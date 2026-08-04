@@ -28,10 +28,14 @@ import junitparams.Parameters;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.query.lookup.LookupExtractorFactory;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
+import org.apache.druid.query.lookup.RetainedLookupExtractor;
+import org.apache.druid.query.lookup.RetainingLookupExtractorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
@@ -39,10 +43,16 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(JUnitParamsRunner.class)
 public class LookupDimensionSpecTest extends InitializedNullHandlingTest
@@ -234,5 +244,118 @@ public class LookupDimensionSpecTest extends InitializedNullHandlingTest
   public void testIsOneToOne()
   {
     Assert.assertEquals(lookupDimSpec.getExtractionFn().getExtractionType(), ExtractionFn.ExtractionType.ONE_TO_ONE);
+  }
+
+  @Test
+  public void testNamedLookupUsesRetainedLookupExtractorWhenSupported() throws Exception
+  {
+    final AtomicReference<Map<String, String>> currentMap =
+        new AtomicReference<>(ImmutableMap.of("foo", "bar-v1"));
+    final AtomicInteger retainedAcquisitions = new AtomicInteger();
+    final AtomicInteger retainedCloses = new AtomicInteger();
+
+    final LookupExtractionFn extractionFn = getLookupExtractionFn(
+        retainedAcquisitions,
+        currentMap,
+        retainedCloses
+    );
+    final Closeable retainedLookup = (Closeable) extractionFn.getLookup();
+
+    Assert.assertTrue(extractionFn.getLookup() instanceof RetainedLookupExtractor);
+    Assert.assertEquals("bar-v1", extractionFn.apply("foo"));
+
+    currentMap.set(ImmutableMap.of("foo", "bar-v2"));
+
+    Assert.assertEquals("bar-v1", extractionFn.apply("foo"));
+    Assert.assertEquals(1, retainedAcquisitions.get());
+    Assert.assertEquals(0, retainedCloses.get());
+
+    retainedLookup.close();
+
+    Assert.assertEquals(1, retainedCloses.get());
+  }
+
+  private static @Nullable LookupExtractionFn getLookupExtractionFn(
+      AtomicInteger retainedAcquisitions,
+      AtomicReference<Map<String, String>> currentMap,
+      AtomicInteger retainedCloses
+  )
+  {
+    final LookupExtractorFactory factory = new RetainingLookupExtractorFactory(
+        () -> new MapLookupExtractor(ImmutableMap.of("foo", "stale"), true),
+        () -> {
+          retainedAcquisitions.incrementAndGet();
+          return Optional.of(
+              RetainedLookupExtractor.create(
+                  new MapLookupExtractor(currentMap.get(), true),
+                  retainedCloses::incrementAndGet
+              )
+          );
+        }
+    );
+
+    final LookupDimensionSpec dimensionSpec = new LookupDimensionSpec(
+        "dimName",
+        "outputName",
+        null,
+        false,
+        null,
+        "lookupName",
+        true,
+        makeLookupProvider(factory)
+    );
+
+    return (LookupExtractionFn) dimensionSpec.getExtractionFn();
+  }
+
+  @Test
+  public void testNamedLookupFallsBackToPlainLookupWhenRetentionUnsupported()
+  {
+    final LookupExtractorFactory factory = new RetainingLookupExtractorFactory(
+        () -> new MapLookupExtractor(ImmutableMap.of("foo", "bar"), true),
+        Optional::empty
+    );
+
+    final LookupDimensionSpec dimensionSpec = new LookupDimensionSpec(
+        "dimName",
+        "outputName",
+        null,
+        false,
+        null,
+        "lookupName",
+        true,
+        makeLookupProvider(factory)
+    );
+
+    final LookupExtractionFn extractionFn = (LookupExtractionFn) dimensionSpec.getExtractionFn();
+
+    Assert.assertFalse(extractionFn.getLookup() instanceof RetainedLookupExtractor);
+    Assert.assertEquals("bar", extractionFn.apply("foo"));
+  }
+
+  private static LookupExtractorFactoryContainerProvider makeLookupProvider(final LookupExtractorFactory factory)
+  {
+    return new LookupExtractorFactoryContainerProvider()
+    {
+      @Override
+      public Set<String> getAllLookupNames()
+      {
+        return Collections.singleton("lookupName");
+      }
+
+      @Override
+      public Optional<LookupExtractorFactoryContainer> get(String lookupName)
+      {
+        return "lookupName".equals(lookupName)
+               ? Optional.of(new LookupExtractorFactoryContainer("v0", factory))
+               : Optional.empty();
+      }
+
+      @Override
+      public String getCanonicalLookupName(String lookupName)
+      {
+        return lookupName;
+      }
+    };
   }
 }

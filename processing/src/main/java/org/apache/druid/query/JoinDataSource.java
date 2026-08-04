@@ -62,10 +62,12 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -384,49 +386,66 @@ public class JoinDataSource implements DataSource
         clauses,
         joinableFactoryWrapper.getJoinableFactory()
     );
-    final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
 
-    // Pick off any join clauses that can be converted into filters.
-    final Set<String> requiredColumns = query.getRequiredColumns();
-    final Filter baseFilterToUse;
-    final List<JoinableClause> clausesToUse;
+    // joinables may retain resources (such as pinned lookup versions) that are owned by the returned function's
+    // close(), if anything below throws before the function takes ownership, release them here instead of leaving
+    // them to the Cleaner
+    try {
+      final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
 
-    if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
-      final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
-          joinableClauses.getJoinableClauses(),
-          requiredColumns,
-          Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
+      // Pick off any join clauses that can be converted into filters.
+      final Set<String> requiredColumns = query.getRequiredColumns();
+      final Filter baseFilterToUse;
+      final List<JoinableClause> clausesToUse;
+
+      if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
+        final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
+            joinableClauses.getJoinableClauses(),
+            requiredColumns,
+            Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
+        );
+
+        baseFilterToUse = Filters.maybeAnd(
+            Lists.newArrayList(
+                Iterables.concat(
+                    Collections.singleton(baseFilter),
+                    conversionResult.lhs
+                )
+            )
+        ).orElse(null);
+        clausesToUse = conversionResult.rhs;
+
+        // joinables for clauses that were converted into filters are not used beyond this point, release any
+        // resources they retain (such as pinned lookup versions) right away
+        closeUnusedJoinables(joinableClauses.getJoinableClauses(), clausesToUse);
+      } else {
+        baseFilterToUse = baseFilter;
+        clausesToUse = joinableClauses.getJoinableClauses();
+      }
+
+      // Analyze remaining join clauses to see if filters on them can be pushed down.
+      final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+          new JoinFilterPreAnalysisKey(
+              filterRewriteConfig,
+              clausesToUse,
+              query.getVirtualColumns(),
+              Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
+                  .orElse(null)
+          )
       );
 
-      baseFilterToUse = Filters.maybeAnd(
-          Lists.newArrayList(
-              Iterables.concat(
-                  Collections.singleton(baseFilter),
-                  conversionResult.lhs
-              )
-          )
-      ).orElse(null);
-      clausesToUse = conversionResult.rhs;
+      final SegmentMapFunction baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
 
-    } else {
-      baseFilterToUse = baseFilter;
-      clausesToUse = joinableClauses.getJoinableClauses();
+      return createSegmentMapFunction(clausesToUse, baseFilterToUse, joinFilterPreAnalysis, baseMapFn);
     }
-
-    // Analyze remaining join clauses to see if filters on them can be pushed down.
-    final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-        new JoinFilterPreAnalysisKey(
-            filterRewriteConfig,
-            clausesToUse,
-            query.getVirtualColumns(),
-            Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
-                .orElse(null)
-        )
-    );
-
-    final SegmentMapFunction baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
-
-    return createSegmentMapFunction(clausesToUse, baseFilterToUse, joinFilterPreAnalysis, baseMapFn);
+    catch (Throwable t) {
+      for (JoinableClause clause : joinableClauses.getJoinableClauses()) {
+        if (clause.getJoinable() instanceof Closeable) {
+          CloseableUtils.closeAndSuppressExceptions((Closeable) clause.getJoinable(), t::addSuppressed);
+        }
+      }
+      throw t;
+    }
   }
 
   public static SegmentMapFunction createSegmentMapFunction(
@@ -436,52 +455,88 @@ public class JoinDataSource implements DataSource
       SegmentMapFunction baseMapFn
   )
   {
-    return baseSegmentReference -> {
-      final Optional<Segment> maybeBaseSegment = baseMapFn.apply(baseSegmentReference);
-      if (maybeBaseSegment.isPresent()) {
-        final Segment baseSegment = maybeBaseSegment.get();
-        Closer closer = Closer.create();
-        // this could be a bit cleaner if joinables get reference returned a closeable joinable (to be consistent with
-        // segment) then we could build a new list of closeable joinables and just close them like we do the base
-        // segment in HashJoinSegment
-        try {
-          boolean acquireFailed = false;
+    return new SegmentMapFunction()
+    {
+      @Override
+      public Optional<Segment> apply(Optional<Segment> baseSegmentReference)
+      {
+        final Optional<Segment> maybeBaseSegment = baseMapFn.apply(baseSegmentReference);
+        if (maybeBaseSegment.isPresent()) {
+          final Segment baseSegment = maybeBaseSegment.get();
+          Closer closer = Closer.create();
+          // this could be a bit cleaner if joinables get reference returned a closeable joinable (to be consistent
+          // with segment) then we could build a new list of closeable joinables and just close them like we do the
+          // base segment in HashJoinSegment
+          try {
+            boolean acquireFailed = false;
 
-          for (JoinableClause joinClause : clausesToUse) {
-            if (acquireFailed) {
-              break;
+            for (JoinableClause joinClause : clausesToUse) {
+              if (acquireFailed) {
+                break;
+              }
+              acquireFailed = joinClause.acquireReference().map(closeable -> {
+                closer.register(closeable);
+                return false;
+              }).orElse(true);
             }
-            acquireFailed = joinClause.acquireReference().map(closeable -> {
-              closer.register(closeable);
-              return false;
-            }).orElse(true);
+            if (acquireFailed) {
+              CloseableUtils.closeAndWrapExceptions(closer);
+              CloseableUtils.closeAndWrapExceptions(baseSegment);
+              return Optional.empty();
+            } else {
+              return Optional.of(
+                  createHashJoinSegment(
+                      baseSegment,
+                      baseFilterToUse,
+                      clausesToUse,
+                      joinFilterPreAnalysis,
+                      closer
+                  )
+              );
+            }
           }
-          if (acquireFailed) {
-            CloseableUtils.closeAndWrapExceptions(closer);
-            CloseableUtils.closeAndWrapExceptions(baseSegment);
+          catch (Throwable e) {
+            // acquireReferences is not permitted to throw exceptions.
+            CloseableUtils.closeAndSuppressExceptions(closer, e::addSuppressed);
+            CloseableUtils.closeAndSuppressExceptions(baseSegment, e::addSuppressed);
+            log.warn(e, "Exception encountered while trying to acquire reference");
             return Optional.empty();
-          } else {
-            return Optional.of(
-                createHashJoinSegment(
-                    baseSegment,
-                    baseFilterToUse,
-                    clausesToUse,
-                    joinFilterPreAnalysis,
-                    closer
-                )
-            );
           }
         }
-        catch (Throwable e) {
-          // acquireReferences is not permitted to throw exceptions.
-          CloseableUtils.closeAndSuppressExceptions(closer, e::addSuppressed);
-          CloseableUtils.closeAndSuppressExceptions(baseSegment, e::addSuppressed);
-          log.warn(e, "Exception encountered while trying to acquire reference");
-          return Optional.empty();
-        }
+        return Optional.empty();
       }
-      return Optional.empty();
+
+      @Override
+      public void close() throws IOException
+      {
+        // releases resources retained for the lifetime of this function: joinable-level resources such as pinned
+        // lookup versions (see LookupJoinable), and anything retained by the base function
+        // must only be called after all mapped segmenst are closed
+        final Closer resourceCloser = Closer.create();
+        resourceCloser.register(baseMapFn);
+        for (JoinableClause clause : clausesToUse) {
+          if (clause.getJoinable() instanceof Closeable) {
+            resourceCloser.register((Closeable) clause.getJoinable());
+          }
+        }
+        resourceCloser.close();
+      }
     };
+  }
+
+  /**
+   * Closes any {@link Closeable} joinables from {@code allClauses} that are not present (by identity) in
+   * {@code clausesToUse}, releasing resources retained by joinables whose clauses were converted into filters
+   */
+  private static void closeUnusedJoinables(List<JoinableClause> allClauses, List<JoinableClause> clausesToUse)
+  {
+    final Set<JoinableClause> used = Collections.newSetFromMap(new IdentityHashMap<>());
+    used.addAll(clausesToUse);
+    for (JoinableClause clause : allClauses) {
+      if (!used.contains(clause) && clause.getJoinable() instanceof Closeable) {
+        CloseableUtils.closeAndWrapExceptions((Closeable) clause.getJoinable());
+      }
+    }
   }
 
   private static Segment createHashJoinSegment(

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -79,6 +80,7 @@ import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -364,7 +366,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       // 1) Populate resource id to the query
       // 2) Merge results using the toolChest, finalize if necessary.
       // 3) Measure CPU time of that operation.
-      // 4) Release all sink segment references.
+      // 4) Release all sink segment references, then close the segment map function to release resources it retains
+      //    for the query, such as lookup versions pinned for joins
       return new ResourceIdPopulatingQueryRunner<>(
           QueryRunnerHelper.makeClosingQueryRunner(
               CPUTimeMetricQueryRunner.safeBuild(
@@ -385,7 +388,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                   cpuTimeAccumulator,
                   true
               ),
-              () -> CloseableUtils.closeAll(allSegmentReferences)
+              () -> CloseableUtils.closeAll(
+                  Iterables.<Closeable>concat(allSegmentReferences, Collections.singletonList(segmentMapFn))
+              )
           )
       )
       {
@@ -398,7 +403,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       };
     }
     catch (Throwable e) {
-      throw CloseableUtils.closeAndWrapInCatch(e, () -> CloseableUtils.closeAll(allSegmentReferences));
+      throw CloseableUtils.closeAndWrapInCatch(
+          e,
+          () -> CloseableUtils.closeAll(
+              Iterables.concat(allSegmentReferences, Collections.singletonList(segmentMapFn))
+          )
+      );
     }
   }
 

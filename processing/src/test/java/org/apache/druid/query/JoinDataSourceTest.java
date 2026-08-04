@@ -24,29 +24,41 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.ExecutionVertexTest;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.Joinable;
+import org.apache.druid.segment.join.JoinableClause;
+import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.easymock.Mock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -602,5 +614,103 @@ public class JoinDataSourceTest
       }
       return Optional.empty();
     }
+  }
+
+  @Test
+  public void test_createSegmentMapFunction_setupFailureReleasesJoinableResources()
+  {
+    final AtomicInteger joinableCloseCount = new AtomicInteger(0);
+
+    final JoinableFactory closeableJoinableFactory = new JoinableFactory()
+    {
+      @Override
+      public boolean isDirectlyJoinable(DataSource dataSource)
+      {
+        return dataSource instanceof LookupDataSource;
+      }
+
+      @Override
+      public Optional<Joinable> build(DataSource dataSource, JoinConditionAnalysis condition)
+      {
+        return Optional.of(
+            LookupJoinable.wrap(
+                new MapLookupExtractor(Collections.singletonMap("k", "v"), false),
+                joinableCloseCount::incrementAndGet
+            )
+        );
+      }
+    };
+
+    // QueryDataSource base cannot create a segment map function, so setup throws after the joinable was built.
+    final JoinDataSource joinDataSource = JoinDataSource.create(
+        new QueryDataSource(Druids.newScanQueryBuilder()
+                                  .dataSource("foo")
+                                  .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+                                  .build()),
+        lookylooLookup,
+        "j.",
+        "\"j.k\" == x",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        new JoinableFactoryWrapper(closeableJoinableFactory),
+        JoinAlgorithm.BROADCAST
+    );
+
+    final Query<?> query = Druids.newScanQueryBuilder()
+                                 .dataSource(joinDataSource)
+                                 .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
+                                 .build();
+
+    Assert.assertThrows(DruidException.class, () -> joinDataSource.createSegmentMapFunction(query));
+    Assert.assertEquals(1, joinableCloseCount.get());
+  }
+
+  @Test
+  public void test_createSegmentMapFunction_closeReleasesJoinableResourcesAndBaseFunction() throws IOException
+  {
+    final AtomicInteger joinableCloseCount = new AtomicInteger(0);
+    final AtomicInteger baseFnCloseCount = new AtomicInteger(0);
+
+    final LookupJoinable joinable = LookupJoinable.wrap(
+        new MapLookupExtractor(Collections.singletonMap("k", "v"), false),
+        joinableCloseCount::incrementAndGet
+    );
+    final JoinableClause clause = new JoinableClause(
+        "j.",
+        joinable,
+        JoinType.LEFT,
+        JoinConditionAnalysis.forExpression("x == \"j.k\"", "j.", ExprMacroTable.nil())
+    );
+
+    final SegmentMapFunction baseFn = new SegmentMapFunction()
+    {
+      @Override
+      public Optional<Segment> apply(Optional<Segment> segment)
+      {
+        return segment;
+      }
+
+      @Override
+      public void close()
+      {
+        baseFnCloseCount.incrementAndGet();
+      }
+    };
+
+    final SegmentMapFunction segmentMapFn = JoinDataSource.createSegmentMapFunction(
+        ImmutableList.of(clause),
+        null,
+        null,
+        baseFn
+    );
+
+    Assert.assertEquals(0, joinableCloseCount.get());
+    Assert.assertEquals(0, baseFnCloseCount.get());
+
+    segmentMapFn.close();
+
+    Assert.assertEquals(1, joinableCloseCount.get());
+    Assert.assertEquals(1, baseFnCloseCount.get());
   }
 }

@@ -825,8 +825,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     final List<DimensionSpec> dimensions = query.getDimensions();
     for (int i = 0; i < dimensions.size(); i++) {
       final DimensionSpec dimensionSpec = dimensions.get(i);
-      if (dimensionSpec.getExtractionFn() != null
-          && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(dimensionSpec.getExtractionFn().getExtractionType())) {
+      // inspection only
+      final ExtractionFn extractionFn = dimensionSpec.getExtractionFnForMetadata();
+      if (extractionFn != null
+          && ExtractionFn.ExtractionType.ONE_TO_ONE.equals(extractionFn.getExtractionType())) {
         retVal.set(i);
       }
     }

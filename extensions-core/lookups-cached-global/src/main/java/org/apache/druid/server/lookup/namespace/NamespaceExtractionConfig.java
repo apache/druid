@@ -20,9 +20,12 @@
 package org.apache.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 public class NamespaceExtractionConfig
 {
+  private static final long DEFAULT_RETIRED_CACHE_ENTRY_TIMEOUT_MILLIS = 15 * 60 * 1000L;
+
   /**
    * The default value of two is chosen because the overhead of having an extra idle thread of the minimum priority is
    * very low, but having more than one thread may save when one namespace extraction is stuck or taking too long time,
@@ -33,6 +36,12 @@ public class NamespaceExtractionConfig
 
   @JsonProperty
   private int numBufferedEntries = 100_000;
+
+  @JsonProperty
+  private int maxRetiredCacheEntries = 1;
+
+  @JsonProperty
+  private long retiredCacheEntryTimeoutMillis = DEFAULT_RETIRED_CACHE_ENTRY_TIMEOUT_MILLIS;
 
   public int getNumExtractionThreads()
   {
@@ -54,5 +63,28 @@ public class NamespaceExtractionConfig
     this.numBufferedEntries = numBufferedEntries;
   }
 
+  public int getMaxRetiredCacheEntries()
+  {
+    return maxRetiredCacheEntries;
+  }
 
+  public void setMaxRetiredCacheEntries(int maxRetiredCacheEntries)
+  {
+    Preconditions.checkArgument(maxRetiredCacheEntries >= 1, "maxRetiredCacheEntries must be at least 1");
+    this.maxRetiredCacheEntries = maxRetiredCacheEntries;
+  }
+
+  public long getRetiredCacheEntryTimeoutMillis()
+  {
+    return retiredCacheEntryTimeoutMillis;
+  }
+
+  public void setRetiredCacheEntryTimeoutMillis(long retiredCacheEntryTimeoutMillis)
+  {
+    Preconditions.checkArgument(
+        retiredCacheEntryTimeoutMillis >= 0,
+        "retiredCacheEntryTimeoutMillis must be non-negative"
+    );
+    this.retiredCacheEntryTimeoutMillis = retiredCacheEntryTimeoutMillis;
+  }
 }

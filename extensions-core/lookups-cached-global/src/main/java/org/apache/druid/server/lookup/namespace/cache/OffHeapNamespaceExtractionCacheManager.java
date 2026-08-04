@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ForwardingConcurrentMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Cleaners;
@@ -37,7 +36,6 @@ import org.mapdb.HTreeMap;
 import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
@@ -67,7 +65,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
      *
      * However if we persist off-heap DB between JVM runs, this decision should be revised.
      */
-    final AtomicBoolean disposed = new AtomicBoolean(false);
+    private boolean disposed = false;
 
     private MapDbCacheDisposer(String mapDbKey)
     {
@@ -81,23 +79,36 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
     @Override
     public void run()
     {
-      if (disposed.compareAndSet(false, true)) {
+      if (tryDisposeFromCleaner()) {
+        // Log statement goes after doDispose(), because logging may fail (e. g. if we are in shutdownHooks).
+        log.error(
+            "OffHeapNamespaceExtractionCacheManager.disposeCache() was not called, disposed resources by the JVM");
+      }
+    }
+
+    private synchronized boolean tryDisposeFromCleaner()
+    {
+      if (disposed) {
+        return false;
+      }
+
+      try {
+        doDispose();
+        disposed = true;
+        return true;
+      }
+      catch (Throwable t) {
         try {
-          doDispose();
-          // Log statement goes after doDispose(), because logging may fail (e. g. if we are in shutdownHooks).
-          log.error(
-              "OffHeapNamespaceExtractionCacheManager.disposeCache() was not called, disposed resources by the JVM");
+          log.error(t, "Error while deleting key %s from MapDb", mapDbKey);
         }
-        catch (Throwable t) {
-          try {
-            log.error(t, "Error while deleting key %s from MapDb", mapDbKey);
-          }
-          catch (Exception e) {
-            t.addSuppressed(e);
-          }
-          Throwables.propagateIfInstanceOf(t, Error.class);
-          // Must not throw exceptions in the cleaner thread, possibly run in the JVM.
+        catch (Exception e) {
+          t.addSuppressed(e);
         }
+        if (t instanceof Error) {
+          throw (Error) t;
+        }
+        // Must not throw exceptions in the cleaner thread, possibly run in the JVM.
+        return false;
       }
     }
 
@@ -105,11 +116,12 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
      * To be called from {@link #disposeCache(CacheHandler)}. The only difference from {@link #run()} is exception
      * treatment, disposeManually() lefts all exceptions thrown in DB.delete() to the caller.
      */
-    void disposeManually()
+    synchronized void disposeManually()
     {
-      if (disposed.compareAndSet(false, true)) {
+      if (!disposed) {
         // TODO: resolve what happens here if query is actively going on
         doDispose();
+        disposed = true;
       }
     }
 

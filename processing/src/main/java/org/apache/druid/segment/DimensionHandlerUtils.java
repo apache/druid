@@ -260,8 +260,8 @@ public final class DimensionHandlerUtils
 
     // Currently, all extractionFns output Strings, so the column will return String values via a
     // DimensionSelector if an extractionFn is present.
-    if (dimSpec.getExtractionFn() != null) {
-      ExtractionFn fn = dimSpec.getExtractionFn();
+    final ExtractionFn fn = dimSpec.getExtractionFnForMetadata();
+    if (fn != null) {
       capabilities = ColumnCapabilitiesImpl.copyOf(capabilities)
                                            .setType(ColumnType.STRING)
                                            .setDictionaryValuesUnique(

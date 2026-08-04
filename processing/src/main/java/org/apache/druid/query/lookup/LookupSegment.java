@@ -20,14 +20,18 @@
 package org.apache.druid.query.lookup;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.segment.RowAdapter;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.lookup.LookupColumnSelectorFactory;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.ToLongFunction;
 
@@ -47,15 +51,33 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
   public LookupSegment(final String lookupName, final LookupExtractorFactory lookupExtractorFactory)
   {
     super(
-        Sequences.simple(() -> {
-          final LookupExtractor extractor = lookupExtractorFactory.get();
+        new BaseSequence<>(
+            new BaseSequence.IteratorMaker<Map.Entry<String, String>, LookupSegmentIterator>()
+            {
+              @Override
+              public LookupSegmentIterator make()
+              {
+                final Optional<RetainedLookupExtractor> maybeRetained = lookupExtractorFactory.acquireRetainedLookupExtractor();
+                final LookupExtractor extractor = maybeRetained.isPresent() ? maybeRetained.get() : lookupExtractorFactory.get();
 
-          if (!extractor.supportsAsMap()) {
-            throw new ISE("Cannot retrieve map view from lookup[%s]", lookupExtractorFactory);
-          }
+                if (!extractor.supportsAsMap()) {
+                  closeRetainedLookupExtractor(maybeRetained);
+                  throw new ISE("Cannot retrieve map view from lookup[%s]", lookupExtractorFactory);
+                }
 
-          return extractor.asMap().entrySet().iterator();
-        }),
+                return new LookupSegmentIterator(
+                    extractor.asMap().entrySet().iterator(),
+                    maybeRetained.orElse(null)
+                );
+              }
+
+              @Override
+              public void cleanup(LookupSegmentIterator iterator)
+              {
+                iterator.close();
+              }
+            }
+        ),
         new RowAdapter<>()
         {
           @Override
@@ -80,6 +102,47 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
         ROW_SIGNATURE
     );
     this.lookupName = lookupName;
+  }
+
+  private static void closeRetainedLookupExtractor(Optional<RetainedLookupExtractor> maybeRetained)
+  {
+    maybeRetained.ifPresent(RetainedLookupExtractor::close);
+  }
+
+  private static class LookupSegmentIterator implements Iterator<Map.Entry<String, String>>, Closeable
+  {
+    private final Iterator<Map.Entry<String, String>> delegate;
+    @Nullable
+    private final RetainedLookupExtractor retainedLookupExtractor;
+
+    private LookupSegmentIterator(
+        Iterator<Map.Entry<String, String>> delegate,
+        @Nullable RetainedLookupExtractor retainedLookupExtractor
+    )
+    {
+      this.delegate = delegate;
+      this.retainedLookupExtractor = retainedLookupExtractor;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return delegate.hasNext();
+    }
+
+    @Override
+    public Map.Entry<String, String> next()
+    {
+      return delegate.next();
+    }
+
+    @Override
+    public void close()
+    {
+      if (retainedLookupExtractor != null) {
+        retainedLookupExtractor.close();
+      }
+    }
   }
 
   @Override
