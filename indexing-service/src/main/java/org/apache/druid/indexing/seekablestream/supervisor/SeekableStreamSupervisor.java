@@ -5406,11 +5406,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     StreamPartition<PartitionIdType> streamPartition = StreamPartition.of(ioConfig.getStream(), partition);
     OrderedSequenceNumber<SequenceOffsetType> sequenceNumber = makeSequenceNumber(offsetFromMetadata);
     recordSupplierLock.lock();
-    if (!recordSupplier.getAssignment().contains(streamPartition)) {
-      // this shouldn't happen, but in case it does...
-      throw new IllegalStateException("Record supplier does not match current known partitions");
-    }
     try {
+      if (!recordSupplier.getAssignment().contains(streamPartition)) {
+        // this shouldn't happen, but in case it does...
+        throw new IllegalStateException("Record supplier does not match current known partitions");
+      }
       return recordSupplier.isOffsetAvailable(streamPartition, sequenceNumber);
     }
     finally {
