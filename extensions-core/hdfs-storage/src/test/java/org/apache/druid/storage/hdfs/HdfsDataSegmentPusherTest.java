@@ -430,7 +430,7 @@ public class HdfsDataSegmentPusherTest
 
   }
 
-  private static File newFolder(File root) throws IOException
+  private static File newFolder(File root)
   {
     return FileUtils.createTempDirInLocation(root.toPath(), "junit");
   }

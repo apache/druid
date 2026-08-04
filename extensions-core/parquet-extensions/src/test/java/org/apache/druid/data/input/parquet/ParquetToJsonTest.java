@@ -29,7 +29,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
@@ -136,7 +135,7 @@ public class ParquetToJsonTest
     Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
+  private static File newFolder(File root, String... subDirs)
   {
     return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
