@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.timeline.DataSegment;
@@ -49,9 +50,14 @@ public class SegmentReplicaCountMap
     cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
-              // Add segments already loaded on this server
+              // Add segments already loaded on this server.
               for (DataSegment segment : serverHolder.getServedSegments()) {
-                computeIfAbsent(segment.getId(), tier).incrementLoaded();
+                final SegmentReplicaCount replicaCount = computeIfAbsent(segment.getId(), tier);
+                if (DataSegmentAndLoadProfile.profileOf(segment) == null) {
+                  replicaCount.incrementLoaded();
+                } else {
+                  replicaCount.incrementLoadedWithPartialProfile();
+                }
               }
 
               // Add segments queued for load, drop or move on this server
