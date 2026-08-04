@@ -105,7 +105,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void ingestSketches(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void ingestSketches(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
@@ -126,7 +126,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void ingestSketchesTimeseries(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void ingestSketchesTimeseries(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     final File inputFile = new File(this.getClass().getClassLoader().getResource("hll/hll_sketches.tsv").getFile());
@@ -175,7 +175,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void buildSketchesAtIngestionTime(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void buildSketchesAtIngestionTime(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
@@ -196,7 +196,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void buildSketchesAtIngestionTimeTimeseries(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void buildSketchesAtIngestionTimeTimeseries(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<Result<TimeseriesResultValue>> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
@@ -217,7 +217,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void buildSketchesAtQueryTime(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void buildSketchesAtQueryTime(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
@@ -238,7 +238,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void buildSketchesAtQueryTimeTimeseries(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void buildSketchesAtQueryTimeTimeseries(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<Result<TimeseriesResultValue>> seq = timeseriesHelper.createIndexAndRunQueryOnSegment(
@@ -259,7 +259,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void unsuccessfulComplexTypesInHLL(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void unsuccessfulComplexTypesInHLL(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     try {
@@ -282,7 +282,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void buildSketchesAtQueryTimeMultiValue(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void buildSketchesAtQueryTimeMultiValue(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
@@ -303,7 +303,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void roundBuildSketch(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void roundBuildSketch(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
@@ -324,7 +324,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void roundMergeSketch(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void roundMergeSketch(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
@@ -345,7 +345,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void testPostAggs(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding) throws Exception
+  public void testPostAggs(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding) throws Exception
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     Sequence<ResultRow> seq = groupByHelper.createIndexAndRunQueryOnSegment(
@@ -420,7 +420,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}, stringEncoding = {2}")
-  public void testRelocation(GroupByQueryConfig config,String vectorize,StringEncoding stringEncoding)
+  public void testRelocation(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding)
   {
     initHllSketchAggregatorTest(config, vectorize, stringEncoding);
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();

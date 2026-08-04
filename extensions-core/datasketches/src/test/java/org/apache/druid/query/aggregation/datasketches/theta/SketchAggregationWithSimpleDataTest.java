@@ -148,7 +148,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSimpleDataIngestAndGpByQuery(GroupByQueryConfig config,String vectorize) throws Exception
+  public void testSimpleDataIngestAndGpByQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
     initSketchAggregationWithSimpleDataTest(config, vectorize);
     try (
@@ -307,7 +307,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSimpleDataIngestAndTimeseriesQuery(GroupByQueryConfig config,String vectorize) throws Exception
+  public void testSimpleDataIngestAndTimeseriesQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
     initSketchAggregationWithSimpleDataTest(config, vectorize);
     AggregationTestHelper timeseriesQueryAggregationTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
@@ -390,7 +390,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSimpleDataIngestAndTopNQuery(GroupByQueryConfig config,String vectorize) throws Exception
+  public void testSimpleDataIngestAndTopNQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
     initSketchAggregationWithSimpleDataTest(config, vectorize);
     AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(
@@ -477,7 +477,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testTopNQueryWithSketchConstant(GroupByQueryConfig config,String vectorize) throws Exception
+  public void testTopNQueryWithSketchConstant(GroupByQueryConfig config, String vectorize) throws Exception
   {
     initSketchAggregationWithSimpleDataTest(config, vectorize);
     AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(

@@ -115,7 +115,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSketchDataIngestAndGpByQuery(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testSketchDataIngestAndGpByQuery(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
@@ -249,7 +249,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testEmptySketchAggregateCombine(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testEmptySketchAggregateCombine(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
@@ -299,7 +299,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testThetaCardinalityOnSimpleColumn(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testThetaCardinalityOnSimpleColumn(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
@@ -460,7 +460,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSketchMergeAggregatorFactorySerde(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testSketchMergeAggregatorFactorySerde(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initSketchAggregationTest(config, vectorize);
     assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null));
@@ -471,7 +471,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSketchMergeFinalization(final GroupByQueryConfig config,final String vectorize)
+  public void testSketchMergeFinalization(final GroupByQueryConfig config, final String vectorize)
   {
     initSketchAggregationTest(config, vectorize);
     SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(128).build());
@@ -507,7 +507,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSketchEstimatePostAggregatorSerde(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testSketchEstimatePostAggregatorSerde(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initSketchAggregationTest(config, vectorize);
     assertPostAggregatorSerde(
@@ -537,7 +537,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSketchSetPostAggregatorSerde(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testSketchSetPostAggregatorSerde(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initSketchAggregationTest(config, vectorize);
     assertPostAggregatorSerde(
@@ -567,7 +567,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testCacheKey(final GroupByQueryConfig config,final String vectorize)
+  public void testCacheKey(final GroupByQueryConfig config, final String vectorize)
   {
     initSketchAggregationTest(config, vectorize);
     final SketchMergeAggregatorFactory factory1 = new SketchMergeAggregatorFactory(
@@ -601,7 +601,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testRetentionDataIngestAndGpByQuery(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testRetentionDataIngestAndGpByQuery(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
@@ -713,7 +713,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testSketchAggregatorFactoryComparator(final GroupByQueryConfig config,final String vectorize)
+  public void testSketchAggregatorFactoryComparator(final GroupByQueryConfig config, final String vectorize)
   {
     initSketchAggregationTest(config, vectorize);
     Comparator<Object> comparator = SketchHolder.COMPARATOR;
@@ -744,7 +744,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testRelocation(final GroupByQueryConfig config,final String vectorize)
+  public void testRelocation(final GroupByQueryConfig config, final String vectorize)
   {
     initSketchAggregationTest(config, vectorize);
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
@@ -763,7 +763,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testUpdateUnionWithNullInList(final GroupByQueryConfig config,final String vectorize)
+  public void testUpdateUnionWithNullInList(final GroupByQueryConfig config, final String vectorize)
   {
     initSketchAggregationTest(config, vectorize);
     List<String> value = new ArrayList<>();
@@ -785,7 +785,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testUpdateUnionWithDouble(final GroupByQueryConfig config,final String vectorize)
+  public void testUpdateUnionWithDouble(final GroupByQueryConfig config, final String vectorize)
   {
     initSketchAggregationTest(config, vectorize);
     Double[] columnValues = new Double[]{2.0};
@@ -802,7 +802,7 @@ public class SketchAggregationTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
-  public void testAggregateWithSize(final GroupByQueryConfig config,final String vectorize)
+  public void testAggregateWithSize(final GroupByQueryConfig config, final String vectorize)
   {
     initSketchAggregationTest(config, vectorize);
     final String[] columnValues = new String[20];

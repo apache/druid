@@ -306,7 +306,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
-  public void testProjectionSingleDim(String name,CursorFactory projectionsCursorFactory,TimeBoundaryInspector projectionsTimeBoundaryInspector,boolean sortByDim,boolean autoSchema)
+  public void testProjectionSingleDim(String name, CursorFactory projectionsCursorFactory, TimeBoundaryInspector projectionsTimeBoundaryInspector, boolean sortByDim, boolean autoSchema)
   {
     initDatasketchesProjectionTest(name, projectionsCursorFactory, projectionsTimeBoundaryInspector, sortByDim, autoSchema);
     // test can use the single dimension projection
@@ -356,7 +356,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
-  public void testProjectionSingleDimNoProjections(String name,CursorFactory projectionsCursorFactory,TimeBoundaryInspector projectionsTimeBoundaryInspector,boolean sortByDim,boolean autoSchema)
+  public void testProjectionSingleDimNoProjections(String name, CursorFactory projectionsCursorFactory, TimeBoundaryInspector projectionsTimeBoundaryInspector, boolean sortByDim, boolean autoSchema)
   {
     initDatasketchesProjectionTest(name, projectionsCursorFactory, projectionsTimeBoundaryInspector, sortByDim, autoSchema);
     // test can use the single dimension projection

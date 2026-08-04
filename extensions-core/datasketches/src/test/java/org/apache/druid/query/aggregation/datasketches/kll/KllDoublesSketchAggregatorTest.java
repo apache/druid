@@ -100,7 +100,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
   // this is to test Json properties and equals
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void serializeDeserializeFactoryWithFieldName(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void serializeDeserializeFactoryWithFieldName(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -119,7 +119,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
   // this is to test Json properties and equals for the combining factory
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void serializeDeserializeCombiningFactoryWithFieldName(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void serializeDeserializeCombiningFactoryWithFieldName(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -136,7 +136,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void ingestingSketches(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void ingestingSketches(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
@@ -211,7 +211,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void buildingSketchesAtIngestionTime(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void buildingSketchesAtIngestionTime(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
@@ -320,7 +320,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void buildingSketchesAtQueryTime(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void buildingSketchesAtQueryTime(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
@@ -449,7 +449,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void queryingDataWithFieldNameValueAsFloatInsteadOfSketch(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void queryingDataWithFieldNameValueAsFloatInsteadOfSketch(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
@@ -527,7 +527,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void timeSeriesQueryInputAsFloat(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void timeSeriesQueryInputAsFloat(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     Sequence<Result<TimeseriesResultValue>> seq = timeSeriesHelper.createIndexAndRunQueryOnSegment(
@@ -577,7 +577,7 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "groupByConfig = {0}, vectorize = {1}")
-  public void testSuccessWhenMaxStreamLengthHit(final GroupByQueryConfig config,final String vectorize) throws Exception
+  public void testSuccessWhenMaxStreamLengthHit(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
     initKllDoublesSketchAggregatorTest(config, vectorize);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(

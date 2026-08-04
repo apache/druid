@@ -466,7 +466,8 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     return results.get(0).getColumns().get(columnName);
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException {
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
     return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs) + "-");
   }
 }
