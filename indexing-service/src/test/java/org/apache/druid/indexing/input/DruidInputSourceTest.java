@@ -39,6 +39,7 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -86,7 +87,7 @@ public class DruidInputSourceTest
 
     final InputSource inputSource = mapper.readValue(json, InputSource.class);
 
-    Assert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
+    MatcherAssert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
     Assert.assertEquals(
         new DruidInputSource(
             "foo",
@@ -119,7 +120,7 @@ public class DruidInputSourceTest
 
     final InputSource inputSource = mapper.readValue(json, InputSource.class);
 
-    Assert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
+    MatcherAssert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
     Assert.assertEquals(
         new DruidInputSource(
             "foo",
@@ -153,7 +154,7 @@ public class DruidInputSourceTest
 
     final InputSource inputSource = mapper.readValue(json, InputSource.class);
 
-    Assert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
+    MatcherAssert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
     Assert.assertEquals(
         new DruidInputSource(
             "foo",
