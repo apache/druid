@@ -35,7 +35,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.LogicalSegment;
 import org.joda.time.Interval;
-
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

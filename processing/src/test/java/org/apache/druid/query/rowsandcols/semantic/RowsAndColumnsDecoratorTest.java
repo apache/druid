@@ -62,7 +62,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 @SuppressWarnings({"unchecked", "rawtypes", "ConstantConditions", "SingleStatementInBlock", "VariableNotUsedInsideIf"})
 @ParameterizedClass
@@ -71,7 +70,7 @@ public class RowsAndColumnsDecoratorTest extends SemanticTestBase
 {
   public static Stream<Object[]> constructorFeeder()
   {
-    return StreamSupport.stream(SemanticTestBase.parameterFeed().spliterator(), false);
+    return SemanticTestBase.parameterFeed();
   }
 
   public RowsAndColumnsDecoratorTest(
