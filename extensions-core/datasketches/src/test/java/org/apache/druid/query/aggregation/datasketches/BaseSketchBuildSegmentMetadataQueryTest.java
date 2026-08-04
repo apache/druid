@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -64,7 +65,6 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -467,6 +467,6 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
   }
 
   private static File newFolder(File root, String... subDirs) throws IOException {
-    return Files.createTempDirectory(root.toPath(), String.join("-", subDirs) + "-").toFile();
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs) + "-");
   }
 }

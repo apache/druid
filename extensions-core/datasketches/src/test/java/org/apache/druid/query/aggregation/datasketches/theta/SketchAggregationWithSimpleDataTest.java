@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
@@ -58,7 +59,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -108,7 +108,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
         )
     ) {
 
-      s1 = Files.createTempDirectory(tempFolder.toPath(), "sketch").toFile();
+      s1 = FileUtils.createTempDirInLocation(tempFolder.toPath(), "sketch");
       final InputRowSchema schema = new InputRowSchema(
           new TimestampSpec("timestamp", "yyyyMMddHH", null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
@@ -129,7 +129,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
           5000
       );
 
-      s2 = Files.createTempDirectory(tempFolder.toPath(), "sketch").toFile();
+      s2 = FileUtils.createTempDirInLocation(tempFolder.toPath(), "sketch");
       toolchest.createIndex(
           new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
           schema,

@@ -33,6 +33,7 @@ import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -96,7 +97,6 @@ import java.io.InputStream;
 import java.lang.reflect.Array;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -412,7 +412,7 @@ public class AggregationTestHelper implements Closeable
 
   private static TempFolderProvider tempFolderProvider(final File tempFolder)
   {
-    return () -> Files.createTempDirectory(tempFolder.toPath(), "druid-").toFile();
+    return () -> FileUtils.createTempDirInLocation(tempFolder.toPath(), "druid-");
   }
 
   public AggregationTestHelper withQueryContext(final Map<String, Object> queryContext)

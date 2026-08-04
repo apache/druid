@@ -28,6 +28,7 @@ import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -54,7 +55,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -137,7 +137,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     final int minTimestamp = 0;
     final int maxRowCount = 10;
 
-    File segmentDir1 = Files.createTempDirectory(timeseriesFolder.toPath(), "hll").toFile();
+    File segmentDir1 = FileUtils.createTempDirInLocation(timeseriesFolder.toPath(), "hll");
     timeseriesHelper.createIndex(
         inputFile,
         inputRowSchema,
@@ -150,7 +150,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
         true
     );
 
-    File segmentDir2 = Files.createTempDirectory(timeseriesFolder.toPath(), "hll").toFile();
+    File segmentDir2 = FileUtils.createTempDirInLocation(timeseriesFolder.toPath(), "hll");
     timeseriesHelper.createIndex(
         inputFile,
         inputRowSchema,
