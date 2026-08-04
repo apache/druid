@@ -1299,8 +1299,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                                 );
           }
           if (complete.isMounted()) {
+            // the entry is already mounted, so hand back its cached reference provider. Read the volatile
+            // referenceProvider exactly once, inside the supplier, rather than trusting the isMounted() check above and
+            // reading the field again when the supplier runs later: for a static (non-virtual-storage) entry a
+            // concurrent drop (release() -> unmount()) can null it in between. The reservation hold does not prevent
+            // this (it only guards weak entries against reclaim), so a weak entry would stay mounted here, but a
+            // static entry can be unmounted out from under us. A dropped entry is reported as absent (empty) rather
+            // than reloaded.
             return new AcquireSegmentAction(
-                () -> Futures.immediateFuture(AcquireSegmentResult.cached(complete.referenceProvider)),
+                () -> {
+                  final ReferenceCountedSegmentProvider provider = complete.referenceProvider;
+                  return Futures.immediateFuture(
+                      provider != null ? AcquireSegmentResult.cached(provider) : AcquireSegmentResult.empty()
+                  );
+                },
                 hold
             );
           } else {
