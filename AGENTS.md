@@ -52,6 +52,8 @@ Real-time analytics database. Java, Maven, multi-module project.
 
 ## Running Tests
 
+Use JUnit 5 (`org.junit.jupiter`) for new test cases; do not add new tests using JUnit 4 (`org.junit`).
+
 Use these flags for faster tests: `-Pskip-static-checks -Dweb.console.skip=true -T1C`
 
 **Single test method:**
