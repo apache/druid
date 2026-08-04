@@ -3675,11 +3675,11 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
+  private static File newFolder(File root, String... subDirs)
   {
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    org.apache.druid.java.util.common.FileUtils.mkdirp(result);
-    return result;
+    return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(
+        root.toPath(),
+        String.join("-", subDirs)
+    );
   }
 }

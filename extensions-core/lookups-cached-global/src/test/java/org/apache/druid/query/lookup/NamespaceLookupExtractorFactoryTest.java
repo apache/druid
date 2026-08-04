@@ -52,7 +52,6 @@ import org.mockito.ArgumentMatchers;
 import javax.ws.rs.core.Response;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -560,11 +559,8 @@ public class NamespaceLookupExtractorFactoryTest
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
+  private static File newFolder(File root, String... subDirs)
   {
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    FileUtils.mkdirp(result);
-    return result;
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

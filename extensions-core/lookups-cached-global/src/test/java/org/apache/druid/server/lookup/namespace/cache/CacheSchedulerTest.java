@@ -52,7 +52,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
@@ -545,11 +544,8 @@ public class CacheSchedulerTest
     Assertions.assertEquals(pre, scheduler.updatesStarted());
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
+  private static File newFolder(File root, String... subDirs)
   {
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    FileUtils.mkdirp(result);
-    return result;
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

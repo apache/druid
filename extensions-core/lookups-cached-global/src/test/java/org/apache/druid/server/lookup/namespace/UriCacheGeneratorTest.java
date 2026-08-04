@@ -565,11 +565,8 @@ public class UriCacheGeneratorTest
     Assertions.assertEquals(0, scheduler.getActiveEntries());
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
+  private static File newFolder(File root, String... subDirs)
   {
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    FileUtils.mkdirp(result);
-    return result;
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }
