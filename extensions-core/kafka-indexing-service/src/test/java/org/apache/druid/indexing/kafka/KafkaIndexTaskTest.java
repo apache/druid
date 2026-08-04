@@ -38,6 +38,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.cli.CliPeon;
+import org.apache.druid.cli.CliPeonTest;
 import org.apache.druid.cli.PeonLoadSpecHolder;
 import org.apache.druid.cli.PeonTaskHolder;
 import org.apache.druid.data.input.InputEntity;
@@ -141,6 +142,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -299,6 +301,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @BeforeEach
   public void setupTest() throws IOException
   {
+    super.tempFolder.create();
+    derby.before();
+    setupBase();
     handoffConditionTimeout = 0;
     reportParseExceptions = false;
     logParseExceptions = true;
@@ -323,6 +328,9 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     reportsFile.delete();
     destroyToolboxFactory();
+    tearDownBase();
+    derby.after();
+    super.tempFolder.delete();
   }
 
   @AfterAll
@@ -335,6 +343,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     kafkaServer = null;
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunAfterDataInserted() throws Exception
   {
@@ -385,6 +394,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testIngestNullColumnAfterDataInserted() throws Exception
   {
@@ -439,6 +449,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testIngestNullColumnAfterDataInserted_storeEmptyColumnsOff_shouldNotStoreEmptyColumns() throws Exception
   {
@@ -486,6 +497,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunBeforeDataInserted() throws Exception
   {
@@ -536,6 +548,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunAfterDataInsertedLiveReport() throws Exception
   {
@@ -588,6 +601,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testIncrementalHandOff() throws Exception
   {
@@ -689,6 +703,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testIncrementalHandOffMaxTotalRows() throws Exception
   {
@@ -830,6 +845,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testTimeBasedIncrementalHandOff() throws Exception
   {
@@ -914,6 +930,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCheckpointResetWithSameEndOffsets() throws Exception
   {
@@ -977,6 +994,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     return metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testIncrementalHandOffReadsThroughEndOffsets() throws Exception
   {
@@ -1081,6 +1099,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyTaskMetrics(staleReplica, RowMeters.with().bytes(totalBytes).totalProcessed(9));
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithMinimumMessageTime() throws Exception
   {
@@ -1130,6 +1149,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithMaximumMessageTime() throws Exception
   {
@@ -1180,6 +1200,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithTransformSpec() throws Exception
   {
@@ -1236,6 +1257,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(ImmutableList.of("bb"), readSegmentColumn("dim1t", publishedDescriptors.get(0)));
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testKafkaRecordEntityInputFormat() throws Exception
   {
@@ -1310,6 +1332,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 4)).totalProcessed(4));
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testKafkaInputFormat() throws Exception
   {
@@ -1380,6 +1403,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(0, 4)).totalProcessed(4));
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunOnNothing() throws Exception
   {
@@ -1414,6 +1438,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(ImmutableList.of(), publishedDescriptors());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testHandoffConditionTimeoutWhenHandoffOccurs() throws Exception
   {
@@ -1460,6 +1485,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testHandoffConditionTimeoutWhenHandoffDoesNotOccur() throws Exception
   {
@@ -1509,6 +1535,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testReportParseExceptions() throws Exception
   {
@@ -1550,6 +1577,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertNull(newDataSchemaMetadata());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testMultipleParseExceptionsSuccess() throws Exception
   {
@@ -1654,6 +1682,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testMultipleParseExceptionsFailure() throws Exception
   {
@@ -1739,6 +1768,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(0, observedSegmentGenerationMetrics.handOffCount());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunReplicas() throws Exception
   {
@@ -1805,6 +1835,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunConflicting() throws Exception
   {
@@ -1873,6 +1904,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunConflictingWithoutTransactions() throws Exception
   {
@@ -1939,6 +1971,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertNull(newDataSchemaMetadata());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunOneTaskTwoPartitions() throws Exception
   {
@@ -1986,6 +2019,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunTwoTasksTwoPartitions() throws Exception
   {
@@ -2054,6 +2088,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRestore() throws Exception
   {
@@ -2135,6 +2170,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRestoreAfterPersistingSequences() throws Exception
   {
@@ -2236,6 +2272,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithPauseAndResume() throws Exception
   {
@@ -2312,6 +2349,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithOffsetOutOfRangeExceptionAndPause() throws Exception
   {
@@ -2346,6 +2384,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithOffsetOutOfRangeExceptionAndNextOffsetGreaterThanLeastAvailable() throws Exception
   {
@@ -2384,6 +2423,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunContextSequenceAheadOfStartingOffsets() throws Exception
   {
@@ -2440,6 +2480,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithDuplicateRequest() throws Exception
   {
@@ -2481,6 +2522,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(Status.READING, task.getRunner().getStatus());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunTransactionModeRollback() throws Exception
   {
@@ -2563,6 +2605,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunUnTransactionMode() throws Exception
   {
@@ -2606,6 +2649,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(2, countEvents(task));
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCanStartFromLaterThanEarliestOffset() throws Exception
   {
@@ -2650,6 +2694,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithoutDataInserted() throws Exception
   {
@@ -2689,6 +2734,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertNull(newDataSchemaMetadata());
   }
 
+  @Test
   public void testSerde() throws Exception
   {
     // This is both a serde test and a regression test for https://github.com/apache/druid/issues/7724.
@@ -2721,6 +2767,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(task, task1);
   }
 
+  @Test
   public void testCorrectInputSources() throws Exception
   {
     // This is both a serde test and a regression test for https://github.com/apache/druid/issues/7724.
@@ -2967,6 +3014,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     makeToolboxFactory(testUtils, emitter, doHandoff);
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testMultipleLinesJSONText() throws Exception
   {
@@ -3034,6 +3082,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testParseExceptionsInIteratorConstructionSuccess() throws Exception
   {
@@ -3112,6 +3161,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testNoParseExceptionsTaskSucceeds() throws Exception
   {
@@ -3174,6 +3224,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(ImmutableList.of(), parseExceptionReport.getErrorMessages());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testParseExceptionsBeyondThresholdTaskFails() throws Exception
   {
@@ -3244,6 +3295,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(ImmutableList.of(), parseExceptionReport.getErrorMessages());
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCompletionReportPartitionStats() throws Exception
   {
@@ -3289,6 +3341,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertEquals(reportData.getRecordsProcessed().values().iterator().next(), (Long) 6L);
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testCompletionReportMultiplePartitionStats() throws Exception
   {
@@ -3344,6 +3397,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assertions.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testTaskWithTransformSpecDoesNotCauseCliPeonCyclicDependency()
       throws IOException, ExecutionException, InterruptedException
@@ -3426,6 +3480,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
+  @Test
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testKafkaTaskContainsAllTaskDimensions()
       throws IOException, ExecutionException, InterruptedException
@@ -3450,17 +3505,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    final File taskFile = File.createTempFile("task.json", null, temporaryFolder);
-    FileUtils.write(taskFile, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
-
-    final CliPeon peon = new CliPeon();
-    peon.taskAndStatusFile = ImmutableList.of(taskFile.getParent(), "1");
-
-    final Properties properties = new Properties();
-    peon.configure(properties);
-    final Injector baseInjector = GuiceInjectors.makeStartupInjector();
-    peon.configure(properties, baseInjector);
-    final Injector peonInjector = peon.makeInjector(Set.of(NodeRole.PEON));
+    final Injector peonInjector = CliPeonTest.makePeonInjectorWithStubEmitter(task, super.tempFolder, OBJECT_MAPPER);
     Emitter peonEmitter = peonInjector.getInstance(Emitter.class);
     Assertions.assertTrue(peonEmitter instanceof StubServiceEmitter);
     emitter = (StubServiceEmitter) peonEmitter;
