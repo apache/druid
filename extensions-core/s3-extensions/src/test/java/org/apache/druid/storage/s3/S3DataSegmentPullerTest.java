@@ -95,7 +95,8 @@ public class S3DataSegmentPullerTest
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
 
-    try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(tmpFile))) {
+    try (final FileOutputStream fileOutputStream = new FileOutputStream(tmpFile);
+         final OutputStream outputStream = new GZIPOutputStream(fileOutputStream)) {
       outputStream.write(value);
     }
 
@@ -135,7 +136,8 @@ public class S3DataSegmentPullerTest
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
 
-    try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(tmpFile))) {
+    try (final FileOutputStream fileOutputStream = new FileOutputStream(tmpFile);
+         final OutputStream outputStream = new GZIPOutputStream(fileOutputStream)) {
       outputStream.write(value);
     }
 
@@ -181,7 +183,8 @@ public class S3DataSegmentPullerTest
 
     final File tmpFile = temporaryFolder.newFile("gzTest.gz");
 
-    try (OutputStream outputStream = new GZIPOutputStream(new FileOutputStream(tmpFile))) {
+    try (final FileOutputStream fileOutputStream = new FileOutputStream(tmpFile);
+         final OutputStream outputStream = new GZIPOutputStream(fileOutputStream)) {
       outputStream.write(value);
     }
 
