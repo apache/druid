@@ -117,6 +117,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -262,6 +263,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     kafkaServer = null;
   }
 
+  @Test
   public void testNoInitialStateWithAutoscaler() throws Exception
   {
     final int taskCountMax = 2;
@@ -455,6 +457,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     autoscaler.stop();
   }
 
+  @Test
   public void testGetTaskRunnerType() throws JsonProcessingException
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -485,6 +488,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertNull(indexTask.getServerPriority());
   }
 
+  @Test
   public void testCreateIndexTasksWithServerPrioritiesToAssign() throws JsonProcessingException
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -518,6 +522,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(Integer.valueOf(20), taskList.get(2).getServerPriority());
   }
 
+  @Test
   public void testNoInitialState() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -594,6 +599,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testSkipOffsetGaps() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -617,6 +623,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testMultiTask() throws Exception
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
@@ -697,6 +704,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testReplicas() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -775,6 +783,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testLateMessageRejectionPeriod() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", new Period("PT1H"), null);
@@ -813,6 +822,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testEarlyMessageRejectionPeriod() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, new Period("PT1H"));
@@ -854,6 +864,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   /**
    * Test generating the starting offsets from the partition high water marks in Kafka.
    */
+  @Test
   public void testLatestOffset() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
@@ -905,6 +916,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   /**
    * Test if partitionIds get updated
    */
+  @Test
   public void testPartitionIdsUpdates() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
@@ -930,6 +942,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
 
+  @Test
   public void testAlwaysUsesEarliestOffsetForNewlyDiscoveredPartitions() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, false, "PT1H", null, null);
@@ -1026,6 +1039,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    * contains the offsets from previous single-topic config of the last built segments, where the previous topic does
    * match the new configuration.
    */
+  @Test
   public void testDatasourceMetadataSingleTopicToSingleTopicMatch() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -1082,6 +1096,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    * contains the offsets from previous single-topic config of the last built segments, where the previous topic does
    * match the new configuration.
    */
+  @Test
   public void testDatasourceMetadataSingleTopicToMultiTopicMatch() throws Exception
   {
     multiTopic = true;
@@ -1139,6 +1154,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    * contains the offsets from previous single-topic config of the last built segments, where the previous topic does
    * not match the new configuration.
    */
+  @Test
   public void testDatasourceMetadataSingleTopicToMultiTopicNotMatch() throws Exception
   {
     multiTopic = true;
@@ -1195,6 +1211,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    * Test generating the starting offsets for single-topic config from the partition data stored in druid_dataSource which
    * contains the offsets from previous multi-topic config of the last built segments.
    */
+  @Test
   public void testDatasourceMetadataMultiTopicToSingleTopic() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -1256,6 +1273,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    * Test generating the starting offsets for muti-topic config from the partition data stored in druid_dataSource which
    * contains the offsets from previous multi-topic config of the last built segments.
    */
+  @Test
   public void testDatasourceMetadataMultiTopicToMultiTopic() throws Exception
   {
     multiTopic = true;
@@ -1310,6 +1328,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(3, taskConfig.getStartSequenceNumbers().getPartitionSequenceNumberMap().size());
   }
 
+  @Test
   public void testBadMetadataOffsets() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -1342,6 +1361,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
   }
 
+  @Test
   public void testDontKillTasksWithMismatchedType() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -1386,6 +1406,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testKillBadPartitionAssignment() throws Exception
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null);
@@ -1512,6 +1533,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
 
+  @Test
   public void testRequeueTaskWhenFailed() throws Exception
   {
     supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
@@ -1602,6 +1624,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testRequeueTaskWithServerPrioritiesWhenFailed() throws Exception
   {
     supervisor = getTestableSupervisor(null, 2, 2, true, true, "PT1H", null, null, false, kafkaHost, null, Map.of(1, 1, 2, 1));
@@ -1704,6 +1727,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
    * must not go out of sync when a newly-submitted task dies before the next supervisor run observes it. Otherwise, the orphan priority entry
    * makes {@link SeekableStreamSupervisor#computeUnassignedServerPriorities} throw on the replacement attempt.
    */
+  @Test
   public void testReplacementSubmittedWhenPriorityTaskDiesBeforeDiscovery() throws Exception
   {
     // replicas=2, taskCount=1, priorities {0:1, 1:1}
@@ -1776,6 +1800,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(orphan.getServerPriority(), replacement.getServerPriority());
   }
 
+  @Test
   public void testRequeueAdoptedTaskWhenFailed() throws Exception
   {
     supervisor = getTestableSupervisor(2, 1, true, "PT1H", null, null);
@@ -1882,6 +1907,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testQueueNextTasksOnSuccess() throws Exception
   {
     supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
@@ -1983,6 +2009,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertTrue(shutdownTaskIdCapture.getValue().contains(iAmSuccess.getIOConfig().getBaseSequenceName()));
   }
 
+  @Test
   public void testBeginPublishAndQueueNextTasks() throws Exception
   {
     final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
@@ -2089,6 +2116,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
+  @Test
   public void testDiscoverExistingPublishingTask() throws Exception
   {
     final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
@@ -2232,6 +2260,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
   {
     final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
@@ -2365,6 +2394,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testDiscoverExistingPublishingAndReadingTask() throws Exception
   {
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -2495,6 +2525,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
   }
 
+  @Test
   public void testReportWhenMultipleActiveTasks() throws Exception
   {
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -2644,6 +2675,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertTrue(payload.getOffsetsLastUpdated().plusMinutes(1).isAfterNow());
   }
 
+  @Test
   public void testSupervisorIsIdleIfStreamInactive() throws Exception
   {
     supervisor = getTestableSupervisorForIdleBehaviour(
@@ -2805,6 +2837,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
+  @Test
   public void testSupervisorIsIdleIfStreamInactiveWhenNoActiveTasks() throws Exception
   {
     supervisor = getTestableSupervisorForIdleBehaviour(
@@ -2862,6 +2895,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
+  @Test
   public void testSupervisorNotIdleIfStreamInactiveWhenSuspended() throws Exception
   {
     supervisor = getTestableSupervisorForIdleBehaviour(
@@ -2917,6 +2951,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(SupervisorStateManager.BasicState.SUSPENDED, supervisor.getState());
   }
 
+  @Test
   public void testSupervisorIsIdleIfStreamInactiveWhenSuspended() throws Exception
   {
     Map<String, String> config = ImmutableMap.of("idleConfig.enabled", "false",
@@ -2978,6 +3013,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
+  @Test
   public void testSupervisorIsIdleIfStreamInactiveWhenNoActiveTasksAndFewPendingTasks() throws Exception
   {
     supervisor = getTestableSupervisorForIdleBehaviour(
@@ -3144,6 +3180,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(SupervisorStateManager.BasicState.IDLE, supervisor.getState());
   }
 
+  @Test
   public void testKillUnresponsiveTasksWhileGettingStartTime() throws Exception
   {
     supervisor = getTestableSupervisor(2, 2, true, "PT1H", null, null);
@@ -3200,6 +3237,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testKillUnresponsiveTasksWhilePausing() throws Exception
   {
     final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
@@ -3297,6 +3335,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
+  @Test
   public void testKillUnresponsiveTasksWhileSettingEndOffsets() throws Exception
   {
     final TaskLocation location = TaskLocation.create("testHost", 1234, -1);
@@ -3400,6 +3439,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
+  @Test
   public void testStopNotStarted()
   {
     assertThrows(IllegalStateException.class, () -> {
@@ -3408,6 +3448,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     });
   }
 
+  @Test
   public void testStop()
   {
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
@@ -3422,6 +3463,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testStopGracefully() throws Exception
   {
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -3555,6 +3597,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testResetNoTasks()
   {
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -3582,6 +3625,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
   }
 
+  @Test
   public void testResetDataSourceMetadata() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -3646,6 +3690,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(expectedMetadata, captureDataSourceMetadata.getValue());
   }
 
+  @Test
   public void testResetNoDataSourceMetadata()
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null);
@@ -3681,6 +3726,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testGetOffsetFromStorageForPartitionWithResetOffsetAutomatically() throws Exception
   {
     addSomeEvents(2);
@@ -3722,6 +3768,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertTrue(alert.getDescription().startsWith("Exception in supervisor run loop for supervisor[testDS] for dataSource[testDS]"));
   }
 
+  @Test
   public void testResetRunningTasks() throws Exception
   {
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -3841,6 +3888,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testNoDataIngestionTasks()
   {
     final DateTime startTime = DateTimes.nowUtc();
@@ -3957,6 +4005,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Test
   public void testCheckpointForInactiveTaskGroup()
       throws InterruptedException
   {
@@ -4088,6 +4137,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Test
   public void testCheckpointForUnknownTaskGroup()
       throws InterruptedException
   {
@@ -4197,6 +4247,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testSuspendedNoRunningTasks() throws Exception
   {
     supervisor = getTestableSupervisor(1, 1, true, "PT1H", null, null, true, kafkaHost);
@@ -4223,6 +4274,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testSuspendedRunningTasks() throws Exception
   {
     // graceful shutdown is expected to be called on running tasks since state is suspended
@@ -4351,6 +4403,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testResetSuspended()
   {
     EasyMock.expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
@@ -4376,6 +4429,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testFailedInitializationAndRecovery() throws Exception
   {
     // Block the supervisor initialization with a bad hostname config, make sure this doesn't block the lifecycle
@@ -4501,6 +4555,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testGetCurrentTotalStats()
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
@@ -4544,6 +4599,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(ImmutableMap.of("task2", ImmutableMap.of("prop2", "val2")), stats.get("1"));
   }
 
+  @Test
   public void testGetCurrentParseErrors()
   {
     supervisor = getTestableSupervisor(1, 2, true, "PT1H", null, null, false, kafkaHost);
@@ -4614,6 +4670,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(ImmutableList.of(exception4, exception3, exception2, exception1), errors);
   }
 
+  @Test
   public void testDoNotKillCompatibleTasks()
       throws Exception
   {
@@ -4686,6 +4743,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testKillIncompatibleTasks()
       throws Exception
   {
@@ -4750,6 +4808,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testIsTaskCurrent()
   {
     DateTime minMessageTime = DateTimes.nowUtc();
@@ -4897,6 +4956,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testSequenceNameDoesNotChangeWithTaskId()
   {
     final DateTime minMessageTime = DateTimes.nowUtc();
@@ -4972,6 +5032,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void testResumeAllActivelyReadingTasks() throws Exception
   {
     supervisor = getTestableSupervisor(2, 3, true, "PT1H", null, null);
@@ -5169,6 +5230,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
   }
 
+  @Test
   public void test_doesTaskMatchSupervisor()
   {
     supervisor = getTestableSupervisor("supervisorId", 1, 1, true, true, null, new Period("PT1H"), new Period("PT1H"), false, kafkaHost, null, null);
@@ -5190,6 +5252,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     EasyMock.replay(differentTaskType);
   }
 
+  @Test
   public void test_autoScaler_doesNotRepeatScaleDownActions_ifTasksAreStillPublishing() throws Exception
   {
     final TaskLocation location1 = TaskLocation.create("testHost1", 1234, -1);
@@ -5385,6 +5448,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertFalse(supervisor.getPartitionOffsets().isEmpty());
   }
 
+  @Test
   public void testComputeUnassignedServerPriorities_whenMultipleReplicasPerPriorityIsSet()
   {
     final Map<String, Object> consumerProperties = KafkaConsumerConfigs.getConsumerProperties();
@@ -5476,6 +5540,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertEquals(List.of(20, 20), supervisor.computeUnassignedServerPriorities(taskGroup3, 2));
   }
 
+  @Test
   public void testBoundedModeCreateTasksWithCorrectOffsets() throws JsonProcessingException
   {
     Map<String, Object> startOffsets = ImmutableMap.of(
@@ -5556,6 +5621,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assertions.assertFalse(supervisor.isOffsetAtOrBeyond(50L, 100L));
   }
 
+  @Test
   public void testCreateSequenceOffsetFromObject_invalidType()
   {
     Map<String, Object> startOffsets = ImmutableMap.of("0", 0, "1", 0);
@@ -6305,6 +6371,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     }
   }
 
+  @Test
   public void testBoundedStreamConfig_tasksIncludeBoundedConfig() throws Exception
   {
     Map<String, Long> startOffsets = ImmutableMap.of("0", 10L, "1", 20L, "2", 30L);
@@ -6352,6 +6419,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                                                 .get(new KafkaTopicPartition(false, topic, 0)));
   }
 
+  @Test
   public void testBoundedStreamConfig_withCheckpoint_resumesFromCheckpoint() throws Exception
   {
     Map<String, Long> startOffsets = ImmutableMap.of("0", 0L, "1", 0L, "2", 0L);
@@ -6411,6 +6479,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                                                 .get(new KafkaTopicPartition(false, topic, 0)));
   }
 
+  @Test
   public void testBoundedStreamConfig_endOffsetsSetCorrectly() throws Exception
   {
     Map<String, Long> startOffsets = ImmutableMap.of("0", 0L, "1", 0L, "2", 0L);
@@ -6450,6 +6519,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
                                                 .get(new KafkaTopicPartition(false, topic, 2)));
   }
 
+  @Test
   public void testBoundedStreamConfig_allPartitionsEmptyRange_completesImmediately() throws Exception
   {
     // All partitions have start == end (nothing to process)
@@ -6560,6 +6630,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     );
   }
 
+  @Test
   public void testBoundedMode_equalOffsetsIsEmpty()
   {
     // Kafka has exclusive end offsets, so start == end represents an EMPTY range
