@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.IndexSpec;
@@ -154,9 +155,12 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
       @Override
       public SerializablePairLongString fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
+        if (numBytes < 0 || numBytes > buffer.remaining()) {
+          throw new IAE("Invalid numBytes[%d] for buffer remaining[%d]", numBytes, buffer.remaining());
+        }
+        final ByteBuffer readOnlyByteBuffer = buffer.asReadOnlyBuffer().order(buffer.order());
 
-        readOnlyByteBuffer.limit(buffer.position() + numBytes);
+        readOnlyByteBuffer.limit(Math.addExact(buffer.position(), numBytes));
 
         return SERDE.deserialize(readOnlyByteBuffer);
       }

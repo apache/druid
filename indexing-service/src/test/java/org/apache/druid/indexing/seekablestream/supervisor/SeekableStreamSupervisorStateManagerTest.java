@@ -235,7 +235,7 @@ public class SeekableStreamSupervisorStateManagerTest
       stateManager.markRunFinished(); // clean run
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState());
       Assert.assertEquals(BasicState.RUNNING, stateManager.getSupervisorState().getBasicState());
-      Assert.assertEquals(j * (config.getUnhealthinessThreshold() - 1), stateManager.getExceptionEvents().size());
+      Assert.assertEquals((long) j * (config.getUnhealthinessThreshold() - 1), stateManager.getExceptionEvents().size());
     }
   }
 

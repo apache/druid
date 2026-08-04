@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import com.google.common.base.Preconditions;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
@@ -93,7 +94,13 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       @Override
       public ApproximateHistogram fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        buffer.limit(buffer.position() + numBytes);
+        Preconditions.checkArgument(
+            numBytes >= 0 && numBytes <= buffer.remaining(),
+            "numBytes[%s] exceeds buffer remaining[%s]",
+            numBytes,
+            buffer.remaining()
+        );
+        buffer.limit(Math.addExact(buffer.position(), numBytes));
         return ApproximateHistogram.fromBytes(buffer);
       }
 

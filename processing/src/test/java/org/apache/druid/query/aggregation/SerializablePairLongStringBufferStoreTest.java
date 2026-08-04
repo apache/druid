@@ -213,7 +213,6 @@ public class SerializablePairLongStringBufferStoreTest
     int maxStringSize = 1024 * 1024;
     int minStringSize = 1024;
     List<SerializablePairLongString> input = new ArrayList<>(rowCount);
-    int totalCount = 0;
 
     for (int i = 0; i < rowCount; i++) {
       long longValue = random.nextLong();
@@ -221,8 +220,6 @@ public class SerializablePairLongStringBufferStoreTest
           new SerializablePairLongString(longValue, RandomStringUtils.randomAlphabetic(minStringSize, maxStringSize));
 
       input.add(value);
-      totalCount += longValue;
-      totalCount = Math.max(totalCount, 0);
 
       bufferStore.store(value);
     }

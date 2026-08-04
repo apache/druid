@@ -91,6 +91,26 @@ public class CompressionStrategyTest
     }
   }
 
+  @Test
+  public void testUncompressedDecompressorRejectsInvalidLengths()
+  {
+    final ByteBuffer input = ByteBuffer.allocate(4);
+    final ByteBuffer output = ByteBuffer.allocate(4);
+    input.position(1);
+    output.position(2);
+
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> CompressionStrategy.UNCOMPRESSED.getDecompressor().decompress(input, -1, output)
+    );
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> CompressionStrategy.UNCOMPRESSED.getDecompressor().decompress(input, 3, output)
+    );
+    Assert.assertEquals(1, input.position());
+    Assert.assertEquals(2, output.position());
+  }
+
   @Test(timeout = 60_000L)
   public void testConcurrency() throws Exception
   {

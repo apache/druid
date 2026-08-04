@@ -119,9 +119,9 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal
    * @return the entry
    */
   @Override
-  public int getArrayEntry(int idx)
+  public int getArrayEntry(final int idx)
   {
-    return buf.getInt(position + idx * Integer.BYTES);
+    return buf.getInt(bufferPosition(idx));
   }
 
   /**
@@ -131,9 +131,15 @@ public class ByteBufferCompressedBigDecimal extends CompressedBigDecimal
    * @param val value to set
    */
   @Override
-  protected void setArrayEntry(int idx, int val)
+  protected void setArrayEntry(final int idx, final int val)
   {
-    buf.putInt(position + idx * Integer.BYTES, val);
+    buf.putInt(bufferPosition(idx), val);
+  }
+
+  private int bufferPosition(final int idx)
+  {
+    Preconditions.checkElementIndex(idx, size);
+    return Math.addExact(position, Math.multiplyExact(idx, Integer.BYTES));
   }
 
   @Override

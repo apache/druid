@@ -595,11 +595,11 @@ public class PeriodGranularity extends Granularity implements JsonSerializable
     // which may not always be the case, e.g if there are daylight saving changes.
     if (chronology.days().isPrecise() && chronology.hours().isPrecise()) {
       final long millis = period.toStandardDuration().getMillis();
-      long offset = t % millis - origin % millis;
+      long offset = Math.subtractExact(t % millis, origin % millis);
       if (offset < 0) {
-        offset += millis;
+        offset = Math.addExact(offset, millis);
       }
-      return t - offset;
+      return Math.subtractExact(t, offset);
     } else {
       throw new UnsupportedOperationException(
           "Period cannot be converted to milliseconds as some fields mays vary in length with chronology " + chronology

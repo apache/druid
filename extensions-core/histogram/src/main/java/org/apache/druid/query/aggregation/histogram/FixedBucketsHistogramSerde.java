@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.Rows;
@@ -134,8 +135,14 @@ public class FixedBucketsHistogramSerde extends ComplexMetricSerde
       @Override
       public FixedBucketsHistogram fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        buffer.limit(buffer.position() + numBytes);
-        FixedBucketsHistogram fbh = FixedBucketsHistogram.fromByteBuffer(buffer);
+        Preconditions.checkArgument(
+            numBytes >= 0 && numBytes <= buffer.remaining(),
+            "numBytes[%s] exceeds buffer remaining[%s]",
+            numBytes,
+            buffer.remaining()
+        );
+        buffer.limit(Math.addExact(buffer.position(), numBytes));
+        final FixedBucketsHistogram fbh = FixedBucketsHistogram.fromByteBuffer(buffer);
         return fbh;
       }
 

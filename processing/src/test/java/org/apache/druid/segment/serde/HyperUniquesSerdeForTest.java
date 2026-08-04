@@ -116,6 +116,9 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
       public HyperLogLogCollector fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+        if (numBytes < 0 || numBytes > readOnlyBuffer.remaining()) {
+          throw new IllegalArgumentException("numBytes exceeds the available buffer contents");
+        }
         readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
         return HyperLogLogCollector.makeCollector(readOnlyBuffer);
       }

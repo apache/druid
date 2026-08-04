@@ -318,11 +318,13 @@ public class DefaultLimitSpec implements LimitSpec
       if (limit == Integer.MAX_VALUE) {
         // Unlimited stays unlimited.
         newLimit = Integer.MAX_VALUE;
-      } else if (limit > Integer.MAX_VALUE - offset) {
-        // Handle overflow as best we can.
-        throw new ISE("Cannot apply limit[%d] with offset[%d] due to overflow", limit, offset);
       } else {
-        newLimit = limit + offset;
+        try {
+          newLimit = Math.addExact(limit, offset);
+        }
+        catch (ArithmeticException e) {
+          throw new ISE("Cannot apply limit[%d] with offset[%d] due to overflow", limit, offset);
+        }
       }
 
       return new DefaultLimitSpec(columns, 0, newLimit);

@@ -551,7 +551,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
 
-    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
+    Assert.assertEquals(2L * CONTENT.length, inputStats.getProcessedBytes());
     EasyMock.verify(OSSCLIENT);
   }
 
@@ -598,7 +598,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
       Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
 
-    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
+    Assert.assertEquals(2L * CONTENT.length, inputStats.getProcessedBytes());
     EasyMock.verify(OSSCLIENT);
   }
 
