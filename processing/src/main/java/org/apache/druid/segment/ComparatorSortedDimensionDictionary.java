@@ -44,19 +44,38 @@ public class ComparatorSortedDimensionDictionary<T>
   public ComparatorSortedDimensionDictionary(List<T> idToValue, Comparator<T> comparator, int length)
   {
     Object2IntSortedMap<T> sortedMap = new Object2IntRBTreeMap<>(comparator);
+    int nullId = -1;
     for (int id = 0; id < length; id++) {
       T value = idToValue.get(id);
-      sortedMap.put(value, id);
+      if (value == null) {
+        nullId = id;
+      } else {
+        sortedMap.put(value, id);
+      }
     }
-    this.sortedVals = Lists.newArrayList(sortedMap.keySet());
+    final List<T> sortedValues = Lists.newArrayList(sortedMap.keySet());
+    int nullIndex = -1;
+    if (nullId != -1) {
+      nullIndex = 0;
+      while (nullIndex < sortedValues.size() && comparator.compare(null, sortedValues.get(nullIndex)) > 0) {
+        nullIndex++;
+      }
+      sortedValues.add(nullIndex, null);
+    }
+    this.sortedVals = sortedValues;
     this.idToIndex = new int[length];
     this.indexToId = new int[length];
     int index = 0;
     for (IntIterator iterator = sortedMap.values().iterator(); iterator.hasNext(); ) {
       int id = iterator.nextInt();
-      idToIndex[id] = index;
-      indexToId[index] = id;
+      final int sortedIndex = nullIndex >= 0 && index >= nullIndex ? index + 1 : index;
+      idToIndex[id] = sortedIndex;
+      indexToId[sortedIndex] = id;
       index++;
+    }
+    if (nullIndex >= 0) {
+      idToIndex[nullId] = nullIndex;
+      indexToId[nullIndex] = nullId;
     }
   }
 
