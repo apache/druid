@@ -1818,7 +1818,7 @@ name: Java Native Access (JNA)
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.18.1
+version: 5.19.1
 libraries:
   - net.java.dev.jna: jna
 
