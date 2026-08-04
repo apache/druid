@@ -148,7 +148,7 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
     private Provider<MonitorScheduler> monitorSchedulerProvider;
     private ObjectMapper jsonMapper = TestHelper.JSON_MAPPER;
     private IndexIO indexIO = TestHelper.getTestIndexIO();
-    private SegmentCacheManagerFactory segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, jsonMapper);
+    private SegmentCacheManagerFactory segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, jsonMapper);
     private Cache cache;
     private CacheConfig cacheConfig;
     private CachePopulatorStats cachePopulatorStats;

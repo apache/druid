@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -42,15 +43,16 @@ import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.vector.ConcatenatingVectorCursor;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
+import org.apache.druid.segment.vector.RemapVectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
@@ -116,59 +118,6 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     return new QueryableIndexCursorHolder(index, spec, timeBoundaryInspector);
   }
 
-  private CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
-  {
-    return new QueryableIndexCursorHolder(
-        projection.getRowSelector(),
-        projection.getCursorBuildSpec(),
-        QueryableIndexTimeBoundaryInspector.create(projection.getRowSelector())
-    )
-    {
-      @Override
-      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          Offset baseOffset
-      )
-      {
-        return projection.wrapColumnSelectorFactory(
-            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset)
-        );
-      }
-
-      @Override
-      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
-          ColumnCache columnCache,
-          VectorOffset baseOffset
-      )
-      {
-        return projection.wrapVectorColumnSelectorFactory(
-            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset)
-        );
-      }
-
-      @Override
-      public boolean isPreAggregated()
-      {
-        return true;
-      }
-
-      @Nullable
-      @Override
-      public List<AggregatorFactory> getAggregatorsForPreAggregated()
-      {
-        return projection.getCursorBuildSpec().getAggregators();
-      }
-    };
-  }
-
-  private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
-  {
-    return makeClusteredCursorHolder(
-        spec,
-        Projections.planClusterGroupQuery(new ArrayList<>(index.getClusterGroupSchemas()), spec)
-    );
-  }
-
   /**
    * Build a clustered-base-table cursor holder from an already-computed {@link ClusterGroupQueryPlan}. Exposed so the
    * partial (on-demand) cursor factory can plan the cluster groups once — to decide which group bundles to download —
@@ -186,6 +135,53 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     return makeMultiGroupClusteredCursorHolder(spec, plan);
   }
 
+  @Override
+  public RowSignature getRowSignature()
+  {
+    final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
+    if (clusterSummary != null) {
+      return getClusteredRowSignature(clusterSummary);
+    }
+
+    final LinkedHashSet<String> columns = new LinkedHashSet<>();
+
+    for (final OrderBy orderBy : index.getOrdering()) {
+      columns.add(orderBy.getColumnName());
+    }
+
+    // Add __time after the defined ordering, if __time wasn't part of it.
+    columns.add(ColumnHolder.TIME_COLUMN_NAME);
+    columns.addAll(index.getColumnNames());
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
+
+      // index.getOrdering() may include columns that don't exist, such as if they were omitted due to
+      // being 100% nulls. Don't add those to the row signature.
+      if (columnType != null) {
+        builder.add(column, columnType);
+      }
+    }
+
+    return builder.build();
+  }
+
+  @Nullable
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return index.getColumnCapabilities(column);
+  }
+
+  private CursorHolder makeClusteredCursorHolder(CursorBuildSpec spec)
+  {
+    return makeClusteredCursorHolder(
+        spec,
+        Projections.planClusterGroupQuery(new ArrayList<>(index.getClusterGroupSchemas()), spec)
+    );
+  }
+
   private CursorHolder makeSingleGroupClusteredCursorHolder(
       CursorBuildSpec spec,
       ClusterGroupQueryPlan plan,
@@ -200,13 +196,52 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
-    // groupIndex exposes the group's clustering columns as constant columns, no selector wrapper is needed
+    // Omit cluster key from ordering if the caller requests (and is granted) time ordering.
+    // This way, the returned ordering will begin with {@code __time}.
+    final ClusteredValueGroupsBaseTableSchema summary = valueGroup.getSummary();
+    final List<OrderBy> ordering =
+        Projections.useTimeOrderedCursors(spec, summary) ? summary.getGroupOrdering() : summary.getOrdering();
+
+    if (plan.virtualColumnRemap().isEmpty()) {
+      return new QueryableIndexCursorHolder(
+          groupIndex,
+          plan.rebuildCursorBuildSpec(spec, valueGroup),
+          QueryableIndexTimeBoundaryInspector.create(groupIndex),
+          ordering
+      );
+    }
+
     return new QueryableIndexCursorHolder(
         groupIndex,
         plan.rebuildCursorBuildSpec(spec, valueGroup),
         QueryableIndexTimeBoundaryInspector.create(groupIndex),
-        valueGroup.getSummary().getOrdering()
-    );
+        ordering
+    )
+    {
+      @Override
+      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          Offset baseOffset
+      )
+      {
+        return new RemapColumnSelectorFactory(
+            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
+            plan.virtualColumnRemap()
+        );
+      }
+
+      @Override
+      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          VectorOffset baseOffset
+      )
+      {
+        return new RemapVectorColumnSelectorFactory(
+            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
+            plan.virtualColumnRemap()
+        );
+      }
+    };
   }
 
   /**
@@ -251,32 +286,144 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       );
     }
 
+    // Use k-way merged group cursors for time ordering, or concatenated cursors otherwise.
+    if (Projections.useTimeOrderedCursors(spec, clusterSummary)) {
+      final boolean descending = Cursors.getTimeOrdering(spec.getPreferredOrdering()) == Order.DESCENDING;
+      return MergingClusterGroupCursor.makeCursorHolder(
+          holderSuppliers,
+          clusteringColumns,
+          clusteringValuesByGroup,
+          descending,
+          spec.getVirtualColumns(),
+          plan.virtualColumnRemap(),
+          closer
+      );
+    }
+
+    return makeConcatenatedClusteredCursorHolder(
+        spec,
+        plan,
+        this,
+        clusteringColumns,
+        clusteringValuesByGroup,
+        holderSuppliers,
+        clusterSummary,
+        closer
+    );
+  }
+
+  /**
+   * Build the row signature for a clustered segment. Top-level columns are empty, so column types are sourced from:
+   *   - the summary's clustering {@link RowSignature} for clustering columns;
+   *   - the first cluster group's sub-index for everything else (all groups share the same data-column shape).
+   */
+  private RowSignature getClusteredRowSignature(ClusteredValueGroupsBaseTableSchema clusterSummary)
+  {
+    final LinkedHashSet<String> columns = new LinkedHashSet<>();
+
+    for (final OrderBy orderBy : clusterSummary.getOrdering()) {
+      columns.add(orderBy.getColumnName());
+    }
+    columns.add(ColumnHolder.TIME_COLUMN_NAME);
+    columns.addAll(clusterSummary.getColumnNames());
+
+    final RowSignature.Builder builder = RowSignature.builder();
+    for (final String column : columns) {
+      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
+      if (columnType != null) {
+        builder.add(column, columnType);
+      }
+    }
+    return builder.build();
+  }
+
+  private static CursorHolder makeAggregateProjectionCursorHolder(QueryableProjection<QueryableIndex> projection)
+  {
+    return new QueryableIndexCursorHolder(
+        projection.getRowSelector(),
+        projection.getCursorBuildSpec(),
+        QueryableIndexTimeBoundaryInspector.create(projection.getRowSelector())
+    )
+    {
+      @Override
+      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          Offset baseOffset
+      )
+      {
+        return projection.wrapColumnSelectorFactory(
+            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset)
+        );
+      }
+
+      @Override
+      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          VectorOffset baseOffset
+      )
+      {
+        return projection.wrapVectorColumnSelectorFactory(
+            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset)
+        );
+      }
+
+      @Override
+      public boolean isPreAggregated()
+      {
+        return true;
+      }
+
+      @Nullable
+      @Override
+      public List<AggregatorFactory> getAggregatorsForPreAggregated()
+      {
+        return projection.getCursorBuildSpec().getAggregators();
+      }
+    };
+  }
+
+  /**
+   * Builds a {@link CursorHolder} that concatenates cluster group cursors together.
+   */
+  private static CursorHolder makeConcatenatedClusteredCursorHolder(
+      CursorBuildSpec spec,
+      ClusterGroupQueryPlan plan,
+      ColumnInspector inspector,
+      RowSignature clusteringColumns,
+      List<Object[]> clusteringValuesByGroup,
+      List<Supplier<CursorHolder>> holderSuppliers,
+      ClusteredValueGroupsBaseTableSchema clusterSummary,
+      Closer closer
+  )
+  {
     // Initial wrapper state uses the first group's clustering values + a throwing placeholder delegate. The
-    // ConcatenatingCursor immediately calls setDelegate on init (before any selector is exposed). The vector
-    // wrapper carries the query-level max vector size from the build spec, the placeholder delegate can't be
-    // queried for sizing, and the value is constant across groups anyway.
+    // ConcatenatingCursor immediately calls setDelegate on init (before any selector is exposed).
     final int vectorSize = spec.getQueryContext().getVectorSize();
     final ClusteringColumnSelectorFactory wrapperFactory = new ClusteringColumnSelectorFactory(
         ClusteringColumnSelectorFactory.UNINITIALIZED_DELEGATE,
         clusteringColumns,
-        clusteringValuesByGroup.get(0)
+        clusteringValuesByGroup.get(0),
+        spec.getVirtualColumns()
     );
     final ClusteringVectorColumnSelectorFactory vectorWrapperFactory = new ClusteringVectorColumnSelectorFactory(
         UNINITIALIZED_VECTOR_DELEGATE,
         clusteringColumns,
         clusteringValuesByGroup.get(0),
-        vectorSize
+        vectorSize,
+        spec.getVirtualColumns()
     );
 
     final ConcatenatingCursor cursor = new ConcatenatingCursor(
         holderSuppliers,
         clusteringValuesByGroup,
-        wrapperFactory
+        wrapperFactory,
+        plan.virtualColumnRemap()
     );
     final ConcatenatingVectorCursor vectorCursor = new ConcatenatingVectorCursor(
         holderSuppliers,
         clusteringValuesByGroup,
-        vectorWrapperFactory
+        vectorWrapperFactory,
+        plan.virtualColumnRemap()
     );
 
     // each group gets a different rewritten filter, so the conservative thing to do here is require the original query
@@ -284,9 +431,9 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
     // original filter (clustering leaves fold to constant TRUE/FALSE, other leaves pass through unchanged)
     final Filter queryFilter = spec.getFilter();
     final boolean filterCanVectorize =
-        queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(this));
+        queryFilter == null || queryFilter.canVectorizeMatcher(spec.getVirtualColumns().wrapInspector(inspector));
     // we still check that the first holder is vectorizable to make sure all the non-filter parts can be vectorized
-    final boolean canVectorize = filterCanVectorize && holderSuppliers.get(0).get().canVectorize();
+    final boolean canVectorize = filterCanVectorize && holderSuppliers.getFirst().get().canVectorize();
 
     return new CursorHolder()
     {
@@ -321,12 +468,7 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       @Override
       public void close()
       {
-        try {
-          closer.close();
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
   }
@@ -374,68 +516,4 @@ public class QueryableIndexCursorFactory implements ResidentCursorFactory
       return null;
     }
   };
-
-  @Override
-  public RowSignature getRowSignature()
-  {
-    final ClusteredValueGroupsBaseTableSchema clusterSummary = index.getClusteredBaseSummary();
-    if (clusterSummary != null) {
-      return getClusteredRowSignature(clusterSummary);
-    }
-
-    final LinkedHashSet<String> columns = new LinkedHashSet<>();
-
-    for (final OrderBy orderBy : index.getOrdering()) {
-      columns.add(orderBy.getColumnName());
-    }
-
-    // Add __time after the defined ordering, if __time wasn't part of it.
-    columns.add(ColumnHolder.TIME_COLUMN_NAME);
-    columns.addAll(index.getColumnNames());
-
-    final RowSignature.Builder builder = RowSignature.builder();
-    for (final String column : columns) {
-      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
-
-      // index.getOrdering() may include columns that don't exist, such as if they were omitted due to
-      // being 100% nulls. Don't add those to the row signature.
-      if (columnType != null) {
-        builder.add(column, columnType);
-      }
-    }
-
-    return builder.build();
-  }
-
-  /**
-   * Build the row signature for a clustered segment. Top-level columns are empty, so column types are sourced from:
-   *   - the summary's clustering {@link RowSignature} for clustering columns;
-   *   - the first cluster group's sub-index for everything else (all groups share the same data-column shape).
-   */
-  private RowSignature getClusteredRowSignature(ClusteredValueGroupsBaseTableSchema clusterSummary)
-  {
-    final LinkedHashSet<String> columns = new LinkedHashSet<>();
-
-    for (final OrderBy orderBy : clusterSummary.getOrdering()) {
-      columns.add(orderBy.getColumnName());
-    }
-    columns.add(ColumnHolder.TIME_COLUMN_NAME);
-    columns.addAll(clusterSummary.getColumnNames());
-
-    final RowSignature.Builder builder = RowSignature.builder();
-    for (final String column : columns) {
-      final ColumnType columnType = ColumnType.fromCapabilities(index.getColumnCapabilities(column));
-      if (columnType != null) {
-        builder.add(column, columnType);
-      }
-    }
-    return builder.build();
-  }
-
-  @Nullable
-  @Override
-  public ColumnCapabilities getColumnCapabilities(String column)
-  {
-    return index.getColumnCapabilities(column);
-  }
 }

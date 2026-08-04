@@ -1693,6 +1693,7 @@ un
 G1GC
 GroupBys
 QoS-type
+QoS
 DumpSegment
 SegmentMetadata
 __time

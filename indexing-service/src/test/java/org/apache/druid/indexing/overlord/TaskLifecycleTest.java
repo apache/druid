@@ -581,7 +581,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         DirectQueryProcessingPool.INSTANCE, // query executor service
         NoopJoinableFactory.INSTANCE,
         () -> monitorScheduler, // monitor scheduler
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, new DefaultObjectMapper()),
+        SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, new DefaultObjectMapper()),
         MAPPER,
         INDEX_IO,
         MapCache.create(0),
@@ -846,7 +846,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Assert.assertEquals("merged statusCode", TaskState.SUCCESS, status.getStatusCode());
     Assert.assertEquals("num segments published", 3, mdc.getPublished().size());
     Assert.assertEquals("num segments nuked", 3, mdc.getNuked().size());
-    Assert.assertEquals("delete segment batch call count", 2, mdc.getDeleteSegmentsCount());
+    Assert.assertEquals("delete segment batch call count", 1, mdc.getDeleteSegmentsCount());
     Assert.assertTrue(
         "expected unused segments get killed",
         expectedUnusedSegments.containsAll(mdc.getNuked()) && mdc.getNuked().containsAll(

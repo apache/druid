@@ -125,6 +125,11 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.calcite</groupId>
+      <artifactId>calcite-linq4j</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
       <groupId>com.github.wnameless</groupId>
       <artifactId>json-flattener</artifactId>
       <version>0.1.0</version>

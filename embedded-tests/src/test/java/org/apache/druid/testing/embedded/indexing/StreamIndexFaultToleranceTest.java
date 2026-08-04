@@ -26,12 +26,14 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
+import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,7 +55,7 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
   @Override
   protected EmbeddedDruidCluster createCluster()
   {
-    return super.createCluster().useDefaultTimeoutForLatchableEmitter(120);
+    return super.createCluster().useDefaultTimeoutForLatchableEmitter(240);
   }
 
   @BeforeEach
@@ -164,6 +166,15 @@ public abstract class StreamIndexFaultToleranceTest extends StreamIndexTestBase
         event -> event.hasMetricName("ingest/notices/time")
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorSpec.getId())
                       .hasDimension("noticeType", "handoff_task_group_notice")
+    );
+
+    // Wait for the pre-handoff tasks to actually shut down, since otherwise getRunningTaskIds() below can
+    // still observe them as running.
+    final Set<Object> shutDownTaskIds = new HashSet<>(taskIdsBeforeHandoff);
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("task/run/time")
+                      .hasDimensionMatching(DruidMetrics.TASK_ID, Matchers.in(shutDownTaskIds)),
+        agg -> agg.hasCountAtLeast(taskIdsBeforeHandoff.size())
     );
 
     totalRecords += publish1kRecords(topic, useTransactions);

@@ -215,7 +215,7 @@ public class ClientCompactionTaskQuerySerdeTest
                   binder.bind(ChatHandlerProvider.class).toInstance(new ChatHandlerProvider());
                   binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
                   binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
-                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
+                  binder.bind(SegmentCacheManagerFactory.class).toInstance(SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, objectMapper));
                   binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
                   binder.bind(OverlordClient.class).toInstance(new NoopOverlordClient());
                 }
@@ -379,7 +379,7 @@ public class ClientCompactionTaskQuerySerdeTest
   {
     CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
         "datasource",
-        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
+        SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, MAPPER)
     )
         .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
         .tuningConfig(

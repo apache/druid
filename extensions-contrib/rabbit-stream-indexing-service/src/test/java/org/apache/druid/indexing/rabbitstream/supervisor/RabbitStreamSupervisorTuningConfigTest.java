@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateAction;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -59,10 +60,19 @@ public class RabbitStreamSupervisorTuningConfigTest
   {
     final RabbitStreamSupervisorSpec oldSpec = supervisorSpec(tuningConfig(15, 16, 17));
 
-    // requireRestart is invoked on the running (old) spec with the proposed spec as argument.
-    Assert.assertTrue(oldSpec.requireRestart(supervisorSpec(tuningConfig(20, 16, 17))));
-    Assert.assertTrue(oldSpec.requireRestart(supervisorSpec(tuningConfig(15, 20, 17))));
-    Assert.assertTrue(oldSpec.requireRestart(supervisorSpec(tuningConfig(15, 16, 20))));
+    // getActionOnUpdateTo is invoked on the running (old) spec with the proposed spec as argument.
+    Assert.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        oldSpec.getActionOnUpdateTo(supervisorSpec(tuningConfig(20, 16, 17)))
+    );
+    Assert.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        oldSpec.getActionOnUpdateTo(supervisorSpec(tuningConfig(15, 20, 17)))
+    );
+    Assert.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        oldSpec.getActionOnUpdateTo(supervisorSpec(tuningConfig(15, 16, 20)))
+    );
   }
 
   @Test

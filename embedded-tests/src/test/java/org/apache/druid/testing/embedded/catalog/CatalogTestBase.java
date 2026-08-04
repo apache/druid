@@ -48,6 +48,7 @@ public abstract class CatalogTestBase extends EmbeddedClusterTestBase
   private final EmbeddedIndexer indexer = new EmbeddedIndexer()
       .setServerMemory(1_000_000_000)
       .addProperty("druid.worker.capacity", "2");
+  protected final EmbeddedHistorical historical = new EmbeddedHistorical();
 
   @Override
   protected EmbeddedDruidCluster createCluster()
@@ -58,11 +59,13 @@ public abstract class CatalogTestBase extends EmbeddedClusterTestBase
                                    CatalogClientModule.class,
                                    CatalogCoordinatorModule.class
                                )
+                               // clustered base table segments require the V10 format
+                               .addCommonProperty("druid.indexer.task.buildV10", "true")
                                .addServer(overlord)
                                .addServer(coordinator)
                                .addServer(broker)
                                .addServer(indexer)
-                               .addServer(new EmbeddedHistorical());
+                               .addServer(historical);
   }
 
   void verifySubmitSqlTaskFailsWith400BadRequest(String sql, String expectedMessageSubstring)

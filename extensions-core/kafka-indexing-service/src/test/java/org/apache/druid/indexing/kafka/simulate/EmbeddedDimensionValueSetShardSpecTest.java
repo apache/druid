@@ -31,7 +31,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
-import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
+import org.apache.druid.indexing.seekablestream.DimensionValueSetPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -212,7 +212,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
             t -> t.withMaxRowsPerSegment(1)
                   .withReleaseLocksOnHandoff(true)
                   // Track both a string dimension and a numeric dimension
-                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT, colRegionCode)))
+                  .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT, colRegionCode)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -319,7 +319,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         .withTuningConfig(
             t -> t.withMaxRowsPerSegment(1000)
                   .withReleaseLocksOnHandoff(true)
-                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(colCode)))
+                  .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(colCode)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -374,8 +374,14 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     // stamped value set contains the queried code.
     assertScan("2", Set.of(day1), "SELECT COUNT(*) FROM %s WHERE %s = 1", dataSource, colCode);
     assertScan("2", Set.of(day3), "SELECT COUNT(*) FROM %s WHERE %s = 3", dataSource, colCode);
-    // A non-existent code is a full prune: zero rows and zero segments scanned.
-    assertScan("0", Set.of(), "SELECT COUNT(*) FROM %s WHERE %s = 999", dataSource, colCode);
+    // A non-existent code is a full prune: zero rows and zero segments reach the historical. A fully-pruned query
+    // contacts no segment and so emits no per-segment query/time event to fence on; verify it via the sentinel fence
+    // (a deterministic non-empty scan) rather than a bare waitForEvent, which would race a prior query's event.
+    assertFullPruneWithSentinel(
+        StringUtils.format("SELECT COUNT(*) FROM %s WHERE %s = 999", dataSource, colCode),
+        StringUtils.format("SELECT COUNT(*) FROM %s WHERE %s = 3", dataSource, colCode),
+        Set.of(day3)
+    );
 
     // Strict correctness: the RIGHT rows survive, not just the right count.
     assertValues(Set.of("val_0", "val_1"), "SELECT \"%s\" FROM %s WHERE %s = 1", COL_VALUE, dataSource, colCode);
@@ -421,7 +427,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
                 .withMaxRowsPerSegment(100_000)
                 // Long enough that time-based persist/push doesn't fire during the test
                 .withIntermediatePersistPeriod(Period.hours(1))
-                .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT)))
+                .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -573,7 +579,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         .withTuningConfig(
             t -> t.withMaxRowsPerSegment(1000)
                   .withReleaseLocksOnHandoff(true)
-                  .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT, colRegion), 2))
+                  .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT, colRegion), 2))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -1069,7 +1075,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
             tuningConfig -> tuningConfig
                 .withMaxRowsPerSegment(1)
                 .withReleaseLocksOnHandoff(true)
-                .withStreamingPartitionsSpec(new StreamingPartitionsSpec(List.of(COL_TENANT)))
+                .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(COL_TENANT)))
         )
         .withIoConfig(
             ioConfig -> ioConfig
@@ -1106,7 +1112,7 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
         .withTuningConfig(t -> {
           t.withMaxRowsPerSegment(1000).withReleaseLocksOnHandoff(true);
           if (!partitionFilterDims.isEmpty()) {
-            t.withStreamingPartitionsSpec(new StreamingPartitionsSpec(partitionFilterDims));
+            t.withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(partitionFilterDims));
           }
         })
         .withIoConfig(

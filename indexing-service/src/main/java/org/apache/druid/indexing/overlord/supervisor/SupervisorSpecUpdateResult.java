@@ -25,17 +25,17 @@ package org.apache.druid.indexing.overlord.supervisor;
 public final class SupervisorSpecUpdateResult
 {
   private final boolean modified;
-  private final boolean restarted;
+  private final SupervisorSpecUpdateAction action;
 
-  private SupervisorSpecUpdateResult(final boolean modified, final boolean restarted)
+  private SupervisorSpecUpdateResult(final boolean modified, final SupervisorSpecUpdateAction action)
   {
     this.modified = modified;
-    this.restarted = restarted;
+    this.action = action;
   }
 
-  public static SupervisorSpecUpdateResult of(final boolean modified, final boolean restarted)
+  public static SupervisorSpecUpdateResult of(final boolean modified, final SupervisorSpecUpdateAction action)
   {
-    return new SupervisorSpecUpdateResult(modified, restarted);
+    return new SupervisorSpecUpdateResult(modified, action);
   }
 
   public boolean isModified()
@@ -45,6 +45,7 @@ public final class SupervisorSpecUpdateResult
 
   public boolean isRestarted()
   {
-    return restarted;
+    return action != SupervisorSpecUpdateAction.NONE;
   }
+
 }

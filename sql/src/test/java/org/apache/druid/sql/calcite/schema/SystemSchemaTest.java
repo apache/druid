@@ -36,6 +36,7 @@ import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Table;
@@ -608,6 +609,88 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
+  public void testSegmentsTableGetDataSourceFilter()
+  {
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final RexLiteral foo = (RexLiteral) rexBuilder.makeLiteral("foo");
+    final RexLiteral bar = (RexLiteral) rexBuilder.makeLiteral("bar");
+    final RexLiteral baz = (RexLiteral) rexBuilder.makeLiteral("baz");
+    // Match the input-ref type to the literal type so Calcite does not wrap the literal in a CAST.
+    // "datasource" is column index 1, "size" is column index 4 in SEGMENTS_SIGNATURE.
+    final RexNode dsRef = rexBuilder.makeInputRef(foo.getType(), 1);
+    final RexNode sizeRef = rexBuilder.makeInputRef(foo.getType(), 4);
+
+    // datasource = 'foo'
+    Assert.assertEquals(
+        ImmutableSet.of("foo"),
+        SegmentsTable.getDataSourceFilter(ImmutableList.of(
+            rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, dsRef, foo)))
+    );
+    // 'foo' = datasource (reversed operands)
+    Assert.assertEquals(
+        ImmutableSet.of("foo"),
+        SegmentsTable.getDataSourceFilter(ImmutableList.of(
+            rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, foo, dsRef)))
+    );
+    // datasource IN ('foo', 'bar')
+    Assert.assertEquals(
+        ImmutableSet.of("foo", "bar"),
+        SegmentsTable.getDataSourceFilter(ImmutableList.of(
+            rexBuilder.makeIn(dsRef, ImmutableList.of(foo, bar))))
+    );
+    // datasource = 'foo' OR datasource = 'bar'
+    Assert.assertEquals(
+        ImmutableSet.of("foo", "bar"),
+        SegmentsTable.getDataSourceFilter(ImmutableList.of(
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.OR,
+                rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, dsRef, foo),
+                rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, dsRef, bar))))
+    );
+    // ANDed conjuncts intersect: IN ('foo','bar') AND IN ('bar','baz') => {'bar'}
+    Assert.assertEquals(
+        ImmutableSet.of("bar"),
+        SegmentsTable.getDataSourceFilter(ImmutableList.of(
+            rexBuilder.makeIn(dsRef, ImmutableList.of(foo, bar)),
+            rexBuilder.makeIn(dsRef, ImmutableList.of(bar, baz))))
+    );
+    // No filters => null (full scan retained)
+    Assert.assertNull(SegmentsTable.getDataSourceFilter(ImmutableList.of()));
+    // Range predicate on datasource cannot bound the scan => null
+    Assert.assertNull(SegmentsTable.getDataSourceFilter(ImmutableList.of(
+        rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN, dsRef, foo))));
+    // Equality on a non-datasource column => null
+    Assert.assertNull(SegmentsTable.getDataSourceFilter(ImmutableList.of(
+        rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, sizeRef, foo))));
+
+    // Compound predicate passed as a single AND(...) RexCall (as Calcite's filter-scan rule may do):
+    // datasource = 'foo' AND <non-datasource predicate> => {foo} (the non-datasource conjunct is ignored)
+    Assert.assertEquals(
+        ImmutableSet.of("foo"),
+        SegmentsTable.getDataSourceFilter(ImmutableList.of(
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.AND,
+                rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, dsRef, foo),
+                rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, sizeRef, foo))))
+    );
+    // AND of two datasource constraints intersects: IN ('foo','bar') AND IN ('bar','baz') => {'bar'}
+    Assert.assertEquals(
+        ImmutableSet.of("bar"),
+        SegmentsTable.getDataSourceFilter(ImmutableList.of(
+            rexBuilder.makeCall(
+                SqlStdOperatorTable.AND,
+                rexBuilder.makeIn(dsRef, ImmutableList.of(foo, bar)),
+                rexBuilder.makeIn(dsRef, ImmutableList.of(bar, baz)))))
+    );
+    // AND with no datasource conjunct => null (full scan retained)
+    Assert.assertNull(SegmentsTable.getDataSourceFilter(ImmutableList.of(
+        rexBuilder.makeCall(
+            SqlStdOperatorTable.AND,
+            rexBuilder.makeCall(SqlStdOperatorTable.EQUALS, sizeRef, foo),
+            rexBuilder.makeCall(SqlStdOperatorTable.GREATER_THAN, sizeRef, foo)))));
+  }
+
+  @Test
   public void testSegmentsTable() throws Exception
   {
     final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, MAPPER, authMapper);
@@ -619,7 +702,7 @@ public class SystemSchemaTest extends CalciteTestBase
         new SegmentStatusInCluster(segment2, false, 0, null, false)
     ));
 
-    EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);
@@ -739,7 +822,7 @@ public class SystemSchemaTest extends CalciteTestBase
         new SegmentStatusInCluster(segment2, false, 0, null, false)
     ));
 
-    EasyMock.expect(metadataView.getSegments()).andReturn(publishedSegments.iterator()).once();
+    EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
     DataContext dataContext = createDataContext(Users.SUPER);
@@ -1798,6 +1881,46 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertEquals("localhost:8081", rows.get(0)[0]);
     Assert.assertEquals("druid.key", rows.get(0)[3]);
     Assert.assertEquals("val", rows.get(0)[4]);
+
+    EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
+  }
+
+  @Test
+  public void testPropertiesTable_filterPushdownInFilter()
+  {
+    SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
+        druidNodeDiscoveryProvider,
+        authMapper,
+        httpClient,
+        MAPPER
+    );
+
+    mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
+
+    // server IN ('localhost:8081', 'nonexistent:9999') — only coordinator (8081) matches, so exactly
+    // one node is fetched. A single HTTP call proves the IN predicate is pushed down (pre-refactor the
+    // SEARCH form was not extracted and both nodes would have been fetched).
+    HttpResponse resp = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
+    StringFullResponseHolder holder = new StringFullResponseHolder(resp, StandardCharsets.UTF_8);
+    holder.addChunk("{\"druid.key\": \"val\"}");
+    EasyMock.expect(
+        httpClient.go(EasyMock.isA(Request.class), EasyMock.isA(StringFullResponseHandler.class))
+    ).andReturn(Futures.immediateFuture(holder)).once();
+
+    EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
+
+    final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
+    final RelDataType rowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
+    final RexNode serverIn = rexBuilder.makeIn(
+        rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX),
+        ImmutableList.of(rexBuilder.makeLiteral("localhost:8081"), rexBuilder.makeLiteral("nonexistent:9999"))
+    );
+
+    final List<Object[]> rows =
+        propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(serverIn), null).toList();
+
+    Assert.assertEquals(1, rows.size());
+    Assert.assertEquals("localhost:8081", rows.get(0)[0]);
 
     EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
   }

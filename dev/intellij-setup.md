@@ -23,9 +23,9 @@ setups of Druid.
 
 ## Project SDK
 
-Druid requires JDK 21 or JDK 25. Add a supported JDK using
+Druid requires JDK 25. Add a supported JDK using
 `File` -> `Project Structure...` -> `Platform Settings` -> `SDKs`. The SDK name can reflect the JDK distribution and
-version, such as `zulu-21`.
+version, such as `zulu-25`.
 
 ![IntelliJ SDK configuration](intellij-sdk-config.png)
 

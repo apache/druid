@@ -187,7 +187,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
     lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
     lockbox.syncFromStorage();
-    segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
+    segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();
     taskActionToolbox = createTaskActionToolbox();
@@ -376,7 +376,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     private final SegmentSchemaMapping segmentSchemaMapping
         = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
-    private TestLocalTaskActionClient(Task task)
+    public TestLocalTaskActionClient(Task task)
     {
       super(task, taskStorage, getTaskActionToolbox());
     }
