@@ -64,6 +64,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -181,7 +182,7 @@ public class SingleTaskBackgroundRunnerTest
             .build()
             .getRunner(runner);
 
-    Assert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
+    MatcherAssert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
   }
 
   @Test

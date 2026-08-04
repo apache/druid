@@ -43,6 +43,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -455,14 +456,14 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
 
     for (StringTuple value : values) {
       if (start != null) {
-        Assert.assertThat(value.compareTo(start), Matchers.greaterThanOrEqualTo(0));
+        MatcherAssert.assertThat(value.compareTo(start), Matchers.greaterThanOrEqualTo(0));
       }
 
       if (end != null) {
         if (value == null) {
           Assert.assertNull("null values should be in first partition", start);
         } else {
-          Assert.assertThat(value.compareTo(end), Matchers.lessThan(0));
+          MatcherAssert.assertThat(value.compareTo(end), Matchers.lessThan(0));
         }
       }
     }
