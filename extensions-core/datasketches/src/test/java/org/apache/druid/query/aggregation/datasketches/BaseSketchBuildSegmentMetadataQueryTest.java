@@ -64,7 +64,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -466,7 +465,7 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     return results.get(0).getColumns().get(columnName);
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
+  private static File newFolder(File root, String... subDirs)
   {
     return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs) + "-");
   }
