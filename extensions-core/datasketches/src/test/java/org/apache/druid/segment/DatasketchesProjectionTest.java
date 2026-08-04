@@ -45,6 +45,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchBuildAggregatorFactory;
@@ -71,13 +72,13 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -91,10 +92,10 @@ import java.util.stream.Collectors;
 /**
  * like {@link CursorFactoryProjectionTest} but for sketch aggs
  */
-@RunWith(Parameterized.class)
 public class DatasketchesProjectionTest extends InitializedNullHandlingTest
 {
   private static final Closer CLOSER = Closer.create();
+  private static final Logger LOG = new Logger(DatasketchesProjectionTest.class);
 
   private static final List<AggregateProjectionSpec> PROJECTIONS = Collections.singletonList(
       AggregateProjectionSpec.builder("a_projection")
@@ -135,7 +136,6 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
                                                 .build()
                  ).collect(Collectors.toList());
 
-  @Parameterized.Parameters(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
   public static Collection<?> constructorFeeder()
   {
     HllSketchModule.registerSerde();
@@ -211,7 +211,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException
   {
     CLOSER.close();
@@ -234,19 +234,24 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
                        .rows(CursorFactoryProjectionTest.ROWS);
   }
 
-  public final CursorFactory projectionsCursorFactory;
-  public final TimeBoundaryInspector projectionsTimeBoundaryInspector;
+  public CursorFactory projectionsCursorFactory;
+  public TimeBoundaryInspector projectionsTimeBoundaryInspector;
 
-  private final GroupingEngine groupingEngine;
+  private GroupingEngine groupingEngine;
 
-  private final NonBlockingPool<ByteBuffer> nonBlockingPool;
-  public final boolean sortByDim;
-  public final boolean autoSchema;
+  private NonBlockingPool<ByteBuffer> nonBlockingPool;
+  public boolean sortByDim;
+  public boolean autoSchema;
 
-  @Rule
-  public final CloserRule closer = new CloserRule(false);
+  private final Closer closer = Closer.create();
 
-  public DatasketchesProjectionTest(
+  @AfterEach
+  public void cleanupResources() throws IOException
+  {
+    closer.close();
+  }
+
+  public void initDatasketchesProjectionTest(
       String name,
       CursorFactory projectionsCursorFactory,
       TimeBoundaryInspector projectionsTimeBoundaryInspector,
@@ -258,7 +263,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
     this.projectionsTimeBoundaryInspector = projectionsTimeBoundaryInspector;
     this.sortByDim = sortByDim;
     this.autoSchema = autoSchema;
-    this.nonBlockingPool = closer.closeLater(
+    this.nonBlockingPool = closeLater(
         new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(1 << 24)
@@ -268,7 +273,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         new DruidProcessingConfig(),
         GroupByQueryConfig::new,
         new GroupByResourcesReservationPool(
-            closer.closeLater(
+            closeLater(
                 new CloseableDefaultBlockingPool<>(
                     () -> ByteBuffer.allocate(1 << 24),
                     5
@@ -284,9 +289,26 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testProjectionSingleDim()
+  private <T extends Closeable> T closeLater(final T closeable)
   {
+    closer.register(
+        () -> {
+          try {
+            closeable.close();
+          }
+          catch (IOException e) {
+            LOG.warn(e, "Error closing [%s]", closeable);
+          }
+        }
+    );
+    return closeable;
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
+  public void testProjectionSingleDim(String name,CursorFactory projectionsCursorFactory,TimeBoundaryInspector projectionsTimeBoundaryInspector,boolean sortByDim,boolean autoSchema)
+  {
+    initDatasketchesProjectionTest(name, projectionsCursorFactory, projectionsTimeBoundaryInspector, sortByDim, autoSchema);
     // test can use the single dimension projection
     final GroupByQuery query =
         GroupByQuery.builder()
@@ -310,7 +332,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         rowCount++;
         cursor.advance();
       }
-      Assert.assertEquals(3, rowCount);
+      Assertions.assertEquals(3, rowCount);
     }
     final Sequence<ResultRow> resultRows = groupingEngine.process(
         query,
@@ -320,7 +342,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         null
     );
     final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
+    Assertions.assertEquals(2, results.size());
     List<Object[]> expectedResults = getSingleDimExpected();
     final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.NO);
     for (int i = 0; i < expectedResults.size(); i++) {
@@ -332,9 +354,11 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
     }
   }
 
-  @Test
-  public void testProjectionSingleDimNoProjections()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
+  public void testProjectionSingleDimNoProjections(String name,CursorFactory projectionsCursorFactory,TimeBoundaryInspector projectionsTimeBoundaryInspector,boolean sortByDim,boolean autoSchema)
   {
+    initDatasketchesProjectionTest(name, projectionsCursorFactory, projectionsTimeBoundaryInspector, sortByDim, autoSchema);
     // test can use the single dimension projection
     final GroupByQuery query =
         GroupByQuery.builder()
@@ -359,7 +383,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         rowCount++;
         cursor.advance();
       }
-      Assert.assertEquals(8, rowCount);
+      Assertions.assertEquals(8, rowCount);
     }
     final Sequence<ResultRow> resultRows = groupingEngine.process(
         query,
@@ -369,7 +393,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
         null
     );
     final List<ResultRow> results = resultRows.toList();
-    Assert.assertEquals(2, results.size());
+    Assertions.assertEquals(2, results.size());
     List<Object[]> expectedResults = getSingleDimExpected();
     final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.NO);
     for (int i = 0; i < expectedResults.size(); i++) {
@@ -443,54 +467,54 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
 
   private void assertResults(Object[] expected, Object[] actual, RowSignature signature)
   {
-    Assert.assertEquals(expected.length, actual.length);
+    Assertions.assertEquals(expected.length, actual.length);
     for (int i = 0; i < expected.length; i++) {
       if (signature.getColumnType(i).get().equals(ColumnType.ofComplex(HllSketchModule.BUILD_TYPE_NAME))) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((HllSketchHolder) expected[i]).getEstimate(),
             ((HllSketchHolder) actual[i]).getEstimate(),
             0.01
         );
       } else if (signature.getColumnType(i).get().equals(DoublesSketchModule.TYPE)) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((DoublesSketch) expected[i]).getMinItem(),
             ((DoublesSketch) actual[i]).getMinItem(),
             0.01
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((DoublesSketch) expected[i]).getMaxItem(),
             ((DoublesSketch) actual[i]).getMaxItem(),
             0.01
         );
       } else if (signature.getColumnType(i).get().equals(ArrayOfDoublesSketchModule.BUILD_TYPE)) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((ArrayOfDoublesSketch) expected[i]).getEstimate(),
             ((ArrayOfDoublesSketch) actual[i]).getEstimate(),
             0.01
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((ArrayOfDoublesSketch) expected[i]).getLowerBound(0),
             ((ArrayOfDoublesSketch) actual[i]).getLowerBound(0),
             0.01
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((ArrayOfDoublesSketch) expected[i]).getUpperBound(0),
             ((ArrayOfDoublesSketch) actual[i]).getUpperBound(0),
             0.01
         );
       } else if (signature.getColumnType(i).get().equals(KllSketchModule.DOUBLES_TYPE)) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((KllDoublesSketch) expected[i]).getMinItem(),
             ((KllDoublesSketch) actual[i]).getMinItem(),
             0.01
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ((KllDoublesSketch) expected[i]).getMaxItem(),
             ((KllDoublesSketch) actual[i]).getMaxItem(),
             0.01
         );
       } else {
-        Assert.assertEquals(expected[i], actual[i]);
+        Assertions.assertEquals(expected[i], actual[i]);
       }
     }
   }
