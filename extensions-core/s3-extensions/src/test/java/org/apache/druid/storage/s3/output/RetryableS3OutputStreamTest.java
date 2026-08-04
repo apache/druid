@@ -19,9 +19,9 @@
 
 package org.apache.druid.storage.s3.output;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidProcessingConfigTest;
@@ -49,7 +49,6 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;

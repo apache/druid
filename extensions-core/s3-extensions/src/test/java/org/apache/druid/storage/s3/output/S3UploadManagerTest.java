@@ -39,7 +39,6 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
