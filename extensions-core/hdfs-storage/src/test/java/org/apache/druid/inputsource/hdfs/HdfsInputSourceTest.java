@@ -104,18 +104,19 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void testConstructorAllowsOnlyDefaultProtocol()
     {
-      Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
-        HdfsInputSource.builder()
-            .paths(PATH + "*")
-            .configuration(CONFIGURATION)
-            .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
-            .build();
+      HdfsInputSource.builder()
+          .paths(PATH + "*")
+          .configuration(CONFIGURATION)
+          .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+          .build();
+
+      Throwable exception = assertThrows(IllegalArgumentException.class, () ->
         HdfsInputSource.builder()
             .paths("file:/foo/bar*")
             .configuration(CONFIGURATION)
             .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
-            .build();
-      });
+            .build()
+      );
       assertTrue(exception.getMessage().contains("Only [hdfs] protocols are allowed"));
     }
 

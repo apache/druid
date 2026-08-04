@@ -389,44 +389,43 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testNoStorageDirectory()
+  public void testNoStorageDirectory() throws Exception
   {
-    Throwable exception = assertThrows(IllegalStateException.class, () -> {
-      Configuration config = new Configuration();
-      HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
-          config,
-          new HdfsDataSegmentPusherConfig()
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
           {
-            @Override
-            public String getStorageDirectory()
-            {
-              return "";
-            }
+            return "";
           }
-      );
+        }
+    );
 
-      FileSystem fs = FileSystem.get(config);
-      Path dataSourceDir = new Path("/tmp/dataSourceNew");
+    FileSystem fs = FileSystem.get(config);
+    Path dataSourceDir = new Path("/tmp/dataSourceNew");
 
-      Path interval1Dir = new Path(dataSourceDir, "intervalNew");
-      Path version11Dir = new Path(interval1Dir, "v1");
+    Path interval1Dir = new Path(dataSourceDir, "intervalNew");
+    Path version11Dir = new Path(interval1Dir, "v1");
 
-      Assertions.assertTrue(fs.mkdirs(version11Dir));
-      fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_index.zip", 3)));
+    Assertions.assertTrue(fs.mkdirs(version11Dir));
+    fs.createNewFile(new Path(version11Dir, StringUtils.format("%s_index.zip", 3)));
 
-      // 'kill' should work even if storageDirectory is not set.
-      killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.zip").toString()));
+    // 'kill' should work even if storageDirectory is not set.
+    killer.kill(getSegmentWithPath(new Path(version11Dir, "3_index.zip").toString()));
 
-      // Verify the segment no longer exists, but that its datasource directory does.
-      // Then delete its datasource directory.
-      Assertions.assertFalse(fs.exists(version11Dir));
-      Assertions.assertFalse(fs.exists(interval1Dir));
-      Assertions.assertTrue(fs.exists(dataSourceDir));
-      Assertions.assertTrue(fs.exists(new Path("/tmp")));
-      Assertions.assertTrue(fs.exists(dataSourceDir));
-      Assertions.assertTrue(fs.delete(dataSourceDir, false));
-      killer.killAll();
-    });
+    // Verify the segment no longer exists, but that its datasource directory does.
+    // Then delete its datasource directory.
+    Assertions.assertFalse(fs.exists(version11Dir));
+    Assertions.assertFalse(fs.exists(interval1Dir));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.exists(new Path("/tmp")));
+    Assertions.assertTrue(fs.exists(dataSourceDir));
+    Assertions.assertTrue(fs.delete(dataSourceDir, false));
+
+    Throwable exception = assertThrows(IllegalStateException.class, killer::killAll);
     assertTrue(exception.getMessage().contains("Cannot delete all segment files since druid.storage.storageDirectory is not set"));
   }
 

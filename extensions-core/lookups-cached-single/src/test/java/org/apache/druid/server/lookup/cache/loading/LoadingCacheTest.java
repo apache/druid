@@ -59,6 +59,7 @@ public class LoadingCacheTest
   public void tearDown()
   {
     loadingCache.invalidateAll();
+    loadingCache.close();
   }
 
   @MethodSource("inputData")
