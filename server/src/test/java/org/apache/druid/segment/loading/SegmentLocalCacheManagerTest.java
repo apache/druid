@@ -919,6 +919,37 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testAcquireExistingSegmentDroppedBeforeSupplierRunsReportsAbsent() throws Exception
+  {
+    final DataSegment segmentToLoad = makeTestDataSegment(segmentDeepStorageDir);
+    final File localSegmentFile = new File(segmentDeepStorageDir, TEST_DATA_RELATIVE_PATH);
+    makeSegmentZip(
+        localSegmentFile,
+        new File(segmentDeepStorageDir.getCanonicalPath() + "/" + TEST_DATA_RELATIVE_PATH + "/index.zip")
+    );
+
+    manager.load(segmentToLoad);
+    Assert.assertTrue("segment should be cached (static, mounted) after load", manager.isSegmentCached(segmentToLoad));
+
+    // Take the already-loaded fast path, but do NOT invoke the supplier yet (getSegmentFuture() is what runs it).
+    final AcquireSegmentAction action = manager.acquireSegment(segmentToLoad, AcquireMode.FULL);
+
+    // Drop the segment: for a static entry release() unmounts it immediately, nulling referenceProvider out from
+    // under the still-outstanding (no-op) hold.
+    manager.drop(segmentToLoad);
+
+    // Invoking the supplier now must not NPE; the segment is reported absent (empty) instead.
+    final AcquireSegmentResult result = action.getSegmentFuture().get();
+    Assert.assertNotNull("reference provider must never be null", result.getReferenceProvider());
+    Assert.assertFalse(
+        "a segment dropped before the supplier ran should be reported absent",
+        result.getReferenceProvider().acquireReference().isPresent()
+    );
+
+    action.close();
+  }
+
+  @Test
   public void testVirtualStorageRejectsNonPositiveLoadThreads()
   {
     final StorageLocationConfig locationConfig = new StorageLocationConfig(localSegmentCacheDir, 10000L, null);
