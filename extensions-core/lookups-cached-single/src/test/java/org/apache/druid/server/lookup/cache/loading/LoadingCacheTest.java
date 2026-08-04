@@ -22,12 +22,10 @@ package org.apache.druid.server.lookup.cache.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -36,12 +34,10 @@ import java.util.Collections;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
-@RunWith(Parameterized.class)
 public class LoadingCacheTest
 {
   private static final ImmutableMap IMMUTABLE_MAP = ImmutableMap.of("key", "value");
 
-  @Parameterized.Parameters
   public static Collection<Object[]> inputData()
   {
     return Arrays.asList(new Object[][]{
@@ -50,42 +46,43 @@ public class LoadingCacheTest
     });
   }
 
-  private final LoadingCache loadingCache;
+  private LoadingCache loadingCache;
 
-  public LoadingCacheTest(LoadingCache loadingCache)
+  private void initLoadingCacheTest(LoadingCache loadingCache)
   {
     this.loadingCache = loadingCache;
-  }
-
-  @Before
-  public void setUp()
-  {
-    Assert.assertFalse(loadingCache.isClosed());
+    Assertions.assertFalse(loadingCache.isClosed());
     loadingCache.putAll(IMMUTABLE_MAP);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     loadingCache.invalidateAll();
   }
 
-  @Test
-  public void testGetIfPresent()
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testGetIfPresent(LoadingCache loadingCache)
   {
-    Assert.assertNull(loadingCache.getIfPresent("not there"));
-    Assert.assertEquals(IMMUTABLE_MAP.get("key"), loadingCache.getIfPresent("key"));
+    initLoadingCacheTest(loadingCache);
+    Assertions.assertNull(loadingCache.getIfPresent("not there"));
+    Assertions.assertEquals(IMMUTABLE_MAP.get("key"), loadingCache.getIfPresent("key"));
   }
 
-  @Test
-  public void testGetAllPresent()
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testGetAllPresent(LoadingCache loadingCache)
   {
-    Assert.assertEquals(IMMUTABLE_MAP, loadingCache.getAllPresent(IMMUTABLE_MAP.keySet()));
+    initLoadingCacheTest(loadingCache);
+    Assertions.assertEquals(IMMUTABLE_MAP, loadingCache.getAllPresent(IMMUTABLE_MAP.keySet()));
   }
 
-  @Test
-  public void testPut() throws ExecutionException
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testPut(LoadingCache loadingCache) throws ExecutionException
   {
+    initLoadingCacheTest(loadingCache);
     loadingCache.get("key2", new Callable()
     {
       @Override
@@ -94,12 +91,14 @@ public class LoadingCacheTest
         return "value2";
       }
     });
-    Assert.assertEquals("value2", loadingCache.getIfPresent("key2"));
+    Assertions.assertEquals("value2", loadingCache.getIfPresent("key2"));
   }
 
-  @Test
-  public void testInvalidate() throws ExecutionException
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testInvalidate(LoadingCache loadingCache) throws ExecutionException
   {
+    initLoadingCacheTest(loadingCache);
     loadingCache.get("key2", new Callable()
     {
       @Override
@@ -108,14 +107,16 @@ public class LoadingCacheTest
         return "value2";
       }
     });
-    Assert.assertEquals("value2", loadingCache.getIfPresent("key2"));
+    Assertions.assertEquals("value2", loadingCache.getIfPresent("key2"));
     loadingCache.invalidate("key2");
-    Assert.assertEquals(null, loadingCache.getIfPresent("key2"));
+    Assertions.assertEquals(null, loadingCache.getIfPresent("key2"));
   }
 
-  @Test
-  public void testInvalidateAll() throws ExecutionException
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testInvalidateAll(LoadingCache loadingCache) throws ExecutionException
   {
+    initLoadingCacheTest(loadingCache);
     loadingCache.get("key2", new Callable()
     {
       @Override
@@ -124,14 +125,16 @@ public class LoadingCacheTest
         return "value2";
       }
     });
-    Assert.assertEquals("value2", loadingCache.getIfPresent("key2"));
+    Assertions.assertEquals("value2", loadingCache.getIfPresent("key2"));
     loadingCache.invalidateAll(Collections.singletonList("key2"));
-    Assert.assertEquals(null, loadingCache.getIfPresent("key2"));
+    Assertions.assertEquals(null, loadingCache.getIfPresent("key2"));
   }
 
-  @Test
-  public void testInvalidateAll1() throws ExecutionException
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testInvalidateAll1(LoadingCache loadingCache) throws ExecutionException
   {
+    initLoadingCacheTest(loadingCache);
     loadingCache.invalidateAll();
     loadingCache.get("key2", new Callable()
     {
@@ -141,27 +144,33 @@ public class LoadingCacheTest
         return "value2";
       }
     });
-    Assert.assertEquals(loadingCache.getAllPresent(IMMUTABLE_MAP.keySet()), Collections.emptyMap());
+    Assertions.assertEquals(loadingCache.getAllPresent(IMMUTABLE_MAP.keySet()), Collections.emptyMap());
   }
 
-  @Test
-  public void testGetStats()
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testGetStats(LoadingCache loadingCache)
   {
-    Assert.assertTrue(loadingCache.getStats() != null && loadingCache.getStats() instanceof LookupCacheStats);
+    initLoadingCacheTest(loadingCache);
+    Assertions.assertTrue(loadingCache.getStats() != null && loadingCache.getStats() instanceof LookupCacheStats);
   }
 
-  @Test
-  public void testIsClosed()
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testIsClosed(LoadingCache loadingCache)
   {
-    Assert.assertFalse(loadingCache.isClosed());
+    initLoadingCacheTest(loadingCache);
+    Assertions.assertFalse(loadingCache.isClosed());
   }
 
-  @Test
-  public void testSerDeser() throws IOException
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testSerDeser(LoadingCache loadingCache) throws IOException
   {
+    initLoadingCacheTest(loadingCache);
     ObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals(loadingCache, mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)));
-    Assert.assertEquals(loadingCache.hashCode(), mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)).hashCode());
+    Assertions.assertEquals(loadingCache, mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)));
+    Assertions.assertEquals(loadingCache.hashCode(), mapper.readerFor(LoadingCache.class).readValue(mapper.writeValueAsString(loadingCache)).hashCode());
   }
 
 }

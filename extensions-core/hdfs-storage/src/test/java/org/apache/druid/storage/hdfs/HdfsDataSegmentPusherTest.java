@@ -44,12 +44,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -57,6 +55,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.regex.Pattern;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  */
@@ -72,15 +73,12 @@ public class HdfsDataSegmentPusherTest
     objectMapper.setInjectableValues(injectableValues);
   }
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  public File tempFolder;
 
   private HdfsDataSegmentPusher hdfsDataSegmentPusher;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     HdfsDataSegmentPusherConfig hdfsDataSegmentPusherConf = new HdfsDataSegmentPusherConfig();
@@ -95,14 +93,14 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void testPushWithBadScheme() throws Exception
-  {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("No FileSystem for scheme");
-    testUsingScheme("xyzzy");
+  public void testPushWithBadScheme() {
+    Throwable exception = assertThrows(RuntimeException.class, () -> {
+      testUsingScheme("xyzzy");
 
-    // Not reached
-    Assert.assertTrue(false);
+      // Not reached
+      Assertions.assertTrue(false);
+    });
+    assertTrue(exception.getMessage().contains("No FileSystem for scheme"));
   }
 
   @Test
@@ -124,7 +122,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = tempFolder.newFolder();
+    File segmentDir = newFolder(tempFolder);
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -132,7 +130,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = tempFolder.newFolder();
+    final File storageDirectory = newFolder(tempFolder);
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
@@ -153,9 +151,9 @@ public class HdfsDataSegmentPusherTest
 
     Pattern pattern =
         Pattern.compile(".*/foo/20150101T000000\\.000Z_20160101T000000\\.000Z/0/0_[A-Za-z0-9-]{36}_index\\.zip");
-    Assert.assertTrue(
-        segment.getLoadSpec().get("path").toString(),
-        pattern.matcher(segment.getLoadSpec().get("path").toString()).matches()
+    Assertions.assertTrue(
+        pattern.matcher(segment.getLoadSpec().get("path").toString()).matches(),
+        segment.getLoadSpec().get("path").toString()
     );
   }
 
@@ -165,7 +163,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = tempFolder.newFolder();
+    File segmentDir = newFolder(tempFolder);
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -173,7 +171,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = tempFolder.newFolder();
+    final File storageDirectory = newFolder(tempFolder);
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
@@ -193,9 +191,9 @@ public class HdfsDataSegmentPusherTest
     final String storageDirSuffix = "shuffle-data/index_parallel_session_analysis_test_bkdhhedd_2023-09-08T03:18:21.121Z/2023-08-29T16:00:00.000Z/2023-08-29T17:00:00.000Z";
     DataSegment segment = pusher.pushToPath(segmentDir, segmentToPush, storageDirSuffix);
     
-    Assert.assertTrue(
-        segment.getLoadSpec().get("path").toString(),
-        segment.getLoadSpec().get("path").toString().endsWith(storageDirSuffix.replace(':', '_') + "/0_index.zip")
+    Assertions.assertTrue(
+        segment.getLoadSpec().get("path").toString().endsWith(storageDirSuffix.replace(':', '_') + "/0_index.zip"),
+        segment.getLoadSpec().get("path").toString()
     );
   }
 
@@ -205,7 +203,7 @@ public class HdfsDataSegmentPusherTest
     DataSegment[] segments = new DataSegment[numberOfSegments];
 
     // Create a mock segment on disk
-    File segmentDir = tempFolder.newFolder();
+    File segmentDir = newFolder(tempFolder);
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -213,7 +211,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = tempFolder.newFolder();
+    final File storageDirectory = newFolder(tempFolder);
 
     config.setCompressionFormat(format);
     config.setStorageDirectory(
@@ -249,9 +247,9 @@ public class HdfsDataSegmentPusherTest
           format.getExtension()
       );
 
-      Assert.assertEquals(segments[i].getSize(), pushedSegment.getSize());
-      Assert.assertEquals(segments[i], pushedSegment);
-      Assert.assertEquals(ImmutableMap.of(
+      Assertions.assertEquals(segments[i].getSize(), pushedSegment.getSize());
+      Assertions.assertEquals(segments[i], pushedSegment);
+      Assertions.assertEquals(ImmutableMap.of(
           "type",
           "hdfs",
           "path",
@@ -267,10 +265,10 @@ public class HdfsDataSegmentPusherTest
           pushedSegment.getShardSpec().getPartitionNum(),
           format.getExtension()
       ));
-      Assert.assertTrue(indexFile.exists());
+      Assertions.assertTrue(indexFile.exists());
 
-      Assert.assertEquals(segments[i].getSize(), pushedSegment.getSize());
-      Assert.assertEquals(segments[i], pushedSegment);
+      Assertions.assertEquals(segments[i].getSize(), pushedSegment.getSize());
+      Assertions.assertEquals(segments[i], pushedSegment);
 
       indexFile = new File(StringUtils.format(
           "%s/%s/%d_index.%s",
@@ -279,7 +277,7 @@ public class HdfsDataSegmentPusherTest
           pushedSegment.getShardSpec().getPartitionNum(),
           format.getExtension()
       ));
-      Assert.assertTrue(indexFile.exists());
+      Assertions.assertTrue(indexFile.exists());
 
 
       // push twice will fail and temp dir cleaned
@@ -289,7 +287,7 @@ public class HdfsDataSegmentPusherTest
         pusher.push(segmentDir, segments[i], false);
       }
       catch (IOException e) {
-        Assert.fail("should not throw exception");
+        Assertions.fail("should not throw exception");
       }
     }
   }
@@ -299,7 +297,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = tempFolder.newFolder();
+    File segmentDir = newFolder(tempFolder);
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -307,7 +305,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = tempFolder.newFolder();
+    final File storageDirectory = newFolder(tempFolder);
 
     config.setStorageDirectory(
         scheme != null
@@ -338,9 +336,9 @@ public class HdfsDataSegmentPusherTest
         segmentToPush.getShardSpec().getPartitionNum()
     );
 
-    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
-    Assert.assertEquals(segmentToPush, segment);
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
+    Assertions.assertEquals(segmentToPush, segment);
+    Assertions.assertEquals(ImmutableMap.of(
         "type",
         "hdfs",
         "path",
@@ -355,7 +353,7 @@ public class HdfsDataSegmentPusherTest
         segmentPath,
         segment.getShardSpec().getPartitionNum()
     ));
-    Assert.assertTrue(indexFile.exists());
+    Assertions.assertTrue(indexFile.exists());
 
     // push twice will fail and temp dir cleaned
     File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
@@ -364,7 +362,7 @@ public class HdfsDataSegmentPusherTest
       pusher.push(segmentDir, segmentToPush, false);
     }
     catch (IOException e) {
-      Assert.fail("should not throw exception");
+      Assertions.fail("should not throw exception");
     }
   }
 
@@ -402,6 +400,7 @@ public class HdfsDataSegmentPusherTest
             }
         );
       }
+
     }
   }
 
@@ -425,7 +424,12 @@ public class HdfsDataSegmentPusherTest
     );
 
     String storageDir = hdfsDataSegmentPusher.getStorageDir(segment, false);
-    Assert.assertEquals("something/20111001T000000.000Z_20111002T000000.000Z/brand_new_version", storageDir);
+    Assertions.assertEquals("something/20111001T000000.000Z_20111002T000000.000Z/brand_new_version", storageDir);
 
+  }
+
+  private static File newFolder(File root) throws IOException {
+    java.nio.file.Path path = java.nio.file.Files.createTempDirectory(root.toPath(), "junit");
+    return path.toFile();
   }
 }

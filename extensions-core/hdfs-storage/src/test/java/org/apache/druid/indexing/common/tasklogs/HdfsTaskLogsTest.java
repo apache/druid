@@ -29,10 +29,9 @@ import org.apache.druid.tasklogs.TaskLogs;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,13 +40,13 @@ import java.util.Map;
 
 public class HdfsTaskLogsTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   @Test
   public void testStream() throws Exception
   {
-    final File tmpDir = tempFolder.newFolder();
+    final File tmpDir = newFolder(tempFolder, "junit");
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
@@ -57,31 +56,31 @@ public class HdfsTaskLogsTest
     final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
     for (Map.Entry<Long, String> entry : expected.entrySet()) {
       final String string = readLog(taskLogs, "foo", entry.getKey());
-      Assert.assertEquals(StringUtils.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
+      Assertions.assertEquals(string, entry.getValue(), StringUtils.format("Read with offset %,d", entry.getKey()));
     }
   }
 
   @Test
   public void testOverwrite() throws Exception
   {
-    final File tmpDir = tempFolder.newFolder();
+    final File tmpDir = newFolder(tempFolder, "junit");
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
     taskLogs.pushTaskLog("foo", logFile);
-    Assert.assertEquals("blah", readLog(taskLogs, "foo", 0));
+    Assertions.assertEquals("blah", readLog(taskLogs, "foo", 0));
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah blah");
     taskLogs.pushTaskLog("foo", logFile);
-    Assert.assertEquals("blah blah", readLog(taskLogs, "foo", 0));
+    Assertions.assertEquals("blah blah", readLog(taskLogs, "foo", 0));
   }
 
   @Test
   public void test_taskStatus() throws Exception
   {
-    final File tmpDir = tempFolder.newFolder();
+    final File tmpDir = newFolder(tempFolder, "junit");
     final File logDir = new File(tmpDir, "logs");
     final File statusFile = new File(tmpDir, "status.json");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
@@ -89,7 +88,7 @@ public class HdfsTaskLogsTest
 
     Files.asCharSink(statusFile, StandardCharsets.UTF_8).write("{}");
     taskLogs.pushTaskStatus("id", statusFile);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{}",
         StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskStatus("id").get()))
     );
@@ -98,20 +97,20 @@ public class HdfsTaskLogsTest
   @Test
   public void test_taskPayload() throws Exception
   {
-    final File tmpDir = tempFolder.newFolder();
+    final File tmpDir = newFolder(tempFolder, "junit");
     final File logDir = new File(tmpDir, "logs");
     final File payload = new File(tmpDir, "payload.json");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
     Files.asCharSink(payload, StandardCharsets.UTF_8).write("{}");
     taskLogs.pushTaskPayload("id", payload);
-    Assert.assertEquals("{}", StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskPayload("id").get())));
+    Assertions.assertEquals("{}", StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskPayload("id").get())));
   }
 
   @Test
   public void testKill() throws Exception
   {
-    final File tmpDir = tempFolder.newFolder();
+    final File tmpDir = newFolder(tempFolder, "junit");
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
 
@@ -122,29 +121,38 @@ public class HdfsTaskLogsTest
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");
     taskLogs.pushTaskLog("log1", logFile);
-    Assert.assertEquals("log1content", readLog(taskLogs, "log1", 0));
+    Assertions.assertEquals("log1content", readLog(taskLogs, "log1", 0));
 
     //File modification timestamp is only maintained to seconds resolution, so artificial delay
     //is necessary to separate 2 file creations by a timestamp that would result in only one
     //of them getting deleted
     Thread.sleep(1500);
     long time = (System.currentTimeMillis() / 1000) * 1000;
-    Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log1")).getModificationTime() < time);
+    Assertions.assertTrue(fs.getFileStatus(new Path(logDirPath, "log1")).getModificationTime() < time);
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log2content");
     taskLogs.pushTaskLog("log2", logFile);
-    Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
-    Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log2")).getModificationTime() >= time);
+    Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+    Assertions.assertTrue(fs.getFileStatus(new Path(logDirPath, "log2")).getModificationTime() >= time);
 
     taskLogs.killOlderThan(time);
 
-    Assert.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
-    Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+    Assertions.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
+    Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
 
   }
 
   private String readLog(TaskLogs taskLogs, String logFile, long offset) throws IOException
   {
     return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get()));
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

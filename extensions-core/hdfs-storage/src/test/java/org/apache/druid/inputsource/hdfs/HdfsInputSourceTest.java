@@ -48,13 +48,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -74,6 +73,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HdfsInputSourceTest extends InitializedNullHandlingTest
 {
@@ -95,47 +97,46 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       null
   );
 
-  public static class ConstructorTest
+  @Nested
+  public class ConstructorTest
   {
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testConstructorAllowsOnlyDefaultProtocol()
     {
-      HdfsInputSource.builder()
-                     .paths(PATH + "*")
-                     .configuration(CONFIGURATION)
-                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
-                     .build();
-
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Only [hdfs] protocols are allowed");
-      HdfsInputSource.builder()
-                     .paths("file:/foo/bar*")
-                     .configuration(CONFIGURATION)
-                     .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
-                     .build();
+      Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+        HdfsInputSource.builder()
+            .paths(PATH + "*")
+            .configuration(CONFIGURATION)
+            .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+            .build();
+        HdfsInputSource.builder()
+            .paths("file:/foo/bar*")
+            .configuration(CONFIGURATION)
+            .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
+            .build();
+      });
+      assertTrue(exception.getMessage().contains("Only [hdfs] protocols are allowed"));
     }
 
     @Test
     public void testConstructorAllowsOnlyCustomProtocol()
     {
-      final Configuration conf = new Configuration();
-      conf.set("fs.ftp.impl", "org.apache.hadoop.fs.ftp.FTPFileSystem");
-      HdfsInputSource.builder()
-                     .paths("ftp://localhost:21/foo/bar")
-                     .configuration(CONFIGURATION)
-                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("ftp")))
-                     .build();
-
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Only [druid] protocols are allowed");
-      HdfsInputSource.builder()
-                     .paths(PATH + "*")
-                     .configuration(CONFIGURATION)
-                     .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("druid")))
-                     .build();
+      Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+        final Configuration conf = new Configuration();
+        conf.set("fs.ftp.impl", "org.apache.hadoop.fs.ftp.FTPFileSystem");
+        HdfsInputSource.builder()
+            .paths("ftp://localhost:21/foo/bar")
+            .configuration(CONFIGURATION)
+            .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("ftp")))
+            .build();
+        HdfsInputSource.builder()
+            .paths(PATH + "*")
+            .configuration(CONFIGURATION)
+            .inputSourceConfig(new HdfsInputSourceConfig(ImmutableSet.of("druid")))
+            .build();
+      });
+      assertTrue(exception.getMessage().contains("Only [druid] protocols are allowed"));
     }
 
     @Test
@@ -180,20 +181,18 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                          .inputSourceConfig(DEFAULT_INPUT_SOURCE_CONFIG)
                          .build();
 
-      Assert.assertEquals(Collections.singleton(HdfsInputSource.TYPE_KEY), inputSource.getTypes());
+      Assertions.assertEquals(Collections.singleton(HdfsInputSource.TYPE_KEY), inputSource.getTypes());
     }
   }
 
-  public static class SerializeDeserializeTest
+  @Nested
+  public class SerializeDeserializeTest
   {
     private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
 
     private HdfsInputSource.Builder hdfsInputSourceBuilder;
 
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
-
-    @Before
+    @BeforeEach
     public void setup()
     {
       hdfsInputSourceBuilder = HdfsInputSource.builder()
@@ -205,10 +204,10 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     @Test
     public void requiresPathsAsStringOrArrayOfStrings()
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("'paths' must be a string or an array of strings");
+      Throwable exception = assertThrows(IllegalArgumentException.class, () ->
 
-      hdfsInputSourceBuilder.paths(Arrays.asList("a", 1)).build();
+        hdfsInputSourceBuilder.paths(Arrays.asList("a", 1)).build());
+      assertTrue(exception.getMessage().contains("'paths' must be a string or an array of strings"));
     }
 
     @Test
@@ -237,7 +236,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       try {
         String serialized = OBJECT_MAPPER.writeValueAsString(hdfsInputSourceWrapper);
         Wrapper deserialized = OBJECT_MAPPER.readValue(serialized, Wrapper.class);
-        Assert.assertEquals(serialized, OBJECT_MAPPER.writeValueAsString(deserialized));
+        Assertions.assertEquals(serialized, OBJECT_MAPPER.writeValueAsString(deserialized));
       }
       catch (IOException e) {
         throw new UncheckedIOException(e);
@@ -274,15 +273,16 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     }
   }
 
-  public static class ReaderTest
+  @Nested
+  public class ReaderTest
   {
     private static final String PATH = "test";
     private static final int NUM_FILE = 3;
     private static final String KEY_VALUE_SEPARATOR = ",";
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz";
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public File temporaryFolder;
 
     private FileSystem fileSystem;
     private HdfsInputSource target;
@@ -290,13 +290,13 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     private Map<Long, String> timestampToValue;
     private List<String> fileContents;
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException
     {
       timestampToValue = new HashMap<>();
       fileContents = new ArrayList<>();
 
-      File dir = temporaryFolder.getRoot();
+      File dir = temporaryFolder;
       Configuration configuration = new Configuration(true);
       fileSystem = new LocalFileSystem();
       fileSystem.initialize(dir.toURI(), configuration);
@@ -322,7 +322,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
                               .build();
     }
 
-    @After
+    @AfterEach
     public void teardown() throws IOException
     {
       temporaryFolder.delete();
@@ -359,10 +359,10 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
         }
       }
 
-      Assert.assertEquals(timestampToValue, actualTimestampToValue);
+      Assertions.assertEquals(timestampToValue, actualTimestampToValue);
 
       long totalFileSize = fileContents.stream().mapToLong(String::length).sum();
-      Assert.assertEquals(totalFileSize, inputStats.getProcessedBytes());
+      Assertions.assertEquals(totalFileSize, inputStats.getProcessedBytes());
     }
 
     @Test
@@ -371,11 +371,11 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       // Set maxSplitSize to 1 so that each inputSplit has only one object
       List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(1L, null))
                                                   .collect(Collectors.toList());
-      splits.forEach(split -> Assert.assertEquals(1, split.get().size()));
+      splits.forEach(split -> Assertions.assertEquals(1, split.get().size()));
       Set<Path> actualPaths = splits.stream()
                                     .flatMap(split -> split.get().stream())
                                     .collect(Collectors.toSet());
-      Assert.assertEquals(paths, actualPaths);
+      Assertions.assertEquals(paths, actualPaths);
     }
 
     @Test
@@ -383,9 +383,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       List<InputSplit<List<Path>>> splits = target.createSplits(null, new MaxSizeSplitHintSpec(7L, null))
                                                   .collect(Collectors.toList());
-      Assert.assertEquals(2, splits.size());
-      Assert.assertEquals(2, splits.get(0).get().size());
-      Assert.assertEquals(1, splits.get(1).get().size());
+      Assertions.assertEquals(2, splits.size());
+      Assertions.assertEquals(2, splits.get(0).get().size());
+      Assertions.assertEquals(1, splits.get(1).get().size());
     }
 
     @Test
@@ -393,7 +393,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       // Set maxSplitSize to 1 so that each inputSplit has only one object
       int numSplits = target.estimateNumSplits(null, new MaxSizeSplitHintSpec(1L, null));
-      Assert.assertEquals(NUM_FILE, numSplits);
+      Assertions.assertEquals(NUM_FILE, numSplits);
     }
 
     @Test
@@ -406,16 +406,17 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
         String expectedPath = Iterables.getOnlyElement(split.get()).toString();
         HdfsInputSource inputSource = (HdfsInputSource) target.withSplit(split);
         String actualPath = Iterables.getOnlyElement(inputSource.getInputPaths());
-        Assert.assertEquals(expectedPath, actualPath);
+        Assertions.assertEquals(expectedPath, actualPath);
       }
     }
   }
 
-  public static class EmptyPathsTest
+  @Nested
+  public class EmptyPathsTest
   {
     private HdfsInputSource target;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
       target = HdfsInputSource.builder()
@@ -432,9 +433,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
       final InputStats inputStats = new InputStatsImpl();
 
       try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
-        Assert.assertFalse(iterator.hasNext());
+        Assertions.assertFalse(iterator.hasNext());
       }
-      Assert.assertEquals(0, inputStats.getProcessedBytes());
+      Assertions.assertEquals(0, inputStats.getProcessedBytes());
     }
 
     @Test
@@ -442,18 +443,19 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
     {
       List<InputSplit<List<Path>>> splits = target.createSplits(null, null)
                                                   .collect(Collectors.toList());
-      Assert.assertTrue(String.valueOf(splits), splits.isEmpty());
+      Assertions.assertTrue(splits.isEmpty(), String.valueOf(splits));
     }
 
     @Test
     public void hasCorrectNumberOfSplits() throws IOException
     {
       int numSplits = target.estimateNumSplits(null, null);
-      Assert.assertEquals(0, numSplits);
+      Assertions.assertEquals(0, numSplits);
     }
   }
 
-  public static class SystemFieldsTest
+  @Nested
+  public class SystemFieldsTest
   {
     @Test
     public void testSystemFields()
@@ -466,50 +468,51 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           new HdfsInputSourceConfig(null)
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           EnumSet.of(SystemField.URI, SystemField.PATH),
           inputSource.getConfiguredSystemFields()
       );
 
       final HdfsInputEntity entity = new HdfsInputEntity(configuration, new Path("hdfs://127.0.0.1/bar"));
-      Assert.assertEquals("hdfs://127.0.0.1/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
-      Assert.assertEquals("/bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
+      Assertions.assertEquals("hdfs://127.0.0.1/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
+      Assertions.assertEquals("/bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
 
       final HdfsInputEntity entity2 = new HdfsInputEntity(configuration, new Path("/127.0.0.1/bar"));
-      Assert.assertEquals("file:///127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.URI));
-      Assert.assertEquals("/127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.PATH));
+      Assertions.assertEquals("file:///127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.URI));
+      Assertions.assertEquals("/127.0.0.1/bar", inputSource.getSystemFieldValue(entity2, SystemField.PATH));
 
       final HdfsInputEntity entity3 = new HdfsInputEntity(configuration, new Path("bar"));
-      Assert.assertEquals(
+      Assertions.assertEquals(
           StringUtils.format("file:%s/bar", System.getProperty("user.dir")),
           inputSource.getSystemFieldValue(entity3, SystemField.URI)
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           StringUtils.format("%s/bar", System.getProperty("user.dir")),
           inputSource.getSystemFieldValue(entity3, SystemField.PATH)
       );
     }
   }
 
-  public static class GetPathsTest
+  @Nested
+  public class GetPathsTest
   {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @TempDir
+    public File temporaryFolder;
 
     private FileSystem fileSystem;
     private Configuration configuration;
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException
     {
-      final File dir = temporaryFolder.getRoot();
+      final File dir = temporaryFolder;
       configuration = new Configuration(true);
       fileSystem = new LocalFileSystem();
       fileSystem.initialize(dir.toURI(), configuration);
       fileSystem.setWorkingDirectory(new Path(dir.getAbsolutePath()));
     }
 
-    @After
+    @AfterEach
     public void teardown() throws IOException
     {
       fileSystem.close();
@@ -522,7 +525,7 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           Collections.singletonList(fileSystem.getWorkingDirectory() + "/nonexistent*"),
           configuration
       );
-      Assert.assertTrue(paths.isEmpty());
+      Assertions.assertTrue(paths.isEmpty());
     }
 
     @Test
@@ -545,8 +548,8 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           configuration
       );
 
-      Assert.assertEquals(1, paths.size());
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(nonEmptyFile)));
+      Assertions.assertEquals(1, paths.size());
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(nonEmptyFile)));
     }
 
     @Test
@@ -574,9 +577,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           configuration
       );
 
-      Assert.assertEquals(2, paths.size());
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileA)));
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileB)));
+      Assertions.assertEquals(2, paths.size());
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(fileA)));
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(fileB)));
     }
 
     @Test
@@ -603,9 +606,9 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           configuration
       );
 
-      Assert.assertEquals(2, paths.size());
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileA)));
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileB)));
+      Assertions.assertEquals(2, paths.size());
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(fileA)));
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(fileB)));
     }
 
     @Test
@@ -637,10 +640,10 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           configuration
       );
 
-      Assert.assertEquals(1, paths.size());
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(visibleFile)));
-      Assert.assertFalse(paths.contains(fileSystem.makeQualified(dotFile)));
-      Assert.assertFalse(paths.contains(fileSystem.makeQualified(underscoreFile)));
+      Assertions.assertEquals(1, paths.size());
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(visibleFile)));
+      Assertions.assertFalse(paths.contains(fileSystem.makeQualified(dotFile)));
+      Assertions.assertFalse(paths.contains(fileSystem.makeQualified(underscoreFile)));
     }
 
     @Test
@@ -680,8 +683,8 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           configuration
       );
 
-      Assert.assertEquals(1, paths.size());
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(fileInDir)));
+      Assertions.assertEquals(1, paths.size());
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(fileInDir)));
     }
 
     @Test
@@ -712,13 +715,14 @@ public class HdfsInputSourceTest extends InitializedNullHandlingTest
           configuration
       );
 
-      Assert.assertEquals(1, paths.size());
-      Assert.assertTrue(paths.contains(fileSystem.makeQualified(visibleFile)));
-      Assert.assertFalse(paths.contains(fileSystem.makeQualified(hiddenFile)));
+      Assertions.assertEquals(1, paths.size());
+      Assertions.assertTrue(paths.contains(fileSystem.makeQualified(visibleFile)));
+      Assertions.assertFalse(paths.contains(fileSystem.makeQualified(hiddenFile)));
     }
   }
 
-  public static class EqualsTest
+  @Nested
+  public class EqualsTest
   {
     @Test
     public void testEquals()

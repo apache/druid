@@ -67,6 +67,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -88,14 +89,16 @@ import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nonnull;
@@ -120,10 +123,14 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 @SuppressWarnings("unchecked")
-@RunWith(Parameterized.class)
 public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
+  @TempDir
+  private File tempFolder;
+
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String STREAM = "stream";
   private static final String SHARD_ID1 = "1";
@@ -167,7 +174,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static KinesisRecordSupplier recordSupplier;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
@@ -188,7 +194,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private int maxRecordsPerPoll;
   private int maxBytesPerPoll;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     taskExec = MoreExecutors.listeningDecorator(
@@ -203,9 +209,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     super(lockGranularity);
   }
 
-  @Before
+  @BeforeEach
   public void setupTest() throws IOException, InterruptedException
   {
+    ExpressionProcessing.initializeForTests();
+    super.tempFolder.create();
+    derby.before();
+    super.setupBase();
     handoffConditionTimeout = 0;
     reportParseExceptions = false;
     logParseExceptions = true;
@@ -223,7 +233,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     makeToolboxFactory();
   }
 
-  @After
+  @AfterEach
   public void tearDownTest()
   {
     synchronized (runningTasks) {
@@ -235,9 +245,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     reportsFile.delete();
     destroyToolboxFactory();
+    super.tearDownBase();
+    derby.after();
+    super.tempFolder.delete();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception
   {
     taskExec.shutdown();
@@ -295,7 +308,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     return new KinesisRecord(STREAM, partitionId, sequenceNumber, Collections.singletonList(entity));
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunAfterDataInserted() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -323,7 +337,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -338,7 +352,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
@@ -346,14 +360,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
-    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
-    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
-    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
-    Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
+    Assertions.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assertions.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assertions.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    Assertions.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testIngestNullColumnAfterDataInserted() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -390,19 +405,20 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
     final Collection<DataSegment> segments = publishedSegments();
     for (DataSegment segment : segments) {
       for (int i = 0; i < dimensionsSpec.getDimensions().size(); i++) {
-        Assert.assertEquals(dimensionsSpec.getDimensionNames().get(i), segment.getDimensions().get(i));
+        Assertions.assertEquals(dimensionsSpec.getDimensionNames().get(i), segment.getDimensions().get(i));
       }
     }
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testIngestNullColumnAfterDataInserted_storeEmptyColumnsOff_shouldNotStoreEmptyColumns() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -441,13 +457,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
     final Collection<DataSegment> segments = publishedSegments();
     for (DataSegment segment : segments) {
-      Assert.assertFalse(segment.getDimensions().contains("unknownDim"));
+      Assertions.assertFalse(segment.getDimensions().contains("unknownDim"));
     }
   }
 
@@ -456,9 +472,11 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     return metadataStorageCoordinator.retrieveDataSourceMetadata(DATA_SCHEMA.getDataSource());
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunBeforeDataInserted() throws Exception
   {
+
 
     recordSupplier.assign(EasyMock.anyObject());
     EasyMock.expectLastCall().anyTimes();
@@ -486,7 +504,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 13, 15))
@@ -500,7 +518,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID0, "1"))
         ),
@@ -508,7 +526,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testIncrementalHandOff() throws Exception
   {
     // as soon as any segment has more than one record, incremental publishing should happen
@@ -557,15 +576,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(task, this::isTaskPaused);
 
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
+    Assertions.assertEquals(checkpoint1.getPartitionSequenceNumberMap(), currentOffsets);
     task.getRunner().setEndOffsets(currentOffsets, false);
 
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
-    Assert.assertEquals(1, checkpointRequestsHash.size());
-    Assert.assertTrue(
+    Assertions.assertEquals(1, checkpointRequestsHash.size());
+    Assertions.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
@@ -591,7 +610,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
@@ -602,7 +621,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testIncrementalHandOffMaxTotalRows() throws Exception
   {
     // incremental publish should happen every 3 records
@@ -641,23 +661,23 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
-    Assert.assertEquals(checkpointOffsets1, currentOffsets);
+    Assertions.assertEquals(checkpointOffsets1, currentOffsets);
     task.getRunner().setEndOffsets(currentOffsets, false);
 
     waitUntil(task, this::isTaskPaused);
 
     final Map<String, String> nextOffsets = ImmutableMap.copyOf(task.getRunner().getCurrentOffsets());
 
-    Assert.assertEquals(checkpointOffsets2, nextOffsets);
+    Assertions.assertEquals(checkpointOffsets2, nextOffsets);
 
     task.getRunner().setEndOffsets(nextOffsets, false);
 
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
-    Assert.assertEquals(2, checkpointRequestsHash.size());
-    Assert.assertTrue(
+    Assertions.assertEquals(2, checkpointRequestsHash.size());
+    Assertions.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
@@ -668,7 +688,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             )
         )
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         checkpointRequestsHash.contains(
             Objects.hash(
                 DATA_SCHEMA.getDataSource(),
@@ -694,21 +714,22 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, endOffsets)),
         newDataSchemaMetadata()
     );
 
     final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
-    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
-    Assert.assertEquals(7, observedSegmentGenerationMetrics.rowOutput());
-    Assert.assertEquals(6, observedSegmentGenerationMetrics.handOffCount());
-    Assert.assertEquals(5, observedSegmentGenerationMetrics.numPersists());
+    Assertions.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assertions.assertEquals(7, observedSegmentGenerationMetrics.rowOutput());
+    Assertions.assertEquals(6, observedSegmentGenerationMetrics.handOffCount());
+    Assertions.assertEquals(5, observedSegmentGenerationMetrics.numPersists());
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithMinimumMessageTime() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -749,7 +770,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -764,14 +785,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
         newDataSchemaMetadata()
     );
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithMaximumMessageTime() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -812,7 +834,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -828,7 +850,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
         newDataSchemaMetadata()
@@ -836,7 +858,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithTransformSpec() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -871,7 +894,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(task, this::isTaskPublishing);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -880,7 +903,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Check published metadata
     assertEqualsExceptVersion(ImmutableList.of(sdd("2009/P1D", 0)), publishedDescriptors());
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
         newDataSchemaMetadata()
@@ -888,12 +911,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Check segments in deep storage
     final List<SegmentDescriptor> publishedDescriptors = publishedDescriptors();
-    Assert.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
-    Assert.assertEquals(ImmutableList.of("bb"), readSegmentColumn("dim1t", publishedDescriptors.get(0)));
+    Assertions.assertEquals(ImmutableList.of("b"), readSegmentColumn("dim1", publishedDescriptors.get(0)));
+    Assertions.assertEquals(ImmutableList.of("bb"), readSegmentColumn("dim1t", publishedDescriptors.get(0)));
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunOnSingletonRange() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -922,7 +946,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -934,7 +958,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testHandoffConditionTimeoutWhenHandoffOccurs() throws Exception
   {
     handoffConditionTimeout = 5_000;
@@ -963,7 +988,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -978,22 +1003,23 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
         newDataSchemaMetadata()
     );
     final SegmentGenerationMetrics observedSegmentGenerationMetrics = task.getRunner().getSegmentGenerationMetrics();
-    Assert.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
-    Assert.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
-    Assert.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
-    Assert.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
+    Assertions.assertTrue(observedSegmentGenerationMetrics.isProcessingDone());
+    Assertions.assertEquals(3, observedSegmentGenerationMetrics.rowOutput());
+    Assertions.assertEquals(2, observedSegmentGenerationMetrics.handOffCount());
+    Assertions.assertEquals(2, observedSegmentGenerationMetrics.numPersists());
     verifyPersistAndMergeTimeMetricsArePositive(observedSegmentGenerationMetrics);
   }
 
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testHandoffConditionTimeoutWhenHandoffDoesNotOccur() throws Exception
   {
     doHandoff = false;
@@ -1023,7 +1049,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -1038,7 +1064,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
@@ -1047,7 +1073,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testReportParseExceptions() throws Exception
   {
     reportParseExceptions = true;
@@ -1080,7 +1107,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.FAILED, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, future.get().getStatusCode());
 
     verifyAll();
 
@@ -1088,12 +1115,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
                                      .unparseable(1).totalProcessed(3));
 
     // Check published metadata
-    Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(newDataSchemaMetadata());
+    Assertions.assertEquals(ImmutableList.of(), publishedDescriptors());
+    Assertions.assertNull(newDataSchemaMetadata());
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testMultipleParseExceptionsSuccess() throws Exception
   {
     reportParseExceptions = false;
@@ -1126,11 +1154,11 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     TaskStatus status = future.get();
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, status.getStatusCode());
 
     verifyAll();
 
-    Assert.assertNull(status.getErrorMsg());
+    Assertions.assertNull(status.getErrorMsg());
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 2, 13))
                                      .errors(3).unparseable(4).totalProcessed(4));
@@ -1140,7 +1168,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ImmutableList.of(sdd("2010/P1D", 0), sdd("2011/P1D", 0), sdd("2013/P1D", 0), sdd("2049/P1D", 0)),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "12"))
         ),
@@ -1150,8 +1178,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     IngestionStatsAndErrors reportData = getTaskReportData();
 
     // Verify ingestion state and error message
-    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
-    Assert.assertNull(reportData.getErrorMsg());
+    Assertions.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assertions.assertNull(reportData.getErrorMsg());
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
     Map<String, Integer> expectedThrownAwayByReason = Map.of();
@@ -1166,7 +1194,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
-    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+    Assertions.assertEquals(expectedMetrics, reportData.getRowStats());
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
@@ -1180,7 +1208,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "Unable to parse row [unparseable] (Record: 1)",
         "Encountered row with timestamp[246140482-04-24T15:36:27.903Z] that cannot be represented as a long: [{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}] (Record: 1)"
     );
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
 
     List<String> expectedInputs = Arrays.asList(
         "{timestamp=2049, dim1=f, dim2=y, dimLong=10, dimFloat=20.0, met1=notanumber}",
@@ -1191,11 +1219,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "unparseable",
         "{timestamp=246140482-04-24T15:36:27.903Z, dim1=x, dim2=z, dimLong=10, dimFloat=20.0, met1=1.0}"
     );
-    Assert.assertEquals(expectedInputs, parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedInputs, parseExceptionReport.getInputs());
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testMultipleParseExceptionsFailure() throws Exception
   {
     reportParseExceptions = false;
@@ -1229,7 +1258,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     TaskStatus status = future.get();
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.FAILED, status.getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
     verifyAll();
     IndexTaskTest.checkTaskStatusErrorMsgForParseExceptionsExceeded(status);
 
@@ -1237,14 +1266,14 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     verifyTaskMetrics(task, RowMeters.with().bytes(totalBytes).unparseable(3).totalProcessed(3));
 
     // Check published metadata
-    Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
-    Assert.assertNull(newDataSchemaMetadata());
+    Assertions.assertEquals(ImmutableList.of(), publishedDescriptors());
+    Assertions.assertNull(newDataSchemaMetadata());
 
     IngestionStatsAndErrors reportData = getTaskReportData();
 
     // Verify ingestion state and error message
-    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
-    Assert.assertNotNull(reportData.getErrorMsg());
+    Assertions.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
+    Assertions.assertNotNull(reportData.getErrorMsg());
 
     // Jackson will serde numerics ≤ 32bits as Integers, rather than Longs
     Map<String, Integer> expectedThrownAwayByReason = Map.of();
@@ -1259,7 +1288,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             RowIngestionMeters.THROWN_AWAY_BY_REASON, expectedThrownAwayByReason
         )
     );
-    Assert.assertEquals(expectedMetrics, reportData.getRowStats());
+    Assertions.assertEquals(expectedMetrics, reportData.getRowStats());
 
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
@@ -1268,12 +1297,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         "Unable to parse [] as the intermediateRow resulted in empty input row (Record: 1)",
         "Unable to parse row [unparseable] (Record: 1)"
     );
-    Assert.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
-    Assert.assertEquals(Arrays.asList("", "unparseable"), parseExceptionReport.getInputs());
+    Assertions.assertEquals(expectedMessages, parseExceptionReport.getErrorMessages());
+    Assertions.assertEquals(Arrays.asList("", "unparseable"), parseExceptionReport.getInputs());
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunReplicas() throws Exception
   {
     // Insert data
@@ -1309,8 +1339,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
 
     // Wait for tasks to exit
-    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
-    Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     verifyAll();
 
@@ -1327,7 +1357,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))
         ),
@@ -1336,7 +1366,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunConflicting() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -1370,11 +1401,11 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Run first task
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
-    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
     // Run second task
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
-    Assert.assertEquals(TaskState.FAILED, future2.get().getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, future2.get().getStatusCode());
 
     verifyAll();
     verifyTaskMetrics(task1, RowMeters.with().bytes(getTotalSize(RECORDS, 2, 5))
@@ -1390,14 +1421,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
         newDataSchemaMetadata()
     );
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunConflictingWithoutTransactions() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -1437,17 +1469,17 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     // Run first task
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
-    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
     // Check published segments & metadata
     SegmentDescriptorAndExpectedDim1Values desc1 = sdd("2010/P1D", 0, ImmutableList.of("c"));
     SegmentDescriptorAndExpectedDim1Values desc2 = sdd("2011/P1D", 0, ImmutableList.of("d", "e"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2), publishedDescriptors());
-    Assert.assertNull(newDataSchemaMetadata());
+    Assertions.assertNull(newDataSchemaMetadata());
 
     // Run second task
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
-    Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     verifyAll();
 
@@ -1460,11 +1492,12 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     SegmentDescriptorAndExpectedDim1Values desc3 = sdd("2011/P1D", 1, ImmutableList.of("d", "e"));
     SegmentDescriptorAndExpectedDim1Values desc4 = sdd("2013/P1D", 0, ImmutableList.of("f"));
     assertEqualsExceptVersion(ImmutableList.of(desc1, desc2, desc3, desc4), publishedDescriptors());
-    Assert.assertNull(newDataSchemaMetadata());
+    Assertions.assertNull(newDataSchemaMetadata());
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunOneTaskTwoPartitions() throws Exception
   {
     // Insert data
@@ -1495,7 +1528,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(task, t -> countEvents(task) >= 5);
 
     // Wait for tasks to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -1511,7 +1544,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4", SHARD_ID0, "1"))
         ),
@@ -1520,7 +1553,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunTwoTasksTwoPartitions() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -1552,10 +1586,10 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
-    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
-    Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     verifyAll();
 
@@ -1573,7 +1607,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4", SHARD_ID0, "1"))
         ),
@@ -1582,7 +1616,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   }
 
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRestore() throws Exception
   {
     final StreamPartition<String> streamPartition = StreamPartition.of(STREAM, SHARD_ID1);
@@ -1609,13 +1644,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future1 = runTask(task1);
 
     waitUntil(task1, t -> countEvents(t) == 2);
-    Assert.assertEquals(2, countEvents(task1));
+    Assertions.assertEquals(2, countEvents(task1));
 
     // Stop without publishing segment
     task1.stopGracefully(toolboxFactory.build(task1).getConfig());
     unlockAppenderatorBasePersistDirForTask(task1);
 
-    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
     verifyAll();
     EasyMock.reset(recordSupplier);
@@ -1643,10 +1678,10 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
     waitUntil(task2, t -> countEvents(t) >= 3);
-    Assert.assertEquals(3, countEvents(task2));
+    Assertions.assertEquals(3, countEvents(task2));
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     verifyAll();
 
@@ -1663,14 +1698,15 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "5"))),
         newDataSchemaMetadata()
     );
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRestoreAfterPersistingSequences() throws Exception
   {
     maxRowsPerSegment = 2;
@@ -1717,14 +1753,14 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(task1, this::isTaskPaused);
 
     final Map<String, String> currentOffsets = ImmutableMap.copyOf(task1.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpointOffsets1, currentOffsets);
+    Assertions.assertEquals(checkpointOffsets1, currentOffsets);
     task1.getRunner().setEndOffsets(currentOffsets, false);
 
     // Stop without publishing segment
     task1.stopGracefully(toolboxFactory.build(task1).getConfig());
     unlockAppenderatorBasePersistDirForTask(task1);
 
-    Assert.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future1.get().getStatusCode());
 
     verifyAll();
     EasyMock.reset(recordSupplier);
@@ -1756,7 +1792,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future2 = runTask(task2);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future2.get().getStatusCode());
 
     verifyAll();
 
@@ -1777,7 +1813,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "6"))
         ),
@@ -1785,7 +1821,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithPauseAndResume() throws Exception
   {
     final StreamPartition<String> streamPartition = StreamPartition.of(STREAM, SHARD_ID1);
@@ -1808,13 +1845,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final ListenableFuture<TaskStatus> future = runTask(task);
     waitUntil(task, t -> countEvents(t) == 3);
-    Assert.assertEquals(3, countEvents(task));
-    Assert.assertTrue(isTaskReading(task));
+    Assertions.assertEquals(3, countEvents(task));
+    Assertions.assertTrue(isTaskReading(task));
 
     task.getRunner().pause();
 
     waitUntil(task, this::isTaskPaused);
-    Assert.assertTrue(isTaskPaused(task));
+    Assertions.assertTrue(isTaskPaused(task));
 
     verifyAll();
 
@@ -1822,13 +1859,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     try {
       future.get(10, TimeUnit.SECONDS);
-      Assert.fail("Task completed when it should have been paused");
+      Assertions.fail("Task completed when it should have been paused");
     }
     catch (TimeoutException e) {
       // carry on..
     }
 
-    Assert.assertEquals(currentOffsets, task.getRunner().getCurrentOffsets());
+    Assertions.assertEquals(currentOffsets, task.getRunner().getCurrentOffsets());
 
     EasyMock.reset(recordSupplier);
 
@@ -1841,10 +1878,10 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     task.getRunner().setEndOffsets(currentOffsets, true);
 
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
-    Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
+    Assertions.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
 
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 2, 5))
                                      .totalProcessed(3));
@@ -1857,7 +1894,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(
             STREAM,
             ImmutableMap.of(SHARD_ID1, currentOffsets.get(SHARD_ID1))
@@ -1866,7 +1903,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunContextSequenceAheadOfStartingOffsets() throws Exception
   {
     // This tests the case when a replacement task is created in place of a failed test
@@ -1922,7 +1960,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSize(RECORDS, 2, 5))
                                      .totalProcessed(3));
 
@@ -1934,13 +1972,14 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "4"))),
         newDataSchemaMetadata()
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
   public void testIncrementalHandOffReadsThroughEndOffsets() throws Exception
   {
     // as soon as any segment has more than one record, incremental publishing should happen
@@ -1996,7 +2035,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(staleReplica, this::isTaskPaused);
 
     Map<String, String> currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpointOffsets1, currentOffsets);
+    Assertions.assertEquals(checkpointOffsets1, currentOffsets);
 
     normalReplica.getRunner().setEndOffsets(currentOffsets, false);
     staleReplica.getRunner().setEndOffsets(currentOffsets, false);
@@ -2005,19 +2044,19 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     waitUntil(staleReplica, this::isTaskPaused);
 
     currentOffsets = ImmutableMap.copyOf(normalReplica.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpointOffsets2, currentOffsets);
+    Assertions.assertEquals(checkpointOffsets2, currentOffsets);
     currentOffsets = ImmutableMap.copyOf(staleReplica.getRunner().getCurrentOffsets());
-    Assert.assertEquals(checkpointOffsets2, currentOffsets);
+    Assertions.assertEquals(checkpointOffsets2, currentOffsets);
 
     normalReplica.getRunner().setEndOffsets(currentOffsets, true);
     staleReplica.getRunner().setEndOffsets(currentOffsets, true);
 
-    Assert.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
-    Assert.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, normalReplicaFuture.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, staleReplicaFuture.get().getStatusCode());
 
     verifyAll();
 
-    Assert.assertEquals(2, checkpointRequestsHash.size());
+    Assertions.assertEquals(2, checkpointRequestsHash.size());
 
     long totalRecordBytes = getTotalSize(SINGLE_PARTITION_RECORDS, 0, 10);
     verifyTaskMetrics(normalReplica, RowMeters.with().bytes(totalRecordBytes).totalProcessed(10));
@@ -2037,7 +2076,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(STREAM, ImmutableMap.of(SHARD_ID1, "9"))
         ),
@@ -2087,38 +2126,39 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     task.getRunner().initializeSequences();
     final List<SequenceMetadata<String, String>> sequences = task.getRunner().getSequences();
 
-    Assert.assertEquals(3, sequences.size());
+    Assertions.assertEquals(3, sequences.size());
 
     SequenceMetadata<String, String> sequenceMetadata = sequences.get(0);
-    Assert.assertEquals(checkpoints.get(0), sequenceMetadata.getStartOffsets());
-    Assert.assertEquals(checkpoints.get(1), sequenceMetadata.getEndOffsets());
-    Assert.assertEquals(
+    Assertions.assertEquals(checkpoints.get(0), sequenceMetadata.getStartOffsets());
+    Assertions.assertEquals(checkpoints.get(1), sequenceMetadata.getEndOffsets());
+    Assertions.assertEquals(
         task.getIOConfig().getStartSequenceNumbers().getExclusivePartitions(),
         sequenceMetadata.getExclusiveStartPartitions()
     );
-    Assert.assertTrue(sequenceMetadata.isCheckpointed());
+    Assertions.assertTrue(sequenceMetadata.isCheckpointed());
 
     sequenceMetadata = sequences.get(1);
-    Assert.assertEquals(checkpoints.get(1), sequenceMetadata.getStartOffsets());
-    Assert.assertEquals(checkpoints.get(2), sequenceMetadata.getEndOffsets());
-    Assert.assertEquals(checkpoints.get(1).keySet(), sequenceMetadata.getExclusiveStartPartitions());
-    Assert.assertTrue(sequenceMetadata.isCheckpointed());
+    Assertions.assertEquals(checkpoints.get(1), sequenceMetadata.getStartOffsets());
+    Assertions.assertEquals(checkpoints.get(2), sequenceMetadata.getEndOffsets());
+    Assertions.assertEquals(checkpoints.get(1).keySet(), sequenceMetadata.getExclusiveStartPartitions());
+    Assertions.assertTrue(sequenceMetadata.isCheckpointed());
 
     sequenceMetadata = sequences.get(2);
-    Assert.assertEquals(checkpoints.get(2), sequenceMetadata.getStartOffsets());
-    Assert.assertEquals(
+    Assertions.assertEquals(checkpoints.get(2), sequenceMetadata.getStartOffsets());
+    Assertions.assertEquals(
         task.getIOConfig().getEndSequenceNumbers().getPartitionSequenceNumberMap(),
         sequenceMetadata.getEndOffsets()
     );
-    Assert.assertEquals(checkpoints.get(2).keySet(), sequenceMetadata.getExclusiveStartPartitions());
-    Assert.assertFalse(sequenceMetadata.isCheckpointed());
+    Assertions.assertEquals(checkpoints.get(2).keySet(), sequenceMetadata.getExclusiveStartPartitions());
+    Assertions.assertFalse(sequenceMetadata.isCheckpointed());
   }
 
   /**
    * Tests handling of a closed shard. The task is initially given an unlimited end sequence number and
    * eventually gets an EOS marker which causes it to stop reading.
    */
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testEndOfShard() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -2151,7 +2191,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final ListenableFuture<TaskStatus> future = runTask(task);
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
 
@@ -2166,7 +2206,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         ),
         publishedDescriptors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new KinesisDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
@@ -2177,7 +2217,8 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRunWithoutDataInserted() throws Exception
   {
     recordSupplier.assign(EasyMock.anyObject());
@@ -2207,20 +2248,20 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Thread.sleep(1000);
 
-    Assert.assertEquals(0, countEvents(task));
-    Assert.assertEquals(SeekableStreamIndexTaskRunner.Status.READING, task.getRunner().getStatus());
+    Assertions.assertEquals(0, countEvents(task));
+    Assertions.assertEquals(SeekableStreamIndexTaskRunner.Status.READING, task.getRunner().getStatus());
 
     task.getRunner().stopGracefully();
 
     // Wait for task to exit
-    Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
+    Assertions.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
 
     verifyAll();
     verifyTaskMetrics(task, RowMeters.with().totalProcessed(0));
 
     // Check published metadata and segments in deep storage
     assertEqualsExceptVersion(Collections.emptyList(), publishedDescriptors());
-    Assert.assertNull(newDataSchemaMetadata());
+    Assertions.assertNull(newDataSchemaMetadata());
   }
 
   @Test
@@ -2229,18 +2270,18 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo =
         new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 10_000_000_000L);
 
-    Assert.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, null));
-    Assert.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 2));
+    Assertions.assertEquals(6, KinesisIndexTask.computeFetchThreads(runtimeInfo, null));
+    Assertions.assertEquals(2, KinesisIndexTask.computeFetchThreads(runtimeInfo, 2));
 
     final DruidProcessingConfigTest.MockRuntimeInfo runtimeInfo2 =
         new DruidProcessingConfigTest.MockRuntimeInfo(3, 1000, 1_000_000_000);
-    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, null));
-    Assert.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, 6));
-    Assert.assertThrows(
+    Assertions.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, null));
+    Assertions.assertEquals(5, KinesisIndexTask.computeFetchThreads(runtimeInfo2, 6));
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, 0)
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> KinesisIndexTask.computeFetchThreads(runtimeInfo, -1)
     );
@@ -2404,7 +2445,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private void makeToolboxFactory() throws IOException
   {
-    directory = tempFolder.newFolder();
+    directory = newFolder(tempFolder, "junit");
     final TestUtils testUtils = new TestUtils();
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
     objectMapper.setInjectableValues(((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(
@@ -2500,6 +2541,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     {
       return localSupplier == null ? recordSupplier : localSupplier;
     }
+
   }
 
   /**
@@ -2526,6 +2568,17 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     {
       return data;
     }
+
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 
 }

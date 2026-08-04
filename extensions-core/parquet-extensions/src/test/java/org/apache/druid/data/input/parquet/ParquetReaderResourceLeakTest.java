@@ -32,10 +32,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,8 +42,8 @@ import java.util.Objects;
 
 public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   @Test
   public void testFetchOnReadCleanupAfterExhaustingIterator() throws IOException
@@ -58,16 +57,16 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
     );
     FetchingFileEntity entity = new FetchingFileEntity(new File("example/wiki/wiki.parquet"));
     ParquetInputFormat parquet = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
-    File tempDir = temporaryFolder.newFolder();
+    File tempDir = newFolder(temporaryFolder, "junit");
     InputEntityReader reader = parquet.createReader(schema, entity, tempDir);
-    Assert.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
+    Assertions.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      Assert.assertTrue(Objects.requireNonNull(tempDir.list()).length > 0);
+      Assertions.assertTrue(Objects.requireNonNull(tempDir.list()).length > 0);
       while (iterator.hasNext()) {
         iterator.next();
       }
     }
-    Assert.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
+    Assertions.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
   }
 
   private static class FetchingFileEntity extends FileEntity
@@ -113,5 +112,23 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
         throw new RuntimeException(e);
       }
     }
+
+    private static File newFolder(File root, String... subDirs) throws IOException {
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
+    }
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

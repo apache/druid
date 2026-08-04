@@ -22,30 +22,30 @@ package org.apache.druid.data.input.parquet;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.List;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("ALL")
 public class ParquetToJsonTest
 {
-  @ClassRule
-  public static TemporaryFolder tmp = new TemporaryFolder();
+  @TempDir
+  public static File tmp;
 
   @Test
   public void testSanity() throws Exception
   {
-    final File tmpDir = tmp.newFolder();
+    final File tmpDir = newFolder(tmp, "junit");
     try (InputStream in = new BufferedInputStream(ClassLoader.getSystemResourceAsStream("smlTbl.parquet"))) {
       Files.copy(in, tmpDir.toPath().resolve("smlTbl.parquet"));
     }
@@ -55,8 +55,8 @@ public class ParquetToJsonTest
     DefaultObjectMapper mapper = DefaultObjectMapper.INSTANCE;
     List<Object> objs = mapper.readerFor(Object.class).readValues(new File(tmpDir, "smlTbl.parquet.json")).readAll();
 
-    Assert.assertEquals(56, objs.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(56, objs.size());
+    Assertions.assertEquals(
         ImmutableMap
             .builder()
             .put("col_int", 8122)
@@ -76,7 +76,7 @@ public class ParquetToJsonTest
   @Test
   public void testConvertedDates() throws Exception
   {
-    final File tmpDir = tmp.newFolder();
+    final File tmpDir = newFolder(tmp, "junit");
     try (InputStream in = new BufferedInputStream(ClassLoader.getSystemResourceAsStream("smlTbl.parquet"))) {
       Files.copy(in, tmpDir.toPath().resolve("smlTbl.parquet"));
     }
@@ -86,8 +86,8 @@ public class ParquetToJsonTest
     DefaultObjectMapper mapper = DefaultObjectMapper.INSTANCE;
     List<Object> objs = mapper.readerFor(Object.class).readValues(new File(tmpDir, "smlTbl.parquet.json")).readAll();
 
-    Assert.assertEquals(56, objs.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(56, objs.size());
+    Assertions.assertEquals(
         ImmutableMap
             .builder()
             .put("col_int", 8122)
@@ -108,30 +108,34 @@ public class ParquetToJsonTest
   @Test
   public void testInputValidation()
   {
-    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{}));
-    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{"a", "b"}));
+    Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{}));
+    Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[]{"a", "b"}));
   }
 
   @Test
   public void testEmptyDir() throws Exception
   {
-    final File tmpDir = tmp.newFolder();
-    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {tmpDir.getAbsolutePath()}));
+    final File tmpDir = newFolder(tmp, "junit");
+    Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {tmpDir.getAbsolutePath()}));
   }
 
   @Test
   public void testSomeFile() throws Exception
   {
-    final File file = tmp.newFile();
+    final File file = File.createTempFile("junit", null, tmp);
     assertTrue(file.exists());
-    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
+    Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
   }
 
   @Test
   public void testNonExistentFile() throws Exception
   {
-    final File file = new File(tmp.getRoot(), "nonExistent");
+    final File file = new File(tmp, "nonExistent");
     assertFalse(file.exists());
-    Assert.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
+    Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException {
+    return Files.createTempDirectory(root.toPath(), String.join("-", subDirs)).toFile();
   }
 }

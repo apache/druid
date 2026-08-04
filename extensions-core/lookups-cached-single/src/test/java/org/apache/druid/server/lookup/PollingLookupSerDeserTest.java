@@ -28,10 +28,9 @@ import org.apache.druid.server.lookup.cache.polling.OffHeapPollingCache;
 import org.apache.druid.server.lookup.cache.polling.OnHeapPollingCache;
 import org.apache.druid.server.lookup.cache.polling.PollingCacheFactory;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -41,10 +40,8 @@ import java.util.List;
 import java.util.Map;
 
 
-@RunWith(Parameterized.class)
 public class PollingLookupSerDeserTest
 {
-  @Parameterized.Parameters
   public static Collection<Object[]> inputData()
   {
     return Arrays.asList(new Object[][]{
@@ -52,29 +49,31 @@ public class PollingLookupSerDeserTest
     });
   }
 
-  private final PollingCacheFactory cacheFactory;
+  private PollingCacheFactory cacheFactory;
   private final DataFetcher dataFetcher = new MockDataFetcher();
 
-  public PollingLookupSerDeserTest(PollingCacheFactory cacheFactory)
+  public void initPollingLookupSerDeserTest(PollingCacheFactory cacheFactory)
   {
     this.cacheFactory = cacheFactory;
   }
 
-  @Test
-  public void testSerDeser() throws IOException
+  @MethodSource("inputData")
+  @ParameterizedTest
+  public void testSerDeser(PollingCacheFactory cacheFactory) throws IOException
   {
+    initPollingLookupSerDeserTest(cacheFactory);
     ObjectMapper mapper = new DefaultObjectMapper();
     PollingLookupFactory pollingLookupFactory = new PollingLookupFactory(Period.ZERO, dataFetcher, cacheFactory);
     mapper.registerSubtypes(MockDataFetcher.class);
     mapper.registerSubtypes(PollingLookupFactory.class);
-    Assert.assertEquals(pollingLookupFactory, mapper.readerFor(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(pollingLookupFactory)));
+    Assertions.assertEquals(pollingLookupFactory, mapper.readerFor(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(pollingLookupFactory)));
   }
 
   @JsonTypeName("mock")
   private static class MockDataFetcher implements DataFetcher
   {
     @JsonCreator
-    public MockDataFetcher()
+    public void initPollingLookupSerDeserTest()
     {
     }
 
