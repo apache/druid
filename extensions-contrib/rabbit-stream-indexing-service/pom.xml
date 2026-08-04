@@ -122,6 +122,12 @@
       <groupId>com.rabbitmq</groupId>
       <artifactId>stream-client</artifactId>
       <version>0.15.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.lz4</groupId>
+          <artifactId>lz4-java</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>jakarta.validation</groupId>
