@@ -64,6 +64,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -2575,9 +2576,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   {
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
+    FileUtils.mkdirp(result);
     return result;
   }
 

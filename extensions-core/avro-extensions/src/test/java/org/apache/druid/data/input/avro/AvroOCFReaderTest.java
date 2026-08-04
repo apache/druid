@@ -36,6 +36,7 @@ import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -203,9 +204,7 @@ public class AvroOCFReaderTest
   private static File newFolder(File root, String... subDirs) throws IOException {
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
+    FileUtils.mkdirp(result);
     return result;
   }
 }

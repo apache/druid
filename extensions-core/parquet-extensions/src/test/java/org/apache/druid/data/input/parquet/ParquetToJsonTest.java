@@ -21,6 +21,7 @@ package org.apache.druid.data.input.parquet;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -136,6 +137,6 @@ public class ParquetToJsonTest
   }
 
   private static File newFolder(File root, String... subDirs) throws IOException {
-    return Files.createTempDirectory(root.toPath(), String.join("-", subDirs)).toFile();
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

@@ -22,6 +22,7 @@ package org.apache.druid.indexing.common.tasklogs;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import org.apache.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
@@ -150,9 +151,7 @@ public class HdfsTaskLogsTest
   private static File newFolder(File root, String... subDirs) throws IOException {
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
+    FileUtils.mkdirp(result);
     return result;
   }
 }

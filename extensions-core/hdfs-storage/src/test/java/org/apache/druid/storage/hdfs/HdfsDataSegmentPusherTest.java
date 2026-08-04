@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.jackson.GranularityModule;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -429,7 +430,6 @@ public class HdfsDataSegmentPusherTest
   }
 
   private static File newFolder(File root) throws IOException {
-    java.nio.file.Path path = java.nio.file.Files.createTempDirectory(root.toPath(), "junit");
-    return path.toFile();
+    return FileUtils.createTempDirInLocation(root.toPath(), "junit");
   }
 }
