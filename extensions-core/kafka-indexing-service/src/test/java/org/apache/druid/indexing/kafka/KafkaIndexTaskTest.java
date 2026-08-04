@@ -3633,9 +3633,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   private static File newFolder(File root, String... subDirs) throws IOException {
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
+    org.apache.druid.java.util.common.FileUtils.mkdirp(result);
     return result;
   }
 }
