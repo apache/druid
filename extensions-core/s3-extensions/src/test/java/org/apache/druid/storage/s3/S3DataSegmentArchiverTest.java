@@ -99,6 +99,7 @@ public class S3DataSegmentArchiverTest
       ))
       .size(0)
       .build();
+
   @BeforeAll
   public static void setUpStatic()
   {
