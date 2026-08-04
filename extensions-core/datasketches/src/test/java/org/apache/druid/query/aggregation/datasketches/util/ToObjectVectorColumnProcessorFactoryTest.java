@@ -34,6 +34,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -168,7 +169,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   public void testComplexSketch()
   {
     final Object sketch = Iterables.getOnlyElement(readColumn("quality_uniques", 1));
-    Assert.assertThat(sketch, CoreMatchers.instanceOf(HyperLogLogCollector.class));
+    MatcherAssert.assertThat(sketch, CoreMatchers.instanceOf(HyperLogLogCollector.class));
   }
 
   private CursorHolder makeCursorHolder()

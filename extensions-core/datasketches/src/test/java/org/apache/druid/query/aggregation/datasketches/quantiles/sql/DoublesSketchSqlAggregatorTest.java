@@ -396,7 +396,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
                 .virtualColumns(
                     new ExpressionVirtualColumn("v0", "946684800000", ColumnType.LONG, TestExprMacroTable.INSTANCE),
-                    new ExpressionVirtualColumn("v1", "case_searched((\"j0.a0\" < \"_a0\"),'val2',((\"j0.a0\" >= \"_a0\") && (\"j0.a0\" < \"_a1\")),'val3',(\"j0.a0\" >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+                    new ExpressionVirtualColumn("v1", "case_searched((CAST(\"j0.a0\", 'DOUBLE') < \"_a0\"),'val2',((CAST(\"j0.a0\", 'DOUBLE') >= \"_a0\") && (CAST(\"j0.a0\", 'DOUBLE') < \"_a1\")),'val3',(CAST(\"j0.a0\", 'DOUBLE') >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
                 )
                 .columns("v0", "j0.d0", "j0.a0", "v1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.STRING)

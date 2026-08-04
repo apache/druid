@@ -264,7 +264,7 @@ public class FileUtils
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
     //noinspection unused
-    try (final Closeable deleter = () -> Files.deleteIfExists(tmpFile.toPath())) {
+    try (final Closeable ignoredDeleter = () -> Files.deleteIfExists(tmpFile.toPath())) {
       final T retVal;
 
       try (

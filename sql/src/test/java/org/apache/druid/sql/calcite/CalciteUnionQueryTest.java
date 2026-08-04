@@ -284,7 +284,6 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       // UnionToDistinctRule
       testBuilder()
           .sql(sql)
-          .expectedResults(ImmutableList.of(new Object[] {"def", 2L}))
           .expectedResults(
               ResultMatchMode.RELAX_NULLS,
               ImmutableList.of(
@@ -298,7 +297,6 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
                   new Object[] {"he", "\u05D3\u05E8\u05D5\u05D0\u05D9\u05D3", 1.0F},
                   new Object[] {"ru", "\u0434\u0440\u0443\u0438\u0434", 1.0F}
               )
-
           )
           .run();
     } else {

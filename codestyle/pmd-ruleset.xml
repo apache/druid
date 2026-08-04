@@ -29,6 +29,8 @@ This ruleset defines the PMD rules for the Apache Druid project.
 
   <rule ref="category/java/codestyle.xml/UnnecessaryImport" />
   <rule ref="category/java/codestyle.xml/TooManyStaticImports" />
+  <rule ref="category/java/bestpractices.xml/UnusedFormalParameter" />
+  <rule ref="category/java/bestpractices.xml/UnusedLocalVariable" />
   <rule ref="category/java/bestpractices.xml/MissingOverride" />
   <rule name="ConfusingMethodName"
         language="java"

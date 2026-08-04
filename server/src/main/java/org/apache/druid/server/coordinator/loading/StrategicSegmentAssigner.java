@@ -807,7 +807,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Drop as many replicas as possible from decommissioning servers
     int remainingNumToDrop = numToDrop;
     int numDropsQueued =
-        dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator(), tier);
+        dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator());
 
     // Drop replicas from active servers if required
     if (numToDrop > numDropsQueued) {
@@ -816,7 +816,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
           (useRoundRobinAssignment || eligibleLiveServers.size() <= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
           : strategy.findServersToDropSegment(segment, new ArrayList<>(eligibleLiveServers));
-      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
+      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator);
     }
 
     return numDropsQueued;
@@ -829,8 +829,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private int dropReplicasFromServers(
       int numToDrop,
       DataSegment segment,
-      Iterator<ServerHolder> serverIterator,
-      String tier
+      Iterator<ServerHolder> serverIterator
   )
   {
     int numDropsQueued = 0;
