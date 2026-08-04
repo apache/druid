@@ -407,7 +407,7 @@ public class AggregationTestHelper implements Closeable
 
   private static TempFolderProvider tempFolderProvider(final TemporaryFolder tempFolder)
   {
-    return tempFolder::newFolder;
+    return () -> tempFolder.newFolder();
   }
 
   private static TempFolderProvider tempFolderProvider(final File tempFolder)
