@@ -94,7 +94,8 @@ public class HdfsDataSegmentPusherTest
   }
 
   @Test
-  public void testPushWithBadScheme() {
+  public void testPushWithBadScheme()
+  {
     Throwable exception = assertThrows(RuntimeException.class, () -> {
       testUsingScheme("xyzzy");
 
@@ -429,7 +430,8 @@ public class HdfsDataSegmentPusherTest
 
   }
 
-  private static File newFolder(File root) throws IOException {
+  private static File newFolder(File root) throws IOException
+  {
     return FileUtils.createTempDirInLocation(root.toPath(), "junit");
   }
 }

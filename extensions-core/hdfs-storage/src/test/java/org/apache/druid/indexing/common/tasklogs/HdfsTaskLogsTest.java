@@ -148,7 +148,8 @@ public class HdfsTaskLogsTest
     return StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskLog(logFile, offset).get()));
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException {
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
     FileUtils.mkdirp(result);

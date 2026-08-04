@@ -136,7 +136,8 @@ public class ParquetToJsonTest
     Assertions.assertThrows(IAE.class, () -> ParquetToJson.main(new String[] {file.getAbsolutePath()}));
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException {
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
     return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

@@ -368,7 +368,8 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testKillNonZipSegment() {
+  public void testKillNonZipSegment()
+  {
     Throwable exception = assertThrows(SegmentLoadingException.class, () -> {
       Configuration config = new Configuration();
       HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
@@ -388,7 +389,8 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
-  public void testNoStorageDirectory() {
+  public void testNoStorageDirectory()
+  {
     Throwable exception = assertThrows(IllegalStateException.class, () -> {
       Configuration config = new Configuration();
       HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
