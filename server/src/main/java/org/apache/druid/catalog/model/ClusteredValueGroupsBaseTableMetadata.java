@@ -26,10 +26,8 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -212,55 +210,14 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
       // FLOAT ARRAY as DOUBLE ARRAY).
       return DimensionSchema.getDefaultSchemaForBuiltInType(column.name(), druidType);
     }
-    if (ColumnType.NESTED_DATA.equals(druidType)) {
-      return new NestedDataColumnSchema(column.name(), NestedDataColumnSchema.DEFAULT_FORMAT_VERSION);
-    }
     if (druidType.is(ValueType.COMPLEX)) {
-      return complexDimensionSchema(column.name(), druidType);
+      return DimensionHandlerUtils.getComplexDimensionSchema(column.name(), druidType);
     }
     throw InvalidInput.exception(
         "column [%s] has unsupported type [%s] for a clustered base table",
         column.name(),
         druidType
     );
-  }
-
-  /**
-   * Resolve a complex column through its registered {@link org.apache.druid.segment.DimensionHandler}, so that any
-   * complex type which can be stored as a dimension may be declared, including types contributed by extensions. The
-   * handler is looked up by the complex type name, so the schema it returns is specific to the declared type.
-   * <p>
-   * The returned schema is checked against the declared type before it is accepted. A schema selects its own handler
-   * at ingest time (via {@link DimensionSchema#getDimensionHandler()}, which reads
-   * {@link DimensionSchema#getColumnType()}), so a schema of some other type would quietly store the column as that
-   * type instead, contradicting the declared schema that queries are validated and coerced against.
-   */
-  private static DimensionSchema complexDimensionSchema(String name, ColumnType druidType)
-  {
-    final DimensionSchema schema;
-    try {
-      schema = DimensionHandlerUtils.getComplexDimensionSchema(name, druidType);
-    }
-    catch (ISE e) {
-      // No handler is registered for this complex type, which usually means the extension that defines it is not
-      // loaded on whichever service is validating the spec.
-      throw InvalidInput.exception(
-          "column [%s] has type [%s], which cannot be stored as a dimension of a clustered base table; if this type"
-          + " comes from an extension, check that the extension is loaded",
-          name,
-          druidType
-      );
-    }
-    if (!druidType.equals(schema.getColumnType())) {
-      throw InvalidInput.exception(
-          "column [%s] has type [%s], but the dimension handler registered for that type produced a schema of type"
-          + " [%s]; a column cannot be stored as a type other than the one it declares",
-          name,
-          druidType,
-          schema.getColumnType()
-      );
-    }
-    return schema;
   }
 
   private void validateColumnSchemaCustomization(
@@ -301,8 +258,6 @@ public class ClusteredValueGroupsBaseTableMetadata implements DatasourceBaseTabl
       // The auto schema stores FLOAT as DOUBLE.
       expectedType = autoColumnType(declaredType);
     }
-    // A NestedDataColumnSchema always reports COMPLEX<json>, so this also restricts json schemas to columns declared
-    // as COMPLEX<json>.
     if (!expectedType.equals(customSchema.getColumnType())) {
       throw InvalidInput.exception(
           "columnSchemas entry [%s] of type [%s] does not match the column's declared type [%s]; column schemas"

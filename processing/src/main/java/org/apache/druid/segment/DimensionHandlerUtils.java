@@ -27,6 +27,7 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -142,13 +143,18 @@ public final class DimensionHandlerUtils
    * The {@link DimensionHandler} registered for a complex type. Complex columns are stored by type-specific handlers,
    * so a type contributed by an extension becomes storable as soon as that extension registers one.
    *
-   * @throws ISE if no handler is registered for the type, which usually means the extension defining it is not loaded
+   * @throws DruidException if no handler is registered for the type, which usually means the extension defining it is
+   *                        not loaded
    */
   public static DimensionHandler<?, ?, ?> getHandlerForComplexType(String dimensionName, String complexTypeName)
   {
     final DimensionHandlerProvider provider = DIMENSION_HANDLER_PROVIDERS.get(complexTypeName);
     if (provider == null) {
-      throw new ISE("Can't find DimensionHandlerProvider for typeName [%s]", complexTypeName);
+      throw InvalidInput.exception(
+          "Complex type[%s] for dimension[%s] is not a valid type",
+          complexTypeName,
+          dimensionName
+      );
     }
     return provider.get(dimensionName);
   }
@@ -157,16 +163,42 @@ public final class DimensionHandlerUtils
    * The {@link DimensionSchema} to use when storing a complex column of the given type, for callers that have a
    * declared type rather than an existing column. Handlers are free to consult the {@link ColumnCapabilities} they
    * are given, so a default set describing the type is supplied on the caller's behalf.
+   * <p>
+   * The schema the handler produces must describe the column that was asked for, since a {@link DimensionSchema}
+   * selects its own handler at ingest time (via {@link DimensionSchema#getDimensionHandler()}, which reads
+   * {@link DimensionSchema#getColumnType()}). A schema of some other type would quietly store the column as that type
+   * instead, contradicting the type the caller declared, and one of some other name would store a different column
+   * entirely.
    *
-   * @throws ISE if no handler is registered for the type, which usually means the extension defining it is not loaded
+   * @throws DruidException if the type is not a named complex type, if no handler is registered for it (which usually
+   *                        means the extension defining it is not loaded), or if the registered handler does not
+   *                        describe the column that was asked for
    */
   public static DimensionSchema getComplexDimensionSchema(String dimensionName, ColumnType type)
   {
     if (!type.is(ValueType.COMPLEX) || type.getComplexTypeName() == null) {
-      throw new IAE("Type [%s] is not a named complex type", type);
+      throw InvalidInput.exception("Type[%s] for dimension[%s] is not a named complex type", type, dimensionName);
     }
-    return getHandlerForComplexType(dimensionName, type.getComplexTypeName())
+    final DimensionSchema schema = getHandlerForComplexType(dimensionName, type.getComplexTypeName())
         .getDimensionSchema(ColumnCapabilitiesImpl.createDefault().setType(type));
+    if (!type.equals(schema.getColumnType())) {
+      throw DruidException.defensive(
+          "Dimension handler for type[%s] produced a schema of type[%s] for dimension[%s]; a column cannot be stored"
+          + " as a type other than the one it declares",
+          type,
+          schema.getColumnType(),
+          dimensionName
+      );
+    }
+    if (!dimensionName.equals(schema.getName())) {
+      throw DruidException.defensive(
+          "Dimension handler for type[%s] produced a schema for dimension[%s] instead of dimension[%s]",
+          type,
+          schema.getName(),
+          dimensionName
+      );
+    }
+    return schema;
   }
 
   public static List<ColumnType> getValueTypesFromDimensionSpecs(List<DimensionSpec> dimSpecs)
