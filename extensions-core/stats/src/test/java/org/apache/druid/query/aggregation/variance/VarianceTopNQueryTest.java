@@ -38,36 +38,35 @@ import org.apache.druid.query.topn.TopNQueryRunnerTest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
 public class VarianceTopNQueryTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners(true));
   }
 
-  private final QueryRunner<Result<TopNResultValue>> runner;
+  private QueryRunner<Result<TopNResultValue>> runner;
 
-  public VarianceTopNQueryTest(
+  public void initVarianceTopNQueryTest(
       QueryRunner<Result<TopNResultValue>> runner
   )
   {
     this.runner = runner;
   }
 
-  @Test
-  public void testFullOnTopNOverUniques()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testFullOnTopNOverUniques(QueryRunner<Result<TopNResultValue>> runner)
   {
+    initVarianceTopNQueryTest(runner);
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)

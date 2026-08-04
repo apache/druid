@@ -48,10 +48,9 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Period;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -61,19 +60,17 @@ import java.util.List;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
 {
   @MonotonicNonNull
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private final GroupByQueryConfig config;
-  private final QueryRunner<Row> runner;
-  private final GroupByQueryRunnerFactory factory;
-  private final String testName;
-  private final GroupByQuery.Builder queryBuilder;
+  private GroupByQueryConfig config;
+  private QueryRunner<Row> runner;
+  private GroupByQueryRunnerFactory factory;
+  private String testName;
+  private GroupByQuery.Builder queryBuilder;
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
     setUpClass();
@@ -90,7 +87,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     if (BUFFER_POOLS == null) {
@@ -98,7 +95,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     }
   }
 
-  public VarianceGroupByQueryTest(
+  public void initVarianceGroupByQueryTest(
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
@@ -113,9 +110,16 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
                                     .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
   }
 
-  @Test
-  public void testGroupByVarianceOnly()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupByVarianceOnly(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
+    initVarianceGroupByQueryTest(testName, config, factory, runner);
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -154,9 +158,16 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedObjects(expectedResults, results, "variance");
   }
 
-  @Test
-  public void testGroupBy()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupBy(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
+    initVarianceGroupByQueryTest(testName, config, factory, runner);
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -199,9 +210,16 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
-  @Test
-  public void testPostAggHavingSpec()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testPostAggHavingSpec(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
+    initVarianceGroupByQueryTest(testName, config, factory, runner);
     VarianceTestHelper.RowBuilder expect = new VarianceTestHelper.RowBuilder(
         new String[]{"alias", "rows", "index", "index_var", "index_stddev"}
     );
@@ -254,9 +272,16 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedObjects(expectedResults, results, "limitSpec");
   }
 
-  @Test
-  public void testGroupByZtestPostAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupByZtestPostAgg(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
+    initVarianceGroupByQueryTest(testName, config, factory, runner);
     // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -295,9 +320,16 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
-  @Test
-  public void testGroupByTestPvalueZscorePostAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupByTestPvalueZscorePostAgg(
+      String testName,
+      GroupByQueryConfig config,
+      GroupByQueryRunnerFactory factory,
+      QueryRunner runner
+  )
   {
+    initVarianceGroupByQueryTest(testName, config, factory, runner);
     // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
