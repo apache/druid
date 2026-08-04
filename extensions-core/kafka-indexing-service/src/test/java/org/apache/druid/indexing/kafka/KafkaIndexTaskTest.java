@@ -3430,7 +3430,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    File file = File.createTempFile("task.json", null, temporaryFolder);
+    final File file = new File(temporaryFolder, "task.json");
 
     FileUtils.write(file, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
 
