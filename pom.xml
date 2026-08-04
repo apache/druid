@@ -1309,7 +1309,7 @@
             <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
-                <version>3.7.0</version>
+                <version>3.7.1</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
