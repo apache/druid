@@ -22,6 +22,7 @@ options {
     STATIC = false;
     IGNORE_CASE = true;
     UNICODE_INPUT = true;
+    COMMON_TOKEN_ACTION = true;
 }
 
 
@@ -8310,13 +8311,13 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < DEFINED: "DEFINED" >
 |   < DEFINER: "DEFINER" >
 |   < DEGREE: "DEGREE" >
-|   < DELETE: "DELETE" > { beforeTableName(); }
+|   < DELETE: "DELETE" >
 |   < DENSE_RANK: "DENSE_RANK" >
 |   < DEPTH: "DEPTH" >
 |   < DEREF: "DEREF" >
 |   < DERIVED: "DERIVED" >
 |   < DESC: "DESC" >
-|   < DESCRIBE: "DESCRIBE" > { beforeTableName(); }
+|   < DESCRIBE: "DESCRIBE" >
 |   < DESCRIPTION: "DESCRIPTION" >
 |   < DESCRIPTOR: "DESCRIPTOR" >
 |   < DETERMINISTIC: "DETERMINISTIC" >
@@ -8378,7 +8379,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < FRAME_ROW: "FRAME_ROW" >
 |   < FREE: "FREE" >
 |   < FRIDAY: "FRIDAY" >
-|   < FROM: "FROM" > { beforeTableName(); }
+|   < FROM: "FROM" >
 |   < FULL: "FULL" >
 |   < FUNCTION: "FUNCTION" >
 |   < FUSION: "FUSION" >
@@ -8420,7 +8421,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < INOUT: "INOUT" >
 |   < INPUT: "INPUT" >
 |   < INSENSITIVE: "INSENSITIVE" >
-|   < INSERT: "INSERT" > { beforeTableName(); }
+|   < INSERT: "INSERT" >
 |   < INSTANCE: "INSTANCE" >
 |   < INSTANTIABLE: "INSTANTIABLE" >
 |   < INT: "INT" >
@@ -8435,7 +8436,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < ISOYEAR: "ISOYEAR" >
 |   < ISOLATION: "ISOLATION" >
 |   < JAVA: "JAVA" >
-|   < JOIN: "JOIN" > { beforeTableName(); }
+|   < JOIN: "JOIN" >
 |   < JSON: "JSON" >
 |   < JSON_ARRAY: "JSON_ARRAY">
 |   < JSON_ARRAYAGG: "JSON_ARRAYAGG">
@@ -8484,7 +8485,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < MEASURE: "MEASURE" >
 |   < MEASURES: "MEASURES" >
 |   < MEMBER: "MEMBER" >
-|   < MERGE: "MERGE" > { beforeTableName(); }
+|   < MERGE: "MERGE" >
 |   < MESSAGE_LENGTH: "MESSAGE_LENGTH" >
 |   < MESSAGE_OCTET_LENGTH: "MESSAGE_OCTET_LENGTH" >
 |   < MESSAGE_TEXT: "MESSAGE_TEXT" >
@@ -8669,7 +8670,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < SECTION: "SECTION" >
 |   < SECURITY: "SECURITY" >
 |   < SEEK: "SEEK" >
-|   < SELECT: "SELECT" > { afterTableName(); }
+|   < SELECT: "SELECT" >
 |   < SELF: "SELF" >
 |   < SENSITIVE: "SENSITIVE" >
 |   < SEPARATOR: "SEPARATOR" >
@@ -8679,7 +8680,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < SERVER_NAME: "SERVER_NAME" >
 |   < SESSION: "SESSION" >
 |   < SESSION_USER: "SESSION_USER" >
-|   < SET: "SET" > { afterTableName(); }
+|   < SET: "SET" >
 |   < SETS: "SETS" >
 |   < SET_MINUS: "MINUS">
 |   < SHOW: "SHOW" >
@@ -8771,7 +8772,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < SYSTEM: "SYSTEM" >
 |   < SYSTEM_TIME: "SYSTEM_TIME" >
 |   < SYSTEM_USER: "SYSTEM_USER" >
-|   < TABLE: "TABLE" > { beforeTableName(); }
+|   < TABLE: "TABLE" >
 |   < TABLE_NAME: "TABLE_NAME" >
 |   < TABLESAMPLE: "TABLESAMPLE" >
 |   < TEMPORARY: "TEMPORARY" >
@@ -8826,7 +8827,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < UNNAMED: "UNNAMED" >
 |   < UNNEST: "UNNEST" >
 |   < UNSIGNED: "UNSIGNED" >
-|   < UPDATE: "UPDATE" > { beforeTableName(); }
+|   < UPDATE: "UPDATE" >
 |   < UPPER: "UPPER" >
 |   < UPSERT: "UPSERT" >
 |   < USAGE: "USAGE" >
@@ -8841,7 +8842,7 @@ SqlPostfixOperator PostfixRowOperator() :
 |   < UTF32: "UTF32" >
 |   < UUID: "UUID" >
 |   < VALUE: "VALUE" >
-|   < VALUES: "VALUES" > { afterTableName(); }
+|   < VALUES: "VALUES" >
 |   < VALUE_OF: "VALUE_OF" >
 |   < VAR_POP: "VAR_POP" >
 |   < VAR_SAMP: "VAR_SAMP" >
@@ -9106,6 +9107,31 @@ TOKEN_MGR_DECLS : {
       }
     }
 
+    void CommonTokenAction(final Token token) {
+      switch (token.kind) {
+        case DELETE:
+        case DESCRIBE:
+        case FROM:
+        case INSERT:
+        case JOIN:
+        case MERGE:
+        case TABLE:
+        case UPDATE:
+          beforeTableName();
+          break;
+        case SELECT:
+        case SET:
+        case VALUES:
+          afterTableName();
+          break;
+        case HYPHENATED_IDENTIFIER:
+          popState();
+          break;
+        default:
+          break;
+      }
+    }
+
 <#if (parser.includeAdditionalDeclarations!default.parser.includeAdditionalDeclarations)>
   <#include "/@includes/tokenManagerDeclarations.ftl" />
 </#if>
@@ -9254,7 +9280,7 @@ MORE :
     // Per BigQuery: "Project IDs must contain 6-63 lowercase letters, digits,
     // or dashes. IDs must start with a letter and may not end with a dash."
     // We do not restrict length, or prevent identifiers from ending in a dash.
-    < HYPHENATED_IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>|"-")* > { popState(); }
+    < HYPHENATED_IDENTIFIER: <LETTER> (<LETTER>|<DIGIT>|"-")* >
 }
 
 <DEFAULT, DQID, BTID, BQID> TOKEN :
