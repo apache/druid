@@ -53,7 +53,7 @@ public class SleepExprTest extends InitializedNullHandlingTest
 
   private void assertTimeElapsed(String expression, long expectedTimeElapsedMs)
   {
-    final long detla = 50;
+    final long deltaMs = 50;
     final long before = System.currentTimeMillis();
     final Expr expr = Parser.parse(expression, exprMacroTable);
     expr.eval(InputBindings.nilBindings()).value();
@@ -61,7 +61,7 @@ public class SleepExprTest extends InitializedNullHandlingTest
     final long elapsed = after - before;
     Assertions.assertTrue(
         elapsed >= expectedTimeElapsedMs
-        && elapsed < expectedTimeElapsedMs + detla,
+        && elapsed < expectedTimeElapsedMs + deltaMs,
         StringUtils.format("Expected [%s], but actual elapsed was [%s]", expectedTimeElapsedMs, elapsed)
     );
   }

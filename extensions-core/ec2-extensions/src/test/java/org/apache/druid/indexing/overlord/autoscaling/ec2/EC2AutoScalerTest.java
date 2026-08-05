@@ -119,12 +119,12 @@ public class EC2AutoScalerTest
 
     AutoScalingData created = autoScaler.provision();
 
-    Assertions.assertEquals(created.getNodeIds().size(), 1);
+    Assertions.assertEquals(1, created.getNodeIds().size());
     Assertions.assertEquals("theInstance", created.getNodeIds().get(0));
 
     AutoScalingData deleted = autoScaler.terminate(Collections.singletonList("dummyIP"));
 
-    Assertions.assertEquals(deleted.getNodeIds().size(), 1);
+    Assertions.assertEquals(1, deleted.getNodeIds().size());
     Assertions.assertEquals(INSTANCE_ID, deleted.getNodeIds().get(0));
   }
 

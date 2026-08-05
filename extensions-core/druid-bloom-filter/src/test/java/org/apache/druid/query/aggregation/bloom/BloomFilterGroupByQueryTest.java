@@ -97,7 +97,9 @@ public class BloomFilterGroupByQueryTest extends InitializedNullHandlingTest
   @AfterEach
   public void teardown() throws IOException
   {
-    helper.close();
+    if (helper != null) {
+      helper.close();
+    }
   }
 
   @MethodSource("constructorFeeder")
