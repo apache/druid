@@ -33,6 +33,7 @@ import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -417,10 +418,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return files == null ? new File[0] : files;
   }
 
+  private File getSegmentInfoFile(final DataSegment segment)
+  {
+    return FileUtils.resolveFileWithinDirectory(getEffectiveInfoDir(), segment.getId().toString());
+  }
+
   @Override
   public void storeInfoFile(final DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
     if (!segmentInfoCacheFile.exists()) {
       FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
       FileUtils.writeAtomically(
@@ -456,9 +462,16 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  private void deleteSegmentInfoFile(DataSegment segment)
+  private void deleteSegmentInfoFile(final DataSegment segment)
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile;
+    try {
+      segmentInfoCacheFile = getSegmentInfoFile(segment);
+    }
+    catch (IAE e) {
+      log.warn(e, "Refusing to delete info file with invalid path for segment[%s].", segment.getId());
+      return;
+    }
     if (!segmentInfoCacheFile.delete()) {
       log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
     }
@@ -473,7 +486,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private void rewriteInfoFile(DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
     FileUtils.mkdirp(getEffectiveInfoDir());
     FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
       jsonMapper.writeValue(out, segment);
@@ -530,7 +543,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           try {
             if (hold != null) {
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
-              final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
+              final File segmentInfoCacheFile = getSegmentInfoFile(dataSegment);
               if (!segmentInfoCacheFile.exists()) {
                 FileUtils.mkdirp(getEffectiveInfoDir());
                 FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
