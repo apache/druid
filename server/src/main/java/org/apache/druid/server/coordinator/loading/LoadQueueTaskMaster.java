@@ -22,12 +22,13 @@ package org.apache.druid.server.coordinator.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -73,7 +74,7 @@ public class LoadQueueTaskMaster
     this.coordinatorDynamicConfigSupplier = coordinatorDynamicConfigSupplier;
   }
 
-  private LoadQueuePeon createPeon(ImmutableDruidServer server)
+  private LoadQueuePeon createPeon(DruidServerMetadata server)
   {
     return new HttpLoadQueuePeon(
         server.getURL(),
@@ -91,9 +92,14 @@ public class LoadQueueTaskMaster
     return loadManagementPeons;
   }
 
-  public LoadQueuePeon getPeonForServer(ImmutableDruidServer server)
+  /**
+   * Returns the peon for the named server, or null if this Coordinator is not the leader or the server is not
+   * currently part of the cluster.
+   */
+  @Nullable
+  public LoadQueuePeon getPeonForServer(String serverName)
   {
-    return loadManagementPeons.get(server.getName());
+    return loadManagementPeons.get(serverName);
   }
 
   /**
@@ -104,7 +110,7 @@ public class LoadQueueTaskMaster
    * {@link #onLeaderStop()} so that there are no stray peons if the Coordinator
    * is not leader anymore.
    */
-  public synchronized void resetPeonsForNewServers(List<ImmutableDruidServer> currentServers)
+  public synchronized void resetPeonsForNewServers(List<DruidServerMetadata> currentServers)
   {
     if (!isLeader.get()) {
       return;
@@ -113,7 +119,7 @@ public class LoadQueueTaskMaster
     final Set<String> oldServers = Sets.newHashSet(loadManagementPeons.keySet());
 
     // Start peons for new servers
-    for (ImmutableDruidServer server : currentServers) {
+    for (DruidServerMetadata server : currentServers) {
       loadManagementPeons.computeIfAbsent(server.getName(), serverName -> {
         LoadQueuePeon loadQueuePeon = createPeon(server);
         loadQueuePeon.start();
@@ -123,7 +129,7 @@ public class LoadQueueTaskMaster
     }
 
     // Remove peons for disappeared servers
-    for (ImmutableDruidServer server : currentServers) {
+    for (DruidServerMetadata server : currentServers) {
       oldServers.remove(server.getName());
     }
     for (String name : oldServers) {

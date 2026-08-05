@@ -30,6 +30,7 @@ import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
@@ -82,8 +83,10 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    List<ImmutableDruidServer> currentServers = prepareCurrentServers();
-    taskMaster.resetPeonsForNewServers(currentServers);
+    final List<DruidServer> currentServers = prepareCurrentServers();
+    taskMaster.resetPeonsForNewServers(
+        currentServers.stream().map(DruidServer::getMetadata).collect(Collectors.toList())
+    );
 
     final CoordinatorDynamicConfig dynamicConfig = params.getCoordinatorDynamicConfig();
     final SegmentLoadingConfig segmentLoadingConfig
@@ -137,32 +140,49 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
     }
   }
 
-  private List<ImmutableDruidServer> prepareCurrentServers()
+  private List<DruidServer> prepareCurrentServers()
   {
     return serverInventoryView
         .getInventory()
         .stream()
         .filter(DruidServer::isSegmentReplicationOrBroadcastTarget)
-        .map(DruidServer::toImmutableDruidServer)
         .collect(Collectors.toList());
   }
 
+  /**
+   * Captures the current state of every managed server, pairing each server's segment set with its load queue.
+   * <p>
+   * The two captures are interleaved per server, and the queue is read <em>against</em> the segment set just copied,
+   * so an operation is reported as pending exactly when that copy does not yet reflect it. Copying every server's
+   * segment set first and only then reading the load queues (as this duty used to) leaves a window in which a
+   * completing operation is visible in neither. See apache/druid#18764.
+   */
   private DruidCluster prepareCluster(
       CoordinatorDynamicConfig dynamicConfig,
       SegmentLoadingConfig segmentLoadingConfig,
-      List<ImmutableDruidServer> currentServers
+      List<DruidServer> currentServers
   )
   {
     final Set<String> decommissioningServers = dynamicConfig.getDecommissioningNodes();
     final Set<String> unmanagedServers = new HashSet<>(dynamicConfig.getCloneServers().keySet());
     final DruidCluster.Builder cluster = DruidCluster.builder();
-    for (ImmutableDruidServer server : currentServers) {
+    for (DruidServer server : currentServers) {
+      final LoadQueuePeon peon = taskMaster.getPeonForServer(server.getName());
+      if (peon == null) {
+        // This Coordinator stopped being the leader between resetting the peons and now.
+        log.debug("No load queue peon for server[%s]. Skipping it in this run.", server.getName());
+        continue;
+      }
+
+      final ImmutableDruidServer immutableServer = server.toImmutableDruidServer();
+
       cluster.add(
           new ServerHolder(
-              server,
-              taskMaster.getPeonForServer(server),
-              decommissioningServers.contains(server.getHost()),
-              unmanagedServers.contains(server.getHost()),
+              immutableServer,
+              peon,
+              peon.getQueueSnapshot(immutableServer),
+              decommissioningServers.contains(immutableServer.getHost()),
+              unmanagedServers.contains(immutableServer.getHost()),
               segmentLoadingConfig.getMaxSegmentsInLoadQueue(),
               segmentLoadingConfig.getMaxLifetimeInLoadQueue()
           )
