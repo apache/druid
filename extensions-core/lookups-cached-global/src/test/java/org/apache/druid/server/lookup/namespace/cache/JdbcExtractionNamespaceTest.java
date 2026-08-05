@@ -107,7 +107,11 @@ public class JdbcExtractionNamespaceTest
         new DBI(connector.getJdbcUri() + ";drop=true").open().close();
       }
       catch (UnableToObtainConnectionException e) {
-        final SQLException cause = (SQLException) e.getCause();
+        final SQLException cause = Assertions.assertInstanceOf(
+            SQLException.class,
+            e.getCause(),
+            "Expected Derby shutdown failure to wrap a SQLException"
+        );
         Assertions.assertEquals(
             "08006",
             cause.getSQLState(),

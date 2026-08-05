@@ -81,9 +81,9 @@ public class JdbcCacheGeneratorTest
   @Test
   public void indicatesMissingJdbcJarsWithTsColumn()
   {
-    Throwable exception = assertThrows(IllegalStateException.class, () -> {
-      String tsColumn = "tsColumn";
-      JdbcExtractionNamespace missingJarNamespace = createJdbcExtractionNamespace(
+    final Throwable exception = assertThrows(IllegalStateException.class, () -> {
+      final String tsColumn = "tsColumn";
+      final JdbcExtractionNamespace missingJarNamespace = createJdbcExtractionNamespace(
           MISSING_METADATA_STORAGE_CONNECTOR_CONFIG,
           tsColumn
       );
@@ -96,10 +96,10 @@ public class JdbcCacheGeneratorTest
   @Test
   public void indicatesMissingJdbcJarsWithoutTsColumn()
   {
-    Throwable exception = assertThrows(IllegalStateException.class, () -> {
-      String missingTsColumn = null;
+    final Throwable exception = assertThrows(IllegalStateException.class, () -> {
+      final String missingTsColumn = null;
       @SuppressWarnings("ConstantConditions")  // for missingTsColumn
-      JdbcExtractionNamespace missingJarNamespace = createJdbcExtractionNamespace(
+      final JdbcExtractionNamespace missingJarNamespace = createJdbcExtractionNamespace(
           MISSING_METADATA_STORAGE_CONNECTOR_CONFIG,
           missingTsColumn
       );
