@@ -91,7 +91,10 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
   @AfterEach
   public void teardown() throws IOException
   {
-    helper.close();
+    if (helper != null) {
+      helper.close();
+      helper = null;
+    }
   }
 
   @MethodSource("constructorFeeder")

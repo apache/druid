@@ -130,8 +130,7 @@ public class HllSketchMergeAggregatorFactoryTest
           SHOULD_FINALIZE,
           ROUND
       );
-      HllSketchAggregatorFactory result = (HllSketchAggregatorFactory) targetRound.getMergingFactory(other);
-      Assertions.assertEquals(LG_K, result.getLgK());
+      targetRound.getMergingFactory(other);
     });
   }
 

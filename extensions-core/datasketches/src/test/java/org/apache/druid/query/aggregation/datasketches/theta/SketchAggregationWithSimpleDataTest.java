@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -53,7 +52,6 @@ import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -71,18 +69,9 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   @TempDir
   private File tempFolder;
 
-  private GroupByQueryConfig config;
-  private QueryContexts.Vectorize vectorize;
-
   private SketchModule sm;
   private File s1;
   private File s2;
-
-  public void initSketchAggregationWithSimpleDataTest(GroupByQueryConfig config, String vectorize)
-  {
-    this.config = config;
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
-  }
 
   public static Collection<?> constructorFeeder()
   {
@@ -95,8 +84,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     return constructors;
   }
 
-  @BeforeEach
-  public void setup() throws Exception
+  private void setup(final GroupByQueryConfig config) throws Exception
   {
     SketchModule.registerSerde();
     sm = new SketchModule();
@@ -150,7 +138,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
   public void testSimpleDataIngestAndGpByQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    initSketchAggregationWithSimpleDataTest(config, vectorize);
+    setup(config);
     try (
         final AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
             sm.getJacksonModules(),
@@ -309,7 +297,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
   public void testSimpleDataIngestAndTimeseriesQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    initSketchAggregationWithSimpleDataTest(config, vectorize);
+    setup(config);
     AggregationTestHelper timeseriesQueryAggregationTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
@@ -392,7 +380,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
   public void testSimpleDataIngestAndTopNQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    initSketchAggregationWithSimpleDataTest(config, vectorize);
+    setup(config);
     AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
@@ -479,7 +467,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
   @ParameterizedTest(name = "config = {0}, vectorize = {1}")
   public void testTopNQueryWithSketchConstant(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    initSketchAggregationWithSimpleDataTest(config, vectorize);
+    setup(config);
     AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
