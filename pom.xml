@@ -2027,7 +2027,7 @@
                         <argLine>
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
-<!--                            ${jdk.security.manager.allow.argLine}-->
+                            ${jdk.security.manager.allow.argLine}
                             -Xmx2048m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -2156,20 +2156,20 @@
     </build>
 
     <profiles>
-<!--        <profile>-->
-<!--            <id>java-12+</id>-->
-<!--            <activation>-->
-<!--                &lt;!&ndash; Security Manager was permanently removed in JDK 24 (JEP 486); this flag is fatal on 24+ &ndash;&gt;-->
-<!--                <jdk>[12,24)</jdk>-->
-<!--            </activation>-->
-<!--            <properties>-->
-<!--                <jdk.security.manager.allow.argLine>-->
-<!--                  &lt;!&ndash; required for system-rules with Java >= 18 https://github.com/stefanbirkner/system-rules/issues/85 &ndash;&gt;-->
-<!--                  &lt;!&ndash; this option is only available starting in Java 12 &ndash;&gt;-->
-<!--                    -Djava.security.manager=allow-->
-<!--                </jdk.security.manager.allow.argLine>-->
-<!--            </properties>-->
-<!--        </profile>-->
+        <profile>
+            <id>java-12+</id>
+            <activation>
+                <!-- Security Manager was permanently removed in JDK 24 (JEP 486); this flag is fatal on 24+ -->
+                <jdk>[12,24)</jdk>
+            </activation>
+            <properties>
+                <jdk.security.manager.allow.argLine>
+                  <!-- required for system-rules with Java >= 18 https://github.com/stefanbirkner/system-rules/issues/85 -->
+                  <!-- this option is only available starting in Java 12 -->
+                    -Djava.security.manager=allow
+                </jdk.security.manager.allow.argLine>
+            </properties>
+        </profile>
           <profile>
             <id>strict</id>
             <activation>
