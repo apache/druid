@@ -518,9 +518,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             and(
-                not(equality("v0", "x6", ColumnType.STRING)),
-                not(equality("v0", "nonexistent", ColumnType.STRING)),
-                notNull("v0")
+                notNull("v0"),
+                not(in("v0", ImmutableList.of("nonexistent", "x6")))
             )
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
@@ -574,11 +573,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
             or(
-                and(
-                    not(equality("v0", "x6", ColumnType.STRING)),
-                    not(equality("v0", "nonexistent", ColumnType.STRING))
-                ),
-                isNull("v0")
+                isNull("v0"),
+                not(in("v0", ImmutableList.of("nonexistent", "x6")))
             )
         ),
         ImmutableList.of(
@@ -617,7 +613,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
         QUERY_CONTEXT,
         buildFilterTestExpectedQuery(
             expressionVirtualColumn("v0", LOOKUP_EXPRESSION, ColumnType.STRING),
-            and(not(equality("v0", "x6", ColumnType.STRING)), not(equality("v0", "nonexistent", ColumnType.STRING)))
+            not(in("v0", ImmutableList.of("nonexistent", "x6")))
         ),
         ImmutableList.of(new Object[]{"xabc", 1L})
     );

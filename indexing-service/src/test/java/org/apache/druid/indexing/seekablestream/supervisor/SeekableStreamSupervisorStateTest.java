@@ -112,6 +112,8 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -245,6 +247,32 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
     Assert.assertTrue(supervisor.stateManager.isAtLeastOneSuccessfulRun());
 
+    verifyAll();
+  }
+
+  @Test
+  public void testCheckOffsetAvailabilityReleasesLockWhenAssignmentDoesNotMatch() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false);
+    EasyMock.reset(recordSupplier);
+    EasyMock.expect(recordSupplier.getAssignment()).andReturn(ImmutableSet.of());
+    replayAll();
+
+    final TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+    supervisor.recordSupplier = recordSupplier;
+    final Method checkOffsetAvailability = SeekableStreamSupervisor.class.getDeclaredMethod(
+        "checkOffsetAvailability",
+        Object.class,
+        Object.class
+    );
+    checkOffsetAvailability.setAccessible(true);
+
+    final InvocationTargetException exception = Assert.assertThrows(
+        InvocationTargetException.class,
+        () -> checkOffsetAvailability.invoke(supervisor, SHARD_ID, "1")
+    );
+    Assert.assertEquals(IllegalStateException.class, exception.getCause().getClass());
+    Assert.assertFalse(supervisor.getRecordSupplierLock().isLocked());
     verifyAll();
   }
 

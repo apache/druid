@@ -27,8 +27,8 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.regions.Region;
@@ -94,12 +94,12 @@ public class S3DataSegmentMoverTest
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
         MapUtils.getString(targetLoadSpec, "key")
     );
-    Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertTrue(mockS3Client.didMove());
+    Assertions.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
+    Assertions.assertTrue(mockS3Client.didMove());
   }
 
   @Test
@@ -123,12 +123,12 @@ public class S3DataSegmentMoverTest
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
         MapUtils.getString(targetLoadSpec, "key")
     );
-    Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertFalse(mockS3Client.didMove());
+    Assertions.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
+    Assertions.assertFalse(mockS3Client.didMove());
   }
 
   @Test
@@ -162,15 +162,15 @@ public class S3DataSegmentMoverTest
 
     final Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
         MapUtils.getString(targetLoadSpec, "key")
     );
-    Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertFalse(mockS3Client.didMove());
+    Assertions.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
+    Assertions.assertFalse(mockS3Client.didMove());
   }
 
-  @Test(expected = SegmentLoadingException.class)
+  @Test
   public void testMoveException() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
@@ -179,9 +179,12 @@ public class S3DataSegmentMoverTest
         new S3DataSegmentPusherConfig()
     );
 
-    mover.move(
-        SOURCE_SEGMENT,
-        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> mover.move(
+            SOURCE_SEGMENT,
+            ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+        )
     );
   }
 
@@ -211,7 +214,7 @@ public class S3DataSegmentMoverTest
     ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
   }
 
-  @Test(expected = SegmentLoadingException.class)
+  @Test
   public void testFailsToMoveMissing() throws Exception
   {
     MockAmazonS3Client mockS3Client = new MockAmazonS3Client();
@@ -219,22 +222,25 @@ public class S3DataSegmentMoverTest
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
-    mover.move(new DataSegment(
-        "test",
-        Intervals.of("2013-01-01/2013-01-02"),
-        "1",
-        ImmutableMap.of(
-            "key",
-            "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-            "bucket",
-            "DOES NOT EXIST"
-        ),
-        ImmutableList.of("dim1", "dim1"),
-        ImmutableList.of("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        0,
-        1
-    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> mover.move(new DataSegment(
+            "test",
+            Intervals.of("2013-01-01/2013-01-02"),
+            "1",
+            ImmutableMap.of(
+                "key",
+                "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+                "bucket",
+                "DOES NOT EXIST"
+            ),
+            ImmutableList.of("dim1", "dim1"),
+            ImmutableList.of("metric1", "metric2"),
+            NoneShardSpec.instance(),
+            0,
+            1
+        ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"))
+    );
   }
 
   private static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3

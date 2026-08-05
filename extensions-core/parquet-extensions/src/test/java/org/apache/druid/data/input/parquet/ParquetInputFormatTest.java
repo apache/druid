@@ -21,8 +21,8 @@ package org.apache.druid.data.input.parquet;
 
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ParquetInputFormatTest
 {
@@ -31,7 +31,7 @@ public class ParquetInputFormatTest
   {
     final ParquetInputFormat format = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
     long unweightedSize = 100L;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         unweightedSize * ParquetInputFormat.SCALE_FACTOR,
         format.getWeightedSize("file.parquet", unweightedSize)
     );

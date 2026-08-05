@@ -48,6 +48,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -149,23 +150,28 @@ public class TimestampGroupByAggregationTest
                                             .setInterval("2011-01-01T00:00:00.000Z/2011-05-01T00:00:00.000Z")
                                             .build();
 
-    ZipFile zip = new ZipFile(new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI()));
-    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
-        zip.getInputStream(zip.getEntry("druid.sample.tsv")),
-        new InputRowSchema(
-            new TimestampSpec("timestamp", "auto", null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
-            ColumnsFilter.all()
-        ),
-        DelimitedInputFormat.forColumns(
-            List.of("timestamp", "cat", "product", "prefer", "prefer2", "pty_country")
-        ),
-        aggregators,
-        0,
-        Granularities.MONTH,
-        100,
-        groupByQuery
+    final Sequence<ResultRow> seq;
+    try (final ZipFile zip = new ZipFile(
+        new File(this.getClass().getClassLoader().getResource("druid.sample.tsv.zip").toURI())
     );
+         final InputStream inputStream = zip.getInputStream(zip.getEntry("druid.sample.tsv"))) {
+      seq = helper.createIndexAndRunQueryOnSegment(
+          inputStream,
+          new InputRowSchema(
+              new TimestampSpec("timestamp", "auto", null),
+              new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
+              ColumnsFilter.all()
+          ),
+          DelimitedInputFormat.forColumns(
+              List.of("timestamp", "cat", "product", "prefer", "prefer2", "pty_country")
+          ),
+          aggregators,
+          0,
+          Granularities.MONTH,
+          100,
+          groupByQuery
+      );
+    }
 
     int groupByFieldNumber = groupByQuery.getResultRowSignature().indexOf(groupByField);
 

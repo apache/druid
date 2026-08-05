@@ -78,6 +78,7 @@ import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.utils.JvmUtils;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -117,12 +118,17 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   @Parameters(name = "{0}")
   public static Iterable<String[]> data() throws IOException
   {
-    BufferedReader testReader = new BufferedReader(
-        new InputStreamReader(MovingAverageQueryTest.class.getResourceAsStream("/queryTests"), StandardCharsets.UTF_8));
     List<String[]> tests = new ArrayList<>();
 
-    for (String line = testReader.readLine(); line != null; line = testReader.readLine()) {
-      tests.add(new String[]{line});
+    try (final BufferedReader testReader = new BufferedReader(
+        new InputStreamReader(
+            MovingAverageQueryTest.class.getResourceAsStream("/queryTests"),
+            StandardCharsets.UTF_8
+        )
+    )) {
+      for (String line = testReader.readLine(); line != null; line = testReader.readLine()) {
+        tests.add(new String[]{line});
+      }
     }
 
     return tests;
@@ -171,9 +177,10 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     retryConfig = injector.getInstance(RetryQueryRunnerConfig.class);
     serverConfig = injector.getInstance(ServerConfig.class);
 
-    InputStream is = getClass().getResourceAsStream("/queryTests/" + yamlFile);
     ObjectMapper reader = new ObjectMapper(new YAMLFactory());
-    config = reader.readValue(is, TestConfig.class);
+    try (final InputStream is = getClass().getResourceAsStream("/queryTests/" + yamlFile)) {
+      config = reader.readValue(is, TestConfig.class);
+    }
   }
 
   /**
@@ -303,11 +310,11 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   public void testQuery() throws IOException
   {
     Query<?> query = jsonMapper.readValue(getQueryString(), Query.class);
-    Assert.assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
+    MatcherAssert.assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
 
     List<MapBasedRow> expectedResults = jsonMapper.readValue(getExpectedResultString(), getExpectedResultType());
     Assert.assertNotNull(expectedResults);
-    Assert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
+    MatcherAssert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
 
     DruidHttpClientConfig httpClientConfig = new DruidHttpClientConfig()
     {

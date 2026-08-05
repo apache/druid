@@ -82,7 +82,7 @@ public class OpenTelemetryEmitter implements Emitter
   {
     Context opentelemetryContext = propagator.extract(Context.current(), event, DRUID_CONTEXT_TEXT_MAP_GETTER);
 
-    try (Scope scope = opentelemetryContext.makeCurrent()) {
+    try (Scope ignoredScope = opentelemetryContext.makeCurrent()) {
       DateTime endTime = event.getCreatedTime();
       DateTime startTime = endTime.minusMillis(event.getValue().intValue());
 
