@@ -45,12 +45,12 @@ public class AWSClientConfig
   private static final int DEFAULT_MAX_CONNECTIONS_FLOOR = 50;
 
   /**
-   * Selects the retry behaviour AWS documents for {@code standard} and {@code adaptive} rather than the pre-2026
-   * behaviour. The no-argument factories default the {@code aws.newRetries2026} opt-in to false, which changes the
+   * Selects the retry behavior AWS documents for {@code standard} and {@code adaptive} rather than the pre-2026
+   * behavior. The no-argument factories default the {@code aws.newRetries2026} opt-in to false, which changes the
    * backoff base delays and the retry-quota token costs; asking for it explicitly means the modes behave as
    * documented, and keeps them behaving that way when AWS flips the opt-in default.
    */
-  private static final Boolean USE_DOCUMENTED_RETRY_BEHAVIOUR = Boolean.TRUE;
+  private static final Boolean USE_DOCUMENTED_RETRY_BEHAVIOR = Boolean.TRUE;
 
   /**
    * Retry strategy family. Declared as an enum so an unrecognised value is rejected while the config is bound at
@@ -62,7 +62,7 @@ public class AWSClientConfig
       @Override
       RetryStrategy createStrategy()
       {
-        return AwsRetryStrategy.standardRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOUR);
+        return AwsRetryStrategy.standardRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOR);
       }
     },
     ADAPTIVE {
@@ -72,14 +72,14 @@ public class AWSClientConfig
         // Standard plus a client-side rate limiter, which unlike standard can delay or block the initial request,
         // not just retries. The limiter belongs to one client instance and covers every request that client makes,
         // so throttling on one key prefix also slows requests to prefixes that are not being throttled.
-        return AwsRetryStrategy.adaptiveRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOUR);
+        return AwsRetryStrategy.adaptiveRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOR);
       }
     },
     LEGACY {
       @Override
       RetryStrategy createStrategy()
       {
-        // Deliberately left on the pre-standard behaviour: this mode exists so a deployment can get back to what it
+        // Deliberately left on the pre-standard behavior: this mode exists so a deployment can get back to what it
         // had before, which is the opposite of what the opt-in above asks for.
         return AwsRetryStrategy.legacyRetryStrategy();
       }
@@ -154,7 +154,7 @@ public class AWSClientConfig
    * Retry strategy applied to every AWS client built from this config.
    * <p>
    * Setting this at all is deliberate: left unset, the SDK picks its own default, and which one it picks depends on
-   * the {@code aws.newRetries2026} migration flag. Naming the mode here keeps retry behaviour stable across SDK
+   * the {@code aws.newRetries2026} migration flag. Naming the mode here keeps retry behavior stable across SDK
    * upgrades instead of changing under Druid when that flag's default flips.
    */
   @JsonProperty
