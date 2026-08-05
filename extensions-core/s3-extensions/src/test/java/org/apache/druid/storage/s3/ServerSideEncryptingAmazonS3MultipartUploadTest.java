@@ -21,6 +21,7 @@ package org.apache.druid.storage.s3;
 
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
+import org.apache.druid.java.util.common.StringUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -173,7 +174,7 @@ public class ServerSideEncryptingAmazonS3MultipartUploadTest
    */
   private static int partCountOf(String eTag)
   {
-    final String unquoted = eTag.replace("\"", "");
+    final String unquoted = StringUtils.replace(eTag, "\"", "");
     final int dash = unquoted.lastIndexOf('-');
     return dash < 0 ? 1 : Integer.parseInt(unquoted.substring(dash + 1));
   }
