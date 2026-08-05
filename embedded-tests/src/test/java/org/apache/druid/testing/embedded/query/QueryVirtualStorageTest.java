@@ -266,7 +266,15 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         aggregate -> aggregate.hasSumAtLeast(1)
     );
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_COUNT) > 0);
+    emitter.waitForEventAggregate(
+        event -> event.hasMetricName(StorageMonitor.VSF_READ_BYTES),
+        aggregate -> aggregate.hasSumAtLeast(1)
+    );
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_BYTES) > 0);
+    emitter.waitForEventAggregate(
+        event -> event.hasMetricName(StorageMonitor.VSF_READ_TIME),
+        aggregate -> aggregate.hasCountAtLeast(1)
+    );
     Assertions.assertTrue(emitter.getMetricEventLongSum(StorageMonitor.VSF_READ_TIME) >= 0);
     emitter.waitForEventAggregate(
         event -> event.hasMetricName(StorageMonitor.VSF_EVICT_COUNT),
