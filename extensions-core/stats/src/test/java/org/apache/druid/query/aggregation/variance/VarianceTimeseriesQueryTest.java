@@ -27,7 +27,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerTest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
@@ -49,7 +48,7 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return StreamSupport.stream(TimeseriesQueryRunnerTest.constructorFeeder().spliterator(), false)
-                        .map(constructor -> new Object[]{constructor[0], constructor[1], constructor[2], constructor[3]})
+                        .map(constructor -> new Object[]{constructor[0], constructor[1], constructor[2]})
                         .collect(Collectors.toList());
   }
 
@@ -71,8 +70,7 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
   public void testTimeseriesWithNullFilterOnNonExistentDimension(
       QueryRunner runner,
       boolean descending,
-      boolean vectorize,
-      List<AggregatorFactory> aggregatorFactories
+      boolean vectorize
   )
   {
     initVarianceTimeseriesQueryTest(descending, vectorize);
@@ -127,8 +125,7 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
   public void testEmptyTimeseries(
       QueryRunner runner,
       boolean descending,
-      boolean vectorize,
-      List<AggregatorFactory> aggregatorFactories
+      boolean vectorize
   )
   {
     initVarianceTimeseriesQueryTest(descending, vectorize);
