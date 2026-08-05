@@ -85,7 +85,7 @@ public class NestedDataExpressions
             if (!field.type().is(ExprType.STRING)) {
               throw JsonObjectExprMacro.this.validationFailed("field name must be a STRING");
             }
-            theMap.put(field.asString(), unwrap(value));
+            theMap.put(field.asString(), unwrapEval(value));
           }
 
           return ExprEval.ofComplex(ExpressionType.NESTED_DATA, theMap);
@@ -275,7 +275,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           try {
-            final Object unwrapped = unwrap(input);
+            final Object unwrapped = unwrapEval(input);
             final String stringify = unwrapped == null ? null : jsonMapper.writeValueAsString(unwrapped);
             return ExprEval.ofType(
                 ExpressionType.STRING,
@@ -472,7 +472,7 @@ public class NestedDataExpressions
       {
         final ExprEval input = args.get(0).eval(bindings);
         final ExprEval valAtPath = ExprEval.bestEffortOf(
-            NestedPathFinder.find(unwrap(input), parts)
+            NestedPathFinder.find(unwrapEval(input), parts)
         );
         if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
           return valAtPath;
@@ -512,7 +512,7 @@ public class NestedDataExpressions
       {
         final ExprEval input = args.get(0).eval(bindings);
         final ExprEval valAtPath = ExprEval.bestEffortOf(
-            NestedPathFinder.find(unwrap(input), parts)
+            NestedPathFinder.find(unwrapEval(input), parts)
         );
         if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
           return valAtPath.castTo(castTo);
@@ -553,7 +553,7 @@ public class NestedDataExpressions
           castTo = null;
         }
         final List<NestedPathPart> parts = NestedPathFinder.parseJsonPath(path.asString());
-        final ExprEval<?> valAtPath = ExprEval.bestEffortOf(NestedPathFinder.find(unwrap(input), parts));
+        final ExprEval<?> valAtPath = ExprEval.bestEffortOf(NestedPathFinder.find(unwrapEval(input), parts));
         if (valAtPath.type().isPrimitive() || valAtPath.type().isPrimitiveArray()) {
           return castTo == null ? valAtPath : valAtPath.castTo(castTo);
         }
@@ -606,7 +606,7 @@ public class NestedDataExpressions
         ExprEval input = args.get(0).eval(bindings);
         return ExprEval.ofComplex(
             ExpressionType.NESTED_DATA,
-            NestedPathFinder.find(unwrap(input), parts)
+            NestedPathFinder.find(unwrapEval(input), parts)
         );
       }
 
@@ -634,7 +634,7 @@ public class NestedDataExpressions
         final List<NestedPathPart> parts = NestedPathFinder.parseJsonPath(path.asString());
         return ExprEval.ofComplex(
             ExpressionType.NESTED_DATA,
-            NestedPathFinder.find(unwrap(input), parts)
+            NestedPathFinder.find(unwrapEval(input), parts)
         );
       }
 
@@ -682,7 +682,7 @@ public class NestedDataExpressions
       public ExprEval eval(ObjectBinding bindings)
       {
         ExprEval input = args.get(0).eval(bindings);
-        final Object value = NestedPathFinder.find(unwrap(input), parts);
+        final Object value = NestedPathFinder.find(unwrapEval(input), parts);
         if (value instanceof List) {
           return ExprEval.ofArray(
               JSON_ARRAY,
@@ -717,7 +717,7 @@ public class NestedDataExpressions
         ExprEval input = args.get(0).eval(bindings);
         ExprEval path = args.get(1).eval(bindings);
         final List<NestedPathPart> parts = NestedPathFinder.parseJsonPath(path.asString());
-        final Object value = NestedPathFinder.find(unwrap(input), parts);
+        final Object value = NestedPathFinder.find(unwrapEval(input), parts);
         if (value instanceof List) {
           return ExprEval.ofArray(
               JSON_ARRAY,
@@ -790,7 +790,7 @@ public class NestedDataExpressions
         {
           ExprEval input = args.get(0).eval(bindings);
           // maybe in the future ProcessResults should deal in PathFinder.PathPart instead of strings for fields
-          StructuredDataProcessor.ProcessResults info = processor.processFields(unwrap(input));
+          StructuredDataProcessor.ProcessResults info = processor.processFields(unwrapEval(input));
           List<String> transformed = info.getLiteralFields()
                                          .stream()
                                          .map(NestedPathFinder::toNormalizedJsonPath)
@@ -839,7 +839,7 @@ public class NestedDataExpressions
           ExprEval input = args.get(0).eval(bindings);
           return ExprEval.ofType(
               ExpressionType.STRING_ARRAY,
-              NestedPathFinder.findKeys(unwrap(input), parts)
+              NestedPathFinder.findKeys(unwrapEval(input), parts)
           );
         }
 
@@ -854,7 +854,7 @@ public class NestedDataExpressions
   }
 
   @Nullable
-  static Object unwrap(ExprEval input)
+  static Object unwrapEval(ExprEval<?> input)
   {
     return unwrap(input.value());
   }

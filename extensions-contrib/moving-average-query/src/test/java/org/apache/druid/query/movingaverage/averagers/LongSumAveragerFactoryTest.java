@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsInstanceOf;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class LongSumAveragerFactoryTest
@@ -30,7 +30,7 @@ public class LongSumAveragerFactoryTest
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new LongSumAveragerFactory("test", 5, 1, "field");
-    Assert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(LongSumAverager.class));
+    MatcherAssert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(LongSumAverager.class));
   }
 
 }

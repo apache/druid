@@ -36,6 +36,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireMode;
@@ -71,12 +72,21 @@ public class SegmentManager
 
   private final SegmentCacheManager cacheManager;
 
+  private final SegmentTimelineConfig segmentTimelineConfig;
+
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
-  @Inject
   public SegmentManager(SegmentCacheManager cacheManager)
   {
+    this(cacheManager, new SegmentTimelineConfig(false));
+  }
+
+
+  @Inject
+  public SegmentManager(SegmentCacheManager cacheManager, SegmentTimelineConfig segmentTimelineConfig)
+  {
     this.cacheManager = cacheManager;
+    this.segmentTimelineConfig = segmentTimelineConfig;
   }
 
   @VisibleForTesting
@@ -339,7 +349,7 @@ public class SegmentManager
     dataSources.compute(
         dataSegment.getDataSource(),
         (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
+          final DataSourceState dataSourceState = v == null ? new DataSourceState(segmentTimelineConfig) : v;
           final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
               dataSourceState.getTimeline();
           final PartitionChunk<DataSegment> entry = loadedIntervals.findChunk(
@@ -516,14 +526,18 @@ public class SegmentManager
    */
   public static class DataSourceState
   {
-    private final VersionedIntervalTimeline<String, DataSegment> timeline =
-        new VersionedIntervalTimeline<>(Ordering.natural());
+    private final VersionedIntervalTimeline<String, DataSegment> timeline;
 
     private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
     private long rowCount;
     private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
+
+    public DataSourceState(SegmentTimelineConfig segmentTimelineConfig)
+    {
+      timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, segmentTimelineConfig.isFastIntervalSearch());
+    }
 
     private void addSegment(DataSegment segment, long numOfRows)
     {

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.core.IsInstanceOf;
-import org.junit.Assert;
 import org.junit.Test;
 
 public class DoubleSumAveragerFactoryTest
@@ -30,7 +30,7 @@ public class DoubleSumAveragerFactoryTest
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new DoubleSumAveragerFactory("test", 5, 1, "field");
-    Assert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(DoubleSumAverager.class));
+    MatcherAssert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(DoubleSumAverager.class));
   }
 
 }

@@ -454,10 +454,11 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskLog(KEY_1, 0);
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(LOG_CONTENTS, taskLogs);
   }
@@ -483,10 +484,11 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskLog(KEY_1, 1);
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
@@ -512,10 +514,11 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskLog(KEY_1, -1 * (LOG_CONTENTS.length() - 1));
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
@@ -541,10 +544,11 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskReports(KEY_1);
-    String report = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String report;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      report = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(REPORT_CONTENTS, report);
   }
@@ -569,10 +573,11 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskStatus(KEY_1);
-    String report = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String report;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      report = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(STATUS_CONTENTS, report);
   }

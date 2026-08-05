@@ -27,6 +27,7 @@ import com.rabbitmq.stream.Consumer;
 import com.rabbitmq.stream.ConsumerBuilder;
 import com.rabbitmq.stream.Environment;
 import com.rabbitmq.stream.EnvironmentBuilder;
+import com.rabbitmq.stream.Message;
 import com.rabbitmq.stream.MessageHandler;
 import com.rabbitmq.stream.OffsetSpecification;
 import com.rabbitmq.stream.codec.WrapperMessageBuilder;
@@ -383,6 +384,51 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     Assert.assertEquals(recordSupplier.getOffset(partition0), OffsetSpecification.last());
     Assert.assertEquals(recordSupplier.getOffset(partition1), OffsetSpecification.last());
 
+  }
+
+
+  @Test
+  public void testSeekRetainsBufferedRecordsForOtherPartitions()
+  {
+    final StreamPartition<String> partition0 = StreamPartition.of(STREAM, PARTITION_ID0);
+    final StreamPartition<String> partition1 = StreamPartition.of(STREAM, PARTITION_ID1);
+    final Set<StreamPartition<String>> partitions = ImmutableSet.of(partition0, partition1);
+    final RabbitStreamRecordSupplier recordSupplier = makeRecordSupplierWithMockedEnvironment(uri, null);
+
+    EasyMock.expect(environmentBuilder.uri("rabbitmq-stream://localhost:5552")).andReturn(environmentBuilder).once();
+    EasyMock.expect(environmentBuilder.build()).andStubReturn(environment);
+
+    final ConsumerBuilder consumerBuilder0 = createMock(ConsumerBuilder.class);
+    EasyMock.expect(environment.consumerBuilder()).andReturn(consumerBuilder0).once();
+    EasyMock.expect(consumerBuilder0.noTrackingStrategy()).andReturn(consumerBuilder0).once();
+    EasyMock.expect(consumerBuilder0.stream(PARTITION_ID0)).andReturn(consumerBuilder0).once();
+    EasyMock.expect(consumerBuilder0.messageHandler(recordSupplier)).andReturn(consumerBuilder0).once();
+
+    final ConsumerBuilder consumerBuilder1 = createMock(ConsumerBuilder.class);
+    EasyMock.expect(environment.consumerBuilder()).andReturn(consumerBuilder1).once();
+    EasyMock.expect(consumerBuilder1.noTrackingStrategy()).andReturn(consumerBuilder1).once();
+    EasyMock.expect(consumerBuilder1.stream(PARTITION_ID1)).andReturn(consumerBuilder1).once();
+    EasyMock.expect(consumerBuilder1.messageHandler(recordSupplier)).andReturn(consumerBuilder1).once();
+
+    replayAll();
+    recordSupplier.assign(partitions);
+
+    final WrapperMessageBuilder messageBuilder = new WrapperMessageBuilder();
+    messageBuilder.addData("record".getBytes(StandardCharsets.UTF_8));
+    final Message rabbitMessage = messageBuilder.build();
+    for (int i = 0; i < 50; i++) {
+      recordSupplier.handle(new MessageHandlerContext(i, 0, 0, PARTITION_ID0), rabbitMessage);
+      recordSupplier.handle(new MessageHandlerContext(i, 0, 0, PARTITION_ID1), rabbitMessage);
+    }
+
+    recordSupplier.seek(partition0, 10L);
+
+    final List<OrderedPartitionableRecord<String, Long, ByteEntity>> messages = recordSupplier.poll(0);
+    Assert.assertEquals(50, messages.size());
+    Assert.assertTrue(messages.stream().allMatch(message -> PARTITION_ID1.equals(message.getPartitionId())));
+
+    recordSupplier.close();
+    verifyAll();
   }
 
 
