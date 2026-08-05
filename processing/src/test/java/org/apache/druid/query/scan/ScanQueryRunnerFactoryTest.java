@@ -365,10 +365,12 @@ public class ScanQueryRunnerFactoryTest
               ResponseContext.createEmpty()
           )
       );
-      Assertions.assertTrue(
-          ex.getMessage().contains(
-              "Time ordering is not supported for a Scan query with 5 segments per time chunk and a row limit of 10,001."
-          )
+      Assertions.assertEquals(
+          "Time ordering is not supported for a Scan query with 5 segments per time chunk and a row limit of"
+          + " 10,001. Try reducing your query limit below maxRowsQueuedForOrdering (currently 10,000), or using"
+          + " compaction to reduce the number of segments per time chunk, or raising"
+          + " maxSegmentPartitionsOrderedInMemory (currently 4) above the number of segments you have per time chunk.",
+          ex.getMessage()
       );
     }
   }
