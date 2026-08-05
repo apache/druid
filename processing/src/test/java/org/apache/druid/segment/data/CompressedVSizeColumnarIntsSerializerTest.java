@@ -348,10 +348,8 @@ public class CompressedVSizeColumnarIntsSerializerTest
     }
   }
 
-  private File newSubDir() throws IOException
+  private File newSubDir()
   {
-    File dir = new File(temporaryFolder, "dir" + dirCounter.getAndIncrement());
-    FileUtils.mkdirp(dir);
-    return dir;
+    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "dir" + dirCounter.getAndIncrement());
   }
 }
