@@ -84,6 +84,14 @@ public class KafkaLookupExtractorFactoryTest
     });
   }
 
+  private void verifyCacheManagerAfterExecutorTerminates(
+      final KafkaLookupExtractorFactory factory
+  ) throws InterruptedException
+  {
+    Assert.assertTrue(factory.awaitExecutorTermination(10, TimeUnit.SECONDS));
+    EasyMock.verify(cacheManager);
+  }
+
   @Test
   public void testSimpleSerDe() throws Exception
   {
@@ -254,7 +262,7 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
-  public void testStartStop()
+  public void testStartStop() throws InterruptedException
   {
     final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
@@ -281,7 +289,7 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     Assert.assertTrue(factory.getFuture().isDone());
-    EasyMock.verify(cacheManager);
+    verifyCacheManagerAfterExecutorTerminates(factory);
   }
 
   @Test
@@ -347,12 +355,12 @@ public class KafkaLookupExtractorFactoryTest
       factory.close();
       startExecutor.shutdownNow();
     }
-    EasyMock.verify(cacheManager);
+    verifyCacheManagerAfterExecutorTerminates(factory);
   }
 
 
   @Test
-  public void testStartTimeoutWaitsForConsumerToStop() throws Exception
+  public void testStartTimeoutReturnsBeforeConsumerStops() throws Exception
   {
     final CountDownLatch pollStarted = new CountDownLatch(1);
     final CountDownLatch allowPollToFinish = new CountDownLatch(1);
@@ -391,16 +399,13 @@ public class KafkaLookupExtractorFactoryTest
 
     try {
       Assert.assertTrue(pollStarted.await(10, TimeUnit.SECONDS));
-      Assert.assertThrows(
-          "start returned before the Kafka consumer stopped",
-          TimeoutException.class,
-          () -> startFuture.get(500, TimeUnit.MILLISECONDS)
-      );
+      Assert.assertFalse(startFuture.get(500, TimeUnit.MILLISECONDS));
       Assert.assertEquals(1L, consumerClosed.getCount());
+      Assert.assertFalse(factory.awaitExecutorTermination(100, TimeUnit.MILLISECONDS));
 
       allowPollToFinish.countDown();
-      Assert.assertFalse(startFuture.get(10, TimeUnit.SECONDS));
       Assert.assertTrue(consumerClosed.await(10, TimeUnit.SECONDS));
+      Assert.assertTrue(factory.awaitExecutorTermination(10, TimeUnit.SECONDS));
       Assert.assertTrue(factory.getFuture().isDone());
       Assert.assertTrue(factory.getFuture().isCancelled());
     }
@@ -412,7 +417,7 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
-  public void testStartStopStart()
+  public void testStartStopStart() throws InterruptedException
   {
     Consumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
     EasyMock.replay(cacheManager);
@@ -431,11 +436,11 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     Assert.assertFalse(factory.start());
-    EasyMock.verify(cacheManager);
+    verifyCacheManagerAfterExecutorTerminates(factory);
   }
 
   @Test
-  public void testStartStartStopStop()
+  public void testStartStartStopStop() throws InterruptedException
   {
     final MockConsumer<String, String> kafkaConsumer = new MockConsumer<>("earliest");
     final TopicPartition topicPartition = new TopicPartition(TOPIC, 0);
@@ -461,7 +466,7 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     Assert.assertTrue(factory.close());
-    EasyMock.verify(cacheManager);
+    verifyCacheManagerAfterExecutorTerminates(factory);
   }
 
   @Test

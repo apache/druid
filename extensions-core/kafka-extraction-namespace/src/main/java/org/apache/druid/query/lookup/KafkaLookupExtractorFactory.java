@@ -387,29 +387,20 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return future;
   }
 
+  boolean awaitExecutorTermination(final long timeout, final TimeUnit unit) throws InterruptedException
+  {
+    return executorService.awaitTermination(timeout, unit);
+  }
+
   private void shutdownExecutorAndCloseCache()
   {
+    // The executor is single-threaded, so the cache is not closed until the Kafka worker stops using it.
+    executorService.execute(cacheHandler::close);
     executorService.shutdown();
 
     final ListenableFuture<?> future = this.future;
     if (future != null) {
       future.cancel(true);
-    }
-
-    boolean interrupted = false;
-    while (!executorService.isTerminated()) {
-      try {
-        executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-      }
-      catch (InterruptedException e) {
-        interrupted = true;
-      }
-    }
-
-    cacheHandler.close();
-
-    if (interrupted) {
-      Thread.currentThread().interrupt();
     }
   }
 
