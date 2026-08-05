@@ -43,6 +43,8 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -273,6 +275,139 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
+  public void testRevertsRespectTheLoadQueueBudgetAcrossSegments()
+  {
+    // Switching a whole datasource back to a full-load rule means every one of its segments is a revert candidate on
+    // every historical holding it. ServerHolder.startOperation does not enforce maxSegmentsInNodeLoadingQueue on its
+    // own, so without an explicit budget check the reverts for an entire datasource would all be enqueued in a single
+    // coordinator run and flood the peon.
+    final DataSegment segment1 = createSegment(Intervals.of("2024-01-01/2024-01-02"));
+    final DataSegment segment2 = createSegment(Intervals.of("2024-01-02/2024-01-03"));
+    final ServerHolder s1 = createServerWithLoadedAndQueueLimit(TIER1, 1, profileForRevenue(), segment1, segment2);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment1, segment2);
+    params.getSegmentAssigner().replicateSegment(segment1, ImmutableMap.of(TIER1, 1));
+    params.getSegmentAssigner().replicateSegment(segment2, ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(
+        "only one revert fits in this run's queue budget; the rest wait for a later run",
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment1.getDataSource())
+    );
+    Assert.assertEquals(1, s1.getLoadingSegments().size());
+  }
+
+  @Test
+  public void testRevertSkippedWhenLoadQueueIsAlreadyFull()
+  {
+    // The budget is the whole load queue, not just what this run has added to it: a queue already at the limit from a
+    // previous run leaves no room, so nothing is enqueued at all.
+    final DataSegment segment = createSegment();
+    final DataSegment queuedFromPriorRun = createSegment(Intervals.of("2023/2024"));
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
+    peon.addInFlightHolder(new SegmentHolder(
+        queuedFromPriorRun,
+        SegmentAction.LOAD,
+        null,
+        Duration.standardSeconds(10),
+        null
+    ));
+    final DruidServer server = createDruidServer(TIER1);
+    server.addDataSegment(segment, profileForRevenue());
+    final ServerHolder s1 = new ServerHolder(server.toImmutableDruidServer(), peon, false, 1, 1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    Assert.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertFalse(s1.getLoadingSegments().contains(segment));
+  }
+
+  @Test
+  public void testBroadcastRuleRevertsPartialProfileReplicaInPlace()
+  {
+    // Replacing a partial-load rule with a broadcast rule reconciles through broadcastSegment, not replicateSegment.
+    // loadBroadcastSegment returns early for a server that is already serving, so without an explicit revert the old
+    // profile and its rule holds would survive indefinitely.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().broadcastSegment(segment);
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
+    );
+    Assert.assertTrue(s1.getLoadingSegments().contains(segment));
+    Assert.assertNull(
+        "the broadcast revert must carry no profile, same as on the replication path",
+        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment)
+    );
+    Assert.assertFalse(
+        "an in-place revert is not a new assignment",
+        stats.hasStat(Stats.Segments.ASSIGNED)
+    );
+  }
+
+  @Test
+  public void testBroadcastRuleLeavesProfilelessReplicaAlone()
+  {
+    // The ordinary broadcast no-op must survive: a replica already serving without a profile needs nothing.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, null);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().broadcastSegment(segment);
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
+    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+  }
+
+  @Test
+  public void testBroadcastRuleLoadsMissingReplicaWithoutRevert()
+  {
+    // A broadcast target that does not have the segment at all takes an ordinary assignment, and must not be counted
+    // as a revert: the two branches are mutually exclusive because a freshly queued load stops the server from being
+    // `isServingSegment`.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().broadcastSegment(segment);
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource()));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertTrue(s1.getLoadingSegments().contains(segment));
+  }
+
+  @Test
+  public void testRevertSkippedOnDecommissioningServer()
+  {
+    // A decommissioning server's replicas are on their way off it, so reloading them just to release rule holds is
+    // wasted work on a server that is trying to shed load.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createDecommissioningServerWithLoaded(TIER1, segment, profileForRevenue());
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    Assert.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+  }
+
+  @Test
   public void testFullFallbackLoadedBytesCountsAsMatching()
   {
     // s1 announced with a loaded profile whose loadedBytes equals the full segment size (historical was asked to
@@ -441,7 +576,7 @@ public class StrategicSegmentAssignerPartialTest
         segment,
         SegmentAction.LOAD,
         staleInFlightProfile,
-        org.joda.time.Duration.standardSeconds(10),
+        Duration.standardSeconds(10),
         null
     ));
     final DruidServer druidServer = createDruidServer(TIER1);
@@ -557,7 +692,7 @@ public class StrategicSegmentAssignerPartialTest
         segment,
         SegmentAction.LOAD,
         profileForRevenue(),
-        org.joda.time.Duration.standardSeconds(10),
+        Duration.standardSeconds(10),
         null
     ));
     final ServerHolder source = new ServerHolder(createDruidServer(TIER1).toImmutableDruidServer(), sourcePeon, true);
@@ -636,6 +771,30 @@ public class StrategicSegmentAssignerPartialTest
     return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon());
   }
 
+  /**
+   * Creates a server that already serves every given segment under {@code profile}, with its load queue capped at
+   * {@code maxSegmentsInLoadQueue} so tests can observe the budget being exhausted.
+   */
+  private ServerHolder createServerWithLoadedAndQueueLimit(
+      String tier,
+      int maxSegmentsInLoadQueue,
+      @Nullable PartialLoadProfile profile,
+      DataSegment... segments
+  )
+  {
+    final DruidServer server = createDruidServer(tier);
+    for (DataSegment segment : segments) {
+      server.addDataSegment(segment, profile);
+    }
+    return new ServerHolder(
+        server.toImmutableDruidServer(),
+        new TestLoadQueuePeon(),
+        false,
+        maxSegmentsInLoadQueue,
+        1
+    );
+  }
+
   private ServerHolder createDecommissioningServer(String tier)
   {
     return new ServerHolder(createDruidServer(tier).toImmutableDruidServer(), new TestLoadQueuePeon(), true);
@@ -661,6 +820,20 @@ public class StrategicSegmentAssignerPartialTest
   {
     return DataSegment
         .builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024/2025"), DateTimes.nowUtc().toString(), null))
+        .loadSpec(Map.of("type", "local", "path", "/var/druid/segments/foo"))
+        .dimensions(Collections.emptyList())
+        .metrics(Collections.emptyList())
+        .size(0)
+        .build();
+  }
+
+  /**
+   * A segment over a specific interval, for tests that need several distinct segments of the same datasource.
+   */
+  private static DataSegment createSegment(Interval interval)
+  {
+    return DataSegment
+        .builder(SegmentId.of(TestDataSource.WIKI, interval, "v1", null))
         .loadSpec(Map.of("type", "local", "path", "/var/druid/segments/foo"))
         .dimensions(Collections.emptyList())
         .metrics(Collections.emptyList())

@@ -687,20 +687,40 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    * The replica count is deliberately left alone: these servers <em>are</em> serving, so they still satisfy the
    * rule's replication requirement and must not be double-counted as a deficit. This only refreshes what they hold.
    * <p>
-   * Servers with any queued action are skipped via {@link ServerHolder#isServingSegment}, which covers both the
-   * load/drop decisions made earlier in this run and operations left over from a previous one.
+   * Servers are skipped when:
+   * <ul>
+   *   <li>they have any queued action, via {@link ServerHolder#isServingSegment}, which covers both the load/drop
+   *       decisions made earlier in this run and operations left over from a previous one;</li>
+   *   <li>their load queue is already at the configured {@code maxSegmentsInNodeLoadingQueue} budget for this run.</li>
+   *   <li>they are decommissioning, since their replicas are on the way out and reloading them is wasted work.</li>
+   * </ul>
+   * These are the same two eligibility conditions {@code PartialSegmentStatusInTier.canReloadAdditively} applies to
+   * the partial-load reconciler's in-place reload. {@link ServerHolder#canLoadSegment} is not usable here because it
+   * requires the server to <em>not</em> already have the segment, which is precisely the case being handled.
    */
   private int revertPartialProfileReplicas(DataSegment segment, String tier)
   {
     int numReverted = 0;
     for (ServerHolder server : cluster.getManagedHistoricalsByTier(tier)) {
-      if (server.isServingSegment(segment)
-          && server.getServer().getPartialLoadProfile(segment.getId()) != null
-          && loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, null)) {
+      if (revertPartialProfileReplica(segment, server)) {
         ++numReverted;
       }
     }
     return numReverted;
+  }
+
+  /**
+   * Queues the in-place reload described by {@link #revertPartialProfileReplicas} on a single server, if that server
+   * is holding {@code segment} under a partial-load rule and has room in its load queue. Returns whether a reload was
+   * queued.
+   */
+  private boolean revertPartialProfileReplica(DataSegment segment, ServerHolder server)
+  {
+    return server.isServingSegment(segment)
+           && !server.isDecommissioning()
+           && !server.isLoadQueueFull()
+           && server.getServer().getPartialLoadProfile(segment.getId()) != null
+           && loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, null);
   }
 
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
@@ -739,11 +759,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Drop from decommissioning servers and load on active servers
       int numDropsQueued = 0;
       int numLoadsQueued = 0;
+      int numRevertsQueued = 0;
       if (server.isDecommissioning()) {
         numDropsQueued += dropBroadcastSegment(segment, server) ? 1 : 0;
       } else {
         tierToRequiredReplicas.addTo(tier, 1);
         numLoadsQueued += loadBroadcastSegment(segment, server) ? 1 : 0;
+        // A broadcast rule wants the whole segment on every target, so a replica still pinned by a partial-load rule
+        // has to be reloaded unwrapped, exactly as on the replication path. loadBroadcastSegment cannot do this
+        // itself: it returns early for a server that is already serving, which is precisely the case here. The two
+        // are mutually exclusive, since a server that just had a genuine load queued is no longer `isServingSegment`.
+        numRevertsQueued += revertPartialProfileReplica(segment, server) ? 1 : 0;
       }
 
       if (numLoadsQueued > 0) {
@@ -751,6 +777,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       }
       if (numDropsQueued > 0) {
         incrementStat(Stats.Segments.DROPPED, segment, tier, numDropsQueued);
+      }
+      if (numRevertsQueued > 0) {
+        incrementStat(Stats.Segments.PARTIAL_RULE_REVERTED, segment, tier, numRevertsQueued);
       }
     }
 
