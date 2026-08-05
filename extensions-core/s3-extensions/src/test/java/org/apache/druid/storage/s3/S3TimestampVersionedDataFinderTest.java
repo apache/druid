@@ -104,7 +104,7 @@ public class S3TimestampVersionedDataFinderTest
 
     EasyMock.verify(s3Client);
 
-    Assertions.assertEquals(null, latest);
+    Assertions.assertNull(latest);
   }
 
   @Test
