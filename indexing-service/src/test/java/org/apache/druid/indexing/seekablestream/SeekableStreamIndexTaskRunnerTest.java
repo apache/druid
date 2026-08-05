@@ -1118,6 +1118,8 @@ public class SeekableStreamIndexTaskRunnerTest
       if (sequenceNumber == null) {
         return null;
       }
+      // Offset ordering intentionally excludes boundary exclusivity, which value equality includes.
+      // codeql[java/inconsistent-compareto-and-equals]
       return new OrderedSequenceNumber<>(sequenceNumber.toString(), false)
       {
         @Override

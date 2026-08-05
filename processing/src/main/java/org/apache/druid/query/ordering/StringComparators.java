@@ -68,7 +68,8 @@ public class StringComparators
     {
       // Avoid comparisons for equal references
       // Assuming we mostly compare different strings, checking s.equals(s2) will only make the comparison slower.
-      //noinspection StringEquality
+      // Identity is only a fast path; ORDERING performs the content comparison for distinct strings.
+      // codeql[java/reference-equality-on-strings]
       if (s == s2) {
         return 0;
       }
@@ -311,7 +312,8 @@ public class StringComparators
     public int compare(String s, String s2)
     {
       // Optimization
-      //noinspection StringEquality
+      // Identity is only a fast path; ORDERING performs the content comparison for distinct strings.
+      // codeql[java/reference-equality-on-strings]
       if (s == s2) {
         return 0;
       }
@@ -373,7 +375,8 @@ public class StringComparators
     {
       // return if o1 and o2 are the same object
       // Assuming we mostly compare different strings, checking o1.equals(o2) will only make the comparison slower.
-      //noinspection StringEquality
+      // Identity is only a fast path; numeric and lexical comparison handles distinct strings.
+      // codeql[java/reference-equality-on-strings]
       if (o1 == o2) {
         return 0;
       }
@@ -450,7 +453,8 @@ public class StringComparators
     @Override
     public int compare(String o1, String o2)
     {
-      //noinspection StringEquality
+      // Identity is only a fast path; version comparison handles distinct strings.
+      // codeql[java/reference-equality-on-strings]
       if (o1 == o2) {
         return 0;
       }
