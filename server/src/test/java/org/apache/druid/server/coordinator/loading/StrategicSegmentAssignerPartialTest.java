@@ -404,6 +404,73 @@ public class StrategicSegmentAssignerPartialTest
     );
   }
 
+  @Test
+  public void testMoveOfPartialReplicaCarriesProfileToDestination()
+  {
+    // Balancing a partial replica must move the same parts of the segment. Without the profile the destination
+    // downloads the whole segment, and the reconciler then has to replace it with a partial replica on a later run.
+    final DataSegment segment = createSegment();
+    final ServerHolder source = createDecommissioningServerWithLoaded(TIER1, segment, profileForRevenue());
+    final ServerHolder destination = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
+
+    Assert.assertTrue(moved);
+    Assert.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
+    final PartialLoadProfile queued = ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment);
+    Assert.assertNotNull("Move destination should be asked for the same parts the source holds", queued);
+    Assert.assertEquals(FP_REVENUE, queued.fingerprint());
+  }
+
+  @Test
+  public void testMoveOfInFlightPartialLoadCarriesProfileToDestination()
+  {
+    // The source's load has not completed yet, so the move cancels it and loads on the destination instead. The
+    // profile lives on the peon's in-flight holder, and cancelling the operation clears it from the source, so it
+    // has to be read before the cancellation.
+    final DataSegment segment = createSegment();
+    final TestLoadQueuePeon sourcePeon = new TestLoadQueuePeon();
+    sourcePeon.addInFlightHolder(new SegmentHolder(
+        segment,
+        SegmentAction.LOAD,
+        profileForRevenue(),
+        org.joda.time.Duration.standardSeconds(10),
+        null
+    ));
+    final ServerHolder source = new ServerHolder(createDruidServer(TIER1).toImmutableDruidServer(), sourcePeon, true);
+    final ServerHolder destination = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
+
+    Assert.assertTrue(moved);
+    final PartialLoadProfile queued = ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment);
+    Assert.assertNotNull("Cancelled in-flight partial load should be reissued to the destination", queued);
+    Assert.assertEquals(FP_REVENUE, queued.fingerprint());
+  }
+
+  @Test
+  public void testMoveOfFullLoadReplicaCarriesNoProfile()
+  {
+    final DataSegment segment = createSegment();
+    final ServerHolder source = createDecommissioningServerWithLoaded(TIER1, segment, null);
+    final ServerHolder destination = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
+
+    Assert.assertTrue(moved);
+    Assert.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
+    Assert.assertNull(
+        "Moving a regular full-load replica must not thread a profile",
+        ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment)
+    );
+  }
+
   private DruidCoordinatorRuntimeParams makeRuntimeParams(DruidCluster cluster, DataSegment... segments)
   {
     return DruidCoordinatorRuntimeParams
@@ -451,6 +518,22 @@ public class StrategicSegmentAssignerPartialTest
   private ServerHolder createDecommissioningServer(String tier)
   {
     return new ServerHolder(createDruidServer(tier).toImmutableDruidServer(), new TestLoadQueuePeon(), true);
+  }
+
+  /**
+   * Creates a decommissioning server that already serves the given segment, announced with {@code profile} when it is
+   * non-null. Decommissioning keeps the server out of its own move-destination candidates, so the move has exactly
+   * one place to go.
+   */
+  private ServerHolder createDecommissioningServerWithLoaded(
+      String tier,
+      DataSegment segment,
+      @Nullable PartialLoadProfile profile
+  )
+  {
+    final DruidServer server = createDruidServer(tier);
+    server.addDataSegment(segment, profile);
+    return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon(), true);
   }
 
   private static DataSegment createSegment()

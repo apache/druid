@@ -33,6 +33,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -582,6 +584,93 @@ class StorageLocationTest
     Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
   }
 
+  @Test
+  public void testEphemeralWeakEntryUnmountCascadeDoesNotThrowConcurrentModification()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 10_000L, null);
+    location.setAreWeakEntriesEphemeral(true);
+
+    // Parent entry (e.g. a __base bundle), held by the child for its lifetime and evicted only when the child unmounts.
+    final CascadingUnmountCacheEntry parent = new CascadingUnmountCacheEntry("parent", 100L, null);
+    final StorageLocation.ReservationHold<?> parentHold =
+        location.addWeakReservationHold(parent.getId(), () -> parent);
+    Assertions.assertNotNull(parentHold);
+    parent.mount(location);
+
+    // Child entry (a partial bundle) whose unmount() releases the parent's cache hold, re-entering StorageLocation.
+    final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 100L, parentHold);
+    final StorageLocation.ReservationHold<?> childHold =
+        location.addWeakReservationHold(child.getId(), () -> child);
+    Assertions.assertNotNull(childHold);
+    child.mount(location);
+
+    // Releasing the child's last hold evicts it (ephemeral) and fires child.unmount() -> parentHold.close() -> parent
+    // eviction, all under the location write lock. Before the fix this threw ConcurrentModificationException.
+    Assertions.assertDoesNotThrow(childHold::close);
+
+    Assertions.assertTrue(child.wasUnmounted());
+    Assertions.assertTrue(parent.wasUnmounted());
+    Assertions.assertNull(location.getCacheEntry(child.getId()));
+    Assertions.assertNull(location.getCacheEntry(parent.getId()));
+  }
+
+  @Test
+  public void testRemoveUnheldWeakEntryUnmountCascadeDoesNotThrowConcurrentModification()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 10_000L, null);
+
+    // The parent is deliberately NOT mounted: on a non-ephemeral location, releasing the child's hold on it removes it
+    // via the `isNewEntry && !isMounted` branch of createWeakEntryReleaseRunnable, and that removal (re-entering
+    // weakCacheEntries for the parent key) is what reproduces the cascade. Do NOT add parent.mount() here — a mounted,
+    // non-ephemeral parent is never removed on hold release, so no nested map mutation occurs and the test would pass
+    // even against the buggy code.
+    final CascadingUnmountCacheEntry parent = new CascadingUnmountCacheEntry("parent", 100L, null);
+    final StorageLocation.ReservationHold<?> parentHold =
+        location.addWeakReservationHold(parent.getId(), () -> parent);
+    Assertions.assertNotNull(parentHold);
+
+    // Child registered WITHOUT a hold (the bootstrap reserveWeak path that removeUnheldWeakEntry cleans up).
+    final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 100L, parentHold);
+    Assertions.assertTrue(location.reserveWeak(child));
+    child.mount(location);
+
+    Assertions.assertDoesNotThrow(() -> location.removeUnheldWeakEntry(child.getId()));
+
+    Assertions.assertTrue(child.wasUnmounted());
+    Assertions.assertTrue(parent.wasUnmounted());
+    Assertions.assertNull(location.getCacheEntry(child.getId()));
+    Assertions.assertNull(location.getCacheEntry(parent.getId()));
+  }
+
+  @Test
+  public void testReclaimUnmountCascadeDoesNotThrowConcurrentModification()
+  {
+    // Small location so the filler reservation forces reclaim of the child (parent is held, so reclaim skips it).
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+
+    // As in testRemoveUnheld..., the parent is deliberately NOT mounted so that releasing the child's hold on it
+    // removes it (the `isNewEntry && !isMounted` branch), driving the nested weakCacheEntries mutation. Adding
+    // parent.mount() would leave the parent in the map on release and defang the reproduction.
+    final CascadingUnmountCacheEntry parent = new CascadingUnmountCacheEntry("parent", 40L, null);
+    final StorageLocation.ReservationHold<?> parentHold =
+        location.addWeakReservationHold(parent.getId(), () -> parent);
+    Assertions.assertNotNull(parentHold);
+
+    // Child registered unheld and mounted, sole holder of the parent's cache hold; it is the reclaim target.
+    final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 40L, parentHold);
+    Assertions.assertTrue(location.reserveWeak(child));
+    child.mount(location);
+
+    final CascadingUnmountCacheEntry filler = new CascadingUnmountCacheEntry("filler", 40L, null);
+    Assertions.assertDoesNotThrow(() -> location.reserveWeak(filler));
+
+    Assertions.assertTrue(child.wasUnmounted());
+    Assertions.assertTrue(parent.wasUnmounted());
+    Assertions.assertNull(location.getCacheEntry(child.getId()));
+    Assertions.assertNull(location.getCacheEntry(parent.getId()));
+    Assertions.assertTrue(location.isWeakReserved(filler.getId()));
+  }
+
   @SuppressWarnings({"GuardedBy", "FieldAccessNotGuarded"})
   private void verifyLoc(long maxSize, StorageLocation loc)
   {
@@ -756,6 +845,67 @@ class StorageLocationTest
     {
       unmountCalled = true;
       mounted = false;
+    }
+  }
+
+  /**
+   * A {@link CacheEntry} whose {@link #unmount()} optionally closes another {@link Closeable} (e.g. a parent bundle's
+   * {@link StorageLocation.ReservationHold}), reproducing the partial-load cascade where unmounting one weak entry
+   * re-enters {@link StorageLocation} to release a hold on a different weak entry.
+   */
+  private static final class CascadingUnmountCacheEntry implements CacheEntry
+  {
+    private final StringCacheIdentifier id;
+    private final long size;
+    @Nullable
+    private final Closeable onUnmount;
+    private boolean mounted = false;
+    private boolean unmounted = false;
+
+    private CascadingUnmountCacheEntry(String id, long size, @Nullable Closeable onUnmount)
+    {
+      this.id = new StringCacheIdentifier(id);
+      this.size = size;
+      this.onUnmount = onUnmount;
+    }
+
+    @Override
+    public StringCacheIdentifier getId()
+    {
+      return id;
+    }
+
+    @Override
+    public long getSize()
+    {
+      return size;
+    }
+
+    @Override
+    public boolean isMounted()
+    {
+      return mounted;
+    }
+
+    @Override
+    public void mount(StorageLocation location)
+    {
+      mounted = true;
+    }
+
+    @Override
+    public void unmount()
+    {
+      unmounted = true;
+      mounted = false;
+      if (onUnmount != null) {
+        CloseableUtils.closeAndWrapExceptions(onUnmount);
+      }
+    }
+
+    private boolean wasUnmounted()
+    {
+      return unmounted;
     }
   }
 

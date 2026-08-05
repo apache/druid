@@ -27,7 +27,7 @@ ORDER BY dim2, gran desc;
 LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])
   LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
     LogicalProject(dim2=[$1], gran=[TIME_FLOOR($0, 'P1M')], s=[$2])
-      LogicalFilter(condition=[>($2, 1)])
+      LogicalFilter(condition=[>($2, 1.0E0)])
         LogicalAggregate(group=[{0, 1}], s=[SUM($2)])
           LogicalProject(gran=[TIME_FLOOR($0, 'P1D')], dim2=[$2], m1=[$5])
             LogicalTableScan(table=[[druid, foo]])
@@ -36,7 +36,7 @@ LogicalSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC])
 DruidSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC], druid=[logical])
   DruidAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], druid=[logical])
     DruidProject(dim2=[$1], gran=[TIME_FLOOR($0, 'P1M')], s=[$2], druid=[logical])
-      DruidFilter(condition=[>($2, 1)])
+      DruidFilter(condition=[>($2, 1.0E0)])
         DruidAggregate(group=[{0, 1}], s=[SUM($2)], druid=[logical])
           DruidProject(gran=[TIME_FLOOR($0, 'P1D')], dim2=[$2], m1=[$5], druid=[logical])
             DruidTableScan(table=[[druid, foo]], druid=[logical])
@@ -86,8 +86,8 @@ DruidSort(sort0=[$0], sort1=[$1], dir0=[ASC], dir1=[DESC], druid=[logical])
         "filter" : {
           "type" : "range",
           "column" : "a0",
-          "matchValueType" : "LONG",
-          "lower" : 1,
+          "matchValueType" : "DOUBLE",
+          "lower" : 1.0,
           "lowerOpen" : true
         },
         "finalize" : true

@@ -300,10 +300,11 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     OssTaskLogs ossTaskLogs = getOssTaskLogs();
     Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskLog(KEY_1, 0);
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(LOG_CONTENTS, taskLogs);
   }
@@ -324,10 +325,11 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     OssTaskLogs ossTaskLogs = getOssTaskLogs();
     Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskLog(KEY_1, 1);
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
@@ -348,10 +350,11 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     OssTaskLogs ossTaskLogs = getOssTaskLogs();
     Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskLog(KEY_1, -1 * (LOG_CONTENTS.length() - 1));
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
@@ -373,10 +376,11 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     OssTaskLogs ossTaskLogs = getOssTaskLogs();
     Optional<InputStream> inputStreamOptional = ossTaskLogs.streamTaskReports(KEY_1);
-    String report = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String report;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      report = reader.lines().collect(Collectors.joining("\n"));
+    }
 
     Assert.assertEquals(REPORT_CONTENTS, report);
   }

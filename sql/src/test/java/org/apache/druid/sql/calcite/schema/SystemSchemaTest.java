@@ -385,7 +385,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private final long totalMemory = JvmUtils.getTotalMemory();
 
   private final String version = GuavaUtils.firstNonNull(
-      SystemSchemaTest.class.getPackage().getImplementationVersion(),
+      DruidNode.class.getPackage().getImplementationVersion(),
       DruidNode.UNKNOWN_VERSION
   );
 
@@ -2151,7 +2151,7 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testPropertiesTable_withInterruptedException() throws Exception
+  public void testPropertiesTable_withInterruptedException()
   {
     SystemServerPropertiesTable propertiesTable = new SystemServerPropertiesTable(
         druidNodeDiscoveryProvider,
