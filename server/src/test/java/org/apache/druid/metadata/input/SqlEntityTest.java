@@ -69,15 +69,15 @@ public class SqlEntityTest
     final SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     final InputRow expectedRow = testUtils.createTableWithRows(TABLE_NAME_1, 1).get(0);
     final File tmpFile = temporaryFolder.newFile("testQueryResults");
-    final InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
+    final String actualJson;
+    try (final InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
         VALID_SQL,
         testUtils.getDerbyInputSourceConnector(),
         mapper,
         true,
         tmpFile
     );
-    final String actualJson;
-    try (InputStream queryInputStream = new FileInputStream(queryResult.file())) {
+         final InputStream queryInputStream = new FileInputStream(queryResult.file())) {
       actualJson = IOUtils.toString(queryInputStream, StandardCharsets.UTF_8);
     }
     final String expectedJson = mapper.writeValueAsString(

@@ -58,10 +58,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TimeZone;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.collection.IsMapContaining.hasEntry;
 import static org.hamcrest.collection.IsMapWithSize.aMapWithSize;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 
 public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends InitializedNullHandlingTest
 {

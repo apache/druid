@@ -232,11 +232,14 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
 
     Assert.assertEquals(2, results.size());
 
-    ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{null, "bo", 1L}, row.getArray());
-
-    row = results.get(1);
-    Assert.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
+    // GroupingEngine.process returns raw grouped results without applying the query's order-by post-processing.
+    // The result order is therefore not guaranteed when the incremental index is not sorted by dimensions.
+    Assert.assertTrue(
+        results.stream().anyMatch(row -> Arrays.deepEquals(new Object[]{null, "bo", 1L}, row.getArray()))
+    );
+    Assert.assertTrue(
+        results.stream().anyMatch(row -> Arrays.deepEquals(new Object[]{"hi", null, 1L}, row.getArray()))
+    );
   }
 
   @Test

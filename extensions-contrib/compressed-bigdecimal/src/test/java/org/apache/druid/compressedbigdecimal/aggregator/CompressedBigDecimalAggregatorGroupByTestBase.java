@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.collection.IsCollectionWithSize;
 import org.hamcrest.collection.IsMapContaining;
 import org.hamcrest.collection.IsMapWithSize;
@@ -115,7 +116,7 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
     }
 
     List<ResultRow> results = seq.toList();
-    Assert.assertThat(results, IsCollectionWithSize.hasSize(1));
+    MatcherAssert.assertThat(results, IsCollectionWithSize.hasSize(1));
     ResultRow row = results.get(0);
     MapBasedRow mapBasedRow = row.toMapBasedRow(cbdGroupByQueryConfig.getQuery());
     Map<String, Object> event = mapBasedRow.getEvent();
@@ -123,8 +124,8 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
         new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
         mapBasedRow.getTimestamp()
     );
-    Assert.assertThat(event, IsMapWithSize.aMapWithSize(3));
-    Assert.assertThat(
+    MatcherAssert.assertThat(event, IsMapWithSize.aMapWithSize(3));
+    MatcherAssert.assertThat(
         event,
         IsMapContaining.hasEntry(
             "cbdRevenueFromString",
@@ -132,7 +133,7 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
         )
     );
     // long conversion of 5000000000.000000005 results in null/0 value
-    Assert.assertThat(
+    MatcherAssert.assertThat(
         event,
         IsMapContaining.hasEntry(
             "cbdRevenueFromLong",
@@ -140,7 +141,7 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
         )
     );
     // double input changes 5000000000.000000005 to 5000000000.5 to fit in double mantissa space
-    Assert.assertThat(
+    MatcherAssert.assertThat(
         event,
         IsMapContaining.hasEntry(
             "cbdRevenueFromDouble",

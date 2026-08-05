@@ -110,7 +110,12 @@ public class VersionedIntervalTimelineTestBase
 
   static VersionedIntervalTimeline<String, OvershadowableInteger> makeStringIntegerTimeline()
   {
-    return new VersionedIntervalTimeline<>(Ordering.natural());
+    return makeStringIntegerTimeline(false);
+  }
+
+  static VersionedIntervalTimeline<String, OvershadowableInteger> makeStringIntegerTimeline(boolean fastIntervalSearch)
+  {
+    return new VersionedIntervalTimeline<>(Ordering.natural(), false, fastIntervalSearch);
   }
 
   VersionedIntervalTimeline<String, OvershadowableInteger> timeline;

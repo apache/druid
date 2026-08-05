@@ -54,6 +54,7 @@ import org.apache.druid.server.metrics.DefaultLoadSpecHolder;
 import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.server.metrics.TestTaskHolder;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -85,7 +86,7 @@ public class EmitterModuleTest
     final Emitter emitter = makeInjectorWithProperties(props).getInstance(Emitter.class);
 
     // Testing that ParametrizedUriEmitter is successfully deserialized from the above config
-    Assert.assertThat(emitter, CoreMatchers.instanceOf(ParametrizedUriEmitter.class));
+    MatcherAssert.assertThat(emitter, CoreMatchers.instanceOf(ParametrizedUriEmitter.class));
   }
 
   @Test
@@ -95,7 +96,7 @@ public class EmitterModuleTest
     props.setProperty("druid.emitter", "");
 
     final Emitter emitter = makeInjectorWithProperties(props).getInstance(Emitter.class);
-    Assert.assertThat(emitter, CoreMatchers.instanceOf(NoopEmitter.class));
+    MatcherAssert.assertThat(emitter, CoreMatchers.instanceOf(NoopEmitter.class));
   }
 
   @Test

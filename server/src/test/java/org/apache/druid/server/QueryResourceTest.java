@@ -79,6 +79,7 @@ import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -772,11 +773,9 @@ public class QueryResourceTest
                 emitter,
                 testRequestLogger,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-                overrideConfig,
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
-                null,
-                Collections.emptyMap(),
+                new QueryConfigSnapshot(overrideConfig.getContext(), null),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
@@ -1039,11 +1038,16 @@ public class QueryResourceTest
   @Test
   public void testResourceLimitExceeded() throws IOException
   {
-    Response response = queryResource.doPost(
-        new ExceptionalInputStream(() -> new ResourceLimitExceededException("You require too much of something")),
-        null /*pretty*/,
-        testServletRequest
-    );
+    final Response response;
+    try (final ExceptionalInputStream inputStream = new ExceptionalInputStream(
+        () -> new ResourceLimitExceededException("You require too much of something")
+    )) {
+      response = queryResource.doPost(
+          inputStream,
+          null /*pretty*/,
+          testServletRequest
+      );
+    }
     Assert.assertNotNull(response);
     Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
@@ -1055,11 +1059,16 @@ public class QueryResourceTest
   public void testUnsupportedQueryThrowsException() throws IOException
   {
     String errorMessage = "This will be support in Druid 9999";
-    Response response = queryResource.doPost(
-        new ExceptionalInputStream(() -> new QueryUnsupportedException(errorMessage)),
-        null /*pretty*/,
-        testServletRequest
-    );
+    final Response response;
+    try (final ExceptionalInputStream inputStream = new ExceptionalInputStream(
+        () -> new QueryUnsupportedException(errorMessage)
+    )) {
+      response = queryResource.doPost(
+          inputStream,
+          null /*pretty*/,
+          testServletRequest
+      );
+    }
     Assert.assertNotNull(response);
     Assert.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
     QueryException ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
@@ -1979,10 +1988,12 @@ public class QueryResourceTest
 
   private QueryResource createQueryResourceWithBlocklist(ServerConfig serverConfig, QueryBlocklistRule... rules)
   {
+    final BrokerDynamicConfig dynamicConfig =
+        new BrokerDynamicConfig.Builder().withQueryBlocklist(Arrays.asList(rules)).build();
     final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = Mockito.mock(BrokerViewOfBrokerConfig.class);
-    Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(
-        new BrokerDynamicConfig.Builder().withQueryBlocklist(Arrays.asList(rules)).build()
-    );
+    Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(dynamicConfig);
+    Mockito.when(brokerViewOfBrokerConfig.snapshotForQuery())
+           .thenReturn(new QueryConfigSnapshot(Map.of(), dynamicConfig));
 
     return createQueryResource(
         new QueryLifecycleFactory(
