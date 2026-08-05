@@ -35,6 +35,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
@@ -373,10 +374,16 @@ public class ServerSideEncryptingAmazonS3
       S3Configuration s3Config = S3Configuration.builder()
                                                 .chunkedEncodingEnabled(!awsClientConfig.isDisableChunkedEncoding())
                                                 .build();
+      final ClientOverrideConfiguration retryOverrides =
+          ClientOverrideConfiguration.builder()
+                                     .retryStrategy(awsClientConfig.getRetryStrategy())
+                                     .build();
       clientBuilder.serviceConfiguration(s3Config)
                    .forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
-                   .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled());
-      asyncClientBuilder.forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
+                   .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled())
+                   .overrideConfiguration(retryOverrides);
+      asyncClientBuilder.overrideConfiguration(retryOverrides)
+                        .forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
                         .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled())
                         .httpClientBuilder(AsyncHttpClientType.fromString(s3StorageConfig.getS3TransferConfig().getAsyncHttpClientType()).buildBuilder(awsClientConfig))
                         .multipartEnabled(true);
@@ -405,7 +412,8 @@ public class ServerSideEncryptingAmazonS3
           assumeRoleArn,
           assumeRoleExternalId,
           awsEndpointConfig,
-          credentialsProvider
+          credentialsProvider,
+          awsClientConfig
       );
     }
 
@@ -443,7 +451,8 @@ public class ServerSideEncryptingAmazonS3
       String assumeRoleArn,
       @Nullable String assumeRoleExternalId,
       @Nullable AWSEndpointConfig awsEndpointConfig,
-      AwsCredentialsProvider baseCredentialsProvider
+      AwsCredentialsProvider baseCredentialsProvider,
+      @Nullable AWSClientConfig awsClientConfig
   )
   {
     String roleSessionName = StringUtils.format("druid-s3-%s", UUID.randomUUID().toString());
@@ -452,6 +461,11 @@ public class ServerSideEncryptingAmazonS3
     // If we have endpoint config, use its region for STS too
     if (awsEndpointConfig != null && awsEndpointConfig.getSigningRegion() != null) {
       stsBuilder.region(Region.of(awsEndpointConfig.getSigningRegion()));
+    }
+    if (awsClientConfig != null) {
+      stsBuilder.overrideConfiguration(
+          ClientOverrideConfiguration.builder().retryStrategy(awsClientConfig.getRetryStrategy()).build()
+      );
     }
 
     AssumeRoleRequest.Builder assumeRoleRequestBuilder =

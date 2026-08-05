@@ -82,6 +82,17 @@
           <artifactId>sdk-core</artifactId>
           <version>${aws.sdk.v2.version}</version>
         </dependency>
+        <!-- Retry strategies configured by AWSClientConfig -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>retries-spi</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>retries</artifactId>
+            <version>${aws.sdk.v2.version}</version>
+        </dependency>
         <!-- WebIdentityTokenProvider requires runtime dependency on sts -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>

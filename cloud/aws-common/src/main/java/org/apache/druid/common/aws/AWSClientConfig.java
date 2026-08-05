@@ -20,10 +20,18 @@
 package org.apache.druid.common.aws;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.utils.RuntimeInfo;
+import software.amazon.awssdk.awscore.retry.AwsRetryStrategy;
+import software.amazon.awssdk.retries.api.RetryStrategy;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.Min;
+import java.util.Arrays;
 
 public class AWSClientConfig
 {
@@ -35,6 +43,68 @@ public class AWSClientConfig
   private static final int DEFAULT_SOCKET_TIMEOUT_MILLIS = 50_000;
   /** AWS SDK v2's own default. */
   private static final int DEFAULT_MAX_CONNECTIONS_FLOOR = 50;
+
+  /**
+   * Selects the retry behaviour AWS documents for {@code standard} and {@code adaptive} rather than the pre-2026
+   * behaviour. The no-argument factories default the {@code aws.newRetries2026} opt-in to false, which changes the
+   * backoff base delays and the retry-quota token costs; asking for it explicitly means the modes behave as
+   * documented, and keeps them behaving that way when AWS flips the opt-in default.
+   */
+  private static final Boolean USE_DOCUMENTED_RETRY_BEHAVIOUR = Boolean.TRUE;
+
+  /**
+   * Retry strategy family. Declared as an enum so an unrecognised value is rejected while the config is bound at
+   * startup, rather than when a client is first built.
+   */
+  public enum RetryMode
+  {
+    STANDARD {
+      @Override
+      RetryStrategy createStrategy()
+      {
+        return AwsRetryStrategy.standardRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOUR);
+      }
+    },
+    ADAPTIVE {
+      @Override
+      RetryStrategy createStrategy()
+      {
+        // Standard plus a client-side rate limiter, which unlike standard can delay or block the initial request,
+        // not just retries. The limiter belongs to one client instance and covers every request that client makes,
+        // so throttling on one key prefix also slows requests to prefixes that are not being throttled.
+        return AwsRetryStrategy.adaptiveRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOUR);
+      }
+    },
+    LEGACY {
+      @Override
+      RetryStrategy createStrategy()
+      {
+        // Deliberately left on the pre-standard behaviour: this mode exists so a deployment can get back to what it
+        // had before, which is the opposite of what the opt-in above asks for.
+        return AwsRetryStrategy.legacyRetryStrategy();
+      }
+    };
+
+    abstract RetryStrategy createStrategy();
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return StringUtils.toLowerCase(name());
+    }
+
+    @JsonCreator
+    public static RetryMode fromString(String value)
+    {
+      for (RetryMode mode : values()) {
+        if (mode.name().equalsIgnoreCase(value)) {
+          return mode;
+        }
+      }
+      throw new IAE("Invalid druid.s3.retryMode[%s]. Must be one of %s.", value, Arrays.toString(values()));
+    }
+  }
 
   /**
    * Used by {@link #getMaxConnections} to scale the default connection pool with host size so hosts large enough to
@@ -79,6 +149,30 @@ public class AWSClientConfig
   @JsonProperty
   @Nullable
   private Integer maxConnections = null;
+
+  /**
+   * Retry strategy applied to every AWS client built from this config.
+   * <p>
+   * Setting this at all is deliberate: left unset, the SDK picks its own default, and which one it picks depends on
+   * the {@code aws.newRetries2026} migration flag. Naming the mode here keeps retry behaviour stable across SDK
+   * upgrades instead of changing under Druid when that flag's default flips.
+   */
+  @JsonProperty
+  private RetryMode retryMode = RetryMode.STANDARD;
+
+  /**
+   * Total attempts per request, including the first. Maps directly to the SDK's {@code maxAttempts}, so 1 disables
+   * retries. Null leaves the count that {@link #retryMode} defines for itself, which AWS tunes alongside that mode's
+   * backoff and retry quota.
+   * <p>
+   * This counts HTTP requests. Druid layers its own retries on top (see {@code S3Utils#retryS3Operation}) and the two
+   * multiply, but they are not equivalent: an attempt here re-sends a single request, whereas a Druid-level retry
+   * repeats a whole operation, such as re-uploading an entire segment.
+   */
+  @JsonProperty
+  @Nullable
+  @Min(1)
+  private Integer maxRetryAttempts = null;
 
   public String getProtocol()
   {
@@ -146,6 +240,39 @@ public class AWSClientConfig
     return Math.max(DEFAULT_MAX_CONNECTIONS_FLOOR, 4 * runtimeInfo.getAvailableProcessors());
   }
 
+  public RetryMode getRetryMode()
+  {
+    return retryMode;
+  }
+
+  @Nullable
+  public Integer getMaxRetryAttempts()
+  {
+    return maxRetryAttempts;
+  }
+
+  /**
+   * Builds the strategy to hand to {@code ClientOverrideConfiguration.retryStrategy}. Kept as a plain function of the
+   * config because a built AWS client does not expose the strategy it was given, so this is the only place the
+   * mapping can be tested.
+   */
+  public RetryStrategy getRetryStrategy()
+  {
+    return withMaxAttempts(retryMode.createStrategy());
+  }
+
+  /**
+   * Overrides the attempt count only when one is configured, so an unset {@link #maxRetryAttempts} leaves whatever
+   * the chosen mode defines for itself.
+   */
+  private RetryStrategy withMaxAttempts(RetryStrategy strategy)
+  {
+    if (maxRetryAttempts == null) {
+      return strategy;
+    }
+    return strategy.toBuilder().maxAttempts(maxRetryAttempts).build();
+  }
+
   @Override
   public String toString()
   {
@@ -157,6 +284,8 @@ public class AWSClientConfig
            ", connectionTimeout=" + connectionTimeout +
            ", socketTimeout=" + socketTimeout +
            ", maxConnections=" + getMaxConnections() +
+           ", retryMode='" + retryMode + '\'' +
+           ", maxRetryAttempts=" + maxRetryAttempts +
            '}';
   }
 }
