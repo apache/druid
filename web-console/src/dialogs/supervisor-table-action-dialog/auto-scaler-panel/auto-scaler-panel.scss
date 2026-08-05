@@ -21,12 +21,12 @@
   flex-direction: column;
   height: 100%;
   padding: 15px;
-  overflow: auto;
+  overflow: hidden;
 
   .auto-scaler-controls {
     display: flex;
     flex-wrap: wrap;
-    gap: 40px;
+    gap: 5px 30px;
     margin-bottom: 15px;
 
     .bp4-form-group {
