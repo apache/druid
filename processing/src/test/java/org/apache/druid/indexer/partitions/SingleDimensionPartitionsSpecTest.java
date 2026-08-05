@@ -290,7 +290,7 @@ public class SingleDimensionPartitionsSpecTest
     }
   }
 
-  private class Tester
+  private static class Tester
   {
     private Integer targetRowsPerSegment;
     private Integer maxRowsPerSegment;
