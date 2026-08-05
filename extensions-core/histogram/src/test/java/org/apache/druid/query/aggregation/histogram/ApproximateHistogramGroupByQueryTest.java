@@ -99,7 +99,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
             config.toString(),
             runner.toString()
         );
-        constructors.add(new Object[]{testName, factory, runner});
+        constructors.add(new Object[]{testName, runner});
       }
     }
 
@@ -116,7 +116,6 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithApproximateHistogramAgg(
       String testName,
-      GroupByQueryRunnerFactory factory,
       QueryRunner runner
   )
   {
@@ -184,7 +183,6 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithSameNameComplexPostAgg(
       String testName,
-      GroupByQueryRunnerFactory factory,
       QueryRunner runner
   )
   {

@@ -99,7 +99,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
             config.toString(),
             runner.toString()
         );
-        constructors.add(new Object[]{testName, factory, runner});
+        constructors.add(new Object[]{testName, runner});
       }
     }
 
@@ -116,7 +116,6 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithFixedHistogramAgg(
       String testName,
-      GroupByQueryRunnerFactory factory,
       QueryRunner runner
   )
   {
@@ -184,7 +183,6 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
   @ParameterizedTest(name = "{0}")
   public void testGroupByWithSameNameComplexPostAgg(
       String testName,
-      GroupByQueryRunnerFactory factory,
       QueryRunner runner
   )
   {
