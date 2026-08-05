@@ -118,12 +118,17 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   @Parameters(name = "{0}")
   public static Iterable<String[]> data() throws IOException
   {
-    BufferedReader testReader = new BufferedReader(
-        new InputStreamReader(MovingAverageQueryTest.class.getResourceAsStream("/queryTests"), StandardCharsets.UTF_8));
     List<String[]> tests = new ArrayList<>();
 
-    for (String line = testReader.readLine(); line != null; line = testReader.readLine()) {
-      tests.add(new String[]{line});
+    try (final BufferedReader testReader = new BufferedReader(
+        new InputStreamReader(
+            MovingAverageQueryTest.class.getResourceAsStream("/queryTests"),
+            StandardCharsets.UTF_8
+        )
+    )) {
+      for (String line = testReader.readLine(); line != null; line = testReader.readLine()) {
+        tests.add(new String[]{line});
+      }
     }
 
     return tests;
@@ -172,9 +177,10 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     retryConfig = injector.getInstance(RetryQueryRunnerConfig.class);
     serverConfig = injector.getInstance(ServerConfig.class);
 
-    InputStream is = getClass().getResourceAsStream("/queryTests/" + yamlFile);
     ObjectMapper reader = new ObjectMapper(new YAMLFactory());
-    config = reader.readValue(is, TestConfig.class);
+    try (final InputStream is = getClass().getResourceAsStream("/queryTests/" + yamlFile)) {
+      config = reader.readValue(is, TestConfig.class);
+    }
   }
 
   /**

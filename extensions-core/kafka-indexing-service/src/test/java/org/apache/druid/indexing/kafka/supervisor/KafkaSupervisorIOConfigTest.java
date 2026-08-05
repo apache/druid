@@ -39,13 +39,11 @@ import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScaler
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -62,9 +60,6 @@ public class KafkaSupervisorIOConfigTest
     mapper = new DefaultObjectMapper();
     mapper.registerModules(new KafkaIndexTaskModule().getJacksonModules());
   }
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -84,22 +79,22 @@ public class KafkaSupervisorIOConfigTest
         ), KafkaSupervisorIOConfig.class
     );
 
-    Assert.assertEquals("my-topic", config.getTopic());
-    Assert.assertNull(config.getTopicPattern());
-    Assert.assertEquals(1, (int) config.getReplicas());
-    Assert.assertEquals(1, (int) config.getTaskCount());
-    Assert.assertNull(config.getStopTaskCount());
-    Assert.assertEquals((int) config.getTaskCount(), config.getMaxAllowedStops());
-    Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
-    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertEquals(100, config.getPollTimeout());
-    Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
-    Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
-    Assert.assertFalse(config.isUseEarliestOffset());
-    Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
-    Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
-    Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
-    Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
+    Assertions.assertEquals("my-topic", config.getTopic());
+    Assertions.assertNull(config.getTopicPattern());
+    Assertions.assertEquals(1, (int) config.getReplicas());
+    Assertions.assertEquals(1, (int) config.getTaskCount());
+    Assertions.assertNull(config.getStopTaskCount());
+    Assertions.assertEquals((int) config.getTaskCount(), config.getMaxAllowedStops());
+    Assertions.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
+    Assertions.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assertions.assertEquals(100, config.getPollTimeout());
+    Assertions.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardSeconds(30), config.getPeriod());
+    Assertions.assertFalse(config.isUseEarliestOffset());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
+    Assertions.assertFalse(config.getLateMessageRejectionPeriod().isPresent(), "lateMessageRejectionPeriod");
+    Assertions.assertFalse(config.getEarlyMessageRejectionPeriod().isPresent(), "earlyMessageRejectionPeriod");
+    Assertions.assertFalse(config.getLateMessageRejectionStartDateTime().isPresent(), "lateMessageRejectionStartDateTime");
   }
 
   @Test
@@ -120,8 +115,8 @@ public class KafkaSupervisorIOConfigTest
         ), KafkaSupervisorIOConfig.class
     );
 
-    Assert.assertEquals("my-topic.*", config.getTopicPattern());
-    Assert.assertNull(config.getTopic());
+    Assertions.assertEquals("my-topic.*", config.getTopicPattern());
+    Assertions.assertNull(config.getTopic());
   }
 
   @Test
@@ -152,19 +147,19 @@ public class KafkaSupervisorIOConfigTest
             ), KafkaSupervisorIOConfig.class
         );
 
-    Assert.assertEquals("my-topic", config.getTopic());
-    Assert.assertNull(config.getTopicPattern());
-    Assert.assertEquals(3, (int) config.getReplicas());
-    Assert.assertEquals(9, (int) config.getTaskCount());
-    Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
-    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertEquals(1000, config.getPollTimeout());
-    Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
-    Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
-    Assert.assertTrue(config.isUseEarliestOffset());
-    Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
-    Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().orNull());
-    Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().orNull());
+    Assertions.assertEquals("my-topic", config.getTopic());
+    Assertions.assertNull(config.getTopicPattern());
+    Assertions.assertEquals(3, (int) config.getReplicas());
+    Assertions.assertEquals(9, (int) config.getTaskCount());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
+    Assertions.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assertions.assertEquals(1000, config.getPollTimeout());
+    Assertions.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardSeconds(10), config.getPeriod());
+    Assertions.assertTrue(config.isUseEarliestOffset());
+    Assertions.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
+    Assertions.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().orNull());
+    Assertions.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().orNull());
   }
 
   @Test
@@ -195,18 +190,18 @@ public class KafkaSupervisorIOConfigTest
             ), KafkaSupervisorIOConfig.class
         );
 
-    Assert.assertEquals("my-topic", config.getTopic());
-    Assert.assertNull(config.getTopicPattern());
-    Assert.assertEquals(3, (int) config.getReplicas());
-    Assert.assertEquals(9, (int) config.getTaskCount());
-    Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
-    Assert.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
-    Assert.assertEquals(1000, config.getPollTimeout());
-    Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
-    Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
-    Assert.assertTrue(config.isUseEarliestOffset());
-    Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
-    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getLateMessageRejectionStartDateTime().orNull());
+    Assertions.assertEquals("my-topic", config.getTopic());
+    Assertions.assertNull(config.getTopicPattern());
+    Assertions.assertEquals(3, (int) config.getReplicas());
+    Assertions.assertEquals(9, (int) config.getTaskCount());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
+    Assertions.assertEquals(ImmutableMap.of("bootstrap.servers", "localhost:9092"), config.getConsumerProperties());
+    Assertions.assertEquals(1000, config.getPollTimeout());
+    Assertions.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardSeconds(10), config.getPeriod());
+    Assertions.assertTrue(config.isUseEarliestOffset());
+    Assertions.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
+    Assertions.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getLateMessageRejectionStartDateTime().orNull());
   }
 
   @Test
@@ -225,12 +220,12 @@ public class KafkaSupervisorIOConfigTest
     Properties props = new Properties();
     KafkaRecordSupplier.addConsumerPropertiesFromConfig(props, mapper, config.getConsumerProperties());
 
-    Assert.assertEquals("my-topic", config.getTopic());
-    Assert.assertNull(config.getTopicPattern());
-    Assert.assertEquals("localhost:9092", props.getProperty("bootstrap.servers"));
-    Assert.assertEquals("mytruststorepassword", props.getProperty("ssl.truststore.password"));
-    Assert.assertEquals("mykeystorepassword", props.getProperty("ssl.keystore.password"));
-    Assert.assertEquals("mykeypassword", props.getProperty("ssl.key.password"));
+    Assertions.assertEquals("my-topic", config.getTopic());
+    Assertions.assertNull(config.getTopicPattern());
+    Assertions.assertEquals("localhost:9092", props.getProperty("bootstrap.servers"));
+    Assertions.assertEquals("mytruststorepassword", props.getProperty("ssl.truststore.password"));
+    Assertions.assertEquals("mykeystorepassword", props.getProperty("ssl.keystore.password"));
+    Assertions.assertEquals("mykeypassword", props.getProperty("ssl.key.password"));
   }
 
   @Test
@@ -241,10 +236,11 @@ public class KafkaSupervisorIOConfigTest
                      + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"}\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(DruidException.class));
-    exception.expectMessage(CoreMatchers.containsString("Either topic or topicPattern must be specified"));
-    mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+    assertJsonMappingException(
+        DruidException.class,
+        "Either topic or topicPattern must be specified",
+        () -> mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class)
+    );
   }
 
   @Test
@@ -255,10 +251,11 @@ public class KafkaSupervisorIOConfigTest
                      + "  \"topic\": \"my-topic\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("consumerProperties"));
-    mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+    assertJsonMappingException(
+        NullPointerException.class,
+        "consumerProperties",
+        () -> mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class)
+    );
   }
 
   @Test
@@ -270,40 +267,42 @@ public class KafkaSupervisorIOConfigTest
         + "  \"consumerProperties\": {}\n"
         + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("bootstrap.servers"));
-    mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
+    assertJsonMappingException(
+        NullPointerException.class,
+        "bootstrap.servers",
+        () -> mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class)
+    );
   }
 
   @Test
-  public void testSerdeWithBothExclusiveProperties() throws Exception
+  public void testSerdeWithBothExclusiveProperties()
   {
-    String jsonStr = "{\n"
-        + "  \"type\": \"kafka\",\n"
-        + "  \"topic\": \"my-topic\",\n"
-        + "  \"replicas\": 3,\n"
-        + "  \"taskCount\": 9,\n"
-        + "  \"taskDuration\": \"PT30M\",\n"
-        + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
-        + "  \"pollTimeout\": 1000,\n"
-        + "  \"startDelay\": \"PT1M\",\n"
-        + "  \"period\": \"PT10S\",\n"
-        + "  \"useEarliestOffset\": true,\n"
-        + "  \"completionTimeout\": \"PT45M\",\n"
-        + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
-        + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
-        + "  \"lateMessageRejectionStartDateTime\": \"2016-05-31T12:00Z\"\n"
-        + "}";
-    exception.expect(JsonMappingException.class);
-    mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                KafkaSupervisorIOConfig.class
-            )
-        ), KafkaSupervisorIOConfig.class
-    );
+    Assertions.assertThrows(JsonMappingException.class, () -> {
+      String jsonStr = "{\n"
+          + "  \"type\": \"kafka\",\n"
+          + "  \"topic\": \"my-topic\",\n"
+          + "  \"replicas\": 3,\n"
+          + "  \"taskCount\": 9,\n"
+          + "  \"taskDuration\": \"PT30M\",\n"
+          + "  \"consumerProperties\": {\"bootstrap.servers\":\"localhost:9092\"},\n"
+          + "  \"pollTimeout\": 1000,\n"
+          + "  \"startDelay\": \"PT1M\",\n"
+          + "  \"period\": \"PT10S\",\n"
+          + "  \"useEarliestOffset\": true,\n"
+          + "  \"completionTimeout\": \"PT45M\",\n"
+          + "  \"lateMessageRejectionPeriod\": \"PT1H\",\n"
+          + "  \"earlyMessageRejectionPeriod\": \"PT1H\",\n"
+          + "  \"lateMessageRejectionStartDateTime\": \"2016-05-31T12:00Z\"\n"
+          + "}";
+      mapper.readValue(
+          mapper.writeValueAsString(
+              mapper.readValue(
+                  jsonStr,
+                  KafkaSupervisorIOConfig.class
+              )
+          ), KafkaSupervisorIOConfig.class
+      );
+    });
   }
 
   @Test
@@ -357,11 +356,11 @@ public class KafkaSupervisorIOConfigTest
     );
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);
-    Assert.assertNotNull(kafkaSupervisorIOConfig1.getAutoScalerConfig());
-    Assert.assertTrue(kafkaSupervisorIOConfig1.getAutoScalerConfig().getEnableTaskAutoScaler());
-    Assert.assertEquals(1, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMin());
-    Assert.assertEquals(10, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMax());
-    Assert.assertEquals(
+    Assertions.assertNotNull(kafkaSupervisorIOConfig1.getAutoScalerConfig());
+    Assertions.assertTrue(kafkaSupervisorIOConfig1.getAutoScalerConfig().getEnableTaskAutoScaler());
+    Assertions.assertEquals(1, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMin());
+    Assertions.assertEquals(10, kafkaSupervisorIOConfig1.getAutoScalerConfig().getTaskCountMax());
+    Assertions.assertEquals(
         1200000,
         kafkaSupervisorIOConfig1.getAutoScalerConfig().getMinTriggerScaleActionFrequencyMillis()
     );
@@ -392,22 +391,24 @@ public class KafkaSupervisorIOConfigTest
         null,
         null
     );
-    Assert.assertEquals(1, kafkaSupervisorIOConfig.getTaskCount());
+    Assertions.assertEquals(1, kafkaSupervisorIOConfig.getTaskCount());
 
-    Assert.assertThrows(
-        "taskCountMin <= taskCountStart <= taskCountMax",
-        RuntimeException.class, () -> {
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> {
           autoScalerConfig.put("taskCountStart", 11); // > max task count
           mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
-        }
+        },
+        "taskCountMin <= taskCountStart <= taskCountMax"
     );
 
-    Assert.assertThrows(
-        "taskCountMin <= taskCountStart <= taskCountMax",
-        RuntimeException.class, () -> {
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> {
           autoScalerConfig.put("taskCountStart", 0); // < min task count
           mapper.convertValue(autoScalerConfig, LagBasedAutoScalerConfig.class);
-        }
+        },
+        "taskCountMin <= taskCountStart <= taskCountMax"
     );
   }
 
@@ -421,11 +422,11 @@ public class KafkaSupervisorIOConfigTest
         "taskCountStart", 5
     );
 
-    Assert.assertEquals(7, makeIOConfig(7, autoScalerConfig).getTaskCount());
-    Assert.assertTrue(makeIOConfig(7, autoScalerConfig).isTaskCountExplicit());
+    Assertions.assertEquals(7, makeIOConfig(7, autoScalerConfig).getTaskCount());
+    Assertions.assertTrue(makeIOConfig(7, autoScalerConfig).isTaskCountExplicit());
 
-    Assert.assertEquals(5, makeIOConfig(null, autoScalerConfig).getTaskCount());
-    Assert.assertFalse(makeIOConfig(null, autoScalerConfig).isTaskCountExplicit());
+    Assertions.assertEquals(5, makeIOConfig(null, autoScalerConfig).getTaskCount());
+    Assertions.assertFalse(makeIOConfig(null, autoScalerConfig).isTaskCountExplicit());
   }
 
   private KafkaSupervisorIOConfig makeIOConfig(Integer taskCount, Map<String, Object> autoScalerConfig)
@@ -495,9 +496,9 @@ public class KafkaSupervisorIOConfigTest
     String ioConfig = mapper.writeValueAsString(kafkaSupervisorIOConfig);
     KafkaSupervisorIOConfig kafkaSupervisorIOConfig1 = mapper.readValue(ioConfig, KafkaSupervisorIOConfig.class);
 
-    Assert.assertNotNull(kafkaSupervisorIOConfig1.getIdleConfig());
-    Assert.assertTrue(kafkaSupervisorIOConfig1.getIdleConfig().isEnabled());
-    Assert.assertEquals(Long.valueOf(600000), kafkaSupervisorIOConfig1.getIdleConfig().getInactiveAfterMillis());
+    Assertions.assertNotNull(kafkaSupervisorIOConfig1.getIdleConfig());
+    Assertions.assertTrue(kafkaSupervisorIOConfig1.getIdleConfig().isEnabled());
+    Assertions.assertEquals(Long.valueOf(600000), kafkaSupervisorIOConfig1.getIdleConfig().getInactiveAfterMillis());
   }
 
   @Test
@@ -515,10 +516,10 @@ public class KafkaSupervisorIOConfigTest
 
     KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
 
-    Assert.assertTrue(config.isBounded());
-    Assert.assertNotNull(config.getBoundedStreamConfig());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+    Assertions.assertTrue(config.isBounded());
+    Assertions.assertNotNull(config.getBoundedStreamConfig());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
   }
 
   @Test
@@ -536,10 +537,10 @@ public class KafkaSupervisorIOConfigTest
 
     KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
 
-    Assert.assertTrue(config.isBounded());
-    Assert.assertNotNull(config.getBoundedStreamConfig());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+    Assertions.assertTrue(config.isBounded());
+    Assertions.assertNotNull(config.getBoundedStreamConfig());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
   }
 
   @Test
@@ -557,8 +558,8 @@ public class KafkaSupervisorIOConfigTest
 
     KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
 
-    Assert.assertTrue(config.isBounded());
-    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assertions.assertTrue(config.isBounded());
+    Assertions.assertNotNull(config.getBoundedStreamConfig());
   }
 
   @Test
@@ -572,8 +573,8 @@ public class KafkaSupervisorIOConfigTest
 
     KafkaSupervisorIOConfig config = mapper.readValue(jsonStr, KafkaSupervisorIOConfig.class);
 
-    Assert.assertFalse(config.isBounded());
-    Assert.assertNull(config.getBoundedStreamConfig());
+    Assertions.assertFalse(config.isBounded());
+    Assertions.assertNull(config.getBoundedStreamConfig());
   }
 
   @Test
@@ -621,10 +622,10 @@ public class KafkaSupervisorIOConfigTest
     String json = mapper.writeValueAsString(original);
     KafkaSupervisorIOConfig deserialized = mapper.readValue(json, KafkaSupervisorIOConfig.class);
 
-    Assert.assertTrue(deserialized.isBounded());
-    Assert.assertNotNull(deserialized.getBoundedStreamConfig());
-    Assert.assertEquals(2, deserialized.getBoundedStreamConfig().getStartSequenceNumbers().size());
-    Assert.assertEquals(2, deserialized.getBoundedStreamConfig().getEndSequenceNumbers().size());
+    Assertions.assertTrue(deserialized.isBounded());
+    Assertions.assertNotNull(deserialized.getBoundedStreamConfig());
+    Assertions.assertEquals(2, deserialized.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, deserialized.getBoundedStreamConfig().getEndSequenceNumbers().size());
   }
 
   private static KafkaIOConfigBuilder ioConfigBuilder()
@@ -641,31 +642,31 @@ public class KafkaSupervisorIOConfigTest
   public void testEqualsAndHashCode()
   {
     final KafkaSupervisorIOConfig config = ioConfigBuilder().build();
-    Assert.assertEquals(config, ioConfigBuilder().build());
-    Assert.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
-    Assert.assertNotEquals(config, null);
-    Assert.assertNotEquals(config, "not an io config");
-    Assert.assertNotEquals(config, ioConfigBuilder().withTopic("other").build());
-    Assert.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
-    Assert.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
-    Assert.assertNotEquals(
+    Assertions.assertEquals(config, ioConfigBuilder().build());
+    Assertions.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assertions.assertNotEquals(config, null);
+    Assertions.assertNotEquals(config, "not an io config");
+    Assertions.assertNotEquals(config, ioConfigBuilder().withTopic("other").build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assertions.assertNotEquals(
         config,
         ioConfigBuilder().withConsumerProperties(Map.of("bootstrap.servers", "other:9092")).build()
     );
-    Assert.assertNotEquals(config, ioConfigBuilder().withEmitTimeLagMetrics(true).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withEmitTimeLagMetrics(true).build());
   }
 
   @Test
   public void testTuningConfigEqualsAndHashCode()
   {
     final KafkaSupervisorTuningConfig config = new KafkaTuningConfigBuilder().build();
-    Assert.assertEquals(config, new KafkaTuningConfigBuilder().build());
-    Assert.assertEquals(config.hashCode(), new KafkaTuningConfigBuilder().build().hashCode());
-    Assert.assertNotEquals(config, null);
-    Assert.assertNotEquals(config, "not a tuning config");
-    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withWorkerThreads(99).build());
-    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withShutdownTimeout(new Period("PT99M")).build());
-    Assert.assertNotEquals(config, new KafkaTuningConfigBuilder().withOffsetFetchPeriod(new Period("PT99S")).build());
+    Assertions.assertEquals(config, new KafkaTuningConfigBuilder().build());
+    Assertions.assertEquals(config.hashCode(), new KafkaTuningConfigBuilder().build().hashCode());
+    Assertions.assertNotEquals(config, null);
+    Assertions.assertNotEquals(config, "not a tuning config");
+    Assertions.assertNotEquals(config, new KafkaTuningConfigBuilder().withWorkerThreads(99).build());
+    Assertions.assertNotEquals(config, new KafkaTuningConfigBuilder().withShutdownTimeout(new Period("PT99M")).build());
+    Assertions.assertNotEquals(config, new KafkaTuningConfigBuilder().withOffsetFetchPeriod(new Period("PT99S")).build());
   }
 
   /**
@@ -700,5 +701,16 @@ public class KafkaSupervisorIOConfigTest
                   .withRedefinedSuperclass()
                   .suppress(Warning.NONFINAL_FIELDS)
                   .verify();
+  }
+
+  private static void assertJsonMappingException(
+      Class<? extends Throwable> causeType,
+      String expectedMessage,
+      Executable executable
+  )
+  {
+    final JsonMappingException exception = Assertions.assertThrows(JsonMappingException.class, executable);
+    Assertions.assertInstanceOf(causeType, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains(expectedMessage));
   }
 }

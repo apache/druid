@@ -19,8 +19,8 @@
 
 package org.apache.druid.storage.s3;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class S3TransferConfigTest
 {
@@ -28,9 +28,9 @@ public class S3TransferConfigTest
   public void testDefaultValues()
   {
     S3TransferConfig config = new S3TransferConfig();
-    Assert.assertTrue(config.isUseTransferManager());
-    Assert.assertEquals(20 * 1024 * 1024L, config.getMinimumUploadPartSize());
-    Assert.assertEquals(20 * 1024 * 1024L, config.getMultipartUploadThreshold());
+    Assertions.assertTrue(config.isUseTransferManager());
+    Assertions.assertEquals(20 * 1024 * 1024L, config.getMinimumUploadPartSize());
+    Assertions.assertEquals(20 * 1024 * 1024L, config.getMultipartUploadThreshold());
   }
 
   @Test
@@ -38,7 +38,7 @@ public class S3TransferConfigTest
   {
     S3TransferConfig config = new S3TransferConfig();
     config.setUseTransferManager(true);
-    Assert.assertTrue(config.isUseTransferManager());
+    Assertions.assertTrue(config.isUseTransferManager());
   }
 
   @Test
@@ -46,7 +46,7 @@ public class S3TransferConfigTest
   {
     S3TransferConfig config = new S3TransferConfig();
     config.setMinimumUploadPartSize(10 * 1024 * 1024L);
-    Assert.assertEquals(10 * 1024 * 1024L, config.getMinimumUploadPartSize());
+    Assertions.assertEquals(10 * 1024 * 1024L, config.getMinimumUploadPartSize());
   }
 
   @Test
@@ -54,6 +54,6 @@ public class S3TransferConfigTest
   {
     S3TransferConfig config = new S3TransferConfig();
     config.setMultipartUploadThreshold(10 * 1024 * 1024L);
-    Assert.assertEquals(10 * 1024 * 1024L, config.getMultipartUploadThreshold());
+    Assertions.assertEquals(10 * 1024 * 1024L, config.getMultipartUploadThreshold());
   }
 }

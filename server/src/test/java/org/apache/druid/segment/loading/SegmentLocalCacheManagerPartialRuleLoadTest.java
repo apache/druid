@@ -554,6 +554,93 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   @Test
+  void testFullLoadRequestReleasesRuleAndRewritesInfoFile() throws Exception
+  {
+    // An unwrapped load request for a segment held under a rule is the coordinator asking for the whole segment again.
+    // The rule's holds have to come off, so the pinned parts become evictable like any other virtual-storage full load,
+    // and the info file has to stop describing the rule so a restart doesn't reinstate it.
+    manager = makeManager(true, true);
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+    Assertions.assertEquals(FINGERPRINT, manager.getRuleFingerprintForSegment(SEGMENT_ID));
+
+    manager.load(plainSegment());
+
+    Assertions.assertNull(
+        manager.getRuleFingerprintForSegment(SEGMENT_ID),
+        "a full load request must release the applied rule"
+    );
+    final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
+    final DataSegment onDisk = jsonMapper.readValue(infoFile, DataSegment.class);
+    Assertions.assertFalse(
+        PartialLoadSpec.detectPartialLoadSpec(onDisk.getLoadSpec()),
+        "info file on disk must no longer carry a partial-load wrapper"
+    );
+  }
+
+  @Test
+  void testFullLoadRequestFailsWhenTheInfoFileCannotBeRewritten() throws Exception
+  {
+    // The release has to reach disk or not happen at all: an unwrapped request announces as a full load either way, so
+    // a rule released only in memory would leave the coordinator recording a replica with no profile while a restart
+    // reinstates the rule. Failing the load instead sends the historical down its drop path, which cleans both up.
+    manager = makeManager(true, true);
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+
+    final File infoDir = new File(cacheRoot, "info_dir");
+    Assertions.assertTrue(infoDir.setReadOnly(), "test setup must be able to make the info dir read-only");
+    try {
+      Assertions.assertThrows(
+          SegmentLoadingException.class,
+          () -> manager.load(plainSegment())
+      );
+      Assertions.assertEquals(
+          FINGERPRINT,
+          manager.getRuleFingerprintForSegment(SEGMENT_ID),
+          "the rule must still be applied when the release could not be persisted"
+      );
+    }
+    finally {
+      Assertions.assertTrue(infoDir.setWritable(true), "test teardown must restore write permission");
+    }
+  }
+
+  @Test
+  void testRestartAfterFullLoadRequestDoesNotReinstateRule() throws Exception
+  {
+    // The released rule has to stay released across a restart: bootstrap reads the rewritten info file, so it restores
+    // the partial layout that is still on disk without reapplying the rule, and announces no profile for it.
+    manager = makeManager(true, true);
+    manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
+    manager.load(plainSegment());
+    manager.shutdown();
+    manager = null;
+
+    final SegmentLocalCacheManager restarted = makeManager(true, true);
+    try {
+      final DataSegment cached = restarted.getCachedSegments()
+                                          .stream()
+                                          .filter(s -> s.getId().equals(SEGMENT_ID))
+                                          .findFirst()
+                                          .orElse(null);
+      Assertions.assertNotNull(cached, "restarted historical must rediscover the segment via its info file");
+
+      final DataSegment bootstrapped = restarted.bootstrap(cached, SegmentLazyLoadFailCallback.NOOP);
+
+      Assertions.assertNull(
+          restarted.getRuleFingerprintForSegment(SEGMENT_ID),
+          "bootstrap must not reapply a rule that a full load request released"
+      );
+      Assertions.assertFalse(
+          bootstrapped instanceof DataSegmentAndLoadProfile,
+          "bootstrap must not announce a partial-load profile for a released rule"
+      );
+    }
+    finally {
+      restarted.shutdown();
+    }
+  }
+
+  @Test
   void testDropClearsRule() throws Exception
   {
     manager = makeManager(true, true);
@@ -836,6 +923,19 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     return DataSegment.builder(SEGMENT_ID)
                       .shardSpec(NoneShardSpec.instance())
                       .loadSpec(CompositePartialLoadSpec.wireForm(delegate, members, fingerprint))
+                      .size(0)
+                      .build();
+  }
+
+  /**
+   * The same segment as {@link #partialWrapperSegment}, but with the plain deep-storage load spec the coordinator sends
+   * for a regular full load.
+   */
+  private DataSegment plainSegment()
+  {
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(Map.of("type", "local", "path", DEEP_STORAGE_DIR.getAbsolutePath()))
                       .size(0)
                       .build();
   }

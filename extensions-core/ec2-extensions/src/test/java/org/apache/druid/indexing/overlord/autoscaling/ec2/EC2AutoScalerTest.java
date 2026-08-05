@@ -140,7 +140,6 @@ public class EC2AutoScalerTest
     );
 
     final int n = 150;
-    Assert.assertTrue(n <= 2 * EC2AutoScaler.MAX_AWS_FILTER_VALUES);
 
     List<String> ips = Lists.transform(
         ContiguousSet.create(Range.closedOpen(0, n), DiscreteDomain.integers()).asList(),
@@ -193,7 +192,6 @@ public class EC2AutoScalerTest
     );
 
     final int n = 150;
-    Assert.assertTrue(n <= 2 * EC2AutoScaler.MAX_AWS_FILTER_VALUES);
 
     List<String> ids = Lists.transform(
         ContiguousSet.create(Range.closedOpen(0, n), DiscreteDomain.integers()).asList(),

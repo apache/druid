@@ -348,6 +348,9 @@ public class ControllerHolder
       case FAILED:
         state = State.FAILED;
         break;
+
+      case RUNNING:
+        break;
     }
   }
 

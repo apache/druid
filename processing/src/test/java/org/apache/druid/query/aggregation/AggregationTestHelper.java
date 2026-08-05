@@ -366,17 +366,19 @@ public class AggregationTestHelper implements Closeable
       int maxRowCount
   ) throws Exception
   {
-    createIndex(
-        new FileInputStream(inputDataFile),
-        inputSchema,
-        inputFormat,
-        aggregators,
-        outDir,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        true
-    );
+    try (final InputStream inputStream = new FileInputStream(inputDataFile)) {
+      createIndex(
+          inputStream,
+          inputSchema,
+          inputFormat,
+          aggregators,
+          outDir,
+          minTimestamp,
+          gran,
+          maxRowCount,
+          true
+      );
+    }
   }
 
   public void createIndex(
@@ -391,17 +393,19 @@ public class AggregationTestHelper implements Closeable
       boolean rollup
   ) throws Exception
   {
-    createIndex(
-        new FileInputStream(inputDataFile),
-        inputSchema,
-        inputFormat,
-        aggregators,
-        outDir,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        rollup
-    );
+    try (final InputStream inputStream = new FileInputStream(inputDataFile)) {
+      createIndex(
+          inputStream,
+          inputSchema,
+          inputFormat,
+          aggregators,
+          outDir,
+          minTimestamp,
+          gran,
+          maxRowCount,
+          rollup
+      );
+    }
   }
 
   public void createIndex(
@@ -704,4 +708,3 @@ public class AggregationTestHelper implements Closeable
     resourceCloser.close();
   }
 }
-

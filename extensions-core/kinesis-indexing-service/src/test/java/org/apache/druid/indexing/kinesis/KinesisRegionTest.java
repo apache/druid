@@ -22,17 +22,19 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KinesisRegionTest
 {
   private ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setupTest()
   {
     mapper = new DefaultObjectMapper();
@@ -44,8 +46,8 @@ public class KinesisRegionTest
     KinesisRegion kinesisRegionUs1 = KinesisRegion.US_EAST_1;
     KinesisRegion kinesisRegionAp1 = KinesisRegion.AP_NORTHEAST_1;
 
-    Assert.assertEquals("\"us-east-1\"", mapper.writeValueAsString(kinesisRegionUs1));
-    Assert.assertEquals("\"ap-northeast-1\"", mapper.writeValueAsString(kinesisRegionAp1));
+    Assertions.assertEquals("\"us-east-1\"", mapper.writeValueAsString(kinesisRegionUs1));
+    Assertions.assertEquals("\"ap-northeast-1\"", mapper.writeValueAsString(kinesisRegionAp1));
 
     KinesisRegion kinesisRegion = mapper.readValue(
         mapper.writeValueAsString(
@@ -57,23 +59,24 @@ public class KinesisRegionTest
         KinesisRegion.class
     );
 
-    Assert.assertEquals(kinesisRegion, KinesisRegion.US_EAST_1);
+    Assertions.assertEquals(kinesisRegion, KinesisRegion.US_EAST_1);
   }
 
   @Test
   public void testGetEndpoint()
   {
-    Assert.assertEquals("kinesis.cn-north-1.amazonaws.com.cn", KinesisRegion.CN_NORTH_1.getEndpoint());
-    Assert.assertEquals("kinesis.us-east-1.amazonaws.com", KinesisRegion.US_EAST_1.getEndpoint());
+    Assertions.assertEquals("kinesis.cn-north-1.amazonaws.com.cn", KinesisRegion.CN_NORTH_1.getEndpoint());
+    Assertions.assertEquals("kinesis.us-east-1.amazonaws.com", KinesisRegion.US_EAST_1.getEndpoint());
   }
 
-  @Test(expected = JsonMappingException.class)
-  public void testBadSerde() throws IOException
+  @Test
+  public void testBadSerde()
   {
-    mapper.readValue(
-        "\"us-east-10\"",
-        KinesisRegion.class
-    );
+    assertThrows(JsonMappingException.class, () ->
+      mapper.readValue(
+          "\"us-east-10\"",
+          KinesisRegion.class
+      ));
   }
 
 }

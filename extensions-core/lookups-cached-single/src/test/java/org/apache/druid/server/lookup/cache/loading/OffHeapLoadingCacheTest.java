@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.lookup.cache.loading;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class OffHeapLoadingCacheTest
 {
@@ -29,7 +29,7 @@ public class OffHeapLoadingCacheTest
   {
     LoadingCache loadingCache = new OffHeapLoadingCache<>(1000L, 1000L, 0L, 0L);
     loadingCache.close();
-    Assert.assertTrue(loadingCache.isClosed());
+    Assertions.assertTrue(loadingCache.isClosed());
   }
 
 }

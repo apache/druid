@@ -108,16 +108,16 @@
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.22.1</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
-        <log4j.version>2.26.0</log4j.version>
+        <log4j.version>2.26.1</log4j.version>
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.2.15.Final</netty4.version>
+        <netty4.version>4.2.16.Final</netty4.version>
         <postgresql.version>42.7.12</postgresql.version>
         <protobuf.version>4.35.1</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
         <slf4j.version>2.0.18</slf4j.version>
-        <jna.version>5.18.1</jna.version>
+        <jna.version>5.19.1</jna.version>
         <jna-platform.version>5.18.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
         <graaljs.version>25.1.3</graaljs.version>
@@ -128,7 +128,7 @@
         <aws.sdk.v2.version>2.49.6</aws.sdk.v2.version>
         <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
-        <testcontainers.version>2.0.3</testcontainers.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <okhttp.version>5.3.2</okhttp.version>
@@ -414,7 +414,7 @@
             <dependency>
                 <groupId>com.ning</groupId>
                 <artifactId>compress-lzf</artifactId>
-                <version>1.0.4</version>
+                <version>1.2.0</version>
             </dependency>
             <dependency>
                 <groupId>com.github.rvesse</groupId>
@@ -1108,7 +1108,7 @@
             <dependency>
                 <groupId>org.roaringbitmap</groupId>
                 <artifactId>RoaringBitmap</artifactId>
-                <version>1.6.14</version>
+                <version>1.6.18</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
@@ -1298,7 +1298,7 @@
             <dependency>
                 <groupId>com.github.docker-java</groupId>
                 <artifactId>docker-java-bom</artifactId>
-                <version>3.7.0</version>
+                <version>3.7.1</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -1849,7 +1849,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.6.2</version>
+                <version>3.6.3</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
