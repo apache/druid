@@ -75,7 +75,7 @@ export const SupervisorTableActionDialog = React.memo(function SupervisorTableAc
       ? [
           {
             icon: 'predictive-analysis' as const,
-            text: 'Auto-scaler',
+            text: 'Simulate auto-scaler',
             active: activeTab === 'auto-scaler',
             onClick: () => setActiveTab('auto-scaler'),
           },

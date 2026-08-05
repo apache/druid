@@ -71,7 +71,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
 
   const [taskCountMin, setTaskCountMin] = useState<number>(1);
   const [taskCountMax, setTaskCountMax] = useState<number>(10);
-  const [maxProcessingRatePerTask, setMaxProcessingRatePerTask] = useState<number>(10000);
+  const [maxProcessingRatePerTask, setMaxProcessingRatePerTask] = useState<number>(1000);
   const [optimalTaskIdleRatio, setOptimalTaskIdleRatio] = useState<number>(0.2);
   const [lagWeight, setLagWeight] = useState<number>(0.4);
   // Idle weight is the complement of lag weight; one slider drives both.
