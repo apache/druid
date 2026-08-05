@@ -431,6 +431,8 @@ JAVACODE void checkQueryExpression(ExprContext exprContext)
     case ACCEPT_CURSOR:
         throw SqlUtil.newContextException(getPos(),
             RESOURCE.illegalQueryExpression());
+    default:
+        break;
     }
 }
 
@@ -440,6 +442,8 @@ JAVACODE void checkNonQueryExpression(ExprContext exprContext)
     case ACCEPT_QUERY:
         throw SqlUtil.newContextException(getPos(),
             RESOURCE.illegalNonQueryExpression());
+    default:
+        break;
     }
 }
 
@@ -834,6 +838,8 @@ SqlNode ParenthesizedExpression(ExprContext exprContext) :
         case ACCEPT_CURSOR:
             exprContext = ExprContext.ACCEPT_ALL;
             break;
+        default:
+            break;
         }
     }
     e = ExprOrJoinOrOrderedQuery(exprContext)
@@ -889,6 +895,8 @@ SqlNodeList ParenthesizedQueryOrCommaList(
         case ACCEPT_CURSOR:
             firstExprContext = ExprContext.ACCEPT_ALL;
             break;
+        default:
+            break;
         }
     }
     e = OrderedQueryOrExpr(firstExprContext) { list.add(e); }
@@ -929,6 +937,8 @@ SqlNodeList ParenthesizedQueryOrCommaListWithDefault(
             break;
         case ACCEPT_CURSOR:
             firstExprContext = ExprContext.ACCEPT_ALL;
+            break;
+        default:
             break;
         }
     }

@@ -46,14 +46,14 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
 
-import static org.junit.Assert.assertThrows;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KafkaSupervisorSpecTest
 {
@@ -141,23 +141,23 @@ public class KafkaSupervisorSpecTest
                   + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
-    Assert.assertNotNull(spec);
-    Assert.assertNotNull(spec.getDataSchema());
-    Assert.assertEquals("metrics.*", spec.getIoConfig().getTopicPattern());
-    Assert.assertNull(spec.getIoConfig().getTopic());
-    Assert.assertNotNull(spec.getTuningConfig());
-    Assert.assertNull(spec.getContext());
+    Assertions.assertNotNull(spec);
+    Assertions.assertNotNull(spec.getDataSchema());
+    Assertions.assertEquals("metrics.*", spec.getIoConfig().getTopicPattern());
+    Assertions.assertNull(spec.getIoConfig().getTopic());
+    Assertions.assertNotNull(spec.getTuningConfig());
+    Assertions.assertNull(spec.getContext());
     String serialized = mapper.writeValueAsString(spec);
 
     // expect default values populated in reserialized string
-    Assert.assertTrue(serialized.contains("\"topicPattern\":\"metrics.*\""));
-    Assert.assertTrue(serialized, serialized.contains("\"topic\":null"));
+    Assertions.assertTrue(serialized.contains("\"topicPattern\":\"metrics.*\""));
+    Assertions.assertTrue(serialized.contains("\"topic\":null"), serialized);
 
     KafkaSupervisorSpec spec2 = mapper.readValue(serialized, KafkaSupervisorSpec.class);
 
     String stable = mapper.writeValueAsString(spec2);
 
-    Assert.assertEquals(serialized, stable);
+    Assertions.assertEquals(serialized, stable);
   }
   @Test
   public void testSerdeWithInputFormat() throws IOException
@@ -222,28 +222,28 @@ public class KafkaSupervisorSpecTest
                   + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
-    Assert.assertNotNull(spec);
-    Assert.assertNotNull(spec.getDataSchema());
-    Assert.assertEquals(4, spec.getDataSchema().getAggregators().length);
-    Assert.assertNotNull(spec.getIoConfig());
-    Assert.assertEquals("metrics", spec.getIoConfig().getTopic());
-    Assert.assertNull(spec.getIoConfig().getTopicPattern());
-    Assert.assertNotNull(spec.getTuningConfig());
-    Assert.assertNull(spec.getContext());
-    Assert.assertFalse(spec.isSuspended());
+    Assertions.assertNotNull(spec);
+    Assertions.assertNotNull(spec.getDataSchema());
+    Assertions.assertEquals(4, spec.getDataSchema().getAggregators().length);
+    Assertions.assertNotNull(spec.getIoConfig());
+    Assertions.assertEquals("metrics", spec.getIoConfig().getTopic());
+    Assertions.assertNull(spec.getIoConfig().getTopicPattern());
+    Assertions.assertNotNull(spec.getTuningConfig());
+    Assertions.assertNull(spec.getContext());
+    Assertions.assertFalse(spec.isSuspended());
     String serialized = mapper.writeValueAsString(spec);
 
     // expect default values populated in reserialized string
-    Assert.assertTrue(serialized.contains("\"tuningConfig\":{"));
-    Assert.assertTrue(serialized.contains("\"indexSpec\":{"));
-    Assert.assertTrue(serialized.contains("\"suspended\":false"));
-    Assert.assertTrue(serialized.contains("\"inputFormat\":{"));
+    Assertions.assertTrue(serialized.contains("\"tuningConfig\":{"));
+    Assertions.assertTrue(serialized.contains("\"indexSpec\":{"));
+    Assertions.assertTrue(serialized.contains("\"suspended\":false"));
+    Assertions.assertTrue(serialized.contains("\"inputFormat\":{"));
 
     KafkaSupervisorSpec spec2 = mapper.readValue(serialized, KafkaSupervisorSpec.class);
 
     String stable = mapper.writeValueAsString(spec2);
 
-    Assert.assertEquals(serialized, stable);
+    Assertions.assertEquals(serialized, stable);
   }
 
   @Test
@@ -311,28 +311,28 @@ public class KafkaSupervisorSpecTest
                   + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
-    Assert.assertNotNull(spec);
-    Assert.assertNotNull(spec.getDataSchema());
-    Assert.assertEquals(4, spec.getDataSchema().getAggregators().length);
-    Assert.assertNotNull(spec.getIoConfig());
-    Assert.assertEquals("metrics", spec.getIoConfig().getTopic());
-    Assert.assertNull(spec.getIoConfig().getTopicPattern());
-    Assert.assertNotNull(spec.getTuningConfig());
-    Assert.assertNull(spec.getContext());
-    Assert.assertFalse(spec.isSuspended());
+    Assertions.assertNotNull(spec);
+    Assertions.assertNotNull(spec.getDataSchema());
+    Assertions.assertEquals(4, spec.getDataSchema().getAggregators().length);
+    Assertions.assertNotNull(spec.getIoConfig());
+    Assertions.assertEquals("metrics", spec.getIoConfig().getTopic());
+    Assertions.assertNull(spec.getIoConfig().getTopicPattern());
+    Assertions.assertNotNull(spec.getTuningConfig());
+    Assertions.assertNull(spec.getContext());
+    Assertions.assertFalse(spec.isSuspended());
     String serialized = mapper.writeValueAsString(spec);
 
     // expect default values populated in reserialized string
-    Assert.assertTrue(serialized.contains("\"tuningConfig\":{"));
-    Assert.assertTrue(serialized.contains("\"indexSpec\":{"));
-    Assert.assertTrue(serialized.contains("\"suspended\":false"));
-    Assert.assertTrue(serialized.contains("\"inputFormat\":{"));
+    Assertions.assertTrue(serialized.contains("\"tuningConfig\":{"));
+    Assertions.assertTrue(serialized.contains("\"indexSpec\":{"));
+    Assertions.assertTrue(serialized.contains("\"suspended\":false"));
+    Assertions.assertTrue(serialized.contains("\"inputFormat\":{"));
 
     KafkaSupervisorSpec spec2 = mapper.readValue(serialized, KafkaSupervisorSpec.class);
 
     String stable = mapper.writeValueAsString(spec2);
 
-    Assert.assertEquals(serialized, stable);
+    Assertions.assertEquals(serialized, stable);
   }
 
   @Test
@@ -398,32 +398,32 @@ public class KafkaSupervisorSpecTest
                   + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
-    Assert.assertNotNull(spec);
-    Assert.assertNotNull(spec.getDataSchema());
-    Assert.assertEquals(4, spec.getDataSchema().getAggregators().length);
-    Assert.assertNotNull(spec.getIoConfig());
-    Assert.assertEquals("metrics", spec.getIoConfig().getTopic());
-    Assert.assertNull(spec.getIoConfig().getTopicPattern());
-    Assert.assertNotNull(spec.getTuningConfig());
-    Assert.assertNull(spec.getContext());
-    Assert.assertFalse(spec.isSuspended());
+    Assertions.assertNotNull(spec);
+    Assertions.assertNotNull(spec.getDataSchema());
+    Assertions.assertEquals(4, spec.getDataSchema().getAggregators().length);
+    Assertions.assertNotNull(spec.getIoConfig());
+    Assertions.assertEquals("metrics", spec.getIoConfig().getTopic());
+    Assertions.assertNull(spec.getIoConfig().getTopicPattern());
+    Assertions.assertNotNull(spec.getTuningConfig());
+    Assertions.assertNull(spec.getContext());
+    Assertions.assertFalse(spec.isSuspended());
 
     String suspendedSerialized = mapper.writeValueAsString(spec.createSuspendedSpec());
 
     // expect default values populated in reserialized string
-    Assert.assertTrue(suspendedSerialized.contains("\"tuningConfig\":{"));
-    Assert.assertTrue(suspendedSerialized.contains("\"indexSpec\":{"));
-    Assert.assertTrue(suspendedSerialized.contains("\"suspended\":true"));
+    Assertions.assertTrue(suspendedSerialized.contains("\"tuningConfig\":{"));
+    Assertions.assertTrue(suspendedSerialized.contains("\"indexSpec\":{"));
+    Assertions.assertTrue(suspendedSerialized.contains("\"suspended\":true"));
 
     KafkaSupervisorSpec suspendedSpec = mapper.readValue(suspendedSerialized, KafkaSupervisorSpec.class);
 
-    Assert.assertTrue(suspendedSpec.isSuspended());
+    Assertions.assertTrue(suspendedSpec.isSuspended());
 
     String runningSerialized = mapper.writeValueAsString(spec.createRunningSpec());
 
     KafkaSupervisorSpec runningSpec = mapper.readValue(runningSerialized, KafkaSupervisorSpec.class);
 
-    Assert.assertFalse(runningSpec.isSuspended());
+    Assertions.assertFalse(runningSpec.isSuspended());
   }
 
   @Test
@@ -462,8 +462,8 @@ public class KafkaSupervisorSpecTest
     final byte[] payload = mapper.writeValueAsBytes(spec);
     final KafkaSupervisorSpec roundTripped =
         (KafkaSupervisorSpec) mapper.readValue(payload, SupervisorSpec.class);
-    Assert.assertEquals(50, roundTripped.getIoConfig().getTaskCount());
-    Assert.assertTrue(roundTripped.getIoConfig().isTaskCountExplicit());
+    Assertions.assertEquals(50, roundTripped.getIoConfig().getTaskCount());
+    Assertions.assertTrue(roundTripped.getIoConfig().isTaskCountExplicit());
   }
 
   @Test
@@ -473,7 +473,7 @@ public class KafkaSupervisorSpecTest
 
     // Proposed spec being non-kafka is not allowed
     TestSupervisorSpec otherSpec = new TestSupervisorSpec("test", new Object());
-    MatcherAssert.assertThat(
+    assertThat(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(otherSpec)),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,
@@ -485,7 +485,7 @@ public class KafkaSupervisorSpecTest
     );
 
     KafkaSupervisorSpec multiTopicProposedSpec = getSpec(null, "metrics-.*");
-    MatcherAssert.assertThat(
+    assertThat(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(multiTopicProposedSpec)),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,
@@ -501,7 +501,7 @@ public class KafkaSupervisorSpecTest
     );
 
     KafkaSupervisorSpec singleTopicNewStreamProposedSpec = getSpec("metricsNew", null);
-    MatcherAssert.assertThat(
+    assertThat(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(singleTopicNewStreamProposedSpec)),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,
@@ -517,7 +517,7 @@ public class KafkaSupervisorSpecTest
     );
 
     KafkaSupervisorSpec multiTopicMatchingSourceString = getSpec(null, "metrics");
-    MatcherAssert.assertThat(
+    assertThat(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(multiTopicMatchingSourceString)),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,
@@ -533,7 +533,7 @@ public class KafkaSupervisorSpecTest
     );
 
     // test the inverse as well
-    MatcherAssert.assertThat(
+    assertThat(
         assertThrows(DruidException.class, () -> multiTopicMatchingSourceString.validateSpecUpdateTo(sourceSpec)),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,
@@ -590,11 +590,11 @@ public class KafkaSupervisorSpecTest
 
     KafkaSupervisorSpec backfill = (KafkaSupervisorSpec) spec.createBackfillSpec("backfill-id", boundedStreamConfig, 2);
 
-    Assert.assertEquals("backfill-id", backfill.getId());
-    Assert.assertEquals("testDs", backfill.getSpec().getDataSchema().getDataSource());
-    Assert.assertEquals("metrics", backfill.getSpec().getIOConfig().getTopic());
-    Assert.assertEquals(2, backfill.getSpec().getIOConfig().getTaskCount());
-    Assert.assertEquals(boundedStreamConfig, backfill.getSpec().getIOConfig().getBoundedStreamConfig());
+    Assertions.assertEquals("backfill-id", backfill.getId());
+    Assertions.assertEquals("testDs", backfill.getSpec().getDataSchema().getDataSource());
+    Assertions.assertEquals("metrics", backfill.getSpec().getIOConfig().getTopic());
+    Assertions.assertEquals(2, backfill.getSpec().getIOConfig().getTaskCount());
+    Assertions.assertEquals(boundedStreamConfig, backfill.getSpec().getIOConfig().getBoundedStreamConfig());
   }
 
   private KafkaSupervisorSpec getSpec(String topic, String topicPattern)
