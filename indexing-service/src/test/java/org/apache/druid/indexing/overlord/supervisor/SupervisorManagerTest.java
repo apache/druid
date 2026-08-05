@@ -636,22 +636,27 @@ public class SupervisorManagerTest extends EasyMockSupport
     final SeekableStreamSupervisor<Integer, String, ByteEntity> supervisor = EasyMock.createMock(
         SeekableStreamSupervisor.class
     );
-    final SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(supervisor.getIoConfig()).andReturn(ioConfig);
-    EasyMock.expect(ioConfig.getTaskCount()).andReturn(20);
-    EasyMock.replay(supervisor, ioConfig);
-    getSupervisorsMap().put(supervisorId, Pair.of(supervisor, new TestSupervisorSpec(supervisorId, supervisor)));
+    final int partitionCount = 10;
+    EasyMock.expect(supervisor.getKnownPartitionCount()).andReturn(partitionCount);
+    EasyMock.replay(supervisor);
+
+    final TestBackfillSupervisorSpec.IngestionSpec ingestionSpec = new TestBackfillSupervisorSpec.IngestionSpec(
+        new TestBackfillSupervisorSpec.IOConfig("test-stream", null, null)
+    );
+    getSupervisorsMap().put(
+        supervisorId,
+        Pair.of(supervisor, new TestBackfillSupervisorSpec(supervisorId, ingestionSpec))
+    );
 
     final Map<String, Object> result = manager.simulateAutoscaling(
         supervisorId,
         CostBasedAutoScalerConfig.forSimulation(1, 10, 0.1, null, null),
-        1000,
         100,
         null
     );
 
     final Object[] data = (Object[]) result.get("data");
-    Assert.assertEquals(40, data.length);
+    Assert.assertEquals(200, data.length);
     Assert.assertTrue(data[0] instanceof Map);
     final Map<?, ?> firstDataPoint = (Map<?, ?>) data[0];
     Assert.assertTrue(firstDataPoint.containsKey("lag"));
@@ -661,7 +666,7 @@ public class SupervisorManagerTest extends EasyMockSupport
       final Number taskCount = (Number) ((Map<?, ?>) dataPoint).get("taskCount");
       Assert.assertTrue(taskCount.intValue() >= 1 && taskCount.intValue() <= 10);
     }
-    EasyMock.verify(supervisor, ioConfig);
+    EasyMock.verify(supervisor);
   }
 
   @Test
@@ -671,11 +676,15 @@ public class SupervisorManagerTest extends EasyMockSupport
     final SeekableStreamSupervisor<Integer, String, ByteEntity> supervisor = EasyMock.createMock(
         SeekableStreamSupervisor.class
     );
-    final SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(supervisor.getIoConfig()).andReturn(ioConfig);
-    EasyMock.expect(ioConfig.getTaskCount()).andReturn(20);
-    EasyMock.replay(supervisor, ioConfig);
-    getSupervisorsMap().put(supervisorId, Pair.of(supervisor, new TestSupervisorSpec(supervisorId, supervisor)));
+    EasyMock.replay(supervisor);
+
+    final TestBackfillSupervisorSpec.IngestionSpec ingestionSpec = new TestBackfillSupervisorSpec.IngestionSpec(
+        new TestBackfillSupervisorSpec.IOConfig("test-stream", null, null)
+    );
+    getSupervisorsMap().put(
+        supervisorId,
+        Pair.of(supervisor, new TestBackfillSupervisorSpec(supervisorId, ingestionSpec))
+    );
 
     MatcherAssert.assertThat(
         Assert.assertThrows(
@@ -683,7 +692,6 @@ public class SupervisorManagerTest extends EasyMockSupport
             () -> manager.simulateAutoscaling(
                 supervisorId,
                 CostBasedAutoScalerConfig.forSimulation(1, 10, 0.1, null, null),
-                1000,
                 100,
                 11
             )
@@ -692,7 +700,7 @@ public class SupervisorManagerTest extends EasyMockSupport
             "Value of currentTaskCount[11] must be within taskCountMin[1] and taskCountMax[10]"
         )
     );
-    EasyMock.verify(supervisor, ioConfig);
+    EasyMock.verify(supervisor);
   }
 
   @Test

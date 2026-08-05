@@ -538,7 +538,7 @@ public class SupervisorResource
   }
 
   @POST
-  @Path("/{id}/autoscaler")
+  @Path("/{id}/autoscaler/simulate")
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
@@ -546,7 +546,6 @@ public class SupervisorResource
       @PathParam("id") String supervisorId,
       CostBasedAutoScalerConfig autoScalerConfig,
       @QueryParam("maxProcessingRatePerTask") int maxProcessingRatePerTask,
-      @QueryParam("criticalLag") int criticalLag,
       @QueryParam("currentTaskCount") Integer currentTaskCount,
       @Context HttpServletRequest request
   )
@@ -556,7 +555,6 @@ public class SupervisorResource
             manager.simulateAutoscaling(
                 supervisorId,
                 autoScalerConfig,
-                criticalLag,
                 maxProcessingRatePerTask,
                 currentTaskCount
             )

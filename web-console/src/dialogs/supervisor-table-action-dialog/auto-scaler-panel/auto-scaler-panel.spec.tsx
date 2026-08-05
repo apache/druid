@@ -22,9 +22,9 @@ describe('getAutoScalerValidationError', () => {
   const validValues = {
     taskCountMin: 1,
     taskCountMax: 10,
-    maxProcessingRatePerTask: 100,
+    maxProcessingRatePerTask: 1000,
     optimalTaskIdleRatio: 0.2,
-    criticalLag: 1000,
+    criticalLag: 1000000,
     currentTaskCount: undefined,
   };
 

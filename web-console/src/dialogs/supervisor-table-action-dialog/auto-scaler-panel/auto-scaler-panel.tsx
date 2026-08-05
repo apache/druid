@@ -76,7 +76,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
   const [lagWeight, setLagWeight] = useState<number>(0.4);
   // Idle weight is the complement of lag weight; one slider drives both.
   const idleWeight = Math.round((1 - lagWeight) * 10) / 10;
-  const [criticalLag, setCriticalLag] = useState<number>(100000);
+  const [criticalLag, setCriticalLag] = useState<number>(1000000);
   // Undefined means "let the server use the supervisor's live task count".
   const [currentTaskCount, setCurrentTaskCount] = useState<number | undefined>(undefined);
 
@@ -127,7 +127,7 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
     debounceLoading: 500,
     processQuery: async (params, signal) => {
       const resp = await Api.instance.post<{ data: AutoScalerRow[] }>(
-        `/druid/indexer/v1/supervisor/${Api.encodePath(params.supervisorId)}/autoscaler`,
+        `/druid/indexer/v1/supervisor/${Api.encodePath(params.supervisorId)}/autoscaler/simulate`,
         {
           autoScalerStrategy: 'costBased',
           enableTaskAutoScaler: true,
@@ -141,7 +141,6 @@ export const AutoScalerPanel = React.memo(function AutoScalerPanel(props: AutoSc
         {
           params: {
             maxProcessingRatePerTask: params.maxProcessingRatePerTask,
-            criticalLag: params.criticalLag,
             currentTaskCount: params.currentTaskCount,
           },
           signal,

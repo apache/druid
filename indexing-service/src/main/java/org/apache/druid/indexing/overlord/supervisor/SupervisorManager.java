@@ -76,9 +76,6 @@ public class SupervisorManager implements SupervisorStatsProvider
 {
   private static final EmittingLogger log = new EmittingLogger(SupervisorManager.class);
 
-  // Caps the autoscaler simulation's range (we're not aware of workloads higher than 1k partitions)..
-  private static final int MAX_SIMULATION_TASK_COUNT = 1000;
-
   private final MetadataSupervisorManager metadataSupervisorManager;
   private final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisors = new ConcurrentHashMap<>();
   // SupervisorTaskAutoScaler could be null
@@ -658,15 +655,25 @@ public class SupervisorManager implements SupervisorStatsProvider
   public Map<String, Object> simulateAutoscaling(
       String supervisorId,
       CostBasedAutoScalerConfig config,
-      int criticalLag,
       int maxProcessingRatePerTask,
       @Nullable Integer requestedTaskCount
   )
   {
-    // Validate that this is a streaming supervisor
-    final StreamSupervisor supervisor = requireStreamSupervisor(supervisorId, "simulateAutoscaling");
+    // Validate that this is a SeekableStreamSupervisor
+    final Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(supervisorId);
+    if (supervisorPair == null || supervisorPair.rhs == null || supervisorPair.lhs == null) {
+      throw NotFound.exception("Invalid supervisor[%s]", supervisorId);
+    } else if (!(supervisorPair.rhs instanceof SeekableStreamSupervisorSpec)) {
+      throw InvalidInput.exception(
+          "Cannot simulate autoscaling for supervisor[%s] of type[%s]",
+          supervisorId, supervisorPair.rhs.getType()
+      );
+    }
+
+    final SeekableStreamSupervisorSpec supervisorSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
 
     // Validate the inputs
+    final long criticalLag = Configs.valueOrDefault(config.getCriticalLagThreshold(), 1_000_000);
     InvalidInput.conditionalException(
         criticalLag >= 1000,
         "Value of critical lag[%d] must be 1000 or more",
@@ -678,45 +685,34 @@ public class SupervisorManager implements SupervisorStatsProvider
         maxProcessingRatePerTask
     );
     InvalidInput.conditionalException(
-        config.getTaskCountMin() >= 1,
-        "Value of taskCountMin[%d] must be 1 or more",
-        config.getTaskCountMin()
-    );
-    InvalidInput.conditionalException(
-        config.getTaskCountMax() <= MAX_SIMULATION_TASK_COUNT,
-        "Value of taskCountMax[%d] must be [%d] or less",
-        config.getTaskCountMax(), MAX_SIMULATION_TASK_COUNT
+        requestedTaskCount == null
+        || (requestedTaskCount >= config.getTaskCountMin() && requestedTaskCount <= config.getTaskCountMax()),
+        "Value of currentTaskCount[%d] must be within taskCountMin[%d] and taskCountMax[%d]",
+        requestedTaskCount, config.getTaskCountMin(), config.getTaskCountMax()
     );
 
     // Simulate from the supervisor's live task count unless the caller pins one.
-    final int currentTaskCount = Configs.valueOrDefault(
-        requestedTaskCount,
-        ((SeekableStreamSupervisor<?, ?, ?>) supervisor).getIoConfig().getTaskCount()
-    );
-    InvalidInput.conditionalException(
-        requestedTaskCount == null
-        || (currentTaskCount >= config.getTaskCountMin() && currentTaskCount <= config.getTaskCountMax()),
-        "Value of currentTaskCount[%d] must be within taskCountMin[%d] and taskCountMax[%d]",
-        currentTaskCount, config.getTaskCountMin(), config.getTaskCountMax()
-    );
+    final int currentTaskCount = supervisorSpec.getIoConfig().getTaskCount();
     final int simulationTaskCount = Math.max(
         config.getTaskCountMin(),
-        Math.min(currentTaskCount, config.getTaskCountMax())
+        Math.min(
+            Configs.valueOrDefault(requestedTaskCount, currentTaskCount),
+            config.getTaskCountMax()
+        )
     );
 
-    // Assumption: enough partitions to reach taskCountMax.
-    final int partitionCount = config.getTaskCountMax();
-    final int taskDurationSeconds = 3600;
+    // Use the partition count and task duration from the supervisor spec
+    final int partitionCount = ((SeekableStreamSupervisor<?, ?, ?>) supervisorPair.lhs).getKnownPartitionCount();
+    final long taskDurationSeconds = supervisorSpec.getIoConfig().getTaskDuration().getStandardSeconds();
 
     // Assume that the tasks are fully used since there is some lag
-    final double avgProcessingRatePerTask = maxProcessingRatePerTask;
     final double idleRatio = config.getOptimalTaskIdleRatio();
 
-    // Invoke the cost function for a variety of input values of lag
-    final Object[] rows = new Object[40];
-    final int lagStepSize = criticalLag / 20;
+    // Invoke the cost function for lag in the range [0, 2 * criticalLagThreshold)
+    final Object[] rows = new Object[200];
+    final int lagStepSize = (int) (criticalLag / 100);
     final CostBasedAutoScaler autoscaleSimulator = CostBasedAutoScaler.createSimulator(config, supervisorId);
-    for (int i = 0; i < 40; ++i) {
+    for (int i = 0; i < 200; ++i) {
       final double observedAggregateLag = (double) lagStepSize * i;
       final CostMetrics costMetrics = new CostMetrics(
           observedAggregateLag / partitionCount,
@@ -725,7 +721,7 @@ public class SupervisorManager implements SupervisorStatsProvider
           partitionCount,
           idleRatio,
           taskDurationSeconds,
-          avgProcessingRatePerTask,
+          maxProcessingRatePerTask,
           maxProcessingRatePerTask * 1.0
       );
       final int optimalTaskCount = autoscaleSimulator.computeOptimalTaskCountInternal(costMetrics, true);
