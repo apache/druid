@@ -73,7 +73,7 @@ public class PollingLookupSerDeserTest
   private static class MockDataFetcher implements DataFetcher
   {
     @JsonCreator
-    public void initPollingLookupSerDeserTest()
+    public MockDataFetcher()
     {
     }
 
