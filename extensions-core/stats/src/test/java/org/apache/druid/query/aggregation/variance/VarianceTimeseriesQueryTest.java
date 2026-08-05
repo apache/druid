@@ -53,18 +53,14 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
                         .collect(Collectors.toList());
   }
 
-  private QueryRunner runner;
   private boolean descending;
   private Druids.TimeseriesQueryBuilder queryBuilder;
 
   public void initVarianceTimeseriesQueryTest(
-      QueryRunner runner,
       boolean descending,
-      boolean vectorize,
-      List<AggregatorFactory> aggregatorFactories
+      boolean vectorize
   )
   {
-    this.runner = runner;
     this.descending = descending;
     this.queryBuilder = Druids.newTimeseriesQueryBuilder()
                               .context(ImmutableMap.of("vectorize", vectorize ? "force" : "false"));
@@ -79,7 +75,7 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
       List<AggregatorFactory> aggregatorFactories
   )
   {
-    initVarianceTimeseriesQueryTest(runner, descending, vectorize, aggregatorFactories);
+    initVarianceTimeseriesQueryTest(descending, vectorize);
     TimeseriesQuery query = queryBuilder
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.DAY_GRAN)
@@ -135,7 +131,7 @@ public class VarianceTimeseriesQueryTest extends InitializedNullHandlingTest
       List<AggregatorFactory> aggregatorFactories
   )
   {
-    initVarianceTimeseriesQueryTest(runner, descending, vectorize, aggregatorFactories);
+    initVarianceTimeseriesQueryTest(descending, vectorize);
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.ALL_GRAN)

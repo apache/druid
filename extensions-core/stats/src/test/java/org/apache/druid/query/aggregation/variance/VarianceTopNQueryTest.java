@@ -53,20 +53,10 @@ public class VarianceTopNQueryTest extends InitializedNullHandlingTest
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners(true));
   }
 
-  private QueryRunner<Result<TopNResultValue>> runner;
-
-  public void initVarianceTopNQueryTest(
-      QueryRunner<Result<TopNResultValue>> runner
-  )
-  {
-    this.runner = runner;
-  }
-
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
   public void testFullOnTopNOverUniques(QueryRunner<Result<TopNResultValue>> runner)
   {
-    initVarianceTopNQueryTest(runner);
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -127,12 +117,13 @@ public class VarianceTopNQueryTest extends InitializedNullHandlingTest
             )
         )
     );
-    assertExpectedResults(expectedResults, query);
+    assertExpectedResults(expectedResults, query, runner);
   }
 
   private void assertExpectedResults(
       Iterable<Result<TopNResultValue>> expectedResults,
-      TopNQuery query
+      TopNQuery query,
+      QueryRunner<Result<TopNResultValue>> runner
   )
   {
     final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(new TopNQueryConfig());

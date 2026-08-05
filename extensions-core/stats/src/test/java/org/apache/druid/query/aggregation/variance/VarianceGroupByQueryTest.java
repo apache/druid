@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -65,12 +64,6 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
   @MonotonicNonNull
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private GroupByQueryConfig config;
-  private QueryRunner<Row> runner;
-  private GroupByQueryRunnerFactory factory;
-  private String testName;
-  private GroupByQuery.Builder queryBuilder;
-
   public static Collection<Object[]> constructorFeeder()
   {
     setUpClass();
@@ -95,31 +88,19 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
     }
   }
 
-  public void initVarianceGroupByQueryTest(
-      String testName,
-      GroupByQueryConfig config,
-      GroupByQueryRunnerFactory factory,
-      QueryRunner runner
-  )
-  {
-    this.testName = testName;
-    this.config = config;
-    this.factory = factory;
-    this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
-    this.queryBuilder = GroupByQuery.builder()
-                                    .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
-  }
-
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
   public void testGroupByVarianceOnly(
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
-      QueryRunner runner
+      QueryRunner<ResultRow> runner
   )
   {
-    initVarianceGroupByQueryTest(testName, config, factory, runner);
+    final QueryRunner<ResultRow> mergedRunner =
+        factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    final GroupByQuery.Builder queryBuilder = GroupByQuery.builder()
+                                                          .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -154,7 +135,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         .add("2011-04-02", "travel", 0d, 0d)
         .build(query);
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergedRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "variance");
   }
 
@@ -164,10 +145,13 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
-      QueryRunner runner
+      QueryRunner<ResultRow> runner
   )
   {
-    initVarianceGroupByQueryTest(testName, config, factory, runner);
+    final QueryRunner<ResultRow> mergedRunner =
+        factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    final GroupByQuery.Builder queryBuilder = GroupByQuery.builder()
+                                                          .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -206,7 +190,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         .add("2011-04-02", "travel", 1L, 126L, 0d, 0d)
         .build(query);
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergedRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -216,10 +200,13 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
-      QueryRunner runner
+      QueryRunner<ResultRow> runner
   )
   {
-    initVarianceGroupByQueryTest(testName, config, factory, runner);
+    final QueryRunner<ResultRow> mergedRunner =
+        factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    final GroupByQuery.Builder queryBuilder = GroupByQuery.builder()
+                                                          .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
     VarianceTestHelper.RowBuilder expect = new VarianceTestHelper.RowBuilder(
         new String[]{"alias", "rows", "index", "index_var", "index_stddev"}
     );
@@ -250,7 +237,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         .add("2011-04-01", "premium", 6L, 4416L, 252279.2020389339, 502.27403082275106)
         .build(query);
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergedRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "havingSpec");
 
     query = query.withLimitSpec(
@@ -268,7 +255,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         .add("2011-04-01", "premium", 6L, 4416L, 252279.2020389339, 502.27403082275106)
         .build(query);
 
-    results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    results = GroupByQueryRunnerTestHelper.runQuery(factory, mergedRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "limitSpec");
   }
 
@@ -278,10 +265,13 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
-      QueryRunner runner
+      QueryRunner<ResultRow> runner
   )
   {
-    initVarianceGroupByQueryTest(testName, config, factory, runner);
+    final QueryRunner<ResultRow> mergedRunner =
+        factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    final GroupByQuery.Builder queryBuilder = GroupByQuery.builder()
+                                                          .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
     // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -316,7 +306,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         .add("2011-04-01", "premium", 3L, 2900.0, 726.632270328514, 527994.4562827706, 36.54266309285626)
         .build(query);
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergedRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 
@@ -326,10 +316,13 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
       String testName,
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
-      QueryRunner runner
+      QueryRunner<ResultRow> runner
   )
   {
-    initVarianceGroupByQueryTest(testName, config, factory, runner);
+    final QueryRunner<ResultRow> mergedRunner =
+        factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
+    final GroupByQuery.Builder queryBuilder = GroupByQuery.builder()
+                                                          .setContext(ImmutableMap.of("vectorize", config.isVectorize()));
     // test postaggs from 'teststats' package in here since we've already gone to the trouble of setting up the test
     GroupByQuery query = queryBuilder
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -365,7 +358,7 @@ public class VarianceGroupByQueryTest extends InitializedNullHandlingTest
         .add("2011-04-01", "automotive", 1L, 135.0, 0.0, 0.0, 1.0)
         .build(query);
 
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, mergedRunner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
   }
 }

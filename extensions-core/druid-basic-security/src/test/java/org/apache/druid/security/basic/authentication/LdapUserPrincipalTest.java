@@ -70,7 +70,7 @@ public class LdapUserPrincipalTest
   }
 
   @Test
-  public void testIsExpiredWhenDurationsAreSmall() 
+  public void testIsExpiredWhenDurationsAreSmall()
   {
     Assertions.assertTrue(PRINCIPAL.isExpired(1, 1, CREATED_MILLIS + 1001));
   }
