@@ -1849,7 +1849,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.6.2</version>
+                <version>3.6.3</version>
                 <executions>
                     <execution>
                         <id>default-cli</id>
