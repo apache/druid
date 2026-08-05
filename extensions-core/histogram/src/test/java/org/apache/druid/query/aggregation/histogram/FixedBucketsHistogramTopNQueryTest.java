@@ -61,20 +61,10 @@ public class FixedBucketsHistogramTopNQueryTest extends InitializedNullHandlingT
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners(true));
   }
 
-  private QueryRunner runner;
-
-  public void initFixedBucketsHistogramTopNQueryTest(
-      QueryRunner runner
-  )
-  {
-    this.runner = runner;
-  }
-
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
   public void testTopNWithFixedHistogramAgg(QueryRunner runner)
   {
-    initFixedBucketsHistogramTopNQueryTest(runner);
     FixedBucketsHistogramAggregatorFactory factory = new FixedBucketsHistogramAggregatorFactory(
         "histo",
         "index",

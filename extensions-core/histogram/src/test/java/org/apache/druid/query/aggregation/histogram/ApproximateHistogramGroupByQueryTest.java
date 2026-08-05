@@ -57,9 +57,6 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
   private static final Closer RESOURCE_CLOSER = Closer.create();
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private QueryRunner<ResultRow> runner;
-  private GroupByQueryRunnerFactory factory;
-
   @BeforeAll
   public static void setUpClass()
   {
@@ -109,17 +106,6 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
     return constructors;
   }
 
-  public void initApproximateHistogramGroupByQueryTest(
-      String testName,
-      GroupByQueryRunnerFactory factory,
-      QueryRunner runner
-  )
-  {
-    this.factory = factory;
-    this.runner = runner;
-    ApproximateHistogramDruidModule.registerSerde();
-  }
-
   @AfterEach
   public void teardown() throws IOException
   {
@@ -134,7 +120,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
       QueryRunner runner
   )
   {
-    initApproximateHistogramGroupByQueryTest(testName, factory, runner);
+    ApproximateHistogramDruidModule.registerSerde();
     ApproximateHistogramAggregatorFactory aggFactory = new ApproximateHistogramAggregatorFactory(
         "apphisto",
         "index",
@@ -202,7 +188,7 @@ public class ApproximateHistogramGroupByQueryTest extends InitializedNullHandlin
       QueryRunner runner
   )
   {
-    initApproximateHistogramGroupByQueryTest(testName, factory, runner);
+    ApproximateHistogramDruidModule.registerSerde();
     assertThrows(IllegalArgumentException.class, () -> {
       ApproximateHistogramAggregatorFactory aggFactory = new ApproximateHistogramAggregatorFactory(
           "quantile",

@@ -62,20 +62,10 @@ public class ApproximateHistogramTopNQueryTest extends InitializedNullHandlingTe
     return QueryRunnerTestHelper.transformToConstructionFeeder(TopNQueryRunnerTest.queryRunners(false));
   }
 
-  private QueryRunner runner;
-
-  public void initApproximateHistogramTopNQueryTest(
-      QueryRunner runner
-  )
-  {
-    this.runner = runner;
-  }
-
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
   public void testTopNWithApproximateHistogramAgg(QueryRunner runner)
   {
-    initApproximateHistogramTopNQueryTest(runner);
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
         "apphisto",
         "index",

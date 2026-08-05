@@ -57,9 +57,6 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
   private static final Closer RESOURCE_CLOSER = Closer.create();
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private QueryRunner<ResultRow> runner;
-  private GroupByQueryRunnerFactory factory;
-
   @BeforeAll
   public static void setUpClass()
   {
@@ -109,19 +106,6 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
     return constructors;
   }
 
-  @SuppressWarnings("unused")
-  public void initFixedBucketsHistogramGroupByQueryTest(
-      String testName,
-      GroupByQueryRunnerFactory factory,
-      QueryRunner runner
-  )
-  {
-    this.factory = factory;
-    this.runner = runner;
-
-    ApproximateHistogramDruidModule.registerSerde();
-  }
-
   @AfterEach
   public void teardown() throws IOException
   {
@@ -136,7 +120,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
       QueryRunner runner
   )
   {
-    initFixedBucketsHistogramGroupByQueryTest(testName, factory, runner);
+    ApproximateHistogramDruidModule.registerSerde();
     FixedBucketsHistogramAggregatorFactory aggFactory = new FixedBucketsHistogramAggregatorFactory(
         "histo",
         "index",
@@ -204,7 +188,7 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
       QueryRunner runner
   )
   {
-    initFixedBucketsHistogramGroupByQueryTest(testName, factory, runner);
+    ApproximateHistogramDruidModule.registerSerde();
     assertThrows(IllegalArgumentException.class, () -> {
       FixedBucketsHistogramAggregatorFactory aggFactory = new FixedBucketsHistogramAggregatorFactory(
           "histo",
