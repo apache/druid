@@ -20,22 +20,43 @@
 package org.apache.druid.common.aws;
 
 import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.RuntimeInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.awscore.retry.AwsRetryStrategy;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import software.amazon.awssdk.retries.AdaptiveRetryStrategy;
 import software.amazon.awssdk.retries.LegacyRetryStrategy;
 import software.amazon.awssdk.retries.StandardRetryStrategy;
+import software.amazon.awssdk.retries.api.RetryStrategy;
+
+import java.util.Map;
+import java.util.stream.Stream;
 
 public class AWSClientConfigTest
 {
-  private static final ObjectMapper MAPPER = new ObjectMapper().setInjectableValues(
-      new InjectableValues.Std().addValue(RuntimeInfo.class, new RuntimeInfo())
-  );
+  private static final ObjectMapper MAPPER = mapperWithRuntimeInfo(new RuntimeInfo());
+
+  /**
+   * Binds a property map the way {@code JsonConfigurator} binds {@code druid.s3.*} at startup, so behaviour that only
+   * exists during binding - defaults, unset versus explicitly set, rejection of bad values - is exercised here the
+   * same way it happens in a running process.
+   */
+  private static AWSClientConfig bind(Map<String, Object> properties)
+  {
+    return MAPPER.convertValue(properties, AWSClientConfig.class);
+  }
+
+  private static AWSClientConfig bind(Map<String, Object> properties, RuntimeInfo runtimeInfo)
+  {
+    return mapperWithRuntimeInfo(runtimeInfo).convertValue(properties, AWSClientConfig.class);
+  }
 
   private static ObjectMapper mapperWithRuntimeInfo(RuntimeInfo runtimeInfo)
   {
@@ -49,51 +70,58 @@ public class AWSClientConfigTest
   {
     final AWSClientConfig config = new AWSClientConfig();
 
+    Assertions.assertEquals(AWSClientConfig.RetryMode.STANDARD, config.getRetryMode());
     Assertions.assertInstanceOf(StandardRetryStrategy.class, config.getRetryStrategy());
   }
 
-  @Test
-  public void testDefaultLeavesAttemptCountToTheSdk()
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("retryModeStrategies")
+  public void testEachRetryModeBuildsItsStrategy(
+      AWSClientConfig.RetryMode mode,
+      Class<? extends RetryStrategy> expected
+  )
   {
-    final AWSClientConfig config = new AWSClientConfig();
+    Assertions.assertInstanceOf(expected, mode.createStrategy());
+  }
 
-    Assertions.assertNull(config.getMaxRetryAttempts());
+  /**
+   * Guards {@link #retryModeStrategies} against a mode being added without a strategy expectation.
+   */
+  @Test
+  public void testEveryRetryModeHasAStrategyExpectation()
+  {
+    Assertions.assertEquals(AWSClientConfig.RetryMode.values().length, retryModeStrategies().count());
+  }
+
+  private static Stream<Arguments> retryModeStrategies()
+  {
+    return Stream.of(
+        Arguments.of(AWSClientConfig.RetryMode.STANDARD, StandardRetryStrategy.class),
+        Arguments.of(AWSClientConfig.RetryMode.ADAPTIVE, AdaptiveRetryStrategy.class),
+        Arguments.of(AWSClientConfig.RetryMode.LEGACY, LegacyRetryStrategy.class)
+    );
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"adaptive", "ADAPTIVE", "Adaptive"})
+  public void testRetryModeParsingIsCaseInsensitive(String value)
+  {
+    Assertions.assertEquals(AWSClientConfig.RetryMode.ADAPTIVE, AWSClientConfig.RetryMode.fromString(value));
+  }
+
+  @Test
+  public void testRetryModeBindsFromItsProperty()
+  {
     Assertions.assertEquals(
-        AwsRetryStrategy.standardRetryStrategy().maxAttempts(),
-        config.getRetryStrategy().maxAttempts()
+        AWSClientConfig.RetryMode.ADAPTIVE,
+        bind(Map.of("retryMode", "adaptive")).getRetryMode()
     );
   }
 
   @Test
-  public void testAdaptiveRetryModeIsSelectable() throws Exception
+  public void testRetryModeSerializesToItsPropertyValue()
   {
-    final AWSClientConfig config = MAPPER.readValue("{\"retryMode\": \"adaptive\"}", AWSClientConfig.class);
-
-    Assertions.assertInstanceOf(AdaptiveRetryStrategy.class, config.getRetryStrategy());
-  }
-
-  @Test
-  public void testLegacyRetryModeIsSelectable() throws Exception
-  {
-    final AWSClientConfig config = MAPPER.readValue("{\"retryMode\": \"legacy\"}", AWSClientConfig.class);
-
-    Assertions.assertInstanceOf(LegacyRetryStrategy.class, config.getRetryStrategy());
-  }
-
-  @Test
-  public void testRetryModeIsCaseInsensitive() throws Exception
-  {
-    final AWSClientConfig config = MAPPER.readValue("{\"retryMode\": \"ADAPTIVE\"}", AWSClientConfig.class);
-
-    Assertions.assertInstanceOf(AdaptiveRetryStrategy.class, config.getRetryStrategy());
-  }
-
-  @Test
-  public void testConfiguredAttemptCountIsApplied() throws Exception
-  {
-    final AWSClientConfig config = MAPPER.readValue("{\"maxRetryAttempts\": 8}", AWSClientConfig.class);
-
-    Assertions.assertEquals(8, config.getRetryStrategy().maxAttempts());
+    Assertions.assertEquals("adaptive", MAPPER.convertValue(AWSClientConfig.RetryMode.ADAPTIVE, String.class));
   }
 
   /**
@@ -103,102 +131,79 @@ public class AWSClientConfigTest
   @Test
   public void testUnrecognizedRetryModeIsRejectedWhenConfigIsBound()
   {
-    final JsonMappingException e = Assertions.assertThrows(
-        JsonMappingException.class,
-        () -> MAPPER.readValue("{\"retryMode\": \"aggressive\"}", AWSClientConfig.class)
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> bind(Map.of("retryMode", "aggressive"))
     );
 
-    Assertions.assertInstanceOf(IAE.class, e.getCause());
-    Assertions.assertTrue(e.getCause().getMessage().contains("aggressive"));
+    final Throwable rootCause = Throwables.getRootCause(e);
+    Assertions.assertInstanceOf(IAE.class, rootCause);
+    Assertions.assertTrue(rootCause.getMessage().contains("aggressive"));
   }
 
   @Test
-  public void testRetryModeSerializesToItsPropertyValue() throws Exception
+  public void testUnsetAttemptCountLeavesTheCountTheModeDefines()
   {
-    final AWSClientConfig config = MAPPER.readValue("{\"retryMode\": \"adaptive\"}", AWSClientConfig.class);
+    final AWSClientConfig config = new AWSClientConfig();
 
-    Assertions.assertEquals("adaptive", MAPPER.convertValue(config.getRetryMode(), String.class));
-  }
-
-  @Test
-  public void testDefaultCrossRegionAccessEnabled() throws Exception
-  {
-    AWSClientConfig config = MAPPER.readValue("{}", AWSClientConfig.class);
-    Assertions.assertNull(config.isForceGlobalBucketAccessEnabled());
-    Assertions.assertFalse(config.isCrossRegionAccessEnabled());
-  }
-
-  @Test
-  public void testCrossRegionAccessEnabledExplicitlySet() throws Exception
-  {
-    AWSClientConfig config = MAPPER.readValue("{\"crossRegionAccessEnabled\": true}", AWSClientConfig.class);
-    Assertions.assertNull(config.isForceGlobalBucketAccessEnabled());
-    Assertions.assertTrue(config.isCrossRegionAccessEnabled());
-  }
-
-  @Test
-  public void testNewConfigTakesPrecedenceOverDeprecatedWhenBothSet() throws Exception
-  {
-    AWSClientConfig config = MAPPER.readValue(
-        "{\"forceGlobalBucketAccessEnabled\": true, \"crossRegionAccessEnabled\": false}",
-        AWSClientConfig.class
+    Assertions.assertNull(config.getMaxRetryAttempts());
+    Assertions.assertEquals(
+        AWSClientConfig.RetryMode.STANDARD.createStrategy().maxAttempts(),
+        config.getRetryStrategy().maxAttempts()
     );
-    Assertions.assertFalse(config.isCrossRegionAccessEnabled());
   }
 
   @Test
-  public void testNewConfigTrueWinsOverDeprecatedFalse() throws Exception
+  public void testConfiguredAttemptCountIsApplied()
   {
-    AWSClientConfig config = MAPPER.readValue(
-        "{\"forceGlobalBucketAccessEnabled\": false, \"crossRegionAccessEnabled\": true}",
-        AWSClientConfig.class
+    Assertions.assertEquals(8, bind(Map.of("maxRetryAttempts", 8)).getRetryStrategy().maxAttempts());
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("crossRegionAccessBindings")
+  public void testCrossRegionAccessResolution(Map<String, Object> properties, boolean expected)
+  {
+    Assertions.assertEquals(expected, bind(properties).isCrossRegionAccessEnabled());
+  }
+
+  private static Stream<Arguments> crossRegionAccessBindings()
+  {
+    return Stream.of(
+        Arguments.of(Map.of(), false),
+        Arguments.of(Map.of("crossRegionAccessEnabled", true), true),
+        Arguments.of(Map.of("forceGlobalBucketAccessEnabled", true), true),
+        // the new property wins whichever way the two disagree
+        Arguments.of(Map.of("forceGlobalBucketAccessEnabled", true, "crossRegionAccessEnabled", false), false),
+        Arguments.of(Map.of("forceGlobalBucketAccessEnabled", false, "crossRegionAccessEnabled", true), true)
     );
-    Assertions.assertTrue(config.isCrossRegionAccessEnabled());
+  }
+
+  /**
+   * The deprecated property is only ever populated by its own key, so code still reading it cannot be misled by the
+   * replacement being set.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testDeprecatedPropertyStaysUnsetWhenOnlyItsReplacementIsBound()
+  {
+    Assertions.assertNull(bind(Map.of()).isForceGlobalBucketAccessEnabled());
+    Assertions.assertNull(bind(Map.of("crossRegionAccessEnabled", true)).isForceGlobalBucketAccessEnabled());
+  }
+
+  @ParameterizedTest(name = "{0} processors -> {1} connections")
+  @CsvSource({"8, 50", "32, 128"})
+  public void testDefaultMaxConnectionsTakesTheSdkFloorOrFourPerCore(int processors, int expected)
+  {
+    Assertions.assertEquals(expected, bind(Map.of(), new FixedProcessorsRuntimeInfo(processors)).getMaxConnections());
   }
 
   @Test
-  public void testDeprecatedForceGlobalBucketAccessAloneTrue() throws Exception
+  public void testExplicitMaxConnectionsOverridesDefault()
   {
-    AWSClientConfig config = MAPPER.readValue(
-        "{\"forceGlobalBucketAccessEnabled\": true}",
-        AWSClientConfig.class
+    Assertions.assertEquals(
+        200,
+        bind(Map.of("maxConnections", 200), new FixedProcessorsRuntimeInfo(64)).getMaxConnections()
     );
-    Assertions.assertTrue(config.isCrossRegionAccessEnabled());
-  }
-
-  @Test
-  public void testDeprecatedNotSetFallsThroughToCrossRegion() throws Exception
-  {
-    AWSClientConfig config = MAPPER.readValue(
-        "{\"crossRegionAccessEnabled\": true}",
-        AWSClientConfig.class
-    );
-    Assertions.assertNull(config.isForceGlobalBucketAccessEnabled());
-    Assertions.assertTrue(config.isCrossRegionAccessEnabled());
-  }
-
-  @Test
-  public void testDefaultMaxConnectionsKeepsAwsSdkFloorOnSmallHost() throws Exception
-  {
-    AWSClientConfig config = mapperWithRuntimeInfo(new FixedProcessorsRuntimeInfo(8))
-        .readValue("{}", AWSClientConfig.class);
-    Assertions.assertEquals(50, config.getMaxConnections());
-  }
-
-  @Test
-  public void testDefaultMaxConnectionsScalesWithCoresOnLargeHost() throws Exception
-  {
-    AWSClientConfig config = mapperWithRuntimeInfo(new FixedProcessorsRuntimeInfo(32))
-        .readValue("{}", AWSClientConfig.class);
-    Assertions.assertEquals(128, config.getMaxConnections());
-  }
-
-  @Test
-  public void testExplicitMaxConnectionsOverridesDefault() throws Exception
-  {
-    AWSClientConfig config = mapperWithRuntimeInfo(new FixedProcessorsRuntimeInfo(64))
-        .readValue("{\"maxConnections\": 200}", AWSClientConfig.class);
-    Assertions.assertEquals(200, config.getMaxConnections());
   }
 
   private static final class FixedProcessorsRuntimeInfo extends RuntimeInfo
