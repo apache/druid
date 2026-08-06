@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -82,11 +83,15 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
   public void testGetHandlerFromUnknownComplexCapabilities()
   {
     ColumnCapabilities capabilities = new ColumnCapabilitiesImpl().setType(ColumnType.ofComplex("unknown"));
-    ISE ex = Assertions.assertThrows(
-        ISE.class,
-        () -> DimensionHandlerUtils.getHandlerFromCapabilities(DIM_NAME, capabilities, null)
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DimensionHandlerUtils.getHandlerFromCapabilities(
+            DIM_NAME,
+            capabilities,
+            null
+        )
     );
-    Assertions.assertTrue(ex.getMessage().contains("Can't find DimensionHandlerProvider for typeName [unknown]"));
+    Assertions.assertEquals("Complex type[unknown] for dimension[dim] is not a valid type", t.getMessage());
   }
 
   @Test
@@ -320,6 +325,7 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
 
   private static class TestDimensionSchema extends DimensionSchema
   {
+    private final String typeName;
 
     protected TestDimensionSchema(
         String name,
@@ -327,19 +333,130 @@ public class DimensionHandlerUtilsTest extends InitializedNullHandlingTest
         boolean createBitmapIndex
     )
     {
+      this(name, multiValueHandling, createBitmapIndex, TYPE);
+    }
+
+    protected TestDimensionSchema(
+        String name,
+        MultiValueHandling multiValueHandling,
+        boolean createBitmapIndex,
+        String typeName
+    )
+    {
       super(name, multiValueHandling, createBitmapIndex);
+      this.typeName = typeName;
     }
 
     @Override
     public String getTypeName()
     {
-      return TYPE;
+      return typeName;
     }
 
     @Override
     public ColumnType getColumnType()
     {
-      return ColumnType.ofComplex(TYPE);
+      return ColumnType.ofComplex(typeName);
     }
   }
+
+  @Test
+  public void testGetComplexDimensionSchema()
+  {
+    Assertions.assertEquals(
+        new TestDimensionSchema("x", null, false),
+        DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.ofComplex(TYPE))
+    );
+  }
+
+  @Test
+  public void testGetComplexDimensionSchemaUnregisteredType()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.ofComplex("noSuchType"))
+    );
+    Assertions.assertEquals("Complex type[noSuchType] for dimension[x] is not a valid type", t.getMessage());
+  }
+
+  @Test
+  public void testGetComplexDimensionSchemaRejectsNonComplexType()
+  {
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.STRING)
+    );
+    Assertions.assertEquals("Type[STRING] for dimension[x] is not a named complex type", t.getMessage());
+  }
+
+  /**
+   * A schema selects its own handler at ingest time, so a handler that hands back a schema of some other type would
+   * quietly store the column as that type rather than the one the caller declared.
+   */
+  @Test
+  public void testGetComplexDimensionSchemaRejectsSchemaOfOtherType()
+  {
+    final String typeName = "otherTypeSchemaType";
+    DimensionHandlerUtils.registerDimensionHandlerProvider(
+        typeName,
+        d -> new DoubleDimensionHandler(d)
+        {
+          @Override
+          public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+          {
+            return new DoubleDimensionSchema(d);
+          }
+        }
+    );
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.ofComplex(typeName))
+    );
+    Assertions.assertEquals(
+        "Dimension handler for type[COMPLEX<otherTypeSchemaType>] produced a schema of type[DOUBLE] for dimension[x];"
+        + " a column cannot be stored as a type other than the one it declares",
+        t.getMessage()
+    );
+  }
+
+  /**
+   * Likewise, a handler that hands back a schema for some other column would store a different column entirely.
+   */
+  @Test
+  public void testGetComplexDimensionSchemaRejectsSchemaOfOtherName()
+  {
+    final String typeName = "otherNameSchemaType";
+    DimensionHandlerUtils.registerDimensionHandlerProvider(
+        typeName,
+        d -> new DoubleDimensionHandler(d)
+        {
+          @Override
+          public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+          {
+            return new TestDimensionSchema("y", null, false, typeName);
+          }
+        }
+    );
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DimensionHandlerUtils.getComplexDimensionSchema("x", ColumnType.ofComplex(typeName))
+    );
+    Assertions.assertEquals(
+        "Dimension handler for type[COMPLEX<otherNameSchemaType>] produced a schema for dimension[y] instead of"
+        + " dimension[x]",
+        t.getMessage()
+    );
+  }
+
+  @Test
+  public void testGetHandlerForComplexType()
+  {
+    Assertions.assertNotNull(DimensionHandlerUtils.getHandlerForComplexType("x", TYPE));
+    Throwable t = Assertions.assertThrows(
+        DruidException.class,
+        () -> DimensionHandlerUtils.getHandlerForComplexType("x", "noSuchType")
+    );
+    Assertions.assertEquals("Complex type[noSuchType] for dimension[x] is not a valid type", t.getMessage());
+  }
+
 }
