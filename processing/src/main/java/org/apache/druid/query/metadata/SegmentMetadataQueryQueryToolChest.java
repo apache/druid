@@ -55,6 +55,7 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentAnalysis.ContainerAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.timeline.LogicalSegment;
@@ -457,35 +458,68 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       projections = null;
     }
 
-    return new SegmentAnalysis(
-        mergedId,
-        newIntervals,
-        columns,
-        arg1.getSize() + arg2.getSize(),
-        arg1.getNumRows() + arg2.getNumRows(),
-        aggregators.isEmpty() ? null : aggregators,
-        (projections == null || projections.isEmpty()) ? null : projections,
-        timestampSpec,
-        queryGranularity,
-        rollup
-    );
+    // Merged containers report one total per bundle name rather than a raw list of every underlying segment's
+    // individual containers, since a container has no identity across segments (only bundle names do).
+    final List<ContainerAnalysis> containers = mergeContainers(arg1.getContainers(), arg2.getContainers());
+
+    return new SegmentAnalysis.Builder(mergedId)
+        .intervals(newIntervals)
+        .columns(columns)
+        .size(arg1.getSize() + arg2.getSize())
+        .numRows(arg1.getNumRows() + arg2.getNumRows())
+        .aggregators(aggregators)
+        .projections(projections)
+        .timestampSpec(timestampSpec)
+        .queryGranularity(queryGranularity)
+        .rollup(rollup)
+        .containers(containers)
+        .build();
+  }
+
+  /**
+   * Sums container sizes by bundle name, since a container has no identity across segments. If only one side has
+   * data, it's returned unchanged instead of being run through the per-bundle collapse: there's nothing to merge it
+   * with, and a single segment's own list may already have more than one entry for the same bundle (a bundle
+   * spanning multiple containers).
+   */
+  @Nullable
+  private static List<ContainerAnalysis> mergeContainers(
+      @Nullable List<ContainerAnalysis> containers1,
+      @Nullable List<ContainerAnalysis> containers2
+  )
+  {
+    if (containers1 == null) {
+      return containers2;
+    }
+    if (containers2 == null) {
+      return containers1;
+    }
+    final Map<String, Long> sizeByBundle = new LinkedHashMap<>();
+    for (ContainerAnalysis container : Iterables.concat(containers1, containers2)) {
+      sizeByBundle.merge(container.bundle(), container.size(), Long::sum);
+    }
+    final List<ContainerAnalysis> merged = new ArrayList<>(sizeByBundle.size());
+    for (Map.Entry<String, Long> entry : sizeByBundle.entrySet()) {
+      merged.add(new ContainerAnalysis(entry.getKey(), entry.getValue()));
+    }
+    return merged;
   }
 
   @VisibleForTesting
   public static SegmentAnalysis finalizeAnalysis(SegmentAnalysis analysis)
   {
-    return new SegmentAnalysis(
-        analysis.getId(),
-        analysis.getIntervals() != null ? JodaUtils.condenseIntervals(analysis.getIntervals()) : null,
-        analysis.getColumns(),
-        analysis.getSize(),
-        analysis.getNumRows(),
-        analysis.getAggregators(),
-        analysis.getProjections(),
-        analysis.getTimestampSpec(),
-        analysis.getQueryGranularity(),
-        analysis.isRollup()
-    );
+    return new SegmentAnalysis.Builder(analysis.getId())
+        .intervals(analysis.getIntervals() != null ? JodaUtils.condenseIntervals(analysis.getIntervals()) : null)
+        .columns(analysis.getColumns())
+        .size(analysis.getSize())
+        .numRows(analysis.getNumRows())
+        .aggregators(analysis.getAggregators())
+        .projections(analysis.getProjections())
+        .timestampSpec(analysis.getTimestampSpec())
+        .queryGranularity(analysis.getQueryGranularity())
+        .rollup(analysis.isRollup())
+        .containers(analysis.getContainers())
+        .build();
   }
 
   public SegmentMetadataQueryConfig getConfig()
