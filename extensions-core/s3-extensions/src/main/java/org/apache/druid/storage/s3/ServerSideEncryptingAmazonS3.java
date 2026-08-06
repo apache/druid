@@ -426,8 +426,7 @@ public class ServerSideEncryptingAmazonS3
     return ServerSideEncryptingAmazonS3.builder()
                                        .setS3ClientSupplier(clientBuilder::build)
                                        .setS3AsyncClientSupplier(asyncClientBuilder::build)
-                                       .setS3StorageConfig(s3StorageConfig)
-                                       .setAwsClientConfig(awsClientConfig);
+                                       .setS3StorageConfig(s3StorageConfig);
   }
 
   /**
@@ -476,8 +475,6 @@ public class ServerSideEncryptingAmazonS3
     if (awsEndpointConfig != null && awsEndpointConfig.getSigningRegion() != null) {
       stsBuilder.region(Region.of(awsEndpointConfig.getSigningRegion()));
     }
-    // A null config leaves the SDK defaults in place, so callers should pass the process configuration rather than
-    // null when a spec supplies no override of its own.
     if (awsClientConfig != null) {
       stsBuilder.overrideConfiguration(retryOverride(awsClientConfig));
     }
@@ -502,8 +499,6 @@ public class ServerSideEncryptingAmazonS3
     @Nullable
     private Supplier<S3AsyncClient> s3AsyncClientSupplier;
     private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption(), null);
-    @Nullable
-    private AWSClientConfig awsClientConfig;
 
     public Builder setS3ClientSupplier(Supplier<S3Client> s3ClientSupplier)
     {
@@ -526,24 +521,6 @@ public class ServerSideEncryptingAmazonS3
     public S3StorageConfig getS3StorageConfig()
     {
       return this.s3StorageConfig;
-    }
-
-    public Builder setAwsClientConfig(@Nullable AWSClientConfig awsClientConfig)
-    {
-      this.awsClientConfig = awsClientConfig;
-      return this;
-    }
-
-    /**
-     * The client configuration the clients of this builder are configured with. Exposed, like
-     * {@link #getS3StorageConfig()}, so a caller that rebuilds a client for a per-spec override can fall back to it
-     * instead of dropping process-level settings. Null when the builder was not
-     * created from an {@link AWSClientConfig}, in which case the clients keep the SDK defaults.
-     */
-    @Nullable
-    public AWSClientConfig getAwsClientConfig()
-    {
-      return this.awsClientConfig;
     }
 
     /**
