@@ -19,6 +19,10 @@
 
 package org.apache.druid.testing.embedded.msq;
 
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.druid.data.input.parquet.ParquetExtensionsModule;
 import org.apache.druid.data.input.s3.S3InputSourceDruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -30,6 +34,10 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
+import org.apache.hadoop.fs.Path;
+import org.apache.parquet.avro.AvroParquetWriter;
+import org.apache.parquet.hadoop.ParquetWriter;
+import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -38,8 +46,10 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.zip.GZIPOutputStream;
 
@@ -54,6 +64,7 @@ public class S3ExternQueryTest extends EmbeddedClusterTestBase
   private static final String DATA_PATH = "extern-input";
   private static final String PLAIN_FILE = "data1.json";
   private static final String GZ_FILE = "data2.json.gz";
+  private static final String PARQUET_FILE = "data3.parquet";
 
   private static final String PLAIN_FILE_CONTENT = """
       {"timestamp":"2020-01-01T00:00:00Z","page":"A","added":10}
@@ -90,6 +101,7 @@ public class S3ExternQueryTest extends EmbeddedClusterTestBase
         .useLatchableEmitter()
         .addResource(storageResource)
         .addExtension(S3InputSourceDruidModule.class)
+        .addExtension(ParquetExtensionsModule.class)
         .addServer(overlord)
         .addServer(coordinator)
         .addServer(indexer)
@@ -113,6 +125,18 @@ public class S3ExternQueryTest extends EmbeddedClusterTestBase
   public void test_extern_backgroundFetchDisabled()
   {
     runQueryAndVerify(false);
+  }
+
+  @Test
+  public void test_externParquet_backgroundFetchEnabled()
+  {
+    runParquetQueryAndVerify(true);
+  }
+
+  @Test
+  public void test_externParquet_backgroundFetchDisabled()
+  {
+    runParquetQueryAndVerify(false);
   }
 
   private void runQueryAndVerify(final boolean backgroundFetchExternalFiles)
@@ -177,7 +201,58 @@ public class S3ExternQueryTest extends EmbeddedClusterTestBase
   }
 
   /**
-   * Uploads {@link #PLAIN_FILE} (plain JSON) and {@link #GZ_FILE} (gzipped JSON) to the MinIO bucket.
+   * Runs the same EXTERN query as {@link #runQueryAndVerify} but against a Parquet file. Parquet is a random-access
+   * format, so its reader downloads each S3 object to a local temp file via {@code InputEntity#fetch}, which exercises
+   * the per-stage external temp directory that the MSQ worker derives lazily ({@code .../stage_NNNNNN/external}).
+   * This is the path that regressed: the directory was never created, so {@code File.createTempFile} failed with
+   * "No such file or directory". Streaming formats like JSON never hit it.
+   */
+  private void runParquetQueryAndVerify(final boolean backgroundFetchExternalFiles)
+  {
+    final String inputSourceJson = StringUtils.format(
+        "{\"type\":\"s3\",\"uris\":[\"s3://%s/%s/%s\"]}",
+        storageResource.getBucket(), DATA_PATH, PARQUET_FILE
+    );
+
+    final String sql = StringUtils.format(
+        """
+            SET backgroundFetchExternalFiles = %s;
+            SELECT page, added
+            FROM TABLE(
+              EXTERN(
+                '%s',
+                '{"type":"parquet"}'
+              )
+            ) EXTEND ("page" VARCHAR, "added" BIGINT)
+            ORDER BY page
+            """,
+        backgroundFetchExternalFiles,
+        inputSourceJson
+    );
+
+    final MSQTaskReportPayload report = msqApis.runTaskSqlAndGetReport(sql);
+
+    BaseCalciteQueryTest.assertResultsEquals(
+        sql,
+        List.of(
+            new Object[]{"A", 10},
+            new Object[]{"B", 20},
+            new Object[]{"C", 30},
+            new Object[]{"D", 40},
+            new Object[]{"E", 50}
+        ),
+        report.getResults().getResults()
+    );
+
+    final EmbeddedMSQApis.ChannelSums channelSums = msqApis.getInputChannelSums(report, 0);
+    Assertions.assertEquals(1, channelSums.files(), "files");
+    Assertions.assertEquals(1, channelSums.totalFiles(), "totalFiles");
+    Assertions.assertEquals(5, channelSums.rows(), "rows");
+  }
+
+  /**
+   * Uploads {@link #PLAIN_FILE} (plain JSON), {@link #GZ_FILE} (gzipped JSON) and {@link #PARQUET_FILE} (Parquet)
+   * to the MinIO bucket.
    */
   private void uploadExternalFiles() throws IOException
   {
@@ -202,6 +277,57 @@ public class S3ExternQueryTest extends EmbeddedClusterTestBase
                         .build(),
         RequestBody.fromBytes(gzBytes)
     );
+
+    s3Client.putObject(
+        PutObjectRequest.builder()
+                        .bucket(storageResource.getBucket())
+                        .key(DATA_PATH + "/" + PARQUET_FILE)
+                        .build(),
+        RequestBody.fromBytes(generateParquet())
+    );
+  }
+
+  /**
+   * Generates a small Parquet file with the same {@code (page, added)} rows used by the JSON tests.
+   */
+  private static byte[] generateParquet() throws IOException
+  {
+    final Schema schema = new Schema.Parser().parse(
+        "{\"type\":\"record\",\"name\":\"row\",\"fields\":["
+        + "{\"name\":\"page\",\"type\":\"string\"},"
+        + "{\"name\":\"added\",\"type\":\"long\"}]}"
+    );
+
+    final File tmpFile = File.createTempFile("extern-input", ".parquet");
+    // AvroParquetWriter creates the file itself and fails if it already exists.
+    Files.delete(tmpFile.toPath());
+
+    try (ParquetWriter<GenericRecord> writer =
+             AvroParquetWriter.<GenericRecord>builder(new Path(tmpFile.toURI()))
+                              .withSchema(schema)
+                              .withCompressionCodec(CompressionCodecName.UNCOMPRESSED)
+                              .build()) {
+      writer.write(record(schema, "A", 10L));
+      writer.write(record(schema, "B", 20L));
+      writer.write(record(schema, "C", 30L));
+      writer.write(record(schema, "D", 40L));
+      writer.write(record(schema, "E", 50L));
+    }
+
+    try {
+      return Files.readAllBytes(tmpFile.toPath());
+    }
+    finally {
+      Files.deleteIfExists(tmpFile.toPath());
+    }
+  }
+
+  private static GenericRecord record(final Schema schema, final String page, final long added)
+  {
+    final GenericRecord record = new GenericData.Record(schema);
+    record.put("page", page);
+    record.put("added", added);
+    return record;
   }
 
   private static byte[] gzip(final String content) throws IOException
