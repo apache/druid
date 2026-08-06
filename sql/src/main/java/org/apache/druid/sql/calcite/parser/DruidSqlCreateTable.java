@@ -154,16 +154,20 @@ public class DruidSqlCreateTable extends SqlCreate
     }
     name.unparse(writer, leftPrec, rightPrec);
 
-    final SqlWriter.Frame frame = writer.startList("(", ")");
-    for (SqlNode column : columnList) {
-      writer.sep(",");
-      column.unparse(writer, 0, 0);
+    // The element list is optional and, when present, must hold at least one element, so a table declaring nothing
+    // prints no parentheses at all: "()" is not something the grammar can read back.
+    if (!columnList.isEmpty() || !projectionList.isEmpty()) {
+      final SqlWriter.Frame frame = writer.startList("(", ")");
+      for (SqlNode column : columnList) {
+        writer.sep(",");
+        column.unparse(writer, 0, 0);
+      }
+      for (SqlNode projection : projectionList) {
+        writer.sep(",");
+        projection.unparse(writer, 0, 0);
+      }
+      writer.endList(frame);
     }
-    for (SqlNode projection : projectionList) {
-      writer.sep(",");
-      projection.unparse(writer, 0, 0);
-    }
-    writer.endList(frame);
 
     if (partitionedBy != null) {
       writer.keyword("PARTITIONED BY");

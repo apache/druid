@@ -21,7 +21,9 @@ package org.apache.druid.catalog.http;
 
 import com.google.common.base.Strings;
 import org.apache.druid.catalog.CatalogException;
+import org.apache.druid.catalog.http.TableEditRequest.AddColumns;
 import org.apache.druid.catalog.http.TableEditRequest.AddProjection;
+import org.apache.druid.catalog.http.TableEditRequest.AlterColumns;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.DropProjection;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
@@ -44,6 +46,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -102,6 +105,10 @@ public class TableEditor
       return updateProperties(((UpdateProperties) editRequest).properties);
     } else if (editRequest instanceof UpdateColumns) {
       return updateColumns(((UpdateColumns) editRequest).columns);
+    } else if (editRequest instanceof AddColumns) {
+      return addOrAlterColumns(((AddColumns) editRequest).columns, true);
+    } else if (editRequest instanceof AlterColumns) {
+      return addOrAlterColumns(((AlterColumns) editRequest).columns, false);
     } else if (editRequest instanceof AddProjection) {
       final AddProjection addProjection = (AddProjection) editRequest;
       return addProjection(addProjection.projection, addProjection.ifNotExists);
@@ -120,6 +127,29 @@ public class TableEditor
     }
   }
 
+  /**
+   * Validate the revised spec as a whole before it is written back. Every edit is a read-modify-write of one part of
+   * the spec, but the rules that matter are cross-field: a projection is checked against the segment granularity, a
+   * base table layout against the declared columns. Validating only the part being edited would let an edit to either
+   * side leave the catalog holding a spec that later fails at ingest, so the update transactions load the whole spec
+   * (they still write back only the part they own) and each edit is checked against all of it.
+   *
+   * @param revised the revised spec, or null when the edit is a no-op and the transaction should roll back
+   */
+  private TableSpec validated(@Nullable TableSpec revised) throws CatalogException
+  {
+    if (revised == null) {
+      return null;
+    }
+    try {
+      catalog.tableRegistry().resolve(revised).validate();
+    }
+    catch (IAE | DruidException e) {
+      throw CatalogException.validationError(e);
+    }
+    return revised;
+  }
+
   private long hideColumns(List<String> columns) throws CatalogException
   {
     if (CollectionUtils.isNullOrEmpty(columns)) {
@@ -127,7 +157,7 @@ public class TableEditor
     }
     return catalog.tables().updateProperties(
         id,
-        table -> applyHiddenColumns(table, columns)
+        table -> validated(applyHiddenColumns(table, columns))
     );
   }
 
@@ -177,7 +207,7 @@ public class TableEditor
     }
     return catalog.tables().updateProperties(
         id,
-        table -> applyUnhideColumns(table, columns)
+        table -> validated(applyUnhideColumns(table, columns))
     );
   }
 
@@ -228,7 +258,7 @@ public class TableEditor
     }
     return catalog.tables().updateColumns(
         id,
-        table -> applyDropColumns(table, columnsToDrop)
+        table -> validated(applyDropColumns(table, columnsToDrop))
     );
   }
 
@@ -261,7 +291,7 @@ public class TableEditor
     }
     return catalog.tables().updateProperties(
         id,
-        table -> applyUpdateProperties(table, updates)
+        table -> validated(applyUpdateProperties(table, updates))
     );
   }
 
@@ -276,12 +306,6 @@ public class TableEditor
         existingSpec.properties(),
         updates
     );
-    try {
-      defn.validate(revised, catalog.jsonMapper());
-    }
-    catch (IAE e) {
-      throw CatalogException.badRequest(e.getMessage());
-    }
     return existingSpec.withProperties(revised);
   }
 
@@ -307,7 +331,7 @@ public class TableEditor
     }
     return catalog.tables().updateColumns(
         id,
-        table -> applyUpdateColumns(table, updates)
+        table -> validated(applyUpdateColumns(table, updates))
     );
   }
 
@@ -319,13 +343,52 @@ public class TableEditor
     final TableSpec existingSpec = table.spec();
     final TableDefn defn = resolveDefn(existingSpec.type());
     final List<ColumnSpec> revised = defn.mergeColumns(existingSpec.columns(), updates);
-    try {
-      defn.validateColumns(revised);
-    }
-    catch (IAE | DruidException e) {
-      throw CatalogException.validationError(e);
-    }
     return existingSpec.withColumns(revised);
+  }
+
+  /**
+   * Applies {@link AddColumns} and {@link AlterColumns}, which are {@link UpdateColumns} plus an existence rule.
+   * Merging by name is the right operation for both, but on its own it is silent about which columns already existed:
+   * a merge that finds the name changes that column, and one that does not appends a new one. So {@code ADD} would
+   * quietly alter and {@code ALTER} would quietly add.
+   * <p>
+   * The rule is checked here, inside the Coordinator's update transaction, rather than by the caller beforehand. A
+   * caller's check would race: two requests adding the same column could both find it absent and the second merge
+   * would overwrite the first.
+   *
+   * @param mustBeAbsent true for {@code ADD} (no column may already exist), false for {@code ALTER} (all must exist)
+   */
+  private long addOrAlterColumns(final List<ColumnSpec> updates, final boolean mustBeAbsent) throws CatalogException
+  {
+    if (CollectionUtils.isNullOrEmpty(updates)) {
+      return 0;
+    }
+    return catalog.tables().updateColumns(
+        id,
+        table -> {
+          final TableSpec existingSpec = table.spec();
+          final List<ColumnSpec> existingColumns =
+              existingSpec.columns() == null ? Collections.emptyList() : existingSpec.columns();
+          final Set<String> existingNames = new HashSet<>(CatalogUtils.columnNames(existingColumns));
+          for (ColumnSpec update : updates) {
+            if (mustBeAbsent && existingNames.contains(update.name())) {
+              throw CatalogException.badRequest(
+                  "Column [%s] already exists in table %s; use ALTER COLUMN to change its type",
+                  update.name(),
+                  id.sqlName()
+              );
+            }
+            if (!mustBeAbsent && !existingNames.contains(update.name())) {
+              throw CatalogException.badRequest(
+                  "Column [%s] does not exist in table %s; use ADD COLUMN to define it",
+                  update.name(),
+                  id.sqlName()
+              );
+            }
+          }
+          return validated(applyUpdateColumns(table, updates));
+        }
+    );
   }
 
   private long moveColumn(MoveColumn moveColumn) throws CatalogException
@@ -341,7 +404,7 @@ public class TableEditor
     }
     return catalog.tables().updateColumns(
         id,
-        table -> applyMoveColumn(table, moveColumn)
+        table -> validated(applyMoveColumn(table, moveColumn))
     );
   }
 
@@ -415,7 +478,7 @@ public class TableEditor
       }
       final List<DatasourceProjectionMetadata> revised = new ArrayList<>(existing);
       revised.add(projection);
-      return withProjections(table, revised);
+      return validated(withProjections(table, revised));
     });
   }
 
@@ -442,7 +505,7 @@ public class TableEditor
             id.sqlName()
         );
       }
-      return withProjections(table, revised);
+      return validated(withProjections(table, revised));
     });
   }
 
@@ -464,14 +527,7 @@ public class TableEditor
     } else {
       revised.put(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, projections);
     }
-    final TableSpec revisedSpec = existingSpec.withProperties(revised);
-    try {
-      catalog.tableRegistry().resolve(revisedSpec).validate();
-    }
-    catch (IAE | DruidException e) {
-      throw CatalogException.badRequest(e.getMessage());
-    }
-    return revisedSpec;
+    return existingSpec.withProperties(revised);
   }
 
 }

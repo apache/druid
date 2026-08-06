@@ -50,6 +50,8 @@ import java.util.Map;
     @Type(name = "dropColumns", value = TableEditRequest.DropColumns.class),
     @Type(name = "updateProperties", value = TableEditRequest.UpdateProperties.class),
     @Type(name = "updateColumns", value = TableEditRequest.UpdateColumns.class),
+    @Type(name = "addColumns", value = TableEditRequest.AddColumns.class),
+    @Type(name = "alterColumns", value = TableEditRequest.AlterColumns.class),
     @Type(name = "moveColumn", value = TableEditRequest.MoveColumn.class),
     @Type(name = "addProjection", value = TableEditRequest.AddProjection.class),
     @Type(name = "dropProjection", value = TableEditRequest.DropProjection.class),
@@ -133,6 +135,40 @@ public class TableEditRequest
 
     @JsonCreator
     public UpdateColumns(@JsonProperty("columns") List<ColumnSpec> columns)
+    {
+      this.columns = columns;
+    }
+  }
+
+  /**
+   * Add columns that the table does not yet declare. Unlike {@link UpdateColumns}, which merges by name and so would
+   * quietly change an existing column, a column that already exists is an error. The check runs inside the update
+   * transaction, so two concurrent requests adding the same column cannot both succeed.
+   */
+  public static class AddColumns extends TableEditRequest
+  {
+    @JsonProperty("columns")
+    public final List<ColumnSpec> columns;
+
+    @JsonCreator
+    public AddColumns(@JsonProperty("columns") List<ColumnSpec> columns)
+    {
+      this.columns = columns;
+    }
+  }
+
+  /**
+   * Change columns the table already declares. Unlike {@link UpdateColumns}, which appends a name it does not find and
+   * so would quietly create a column, a column that does not exist is an error. Checked inside the update transaction,
+   * as for {@link AddColumns}.
+   */
+  public static class AlterColumns extends TableEditRequest
+  {
+    @JsonProperty("columns")
+    public final List<ColumnSpec> columns;
+
+    @JsonCreator
+    public AlterColumns(@JsonProperty("columns") List<ColumnSpec> columns)
     {
       this.columns = columns;
     }

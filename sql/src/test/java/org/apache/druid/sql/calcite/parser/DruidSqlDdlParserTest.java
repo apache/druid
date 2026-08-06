@@ -371,6 +371,9 @@ public class DruidSqlDdlParserTest
   public void testUnparseRoundTrip()
   {
     assertUnparseRoundTrips("CREATE TABLE \"tbl\" (\"a\" VARCHAR, \"b\" BIGINT)");
+    // A table may be declared with no columns at all; the element list is omitted rather than printed empty, since
+    // the grammar has no way to read "()" back.
+    assertUnparseRoundTrips("CREATE TABLE \"tbl\" PARTITIONED BY DAY");
     assertUnparseRoundTrips("CREATE OR REPLACE TABLE \"tbl\" (\"a\" VARCHAR)");
     assertUnparseRoundTrips("CREATE TABLE IF NOT EXISTS \"tbl\" (\"a\" VARCHAR)");
     assertUnparseRoundTrips("CREATE TABLE \"tbl\" (\"a\" VARCHAR) PARTITIONED BY DAY");
@@ -381,6 +384,15 @@ public class DruidSqlDdlParserTest
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" ALTER COLUMN \"a\" SET DATA TYPE BIGINT");
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" SET PROPERTIES (\"sealed\" = TRUE)");
     assertUnparseRoundTrips("CREATE TABLE \"tbl\" (\"a\" VARCHAR) SEALED");
+    assertUnparseRoundTrips(
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR, \"c\" BIGINT,"
+        + " PROJECTION \"p\" AS (SELECT \"a\", SUM(\"c\") AS \"total\" GROUP BY \"a\"))"
+    );
+    assertUnparseRoundTrips(
+        "CREATE TABLE \"tbl\" (\"a\" VARCHAR, \"__time\" TIMESTAMP,"
+        + " PROJECTION \"__base\" AS (SELECT \"a\", \"__time\" CLUSTERED BY \"a\"))"
+    );
+    assertUnparseRoundTrips("ALTER TABLE \"tbl\" DROP PROJECTION \"p\"");
   }
 
   /**

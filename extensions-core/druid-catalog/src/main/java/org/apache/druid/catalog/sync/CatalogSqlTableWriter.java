@@ -71,9 +71,15 @@ public class CatalogSqlTableWriter implements CatalogTableWriter
   }
 
   @Override
-  public void updateColumns(TableId tableId, List<ColumnSpec> columns)
+  public void addColumns(TableId tableId, List<ColumnSpec> columns)
   {
-    execute(tableId, () -> client.editTable(tableId, new TableEditRequest.UpdateColumns(columns)));
+    execute(tableId, () -> client.editTable(tableId, new TableEditRequest.AddColumns(columns)));
+  }
+
+  @Override
+  public void alterColumns(TableId tableId, List<ColumnSpec> columns)
+  {
+    execute(tableId, () -> client.editTable(tableId, new TableEditRequest.AlterColumns(columns)));
   }
 
   @Override

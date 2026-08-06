@@ -103,6 +103,11 @@ ALTER TABLE <table> DROP PROJECTION [IF EXISTS] <name>
 ALTER TABLE <table> SET PROPERTIES ( <property> = <value> [, ...] )
 ```
 
+`ADD COLUMN` fails if the column already exists, and `ALTER COLUMN` fails if it does not, so a misspelled column name
+is reported rather than quietly creating or replacing a column. Each statement is also checked against the rest of the
+table definition, not only the part it changes: adding a column, changing a type, or setting a property is rejected if
+the resulting table would be invalid, such as a segment granularity coarser than a projection the table declares.
+
 #### Projections
 
 A table may declare [projections](../../querying/projections.md), which are pre-aggregated views stored inside each
@@ -126,6 +131,13 @@ PARTITIONED BY DAY
 The body is planned exactly as the equivalent query would be, so a projection matches the queries it was written to
 serve. Every aggregate needs an alias, which becomes the name of the stored column. Time granularity is expressed
 with `TIME_FLOOR`, as it would be in a query.
+
+Because the body is planned like a query, it is planned under the statement's own query context, including any `SET`
+clauses. Only context parameters that affect planning can change the stored definition; parameters that only affect
+query execution have no effect, since the body is planned and stored rather than run. The context itself is not part
+of the definition: what the catalog stores is the projection the body planned to, so nothing from the statement's
+context is carried over to queries that later use it. Note also that a projection is matched to a query by its shape,
+so a definition planned under a context that changes that shape only matches queries run under the same context.
 
 A projection body accepts a select list, an optional `WHERE` and an optional `GROUP BY`. It cannot use `ORDER BY`,
 `LIMIT` or `HAVING`: a projection's ordering follows its grouping columns and is not something you choose. It also

@@ -107,7 +107,10 @@ public class SqlProjectionSpec extends SqlCall
     name.unparse(writer, 0, 0);
     writer.keyword("AS");
     final SqlWriter.Frame frame = writer.startList("(", ")");
-    body.unparse(writer, 0, 0);
+    // Unparse through the operator rather than the node: a SqlSelect in this position parenthesizes itself, which
+    // together with the frame above would print a second set the grammar cannot read back. The parentheses belong to
+    // the projection, not the body, because CLUSTERED BY goes inside them.
+    body.getOperator().unparse(writer, body, 0, 0);
     if (clusteredBy != null) {
       writer.keyword("CLUSTERED BY");
       final SqlWriter.Frame clusterFrame = writer.startList("", "");

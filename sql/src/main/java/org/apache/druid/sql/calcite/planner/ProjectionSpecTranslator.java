@@ -67,6 +67,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -87,8 +88,9 @@ public class ProjectionSpecTranslator
   public static final String BASE_PROJECTION_NAME = "__base";
 
   /**
-   * Planning is deterministic in the shapes the lift understands: no timeseries or topN rewrite to hide the grouping
-   * columns, and no approximation choices that depend on unrelated configuration.
+   * Overrides applied on top of the statement's own context, so that planning is deterministic in the shapes the lift
+   * understands: no timeseries or topN rewrite to hide the grouping columns, and no approximation choices that depend
+   * on unrelated configuration. These win over anything the statement set.
    */
   private static final Map<String, Object> CONTEXT = ImmutableMap.of(
       PlannerContext.CTX_SQL_USE_GRANULARITY, false,
@@ -97,10 +99,20 @@ public class ProjectionSpecTranslator
   );
 
   private final PlannerFactory plannerFactory;
+  private final Map<String, Object> queryContext;
 
-  public ProjectionSpecTranslator(PlannerFactory plannerFactory)
+  /**
+   * @param queryContext the context of the statement being planned, including anything its {@code SET} clauses set.
+   *                     A projection body is planned by the same machinery as the query it is meant to serve, which
+   *                     is what makes the two agree structurally, so it is planned under the same context too. Only
+   *                     parameters that affect planning can change the stored definition; execution-time parameters
+   *                     reach the nested planner but have nothing to act on, since the body is planned and lifted
+   *                     rather than run.
+   */
+  public ProjectionSpecTranslator(PlannerFactory plannerFactory, Map<String, Object> queryContext)
   {
     this.plannerFactory = plannerFactory;
+    this.queryContext = queryContext;
   }
 
   /**
@@ -203,7 +215,7 @@ public class ProjectionSpecTranslator
           "its body does not select rows directly. The base table stores every ingested row as it arrives"
       );
     }
-    final List<String> selected = ((ScanQuery) query).getColumns();
+    final RowSignature sources = druidQuery.getOutputRowSignature();
     final List<String> outputNames = druidQuery.getOutputRowType().getFieldNames();
 
     if (outputNames.size() != columns.size()) {
@@ -234,8 +246,22 @@ public class ProjectionSpecTranslator
             )
         );
       }
-      final VirtualColumn virtualColumn = planned.getVirtualColumn(selected.get(i));
+      final String source = sources.getColumnName(i);
+      final VirtualColumn virtualColumn = planned.getVirtualColumn(source);
       if (virtualColumn == null) {
+        if (!source.equals(declared)) {
+          throw invalid(
+              BASE_PROJECTION_NAME,
+              StringUtils.format(
+                  "its column %d selects [%s] but declares it as [%s]. A base table column is either ingested under"
+                  + " its own name or computed by an expression, so nothing would materialize [%s]",
+                  i + 1,
+                  source,
+                  declared,
+                  declared
+              )
+          );
+        }
         // A plain reference: the column is ingested as it arrives.
         continue;
       }
@@ -275,11 +301,13 @@ public class ProjectionSpecTranslator
 
     final ProjectionSqlEngine engine = new ProjectionSqlEngine();
     final String sql = query.toString();
+    final Map<String, Object> context = new HashMap<>(queryContext);
+    context.putAll(CONTEXT);
     try (DruidPlanner planner = plannerFactory.createPlannerForTable(
         engine,
         sql,
         query,
-        CONTEXT,
+        context,
         tableName,
         tableFor(tableName, columns)
     )) {

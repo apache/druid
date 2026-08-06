@@ -53,10 +53,16 @@ public interface CatalogTableWriter
   void createTable(TableId tableId, TableSpec spec, boolean ifNotExists, boolean replace);
 
   /**
-   * Merge the given columns into the table's column list, matching on name. Columns that do not yet exist are
-   * appended; existing columns are updated in place.
+   * Append the given columns to the table's column list, failing if any of them already exists. Both this and
+   * {@link #alterColumns} match columns by name; they differ only in which outcome is an error, and both decide that
+   * inside the Coordinator's update transaction so that concurrent callers cannot both win.
    */
-  void updateColumns(TableId tableId, List<ColumnSpec> columns);
+  void addColumns(TableId tableId, List<ColumnSpec> columns);
+
+  /**
+   * Update the given columns in place, failing if any of them does not already exist. See {@link #addColumns}.
+   */
+  void alterColumns(TableId tableId, List<ColumnSpec> columns);
 
   /**
    * Remove the named columns from the table's column list. Segments are unaffected.
@@ -102,7 +108,13 @@ public interface CatalogTableWriter
     }
 
     @Override
-    public void updateColumns(TableId tableId, List<ColumnSpec> columns)
+    public void addColumns(TableId tableId, List<ColumnSpec> columns)
+    {
+      throw notAvailable();
+    }
+
+    @Override
+    public void alterColumns(TableId tableId, List<ColumnSpec> columns)
     {
       throw notAvailable();
     }

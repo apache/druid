@@ -260,7 +260,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       );
     }
     return new DatasourceProjectionMetadata(
-        new ProjectionSpecTranslator(handlerContext.plannerFactory())
+        new ProjectionSpecTranslator(handlerContext.plannerFactory(), handlerContext.queryContextMap())
             .translate(tableName, columns, name, projection.getBody())
     );
   }
@@ -276,7 +276,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       final SqlProjectionSpec projection
   )
   {
-    return new ProjectionSpecTranslator(handlerContext.plannerFactory())
+    return new ProjectionSpecTranslator(handlerContext.plannerFactory(), handlerContext.queryContextMap())
         .translateBaseTable(tableName, columns, projection.getBody(), projection.getClusteredBy());
   }
 
@@ -433,8 +433,9 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
   }
 
   /**
-   * {@code ALTER TABLE ... ADD COLUMN}. The Coordinator merges columns by name, so an existing column would be
-   * silently updated; this checks first so that {@code ADD} means add.
+   * {@code ALTER TABLE ... ADD COLUMN}. The Coordinator merges columns by name, which on its own would silently update
+   * an existing column, so the write requires the column to be absent; that check belongs to the Coordinator's update
+   * transaction rather than here, since checking first would race with a concurrent add of the same column.
    */
   public static class AddColumnHandler extends CatalogDdlHandler
   {
@@ -456,19 +457,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     @Override
     protected void execute(CatalogTableWriter writer)
     {
-      final TableMetadata existing = writer.readTable(tableId);
-      if (existing == null) {
-        throw InvalidSqlInput.exception("Table [%s] does not have a catalog entry", tableId.name());
-      }
-      if (existing.spec().columns() != null
-          && existing.spec().columns().stream().anyMatch(c -> column.name().equals(c.name()))) {
-        throw InvalidSqlInput.exception(
-            "Column [%s] already exists in table [%s]; use ALTER COLUMN to change its type",
-            column.name(),
-            tableId.name()
-        );
-      }
-      writer.updateColumns(tableId, Collections.singletonList(column));
+      writer.addColumns(tableId, Collections.singletonList(column));
     }
 
     @Override
@@ -515,8 +504,9 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
   }
 
   /**
-   * {@code ALTER TABLE ... ALTER COLUMN ... SET DATA TYPE}. Merging a column by name is exactly what changing its
-   * type requires, so this reuses the same update as ADD COLUMN without the existence check.
+   * {@code ALTER TABLE ... ALTER COLUMN ... SET DATA TYPE}. The mirror of {@link AddColumnHandler}: merging by name is
+   * what changing a type requires, but a name the Coordinator does not find is appended, so a misspelled target would
+   * create a column instead of failing. The write therefore requires the column to already exist.
    */
   public static class AlterColumnHandler extends CatalogDdlHandler
   {
@@ -541,7 +531,7 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     @Override
     protected void execute(CatalogTableWriter writer)
     {
-      writer.updateColumns(tableId, Collections.singletonList(column));
+      writer.alterColumns(tableId, Collections.singletonList(column));
     }
 
     @Override

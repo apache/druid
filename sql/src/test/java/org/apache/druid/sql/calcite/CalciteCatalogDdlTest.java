@@ -192,32 +192,12 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   @Test
   public void testAlterTableAddColumn()
   {
-    WRITER.existing.put(TableId.datasource("tbl"), tableWithColumns("a"));
+    // ADD and ALTER differ only in which existence outcome is an error, and that rule is enforced inside the
+    // Coordinator's update transaction, so all the statement does is pick the verb. EditorTest covers the rules.
     execute("ALTER TABLE tbl ADD COLUMN b BIGINT");
 
-    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("updateColumns");
+    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("addColumns");
     assertEquals(ImmutableList.of(new ColumnSpec("b", "BIGINT", null)), call.columns);
-  }
-
-  @Test
-  public void testAlterTableAddExistingColumnFails()
-  {
-    WRITER.existing.put(TableId.datasource("tbl"), tableWithColumns("a"));
-    final DruidException e = assertThrows(
-        DruidException.class,
-        () -> execute("ALTER TABLE tbl ADD COLUMN a BIGINT")
-    );
-    assertTrue(e.getMessage().contains("Column [a] already exists"));
-  }
-
-  @Test
-  public void testAlterTableAddColumnToMissingTableFails()
-  {
-    final DruidException e = assertThrows(
-        DruidException.class,
-        () -> execute("ALTER TABLE tbl ADD COLUMN a BIGINT")
-    );
-    assertTrue(e.getMessage().contains("does not have a catalog entry"));
   }
 
   @Test
@@ -230,11 +210,10 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   @Test
   public void testAlterTableAlterColumn()
   {
-    // Unlike ADD COLUMN, changing a type does not require the column to be absent, so no read is needed.
     execute("ALTER TABLE tbl ALTER COLUMN cnt SET DATA TYPE DOUBLE");
     assertEquals(
         ImmutableList.of(new ColumnSpec("cnt", "DOUBLE", null)),
-        WRITER.lastCall("updateColumns").columns
+        WRITER.lastCall("alterColumns").columns
     );
   }
 
@@ -372,6 +351,45 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         + "\"aggregators\":[{\"type\":\"longSum\",\"name\":\"total\",\"fieldName\":\"cnt\"}],"
         + "\"ordering\":[{\"columnName\":\"v0\",\"order\":\"ascending\"},"
         + "{\"columnName\":\"page\",\"order\":\"ascending\"}]}}]",
+        projectionsJson()
+    );
+  }
+
+  /**
+   * A projection body is planned under the statement's own context, so a SET clause that changes how the equivalent
+   * query would plan changes the stored definition the same way. Here the session time zone reaches the TIME_FLOOR.
+   */
+  @Test
+  public void testProjectionBodyHonorsStatementContext() throws Exception
+  {
+    execute(
+        "SET sqlTimeZone = 'America/Los_Angeles';\n"
+        + "CREATE TABLE tbl (__time TIMESTAMP, page VARCHAR, cnt BIGINT,"
+        + " PROJECTION daily AS (SELECT TIME_FLOOR(__time, 'P1D'), page, SUM(cnt) AS total GROUP BY 1, 2))"
+    );
+
+    assertTrue(
+        projectionsJson().contains("timestamp_floor(\\\"__time\\\",'P1D',null,'America/Los_Angeles')"),
+        projectionsJson()
+    );
+  }
+
+  /**
+   * The overrides the lift depends on are applied on top of the statement's context, so a SET clause cannot put the
+   * planner into a shape the lift does not understand.
+   */
+  @Test
+  public void testProjectionBodyContextCannotOverrideDeterministicOverrides() throws Exception
+  {
+    execute(
+        "SET sqlUseGranularity = TRUE;\n"
+        + "CREATE TABLE tbl (__time TIMESTAMP, page VARCHAR, cnt BIGINT,"
+        + " PROJECTION daily AS (SELECT TIME_FLOOR(__time, 'P1D'), page, SUM(cnt) AS total GROUP BY 1, 2))"
+    );
+
+    // Still lifted as an ordinary grouping column rather than a query granularity, exactly as without the SET.
+    assertTrue(
+        projectionsJson().contains("timestamp_floor(\\\"__time\\\",'P1D',null,'UTC')"),
         projectionsJson()
     );
   }
@@ -586,6 +604,30 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         + "\"type\":\"clusteredValueGroups\"}",
         queryFramework().queryJsonMapper()
                         .writeValueAsString(spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY))
+    );
+  }
+
+  /**
+   * A base table column is stored under the name it declares, so a body item that renames another column is rejected:
+   * only a virtual column materializes a name the body did not select, and a bare reference produces none.
+   * <p>
+   * Selecting the same column twice also makes the scan's deduplicated column list shorter than the select list, so
+   * the source of each item is taken from the query's output signature. Reading the scan's columns positionally used
+   * to run off the end of that list and fail as an internal error.
+   */
+  @Test
+  public void testBaseProjectionRenamedColumnFails()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (id BIGINT, copy BIGINT, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT id, id AS copy, __time CLUSTERED BY id)) SEALED"
+        )
+    );
+    assertTrue(
+        e.getMessage().contains("its column 2 selects [id] but declares it as [copy]"),
+        e.getMessage()
     );
   }
 
@@ -836,9 +878,15 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void updateColumns(TableId tableId, List<ColumnSpec> columns)
+    public void addColumns(TableId tableId, List<ColumnSpec> columns)
     {
-      record("updateColumns", tableId).columns = columns;
+      record("addColumns", tableId).columns = columns;
+    }
+
+    @Override
+    public void alterColumns(TableId tableId, List<ColumnSpec> columns)
+    {
+      record("alterColumns", tableId).columns = columns;
     }
 
     @Override
