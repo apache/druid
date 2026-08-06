@@ -31,16 +31,18 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class NotFilterEvaluateTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
@@ -59,6 +61,12 @@ public class NotFilterEvaluateTest extends BaseFilterTest
       makeMapRow(SCHEMA, Map.of("dim0", "5"))
   );
 
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
+
   public NotFilterEvaluateTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -70,7 +78,7 @@ public class NotFilterEvaluateTest extends BaseFilterTest
     super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(NotFilterEvaluateTest.class.getName());

@@ -35,6 +35,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -92,7 +93,7 @@ public class PartialHashSegmentGenerateTaskTest
   public void hasCorrectPrefixForAutomaticId()
   {
     String id = target.getId();
-    Assert.assertThat(id, Matchers.startsWith(PartialHashSegmentGenerateTask.TYPE));
+    MatcherAssert.assertThat(id, Matchers.startsWith(PartialHashSegmentGenerateTask.TYPE));
   }
 
   @Test

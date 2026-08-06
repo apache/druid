@@ -30,8 +30,8 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionModule;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -61,6 +61,6 @@ public class OffHeapNamespaceExtractionCacheManagerTest
     properties.clear();
     properties.put(NamespaceExtractionModule.TYPE_PREFIX, "offHeap");
     final NamespaceExtractionCacheManager manager = injector.getInstance(NamespaceExtractionCacheManager.class);
-    Assert.assertEquals(OffHeapNamespaceExtractionCacheManager.class, manager.getClass());
+    Assertions.assertEquals(OffHeapNamespaceExtractionCacheManager.class, manager.getClass());
   }
 }

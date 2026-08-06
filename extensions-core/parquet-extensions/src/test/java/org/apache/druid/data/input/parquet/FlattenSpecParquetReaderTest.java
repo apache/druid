@@ -30,8 +30,8 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -77,13 +77,13 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
-    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assertions.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assertions.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
+    Assertions.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
 
     reader = createReader(
         file,
@@ -91,7 +91,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -110,13 +110,13 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
-    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assertions.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assertions.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
+    Assertions.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
 
     reader = createReader(
         file,
@@ -124,7 +124,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         JSONPathSpec.DEFAULT
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -151,13 +151,13 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
-    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assertions.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assertions.assertEquals("listDim1v1", rows.get(0).getDimension("list").get(0));
+    Assertions.assertEquals("listDim1v2", rows.get(0).getDimension("list").get(1));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
 
     reader = createReader(
         file,
@@ -165,7 +165,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -191,11 +191,11 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listExtracted").get(0));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assertions.assertEquals("listDim1v2", rows.get(0).getDimension("listExtracted").get(0));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
 
     reader = createReader(
         file,
@@ -204,7 +204,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
 
-    Assert.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(FLAT_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
 
@@ -225,15 +225,15 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
     List<String> dims = rows.get(0).getDimensions();
-    Assert.assertEquals(1, dims.size());
-    Assert.assertFalse(dims.contains("dim2"));
-    Assert.assertFalse(dims.contains("dim3"));
-    Assert.assertFalse(dims.contains("listDim"));
-    Assert.assertFalse(dims.contains("nestedData"));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertEquals(1, dims.size());
+    Assertions.assertFalse(dims.contains("dim2"));
+    Assertions.assertFalse(dims.contains("dim3"));
+    Assertions.assertFalse(dims.contains("listDim"));
+    Assertions.assertFalse(dims.contains("nestedData"));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
 
     reader = createReader(
         file,
@@ -241,7 +241,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -260,13 +260,13 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
     List<String> dims = rows.get(0).getDimensions();
-    Assert.assertFalse(dims.contains("dim2"));
-    Assert.assertFalse(dims.contains("dim3"));
-    Assert.assertFalse(dims.contains("listDim"));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertFalse(dims.contains("dim2"));
+    Assertions.assertFalse(dims.contains("dim3"));
+    Assertions.assertFalse(dims.contains("listDim"));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
 
     reader = createReader(
         file,
@@ -274,7 +274,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         JSONPathSpec.DEFAULT
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -302,14 +302,14 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
 
     List<InputRow> rows = readAllRows(reader);
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    Assert.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
-    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
-    Assert.assertEquals(2, rows.get(0).getMetric("metric2").longValue());
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assertions.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assertions.assertEquals("listDim1v1", rows.get(0).getDimension("listDim").get(0));
+    Assertions.assertEquals("listDim1v2", rows.get(0).getDimension("listDim").get(1));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertEquals(2, rows.get(0).getMetric("metric2").longValue());
 
     reader = createReader(
         file,
@@ -317,7 +317,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -345,12 +345,12 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
 
     List<InputRow> rows = readAllRows(reader);
 
-    Assert.assertEquals(TS1, rows.get(0).getTimestamp().toString());
-    Assert.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
-    Assert.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
-    Assert.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
-    Assert.assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
-    Assert.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
+    Assertions.assertEquals(TS1, rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals("d1v1", rows.get(0).getDimension("dim1").get(0));
+    Assertions.assertEquals("d2v1", rows.get(0).getDimension("dim2").get(0));
+    Assertions.assertEquals("1", rows.get(0).getDimension("dim3").get(0));
+    Assertions.assertEquals("listDim1v2", rows.get(0).getDimension("listextracted").get(0));
+    Assertions.assertEquals(1, rows.get(0).getMetric("metric1").longValue());
 
     reader = createReader(
         file,
@@ -358,7 +358,7 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
         flattenSpec
     );
     List<InputRowListPlusRawValues> sampled = sampleAllRows(reader);
-    Assert.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
+    Assertions.assertEquals(NESTED_JSON, DEFAULT_JSON_WRITER.writeValueAsString(sampled.get(0).getRawValues()));
   }
 
   @Test
@@ -389,12 +389,12 @@ public class FlattenSpecParquetReaderTest extends BaseParquetReaderTest
     );
     List<InputRow> rows = readAllRows(reader);
 
-    Assert.assertEquals("2022-02-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
-    Assert.assertEquals(1L, rows.get(0).getRaw("a1_b1_c1"));
-    Assert.assertEquals(2L, rows.get(0).getRaw("a1_b1_c2"));
-    Assert.assertEquals(1L, rows.get(0).getRaw("a2_0_b1"));
-    Assert.assertEquals(2L, rows.get(0).getRaw("a2_0_b2"));
-    Assert.assertEquals(1L, rows.get(0).getRaw("a2_1_b1"));
-    Assert.assertEquals(2L, rows.get(0).getRaw("a2_1_b2"));
+    Assertions.assertEquals("2022-02-01T00:00:00.000Z", rows.get(0).getTimestamp().toString());
+    Assertions.assertEquals(1L, rows.get(0).getRaw("a1_b1_c1"));
+    Assertions.assertEquals(2L, rows.get(0).getRaw("a1_b1_c2"));
+    Assertions.assertEquals(1L, rows.get(0).getRaw("a2_0_b1"));
+    Assertions.assertEquals(2L, rows.get(0).getRaw("a2_0_b2"));
+    Assertions.assertEquals(1L, rows.get(0).getRaw("a2_1_b1"));
+    Assertions.assertEquals(2L, rows.get(0).getRaw("a2_1_b2"));
   }
 }

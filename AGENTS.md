@@ -41,6 +41,15 @@ Real-time analytics database. Java, Maven, multi-module project.
 - End every file with a newline.
 - Don't format changes unnecessarily.
 
+## Pull Requests
+
+- Before opening a PR, self-review the complete diff against the target branch. Verify that every change is intentional and in scope, check for correctness and regressions, and run the relevant tests or checks.
+- PR titles targeting `master` must use the Conventional Commits format: `<type>: <description>` or `<type>(<scope>): <description>`.
+- For a breaking change, add `!` immediately before the colon: `<type>!: <description>` or `<type>(<scope>)!: <description>`. A breaking change is backward-incompatible and may require users to update existing code, configuration, or integrations.
+- Accepted types are `backport`, `build`, `ci`, `dev`, `docs`, `feat`, `fix`, `minor`, `perf`, `refactor`, `release`, `revert`, `style`, and `test`.
+- Example: `build: remove redundant license download step`.
+- Follow `.github/pull_request_template.md` when preparing the PR description.
+
 ## Running Tests
 
 Use these flags for faster tests: `-Pskip-static-checks -Dweb.console.skip=true -T1C`

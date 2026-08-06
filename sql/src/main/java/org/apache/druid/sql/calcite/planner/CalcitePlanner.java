@@ -425,7 +425,9 @@ public class CalcitePlanner implements Planner, ViewExpander
     final SqlValidator.Config validatorConfig =
         SqlValidator.Config.DEFAULT.withConformance(connectionConfig.conformance())
                                    .withLenientOperatorLookup(connectionConfig.lenientOperatorLookup())
-                                   .withIdentifierExpansion(true);
+                                   .withIdentifierExpansion(true)
+                                   .withTypeCoercionFactory(DruidTypeCoercion::new)
+                                   .withTypeCoercionRules(DruidTypeCoercion.TYPE_COERCION_RULE);
     return new DruidSqlValidator(
         opTab,
         catalogReader,

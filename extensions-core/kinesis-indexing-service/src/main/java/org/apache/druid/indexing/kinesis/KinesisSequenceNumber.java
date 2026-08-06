@@ -26,6 +26,8 @@ import java.math.BigInteger;
 
 // OrderedSequenceNumber.equals() should be used instead.
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")
+// Ordering intentionally groups equivalent unread/end markers while inherited equality preserves their identities.
+// codeql[java/inconsistent-compareto-and-equals]
 public class KinesisSequenceNumber extends OrderedSequenceNumber<String>
 {
   /**

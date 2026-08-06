@@ -19,6 +19,10 @@
 
 package org.apache.druid.segment.loading;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -59,6 +63,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -92,6 +98,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   {
     jsonMapper = new DefaultObjectMapper();
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
+    jsonMapper.registerSubtypes(new NamedType(SlowLoadSpec.class, "slow"));
     jsonMapper.setInjectableValues(
         new InjectableValues.Std().addValue(
             LocalDataSegmentPuller.class,
@@ -129,46 +136,16 @@ class SegmentLocalCacheManagerConcurrencyTest
     locations.add(locationConfig);
     locations.add(locationConfig2);
 
-    loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return locations;
-      }
-
-      @Override
-      public File getInfoDir()
-      {
-        return new File(tempDir, "info");
-      }
-    };
-    vsfLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return locations;
-      }
-
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-
-      @Override
-      public int getVirtualStorageLoadThreads()
-      {
-        return Runtime.getRuntime().availableProcessors();
-      }
-
-      @Override
-      public File getInfoDir()
-      {
-        return new File(tempDir, "info");
-      }
-    };
+    loaderConfig = SegmentLoaderConfig.builder()
+                                      .locations(locations)
+                                      .infoDir(new File(tempDir, "info"))
+                                      .build();
+    vsfLoaderConfig = SegmentLoaderConfig.builder()
+                                         .locations(locations)
+                                         .virtualStorage(true)
+                                         .virtualStorageLoadThreads(Runtime.getRuntime().availableProcessors())
+                                         .infoDir(new File(tempDir, "info"))
+                                         .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
     location = storageLocations.get(0);
     location2 = storageLocations.get(1);
@@ -252,6 +229,45 @@ class SegmentLocalCacheManagerConcurrencyTest
 
     Assertions.assertEquals(8, success);
     Assertions.assertEquals(8 * 1209, rows);
+  }
+
+  @Test
+  public void testAcquireCachedSegmentDoesNotBlockOnConcurrentMount() throws Exception
+  {
+    final File localStorageFolder = new File(tempDir, "local_storage_folder");
+    final Interval interval = Intervals.of("2019-01-01/P1D");
+    final DataSegment segment = makeSlowSegment(localStorageFolder, interval);
+
+    final String key = segment.getId().toString();
+    final CountDownLatch loadStarted = new CountDownLatch(1);
+    final CountDownLatch releaseLoad = new CountDownLatch(1);
+    SlowLoadSpec.STARTED.put(key, loadStarted);
+    SlowLoadSpec.RELEASE.put(key, releaseLoad);
+
+    try {
+      final Future<?> loadFuture = executorService.submit(() -> manager.load(segment));
+      Assertions.assertTrue(loadStarted.await(5, TimeUnit.SECONDS));
+
+      // isMounted() (and hence acquireCachedSegment) must return promptly even while mount() is in flight and
+      // holding entryLock for this same entry; it must not block until the mount finishes.
+      final Future<Optional<Segment>> readFuture =
+          executorService.submit(() -> manager.acquireCachedSegment(segment.getId(), AcquireMode.FULL));
+      final Optional<Segment> whileMounting = readFuture.get(500, TimeUnit.MILLISECONDS);
+      Assertions.assertTrue(whileMounting.isEmpty());
+
+      releaseLoad.countDown();
+      loadFuture.get(5, TimeUnit.SECONDS);
+
+      final Optional<Segment> afterMounting =
+          manager.acquireCachedSegment(segment.getId(), AcquireMode.FULL);
+      Assertions.assertTrue(afterMounting.isPresent());
+      afterMounting.get().close();
+    }
+    finally {
+      SlowLoadSpec.STARTED.remove(key);
+      SlowLoadSpec.RELEASE.remove(key);
+      segmentsToLoad.add(segment);
+    }
   }
 
   @Test
@@ -854,6 +870,36 @@ class SegmentLocalCacheManagerConcurrencyTest
     }
   }
 
+  /**
+   * Builds a segment whose load spec blocks in {@link SlowLoadSpec#loadSegment} until released via
+   * {@link SlowLoadSpec#RELEASE}, keyed by {@link SlowLoadSpec#STARTED}/{@code RELEASE}.get(segment.getId().toString()).
+   */
+  private DataSegment makeSlowSegment(File localStorageFolder, Interval interval) throws IOException
+  {
+    final String segmentPath = Paths.get(
+        localStorageFolder.getCanonicalPath(),
+        dataSource,
+        StringUtils.format("%s_%s", interval.getStart().toString(), interval.getEnd().toString()),
+        segmentVersion,
+        "0"
+    ).toString();
+    final File localSegmentFile = new File(localStorageFolder, segmentPath + "_build");
+    final File indexZip = new File(new File(localStorageFolder, segmentPath), "index.zip");
+    SegmentLocalCacheManagerTest.makeSegmentZip(localSegmentFile, indexZip);
+
+    final DataSegment segment = newSegment(interval, 0, 1000);
+    return segment.withLoadSpec(
+        ImmutableMap.of(
+            "type",
+            "slow",
+            "key",
+            segment.getId().toString(),
+            "path",
+            indexZip.getAbsolutePath()
+        )
+    );
+  }
+
   private DataSegment newSegment(Interval interval, int partitionId, long size)
   {
     return DataSegment.builder()
@@ -887,6 +933,48 @@ class SegmentLocalCacheManagerConcurrencyTest
       this.exceptions = exceptions;
       this.success = success;
       this.rows = rows;
+    }
+  }
+
+  /**
+   * A {@link LoadSpec} that blocks in {@link #loadSegment} until released, so tests can hold {@code entryLock} open
+   * across {@code CompleteSegmentCacheEntry.mount()} for as long as they need. Looked up by a {@code key} property
+   * (rather than passed directly) since {@link LoadSpec} is deserialized from {@link DataSegment#getLoadSpec()}.
+   */
+  @JsonTypeName("slow")
+  public static class SlowLoadSpec implements LoadSpec
+  {
+    static final ConcurrentHashMap<String, CountDownLatch> STARTED = new ConcurrentHashMap<>();
+    static final ConcurrentHashMap<String, CountDownLatch> RELEASE = new ConcurrentHashMap<>();
+
+    private final LocalDataSegmentPuller puller;
+    private final String key;
+    private final String path;
+
+    @JsonCreator
+    public SlowLoadSpec(
+        @JacksonInject LocalDataSegmentPuller puller,
+        @JsonProperty(value = "key", required = true) String key,
+        @JsonProperty(value = "path", required = true) String path
+    )
+    {
+      this.puller = puller;
+      this.key = key;
+      this.path = path;
+    }
+
+    @Override
+    public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException
+    {
+      STARTED.get(key).countDown();
+      try {
+        RELEASE.get(key).await();
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+      return new LoadSpecResult(puller.getSegmentFiles(new File(path), outDir).size());
     }
   }
 

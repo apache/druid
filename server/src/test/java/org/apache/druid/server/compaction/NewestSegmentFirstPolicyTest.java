@@ -535,6 +535,39 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
+  public void testConfiguredSkipIntervalsAreHonoredWithNoExternalSkipIntervals()
+  {
+    final SegmentTimeline timeline = createTimeline(
+        createSegments().forIntervals(4, Granularities.DAY)
+                        .startingAt("2017-12-01")
+                        .withNumPartitions(1)
+    );
+
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder()
+            .withSkipIntervals(List.of(Intervals.of("2017-12-02/2017-12-03")))
+            .build(),
+        timeline
+    );
+
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
+    );
+    expectedSegmentsToCompact.addAll(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-03/2017-12-05"), Partitions.ONLY_COMPLETE)
+    );
+
+    Assert.assertTrue(iterator.hasNext());
+    final Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
+                                                              .flatMap(s -> s.getSegments().stream())
+                                                              .collect(Collectors.toSet());
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        observedSegmentsToCompact
+    );
+  }
+
+  @Test
   public void testHoleInSearchInterval()
   {
     final Period segmentPeriod = Period.hours(1);

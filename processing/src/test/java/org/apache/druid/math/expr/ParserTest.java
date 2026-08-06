@@ -273,11 +273,11 @@ public class ParserTest extends InitializedNullHandlingTest
   @Test
   public void testLiterals()
   {
-    validateConstantExpression("\'foo\'", "foo");
-    validateConstantExpression("\'foo bar\'", "foo bar");
-    validateConstantExpression("\'föo bar\'", "föo bar");
-    validateConstantExpression("\'f\\u0040o bar\'", "f@o bar");
-    validateConstantExpression("\'f\\u000Ao \\'b\\\\\\\"ar\'", "f\no 'b\\\"ar");
+    validateConstantScalarExpression("\'foo\'", "foo");
+    validateConstantScalarExpression("\'foo bar\'", "foo bar");
+    validateConstantScalarExpression("\'föo bar\'", "föo bar");
+    validateConstantScalarExpression("\'f\\u0040o bar\'", "f@o bar");
+    validateConstantScalarExpression("\'f\\u000Ao \\'b\\\\\\\"ar\'", "f\no 'b\\\"ar");
   }
 
   @Test
@@ -409,7 +409,7 @@ public class ParserTest extends InitializedNullHandlingTest
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
         StringUtils.encodeBase64String(b2)
     );
-    validateConstantExpression(
+    validateConstantScalarExpression(
         l1String,
         l1
     );
@@ -887,7 +887,7 @@ public class ParserTest extends InitializedNullHandlingTest
     Assert.assertEquals(transformed.stringify(), transformedRoundTrip.stringify());
   }
 
-  private void validateConstantExpression(String expression, Object expected)
+  private void validateConstantScalarExpression(String expression, Object expected)
   {
     Expr parsed = Parser.parse(expression, ExprMacroTable.nil());
     Assert.assertEquals(
