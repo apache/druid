@@ -146,7 +146,7 @@ public class AWSClientConfigTest
   {
     final AWSClientConfig config = new AWSClientConfig();
 
-    Assertions.assertNull(config.getMaxRetryAttempts());
+    Assertions.assertNull(config.getMaxAttempts());
     Assertions.assertEquals(
         AWSClientConfig.RetryMode.STANDARD.createStrategy().maxAttempts(),
         config.getRetryStrategy().maxAttempts()

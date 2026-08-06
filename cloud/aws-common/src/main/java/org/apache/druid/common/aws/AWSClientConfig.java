@@ -45,14 +45,6 @@ public class AWSClientConfig
   private static final int DEFAULT_MAX_CONNECTIONS_FLOOR = 50;
 
   /**
-   * Selects the retry behavior AWS documents for {@code standard} and {@code adaptive} rather than the pre-2026
-   * behavior. The no-argument factories default the {@code aws.newRetries2026} opt-in to false, which changes the
-   * backoff base delays and the retry-quota token costs; asking for it explicitly means the modes behave as
-   * documented, and keeps them behaving that way when AWS flips the opt-in default.
-   */
-  private static final Boolean USE_DOCUMENTED_RETRY_BEHAVIOR = Boolean.TRUE;
-
-  /**
    * Retry strategy family. Declared as an enum so an unrecognised value is rejected while the config is bound at
    * startup, rather than when a client is first built.
    */
@@ -62,7 +54,8 @@ public class AWSClientConfig
       @Override
       RetryStrategy createStrategy()
       {
-        return AwsRetryStrategy.standardRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOR);
+        // Pass true to ensure we get the new standard AWS SDKv2 retry behavior and not legacy behavior.
+        return AwsRetryStrategy.standardRetryStrategy(true);
       }
     },
     ADAPTIVE {
@@ -72,7 +65,7 @@ public class AWSClientConfig
         // Standard plus a client-side rate limiter, which unlike standard can delay or block the initial request,
         // not just retries. The limiter belongs to one client instance and covers every request that client makes,
         // so throttling on one key prefix also slows requests to prefixes that are not being throttled.
-        return AwsRetryStrategy.adaptiveRetryStrategy(USE_DOCUMENTED_RETRY_BEHAVIOR);
+        return AwsRetryStrategy.adaptiveRetryStrategy(true);
       }
     },
     LEGACY {
@@ -152,16 +145,12 @@ public class AWSClientConfig
 
   /**
    * Retry strategy applied to every AWS client built from this config.
-   * <p>
-   * Setting this at all is deliberate: left unset, the SDK picks its own default, and which one it picks depends on
-   * the {@code aws.newRetries2026} migration flag. Naming the mode here keeps retry behavior stable across SDK
-   * upgrades instead of changing under Druid when that flag's default flips.
    */
   @JsonProperty
   private RetryMode retryMode = RetryMode.STANDARD;
 
   /**
-   * Total attempts per request, including the first. Maps directly to the SDK's {@code maxAttempts}, so 1 disables
+   * Total attempts per request, including the first. A value of 1 disables
    * retries. Null leaves the count that {@link #retryMode} defines for itself, which AWS tunes alongside that mode's
    * backoff and retry quota.
    * <p>
@@ -172,7 +161,7 @@ public class AWSClientConfig
   @JsonProperty
   @Nullable
   @Min(1)
-  private Integer maxRetryAttempts = null;
+  private Integer maxAttempts = null;
 
   public String getProtocol()
   {
@@ -246,9 +235,9 @@ public class AWSClientConfig
   }
 
   @Nullable
-  public Integer getMaxRetryAttempts()
+  public Integer getMaxAttempts()
   {
-    return maxRetryAttempts;
+    return maxAttempts;
   }
 
   /**
@@ -262,15 +251,15 @@ public class AWSClientConfig
   }
 
   /**
-   * Overrides the attempt count only when one is configured, so an unset {@link #maxRetryAttempts} leaves whatever
+   * Overrides the attempt count only when one is configured, so an unset {@link #maxAttempts} leaves whatever
    * the chosen mode defines for itself.
    */
   private RetryStrategy withMaxAttempts(RetryStrategy strategy)
   {
-    if (maxRetryAttempts == null) {
+    if (maxAttempts == null) {
       return strategy;
     }
-    return strategy.toBuilder().maxAttempts(maxRetryAttempts).build();
+    return strategy.toBuilder().maxAttempts(maxAttempts).build();
   }
 
   @Override
@@ -285,7 +274,7 @@ public class AWSClientConfig
            ", socketTimeout=" + socketTimeout +
            ", maxConnections=" + getMaxConnections() +
            ", retryMode='" + retryMode + '\'' +
-           ", maxRetryAttempts=" + maxRetryAttempts +
+           ", maxRetryAttempts=" + maxAttempts +
            '}';
   }
 }
