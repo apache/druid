@@ -300,6 +300,46 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
+  public void testPendingRevertSurvivesTheNextCoordinatorRun()
+  {
+    // Second run with the revert from the first still sitting in the queue. The server both serves the segment and
+    // has a LOAD queued for it, so counting that LOAD as a replica would put projectedReplicas at 2 against a
+    // requirement of 1. updateReplicasInTier would then read the phantom surplus and cancel the very reload it queued
+    // last run — and since the revert would be requeued at the end of the same run, a backlogged peon could be made
+    // to cancel and requeue forever, never completing the transition.
+    final DataSegment segment = createSegment();
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
+    peon.addInFlightHolder(new SegmentHolder(
+        segment,
+        SegmentAction.LOAD,
+        // The revert carries no profile; that is what tells the historical to release its rule holds.
+        null,
+        Duration.standardSeconds(10),
+        null
+    ));
+    final DruidServer server = createDruidServer(TIER1);
+    // The historical has not finished the reload yet, so it is still announcing the old partial profile.
+    server.addDataSegment(segment, profileForRevenue());
+    final ServerHolder s1 = new ServerHolder(server.toImmutableDruidServer(), peon);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertTrue(
+        "the in-flight revert must still be queued, not cancelled as surplus",
+        s1.getLoadingSegments().contains(segment)
+    );
+    Assert.assertFalse("a pending revert must not be mistaken for a surplus replica", stats.hasStat(Stats.Segments.DROPPED));
+    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assert.assertFalse(
+        "the revert is already in flight, so this run has nothing more to queue",
+        stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED)
+    );
+  }
+
+  @Test
   public void testRevertSkippedWhenLoadQueueIsAlreadyFull()
   {
     // The budget is the whole load queue, not just what this run has added to it: a queue already at the limit from a
