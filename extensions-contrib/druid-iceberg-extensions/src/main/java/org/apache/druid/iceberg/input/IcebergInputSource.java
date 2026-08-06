@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -114,7 +115,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   )
   {
     if (!isLoaded) {
-      retrieveIcebergDatafiles();
+      retrieveIcebergDatafiles(inputRowSchema);
     }
     return getDelegateInputSource().reader(inputRowSchema, inputFormat, temporaryDirectory);
   }
@@ -126,7 +127,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   ) throws IOException
   {
     if (!isLoaded) {
-      retrieveIcebergDatafiles();
+      retrieveIcebergDatafiles(null);
     }
     return getDelegateInputSource().createSplits(inputFormat, splitHintSpec);
   }
@@ -135,7 +136,7 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
   public int estimateNumSplits(InputFormat inputFormat, @Nullable SplitHintSpec splitHintSpec) throws IOException
   {
     if (!isLoaded) {
-      retrieveIcebergDatafiles();
+      retrieveIcebergDatafiles(null);
     }
     return getDelegateInputSource().estimateNumSplits(inputFormat, splitHintSpec);
   }
@@ -194,14 +195,21 @@ public class IcebergInputSource implements SplittableInputSource<List<String>>
     return delegateInputSource;
   }
 
-  protected void retrieveIcebergDatafiles()
+  private ColumnsFilter getColumnsFilter(@Nullable final InputRowSchema inputRowSchema)
   {
-    List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
+    return inputRowSchema == null ? null : inputRowSchema.getColumnsFilter();
+  }
+
+  protected void retrieveIcebergDatafiles(@Nullable final InputRowSchema inputRowSchema)
+  {
+    final ColumnsFilter columnsFilter = getColumnsFilter(inputRowSchema);
+    final List<String> snapshotDataFiles = icebergCatalog.extractSnapshotDataFiles(
         getNamespace(),
         getTableName(),
         getIcebergFilter(),
         getSnapshotTime(),
-        getResidualFilterMode()
+        getResidualFilterMode(),
+        columnsFilter
     );
     if (snapshotDataFiles.isEmpty()) {
       delegateInputSource = new EmptyInputSource();
