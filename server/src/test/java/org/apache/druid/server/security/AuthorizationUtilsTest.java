@@ -28,10 +28,11 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -89,11 +90,11 @@ public class AuthorizationUtilsTest
     Iterator<String> itr = filteredResults.iterator();
     // Validate that resource "filteredResource" is not present because null was returned for it.
     // Also validate that calling the filterAuthorizedResources method doesn't get rid of duplicate resources
-    Assert.assertTrue(itr.hasNext());
-    Assert.assertEquals("duplicate", itr.next());
-    Assert.assertEquals("duplicate", itr.next());
-    Assert.assertEquals("hello", itr.next());
-    Assert.assertFalse(itr.hasNext());
+    Assertions.assertTrue(itr.hasNext());
+    Assertions.assertEquals("duplicate", itr.next());
+    Assertions.assertEquals("duplicate", itr.next());
+    Assertions.assertEquals("hello", itr.next());
+    Assertions.assertFalse(itr.hasNext());
   }
 
   @Test
@@ -105,7 +106,7 @@ public class AuthorizationUtilsTest
     // every type and action should have a wildcard pattern
     for (String type : ResourceType.knownTypes()) {
       for (Action action : Action.values()) {
-        Assert.assertTrue(
+        Assertions.assertTrue(
             permissions.stream()
                        .filter(ra -> Objects.equals(type, ra.getResource().getType()))
                        .anyMatch(ra -> action == ra.getAction() && ".*".equals(ra.getResource().getName()))
@@ -114,7 +115,7 @@ public class AuthorizationUtilsTest
     }
     // custom type should be there too
     for (Action action : Action.values()) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           permissions.stream()
                      .filter(ra -> Objects.equals(customType, ra.getResource().getType()))
                      .anyMatch(ra -> action == ra.getAction() && ".*".equals(ra.getResource().getName()))
@@ -127,47 +128,47 @@ public class AuthorizationUtilsTest
   {
     MockHttpServletRequest request = new MockHttpServletRequest();
     AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
-    Assert.assertEquals(true, request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED));
+    Assertions.assertEquals(true, request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED));
   }
 
   @Test
   public void testShouldApplyPolicy_readDatasource()
   {
     final Resource datasourceResource = new Resource("test", ResourceType.DATASOURCE);
-    Assert.assertTrue(AuthorizationUtils.shouldApplyPolicy(datasourceResource, Action.READ));
+    Assertions.assertTrue(AuthorizationUtils.shouldApplyPolicy(datasourceResource, Action.READ));
   }
 
   @Test
   public void testShouldApplyPolicy_writeDatasource()
   {
     final Resource datasourceResource = new Resource("test", ResourceType.DATASOURCE);
-    Assert.assertFalse(AuthorizationUtils.shouldApplyPolicy(datasourceResource, Action.WRITE));
+    Assertions.assertFalse(AuthorizationUtils.shouldApplyPolicy(datasourceResource, Action.WRITE));
   }
 
   @Test
   public void testShouldApplyPolicy_readState()
   {
-    Assert.assertFalse(AuthorizationUtils.shouldApplyPolicy(Resource.STATE_RESOURCE, Action.READ));
+    Assertions.assertFalse(AuthorizationUtils.shouldApplyPolicy(Resource.STATE_RESOURCE, Action.READ));
   }
 
   @Test
   public void testShouldApplyPolicy_writeState()
   {
-    Assert.assertFalse(AuthorizationUtils.shouldApplyPolicy(Resource.STATE_RESOURCE, Action.WRITE));
+    Assertions.assertFalse(AuthorizationUtils.shouldApplyPolicy(Resource.STATE_RESOURCE, Action.WRITE));
   }
 
   @Test
   public void testShouldApplyPolicy_readExternal()
   {
     final Resource externalResource = new Resource("test", ResourceType.EXTERNAL);
-    Assert.assertFalse(AuthorizationUtils.shouldApplyPolicy(externalResource, Action.READ));
+    Assertions.assertFalse(AuthorizationUtils.shouldApplyPolicy(externalResource, Action.READ));
   }
 
   @Test
   public void testShouldApplyPolicy_writeExternal()
   {
     final Resource externalResource = new Resource("test", ResourceType.EXTERNAL);
-    Assert.assertFalse(AuthorizationUtils.shouldApplyPolicy(externalResource, Action.WRITE));
+    Assertions.assertFalse(AuthorizationUtils.shouldApplyPolicy(externalResource, Action.WRITE));
   }
 
   @Test
@@ -208,9 +209,9 @@ public class AuthorizationUtilsTest
         mapper
     );
 
-    Assert.assertTrue(result.allowBasicAccess());
+    Assertions.assertTrue(result.allowBasicAccess());
     // Verify that the policy was captured for the READ action
-    Assert.assertEquals(Map.of("test", Optional.of(policy)), result.getPolicyMap());
+    Assertions.assertEquals(Map.of("test", Optional.of(policy)), result.getPolicyMap());
   }
 
   @Test
@@ -242,16 +243,16 @@ public class AuthorizationUtilsTest
         mapper
     );
 
-    Assert.assertFalse(result.allowBasicAccess());
+    Assertions.assertFalse(result.allowBasicAccess());
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents("auth/forbidden");
-    Assert.assertEquals(1, events.size());
+    Assertions.assertEquals(1, events.size());
     final Map<String, Object> dims = events.get(0).getUserDims();
-    Assert.assertEquals("someUser", dims.get("identity"));
-    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
-    Assert.assertEquals("myDatasource", dims.get("resourceName"));
-    Assert.assertEquals(ResourceType.DATASOURCE, dims.get("resourceType"));
-    Assert.assertEquals(Action.READ.toString(), dims.get("action"));
+    Assertions.assertEquals("someUser", dims.get("identity"));
+    Assertions.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assertions.assertEquals("myDatasource", dims.get("resourceName"));
+    Assertions.assertEquals(ResourceType.DATASOURCE, dims.get("resourceType"));
+    Assertions.assertEquals(Action.READ.toString(), dims.get("action"));
   }
 
   @Test
@@ -280,8 +281,8 @@ public class AuthorizationUtilsTest
         mapper
     );
 
-    Assert.assertTrue(result.allowBasicAccess());
-    Assert.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
+    Assertions.assertTrue(result.allowBasicAccess());
+    Assertions.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
   }
 
   @Test
@@ -310,8 +311,8 @@ public class AuthorizationUtilsTest
         mapper
     );
 
-    Assert.assertFalse(result.allowBasicAccess());
-    Assert.assertNull(mapper.getServiceEmitter());
+    Assertions.assertFalse(result.allowBasicAccess());
+    Assertions.assertNull(mapper.getServiceEmitter());
   }
 
   @Test
@@ -328,7 +329,7 @@ public class AuthorizationUtilsTest
     final ResourceAction resourceAction =
         new ResourceAction(new Resource("myDatasource", ResourceType.DATASOURCE), Action.WRITE);
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> AuthorizationUtils.authorizeAllResourceActions(
             authResult,
@@ -337,13 +338,13 @@ public class AuthorizationUtilsTest
         )
     );
 
-    Assert.assertEquals(1, emitter.getMetricEventCount("auth/exception"));
-    Assert.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
+    Assertions.assertEquals(1, emitter.getMetricEventCount("auth/exception"));
+    Assertions.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
     final Map<String, Object> dims = emitter.getMetricEvents("auth/exception").get(0).getUserDims();
-    Assert.assertEquals("someUser", dims.get("identity"));
-    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
-    Assert.assertEquals("myDatasource", dims.get("resourceName"));
-    Assert.assertEquals(Action.WRITE.toString(), dims.get("action"));
+    Assertions.assertEquals("someUser", dims.get("identity"));
+    Assertions.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assertions.assertEquals("myDatasource", dims.get("resourceName"));
+    Assertions.assertEquals(Action.WRITE.toString(), dims.get("action"));
   }
 
   @Test
@@ -360,7 +361,7 @@ public class AuthorizationUtilsTest
     final ResourceAction resourceAction =
         new ResourceAction(new Resource("myDatasource", ResourceType.DATASOURCE), Action.WRITE);
 
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> AuthorizationUtils.authorizeAllResourceActions(
             authResult,
@@ -370,14 +371,14 @@ public class AuthorizationUtilsTest
     );
 
     final List<ServiceMetricEvent> events = emitter.getMetricEvents("auth/exception");
-    Assert.assertEquals(1, events.size());
-    Assert.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
+    Assertions.assertEquals(1, events.size());
+    Assertions.assertEquals(0, emitter.getMetricEventCount("auth/forbidden"));
     final Map<String, Object> dims = events.get(0).getUserDims();
-    Assert.assertEquals("someUser", dims.get("identity"));
-    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
-    Assert.assertEquals("myDatasource", dims.get("resourceName"));
-    Assert.assertEquals(Action.WRITE.toString(), dims.get("action"));
-    Assert.assertEquals(e.getMessage(), dims.get("errorMessage"));
+    Assertions.assertEquals("someUser", dims.get("identity"));
+    Assertions.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assertions.assertEquals("myDatasource", dims.get("resourceName"));
+    Assertions.assertEquals(Action.WRITE.toString(), dims.get("action"));
+    Assertions.assertEquals(e.getMessage(), dims.get("errorMessage"));
   }
 
   @Test
@@ -404,22 +405,22 @@ public class AuthorizationUtilsTest
     request.method = "GET";
     request.attributes.put(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ForbiddenException.class,
         () -> AuthorizationUtils.verifyUnrestrictedAccessToDatasource(request, "myDatasource", mapper)
     );
 
     // The policy deny path in verifyUnrestrictedAccessToDatasource should emit auth/forbidden.
     // auth/forbidden is NOT emitted by authorizeAllResourceActions here because basic access was allowed.
-    Assert.assertEquals(1, emitter.getMetricEventCount("auth/forbidden"));
-    Assert.assertEquals(0, emitter.getMetricEventCount("auth/exception"));
+    Assertions.assertEquals(1, emitter.getMetricEventCount("auth/forbidden"));
+    Assertions.assertEquals(0, emitter.getMetricEventCount("auth/exception"));
 
     final Map<String, Object> dims = emitter.getMetricEvents("auth/forbidden").get(0).getUserDims();
-    Assert.assertEquals("someUser", dims.get("identity"));
-    Assert.assertEquals(authorizerName, dims.get("authorizerName"));
-    Assert.assertEquals("myDatasource", dims.get("resourceName"));
-    Assert.assertEquals(ResourceType.DATASOURCE, dims.get("resourceType"));
-    Assert.assertEquals(Action.READ.toString(), dims.get("action"));
+    Assertions.assertEquals("someUser", dims.get("identity"));
+    Assertions.assertEquals(authorizerName, dims.get("authorizerName"));
+    Assertions.assertEquals("myDatasource", dims.get("resourceName"));
+    Assertions.assertEquals(ResourceType.DATASOURCE, dims.get("resourceType"));
+    Assertions.assertEquals(Action.READ.toString(), dims.get("action"));
   }
 
   @Test
@@ -448,10 +449,10 @@ public class AuthorizationUtilsTest
         new ResourceAction(new Resource("test", ResourceType.DATASOURCE), Action.WRITE)
     );
 
-    final DruidException exception = Assert.assertThrows(
+    final DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> AuthorizationUtils.authorizeAllResourceActions(authenticationResult, resourceActions, mapper)
     );
-    Assert.assertTrue(exception.getMessage().contains("Policy should only present when reading a table"));
+    Assertions.assertTrue(exception.getMessage().contains("Policy should only present when reading a table"));
   }
 }

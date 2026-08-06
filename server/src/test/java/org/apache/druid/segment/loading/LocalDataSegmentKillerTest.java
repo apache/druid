@@ -25,41 +25,39 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
-@RunWith(Parameterized.class)
 public class LocalDataSegmentKillerTest
 {
   private static final String DATASOURCE_NAME = "ds";
 
-  private final boolean zip;
+  private boolean zip;
 
-  public LocalDataSegmentKillerTest(boolean zip)
+  public void initLocalDataSegmentKillerTest(boolean zip)
   {
     this.zip = zip;
   }
 
-  @Parameterized.Parameters(name = "zip = {0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(new Object[]{false}, new Object[]{true});
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
-  @Test
-  public void testKill() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "zip = {0}")
+  public void testKill(boolean zip) throws Exception
   {
+    initLocalDataSegmentKillerTest(zip);
     LocalDataSegmentKiller killer = new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig());
 
     // Create following segments and then delete them in this order and assert directory deletions
@@ -68,7 +66,7 @@ public class LocalDataSegmentKillerTest
     // /tmp/dataSource/interval1/v2/0/
     // /tmp/dataSource/interval2/v1/0/
 
-    final File dataSourceDir = temporaryFolder.newFolder(DATASOURCE_NAME);
+    final File dataSourceDir = newFolder(temporaryFolder, DATASOURCE_NAME);
 
     File interval1Dir = new File(dataSourceDir, "interval1");
     File version11Dir = new File(interval1Dir, "v1");
@@ -91,34 +89,36 @@ public class LocalDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(partition011Dir));
 
-    Assert.assertFalse(partition011Dir.exists());
-    Assert.assertTrue(partition111Dir.exists());
-    Assert.assertTrue(partition021Dir.exists());
-    Assert.assertTrue(partition012Dir.exists());
+    Assertions.assertFalse(partition011Dir.exists());
+    Assertions.assertTrue(partition111Dir.exists());
+    Assertions.assertTrue(partition021Dir.exists());
+    Assertions.assertTrue(partition012Dir.exists());
 
     killer.kill(getSegmentWithPath(partition111Dir));
 
-    Assert.assertFalse(version11Dir.exists());
-    Assert.assertTrue(partition021Dir.exists());
-    Assert.assertTrue(partition012Dir.exists());
+    Assertions.assertFalse(version11Dir.exists());
+    Assertions.assertTrue(partition021Dir.exists());
+    Assertions.assertTrue(partition012Dir.exists());
 
     killer.kill(getSegmentWithPath(partition021Dir));
 
-    Assert.assertFalse(interval1Dir.exists());
-    Assert.assertTrue(partition012Dir.exists());
+    Assertions.assertFalse(interval1Dir.exists());
+    Assertions.assertTrue(partition012Dir.exists());
 
     killer.kill(getSegmentWithPath(partition012Dir));
 
-    Assert.assertFalse(dataSourceDir.exists());
-    Assert.assertTrue(dataSourceDir.getParentFile().exists());
+    Assertions.assertFalse(dataSourceDir.exists());
+    Assertions.assertTrue(dataSourceDir.getParentFile().exists());
   }
 
-  @Test
-  public void testKillUniquePath() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "zip = {0}")
+  public void testKillUniquePath(boolean zip) throws Exception
   {
+    initLocalDataSegmentKillerTest(zip);
     final LocalDataSegmentKiller killer = new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig());
     final String uuid = UUID.randomUUID().toString().substring(0, 5);
-    final File emptyParentDir = temporaryFolder.newFolder();
+    final File emptyParentDir = newFolder(temporaryFolder, "junit");
     final File dataSourceDir = new File(emptyParentDir, DATASOURCE_NAME);
     final File intervalDir = new File(dataSourceDir, "interval");
     final File versionDir = new File(intervalDir, "1");
@@ -129,24 +129,26 @@ public class LocalDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(uuidDir));
 
-    Assert.assertFalse(uuidDir.exists());
-    Assert.assertFalse(partitionDir.exists());
-    Assert.assertFalse(versionDir.exists());
-    Assert.assertFalse(intervalDir.exists());
-    Assert.assertFalse(dataSourceDir.exists());
+    Assertions.assertFalse(uuidDir.exists());
+    Assertions.assertFalse(partitionDir.exists());
+    Assertions.assertFalse(versionDir.exists());
+    Assertions.assertFalse(intervalDir.exists());
+    Assertions.assertFalse(dataSourceDir.exists());
 
     // Verify that we stop after the datasource dir, even though the parent is empty.
-    Assert.assertTrue(emptyParentDir.exists());
-    Assert.assertEquals(0, emptyParentDir.listFiles().length);
+    Assertions.assertTrue(emptyParentDir.exists());
+    Assertions.assertEquals(0, emptyParentDir.listFiles().length);
   }
 
-  @Test
-  public void testKillUniquePathWrongDataSourceNameInDirectory() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "zip = {0}")
+  public void testKillUniquePathWrongDataSourceNameInDirectory(boolean zip) throws Exception
   {
+    initLocalDataSegmentKillerTest(zip);
     // Verify that
     final LocalDataSegmentKiller killer = new LocalDataSegmentKiller(new LocalDataSegmentPusherConfig());
     final String uuid = UUID.randomUUID().toString().substring(0, 5);
-    final File emptyParentDir = temporaryFolder.newFolder();
+    final File emptyParentDir = newFolder(temporaryFolder, "junit");
     final File dataSourceDir = new File(emptyParentDir, DATASOURCE_NAME + "_wrong");
     final File intervalDir = new File(dataSourceDir, "interval");
     final File versionDir = new File(intervalDir, "1");
@@ -157,15 +159,15 @@ public class LocalDataSegmentKillerTest
 
     killer.kill(getSegmentWithPath(uuidDir));
 
-    Assert.assertFalse(uuidDir.exists());
-    Assert.assertFalse(partitionDir.exists());
-    Assert.assertFalse(versionDir.exists());
-    Assert.assertFalse(intervalDir.exists());
-    Assert.assertFalse(dataSourceDir.exists());
+    Assertions.assertFalse(uuidDir.exists());
+    Assertions.assertFalse(partitionDir.exists());
+    Assertions.assertFalse(versionDir.exists());
+    Assertions.assertFalse(intervalDir.exists());
+    Assertions.assertFalse(dataSourceDir.exists());
 
     // Verify that we stop at 4 pruned paths, even if we don't encounter the datasource-named directory.
-    Assert.assertTrue(emptyParentDir.exists());
-    Assert.assertEquals(0, emptyParentDir.listFiles().length);
+    Assertions.assertTrue(emptyParentDir.exists());
+    Assertions.assertEquals(0, emptyParentDir.listFiles().length);
   }
 
   private void makePartitionDirWithIndex(File path) throws IOException
@@ -173,9 +175,9 @@ public class LocalDataSegmentKillerTest
     FileUtils.mkdirp(path);
 
     if (zip) {
-      Assert.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_ZIP_FILENAME).createNewFile());
+      Assertions.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_ZIP_FILENAME).createNewFile());
     } else {
-      Assert.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_DIR).mkdir());
+      Assertions.assertTrue(new File(path, LocalDataSegmentPusher.INDEX_DIR).mkdir());
     }
   }
 
@@ -197,5 +199,18 @@ public class LocalDataSegmentKillerTest
         9,
         12334
     );
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
+      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+    }
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

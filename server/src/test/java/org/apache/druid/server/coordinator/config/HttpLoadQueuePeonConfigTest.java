@@ -24,9 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HttpLoadQueuePeonConfigTest
 {
@@ -35,9 +34,9 @@ public class HttpLoadQueuePeonConfigTest
   {
     final ObjectMapper jsonMapper = new ObjectMapper();
 
-    MatcherAssert.assertThat(
+    org.apache.druid.error.DruidExceptionAssertions.assertMatches(
         Throwables.getRootCause(
-            Assert.assertThrows(ValueInstantiationException.class, () ->
+            Assertions.assertThrows(ValueInstantiationException.class, () ->
                 jsonMapper.readValue("{\"batchSize\":0}", HttpLoadQueuePeonConfig.class)
             )
         ),
@@ -50,12 +49,12 @@ public class HttpLoadQueuePeonConfigTest
         "{}",
         HttpLoadQueuePeonConfig.class
     );
-    Assert.assertNull(emptyConfig.getBatchSize());
+    Assertions.assertNull(emptyConfig.getBatchSize());
 
     HttpLoadQueuePeonConfig config = jsonMapper.readValue(
         "{\"batchSize\":2}",
         HttpLoadQueuePeonConfig.class
     );
-    Assert.assertEquals(Integer.valueOf(2), config.getBatchSize());
+    Assertions.assertEquals(Integer.valueOf(2), config.getBatchSize());
   }
 }

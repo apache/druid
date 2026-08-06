@@ -19,9 +19,9 @@
 
 package org.apache.druid.server.metrics;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.function.ObjIntConsumer;
 
@@ -31,7 +31,7 @@ public class SegmentRowCountDistributionTest
 
   private SegmentRowCountDistribution rowCountBucket;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     rowCountBucket = new SegmentRowCountDistribution();
@@ -41,9 +41,8 @@ public class SegmentRowCountDistributionTest
   public void test_bucketCountSanity()
   {
     // test base case
-    rowCountBucket.forEachDimension((final String dimension, final int count) -> {
-      Assert.assertEquals(0, count);
-    });
+    rowCountBucket.forEachDimension((final String dimension, final int count) ->
+      Assertions.assertEquals(0, count));
 
     // tombstones
     // add tombstones
@@ -160,16 +159,16 @@ public class SegmentRowCountDistributionTest
   @Test
   public void test_bucketDimensionFromIndex()
   {
-    Assert.assertEquals("Tombstone", getBucketDimensionFromIndex(0));
-    Assert.assertEquals("0", getBucketDimensionFromIndex(1));
-    Assert.assertEquals("1-10k", getBucketDimensionFromIndex(2));
-    Assert.assertEquals("10k-2M", getBucketDimensionFromIndex(3));
-    Assert.assertEquals("2M-4M", getBucketDimensionFromIndex(4));
-    Assert.assertEquals("4M-6M", getBucketDimensionFromIndex(5));
-    Assert.assertEquals("6M-8M", getBucketDimensionFromIndex(6));
-    Assert.assertEquals("8M-10M", getBucketDimensionFromIndex(7));
-    Assert.assertEquals("10M+", getBucketDimensionFromIndex(8));
-    Assert.assertEquals("NA", getBucketDimensionFromIndex(9));
+    Assertions.assertEquals("Tombstone", getBucketDimensionFromIndex(0));
+    Assertions.assertEquals("0", getBucketDimensionFromIndex(1));
+    Assertions.assertEquals("1-10k", getBucketDimensionFromIndex(2));
+    Assertions.assertEquals("10k-2M", getBucketDimensionFromIndex(3));
+    Assertions.assertEquals("2M-4M", getBucketDimensionFromIndex(4));
+    Assertions.assertEquals("4M-6M", getBucketDimensionFromIndex(5));
+    Assertions.assertEquals("6M-8M", getBucketDimensionFromIndex(6));
+    Assertions.assertEquals("8M-10M", getBucketDimensionFromIndex(7));
+    Assertions.assertEquals("10M+", getBucketDimensionFromIndex(8));
+    Assertions.assertEquals("NA", getBucketDimensionFromIndex(9));
   }
 
   private static class AssertBucketHasValue implements ObjIntConsumer<String>
@@ -193,10 +192,10 @@ public class SegmentRowCountDistributionTest
     public void accept(String s, int value)
     {
       if (s.equals(getBucketDimensionFromIndex(expectedBucket))) {
-        Assert.assertEquals(expectedValue, value);
+        Assertions.assertEquals(expectedValue, value);
       } else {
         // assert all other values are empty
-        Assert.assertEquals(0, value);
+        Assertions.assertEquals(0, value);
       }
     }
   }

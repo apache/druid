@@ -28,12 +28,13 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.server.security.AuthConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.Properties;
 
 public class DruidAuthModuleTest
@@ -41,7 +42,7 @@ public class DruidAuthModuleTest
   private Injector injector;
   private DruidAuthModule authModule;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     authModule = new DruidAuthModule();
@@ -60,8 +61,8 @@ public class DruidAuthModuleTest
   {
     AuthConfig config1 = injector.getInstance(AuthConfig.class);
     AuthConfig config2 = injector.getInstance(AuthConfig.class);
-    Assert.assertNotNull(config1);
-    Assert.assertSame(config1, config2);
+    Assertions.assertNotNull(config1);
+    Assertions.assertSame(config1, config2);
   }
 
   @Test
@@ -69,12 +70,12 @@ public class DruidAuthModuleTest
   {
     Properties properties = new Properties();
     final AuthConfig authConfig = injectProperties(properties);
-    Assert.assertNotNull(authConfig);
-    Assert.assertNull(authConfig.getAuthenticatorChain());
-    Assert.assertNull(authConfig.getAuthorizers());
-    Assert.assertTrue(authConfig.getUnsecuredPaths().isEmpty());
-    Assert.assertFalse(authConfig.isAllowUnauthenticatedHttpOptions());
-    Assert.assertFalse(authConfig.authorizeQueryContextParams());
+    Assertions.assertNotNull(authConfig);
+    Assertions.assertNull(authConfig.getAuthenticatorChain());
+    Assertions.assertNull(authConfig.getAuthorizers());
+    Assertions.assertTrue(authConfig.getUnsecuredPaths().isEmpty());
+    Assertions.assertFalse(authConfig.isAllowUnauthenticatedHttpOptions());
+    Assertions.assertFalse(authConfig.authorizeQueryContextParams());
   }
 
   @Test
@@ -88,11 +89,11 @@ public class DruidAuthModuleTest
     properties.setProperty("druid.auth.authorizeQueryContextParams", "true");
 
     final AuthConfig authConfig = injectProperties(properties);
-    Assert.assertNotNull(authConfig);
-    Assert.assertEquals(ImmutableList.of("chain", "of", "authenticators"), authConfig.getAuthenticatorChain());
-    Assert.assertEquals(ImmutableList.of("authorizers", "list"), authConfig.getAuthorizers());
-    Assert.assertEquals(ImmutableList.of("path1", "path2"), authConfig.getUnsecuredPaths());
-    Assert.assertTrue(authConfig.authorizeQueryContextParams());
+    Assertions.assertNotNull(authConfig);
+    Assertions.assertEquals(ImmutableList.of("chain", "of", "authenticators"), authConfig.getAuthenticatorChain());
+    Assertions.assertEquals(ImmutableList.of("authorizers", "list"), authConfig.getAuthorizers());
+    Assertions.assertEquals(ImmutableList.of("path1", "path2"), authConfig.getUnsecuredPaths());
+    Assertions.assertTrue(authConfig.authorizeQueryContextParams());
   }
 
   private AuthConfig injectProperties(Properties properties)

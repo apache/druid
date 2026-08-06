@@ -24,8 +24,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -53,6 +53,6 @@ public class LocatedSegmentDescriptorSerdeTest
         LocatedSegmentDescriptor.class
     );
 
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 }

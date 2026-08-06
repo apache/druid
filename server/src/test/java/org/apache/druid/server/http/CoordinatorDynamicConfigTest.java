@@ -27,10 +27,11 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -256,7 +257,7 @@ public class CoordinatorDynamicConfigTest
 
     CoordinatorDynamicConfig dynamicConfig
         = mapper.readValue(jsonStr, CoordinatorDynamicConfig.class);
-    Assert.assertEquals(15, dynamicConfig.getMaxSegmentsInNodeLoadingQueue());
+    Assertions.assertEquals(15, dynamicConfig.getMaxSegmentsInNodeLoadingQueue());
   }
 
   @Test
@@ -283,7 +284,7 @@ public class CoordinatorDynamicConfigTest
         null,
         null
     );
-    Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
+    Assertions.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
   }
 
   @Test
@@ -310,7 +311,7 @@ public class CoordinatorDynamicConfigTest
         null,
         null
     );
-    Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
+    Assertions.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
   }
 
   @Test
@@ -576,7 +577,7 @@ public class CoordinatorDynamicConfigTest
         .withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of("x"))
         .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         current,
         CoordinatorDynamicConfig.builder().build(current)
     );
@@ -590,8 +591,8 @@ public class CoordinatorDynamicConfigTest
         .withTurboLoadingNodes(ImmutableSet.of("localhost:8083"))
         .build();
 
-    Assert.assertEquals(SegmentLoadingMode.NORMAL, config.getLoadingModeForServer("localhost:8082"));
-    Assert.assertEquals(SegmentLoadingMode.TURBO, config.getLoadingModeForServer("localhost:8083"));
+    Assertions.assertEquals(SegmentLoadingMode.NORMAL, config.getLoadingModeForServer("localhost:8082"));
+    Assertions.assertEquals(SegmentLoadingMode.TURBO, config.getLoadingModeForServer("localhost:8083"));
   }
 
   @Test
@@ -599,8 +600,8 @@ public class CoordinatorDynamicConfigTest
   {
     CoordinatorDynamicConfig config1 = CoordinatorDynamicConfig.builder().build();
     CoordinatorDynamicConfig config2 = CoordinatorDynamicConfig.builder().build();
-    Assert.assertEquals(config1, config2);
-    Assert.assertEquals(config1.hashCode(), config2.hashCode());
+    Assertions.assertEquals(config1, config2);
+    Assertions.assertEquals(config1.hashCode(), config2.hashCode());
   }
 
   private void assertConfig(
@@ -621,26 +622,26 @@ public class CoordinatorDynamicConfigTest
       Map<String, String> cloneServers
   )
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
         config.getMarkSegmentAsUnusedDelayMillis()
     );
-    Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
-    Assert.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
-    Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
-    Assert.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
-    Assert.assertEquals(
+    Assertions.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
+    Assertions.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
+    Assertions.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());
+    Assertions.assertEquals(expectedBalancerComputeThreads, config.getBalancerComputeThreads());
+    Assertions.assertEquals(
         expectedSpecificDataSourcesToKillUnusedSegmentsIn,
         config.getSpecificDataSourcesToKillUnusedSegmentsIn()
     );
-    Assert.assertEquals(expectedKillTaskSlotRatio, config.getKillTaskSlotRatio(), 0.001);
-    Assert.assertEquals((int) expectedMaxKillTaskSlots, config.getMaxKillTaskSlots());
-    Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
-    Assert.assertEquals(decommissioningNodes, config.getDecommissioningNodes());
-    Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
-    Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
-    Assert.assertEquals(turboLoadingNodes, config.getTurboLoadingNodes());
-    Assert.assertEquals(cloneServers, config.getCloneServers());
+    Assertions.assertEquals(expectedKillTaskSlotRatio, config.getKillTaskSlotRatio(), 0.001);
+    Assertions.assertEquals((int) expectedMaxKillTaskSlots, config.getMaxKillTaskSlots());
+    Assertions.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());
+    Assertions.assertEquals(decommissioningNodes, config.getDecommissioningNodes());
+    Assertions.assertEquals(pauseCoordination, config.getPauseCoordination());
+    Assertions.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
+    Assertions.assertEquals(turboLoadingNodes, config.getTurboLoadingNodes());
+    Assertions.assertEquals(cloneServers, config.getCloneServers());
   }
 
   private static int getDefaultNumBalancerThreads()
@@ -659,11 +660,11 @@ public class CoordinatorDynamicConfigTest
     CoordinatorDynamicConfig config = CoordinatorDynamicConfig.builder()
                                                               .withHistoricalTierAliases(aliases)
                                                               .build();
-    Assert.assertEquals(aliases, config.getHistoricalTierAliases());
+    Assertions.assertEquals(aliases, config.getHistoricalTierAliases());
 
     // build(defaults) propagates aliases when not overridden
     CoordinatorDynamicConfig updated = CoordinatorDynamicConfig.builder().build(config);
-    Assert.assertEquals(aliases, updated.getHistoricalTierAliases());
+    Assertions.assertEquals(aliases, updated.getHistoricalTierAliases());
 
     // Serde roundtrip with duplicate values in the JSON array — duplicates must be deduplicated
     String jsonWithDupes = "{"
@@ -675,11 +676,11 @@ public class CoordinatorDynamicConfigTest
         mapper.writeValueAsString(mapper.readValue(jsonWithDupes, CoordinatorDynamicConfig.class)),
         CoordinatorDynamicConfig.class
     );
-    Assert.assertEquals(Set.of("hot_1", "hot_2"), deserialized.getHistoricalTierAliases().get("hot"));
+    Assertions.assertEquals(Set.of("hot_1", "hot_2"), deserialized.getHistoricalTierAliases().get("hot"));
 
     // Absent field defaults to empty map
     CoordinatorDynamicConfig defaultConfig = CoordinatorDynamicConfig.builder().build();
-    Assert.assertEquals(Map.of(), defaultConfig.getHistoricalTierAliases());
+    Assertions.assertEquals(Map.of(), defaultConfig.getHistoricalTierAliases());
   }
 
   @Test
@@ -691,11 +692,11 @@ public class CoordinatorDynamicConfigTest
         "another", Set.of("hot")
     );
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> CoordinatorDynamicConfig.builder().withHistoricalTierAliases(aliases).build()
     );
-    Assert.assertTrue("Throws correct virtual tier alias message", exception.getMessage().contains("A virtual tier alias cannot be a physical tier."));
+    Assertions.assertTrue(exception.getMessage().contains("A virtual tier alias cannot be a physical tier."), "Throws correct virtual tier alias message");
   }
 
   @Test
@@ -706,17 +707,17 @@ public class CoordinatorDynamicConfigTest
         "warm", Set.of("tier_2", "tier_3")
     );
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> CoordinatorDynamicConfig.builder().withHistoricalTierAliases(aliases).build()
     );
-    Assert.assertTrue(
-        "Throws correct multi-alias message",
-        exception.getMessage().contains("cannot belong to more than one alias")
+    Assertions.assertTrue(
+        exception.getMessage().contains("cannot belong to more than one alias"),
+        "Throws correct multi-alias message"
     );
-    Assert.assertTrue(
-        "Names the offending tier",
-        exception.getMessage().contains("tier_2")
+    Assertions.assertTrue(
+        exception.getMessage().contains("tier_2"),
+        "Names the offending tier"
     );
   }
 
@@ -736,10 +737,10 @@ public class CoordinatorDynamicConfigTest
         "hot_2", "hot",
         "cold_1", "cold"
     );
-    Assert.assertEquals(expected, config.getTierToAliasName());
+    Assertions.assertEquals(expected, config.getTierToAliasName());
 
     // No aliases configured -> empty reverse map
-    Assert.assertEquals(Map.of(), CoordinatorDynamicConfig.builder().build().getTierToAliasName());
+    Assertions.assertEquals(Map.of(), CoordinatorDynamicConfig.builder().build().getTierToAliasName());
   }
 
   @Test

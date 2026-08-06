@@ -17,32 +17,38 @@
  * under the License.
  */
 
-package org.apache.druid.client.indexing;
+package org.apache.druid.error;
 
-import org.apache.druid.java.util.common.UOE;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
-public class SamplerSpecTest
+import java.lang.reflect.InvocationTargetException;
+
+public class DruidExceptionAssertions
 {
-  private static final SamplerSpec SAMPLER_SPEC = new SamplerSpec()
+  private DruidExceptionAssertions()
   {
-    @Override
-    public SamplerResponse sample()
-    {
-      return null;
-    }
-  };
-
-  @Test
-  public void testGetType()
-  {
-    Assertions.assertNull(SAMPLER_SPEC.getType());
   }
 
-  @Test
-  public void testGetInputSourceResources()
+  public static void assertMatches(Throwable exception, Object matcher)
   {
-    Assertions.assertThrows(UOE.class, SAMPLER_SPEC::getInputSourceResources);
+    Assertions.assertTrue(
+        matches(matcher, exception),
+        () -> "Exception did not match expectations: " + exception
+    );
+  }
+
+  public static void assertMatches(String message, Throwable exception, Object matcher)
+  {
+    Assertions.assertTrue(matches(matcher, exception), message);
+  }
+
+  private static boolean matches(Object matcher, Throwable exception)
+  {
+    try {
+      return (boolean) matcher.getClass().getMethod("matches", Object.class).invoke(matcher, exception);
+    }
+    catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

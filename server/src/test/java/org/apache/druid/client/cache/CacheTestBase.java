@@ -21,9 +21,9 @@ package org.apache.druid.client.cache;
 
 import org.apache.druid.client.CacheUtil;
 import org.apache.druid.client.cache.Cache.NamedKey;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 public abstract class CacheTestBase<T extends Cache>
 {

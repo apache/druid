@@ -34,12 +34,13 @@ import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Before;
-import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.http.HttpServletRequest;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -54,7 +55,7 @@ public class SegmentListerResourceTest
   private SegmentListerResource segmentListerResource;
   private BatchDataSegmentAnnouncer segmentAnnouncer;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     final SegmentLoadDropHandler loadDropHandler = Mockito.mock(SegmentLoadDropHandler.class);

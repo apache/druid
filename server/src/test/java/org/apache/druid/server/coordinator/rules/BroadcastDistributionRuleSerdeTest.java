@@ -25,21 +25,18 @@ import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Parameterized.class)
 public class BroadcastDistributionRuleSerdeTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
-  @Parameterized.Parameters
   public static List<Object[]> constructorFeeder()
   {
     return Lists.newArrayList(
@@ -49,19 +46,21 @@ public class BroadcastDistributionRuleSerdeTest
     );
   }
 
-  private final Rule testRule;
+  private Rule testRule;
 
-  public BroadcastDistributionRuleSerdeTest(Rule testRule)
+  public void initBroadcastDistributionRuleSerdeTest(Rule testRule)
   {
     this.testRule = testRule;
   }
 
-  @Test
-  public void testSerde() throws IOException
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest
+  public void testSerde(Rule testRule) throws IOException
   {
+    initBroadcastDistributionRuleSerdeTest(testRule);
     final List<Rule> rules = Collections.singletonList(testRule);
     final String json = MAPPER.writeValueAsString(rules);
     final List<Rule> fromJson = MAPPER.readValue(json, new TypeReference<>() {});
-    Assert.assertEquals(rules, fromJson);
+    Assertions.assertEquals(rules, fromJson);
   }
 }

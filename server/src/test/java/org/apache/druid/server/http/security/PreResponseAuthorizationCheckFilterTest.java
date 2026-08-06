@@ -29,10 +29,11 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.PreResponseAuthorizationCheckFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.ServletException;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -73,9 +74,9 @@ public class PreResponseAuthorizationCheckFilterTest
     filter.doFilter(req, resp, (request, response) -> {
     });
 
-    Assert.assertEquals(401, resp.getStatus());
-    Assert.assertEquals("application/json", resp.getContentType());
-    Assert.assertEquals("UTF-8", resp.getCharacterEncoding());
+    Assertions.assertEquals(401, resp.getStatus());
+    Assertions.assertEquals("application/json", resp.getContentType());
+    Assertions.assertEquals("UTF-8", resp.getCharacterEncoding());
   }
 
   @Test
@@ -103,7 +104,7 @@ public class PreResponseAuthorizationCheckFilterTest
     filter.doFilter(req, resp, (request, response) -> {
     });
 
-    Assert.assertEquals(403, resp.getStatus());
+    Assertions.assertEquals(403, resp.getStatus());
   }
 
   @Test
@@ -131,7 +132,7 @@ public class PreResponseAuthorizationCheckFilterTest
     filter.doFilter(req, resp, (request, response) -> {
     });
 
-    Assert.assertEquals(401, resp.getStatus());
+    Assertions.assertEquals(401, resp.getStatus());
   }
 
   @Test
@@ -153,7 +154,7 @@ public class PreResponseAuthorizationCheckFilterTest
     filter.doFilter(req, resp, (request, response) -> {
     });
 
-    Assert.assertEquals(403, resp.getStatus());
+    Assertions.assertEquals(403, resp.getStatus());
   }
 
   @Test
@@ -175,7 +176,7 @@ public class PreResponseAuthorizationCheckFilterTest
     filter.doFilter(req, resp, (request, response) -> {
     });
 
-    Assert.assertEquals(404, resp.getStatus());
+    Assertions.assertEquals(404, resp.getStatus());
   }
 
   @Test
@@ -197,6 +198,6 @@ public class PreResponseAuthorizationCheckFilterTest
     filter.doFilter(req, resp, (request, response) -> {
     });
 
-    Assert.assertEquals(307, resp.getStatus());
+    Assertions.assertEquals(307, resp.getStatus());
   }
 }

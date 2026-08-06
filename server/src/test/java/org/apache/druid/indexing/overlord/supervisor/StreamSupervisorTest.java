@@ -22,10 +22,11 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.concurrent.Future;
 
 public class StreamSupervisorTest
@@ -92,11 +93,11 @@ public class StreamSupervisorTest
       }
     };
 
-    final Exception ex = Assert.assertThrows(
+    final Exception ex = Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> streamSupervisor.handoffTaskGroupsEarly(ImmutableList.of(1))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Supervisor does not have the feature to handoff task groups early implemented",
         ex.getMessage()
     );
@@ -166,9 +167,9 @@ public class StreamSupervisorTest
     };
 
     Future<Void> stopAsyncFuture = streamSupervisor.stopAsync();
-    Assert.assertTrue(stopAsyncFuture.isDone());
+    Assertions.assertTrue(stopAsyncFuture.isDone());
 
     // stop should be called by stopAsync
-    Assert.assertEquals(SupervisorStateManager.BasicState.STOPPING, streamSupervisor.getState());
+    Assertions.assertEquals(SupervisorStateManager.BasicState.STOPPING, streamSupervisor.getState());
   }
 }

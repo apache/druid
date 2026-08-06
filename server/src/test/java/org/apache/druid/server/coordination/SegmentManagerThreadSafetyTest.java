@@ -52,12 +52,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -70,6 +70,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -77,8 +78,8 @@ public class SegmentManagerThreadSafetyTest
 {
   private static final int NUM_THREAD = 4;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private TestSegmentPuller segmentPuller;
   private ObjectMapper objectMapper;
@@ -88,7 +89,7 @@ public class SegmentManagerThreadSafetyTest
   private SegmentManager segmentManager;
   private ExecutorService exec;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     segmentPuller = new TestSegmentPuller();
@@ -97,8 +98,8 @@ public class SegmentManagerThreadSafetyTest
             new SimpleModule().registerSubtypes(new NamedType(LocalLoadSpec.class, "local"), new NamedType(TestSegmentizerFactory.class, "test"))
         )
         .setInjectableValues(new Std().addValue(LocalDataSegmentPuller.class, segmentPuller));
-    segmentCacheDir = temporaryFolder.newFolder();
-    segmentDeepStorageDir = temporaryFolder.newFolder();
+    segmentCacheDir = newFolder(temporaryFolder, "junit");
+    segmentDeepStorageDir = newFolder(temporaryFolder, "junit");
 
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
         .infoDir(segmentCacheDir)
@@ -118,14 +119,15 @@ public class SegmentManagerThreadSafetyTest
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     exec.shutdownNow();
     FileUtils.deleteDirectory(segmentCacheDir);
   }
 
-  @Test(timeout = 6000L)
+  @Test
+  @Timeout(value = 6000L, unit = TimeUnit.MILLISECONDS)
   public void testLoadSameSegment() throws IOException, ExecutionException, InterruptedException
   {
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
@@ -143,12 +145,13 @@ public class SegmentManagerThreadSafetyTest
     for (Future future : futures) {
       future.get();
     }
-    Assert.assertEquals(1, segmentPuller.numFileLoaded.size());
-    Assert.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
-    Assert.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
+    Assertions.assertEquals(1, segmentPuller.numFileLoaded.size());
+    Assertions.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
+    Assertions.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
   }
 
-  @Test(timeout = 6000L)
+  @Test
+  @Timeout(value = 6000L, unit = TimeUnit.MILLISECONDS)
   public void testLoadMultipleSegments() throws IOException, ExecutionException, InterruptedException
   {
     final List<DataSegment> segments = new ArrayList<>(88);
@@ -174,9 +177,9 @@ public class SegmentManagerThreadSafetyTest
     for (Future future : futures) {
       future.get();
     }
-    Assert.assertEquals(11, segmentPuller.numFileLoaded.size());
-    Assert.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
-    Assert.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
+    Assertions.assertEquals(11, segmentPuller.numFileLoaded.size());
+    Assertions.assertEquals(1, segmentPuller.numFileLoaded.values().iterator().next().intValue());
+    Assertions.assertEquals(0, segmentCacheManager.getSegmentLocks().size());
   }
 
   private DataSegment createSegment(String interval) throws IOException
@@ -226,6 +229,19 @@ public class SegmentManagerThreadSafetyTest
         }
       };
     }
+
+    private static File newFolder(File root, String... subDirs) throws IOException
+    {
+      if (subDirs.length == 0) {
+        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      }
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
+    }
   }
 
   private static class TestSegmentizerFactory implements SegmentizerFactory
@@ -266,5 +282,31 @@ public class SegmentManagerThreadSafetyTest
         }
       };
     }
+
+    private static File newFolder(File root, String... subDirs) throws IOException
+    {
+      if (subDirs.length == 0) {
+        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      }
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
+    }
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
+      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+    }
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

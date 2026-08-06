@@ -30,7 +30,7 @@ import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayDeque;
 import java.util.Map;
@@ -53,10 +53,10 @@ public class MockServiceClient implements ServiceClient
     final Expectation expectation = expectations.poll();
 
     requestNumber++;
-    Assert.assertEquals(
-        "request[" + requestNumber + "]",
+    Assertions.assertEquals(
         expectation == null ? null : expectation.request,
-        requestBuilder
+        requestBuilder,
+        "request[" + requestNumber + "]"
     );
 
     if (expectation.response.isValue()) {
@@ -105,7 +105,7 @@ public class MockServiceClient implements ServiceClient
 
   public void verify()
   {
-    Assert.assertTrue("all requests were made", expectations.isEmpty());
+    Assertions.assertTrue(expectations.isEmpty(), "all requests were made");
   }
 
   private static class Expectation

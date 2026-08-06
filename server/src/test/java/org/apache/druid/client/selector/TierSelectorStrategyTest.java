@@ -40,11 +40,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -67,7 +68,7 @@ public class TierSelectorStrategyTest
                                                                 .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
                                                                 .build();
 
-  @Before
+  @BeforeEach
   public void testSetup()
   {
     serviceEmitter = StubServiceEmitter.createStarted();
@@ -270,10 +271,10 @@ public class TierSelectorStrategyTest
       serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
 
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
-    Assert.assertEquals(expectedCandidates, serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(expectedSelection[0], serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(expectedCandidates, serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
   @Test
@@ -287,8 +288,8 @@ public class TierSelectorStrategyTest
     Set<QueryableDruidServer> servers = new HashSet<>();
     servers.add(p0);
     RandomServerSelectorStrategy strategy = new RandomServerSelectorStrategy();
-    Assert.assertEquals(strategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
-    Assert.assertEquals(
+    Assertions.assertEquals(strategy.pick(servers, EasyMock.createMock(DataSegment.class)), p0);
+    Assertions.assertEquals(
         strategy.pick(
             EasyMock.createMock(Query.class),
             servers,
@@ -306,11 +307,11 @@ public class TierSelectorStrategyTest
         return strategy.pick(servers, segment, numServersToPick);
       }
     };
-    Assert.assertEquals(
+    Assertions.assertEquals(
         defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class)),
         p0
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         defaultDeprecatedServerSelectorStrategy.pick(servers, EasyMock.createMock(DataSegment.class), 1)
                                                .get(0), p0
     );
@@ -355,20 +356,20 @@ public class TierSelectorStrategyTest
     }
 
     // Verify that the preferred tier is respected when picking a server
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(expectedSelection[0], serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(expectedSelection[0], serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
 
     // Verify that when getting all severs, the preferred tier is ignored, the returned list is sorted by priority
     List<DruidServerMetadata> allServers = new ArrayList<>(expectedCandidates);
     allServers.sort((o1, o2) -> tierSelectorStrategy.getComparator().compare(o1.getPriority(), o2.getPriority()));
     // verify the priority only because values with same priority may return in different order
-    Assert.assertEquals(
+    Assertions.assertEquals(
         allServers.stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList()),
         serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES).stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList())
     );
 
     // Verify that when getting a limited number of candidates, returns the top N servers with preferred tier first
-    Assert.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(expectedCandidates.subList(0, 2), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
   @Test
@@ -454,20 +455,20 @@ public class TierSelectorStrategyTest
     }
 
     // Verify that the 2nd server is selected
-    Assert.assertEquals(preferredTierHighPriority2, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertEquals(preferredTierHighPriority2, serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(preferredTierHighPriority2, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(preferredTierHighPriority2, serverSelector.pick(EasyMock.createMock(Query.class), CloneQueryMode.EXCLUDECLONES));
 
     // Verify that when getting all severs, the preferred tier is ignored, the returned list is sorted by priority
     List<DruidServerMetadata> allServers = new ArrayList<>(expectedCandidates);
     allServers.sort((o1, o2) -> tierSelectorStrategy.getComparator().compare(o1.getPriority(), o2.getPriority()));
     // verify the priority only because values with same priority may return in different order
-    Assert.assertEquals(
+    Assertions.assertEquals(
         allServers.stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList()),
         serverSelector.getCandidates(-1, CloneQueryMode.EXCLUDECLONES).stream().map(DruidServerMetadata::getPriority).collect(Collectors.toList())
     );
 
     // Verify that when getting 2 candidates, returns the top N servers with preferred tier first
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(
             preferredTierHighPriority.getServer().getMetadata(),
             preferredTierHighPriority2.getServer().getMetadata()
@@ -658,21 +659,21 @@ public class TierSelectorStrategyTest
 
     // Verify all 3 servers are registered
     List<DruidServerMetadata> allServers = serverSelector.getAllServers(CloneQueryMode.EXCLUDECLONES);
-    Assert.assertEquals(3, allServers.size());
+    Assertions.assertEquals(3, allServers.size());
 
-    Assert.assertEquals(p0, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertEquals(p0, serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(p0, serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(p0, serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
 
-    Assert.assertEquals(
-        "Only p0 should be returned when 1 candidate is requested",
+    Assertions.assertEquals(
         List.of(p0.getServer().getMetadata()),
-        serverSelector.getCandidates(1, CloneQueryMode.EXCLUDECLONES)
+        serverSelector.getCandidates(1, CloneQueryMode.EXCLUDECLONES),
+        "Only p0 should be returned when 1 candidate is requested"
     );
 
-    Assert.assertEquals(
-        "Only p0 and p2 should be returned, pNeg1 shouldn't be a candidate",
+    Assertions.assertEquals(
         List.of(p0.getServer().getMetadata(), p2.getServer().getMetadata()),
-        serverSelector.getCandidates(3, CloneQueryMode.EXCLUDECLONES)
+        serverSelector.getCandidates(3, CloneQueryMode.EXCLUDECLONES),
+        "Only p0 and p2 should be returned, pNeg1 shouldn't be a candidate"
     );
   }
 
@@ -708,19 +709,19 @@ public class TierSelectorStrategyTest
     }
 
     // Should return null when no matching priorities
-    Assert.assertNull(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertNull(serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertNull(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertNull(serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
 
     serviceEmitter.verifyEmitted("tierSelector/noServer", 1);
 
     // Should return empty list for getCandidates
-    Assert.assertEquals(Collections.emptyList(), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(Collections.emptyList(), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
   @Test
   public void testEmptyStrictTierPrioritiesThrowsException()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> new StrictTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
@@ -728,7 +729,7 @@ public class TierSelectorStrategyTest
             serviceEmitter
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "priorities must be non-empty when using strict tier selector on the Broker. Found priorities[[]].",
         ex.getMessage()
     );
@@ -770,48 +771,48 @@ public class TierSelectorStrategyTest
 
     // All 3 servers should be configured
     List<DruidServerMetadata> allServers = serverSelector.getAllServers(CloneQueryMode.EXCLUDECLONES);
-    Assert.assertEquals(3, allServers.size());
+    Assertions.assertEquals(3, allServers.size());
     Set<Integer> priorities = allServers.stream()
                                         .map(DruidServerMetadata::getPriority)
                                         .collect(Collectors.toSet());
-    Assert.assertEquals(Set.of(-1, 0, 2), priorities);
+    Assertions.assertEquals(Set.of(-1, 0, 2), priorities);
 
     // Test getCandidates with different sizes - verify correct count
     List<DruidServerMetadata> candidates1 = serverSelector.getCandidates(1, CloneQueryMode.EXCLUDECLONES);
-    Assert.assertEquals(1, candidates1.size());
-    Assert.assertTrue(Set.of(-1, 0, 2).contains(candidates1.get(0).getPriority()));
+    Assertions.assertEquals(1, candidates1.size());
+    Assertions.assertTrue(Set.of(-1, 0, 2).contains(candidates1.get(0).getPriority()));
 
     List<DruidServerMetadata> candidates2 = serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES);
-    Assert.assertEquals(2, candidates2.size());
+    Assertions.assertEquals(2, candidates2.size());
 
     List<DruidServerMetadata> candidates3 = serverSelector.getCandidates(3, CloneQueryMode.EXCLUDECLONES);
-    Assert.assertEquals(3, candidates3.size());
+    Assertions.assertEquals(3, candidates3.size());
     Set<Integer> candidates3Priorities = candidates3.stream()
                                                      .map(DruidServerMetadata::getPriority)
                                                      .collect(Collectors.toSet());
-    Assert.assertEquals(Set.of(-1, 0, 2), candidates3Priorities);
+    Assertions.assertEquals(Set.of(-1, 0, 2), candidates3Priorities);
 
     // Pick should return one of the three servers (any priority - demonstrates flattening)
     QueryableDruidServer picked = serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES);
-    Assert.assertNotNull(picked);
-    Assert.assertTrue(
-        "Picked server should have one of the configured priorities",
+    Assertions.assertNotNull(picked);
+    Assertions.assertTrue(
         picked.getServer().getPriority() == -1 ||
         picked.getServer().getPriority() == 0 ||
-        picked.getServer().getPriority() == 2
+        picked.getServer().getPriority() == 2,
+        "Picked server should have one of the configured priorities"
     );
 
     // Pick multiple times to verify servers from flattened pool are accessible
     Set<Integer> pickedPriorities = new HashSet<>();
     for (int i = 0; i < 20; i++) {
       QueryableDruidServer server = serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES);
-      Assert.assertNotNull(server);
+      Assertions.assertNotNull(server);
       pickedPriorities.add(server.getServer().getPriority());
     }
     // With RandomServerSelectorStrategy and 20 picks from 3 servers, we should see multiple priorities
-    Assert.assertTrue(
-        "Expected to see servers from multiple priorities, but only saw: " + pickedPriorities,
-        pickedPriorities.size() >= 2
+    Assertions.assertTrue(
+        pickedPriorities.size() >= 2,
+        "Expected to see servers from multiple priorities, but only saw: " + pickedPriorities
     );
   }
 
@@ -872,17 +873,17 @@ public class TierSelectorStrategyTest
 
     for (int i = 0; i < 20; i++) {
       QueryableDruidServer picked = selector.pick(null, CloneQueryMode.EXCLUDECLONES);
-      Assert.assertNotNull(picked);
+      Assertions.assertNotNull(picked);
 
       // Should always be one of the priority-2 replicas
-      Assert.assertEquals(2, picked.getServer().getPriority());
+      Assertions.assertEquals(2, picked.getServer().getPriority());
 
       if (picked.getServer().equals(p2a.getServer())) {
         c2a.incrementAndGet();
       } else if (picked.getServer().equals(p2b.getServer())) {
         c2b.incrementAndGet();
       } else {
-        Assert.fail("Expected pick to be either p2a or p2b but got: " + picked);
+        Assertions.fail("Expected pick to be either p2a or p2b but got: " + picked);
       }
     }
 
@@ -890,7 +891,7 @@ public class TierSelectorStrategyTest
     final Set<DruidServer> pickedServers = new HashSet<>();
     for (int i = 0; i < 50; i++) {
       QueryableDruidServer picked = selector.pick(null, CloneQueryMode.EXCLUDECLONES);
-      Assert.assertNotNull(picked);
+      Assertions.assertNotNull(picked);
 
       DruidServer pickedServer = picked.getServer();
       pickedServers.add(pickedServer);
@@ -906,7 +907,7 @@ public class TierSelectorStrategyTest
       }
     }
 
-    Assert.assertEquals(4, pickedServers.size());
+    Assertions.assertEquals(4, pickedServers.size());
 
     EasyMock.verify(client0, client1, client2a, client2b);
   }
@@ -946,17 +947,17 @@ public class TierSelectorStrategyTest
     }
 
     // Should return null since there are no matching priorities
-    Assert.assertNull(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertNull(serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertNull(serverSelector.pick(null, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertNull(serverSelector.pick(SAMPLE_GROUPBY_QUERY, CloneQueryMode.EXCLUDECLONES));
 
-    Assert.assertEquals(List.of(), serverSelector.getCandidates(1, CloneQueryMode.EXCLUDECLONES));
-    Assert.assertEquals(List.of(), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(List.of(), serverSelector.getCandidates(1, CloneQueryMode.EXCLUDECLONES));
+    Assertions.assertEquals(List.of(), serverSelector.getCandidates(2, CloneQueryMode.EXCLUDECLONES));
   }
 
   @Test
   public void testEmptyPooledTierPrioritiesThrowsException()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> new PooledTierSelectorStrategy(
             new ConnectionCountServerSelectorStrategy(),
@@ -964,7 +965,7 @@ public class TierSelectorStrategyTest
             serviceEmitter
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "priorities must be non-empty when using pooled tier selector on the Broker. Found priorities[[]].",
         ex.getMessage()
     );

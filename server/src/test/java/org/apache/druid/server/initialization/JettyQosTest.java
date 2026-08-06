@@ -49,15 +49,18 @@ import org.eclipse.jetty.ee8.servlets.QoSFilter;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
+
 import java.net.URL;
 import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class JettyQosTest extends BaseJettyTest
@@ -100,13 +103,14 @@ public class JettyQosTest extends BaseJettyTest
   public void testNumThreads()
   {
     // Just make sure the injector stuff for this test is actually working.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         10,
         ((QueuedThreadPool) server.getThreadPool()).getMaxThreads()
     );
   }
 
-  @Test(timeout = 120_000L)
+  @Test
+  @Timeout(value = 120_000L, unit = TimeUnit.MILLISECONDS)
   public void testQoS() throws Exception
   {
     final int fastThreads = 20;
@@ -196,7 +200,7 @@ public class JettyQosTest extends BaseJettyTest
     fastPool.shutdown();
 
     // check that fast requests finished quickly
-    Assert.assertTrue(fastElapsed.get() / fastCount.get() < 500);
+    Assertions.assertTrue(fastElapsed.get() / fastCount.get() < 500);
   }
 
   @Test
@@ -207,7 +211,7 @@ public class JettyQosTest extends BaseJettyTest
                                                                                       Long.MAX_VALUE
     );
     filter.init(new QoSFilterConfig(qosFilterHolder));
-    Assert.assertEquals(Integer.MAX_VALUE, filter.getSuspendMs());
+    Assertions.assertEquals(Integer.MAX_VALUE, filter.getSuspendMs());
   }
 
   @Test
@@ -216,7 +220,7 @@ public class JettyQosTest extends BaseJettyTest
     QoSFilter filter = new QoSFilter();
     JettyBindings.QosFilterHolder qosFilterHolder = new JettyBindings.QosFilterHolder(new String[]{"/slow/*"}, 1);
     filter.init(new QoSFilterConfig(qosFilterHolder));
-    Assert.assertEquals(-1, filter.getSuspendMs());
+    Assertions.assertEquals(-1, filter.getSuspendMs());
   }
 
   private static class QoSFilterConfig implements FilterConfig

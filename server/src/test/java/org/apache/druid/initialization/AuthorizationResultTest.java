@@ -27,13 +27,12 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.AuthorizationResult;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AuthorizationResultTest
@@ -80,7 +79,7 @@ public class AuthorizationResultTest
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(ImmutableMap.of());
     assertTrue(result.allowBasicAccess());
     assertTrue(result.allowAccessWithNoRestriction());
-    assertThrows(DruidException.class, result::getErrorMessage);
+    org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, result::getErrorMessage);
 
     AuthorizationResult resultWithEmptyPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
@@ -88,7 +87,7 @@ public class AuthorizationResultTest
     ));
     assertTrue(resultWithEmptyPolicy.allowBasicAccess());
     assertTrue(resultWithEmptyPolicy.allowAccessWithNoRestriction());
-    assertThrows(DruidException.class, resultWithEmptyPolicy::getErrorMessage);
+    org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, resultWithEmptyPolicy::getErrorMessage);
 
     AuthorizationResult resultWithNoRestrictionPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
@@ -96,7 +95,7 @@ public class AuthorizationResultTest
     ));
     assertTrue(resultWithNoRestrictionPolicy.allowBasicAccess());
     assertTrue(resultWithNoRestrictionPolicy.allowAccessWithNoRestriction());
-    assertThrows(DruidException.class, resultWithNoRestrictionPolicy::getErrorMessage);
+    org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, resultWithNoRestrictionPolicy::getErrorMessage);
   }
 
   @Test

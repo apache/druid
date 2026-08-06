@@ -56,17 +56,15 @@ import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -74,9 +72,6 @@ import java.util.Set;
 public class MetricsModuleTest
 {
   private static final String CPU_ARCH = System.getProperty("os.arch");
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSimpleInjection()
@@ -96,8 +91,8 @@ public class MetricsModuleTest
           }
         })
     );
-    Assert.assertTrue(injector.getInstance(TaskHolder.class) instanceof NoopTaskHolder);
-    Assert.assertTrue(injector.getInstance(LoadSpecHolder.class) instanceof DefaultLoadSpecHolder);
+    Assertions.assertTrue(injector.getInstance(TaskHolder.class) instanceof NoopTaskHolder);
+    Assertions.assertTrue(injector.getInstance(LoadSpecHolder.class) instanceof DefaultLoadSpecHolder);
   }
 
   @Test
@@ -125,10 +120,10 @@ public class MetricsModuleTest
         })
     );
     TaskHolder taskHolder = injector.getInstance(TaskHolder.class);
-    Assert.assertEquals(dataSource, taskHolder.getDataSource());
-    Assert.assertEquals(taskId, taskHolder.getTaskId());
-    Assert.assertEquals(taskType, taskHolder.getTaskType());
-    Assert.assertEquals(groupId, taskHolder.getGroupId());
+    Assertions.assertEquals(dataSource, taskHolder.getDataSource());
+    Assertions.assertEquals(taskId, taskHolder.getTaskId());
+    Assertions.assertEquals(taskType, taskHolder.getTaskType());
+    Assertions.assertEquals(groupId, taskHolder.getGroupId());
     Map<String, String> expectedTaskDims = Map.of(
         DruidMetrics.DATASOURCE, dataSource,
         DruidMetrics.TASK_ID, taskId,
@@ -137,7 +132,7 @@ public class MetricsModuleTest
         DruidMetrics.GROUP_ID, groupId
     );
 
-    Assert.assertEquals(expectedTaskDims, taskHolder.getMetricDimensions());
+    Assertions.assertEquals(expectedTaskDims, taskHolder.getMetricDimensions());
   }
 
   @Test
@@ -145,7 +140,7 @@ public class MetricsModuleTest
   {
     final MonitorScheduler monitorScheduler =
         createInjector(new Properties(), ImmutableSet.of()).getInstance(MonitorScheduler.class);
-    Assert.assertSame(BasicMonitorScheduler.class, monitorScheduler.getClass());
+    Assertions.assertSame(BasicMonitorScheduler.class, monitorScheduler.getClass());
   }
 
   @Test
@@ -158,7 +153,7 @@ public class MetricsModuleTest
     );
     final MonitorScheduler monitorScheduler =
         createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class);
-    Assert.assertSame(ClockDriftSafeMonitorScheduler.class, monitorScheduler.getClass());
+    Assertions.assertSame(ClockDriftSafeMonitorScheduler.class, monitorScheduler.getClass());
   }
 
   @Test
@@ -171,7 +166,7 @@ public class MetricsModuleTest
     );
     final MonitorScheduler monitorScheduler =
         createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class);
-    Assert.assertSame(BasicMonitorScheduler.class, monitorScheduler.getClass());
+    Assertions.assertSame(BasicMonitorScheduler.class, monitorScheduler.getClass());
   }
 
   @Test
@@ -231,17 +226,19 @@ public class MetricsModuleTest
         StringUtils.format("%s.schedulerClassName", MetricsModule.MONITORING_PROPERTY_PREFIX),
         "UnknownScheduler"
     );
-    expectedException.expect(CreationException.class);
-    expectedException.expectCause(CoreMatchers.instanceOf(IllegalArgumentException.class));
-    expectedException.expectMessage("Unknown monitor scheduler[UnknownScheduler]");
-    createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class);
+    final CreationException exception = Assertions.assertThrows(
+        CreationException.class,
+        () -> createInjector(properties, ImmutableSet.of()).getInstance(MonitorScheduler.class)
+    );
+    Assertions.assertInstanceOf(IllegalArgumentException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("Unknown monitor scheduler[UnknownScheduler]"));
   }
 
   @Test
   public void testGetSysMonitorViaInjector()
   {
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
 
     final Properties properties = new Properties();
     properties.setProperty(MetricsModule.PROPERTY_PEON_MANAGED, "true");
@@ -250,7 +247,7 @@ public class MetricsModuleTest
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
-    Assert.assertTrue(sysMonitor instanceof NoopSysMonitor);
+    Assertions.assertTrue(sysMonitor instanceof NoopSysMonitor);
     Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
@@ -258,14 +255,14 @@ public class MetricsModuleTest
   public void testGetSysMonitorWhenNull()
   {
     // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assume.assumeFalse("aarch64".equals(CPU_ARCH));
+    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
 
     Injector injector = createInjector(new Properties(), ImmutableSet.of());
     final SysMonitor sysMonitor = injector.getInstance(SysMonitor.class);
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
-    Assert.assertFalse(sysMonitor instanceof NoopSysMonitor);
+    Assertions.assertFalse(sysMonitor instanceof NoopSysMonitor);
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
   @Test
@@ -278,7 +275,7 @@ public class MetricsModuleTest
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
-    Assert.assertTrue(sysMonitor instanceof NoopOshiSysMonitor);
+    Assertions.assertTrue(sysMonitor instanceof NoopOshiSysMonitor);
     Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
@@ -292,11 +289,11 @@ public class MetricsModuleTest
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
-    Assert.assertTrue(sysMonitor instanceof OshiSysMonitor);
+    Assertions.assertTrue(sysMonitor instanceof OshiSysMonitor);
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
 
-    Assert.assertTrue(injector.getInstance(OshiSysMonitorConfig.class).shouldEmitMetricCategory("mem"));
-    Assert.assertFalse(injector.getInstance(OshiSysMonitorConfig.class).shouldEmitMetricCategory("swap"));
+    Assertions.assertTrue(injector.getInstance(OshiSysMonitorConfig.class).shouldEmitMetricCategory("mem"));
+    Assertions.assertFalse(injector.getInstance(OshiSysMonitorConfig.class).shouldEmitMetricCategory("swap"));
   }
 
   @Test
@@ -308,7 +305,7 @@ public class MetricsModuleTest
     final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
     sysMonitor.doMonitor(emitter);
 
-    Assert.assertFalse(sysMonitor instanceof NoopOshiSysMonitor);
+    Assertions.assertFalse(sysMonitor instanceof NoopOshiSysMonitor);
     Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
   }
 
@@ -339,7 +336,7 @@ public class MetricsModuleTest
     for (NodeRole role : NodeRole.values()) {
       final MonitorScheduler monitorScheduler = createInjector(properties, ImmutableSet.of(role))
           .getInstance(MonitorScheduler.class);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           supportedRoleSet.contains(role),
           monitorScheduler.findMonitor(monitorClass).isPresent()
       );

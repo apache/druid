@@ -25,16 +25,19 @@ import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class KillRulesTest
 {
   @Mock
@@ -46,7 +49,7 @@ public class KillRulesTest
   private KillRules killRules;
   private CoordinatorRunStats runStats;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     runStats = new CoordinatorRunStats();
@@ -71,6 +74,6 @@ public class KillRulesTest
     killRules = new KillRules(config, mockRuleManager);
     killRules.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockRuleManager).removeRulesForEmptyDatasourcesOlderThan(ArgumentMatchers.anyLong());
-    Assert.assertTrue(runStats.hasStat(Stats.Kill.RULES));
+    Assertions.assertTrue(runStats.hasStat(Stats.Kill.RULES));
   }
 }

@@ -26,17 +26,17 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
-import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.servlet.AsyncEvent;
 import javax.servlet.AsyncListener;
 import javax.ws.rs.core.Response;
+
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,9 +47,9 @@ public class ServletResourceUtilsTest
   public void testSanitizeException()
   {
     final String message = "some message";
-    Assert.assertEquals(message, ServletResourceUtils.sanitizeException(new Throwable(message)).get("error"));
-    Assert.assertEquals("null", ServletResourceUtils.sanitizeException(null).get("error"));
-    Assert.assertEquals(message, ServletResourceUtils.sanitizeException(new Throwable()
+    Assertions.assertEquals(message, ServletResourceUtils.sanitizeException(new Throwable(message)).get("error"));
+    Assertions.assertEquals("null", ServletResourceUtils.sanitizeException(null).get("error"));
+    Assertions.assertEquals(message, ServletResourceUtils.sanitizeException(new Throwable()
     {
       @Override
       public String toString()
@@ -64,11 +64,11 @@ public class ServletResourceUtilsTest
   {
     DruidException exception = InvalidInput.exception("Invalid value of [%s]", "inputKey");
     Response response = ServletResourceUtils.buildErrorResponseFrom(exception);
-    Assert.assertEquals(exception.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(exception.getStatusCode(), response.getStatus());
 
     Object entity = response.getEntity();
-    Assert.assertTrue(entity instanceof ErrorResponse);
-    MatcherAssert.assertThat(
+    Assertions.assertTrue(entity instanceof ErrorResponse);
+    org.apache.druid.error.DruidExceptionAssertions.assertMatches(
         ((ErrorResponse) entity).getUnderlyingException(),
         DruidExceptionMatcher.invalidInput().expectMessageIs("Invalid value of [inputKey]")
     );
@@ -81,7 +81,7 @@ public class ServletResourceUtilsTest
         new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
         StandardCharsets.UTF_8
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "abc",
         ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(
             new ISE(new HttpResponseException(notFoundResponseHolder), ""),
@@ -93,7 +93,7 @@ public class ServletResourceUtilsTest
         new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.BAD_REQUEST),
         StandardCharsets.UTF_8
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         RuntimeException.class,
         () -> ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(
             new ISE(new HttpResponseException(badRequestResponseHolder), ""),
@@ -101,7 +101,7 @@ public class ServletResourceUtilsTest
         )
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         RuntimeException.class,
         () -> ServletResourceUtils.getDefaultValueIfCauseIs404ElseThrow(new ISE(""), () -> "abc")
     );
@@ -118,9 +118,9 @@ public class ServletResourceUtilsTest
     // Verify that onTimeout updates the count
     final AsyncEvent event = Mockito.mock(AsyncEvent.class);
     listener.onTimeout(event);
-    Assert.assertEquals(1, timeoutCount.get());
+    Assertions.assertEquals(1, timeoutCount.get());
     listener.onTimeout(event);
-    Assert.assertEquals(2, timeoutCount.get());
+    Assertions.assertEquals(2, timeoutCount.get());
 
     // Verify that other actions on the listener are noop
     timeoutCount.set(0);
@@ -128,7 +128,7 @@ public class ServletResourceUtilsTest
     listener.onComplete(event);
     listener.onError(event);
 
-    Assert.assertEquals(0, timeoutCount.get());
+    Assertions.assertEquals(0, timeoutCount.get());
     Mockito.verifyNoInteractions(event);
   }
 }

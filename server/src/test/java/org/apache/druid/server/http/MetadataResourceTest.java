@@ -47,15 +47,16 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -88,7 +89,7 @@ public class MetadataResourceTest
 
   private MetadataResource metadataResource;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     request = Mockito.mock(HttpServletRequest.class);
@@ -154,12 +155,12 @@ public class MetadataResourceTest
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", null);
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
-    Assert.assertEquals(resultList.size(), 4);
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, null, false), resultList.get(1));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
+    Assertions.assertEquals(resultList.size(), 4);
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, null, false), resultList.get(0));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[1], false, null, null, false), resultList.get(1));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
   }
 
   @Test
@@ -251,15 +252,15 @@ public class MetadataResourceTest
     Response response = metadataResource.getAllUsedSegments(request, null, "includeOvershadowedStatus", "includeRealtimeSegments");
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
-    Assert.assertEquals(resultList.size(), 6);
+    Assertions.assertEquals(resultList.size(), 6);
     Map<SegmentId, SegmentStatusInCluster> resultMap = resultList.stream().collect(Collectors.toMap(segmentStatus -> segmentStatus.getDataSegment().getId(), Function.identity()));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultMap.get(segments[0].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultMap.get(segments[1].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultMap.get(segments[2].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultMap.get(segments[0].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultMap.get(segments[1].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultMap.get(segments[2].getId()));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultMap.get(segments[3].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultMap.get(realTimeSegments[0].getId()));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultMap.get(realTimeSegments[1].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultMap.get(segments[3].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultMap.get(realTimeSegments[0].getId()));
+    Assertions.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultMap.get(realTimeSegments[1].getId()));
   }
 
 
@@ -269,7 +270,7 @@ public class MetadataResourceTest
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, null, null);
     final List<DataSegmentPlus> observedSegments = extractResponseList(response);
-    Assert.assertEquals(segmentsPlus, observedSegments);
+    Assertions.assertEquals(segmentsPlus, observedSegments);
   }
 
   @Test
@@ -281,8 +282,8 @@ public class MetadataResourceTest
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, interval, null, null, null);
     final List<DataSegmentPlus> observedSegments = extractResponseList(response);
-    Assert.assertEquals(expectedLimit, observedSegments.size());
-    Assert.assertEquals(segmentsPlus.stream().limit(expectedLimit).collect(Collectors.toList()), observedSegments);
+    Assertions.assertEquals(expectedLimit, observedSegments.size());
+    Assertions.assertEquals(segmentsPlus.stream().limit(expectedLimit).collect(Collectors.toList()), observedSegments);
   }
 
   @Test
@@ -294,8 +295,8 @@ public class MetadataResourceTest
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, interval, limit, null, null);
     final List<DataSegmentPlus> observedSegments = extractResponseList(response);
-    Assert.assertEquals(limit, observedSegments.size());
-    Assert.assertEquals(segmentsPlus.stream().limit(limit).collect(Collectors.toList()), observedSegments);
+    Assertions.assertEquals(limit, observedSegments.size());
+    Assertions.assertEquals(segmentsPlus.stream().limit(limit).collect(Collectors.toList()), observedSegments);
   }
 
   @Test
@@ -307,7 +308,7 @@ public class MetadataResourceTest
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, interval, limit, lastSegmentId, null);
     final List<DataSegmentPlus> observedSegments = extractResponseList(response);
-    Assert.assertEquals(Collections.singletonList(segmentsPlus.get(limit)), observedSegments);
+    Assertions.assertEquals(Collections.singletonList(segmentsPlus.get(limit)), observedSegments);
   }
 
   @Test
@@ -316,7 +317,7 @@ public class MetadataResourceTest
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, "non-existent", null, null, null, null);
     final List<DataSegmentPlus> observedSegments = extractResponseList(response);
-    Assert.assertTrue(observedSegments.isEmpty());
+    Assertions.assertTrue(observedSegments.isEmpty());
   }
 
   @Test
@@ -324,8 +325,8 @@ public class MetadataResourceTest
   {
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, null, null, null, null, null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals("dataSourceName must be non-empty.", getExceptionMessage(response));
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals("dataSourceName must be non-empty.", getExceptionMessage(response));
   }
 
   @Test
@@ -333,8 +334,8 @@ public class MetadataResourceTest
   {
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, "", null, null, null, null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals("dataSourceName must be non-empty.", getExceptionMessage(response));
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals("dataSourceName must be non-empty.", getExceptionMessage(response));
   }
 
   @Test
@@ -342,8 +343,8 @@ public class MetadataResourceTest
   {
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, null, -1, null, null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals("Invalid limit[-1] specified. Limit must be > 0.", getExceptionMessage(response));
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals("Invalid limit[-1] specified. Limit must be > 0.", getExceptionMessage(response));
   }
 
   @Test
@@ -351,8 +352,8 @@ public class MetadataResourceTest
   {
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, "invalid", null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals("Invalid lastSegmentId[invalid] specified.", getExceptionMessage(response));
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals("Invalid lastSegmentId[invalid] specified.", getExceptionMessage(response));
   }
 
   @Test
@@ -360,8 +361,8 @@ public class MetadataResourceTest
   {
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, "2015/2014", null, null, null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Invalid interval[2015/2014]: [The end instant must be greater than the start instant]",
         getExceptionMessage(response)
     );
@@ -372,8 +373,8 @@ public class MetadataResourceTest
   {
     final Response response = metadataResource
         .getUnusedSegmentsInDataSource(request, DATASOURCE1, null, null, null, "Ascd");
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         "Unexpected value[Ascd] for SortOrder. Possible values are: [ASC, DESC]",
         getExceptionMessage(response)
     );
@@ -459,30 +460,30 @@ public class MetadataResourceTest
     Response response = metadataResource.getDataSourceInformation(request, Collections.singletonList(DATASOURCE1));
 
     List<DataSourceInformation> dataSourceInformations = extractResponseList(response);
-    Assert.assertEquals(dataSourceInformations.size(), 1);
-    Assert.assertEquals(dataSourceInformations.get(0), dataSourceInformationMap.get(DATASOURCE1));
+    Assertions.assertEquals(dataSourceInformations.size(), 1);
+    Assertions.assertEquals(dataSourceInformations.get(0), dataSourceInformationMap.get(DATASOURCE1));
   }
 
   @Test
   public void testGetSegment()
   {
     // Available in snapshot
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segments[0],
         metadataResource.getSegment(segments[0].getDataSource(), segments[0].getId().toString(), null).getEntity()
     );
 
     // Unavailable in snapshot, but available in metadata
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segments[4],
         metadataResource.getSegment(segments[4].getDataSource(), segments[4].getId().toString(), null).getEntity()
     );
 
     // Unavailable and unused
-    Assert.assertNull(
+    Assertions.assertNull(
         metadataResource.getSegment(segments[5].getDataSource(), segments[5].getId().toString(), null).getEntity()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segments[5],
         metadataResource.getSegment(segments[5].getDataSource(), segments[5].getId().toString(), true).getEntity()
     );
@@ -495,7 +496,7 @@ public class MetadataResourceTest
 
     Response response = metadataResource.getBootstrapSegments();
     final List<DataSegment> observedSegments = extractResponseList(response);
-    Assert.assertEquals(2, observedSegments.size());
+    Assertions.assertEquals(2, observedSegments.size());
   }
 
   @Test
@@ -505,7 +506,7 @@ public class MetadataResourceTest
 
     Response response = metadataResource.getBootstrapSegments();
     final List<DataSegment> observedSegments = extractResponseList(response);
-    Assert.assertEquals(0, observedSegments.size());
+    Assertions.assertEquals(0, observedSegments.size());
   }
 
   @Test
@@ -514,7 +515,7 @@ public class MetadataResourceTest
     Mockito.doReturn(null).when(coordinator).getBroadcastSegments();
 
     Response response = metadataResource.getBootstrapSegments();
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   private <T> List<T> extractResponseList(Response response)

@@ -37,17 +37,20 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class StorageNodeModuleTest
 {
   private static final boolean INJECT_SERVER_TYPE_CONFIG = true;
@@ -63,7 +66,7 @@ public class StorageNodeModuleTest
 
   private StorageNodeModule target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     self = new DruidNode("test", "test-host", true, 80, 443, false, true);
@@ -80,8 +83,8 @@ public class StorageNodeModuleTest
     Boolean isSegmentCacheConfigured = injector().getInstance(
         Key.get(Boolean.class, Names.named(StorageNodeModule.IS_SEGMENT_CACHE_CONFIGURED))
     );
-    Assert.assertNotNull(isSegmentCacheConfigured);
-    Assert.assertTrue(isSegmentCacheConfigured);
+    Assertions.assertNotNull(isSegmentCacheConfigured);
+    Assertions.assertTrue(isSegmentCacheConfigured);
   }
 
   @Test
@@ -91,8 +94,8 @@ public class StorageNodeModuleTest
     Boolean isSegmentCacheConfigured = injector().getInstance(
         Key.get(Boolean.class, Names.named(StorageNodeModule.IS_SEGMENT_CACHE_CONFIGURED))
     );
-    Assert.assertNotNull(isSegmentCacheConfigured);
-    Assert.assertFalse(isSegmentCacheConfigured);
+    Assertions.assertNotNull(isSegmentCacheConfigured);
+    Assertions.assertFalse(isSegmentCacheConfigured);
   }
 
   @Test
@@ -123,18 +126,18 @@ public class StorageNodeModuleTest
     final Injector injector = injector();
 
     DataNodeService dataNodeService = injector.getInstance(DataNodeService.class);
-    Assert.assertNotNull(dataNodeService);
+    Assertions.assertNotNull(dataNodeService);
 
     DataNodeService other = injector.getInstance(DataNodeService.class);
-    Assert.assertSame(dataNodeService, other);
+    Assertions.assertSame(dataNodeService, other);
   }
 
   @Test
   public void getDataNodeServiceIsInjectedAndDiscoverable()
   {
     DataNodeService dataNodeService = injector().getInstance(DataNodeService.class);
-    Assert.assertNotNull(dataNodeService);
-    Assert.assertTrue(dataNodeService.isDiscoverable());
+    Assertions.assertNotNull(dataNodeService);
+    Assertions.assertTrue(dataNodeService.isDiscoverable());
   }
 
   @Test
@@ -143,8 +146,8 @@ public class StorageNodeModuleTest
     mockSegmentCacheNotConfigured();
     serverTypeConfig = new ServerTypeConfig(ServerType.BROKER);
     DataNodeService dataNodeService = injector().getInstance(DataNodeService.class);
-    Assert.assertNotNull(dataNodeService);
-    Assert.assertFalse(dataNodeService.isDiscoverable());
+    Assertions.assertNotNull(dataNodeService);
+    Assertions.assertFalse(dataNodeService.isDiscoverable());
   }
 
   @Test
@@ -152,10 +155,10 @@ public class StorageNodeModuleTest
   {
     final Injector injector = injector();
     DruidServerMetadata druidServerMetadata = injector.getInstance(DruidServerMetadata.class);
-    Assert.assertNotNull(druidServerMetadata);
+    Assertions.assertNotNull(druidServerMetadata);
 
     DruidServerMetadata other = injector.getInstance(DruidServerMetadata.class);
-    Assert.assertSame(druidServerMetadata, other);
+    Assertions.assertSame(druidServerMetadata, other);
   }
 
   @Test
@@ -182,7 +185,7 @@ public class StorageNodeModuleTest
         Key.get(StorageLoadingThreadPool.class, EphemeralStorageLoading.class)
     );
     try {
-      Assert.assertTrue(pool.isAvailable());
+      Assertions.assertTrue(pool.isAvailable());
     }
     finally {
       pool.stop();

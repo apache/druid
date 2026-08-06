@@ -45,7 +45,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SqlIndexingStateStorageTest
@@ -241,7 +240,7 @@ public class SqlIndexingStateStorageTest
   @Test
   public void test_upsertIndexingState_withNullState_throwsException()
   {
-    Exception exception = assertThrows(
+    Exception exception = org.junit.jupiter.api.Assertions.assertThrows(
         Exception.class,
         () -> manager.upsertIndexingState("ds", "somePrint", null, DateTimes.nowUtc())
     );
@@ -256,7 +255,7 @@ public class SqlIndexingStateStorageTest
   public void test_upsertIndexingState_withEmptyFingerprint_throwsException()
   {
     // The exception ends up wrapped in a sql exception doe to the retryWithHandle so we will just check the message
-    Exception exception = assertThrows(
+    Exception exception = org.junit.jupiter.api.Assertions.assertThrows(
         Exception.class,
         () -> manager.upsertIndexingState("ds", "", createBasicIndexingState(), DateTimes.nowUtc())
     );

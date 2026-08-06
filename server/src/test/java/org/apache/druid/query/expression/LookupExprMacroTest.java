@@ -27,10 +27,10 @@ import org.apache.druid.math.expr.FunctionTest;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LookupExprMacroTest extends InitializedNullHandlingTest
 {
@@ -39,9 +39,6 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
           .put("x", InputBindings.inputSupplier(ExpressionType.STRING, () -> "foo"))
           .build()
   );
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testLookup()
@@ -57,9 +54,9 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
   @Test
   public void testLookupNotFound()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Lookup [lookylook] not found");
-    assertExpr("lookup(x, 'lookylook')", null);
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
+      assertExpr("lookup(x, 'lookylook')", null));
+    assertTrue(exception.getMessage().contains("Lookup [lookylook] not found"));
   }
 
   @Test
@@ -73,7 +70,7 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
         new ExprMacroTable(LookupEnabledTestExprMacroTable.makeTestMacros(ImmutableMap.of("x", "y", "a", "b")))
     );
     // same should have same cache key
-    Assert.assertArrayEquals(expr.getCacheKey(), exprSameLookup.getCacheKey());
+    Assertions.assertArrayEquals(expr.getCacheKey(), exprSameLookup.getCacheKey());
     // different should not have same key
     final byte[] exprBytes = expr.getCacheKey();
     final byte[] expr2Bytes = exprChangedLookup.getCacheKey();
@@ -83,7 +80,7 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
       for (int i = 0; i < exprBytes.length; i++) {
         allEqual = allEqual && (exprBytes[i] == expr2Bytes[i]);
       }
-      Assert.assertFalse(allEqual);
+      Assertions.assertFalse(allEqual);
     }
   }
 
@@ -98,7 +95,7 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
         new ExprMacroTable(LookupEnabledTestExprMacroTable.makeTestMacros(ImmutableMap.of("x", "y", "a", "b")))
     );
     // same should have same cache key
-    Assert.assertArrayEquals(expr.getCacheKey(), exprSameLookup.getCacheKey());
+    Assertions.assertArrayEquals(expr.getCacheKey(), exprSameLookup.getCacheKey());
     // different should not have same key
     final byte[] exprBytes = expr.getCacheKey();
     final byte[] expr2Bytes = exprChangedLookup.getCacheKey();
@@ -108,7 +105,7 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
       for (int i = 0; i < exprBytes.length; i++) {
         allEqual = allEqual && (exprBytes[i] == expr2Bytes[i]);
       }
-      Assert.assertFalse(allEqual);
+      Assertions.assertFalse(allEqual);
     }
   }
 

@@ -26,11 +26,12 @@ import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
+
 import java.util.List;
 
 public class CoordinatorDynamicConfigsResourceTest
@@ -40,7 +41,7 @@ public class CoordinatorDynamicConfigsResourceTest
   private CoordinatorDynamicConfigSyncer coordinatorDynamicConfigSyncer;
   private CloneStatusManager cloneStatusManager;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     manager = EasyMock.createStrictMock(CoordinatorConfigManager.class);
@@ -70,14 +71,14 @@ public class CoordinatorDynamicConfigsResourceTest
         cloneStatusManager
     ).getBrokerStatus();
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     ConfigSyncStatus expected = new ConfigSyncStatus(
         ImmutableSet.of(
             new BrokerSyncStatus("host1", 8080, 1000)
         )
     );
-    Assert.assertEquals(expected, response.getEntity());
+    Assertions.assertEquals(expected, response.getEntity());
   }
 
   @Test
@@ -100,11 +101,11 @@ public class CoordinatorDynamicConfigsResourceTest
         cloneStatusManager
     );
     Response response = resource.getCloneStatus(null);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(new CloneStatus(statusMetrics), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new CloneStatus(statusMetrics), response.getEntity());
 
     response = resource.getCloneStatus("hist2");
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ServerCloneStatus.unknown("hist4", "hist3"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ServerCloneStatus.unknown("hist4", "hist3"), response.getEntity());
   }
 }

@@ -24,21 +24,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.ProvisionException;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import javax.validation.Validation;
+
 import java.util.Properties;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class RequestLoggerProviderTest
 {
   private final DefaultObjectMapper mapper = new DefaultObjectMapper();
-
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
 
   public RequestLoggerProviderTest()
   {
@@ -69,29 +66,29 @@ public class RequestLoggerProviderTest
         RequestLoggerProvider.class,
         NoopRequestLoggerProvider.class
     );
-    MatcherAssert.assertThat(provider, CoreMatchers.instanceOf(NoopRequestLoggerProvider.class));
+    assertThat(provider).isInstanceOf(NoopRequestLoggerProvider.class);
   }
 
   @Test
   public void testLoggerPropertiesWithNoType()
   {
-    final Properties properties = new Properties();
-    properties.setProperty("dummy", "unrelated");
-    properties.setProperty("log.foo", "bar");
-    final JsonConfigurator configurator = new JsonConfigurator(
-        mapper,
-        Validation.buildDefaultValidatorFactory()
-                  .getValidator()
-    );
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(ProvisionException.class, () -> {
+      final Properties properties = new Properties();
+      properties.setProperty("dummy", "unrelated");
+      properties.setProperty("log.foo", "bar");
+      final JsonConfigurator configurator = new JsonConfigurator(
+          mapper,
+          Validation.buildDefaultValidatorFactory()
+              .getValidator()
+      );
 
-    expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("missing type id property 'type'");
-
-    configurator.configurate(
-        properties,
-        "log",
-        RequestLoggerProvider.class,
-        NoopRequestLoggerProvider.class
-    );
+      configurator.configurate(
+          properties,
+          "log",
+          RequestLoggerProvider.class,
+          NoopRequestLoggerProvider.class
+      );
+    });
+    assertTrue(exception.getMessage().contains("missing type id property 'type'"));
   }
 }

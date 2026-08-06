@@ -22,8 +22,8 @@ package org.apache.druid.indexing;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -37,18 +37,18 @@ public class NoopSupervisorSpecTest
       NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
       Supervisor supervisor = noopSupervisorSpec.createSupervisor();
       SupervisorTaskAutoScaler autoscaler = noopSupervisorSpec.createAutoscaler(supervisor);
-      Assert.assertNull(autoscaler);
+      Assertions.assertNull(autoscaler);
     }
     catch (Exception ex) {
       e = ex;
     }
-    Assert.assertNull(e);
+    Assertions.assertNull(e);
   }
 
   @Test
   public void testInputSourceResources()
   {
     NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
-    Assert.assertTrue(noopSupervisorSpec.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(noopSupervisorSpec.getInputSourceResources().isEmpty());
   }
 }

@@ -22,12 +22,15 @@ package org.apache.druid.server.coordinator;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class DataSourceCompactionConfigAuditEntryTest
 {
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
@@ -48,8 +51,8 @@ public class DataSourceCompactionConfigAuditEntryTest
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertTrue(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertTrue(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertTrue(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertTrue(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
@@ -61,8 +64,8 @@ public class DataSourceCompactionConfigAuditEntryTest
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
 
     secondEntry = new DataSourceCompactionConfigAuditEntry(
         new ClusterCompactionConfig(0.1, 10, null, null, null, null),
@@ -70,8 +73,8 @@ public class DataSourceCompactionConfigAuditEntryTest
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
@@ -83,8 +86,8 @@ public class DataSourceCompactionConfigAuditEntryTest
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 
   @Test
@@ -96,7 +99,7 @@ public class DataSourceCompactionConfigAuditEntryTest
         auditInfo,
         DateTimes.nowUtc()
     );
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
-    Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertFalse(secondEntry.hasSameConfig(firstEntry));
   }
 }

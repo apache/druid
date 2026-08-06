@@ -41,7 +41,7 @@ import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -63,7 +63,7 @@ public class BalanceSegmentsProfiler
   PeriodLoadRule loadRule = new PeriodLoadRule(new Period("P5000Y"), null, ImmutableMap.of("normal", 3), null);
   List<Rule> rules = ImmutableList.of(loadRule);
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     loadQueueManager = new SegmentLoadQueueManager(null, null);

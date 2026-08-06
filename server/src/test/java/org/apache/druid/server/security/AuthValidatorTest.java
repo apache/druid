@@ -20,19 +20,15 @@
 package org.apache.druid.server.security;
 
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class AuthValidatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   public AuthValidator target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new AuthValidator();

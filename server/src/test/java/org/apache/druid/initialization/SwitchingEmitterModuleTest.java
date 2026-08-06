@@ -34,11 +34,12 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.server.emitter.SwitchingEmitterConfig;
 import org.apache.druid.server.emitter.SwitchingEmitterModule;
 import org.easymock.EasyMock;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.Properties;
 
 public class SwitchingEmitterModuleTest
@@ -50,7 +51,7 @@ public class SwitchingEmitterModuleTest
   private Emitter defaultEmitter;
   private Emitter feed1Emitter;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     defaultEmitter = EasyMock.createMock(Emitter.class);

@@ -28,6 +28,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;

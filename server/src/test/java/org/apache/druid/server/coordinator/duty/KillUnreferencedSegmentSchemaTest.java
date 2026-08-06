@@ -44,14 +44,16 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -61,10 +63,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class KillUnreferencedSegmentSchemaTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
@@ -78,7 +81,7 @@ public class KillUnreferencedSegmentSchemaTest
   @Mock
   private DruidCoordinatorRuntimeParams mockDruidCoordinatorRuntimeParams;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();
@@ -183,7 +186,7 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should do nothing
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
 
     // delete segment2
     deleteSegment(schemaMetadataPluses.get(1).getSegmentId());
@@ -191,13 +194,13 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should mark the schema unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
 
     // this call should delete the schema
     duty.run(mockDruidCoordinatorRuntimeParams);
 
 
-    Assert.assertNull(getSchemaUsedStatus(fingerprint));
+    Assertions.assertNull(getSchemaUsedStatus(fingerprint));
   }
 
   @Test
@@ -236,12 +239,12 @@ public class KillUnreferencedSegmentSchemaTest
         }
     );
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
 
     // this call should mark the schema as unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprint));
 
     // associate a segment to the schema
     DataSegment segment1 = new DataSegment(
@@ -269,7 +272,7 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should make the schema used
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprint));
   }
 
   @Test
@@ -328,8 +331,8 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should mark both the schema as unused
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintOldVersion));
-    Assert.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintNewVersion));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintOldVersion));
+    Assertions.assertEquals(Boolean.FALSE, getSchemaUsedStatus(fingerprintNewVersion));
 
     // associate a segment to the schema
     DataSegment segment1 = new DataSegment(
@@ -357,11 +360,11 @@ public class KillUnreferencedSegmentSchemaTest
     // this call should make the referenced schema used
     duty.run(mockDruidCoordinatorRuntimeParams);
 
-    Assert.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprintNewVersion));
+    Assertions.assertEquals(Boolean.TRUE, getSchemaUsedStatus(fingerprintNewVersion));
 
     // this call should kill the schema
     duty.run(mockDruidCoordinatorRuntimeParams);
-    Assert.assertNull(getSchemaUsedStatus(fingerprintOldVersion));
+    Assertions.assertNull(getSchemaUsedStatus(fingerprintOldVersion));
   }
 
   private static class TestKillUnreferencedSegmentSchemas extends KillUnreferencedSegmentSchema

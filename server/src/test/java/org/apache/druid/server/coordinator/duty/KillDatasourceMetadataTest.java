@@ -27,16 +27,19 @@ import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class KillDatasourceMetadataTest
 {
   @Mock
@@ -51,7 +54,7 @@ public class KillDatasourceMetadataTest
   private KillDatasourceMetadata killDatasourceMetadata;
   private CoordinatorRunStats runStats;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     runStats = new CoordinatorRunStats();
@@ -83,7 +86,7 @@ public class KillDatasourceMetadataTest
     );
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.anySet());
-    Assert.assertTrue(runStats.hasStat(Stats.Kill.DATASOURCES));
+    Assertions.assertTrue(runStats.hasStat(Stats.Kill.DATASOURCES));
   }
 
   @Test
@@ -94,6 +97,6 @@ public class KillDatasourceMetadataTest
     killDatasourceMetadata = new KillDatasourceMetadata(config, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.eq(ImmutableSet.of()));
-    Assert.assertTrue(runStats.hasStat(Stats.Kill.DATASOURCES));
+    Assertions.assertTrue(runStats.hasStat(Stats.Kill.DATASOURCES));
   }
 }

@@ -22,42 +22,45 @@ package org.apache.druid.guice;
 import com.google.inject.ProvisionException;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+
 
 public class DruidProcessingModuleTest
 {
 
-  @Test(expected = ProvisionException.class)
+  @Test
   public void testMemoryCheckThrowsException()
   {
-    // JDK 9 and above do not support checking for direct memory size
-    // so this test only validates functionality for Java 8.
-    try {
-      JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
-    }
-    catch (UnsupportedOperationException e) {
-      Assume.assumeNoException(e);
-    }
+    org.junit.jupiter.api.Assertions.assertThrows(ProvisionException.class, () -> {
+      // JDK 9 and above do not support checking for direct memory size
+      // so this test only validates functionality for Java 8.
+      try {
+        JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+      }
+      catch (UnsupportedOperationException e) {
+        Assumptions.assumeTrue(false, e::getMessage);
+      }
 
-    DruidProcessingModule module = new DruidProcessingModule();
-    module.getIntermediateResultsPool(
-        new DruidProcessingConfig()
-        {
-          @Override
-          public String getFormatString()
+      DruidProcessingModule module = new DruidProcessingModule();
+      module.getIntermediateResultsPool(
+          new DruidProcessingConfig()
           {
-            return "test";
-          }
+            @Override
+            public String getFormatString()
+            {
+              return "test";
+            }
 
-          @Override
-          public int intermediateComputeSizeBytes()
-          {
-            return Integer.MAX_VALUE;
-          }
-        },
-        JvmUtils.getRuntimeInfo()
-    );
+            @Override
+            public int intermediateComputeSizeBytes()
+            {
+              return Integer.MAX_VALUE;
+            }
+          },
+          JvmUtils.getRuntimeInfo()
+      );
+    });
   }
 
   @Test

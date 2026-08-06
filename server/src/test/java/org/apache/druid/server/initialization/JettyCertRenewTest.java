@@ -49,10 +49,9 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -63,6 +62,7 @@ import javax.net.ssl.X509TrustManager;
 import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.ws.rs.core.MediaType;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -84,8 +84,8 @@ import java.util.zip.GZIPOutputStream;
 
 public class JettyCertRenewTest extends BaseJettyTest
 {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  public File folder;
 
   private Injector injector;
 
@@ -112,9 +112,9 @@ public class JettyCertRenewTest extends BaseJettyTest
     TLSServerConfig tlsConfig;
     try {
       File keyStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("server.jks").getFile());
-      tmpKeyStore = Files.copy(keyStore.toPath(), new File(folder.newFolder(), "server.jks").toPath());
+      tmpKeyStore = Files.copy(keyStore.toPath(), new File(newFolder(folder, "junit"), "server.jks").toPath());
       File trustStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("truststore.jks").getFile());
-      tmpTrustStore = Files.copy(trustStore.toPath(), new File(folder.newFolder(), "truststore.jks").toPath());
+      tmpTrustStore = Files.copy(trustStore.toPath(), new File(newFolder(folder, "junit"), "truststore.jks").toPath());
       pp = () -> "druid123";
       tlsConfig = TLSServerConfig.builder()
           .keyStorePath(tmpKeyStore.toString())
@@ -225,10 +225,10 @@ public class JettyCertRenewTest extends BaseJettyTest
     Certificate[] certificatesBefore = getCertificates();
     for (Certificate certificate : certificatesBefore) {
       X509Certificate real = (X509Certificate) certificate;
-      Assert.assertEquals(dateFormat.parse("Fri Mar 29 11:00:40 UTC 2030").toInstant(), real.getNotAfter().toInstant());
+      Assertions.assertEquals(dateFormat.parse("Fri Mar 29 11:00:40 UTC 2030").toInstant(), real.getNotAfter().toInstant());
     }
 
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
+    Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
 
     // Replace the server and trustore keystores, wait for 3s and perform all the tests.
     File keyStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("server-new.jks").getFile());
@@ -241,10 +241,10 @@ public class JettyCertRenewTest extends BaseJettyTest
     Certificate[] certificatesAfter = getCertificates();
     for (Certificate certificate : certificatesAfter) {
       X509Certificate real = (X509Certificate) certificate;
-      Assert.assertEquals(dateFormat.parse("Thu Aug 19 13:38:51 UTC 2032").toInstant(), real.getNotAfter().toInstant());
+      Assertions.assertEquals(dateFormat.parse("Thu Aug 19 13:38:51 UTC 2032").toInstant(), real.getNotAfter().toInstant());
     }
 
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
+    Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
   }
 
   private static class AcceptAllForTestX509TrustManager implements X509TrustManager
@@ -267,6 +267,19 @@ public class JettyCertRenewTest extends BaseJettyTest
     {
       return accepted;
     }
+
+    private static File newFolder(File root, String... subDirs) throws IOException
+    {
+      if (subDirs.length == 0) {
+        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      }
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
+    }
   }
 
   private static class AcceptAllForTestHostnameVerifier implements HostnameVerifier
@@ -275,6 +288,19 @@ public class JettyCertRenewTest extends BaseJettyTest
     public boolean verify(String string, SSLSession ssls)
     {
       return true;
+    }
+
+    private static File newFolder(File root, String... subDirs) throws IOException
+    {
+      if (subDirs.length == 0) {
+        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      }
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
     }
   }
 
@@ -337,5 +363,18 @@ public class JettyCertRenewTest extends BaseJettyTest
         new InputStreamResponseHandler()
     );
     return IOUtils.toString(go.get(), StandardCharsets.UTF_8);
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
+      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+    }
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

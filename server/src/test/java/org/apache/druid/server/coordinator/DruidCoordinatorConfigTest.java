@@ -34,11 +34,10 @@ import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -51,8 +50,8 @@ public class DruidCoordinatorConfigTest
     final Properties props = new Properties();
     final CoordinatorRunConfig config = deserializeFrom(props, "druid.coordinator", CoordinatorRunConfig.class);
 
-    Assert.assertEquals(Duration.standardMinutes(1), config.getPeriod());
-    Assert.assertEquals(Duration.standardMinutes(5), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardMinutes(1), config.getPeriod());
+    Assertions.assertEquals(Duration.standardMinutes(5), config.getStartDelay());
   }
 
   @Test
@@ -63,8 +62,8 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.period", "PT30S");
     final CoordinatorRunConfig config = deserializeFrom(props, "druid.coordinator", CoordinatorRunConfig.class);
 
-    Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
-    Assert.assertEquals(Duration.standardMinutes(10), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardSeconds(30), config.getPeriod());
+    Assertions.assertEquals(Duration.standardMinutes(10), config.getStartDelay());
   }
 
   @Test
@@ -74,8 +73,8 @@ public class DruidCoordinatorConfigTest
     final CoordinatorPeriodConfig config
         = deserializeFrom(props, "druid.coordinator.period", CoordinatorPeriodConfig.class);
 
-    Assert.assertEquals(Duration.standardMinutes(30), config.getIndexingPeriod());
-    Assert.assertEquals(Duration.standardMinutes(60), config.getMetadataStoreManagementPeriod());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getIndexingPeriod());
+    Assertions.assertEquals(Duration.standardMinutes(60), config.getMetadataStoreManagementPeriod());
   }
 
   @Test
@@ -87,8 +86,8 @@ public class DruidCoordinatorConfigTest
     final CoordinatorPeriodConfig config
         = deserializeFrom(props, "druid.coordinator.period", CoordinatorPeriodConfig.class);
 
-    Assert.assertEquals(Duration.standardMinutes(1), config.getIndexingPeriod());
-    Assert.assertEquals(Duration.standardMinutes(3), config.getMetadataStoreManagementPeriod());
+    Assertions.assertEquals(Duration.standardMinutes(1), config.getIndexingPeriod());
+    Assertions.assertEquals(Duration.standardMinutes(3), config.getMetadataStoreManagementPeriod());
   }
 
   @Test
@@ -98,10 +97,10 @@ public class DruidCoordinatorConfigTest
     final HttpLoadQueuePeonConfig config
         = deserializeFrom(props, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
 
-    Assert.assertEquals(Duration.standardMinutes(1), config.getRepeatDelay());
-    Assert.assertEquals(Duration.standardMinutes(5), config.getHostTimeout());
-    Assert.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
-    Assert.assertNull(config.getBatchSize());
+    Assertions.assertEquals(Duration.standardMinutes(1), config.getRepeatDelay());
+    Assertions.assertEquals(Duration.standardMinutes(5), config.getHostTimeout());
+    Assertions.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
+    Assertions.assertNull(config.getBatchSize());
   }
 
   @Test
@@ -115,10 +114,10 @@ public class DruidCoordinatorConfigTest
     final HttpLoadQueuePeonConfig config
         = deserializeFrom(props, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
 
-    Assert.assertEquals(Duration.standardMinutes(20), config.getRepeatDelay());
-    Assert.assertEquals(Duration.standardMinutes(10), config.getHostTimeout());
-    Assert.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
-    Assert.assertEquals(Integer.valueOf(100), config.getBatchSize());
+    Assertions.assertEquals(Duration.standardMinutes(20), config.getRepeatDelay());
+    Assertions.assertEquals(Duration.standardMinutes(10), config.getHostTimeout());
+    Assertions.assertEquals(Duration.standardMinutes(15), config.getLoadTimeout());
+    Assertions.assertEquals(Integer.valueOf(100), config.getBatchSize());
   }
 
   @Test
@@ -126,9 +125,9 @@ public class DruidCoordinatorConfigTest
   {
     final MetadataCleanupConfig config = new MetadataCleanupConfig(null, null, null);
 
-    Assert.assertTrue(config.isCleanupEnabled());
-    Assert.assertEquals(Duration.standardDays(1), config.getCleanupPeriod());
-    Assert.assertEquals(Duration.standardDays(90), config.getDurationToRetain());
+    Assertions.assertTrue(config.isCleanupEnabled());
+    Assertions.assertEquals(Duration.standardDays(1), config.getCleanupPeriod());
+    Assertions.assertEquals(Duration.standardDays(90), config.getDurationToRetain());
   }
 
   @Test
@@ -140,9 +139,9 @@ public class DruidCoordinatorConfigTest
         Period.parse("P1D").toStandardDuration()
     );
 
-    Assert.assertFalse(config.isCleanupEnabled());
-    Assert.assertEquals(Duration.standardHours(5), config.getCleanupPeriod());
-    Assert.assertEquals(Duration.standardHours(24), config.getDurationToRetain());
+    Assertions.assertFalse(config.isCleanupEnabled());
+    Assertions.assertEquals(Duration.standardHours(5), config.getCleanupPeriod());
+    Assertions.assertEquals(Duration.standardHours(24), config.getDurationToRetain());
   }
 
   @Test
@@ -151,12 +150,12 @@ public class DruidCoordinatorConfigTest
     CoordinatorKillConfigs killConfigs = createKillConfig().build();
     final KillUnusedSegmentsConfig config = killConfigs.unusedSegments(null);
 
-    Assert.assertFalse(config.isCleanupEnabled());
-    Assert.assertFalse(config.isIgnoreDurationToRetain());
-    Assert.assertEquals(Duration.standardDays(1), config.getCleanupPeriod());
-    Assert.assertEquals(Duration.standardDays(30), config.getBufferPeriod());
-    Assert.assertEquals(Duration.standardDays(90), config.getDurationToRetain());
-    Assert.assertEquals(100, config.getMaxSegments());
+    Assertions.assertFalse(config.isCleanupEnabled());
+    Assertions.assertFalse(config.isIgnoreDurationToRetain());
+    Assertions.assertEquals(Duration.standardDays(1), config.getCleanupPeriod());
+    Assertions.assertEquals(Duration.standardDays(30), config.getBufferPeriod());
+    Assertions.assertEquals(Duration.standardDays(90), config.getDurationToRetain());
+    Assertions.assertEquals(100, config.getMaxSegments());
   }
 
   @Test
@@ -174,12 +173,12 @@ public class DruidCoordinatorConfigTest
     CoordinatorKillConfigs killConfigs = createKillConfig().unusedSegments(inputConfig).build();
 
     final KillUnusedSegmentsConfig config = killConfigs.unusedSegments(null);
-    Assert.assertTrue(config.isCleanupEnabled());
-    Assert.assertTrue(config.isIgnoreDurationToRetain());
-    Assert.assertEquals(Duration.standardMinutes(30), config.getCleanupPeriod());
-    Assert.assertEquals(Duration.standardMinutes(60), config.getBufferPeriod());
-    Assert.assertEquals(Duration.standardHours(12), config.getDurationToRetain());
-    Assert.assertEquals(500, config.getMaxSegments());
+    Assertions.assertTrue(config.isCleanupEnabled());
+    Assertions.assertTrue(config.isIgnoreDurationToRetain());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getCleanupPeriod());
+    Assertions.assertEquals(Duration.standardMinutes(60), config.getBufferPeriod());
+    Assertions.assertEquals(Duration.standardHours(12), config.getDurationToRetain());
+    Assertions.assertEquals(500, config.getMaxSegments());
   }
 
   @Test
@@ -217,13 +216,13 @@ public class DruidCoordinatorConfigTest
     final CoordinatorKillConfigs killConfigs
         = deserializeFrom(new Properties(), "druid.coordinator.kill", CoordinatorKillConfigs.class);
 
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.auditLogs());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.supervisors());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.compactionConfigs());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.datasources());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.rules());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.pendingSegments());
-    Assert.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.segmentSchemas());
+    Assertions.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.auditLogs());
+    Assertions.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.supervisors());
+    Assertions.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.compactionConfigs());
+    Assertions.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.datasources());
+    Assertions.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.rules());
+    Assertions.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.pendingSegments());
+    Assertions.assertEquals(MetadataCleanupConfig.DEFAULT, killConfigs.segmentSchemas());
   }
 
   @Test
@@ -259,31 +258,31 @@ public class DruidCoordinatorConfigTest
     final CoordinatorKillConfigs killConfigs
         = deserializeFrom(props, "druid.coordinator.kill", CoordinatorKillConfigs.class);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(10), Duration.standardHours(20)),
         killConfigs.auditLogs()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(20), Duration.standardHours(30)),
         killConfigs.compactionConfigs()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(5), Duration.standardHours(10)),
         killConfigs.datasources()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(11), Duration.standardHours(12)),
         killConfigs.rules()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(1), Duration.standardHours(2)),
         killConfigs.supervisors()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new MetadataCleanupConfig(false, Duration.standardHours(2), Duration.standardHours(8)),
         killConfigs.segmentSchemas()
     );
-    Assert.assertFalse(killConfigs.pendingSegments().isCleanupEnabled());
+    Assertions.assertFalse(killConfigs.pendingSegments().isCleanupEnabled());
   }
 
   @Test
@@ -436,7 +435,7 @@ public class DruidCoordinatorConfigTest
       Object... args
   )
   {
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> new DruidCoordinatorConfig(
             new CoordinatorRunConfig(null, null),
@@ -448,7 +447,7 @@ public class DruidCoordinatorConfigTest
     );
 
     final String expectedMessage = StringUtils.format(expectedMessageFormat, args);
-    MatcherAssert.assertThat(
+    org.apache.druid.error.DruidExceptionAssertions.assertMatches(
         exception,
         new DruidExceptionMatcher(
             DruidException.Persona.OPERATOR,

@@ -26,36 +26,34 @@ import org.apache.druid.server.RequestLogLine;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class FileRequestLoggerTest
 {
   private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
   private static final String HOST = "localhost";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  public File temporaryFolder;
 
   @Test
   public void testLog() throws Exception
   {
     ObjectMapper objectMapper = new ObjectMapper();
     DateTime dateTime = DateTimes.nowUtc();
-    File logDir = temporaryFolder.newFolder();
+    File logDir = newFolder(temporaryFolder, "junit");
     String nativeQueryLogString = dateTime + "\t" + HOST + "\t" + "native";
     String sqlQueryLogString = dateTime + "\t" + HOST + "\t" + "sql";
 
@@ -82,7 +80,7 @@ public class FileRequestLoggerTest
 
     File logFile = new File(logDir, dateTime.toString("yyyy-MM-dd'.log'"));
     String logString = CharStreams.toString(Files.newBufferedReader(logFile.toPath(), StandardCharsets.UTF_8));
-    Assert.assertTrue(logString.contains(nativeQueryLogString + "\n" + sqlQueryLogString + "\n"));
+    Assertions.assertTrue(logString.contains(nativeQueryLogString + "\n" + sqlQueryLogString + "\n"));
     fileRequestLogger.stop();
   }
 
@@ -90,7 +88,7 @@ public class FileRequestLoggerTest
   public void testLogRemove() throws Exception
   {
     ObjectMapper objectMapper = new ObjectMapper();
-    File logDir = temporaryFolder.newFolder();
+    File logDir = newFolder(temporaryFolder, "junit");
     DateTime dateTime = DateTimes.nowUtc();
     String logString = dateTime + "\t" + HOST + "\t" + "logString";
 
@@ -112,26 +110,27 @@ public class FileRequestLoggerTest
     fileRequestLogger.logNativeQuery(nativeRequestLogLine);
     File logFile = new File(logDir, dateTime.toString("yyyy-MM-dd'.log'"));
     Thread.sleep(100);
-    Assert.assertFalse(oldLogFile.exists());
-    Assert.assertTrue(logFile.exists());
+    Assertions.assertFalse(oldLogFile.exists());
+    Assertions.assertTrue(logFile.exists());
     fileRequestLogger.stop();
   }
 
   @Test
-  public void testLogRemoveWithInvalidDuration() throws Exception
+  public void testLogRemoveWithInvalidDuration()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("request logs retention period must be atleast as long as roll period");
-    ObjectMapper objectMapper = new ObjectMapper();
-    File logDir = temporaryFolder.newFolder();
-    FileRequestLogger fileRequestLogger = new FileRequestLogger(
-        objectMapper,
-        scheduler,
-        logDir,
-        "yyyy-MM-dd'.log'",
-        Duration.standardMinutes(30),
-        Duration.standardDays(1)
-    );
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      ObjectMapper objectMapper = new ObjectMapper();
+      File logDir = newFolder(temporaryFolder, "junit");
+      FileRequestLogger fileRequestLogger = new FileRequestLogger(
+          objectMapper,
+          scheduler,
+          logDir,
+          "yyyy-MM-dd'.log'",
+          Duration.standardMinutes(30),
+          Duration.standardDays(1)
+      );
+    });
+    assertTrue(exception.getMessage().contains("request logs retention period must be atleast as long as roll period"));
   }
 
   @Test
@@ -139,7 +138,7 @@ public class FileRequestLoggerTest
   {
     ObjectMapper objectMapper = new ObjectMapper();
     DateTime dateTime = DateTimes.nowUtc();
-    File logDir = temporaryFolder.newFolder();
+    File logDir = newFolder(temporaryFolder, "junit");
     String sqlQueryLogString = dateTime + "\t" + HOST + "\t" + "sql";
 
     FileRequestLogger hourlyLogger = new FileRequestLogger(
@@ -173,10 +172,23 @@ public class FileRequestLoggerTest
     File dailyLogFile = new File(logDir, dateTime.toString("yyyy-MM-dd-00'.log'"));
     String hourlyLogString = CharStreams.toString(Files.newBufferedReader(hourlyLogFile.toPath(), StandardCharsets.UTF_8));
     String dailyLogString = CharStreams.toString(Files.newBufferedReader(dailyLogFile.toPath(), StandardCharsets.UTF_8));
-    Assert.assertTrue(hourlyLogString.contains(sqlQueryLogString + "\n"));
-    Assert.assertTrue(dailyLogString.contains(sqlQueryLogString + "\n"));
+    Assertions.assertTrue(hourlyLogString.contains(sqlQueryLogString + "\n"));
+    Assertions.assertTrue(dailyLogString.contains(sqlQueryLogString + "\n"));
 
     hourlyLogger.stop();
     dailyLoggerWithHourPattern.stop();
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
+      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+    }
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

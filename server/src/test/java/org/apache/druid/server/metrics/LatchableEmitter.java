@@ -25,15 +25,15 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.java.util.metrics.TaskHolder;
-import org.hamcrest.Matcher;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Timeout;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -359,8 +359,8 @@ public class LatchableEmitter extends StubServiceEmitter
     private String host;
     private String service;
     private String metricName;
-    private Matcher<Long> valueMatcher;
-    private final Map<String, Matcher<Object>> dimensionMatchers = new HashMap<>();
+    private Predicate<Object> valueMatcher;
+    private final Map<String, Predicate<Object>> dimensionMatchers = new HashMap<>();
 
     private final AtomicReference<ServiceMetricEvent> matchingEvent = new AtomicReference<>();
 
@@ -376,9 +376,9 @@ public class LatchableEmitter extends StubServiceEmitter
     /**
      * Matches an event only if the metric value satisfies the given matcher.
      */
-    public EventMatcher hasValueMatching(Matcher<Long> valueMatcher)
+    public EventMatcher hasValueMatching(Object valueMatcher)
     {
-      this.valueMatcher = valueMatcher;
+      this.valueMatcher = value -> matches(valueMatcher, value);
       return this;
     }
 
@@ -387,16 +387,16 @@ public class LatchableEmitter extends StubServiceEmitter
      */
     public EventMatcher hasDimension(String dimension, Object value)
     {
-      dimensionMatchers.put(dimension, Matchers.equalTo(value));
+      dimensionMatchers.put(dimension, actualValue -> Objects.equals(value, actualValue));
       return this;
     }
 
     /**
      * Matches an event if the value of the given dimension satisfies the matcher.
      */
-    public EventMatcher hasDimensionMatching(String dimension, Matcher<Object> matcher)
+    public EventMatcher hasDimensionMatching(String dimension, Object matcher)
     {
-      dimensionMatchers.put(dimension, matcher);
+      dimensionMatchers.put(dimension, value -> matches(matcher, value));
       return this;
     }
 
@@ -423,7 +423,7 @@ public class LatchableEmitter extends StubServiceEmitter
     {
       if (metricName != null && !event.getMetric().equals(metricName)) {
         return false;
-      } else if (valueMatcher != null && !valueMatcher.matches(event.getValue())) {
+      } else if (valueMatcher != null && !valueMatcher.test(event.getValue())) {
         return false;
       } else if (service != null && !service.equals(event.getService())) {
         return false;
@@ -432,7 +432,7 @@ public class LatchableEmitter extends StubServiceEmitter
       }
 
       final boolean matches = dimensionMatchers.entrySet().stream().allMatch(
-          dimValue -> dimValue.getValue().matches(event.getUserDims().get(dimValue.getKey()))
+          dimValue -> dimValue.getValue().test(event.getUserDims().get(dimValue.getKey()))
       );
 
       if (matches) {
@@ -440,6 +440,16 @@ public class LatchableEmitter extends StubServiceEmitter
         return true;
       } else {
         return false;
+      }
+    }
+
+    private static boolean matches(Object matcher, Object value)
+    {
+      try {
+        return (boolean) matcher.getClass().getMethod("matches", Object.class).invoke(matcher, value);
+      }
+      catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+        throw new RuntimeException(e);
       }
     }
   }

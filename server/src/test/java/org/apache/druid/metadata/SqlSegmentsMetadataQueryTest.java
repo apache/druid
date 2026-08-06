@@ -40,10 +40,10 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -55,7 +55,7 @@ import java.util.stream.Collectors;
 
 public class SqlSegmentsMetadataQueryTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
       = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -71,7 +71,7 @@ public class SqlSegmentsMetadataQueryTest
                           .withVersion(V1)
                           .eachOfSizeInMb(500);
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     derbyConnectorRule.getConnector().createSegmentTable();
@@ -82,23 +82,23 @@ public class SqlSegmentsMetadataQueryTest
   public void test_markSegmentsAsUnused()
   {
     // Check segments currently present in the metadata store
-    Assert.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
-    Assert.assertTrue(retrieveAllUnusedSegments().isEmpty());
+    Assertions.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
+    Assertions.assertTrue(retrieveAllUnusedSegments().isEmpty());
 
     // Mark segments as unused and verify the results
     final Set<DataSegment> segmentsToUpdate = Set.of(WIKI_SEGMENTS_2X5D.get(0), WIKI_SEGMENTS_2X5D.get(1));
     int numUpdatedSegments = update(
         sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), DateTimes.nowUtc())
     );
-    Assert.assertEquals(2, numUpdatedSegments);
-    Assert.assertEquals(segmentsToUpdate, retrieveAllUnusedSegments());
+    Assertions.assertEquals(2, numUpdatedSegments);
+    Assertions.assertEquals(segmentsToUpdate, retrieveAllUnusedSegments());
 
     // Verify that these segments are not present in used segments set
     Set<DataSegment> usedSegments = retrieveAllUsedSegments();
-    Assert.assertEquals(8, usedSegments.size());
+    Assertions.assertEquals(8, usedSegments.size());
 
     segmentsToUpdate.forEach(
-        updatedSegment -> Assert.assertFalse(usedSegments.contains(updatedSegment))
+        updatedSegment -> Assertions.assertFalse(usedSegments.contains(updatedSegment))
     );
   }
 
@@ -110,16 +110,16 @@ public class SqlSegmentsMetadataQueryTest
     int numUpdatedSegments = update(
         sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), DateTimes.nowUtc())
     );
-    Assert.assertEquals(2, numUpdatedSegments);
-    Assert.assertEquals(segmentsToUpdate, retrieveAllUnusedSegments());
+    Assertions.assertEquals(2, numUpdatedSegments);
+    Assertions.assertEquals(segmentsToUpdate, retrieveAllUnusedSegments());
 
     // Mark segments as used again and verify the results
     numUpdatedSegments = update(
         sql -> sql.markSegmentsAsUsed(getIds(segmentsToUpdate), DateTimes.nowUtc())
     );
-    Assert.assertEquals(2, numUpdatedSegments);
-    Assert.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
-    Assert.assertTrue(retrieveAllUnusedSegments().isEmpty());
+    Assertions.assertEquals(2, numUpdatedSegments);
+    Assertions.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
+    Assertions.assertTrue(retrieveAllUnusedSegments().isEmpty());
   }
 
   @Test
@@ -128,8 +128,8 @@ public class SqlSegmentsMetadataQueryTest
     int numUpdatedSegments = update(
         sql -> sql.markSegmentsAsUnused(Set.of(), DateTimes.nowUtc())
     );
-    Assert.assertEquals(0, numUpdatedSegments);
-    Assert.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
+    Assertions.assertEquals(0, numUpdatedSegments);
+    Assertions.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
   }
 
   @Test
@@ -138,9 +138,9 @@ public class SqlSegmentsMetadataQueryTest
     int numUpdatedSegments = update(
         sql -> sql.markSegmentsUnused(TestDataSource.WIKI, Intervals.ETERNITY, null, DateTimes.nowUtc())
     );
-    Assert.assertEquals(WIKI_SEGMENTS_2X5D.size(), numUpdatedSegments);
-    Assert.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUnusedSegments());
-    Assert.assertTrue(retrieveAllUsedSegments().isEmpty());
+    Assertions.assertEquals(WIKI_SEGMENTS_2X5D.size(), numUpdatedSegments);
+    Assertions.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUnusedSegments());
+    Assertions.assertTrue(retrieveAllUsedSegments().isEmpty());
   }
 
   @Test
@@ -162,9 +162,9 @@ public class SqlSegmentsMetadataQueryTest
             DateTimes.nowUtc()
         )
     );
-    Assert.assertEquals(4, numUpdatedSegments);
-    Assert.assertEquals(4, retrieveAllUnusedSegments().size());
-    Assert.assertEquals(16, retrieveAllUsedSegments().size());
+    Assertions.assertEquals(4, numUpdatedSegments);
+    Assertions.assertEquals(4, retrieveAllUnusedSegments().size());
+    Assertions.assertEquals(16, retrieveAllUsedSegments().size());
   }
 
   @Test
@@ -187,9 +187,9 @@ public class SqlSegmentsMetadataQueryTest
             DateTimes.nowUtc()
         )
     );
-    Assert.assertEquals(8, numUpdatedSegments);
-    Assert.assertEquals(8, retrieveAllUnusedSegments().size());
-    Assert.assertEquals(12, retrieveAllUsedSegments().size());
+    Assertions.assertEquals(8, numUpdatedSegments);
+    Assertions.assertEquals(8, retrieveAllUnusedSegments().size());
+    Assertions.assertEquals(12, retrieveAllUsedSegments().size());
   }
 
   @Test
@@ -211,9 +211,9 @@ public class SqlSegmentsMetadataQueryTest
             DateTimes.nowUtc()
         )
     );
-    Assert.assertEquals(8, numUpdatedSegments);
-    Assert.assertEquals(8, retrieveAllUnusedSegments().size());
-    Assert.assertEquals(12, retrieveAllUsedSegments().size());
+    Assertions.assertEquals(8, numUpdatedSegments);
+    Assertions.assertEquals(8, retrieveAllUnusedSegments().size());
+    Assertions.assertEquals(12, retrieveAllUsedSegments().size());
   }
 
   @Test
@@ -222,16 +222,16 @@ public class SqlSegmentsMetadataQueryTest
     int numUpdatedSegments = update(
         sql -> sql.markSegmentsUnused(TestDataSource.WIKI, Intervals.ETERNITY, List.of(), DateTimes.nowUtc())
     );
-    Assert.assertEquals(0, numUpdatedSegments);
-    Assert.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
-    Assert.assertTrue(retrieveAllUnusedSegments().isEmpty());
+    Assertions.assertEquals(0, numUpdatedSegments);
+    Assertions.assertEquals(Set.copyOf(WIKI_SEGMENTS_2X5D), retrieveAllUsedSegments());
+    Assertions.assertTrue(retrieveAllUnusedSegments().isEmpty());
   }
 
   @Test
   public void test_retrieveSegmentForId()
   {
     final DataSegment segmentJan1 = WIKI_SEGMENTS_2X5D.get(0);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segmentJan1,
         read(sql -> sql.retrieveSegmentForId(segmentJan1.getId()))
     );
@@ -240,7 +240,7 @@ public class SqlSegmentsMetadataQueryTest
   @Test
   public void test_retrieveSegmentForId_returnsNull_forUnknownId()
   {
-    Assert.assertNull(
+    Assertions.assertNull(
         read(
             sql -> sql.retrieveSegmentForId(SegmentId.dummy(TestDataSource.WIKI))
         )
@@ -254,7 +254,7 @@ public class SqlSegmentsMetadataQueryTest
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
 
-    Assert.assertEquals(4, result.size());
+    Assertions.assertEquals(4, result.size());
     assertSegmentsOverlapInterval(result, queryInterval);
   }
 
@@ -265,13 +265,13 @@ public class SqlSegmentsMetadataQueryTest
     int numUpdatedSegments = update(
         sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), DateTimes.nowUtc())
     );
-    Assert.assertEquals(1, numUpdatedSegments);
+    Assertions.assertEquals(1, numUpdatedSegments);
 
     final Interval queryInterval = new Interval(JAN_1, JAN_1.plusDays(2));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
 
-    Assert.assertEquals(3, result.size());
+    Assertions.assertEquals(3, result.size());
     assertSegmentsOverlapInterval(result, queryInterval);
   }
 
@@ -281,7 +281,7 @@ public class SqlSegmentsMetadataQueryTest
     Interval queryInterval = new Interval(JAN_1.plusDays(4), JAN_1.plusDays(5));
 
     Set<DataSegment> result = readAsSet(q -> q.retrieveUsedSegments(TestDataSource.WIKI, List.of(queryInterval)));
-    Assert.assertEquals(2, result.size());
+    Assertions.assertEquals(2, result.size());
     assertSegmentsOverlapInterval(result, queryInterval);
   }
 
@@ -291,9 +291,9 @@ public class SqlSegmentsMetadataQueryTest
   )
   {
     for (DataSegment segment : segments) {
-      Assert.assertTrue(
-          "Segment " + segment.getId() + " should be in interval " + interval,
-          segment.getInterval().overlaps(interval)
+      Assertions.assertTrue(
+          segment.getInterval().overlaps(interval),
+          "Segment " + segment.getId() + " should be in interval " + interval
       );
     }
   }
@@ -384,7 +384,7 @@ public class SqlSegmentsMetadataQueryTest
 
     Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStateFingerprints);
 
-    Assert.assertTrue("Should return empty set when no segments have indexing states", fingerprints.isEmpty());
+    Assertions.assertTrue(fingerprints.isEmpty(), "Should return empty set when no segments have indexing states");
   }
 
   @Test
@@ -405,7 +405,7 @@ public class SqlSegmentsMetadataQueryTest
 
     Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStateFingerprints);
 
-    Assert.assertEquals("Should return all fingerprints in the cache", Set.of("fp1", "fp2", "fp3"), fingerprints);
+    Assertions.assertEquals(Set.of("fp1", "fp2", "fp3"), fingerprints, "Should return all fingerprints in the cache");
   }
 
   @Test
@@ -422,7 +422,7 @@ public class SqlSegmentsMetadataQueryTest
 
     Set<String> fingerprints = read(SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStateFingerprints);
 
-    Assert.assertEquals("Should ignore segments without indexing states", Set.of("fp1"), fingerprints);
+    Assertions.assertEquals(Set.of("fp1"), fingerprints, "Should ignore segments without indexing states");
   }
 
   @Test
@@ -432,7 +432,7 @@ public class SqlSegmentsMetadataQueryTest
 
     List<IndexingStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates);
 
-    Assert.assertTrue("Should return empty list when no indexing states exist", records.isEmpty());
+    Assertions.assertTrue(records.isEmpty(), "Should return empty list when no indexing states exist");
   }
 
   @Test
@@ -460,12 +460,12 @@ public class SqlSegmentsMetadataQueryTest
 
     List<IndexingStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates);
 
-    Assert.assertEquals("Should return all indexing states", 3, records.size());
+    Assertions.assertEquals(3, records.size(), "Should return all indexing states");
 
     Set<String> retrievedFingerprints = records.stream()
                                                 .map(IndexingStateRecord::getFingerprint)
                                                 .collect(Collectors.toSet());
-    Assert.assertEquals("Should contain all fps", Set.of("fp1", "fp2", "fp3"), retrievedFingerprints);
+    Assertions.assertEquals(Set.of("fp1", "fp2", "fp3"), retrievedFingerprints, "Should contain all fps");
 
     // Verify payloads
     Map<String, CompactionState> retrievedStates = records.stream()
@@ -473,9 +473,9 @@ public class SqlSegmentsMetadataQueryTest
             IndexingStateRecord::getFingerprint,
             IndexingStateRecord::getState
         ));
-    Assert.assertEquals("fp1 state should match", state1, retrievedStates.get("fp1"));
-    Assert.assertEquals("fp2 state should match", state2, retrievedStates.get("fp2"));
-    Assert.assertEquals("fp3 state should match", state3, retrievedStates.get("fp3"));
+    Assertions.assertEquals(state1, retrievedStates.get("fp1"), "fp1 state should match");
+    Assertions.assertEquals(state2, retrievedStates.get("fp2"), "fp2 state should match");
+    Assertions.assertEquals(state3, retrievedStates.get("fp3"), "fp3 state should match");
   }
 
   @Test
@@ -493,7 +493,7 @@ public class SqlSegmentsMetadataQueryTest
 
     List<IndexingStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates);
 
-    Assert.assertEquals("Should only return all indexing states", 2, records.size());
+    Assertions.assertEquals(2, records.size(), "Should only return all indexing states");
   }
 
   @Test
@@ -511,7 +511,7 @@ public class SqlSegmentsMetadataQueryTest
 
     List<IndexingStateRecord> records = read(SqlSegmentsMetadataQuery::retrieveAllUsedIndexingStates);
 
-    Assert.assertTrue("Should not return unused indexing states", records.isEmpty());
+    Assertions.assertTrue(records.isEmpty(), "Should not return unused indexing states");
   }
 
   @Test
@@ -523,7 +523,7 @@ public class SqlSegmentsMetadataQueryTest
         sql -> sql.retrieveIndexingStatesForFingerprints(Set.of())
     );
 
-    Assert.assertTrue("Should return empty list for empty input", records.isEmpty());
+    Assertions.assertTrue(records.isEmpty(), "Should return empty list for empty input");
   }
 
   @Test
@@ -542,12 +542,12 @@ public class SqlSegmentsMetadataQueryTest
         sql -> sql.retrieveIndexingStatesForFingerprints(Set.of("fp1", "fp3"))
     );
 
-    Assert.assertEquals("Should return requested fingerprints", 2, records.size());
+    Assertions.assertEquals(2, records.size(), "Should return requested fingerprints");
 
     Set<String> retrievedFingerprints = records.stream()
                                                 .map(IndexingStateRecord::getFingerprint)
                                                 .collect(Collectors.toSet());
-    Assert.assertEquals("Should contain only requested fingerprints", Set.of("fp1", "fp3"), retrievedFingerprints);
+    Assertions.assertEquals(Set.of("fp1", "fp3"), retrievedFingerprints, "Should contain only requested fingerprints");
   }
 
   @Test
@@ -570,12 +570,12 @@ public class SqlSegmentsMetadataQueryTest
         sql -> sql.retrieveIndexingStatesForFingerprints(expectedFingerprints)
     );
 
-    Assert.assertEquals("Should return all fingerprints across multiple batches", 150, records.size());
+    Assertions.assertEquals(150, records.size(), "Should return all fingerprints across multiple batches");
 
     Set<String> retrievedFingerprints = records.stream()
                                                 .map(IndexingStateRecord::getFingerprint)
                                                 .collect(Collectors.toSet());
-    Assert.assertEquals("Should contain all requested fingerprints", expectedFingerprints, retrievedFingerprints);
+    Assertions.assertEquals(expectedFingerprints, retrievedFingerprints, "Should contain all requested fingerprints");
   }
 
   @Test
@@ -592,7 +592,7 @@ public class SqlSegmentsMetadataQueryTest
         sql -> sql.retrieveIndexingStatesForFingerprints(Set.of("fp999", "fp888"))
     );
 
-    Assert.assertTrue("Should return empty list when fingerprints don't exist", records.isEmpty());
+    Assertions.assertTrue(records.isEmpty(), "Should return empty list when fingerprints don't exist");
   }
 
   @Test
@@ -610,12 +610,12 @@ public class SqlSegmentsMetadataQueryTest
         sql -> sql.retrieveIndexingStatesForFingerprints(Set.of("fp1", "fp999", "fp2", "fp888"))
     );
 
-    Assert.assertEquals("Should return only existing fingerprints", 2, records.size());
+    Assertions.assertEquals(2, records.size(), "Should return only existing fingerprints");
 
     Set<String> retrievedFingerprints = records.stream()
                                                 .map(IndexingStateRecord::getFingerprint)
                                                 .collect(Collectors.toSet());
-    Assert.assertEquals("Should contain only existing fingerprints", Set.of("fp1", "fp2"), retrievedFingerprints);
+    Assertions.assertEquals(Set.of("fp1", "fp2"), retrievedFingerprints, "Should contain only existing fingerprints");
   }
 
   @Test
@@ -635,8 +635,8 @@ public class SqlSegmentsMetadataQueryTest
         sql -> sql.retrieveIndexingStatesForFingerprints(Set.of("fp1", "fp2"))
     );
 
-    Assert.assertEquals("Should only return used indexing states", 1, records.size());
-    Assert.assertEquals("Should return fp1", "fp1", records.get(0).getFingerprint());
+    Assertions.assertEquals(1, records.size(), "Should only return used indexing states");
+    Assertions.assertEquals("fp1", records.get(0).getFingerprint(), "Should return fp1");
   }
 
   // ==================== Helper Methods for Indexing State Tests ====================

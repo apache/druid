@@ -37,19 +37,20 @@ import org.apache.druid.guice.TestDruidModule;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.server.DruidNode;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
+
+import java.io.File;
 import java.util.Collection;
 import java.util.Set;
 
 public class ServerInjectorBuilderTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private Injector startupInjector()
   {
@@ -79,9 +80,9 @@ public class ServerInjectorBuilderTest
         DruidModule.class
     );
 
-    Assert.assertTrue(
-        "modules contains TestDruidModule",
-        Collections2.transform(modules, fnClassName).contains(TestDruidModule.class.getName())
+    Assertions.assertTrue(
+        Collections2.transform(modules, fnClassName).contains(TestDruidModule.class.getName()),
+        "modules contains TestDruidModule"
     );
   }
 
@@ -108,9 +109,9 @@ public class ServerInjectorBuilderTest
             }
         )
     );
-    Assert.assertNotNull(injector);
-    Assert.assertNotNull(ExtensionsLoader.instance(injector));
-    Assert.assertSame(extnLoader, ExtensionsLoader.instance(injector));
+    Assertions.assertNotNull(injector);
+    Assertions.assertNotNull(ExtensionsLoader.instance(injector));
+    Assertions.assertSame(extnLoader, ExtensionsLoader.instance(injector));
   }
 
   @Test
@@ -129,8 +130,8 @@ public class ServerInjectorBuilderTest
             )
         )
     );
-    Assert.assertNotNull(injector);
-    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assertions.assertNotNull(injector);
+    Assertions.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
   }
 
   @Test
@@ -147,7 +148,7 @@ public class ServerInjectorBuilderTest
               @Inject
               public void setNodeRoles(@Self Set<NodeRole> nodeRoles)
               {
-                Assert.assertTrue(nodeRoles.isEmpty());
+                Assertions.assertTrue(nodeRoles.isEmpty());
               }
 
               @Override
@@ -163,7 +164,7 @@ public class ServerInjectorBuilderTest
             )
         )
     );
-    Assert.assertNotNull(injector);
+    Assertions.assertNotNull(injector);
   }
 
   @Test
@@ -183,12 +184,12 @@ public class ServerInjectorBuilderTest
             new LoadOnAnnotationTestModule()
         )
     );
-    Assert.assertNotNull(injector);
-    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
-    Assert.assertThrows(
-        "Guice configuration errors",
+    Assertions.assertNotNull(injector);
+    Assertions.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assertions.assertThrows(
         ConfigurationException.class,
-        () -> injector.getInstance(Key.get(String.class, Names.named("emperor")))
+        () -> injector.getInstance(Key.get(String.class, Names.named("emperor"))),
+        "Guice configuration errors"
     );
   }
 
@@ -209,9 +210,9 @@ public class ServerInjectorBuilderTest
             new LoadOnAnnotationTestModule()
         )
     );
-    Assert.assertNotNull(injector);
-    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
-    Assert.assertEquals("I am Druid", injector.getInstance(Key.get(String.class, Names.named("emperor"))));
+    Assertions.assertNotNull(injector);
+    Assertions.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assertions.assertEquals("I am Druid", injector.getInstance(Key.get(String.class, Names.named("emperor"))));
   }
 
   @LoadScope(roles = {"emperor", "druid"})
@@ -242,12 +243,12 @@ public class ServerInjectorBuilderTest
             new NodeRolesInjectTestModule()
         )
     );
-    Assert.assertNotNull(injector);
-    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
-    Assert.assertThrows(
-        "Guice configuration errors",
+    Assertions.assertNotNull(injector);
+    Assertions.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assertions.assertThrows(
         ConfigurationException.class,
-        () -> injector.getInstance(Key.get(String.class, Names.named("emperor")))
+        () -> injector.getInstance(Key.get(String.class, Names.named("emperor"))),
+        "Guice configuration errors"
     );
   }
 
@@ -269,9 +270,9 @@ public class ServerInjectorBuilderTest
             new NodeRolesInjectTestModule()
         )
     );
-    Assert.assertNotNull(injector);
-    Assert.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
-    Assert.assertEquals("I am Druid", injector.getInstance(Key.get(String.class, Names.named("emperor"))));
+    Assertions.assertNotNull(injector);
+    Assertions.assertEquals(expected, injector.getInstance(Key.get(DruidNode.class, Self.class)));
+    Assertions.assertEquals("I am Druid", injector.getInstance(Key.get(String.class, Names.named("emperor"))));
   }
 
   private static class NodeRolesInjectTestModule implements com.google.inject.Module

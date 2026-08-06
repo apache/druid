@@ -32,12 +32,13 @@ import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.HttpHeaders;
+
 import java.util.Collections;
 
 public class MessageRelayClientImplTest
@@ -46,7 +47,7 @@ public class MessageRelayClientImplTest
   private MockServiceClient serviceClient;
   private MessageRelayClient<String> messageRelayClient;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     smileMapper = new DefaultObjectMapper(new SmileFactory(), null);
@@ -54,7 +55,7 @@ public class MessageRelayClientImplTest
     messageRelayClient = new MessageRelayClientImpl<>(serviceClient, smileMapper, String.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     serviceClient.verify();
@@ -73,7 +74,7 @@ public class MessageRelayClientImplTest
     );
 
     final ListenableFuture<MessageBatch<String>> result = messageRelayClient.getMessages("me", MessageRelay.INIT, 0);
-    Assert.assertEquals(batch, result.get());
+    Assertions.assertEquals(batch, result.get());
   }
 
   @Test
@@ -87,6 +88,6 @@ public class MessageRelayClientImplTest
     );
 
     final ListenableFuture<MessageBatch<String>> result = messageRelayClient.getMessages("me", MessageRelay.INIT, 0);
-    Assert.assertEquals(new MessageBatch<>(Collections.emptyList(), MessageRelay.INIT, 0), result.get());
+    Assertions.assertEquals(new MessageBatch<>(Collections.emptyList(), MessageRelay.INIT, 0), result.get());
   }
 }

@@ -20,8 +20,8 @@
 package org.apache.druid.client;
 
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
 
@@ -36,9 +36,9 @@ public class HttpServerInventoryViewConfigTest
 
     HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
 
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(4), config.getServerTimeout());
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(1), config.getServerUnstabilityTimeout());
-    Assert.assertEquals(5, config.getNumThreads());
+    Assertions.assertEquals(TimeUnit.MINUTES.toMillis(4), config.getServerTimeout());
+    Assertions.assertEquals(TimeUnit.MINUTES.toMillis(1), config.getServerUnstabilityTimeout());
+    Assertions.assertEquals(5, config.getNumThreads());
   }
 
   @Test
@@ -52,8 +52,8 @@ public class HttpServerInventoryViewConfigTest
 
     HttpServerInventoryViewConfig config = TestHelper.makeJsonMapper().readValue(json, HttpServerInventoryViewConfig.class);
 
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(2), config.getServerTimeout());
-    Assert.assertEquals(TimeUnit.MINUTES.toMillis(3), config.getServerUnstabilityTimeout());
-    Assert.assertEquals(7, config.getNumThreads());
+    Assertions.assertEquals(TimeUnit.MINUTES.toMillis(2), config.getServerTimeout());
+    Assertions.assertEquals(TimeUnit.MINUTES.toMillis(3), config.getServerUnstabilityTimeout());
+    Assertions.assertEquals(7, config.getNumThreads());
   }
 }

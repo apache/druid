@@ -25,8 +25,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ServiceMetricEventSerdeTest
 {
@@ -53,7 +53,7 @@ public class ServiceMetricEventSerdeTest
                       + "\"service\":\"my-service\","
                       + "\"host\":\"my-host\""
                       + "}";
-    Assert.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
+    Assertions.assertEquals(mapper.readTree(expected), mapper.readTree(actual));
   }
 
 }

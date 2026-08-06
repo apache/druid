@@ -26,8 +26,8 @@ import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrat
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.eclipse.jetty.http.UriCompliance;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.HttpMethod;
 
@@ -41,11 +41,11 @@ public class ServerConfigTest
     ServerConfig defaultConfig = new ServerConfig();
     String defaultConfigJson = OBJECT_MAPPER.writeValueAsString(defaultConfig);
     ServerConfig defaultConfig2 = OBJECT_MAPPER.readValue(defaultConfigJson, ServerConfig.class);
-    Assert.assertEquals(defaultConfig, defaultConfig2);
-    Assert.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
-    Assert.assertFalse(defaultConfig2.isEnableHSTS());
-    Assert.assertEquals(UriCompliance.LEGACY, defaultConfig.getUriCompliance());
-    Assert.assertEquals(true, defaultConfig.isEnforceStrictSNIHostChecking());
+    Assertions.assertEquals(defaultConfig, defaultConfig2);
+    Assertions.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
+    Assertions.assertFalse(defaultConfig2.isEnableHSTS());
+    Assertions.assertEquals(UriCompliance.LEGACY, defaultConfig.getUriCompliance());
+    Assertions.assertEquals(true, defaultConfig.isEnforceStrictSNIHostChecking());
 
     ServerConfig modifiedConfig = new ServerConfig(
         999,
@@ -74,18 +74,18 @@ public class ServerConfigTest
     );
     String modifiedConfigJson = OBJECT_MAPPER.writeValueAsString(modifiedConfig);
     ServerConfig modifiedConfig2 = OBJECT_MAPPER.readValue(modifiedConfigJson, ServerConfig.class);
-    Assert.assertEquals(modifiedConfig, modifiedConfig2);
-    Assert.assertEquals(999, modifiedConfig2.getNumThreads());
-    Assert.assertEquals(888, modifiedConfig2.getQueueSize());
-    Assert.assertTrue(modifiedConfig2.getErrorResponseTransformStrategy() instanceof AllowedRegexErrorResponseTransformStrategy);
-    Assert.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
-    Assert.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
-    Assert.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains(HttpMethod.OPTIONS));
-    Assert.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
-    Assert.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
-    Assert.assertTrue(modifiedConfig2.isEnableHSTS());
-    Assert.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
-    Assert.assertFalse(modifiedConfig2.isEnforceStrictSNIHostChecking());
+    Assertions.assertEquals(modifiedConfig, modifiedConfig2);
+    Assertions.assertEquals(999, modifiedConfig2.getNumThreads());
+    Assertions.assertEquals(888, modifiedConfig2.getQueueSize());
+    Assertions.assertTrue(modifiedConfig2.getErrorResponseTransformStrategy() instanceof AllowedRegexErrorResponseTransformStrategy);
+    Assertions.assertTrue(modifiedConfig2.isEnableForwardedRequestCustomizer());
+    Assertions.assertEquals(1, modifiedConfig2.getAllowedHttpMethods().size());
+    Assertions.assertTrue(modifiedConfig2.getAllowedHttpMethods().contains(HttpMethod.OPTIONS));
+    Assertions.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
+    Assertions.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
+    Assertions.assertTrue(modifiedConfig2.isEnableHSTS());
+    Assertions.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
+    Assertions.assertFalse(modifiedConfig2.isEnforceStrictSNIHostChecking());
   }
 
   @Test

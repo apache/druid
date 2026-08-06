@@ -51,10 +51,10 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -75,7 +75,7 @@ public class RunRulesPartialLoadPlacementTest
   private BalancerStrategy balancerStrategy;
   private SegmentLoadQueueManager loadQueueManager;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesPartialLoadPlacementTest-%d"));
@@ -83,7 +83,7 @@ public class RunRulesPartialLoadPlacementTest
     loadQueueManager = new SegmentLoadQueueManager(null, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     exec.shutdown();
@@ -102,10 +102,10 @@ public class RunRulesPartialLoadPlacementTest
 
     final CoordinatorRunStats stats = runRules(matchNobodyForeverRule(), core0, core1);
 
-    Assert.assertEquals(
-        "both core partitions of a fully-unmatched group are empty loaded, not discarded",
+    Assertions.assertEquals(
         2L,
-        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE)
+        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE),
+        "both core partitions of a fully-unmatched group are empty loaded, not discarded"
     );
   }
 
@@ -120,14 +120,14 @@ public class RunRulesPartialLoadPlacementTest
 
     final CoordinatorRunStats stats = runRules(matchNobodyForeverRule(), appended);
 
-    Assert.assertEquals(
-        "appended unmatched segment is empty partial loaded",
+    Assertions.assertEquals(
         1L,
-        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE)
+        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE),
+        "appended unmatched segment is empty partial loaded"
     );
-    Assert.assertFalse(
-        "appended unmatched segment must not be fully downloaded",
-        stats.hasStat(Stats.Segments.ASSIGNED)
+    Assertions.assertFalse(
+        stats.hasStat(Stats.Segments.ASSIGNED),
+        "appended unmatched segment must not be fully downloaded"
     );
   }
 
@@ -151,7 +151,7 @@ public class RunRulesPartialLoadPlacementTest
     final CoordinatorRunStats stats = runRules(rule, matched, unmatched);
 
     // Both the positive match and the empty match are loaded
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE));
+    Assertions.assertEquals(2L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE));
   }
 
   /**
@@ -178,12 +178,12 @@ public class RunRulesPartialLoadPlacementTest
 
     final CoordinatorRunStats stats = runRules(rule, p0, p1, p2);
 
-    Assert.assertEquals(
-        "all 3 unmatched core partitions are partial loaded so the group stays queryable on demand",
+    Assertions.assertEquals(
         3L,
-        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE)
+        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER, DATASOURCE),
+        "all 3 unmatched core partitions are partial loaded so the group stays queryable on demand"
     );
-    Assert.assertFalse("no partition is fully downloaded", stats.hasStat(Stats.Segments.ASSIGNED));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED), "no partition is fully downloaded");
   }
 
   private ForeverPartialLoadRule matchNobodyForeverRule()

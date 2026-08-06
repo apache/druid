@@ -31,7 +31,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Arrays;
@@ -40,12 +40,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class LocalInputSourceDefnTest extends BaseExternTableTest
 {
@@ -65,7 +64,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -79,7 +78,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -92,7 +91,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
         .inputFormat(CSV_FORMAT)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -173,7 +172,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -204,7 +203,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     validateFormat(externSpec);
 
     // But, it fails if there are no columns.
-    assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -224,7 +223,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     validateFormat(externSpec);
 
     // But, it fails if there are no columns.
-    assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -247,7 +246,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     validateFormat(externSpec);
 
     // But, it fails if there are no columns.
-    assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -271,7 +270,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     validateFormat(externSpec);
 
     // But, it fails if there are no columns.
-    assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -282,21 +281,21 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     {
       // Empty arguments: not valid
       Map<String, Object> args = new HashMap<>();
-      assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
     }
 
     {
       // Base dir without filter: not valid.
       Map<String, Object> args = new HashMap<>();
       args.put(LocalInputSourceDefn.BASE_DIR_PARAMETER, "/tmp");
-      assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
     }
 
     {
       // Filter without base dir: not valid
       Map<String, Object> args = new HashMap<>();
       args.put(LocalInputSourceDefn.FILTER_PARAMETER, "*.csv");
-      assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
     }
 
     {
@@ -305,7 +304,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
       args.put(LocalInputSourceDefn.BASE_DIR_PARAMETER, "/tmp");
       args.put(LocalInputSourceDefn.FILES_PARAMETER, "/tmp/foo.csv, /tmp/bar.csv");
       args.put(LocalInputSourceDefn.FILTER_PARAMETER, "*.csv");
-      assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
     }
   }
 
@@ -357,7 +356,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     validateFormat(externSpec);
 
     // Fails if columns are provided.
-    assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
   }
 
   @Test
@@ -409,7 +408,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     validateFormat(externSpec);
 
     // Fails if columns are provided.
-    assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
   }
 
   @Test
@@ -429,7 +428,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableDefnRegistry registry = new TableDefnRegistry(mapper);
     ResolvedTable resolved = registry.resolve(table.spec());
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function.
     TableFunction fn = externDefn.tableFn(resolved);
@@ -438,7 +437,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     assertFalse(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
 
     // Must provide an additional parameter.
-    assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), Collections.emptyList(), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), Collections.emptyList(), mapper));
 
     {
       // Create a table with a file pattern.
@@ -464,7 +463,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
       validateFormat(externSpec);
 
       // Fails if columns are provided.
-      assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
     }
   }
 
@@ -482,7 +481,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     TableDefnRegistry registry = new TableDefnRegistry(mapper);
     ResolvedTable resolved = registry.resolve(table.spec());
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function.
     TableFunction fn = externDefn.tableFn(resolved);
@@ -491,7 +490,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
     assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
 
     // Must provide an additional parameter.
-    assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), Collections.emptyList(), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), Collections.emptyList(), mapper));
 
     {
       // Create a table with a file pattern and format.
@@ -500,7 +499,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
       args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
 
       // Function fails without columns, since the table has none.
-      assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
 
       // Apply the function with no arguments and columns
       ExternalTableSpec externSpec = fn.apply("x", args, COLUMNS, mapper);
@@ -517,7 +516,7 @@ public class LocalInputSourceDefnTest extends BaseExternTableTest
       args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
 
       // Function fails without columns, since the table has none.
-      assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
 
       // Provide format and columns.
       ExternalTableSpec externSpec = fn.apply("x", args, COLUMNS, mapper);

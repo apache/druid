@@ -22,18 +22,22 @@ package org.apache.druid.segment.realtime.appenderator;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 public class TransactionalSegmentPublisherTest
 {
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testPublishSegments_retriesUpto5Times_ifFailureIsRetryable() throws IOException
   {
     final AtomicInteger attemptCount = new AtomicInteger(0);
@@ -42,11 +46,11 @@ public class TransactionalSegmentPublisherTest
         attemptCount
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentPublishResult.retryableFailure("this error is retryable"),
         publisher.publishSegments(null, Set.of(), Function.identity(), null, null)
     );
-    Assert.assertEquals(14, attemptCount.get());
+    Assertions.assertEquals(14, attemptCount.get());
   }
 
   @Test
@@ -58,11 +62,11 @@ public class TransactionalSegmentPublisherTest
         attemptCount
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentPublishResult.fail("this error is not retryable"),
         publisher.publishSegments(null, Set.of(), Function.identity(), null, null)
     );
-    Assert.assertEquals(1, attemptCount.get());
+    Assertions.assertEquals(1, attemptCount.get());
   }
 
   @Test
@@ -74,11 +78,11 @@ public class TransactionalSegmentPublisherTest
         attemptCount
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentPublishResult.retryableFailure("this error is retryable"),
         publisher.publishAnnotatedSegments(null, Set.of(), null, null)
     );
-    Assert.assertEquals(1, attemptCount.get());
+    Assertions.assertEquals(1, attemptCount.get());
   }
 
   private TransactionalSegmentPublisher createPublisher(

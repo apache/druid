@@ -24,15 +24,18 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.List;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class DataSourceCompactionConfigHistoryTest
 {
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
@@ -41,7 +44,7 @@ public class DataSourceCompactionConfigHistoryTest
 
   private DataSourceCompactionConfigHistory wikiAuditHistory;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     wikiAuditHistory = new DataSourceCompactionConfigHistory(TestDataSource.WIKI);
@@ -57,11 +60,11 @@ public class DataSourceCompactionConfigHistoryTest
         auditTime
     );
 
-    Assert.assertEquals(1, wikiAuditHistory.getEntries().size());
+    Assertions.assertEquals(1, wikiAuditHistory.getEntries().size());
     DataSourceCompactionConfigAuditEntry auditEntry = wikiAuditHistory.getEntries().get(0);
-    Assert.assertEquals(wikiCompactionConfig, auditEntry.getCompactionConfig());
-    Assert.assertEquals(auditInfo, auditEntry.getAuditInfo());
-    Assert.assertEquals(auditTime, auditEntry.getAuditTime());
+    Assertions.assertEquals(wikiCompactionConfig, auditEntry.getCompactionConfig());
+    Assertions.assertEquals(auditInfo, auditEntry.getAuditInfo());
+    Assertions.assertEquals(auditTime, auditEntry.getAuditTime());
   }
 
   @Test
@@ -76,18 +79,18 @@ public class DataSourceCompactionConfigHistoryTest
     wikiAuditHistory.add(DruidCompactionConfig.empty(), auditInfo, auditTime.plusHours(2));
 
     final List<DataSourceCompactionConfigAuditEntry> entries = wikiAuditHistory.getEntries();
-    Assert.assertEquals(2, entries.size());
+    Assertions.assertEquals(2, entries.size());
 
     final DataSourceCompactionConfigAuditEntry firstEntry = entries.get(0);
-    Assert.assertEquals(wikiCompactionConfig, firstEntry.getCompactionConfig());
-    Assert.assertEquals(auditInfo, firstEntry.getAuditInfo());
-    Assert.assertEquals(auditTime, firstEntry.getAuditTime());
+    Assertions.assertEquals(wikiCompactionConfig, firstEntry.getCompactionConfig());
+    Assertions.assertEquals(auditInfo, firstEntry.getAuditInfo());
+    Assertions.assertEquals(auditTime, firstEntry.getAuditTime());
 
     final DataSourceCompactionConfigAuditEntry secondEntry = entries.get(1);
-    Assert.assertNull(secondEntry.getCompactionConfig());
-    Assert.assertEquals(firstEntry.getGlobalConfig(), secondEntry.getGlobalConfig());
-    Assert.assertEquals(auditInfo, secondEntry.getAuditInfo());
-    Assert.assertEquals(auditTime.plusHours(2), secondEntry.getAuditTime());
+    Assertions.assertNull(secondEntry.getCompactionConfig());
+    Assertions.assertEquals(firstEntry.getGlobalConfig(), secondEntry.getGlobalConfig());
+    Assertions.assertEquals(auditInfo, secondEntry.getAuditInfo());
+    Assertions.assertEquals(auditTime.plusHours(2), secondEntry.getAuditTime());
   }
 
   @Test
@@ -103,7 +106,7 @@ public class DataSourceCompactionConfigHistoryTest
     );
     wikiAuditHistory.add(DruidCompactionConfig.empty(), auditInfo, DateTimes.nowUtc());
 
-    Assert.assertTrue(wikiAuditHistory.getEntries().isEmpty());
+    Assertions.assertTrue(wikiAuditHistory.getEntries().isEmpty());
   }
 
   @Test
@@ -127,11 +130,11 @@ public class DataSourceCompactionConfigHistoryTest
     );
 
     final List<DataSourceCompactionConfigAuditEntry> entries = wikiAuditHistory.getEntries();
-    Assert.assertEquals(3, entries.size());
+    Assertions.assertEquals(3, entries.size());
 
     final DataSourceCompactionConfigAuditEntry firstEntry = entries.get(0);
     final DataSourceCompactionConfigAuditEntry thirdEntry = entries.get(2);
-    Assert.assertTrue(firstEntry.hasSameConfig(thirdEntry));
+    Assertions.assertTrue(firstEntry.hasSameConfig(thirdEntry));
   }
 
   @Test
@@ -157,15 +160,15 @@ public class DataSourceCompactionConfigHistoryTest
     );
 
     final List<DataSourceCompactionConfigAuditEntry> entries = wikiAuditHistory.getEntries();
-    Assert.assertEquals(2, entries.size());
+    Assertions.assertEquals(2, entries.size());
 
     final DataSourceCompactionConfigAuditEntry firstEntry = entries.get(0);
     final DataSourceCompactionConfigAuditEntry secondEntry = entries.get(1);
-    Assert.assertEquals(firstEntry.getGlobalConfig(), secondEntry.getGlobalConfig());
+    Assertions.assertEquals(firstEntry.getGlobalConfig(), secondEntry.getGlobalConfig());
 
-    Assert.assertEquals(wikiCompactionConfig, firstEntry.getCompactionConfig());
-    Assert.assertEquals(updatedWikiConfig, secondEntry.getCompactionConfig());
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertEquals(wikiCompactionConfig, firstEntry.getCompactionConfig());
+    Assertions.assertEquals(updatedWikiConfig, secondEntry.getCompactionConfig());
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
   }
 
   @Test
@@ -182,14 +185,14 @@ public class DataSourceCompactionConfigHistoryTest
     wikiAuditHistory.add(updatedConfig, auditInfo, DateTimes.nowUtc());
 
     final List<DataSourceCompactionConfigAuditEntry> entries = wikiAuditHistory.getEntries();
-    Assert.assertEquals(2, entries.size());
+    Assertions.assertEquals(2, entries.size());
 
     final DataSourceCompactionConfigAuditEntry firstEntry = entries.get(0);
     final DataSourceCompactionConfigAuditEntry secondEntry = entries.get(1);
-    Assert.assertEquals(secondEntry.getCompactionConfig(), firstEntry.getCompactionConfig());
+    Assertions.assertEquals(secondEntry.getCompactionConfig(), firstEntry.getCompactionConfig());
 
-    Assert.assertEquals(originalConfig.clusterConfig(), firstEntry.getGlobalConfig());
-    Assert.assertEquals(updatedConfig.clusterConfig(), secondEntry.getGlobalConfig());
-    Assert.assertFalse(firstEntry.hasSameConfig(secondEntry));
+    Assertions.assertEquals(originalConfig.clusterConfig(), firstEntry.getGlobalConfig());
+    Assertions.assertEquals(updatedConfig.clusterConfig(), secondEntry.getGlobalConfig());
+    Assertions.assertFalse(firstEntry.hasSameConfig(secondEntry));
   }
 }

@@ -21,19 +21,23 @@ package org.apache.druid.server.initialization.jetty;
 
 import org.apache.druid.java.util.common.ISE;
 import org.easymock.EasyMock;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
+
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  */
 public class LimitRequestsFilterTest
 {
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testSimple() throws Exception
   {
     LimitRequestsFilter filter = new LimitRequestsFilter(2);

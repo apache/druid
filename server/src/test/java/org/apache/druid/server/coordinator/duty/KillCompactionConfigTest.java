@@ -39,17 +39,20 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class KillCompactionConfigTest
 {
   @Mock
@@ -71,7 +74,7 @@ public class KillCompactionConfigTest
   private KillCompactionConfig killCompactionConfig;
   private CoordinatorRunStats runStats;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     runStats = new CoordinatorRunStats();
@@ -98,7 +101,7 @@ public class KillCompactionConfigTest
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockStorageCoordinator);
     Mockito.verifyNoInteractions(mockJacksonConfigManager);
-    Assert.assertEquals(0, runStats.rowCount());
+    Assertions.assertEquals(0, runStats.rowCount());
   }
 
   @Test
@@ -126,8 +129,8 @@ public class KillCompactionConfigTest
     );
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockStorageCoordinator);
-    Assert.assertTrue(runStats.hasStat(Stats.Kill.COMPACTION_CONFIGS));
-    Assert.assertEquals(0, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
+    Assertions.assertTrue(runStats.hasStat(Stats.Kill.COMPACTION_CONFIGS));
+    Assertions.assertEquals(0, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
 
     Mockito.verify(mockJacksonConfigManager).convertByteToConfig(
         ArgumentMatchers.eq(null),
@@ -212,14 +215,14 @@ public class KillCompactionConfigTest
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
 
     // Verify and Assert
-    Assert.assertNotNull(oldConfigCaptor.getValue());
-    Assert.assertEquals(oldConfigCaptor.getValue(), originalCurrentConfigBytes);
-    Assert.assertNotNull(newConfigCaptor.getValue());
+    Assertions.assertNotNull(oldConfigCaptor.getValue());
+    Assertions.assertEquals(oldConfigCaptor.getValue(), originalCurrentConfigBytes);
+    Assertions.assertNotNull(newConfigCaptor.getValue());
     // The updated config should only contains one compaction config for the active datasource
-    Assert.assertEquals(1, newConfigCaptor.getValue().getCompactionConfigs().size());
+    Assertions.assertEquals(1, newConfigCaptor.getValue().getCompactionConfigs().size());
 
-    Assert.assertEquals(activeDatasourceConfig, newConfigCaptor.getValue().getCompactionConfigs().get(0));
-    Assert.assertEquals(1, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
+    Assertions.assertEquals(activeDatasourceConfig, newConfigCaptor.getValue().getCompactionConfigs().get(0));
+    Assertions.assertEquals(1, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
 
     Mockito.verify(mockJacksonConfigManager).convertByteToConfig(
         ArgumentMatchers.eq(originalCurrentConfigBytes),
@@ -302,7 +305,7 @@ public class KillCompactionConfigTest
     killCompactionConfig.run(mockDruidCoordinatorRuntimeParams);
 
     // Verify that 1 config has been deleted
-    Assert.assertEquals(1, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
+    Assertions.assertEquals(1, runStats.get(Stats.Kill.COMPACTION_CONFIGS));
 
     // Should call convertByteToConfig and lookup (to refresh current compaction config) four times due to RetryableException when failed
     Mockito.verify(mockJacksonConfigManager, Mockito.times(4)).convertByteToConfig(

@@ -20,9 +20,9 @@
 package org.apache.druid.segment.realtime;
 
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ChatHandlerProviderTest
 {
@@ -34,7 +34,7 @@ public class ChatHandlerProviderTest
 
   private ChatHandlerProvider chatHandlerProvider;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     chatHandlerProvider = new ChatHandlerProvider();
@@ -45,20 +45,20 @@ public class ChatHandlerProviderTest
   {
     ChatHandler testChatHandler = new TestChatHandler();
 
-    Assert.assertFalse("bad initial state", chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent());
+    Assertions.assertFalse(chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent(), "bad initial state");
 
     chatHandlerProvider.register(TEST_SERVICE_NAME, testChatHandler);
-    Assert.assertTrue("chatHandler did not register", chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent());
-    Assert.assertEquals(testChatHandler, chatHandlerProvider.get(TEST_SERVICE_NAME).get());
+    Assertions.assertTrue(chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent(), "chatHandler did not register");
+    Assertions.assertEquals(testChatHandler, chatHandlerProvider.get(TEST_SERVICE_NAME).get());
 
     chatHandlerProvider.unregister(TEST_SERVICE_NAME);
-    Assert.assertFalse("chatHandler did not deregister", chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent());
+    Assertions.assertFalse(chatHandlerProvider.get(TEST_SERVICE_NAME).isPresent(), "chatHandler did not deregister");
   }
 
   @Test
   public void testDuplicateRegistrationThrows()
   {
     chatHandlerProvider.register(TEST_SERVICE_NAME, new TestChatHandler());
-    Assert.assertThrows(ISE.class, () -> chatHandlerProvider.register(TEST_SERVICE_NAME, new TestChatHandler()));
+    Assertions.assertThrows(ISE.class, () -> chatHandlerProvider.register(TEST_SERVICE_NAME, new TestChatHandler()));
   }
 }

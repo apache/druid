@@ -31,21 +31,19 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.QueryLaningStrategy;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class HiLoQueryLaningStrategyTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private Druids.TimeseriesQueryBuilder queryBuilder;
   private HiLoQueryLaningStrategy strategy;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.queryBuilder = Druids.newTimeseriesQueryBuilder()
@@ -60,34 +58,38 @@ public class HiLoQueryLaningStrategyTest
   @Test
   public void testMaxPercentageThreadsRequired()
   {
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("maxLowPercent must be set");
-    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(null);
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> {
+      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(null);
+    });
+    assertTrue(exception.getMessage().contains("maxLowPercent must be set"));
   }
 
   @Test
   public void testMaxLowPercentMustBeGreaterThanZero()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("maxLowPercent must be in the range 1 to 100");
-    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(-1);
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(-1);
+    });
+    assertTrue(exception.getMessage().contains("maxLowPercent must be in the range 1 to 100"));
   }
 
 
   @Test
   public void testMaxLowPercentMustBeLessThanOrEqual100()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("maxLowPercent must be in the range 1 to 100");
-    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(9000);
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(9000);
+    });
+    assertTrue(exception.getMessage().contains("maxLowPercent must be in the range 1 to 100"));
   }
 
   @Test
   public void testMaxLowPercentZero()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("maxLowPercent must be in the range 1 to 100");
-    QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(0);
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(0);
+    });
+    assertTrue(exception.getMessage().contains("maxLowPercent must be in the range 1 to 100"));
   }
 
   @Test
@@ -95,9 +97,9 @@ public class HiLoQueryLaningStrategyTest
   {
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(100);
     Object2IntMap<String> laneConfig = strategy.getLaneLimits(25);
-    Assert.assertEquals(1, laneConfig.size());
-    Assert.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
-    Assert.assertEquals(25, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(1, laneConfig.size());
+    Assertions.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(25, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
   }
 
   @Test
@@ -106,68 +108,68 @@ public class HiLoQueryLaningStrategyTest
     // will round up to 1
     QueryLaningStrategy strategyRoundLow = new HiLoQueryLaningStrategy(1);
     Object2IntMap<String> laneConfigRoundLow = strategyRoundLow.getLaneLimits(25);
-    Assert.assertEquals(1, laneConfigRoundLow.size());
-    Assert.assertTrue(laneConfigRoundLow.containsKey(HiLoQueryLaningStrategy.LOW));
-    Assert.assertEquals(1, laneConfigRoundLow.getInt(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(1, laneConfigRoundLow.size());
+    Assertions.assertTrue(laneConfigRoundLow.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(1, laneConfigRoundLow.getInt(HiLoQueryLaningStrategy.LOW));
 
     // will not round, evenly divides
     QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(96);
     Object2IntMap<String> laneConfig = strategy.getLaneLimits(25);
-    Assert.assertEquals(1, laneConfig.size());
-    Assert.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
-    Assert.assertEquals(24, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(1, laneConfig.size());
+    Assertions.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(24, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
 
     // will round up
     QueryLaningStrategy strategyRounded = new HiLoQueryLaningStrategy(97);
     Object2IntMap<String> laneConfigRounded = strategyRounded.getLaneLimits(25);
-    Assert.assertEquals(1, laneConfigRounded.size());
-    Assert.assertTrue(laneConfigRounded.containsKey(HiLoQueryLaningStrategy.LOW));
-    Assert.assertEquals(25, laneConfigRounded.getInt(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(1, laneConfigRounded.size());
+    Assertions.assertTrue(laneConfigRounded.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(25, laneConfigRounded.getInt(HiLoQueryLaningStrategy.LOW));
   }
 
   @Test
   public void testLaneLimits()
   {
     Object2IntMap<String> laneConfig = strategy.getLaneLimits(5);
-    Assert.assertEquals(1, laneConfig.size());
-    Assert.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
-    Assert.assertEquals(2, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(1, laneConfig.size());
+    Assertions.assertTrue(laneConfig.containsKey(HiLoQueryLaningStrategy.LOW));
+    Assertions.assertEquals(2, laneConfig.getInt(HiLoQueryLaningStrategy.LOW));
   }
 
   @Test
   public void testLaningNoPriority()
   {
     TimeseriesQuery query = queryBuilder.build();
-    Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+    Assertions.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
   public void testLaningZeroPriority()
   {
     TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY_KEY, 0)).build();
-    Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+    Assertions.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
   public void testLaningInteractivePriority()
   {
     TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY_KEY, 100)).build();
-    Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+    Assertions.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
   public void testLaningInteractivePriority_String()
   {
     TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY_KEY, "100")).build();
-    Assert.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+    Assertions.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
   }
 
   @Test
   public void testLaningLowPriority()
   {
     TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY_KEY, -1)).build();
-    Assert.assertTrue(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
-    Assert.assertEquals(
+    Assertions.assertTrue(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+    Assertions.assertEquals(
         HiLoQueryLaningStrategy.LOW,
         strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()
     );
@@ -177,8 +179,8 @@ public class HiLoQueryLaningStrategyTest
   public void testLaningLowPriority_String()
   {
     TimeseriesQuery query = queryBuilder.context(ImmutableMap.of(QueryContexts.PRIORITY_KEY, "-1")).build();
-    Assert.assertTrue(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
-    Assert.assertEquals(
+    Assertions.assertTrue(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+    Assertions.assertEquals(
         HiLoQueryLaningStrategy.LOW,
         strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()
     );
@@ -190,7 +192,7 @@ public class HiLoQueryLaningStrategyTest
     TimeseriesQuery query = queryBuilder.context(
         ImmutableMap.of(QueryContexts.PRIORITY_KEY, 100, QueryContexts.LANE_KEY, "low")
     ).build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         HiLoQueryLaningStrategy.LOW,
         strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).get()
     );

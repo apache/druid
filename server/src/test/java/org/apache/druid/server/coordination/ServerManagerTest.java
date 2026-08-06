@@ -100,10 +100,10 @@ import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -116,7 +116,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ServerManagerTest
 {
@@ -164,7 +163,7 @@ public class ServerManagerTest
   @Inject
   private ServerManager serverManager;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     serviceEmitter = new NoopServiceEmitter();
@@ -320,18 +319,18 @@ public class ServerManagerTest
 
     factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(1, factory.getReferenceProviders().size());
+    Assertions.assertEquals(1, factory.getReferenceProviders().size());
 
     for (ReferenceCountedSegmentProvider referenceCountingSegment : factory.getReferenceProviders()) {
-      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
+      Assertions.assertEquals(1, referenceCountingSegment.getNumReferences());
     }
 
     factory.waitYieldLatch.countDown();
 
-    Assert.assertEquals(1, factory.getSegments().size());
+    Assertions.assertEquals(1, factory.getSegments().size());
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertFalse(segment.isClosed());
+      Assertions.assertFalse(segment.isClosed());
     }
 
     factory.waitLatch.countDown();
@@ -340,7 +339,7 @@ public class ServerManagerTest
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertTrue(segment.isClosed());
+      Assertions.assertTrue(segment.isClosed());
     }
   }
 
@@ -359,31 +358,31 @@ public class ServerManagerTest
 
     factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(1, factory.getReferenceProviders().size());
+    Assertions.assertEquals(1, factory.getReferenceProviders().size());
 
     for (ReferenceCountedSegmentProvider referenceCountingSegment : factory.getReferenceProviders()) {
-      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
+      Assertions.assertEquals(1, referenceCountingSegment.getNumReferences());
     }
 
     factory.waitYieldLatch.countDown();
 
-    Assert.assertEquals(1, factory.getSegments().size());
+    Assertions.assertEquals(1, factory.getSegments().size());
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertFalse(segment.isClosed());
+      Assertions.assertFalse(segment.isClosed());
     }
 
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertFalse(segment.isClosed());
+      Assertions.assertFalse(segment.isClosed());
     }
 
     factory.waitLatch.countDown();
     future.get();
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertTrue(segment.isClosed());
+      Assertions.assertTrue(segment.isClosed());
     }
   }
 
@@ -402,32 +401,32 @@ public class ServerManagerTest
 
     factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS);
 
-    Assert.assertEquals(1, factory.getReferenceProviders().size());
+    Assertions.assertEquals(1, factory.getReferenceProviders().size());
 
     for (ReferenceCountedSegmentProvider referenceCountingSegment : factory.getReferenceProviders()) {
-      Assert.assertEquals(1, referenceCountingSegment.getNumReferences());
+      Assertions.assertEquals(1, referenceCountingSegment.getNumReferences());
     }
 
     factory.waitYieldLatch.countDown();
 
-    Assert.assertEquals(1, factory.getSegments().size());
+    Assertions.assertEquals(1, factory.getSegments().size());
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertFalse(segment.isClosed());
+      Assertions.assertFalse(segment.isClosed());
     }
 
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
     dropQueryable("test", "3", Intervals.of("2011-04-04/2011-04-05"));
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertFalse(segment.isClosed());
+      Assertions.assertFalse(segment.isClosed());
     }
 
     factory.waitLatch.countDown();
     future.get();
 
     for (TestSegmentUtils.SegmentForTesting segment : factory.getSegments()) {
-      Assert.assertTrue(segment.isClosed());
+      Assertions.assertTrue(segment.isClosed());
     }
   }
 
@@ -459,18 +458,18 @@ public class ServerManagerTest
         ImmutableList.of(new Pair<>("1", interval))
     );
 
-    Assert.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
-    Assert.assertEquals(1, factory.getReferenceProviders().size());
+    Assertions.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
+    Assertions.assertEquals(1, factory.getReferenceProviders().size());
     // Expect 2 references here: 1 for query and 1 for queryOnRestricted
-    Assert.assertEquals(2, factory.getReferenceProviders().get(0).getNumReferences());
+    Assertions.assertEquals(2, factory.getReferenceProviders().get(0).getNumReferences());
 
     factory.waitYieldLatch.countDown();
     factory.waitLatch.countDown();
     future.get();
     futureOnRestricted.get();
-    Assert.assertEquals(1, factory.getReferenceProviders().size());
+    Assertions.assertEquals(1, factory.getReferenceProviders().size());
     // no references since both query are finished
-    Assert.assertEquals(0, factory.getReferenceProviders().get(0).getNumReferences());
+    Assertions.assertEquals(0, factory.getReferenceProviders().get(0).getNumReferences());
   }
 
   @Test
@@ -481,7 +480,7 @@ public class ServerManagerTest
         searchQuery("unknown_datasource", interval, Granularities.ALL),
         Collections.singletonList(interval)
     );
-    Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
+    Assertions.assertSame(NoopQueryRunner.class, queryRunner.getClass());
   }
 
   @Test
@@ -515,12 +514,12 @@ public class ServerManagerTest
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "unknown_version", 0)
     );
-    DruidException e = assertThrows(
+    DruidException e = org.junit.jupiter.api.Assertions.assertThrows(
         DruidException.class,
         () -> serverManager.getQueryRunnerForSegments(query, unknownSegments)
     );
-    Assert.assertTrue(e.getMessage().startsWith("Base dataSource"));
-    Assert.assertTrue(e.getMessage().endsWith("is not a table!"));
+    Assertions.assertTrue(e.getMessage().startsWith("Base dataSource"));
+    Assertions.assertTrue(e.getMessage().endsWith("is not a table!"));
   }
 
   @Test
@@ -537,9 +536,9 @@ public class ServerManagerTest
                                                                  .run(QueryPlus.wrap(query), responseContext)
                                                                  .toList();
 
-    Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.getMissingSegments());
-    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
+    Assertions.assertTrue(results.isEmpty());
+    Assertions.assertNotNull(responseContext.getMissingSegments());
+    Assertions.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -555,9 +554,9 @@ public class ServerManagerTest
     final List<Result<SearchResultValue>> results = serverManager.getQueryRunnerForSegments(query, unknownSegments)
                                                                  .run(QueryPlus.wrap(query), responseContext)
                                                                  .toList();
-    Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.getMissingSegments());
-    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
+    Assertions.assertTrue(results.isEmpty());
+    Assertions.assertNotNull(responseContext.getMissingSegments());
+    Assertions.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -573,9 +572,9 @@ public class ServerManagerTest
     final List<Result<SearchResultValue>> results = serverManager.getQueryRunnerForSegments(query, unknownSegments)
                                                                  .run(QueryPlus.wrap(query), responseContext)
                                                                  .toList();
-    Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.getMissingSegments());
-    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
+    Assertions.assertTrue(results.isEmpty());
+    Assertions.assertNotNull(responseContext.getMissingSegments());
+    Assertions.assertEquals(unknownSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -585,14 +584,14 @@ public class ServerManagerTest
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
     final Optional<VersionedIntervalTimeline<String, DataSegment>> maybeTimeline = segmentManager
         .getTimeline(ExecutionVertex.of(query).getBaseTableDataSource());
-    Assume.assumeTrue(maybeTimeline.isPresent());
+    Assumptions.assumeTrue(maybeTimeline.isPresent());
     // close all segments in interval
     final List<TimelineObjectHolder<String, DataSegment>> holders = maybeTimeline.get().lookup(interval);
     final List<SegmentDescriptor> closedSegments = new ArrayList<>();
     for (TimelineObjectHolder<String, DataSegment> holder : holders) {
       for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
         final DataSegment segment = chunk.getObject();
-        Assert.assertNotNull(segment.getId());
+        Assertions.assertNotNull(segment.getId());
         closedSegments.add(
             new SegmentDescriptor(segment.getInterval(), segment.getVersion(), segment.getId().getPartitionNum())
         );
@@ -604,9 +603,9 @@ public class ServerManagerTest
     final List<Result<SearchResultValue>> results = serverManager.getQueryRunnerForSegments(query, closedSegments)
                                                                  .run(QueryPlus.wrap(query), responseContext)
                                                                  .toList();
-    Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.getMissingSegments());
-    Assert.assertEquals(closedSegments, responseContext.getMissingSegments());
+    Assertions.assertTrue(results.isEmpty());
+    Assertions.assertNotNull(responseContext.getMissingSegments());
+    Assertions.assertEquals(closedSegments, responseContext.getMissingSegments());
   }
 
   @Test
@@ -619,11 +618,11 @@ public class ServerManagerTest
                            .intervals(interval.toString())
                            .build();
     // We only have QueryRunnerFactory for SearchQuery in test.
-    QueryUnsupportedException e = Assert.assertThrows(
+    QueryUnsupportedException e = Assertions.assertThrows(
         QueryUnsupportedException.class,
         () -> serverManager.getQueryRunnerForSegments(query, descriptors)
     );
-    Assert.assertTrue(e.getMessage().startsWith("Unknown query type"));
+    Assertions.assertTrue(e.getMessage().startsWith("Unknown query type"));
   }
 
   @Test
@@ -646,15 +645,15 @@ public class ServerManagerTest
     policyEnforcer = new RestrictAllTablesPolicyEnforcer(ImmutableList.of(NoRestrictionPolicy.class.getName()));
     serverManager = Guice.createInjector(BoundFieldModule.of(this)).getInstance(ServerManager.class);
     // fail on query
-    DruidException e = Assert.assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> serverManager.getQueryRunnerForIntervals(query, ImmutableList.of(interval))
                            .run(QueryPlus.wrap(query))
                            .toList()
     );
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals(
+    Assertions.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals(
         "Failed security validation with segment [test_2011-03-31T00:00:00.000Z_2011-04-01T00:00:00.000Z_1]",
         e.getMessage()
     );
@@ -740,12 +739,12 @@ public class ServerManagerTest
             Pair<String, Interval> expectedVals = expectedIter.next();
             SegmentForTesting value = adaptersIter.next();
 
-            Assert.assertEquals(expectedVals.lhs, value.getVersion());
-            Assert.assertEquals(expectedVals.rhs, value.getInterval());
+            Assertions.assertEquals(expectedVals.lhs, value.getVersion());
+            Assertions.assertEquals(expectedVals.rhs, value.getInterval());
           }
 
-          Assert.assertFalse(expectedIter.hasNext());
-          Assert.assertFalse(adaptersIter.hasNext());
+          Assertions.assertFalse(expectedIter.hasNext());
+          Assertions.assertFalse(adaptersIter.hasNext());
         }
     );
   }

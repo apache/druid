@@ -26,18 +26,16 @@ import org.easymock.EasyMock;
 import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.HttpMethod;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -52,7 +50,7 @@ public class StandardResponseHeaderFilterHolderTest
   public HttpServletResponse proxyResponse;
   public Response clientResponse;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     serverConfig = EasyMock.strictMock(ServerConfig.class);
@@ -64,7 +62,7 @@ public class StandardResponseHeaderFilterHolderTest
     clientResponse = EasyMock.strictMock(Response.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(serverConfig, httpRequest, httpResponse, filterChain, proxyResponse, clientResponse);
@@ -129,14 +127,10 @@ public class StandardResponseHeaderFilterHolderTest
 
     replayAllMocks();
 
-    final RuntimeException e = Assert.assertThrows(RuntimeException.class, this::makeFilter);
+    final RuntimeException e = Assertions.assertThrows(RuntimeException.class, this::makeFilter);
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Content-Security-Policy header value must be fully ASCII")
-        )
-    );
+    org.assertj.core.api.Assertions.assertThat(e)
+                                  .hasMessageContaining("Content-Security-Policy header value must be fully ASCII");
   }
 
   @Test
@@ -202,7 +196,7 @@ public class StandardResponseHeaderFilterHolderTest
     filter.doFilter(httpRequest, httpResponse, filterChain);
 
     for (final Map.Entry<String, String> entry : expectedHeaders.entrySet()) {
-      Assert.assertEquals(entry.getKey(), entry.getValue(), captureMap.get(entry.getKey()).getValue());
+      Assertions.assertEquals(entry.getValue(), captureMap.get(entry.getKey()).getValue(), entry.getKey());
     }
   }
 

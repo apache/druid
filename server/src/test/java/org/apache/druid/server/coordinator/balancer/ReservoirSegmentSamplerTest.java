@@ -29,9 +29,10 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +42,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -57,7 +59,7 @@ public class ReservoirSegmentSamplerTest
                         .withNumPartitions(10)
                         .eachOfSizeInMb(100);
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
   }
@@ -86,7 +88,7 @@ public class ReservoirSegmentSamplerTest
     }
 
     // Verify that each segment has been chosen at least once
-    Assert.assertEquals(4, segmentCountMap.size());
+    Assertions.assertEquals(4, segmentCountMap.size());
   }
 
   /**
@@ -119,8 +121,8 @@ public class ReservoirSegmentSamplerTest
     }
 
     // Verify that the segment on server4 is never chosen because of limit
-    Assert.assertFalse(segmentCountMap.containsKey(excludedSegment));
-    Assert.assertEquals(3, segmentCountMap.size());
+    Assertions.assertFalse(segmentCountMap.containsKey(excludedSegment));
+    Assertions.assertEquals(3, segmentCountMap.size());
   }
 
   @Test
@@ -146,8 +148,8 @@ public class ReservoirSegmentSamplerTest
         .stream().map(BalancerSegmentHolder::getSegment).collect(Collectors.toSet());
 
     // Verify that only loading segments are picked
-    Assert.assertEquals(loadingSegments.size(), pickedSegments.size());
-    Assert.assertTrue(pickedSegments.containsAll(loadingSegments));
+    Assertions.assertEquals(loadingSegments.size(), pickedSegments.size());
+    Assertions.assertTrue(pickedSegments.containsAll(loadingSegments));
 
     // Pick only loaded segments
     List<BalancerSegmentHolder> pickedHolders = ReservoirSegmentSampler.pickMovableSegmentsFrom(
@@ -162,8 +164,8 @@ public class ReservoirSegmentSamplerTest
         .collect(Collectors.toSet());
 
     // Verify that only loaded segments are picked
-    Assert.assertEquals(loadedSegments.size(), pickedSegments.size());
-    Assert.assertTrue(pickedSegments.containsAll(loadedSegments));
+    Assertions.assertEquals(loadedSegments.size(), pickedSegments.size());
+    Assertions.assertTrue(pickedSegments.containsAll(loadedSegments));
   }
 
   @Test
@@ -188,9 +190,9 @@ public class ReservoirSegmentSamplerTest
     );
 
     // Verify that only the segments on the historical are picked
-    Assert.assertEquals(2, pickedSegments.size());
+    Assertions.assertEquals(2, pickedSegments.size());
     for (BalancerSegmentHolder holder : pickedSegments) {
-      Assert.assertEquals(historical, holder.getServer());
+      Assertions.assertEquals(historical, holder.getServer());
     }
   }
 
@@ -220,9 +222,9 @@ public class ReservoirSegmentSamplerTest
     );
 
     // Verify that none of the broadcast segments are picked
-    Assert.assertEquals(2, pickedSegments.size());
+    Assertions.assertEquals(2, pickedSegments.size());
     for (BalancerSegmentHolder holder : pickedSegments) {
-      Assert.assertNotEquals(broadcastDatasource, holder.getSegment().getDataSource());
+      Assertions.assertNotEquals(broadcastDatasource, holder.getSegment().getDataSource());
     }
   }
 
@@ -247,7 +249,7 @@ public class ReservoirSegmentSamplerTest
       final double expectedPickedSegments = totalSegmentsPicked * 0.25;
       final double error = totalSegmentsPicked * 0.02;
       for (int pickedSegments : numSegmentsPickedFromServer) {
-        Assert.assertEquals(expectedPickedSegments, pickedSegments, error);
+        Assertions.assertEquals(expectedPickedSegments, pickedSegments, error);
       }
     }
   }
@@ -277,15 +279,16 @@ public class ReservoirSegmentSamplerTest
       // Number of segments picked from server0 are ~40% of total and
       // number of segments picked from other servers are each ~20% of total
       double error = totalSegmentsPicked * 0.02;
-      Assert.assertEquals(totalSegmentsPicked * 0.40, numSegmentsPickedFromServer[0], error);
+      Assertions.assertEquals(totalSegmentsPicked * 0.40, numSegmentsPickedFromServer[0], error);
 
       for (int serverId = 1; serverId < servers.size(); ++serverId) {
-        Assert.assertEquals(totalSegmentsPicked * 0.20, numSegmentsPickedFromServer[serverId], error);
+        Assertions.assertEquals(totalSegmentsPicked * 0.20, numSegmentsPickedFromServer[serverId], error);
       }
     }
   }
 
-  @Test(timeout = 60_000)
+  @Test
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
   public void testNumberOfSamplingsRequiredToPickAllSegments()
   {
     // The number of sampling iterations required for each sample percentage
@@ -305,7 +308,7 @@ public class ReservoirSegmentSamplerTest
     // Compute the avg value from the 50 observations for each sample percentage
     for (int j = 0; j < samplePercentages.length; ++j) {
       double avgObservedIterations = totalObservedIterations[j] / 50.0;
-      Assert.assertTrue(avgObservedIterations <= expectedIterations[j]);
+      Assertions.assertTrue(avgObservedIterations <= expectedIterations[j]);
     }
 
   }

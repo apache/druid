@@ -24,8 +24,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ClusterCompactionConfigTest
 {
@@ -36,12 +36,12 @@ public class ClusterCompactionConfigTest
   {
     ClusterCompactionConfig config = new ClusterCompactionConfig(null, null, null, null, null, null);
 
-    Assert.assertEquals(0.1, config.getCompactionTaskSlotRatio(), 0.0001);
-    Assert.assertEquals(Integer.MAX_VALUE, config.getMaxCompactionTaskSlots());
-    Assert.assertTrue(config.isUseSupervisors());
-    Assert.assertEquals(CompactionEngine.NATIVE, config.getEngine());
-    Assert.assertNotNull(config.getCompactionPolicy());
-    Assert.assertTrue(config.isStoreCompactionStatePerSegment());
+    Assertions.assertEquals(0.1, config.getCompactionTaskSlotRatio(), 0.0001);
+    Assertions.assertEquals(Integer.MAX_VALUE, config.getMaxCompactionTaskSlots());
+    Assertions.assertTrue(config.isUseSupervisors());
+    Assertions.assertEquals(CompactionEngine.NATIVE, config.getEngine());
+    Assertions.assertNotNull(config.getCompactionPolicy());
+    Assertions.assertTrue(config.isStoreCompactionStatePerSegment());
   }
 
   @Test
@@ -58,7 +58,7 @@ public class ClusterCompactionConfigTest
     String json = MAPPER.writeValueAsString(config);
     ClusterCompactionConfig deserialized = MAPPER.readValue(json, ClusterCompactionConfig.class);
 
-    Assert.assertEquals(config, deserialized);
+    Assertions.assertEquals(config, deserialized);
   }
 
   @Test
@@ -74,12 +74,12 @@ public class ClusterCompactionConfigTest
                                                             .storeCompactionStatePerSegment(true)
                                                             .build();
 
-    Assert.assertEquals(0.3, config.getCompactionTaskSlotRatio(), 0.0001);
-    Assert.assertEquals(5, config.getMaxCompactionTaskSlots());
-    Assert.assertTrue(config.isUseSupervisors());
-    Assert.assertEquals(CompactionEngine.MSQ, config.getEngine());
-    Assert.assertEquals(policy, config.getCompactionPolicy());
-    Assert.assertTrue(config.isStoreCompactionStatePerSegment());
+    Assertions.assertEquals(0.3, config.getCompactionTaskSlotRatio(), 0.0001);
+    Assertions.assertEquals(5, config.getMaxCompactionTaskSlots());
+    Assertions.assertTrue(config.isUseSupervisors());
+    Assertions.assertEquals(CompactionEngine.MSQ, config.getEngine());
+    Assertions.assertEquals(policy, config.getCompactionPolicy());
+    Assertions.assertTrue(config.isStoreCompactionStatePerSegment());
   }
 
   @Test
@@ -97,20 +97,20 @@ public class ClusterCompactionConfigTest
                                                .compactionTaskSlotRatio(0.8)
                                                .build();
 
-    Assert.assertEquals(0.8, modified.getCompactionTaskSlotRatio(), 0.0001);
-    Assert.assertEquals(20, modified.getMaxCompactionTaskSlots());
-    Assert.assertFalse(modified.isUseSupervisors());
+    Assertions.assertEquals(0.8, modified.getCompactionTaskSlotRatio(), 0.0001);
+    Assertions.assertEquals(20, modified.getMaxCompactionTaskSlots());
+    Assertions.assertFalse(modified.isUseSupervisors());
   }
 
   @Test
   public void testMsqEngineRequiresSupervisors()
   {
-    DruidException e = Assert.assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> ClusterCompactionConfig.builder().useSupervisors(false).engine(CompactionEngine.MSQ).build()
     );
-    Assert.assertEquals("MSQ Compaction engine can be used only with compaction supervisors.", e.getMessage());
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    Assertions.assertEquals("MSQ Compaction engine can be used only with compaction supervisors.", e.getMessage());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
   }
 
   @Test
@@ -131,9 +131,9 @@ public class ClusterCompactionConfigTest
                                                              .maxCompactionTaskSlots(10)
                                                              .build();
 
-    Assert.assertEquals(config1, config2);
-    Assert.assertEquals(config1.hashCode(), config2.hashCode());
-    Assert.assertNotEquals(config1, config3);
-    Assert.assertNotEquals(config3, config2);
+    Assertions.assertEquals(config1, config2);
+    Assertions.assertEquals(config1.hashCode(), config2.hashCode());
+    Assertions.assertNotEquals(config1, config3);
+    Assertions.assertNotEquals(config3, config2);
   }
 }

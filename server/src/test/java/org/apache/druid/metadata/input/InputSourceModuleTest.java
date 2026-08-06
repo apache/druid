@@ -36,12 +36,13 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.jackson.JacksonModule;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;
@@ -51,7 +52,7 @@ public class InputSourceModuleTest
   private final ObjectMapper mapper = new ObjectMapper();
   private final String SQL_NAMED_TYPE = "sql";
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     for (Module jacksonModule : new InputSourceModule().getJacksonModules()) {
@@ -69,8 +70,8 @@ public class InputSourceModuleTest
                                   .stream()
                                   .map(NamedType::getName)
                                   .collect(Collectors.toList());
-    Assert.assertNotNull(subtypes);
-    Assert.assertEquals(SQL_NAMED_TYPE, Iterables.getOnlyElement(subtypes));
+    Assertions.assertNotNull(subtypes);
+    Assertions.assertEquals(SQL_NAMED_TYPE, Iterables.getOnlyElement(subtypes));
   }
 
   @Test
@@ -79,8 +80,8 @@ public class InputSourceModuleTest
     Properties props = new Properties();
     Injector injector = makeInjectorWithProperties(props);
     HttpInputSourceConfig instance = injector.getInstance(HttpInputSourceConfig.class);
-    Assert.assertEquals(new HttpInputSourceConfig(null, null), instance);
-    Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, instance.getAllowedProtocols());
+    Assertions.assertEquals(new HttpInputSourceConfig(null, null), instance);
+    Assertions.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, instance.getAllowedProtocols());
   }
 
   private Injector makeInjectorWithProperties(final Properties props)

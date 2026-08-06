@@ -46,19 +46,22 @@ import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfi
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -67,7 +70,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class CoordinatorCompactionConfigsResourceTest
 {
   private static final double DELTA = 1e-9;
@@ -79,7 +83,7 @@ public class CoordinatorCompactionConfigsResourceTest
   private TestCoordinatorConfigManager configManager;
   private CoordinatorCompactionConfigsResource resource;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
@@ -89,7 +93,7 @@ public class CoordinatorCompactionConfigsResourceTest
     configManager.delegate.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     configManager.delegate.stop();
@@ -102,11 +106,11 @@ public class CoordinatorCompactionConfigsResourceTest
     final DruidCompactionConfig defaultConfig
         = verifyAndGetPayload(response, DruidCompactionConfig.class);
 
-    Assert.assertEquals(0.1, defaultConfig.getCompactionTaskSlotRatio(), DELTA);
-    Assert.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
-    Assert.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
-    Assert.assertTrue(defaultConfig.isUseSupervisors());
-    Assert.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
+    Assertions.assertEquals(0.1, defaultConfig.getCompactionTaskSlotRatio(), DELTA);
+    Assertions.assertEquals(Integer.MAX_VALUE, defaultConfig.getMaxCompactionTaskSlots());
+    Assertions.assertTrue(defaultConfig.getCompactionConfigs().isEmpty());
+    Assertions.assertTrue(defaultConfig.isUseSupervisors());
+    Assertions.assertEquals(CompactionEngine.NATIVE, defaultConfig.getEngine());
   }
 
   @Test
@@ -116,8 +120,8 @@ public class CoordinatorCompactionConfigsResourceTest
 
     final DruidCompactionConfig oldConfig
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
-    Assert.assertEquals(100, oldConfig.getMaxCompactionTaskSlots());
-    Assert.assertEquals(0.1, oldConfig.getCompactionTaskSlotRatio(), 1e-9);
+    Assertions.assertEquals(100, oldConfig.getMaxCompactionTaskSlots());
+    Assertions.assertEquals(0.1, oldConfig.getCompactionTaskSlotRatio(), 1e-9);
 
     Response response = resource.setCompactionTaskLimit(0.5, 9, mockHttpServletRequest);
     verifyStatus(Response.Status.OK, response);
@@ -126,16 +130,16 @@ public class CoordinatorCompactionConfigsResourceTest
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
 
     // Verify that the task slot fields have been updated
-    Assert.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
-    Assert.assertEquals(9, updatedConfig.getMaxCompactionTaskSlots());
+    Assertions.assertEquals(0.5, updatedConfig.getCompactionTaskSlotRatio(), DELTA);
+    Assertions.assertEquals(9, updatedConfig.getMaxCompactionTaskSlots());
 
     // Verify that other cluster config fields are unchanged
-    Assert.assertEquals(oldConfig.isUseSupervisors(), updatedConfig.isUseSupervisors());
-    Assert.assertEquals(oldConfig.getCompactionPolicy(), updatedConfig.getCompactionPolicy());
-    Assert.assertEquals(oldConfig.getEngine(), updatedConfig.getEngine());
+    Assertions.assertEquals(oldConfig.isUseSupervisors(), updatedConfig.isUseSupervisors());
+    Assertions.assertEquals(oldConfig.getCompactionPolicy(), updatedConfig.getCompactionPolicy());
+    Assertions.assertEquals(oldConfig.getEngine(), updatedConfig.getEngine());
 
     // Verify that the other fields are unchanged
-    Assert.assertEquals(oldConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
+    Assertions.assertEquals(oldConfig.getCompactionConfigs(), updatedConfig.getCompactionConfigs());
   }
 
   @Test
@@ -155,12 +159,12 @@ public class CoordinatorCompactionConfigsResourceTest
 
     final DataSourceCompactionConfig fetchedDatasourceConfig
         = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
-    Assert.assertEquals(newDatasourceConfig, fetchedDatasourceConfig);
+    Assertions.assertEquals(newDatasourceConfig, fetchedDatasourceConfig);
 
     final DruidCompactionConfig fullCompactionConfig
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
-    Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
-    Assert.assertEquals(newDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
+    Assertions.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
+    Assertions.assertEquals(newDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
   }
 
   @Test
@@ -173,8 +177,8 @@ public class CoordinatorCompactionConfigsResourceTest
                                                 .build();
     Response response = resource.addOrUpdateDatasourceCompactionConfig(newDatasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.BAD_REQUEST, response);
-    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
-    Assert.assertEquals(
+    Assertions.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assertions.assertEquals(
         "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
@@ -216,12 +220,12 @@ public class CoordinatorCompactionConfigsResourceTest
 
     final DataSourceCompactionConfig latestDatasourceConfig
         = verifyAndGetPayload(resource.getDatasourceCompactionConfig(TestDataSource.WIKI), InlineSchemaDataSourceCompactionConfig.class);
-    Assert.assertEquals(originalDatasourceConfig, latestDatasourceConfig);
+    Assertions.assertEquals(originalDatasourceConfig, latestDatasourceConfig);
 
     final DruidCompactionConfig fullCompactionConfig
         = verifyAndGetPayload(resource.getCompactionConfig(), DruidCompactionConfig.class);
-    Assert.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
-    Assert.assertEquals(originalDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
+    Assertions.assertEquals(1, fullCompactionConfig.getCompactionConfigs().size());
+    Assertions.assertEquals(originalDatasourceConfig, fullCompactionConfig.getCompactionConfigs().get(0));
   }
 
   @Test
@@ -256,7 +260,7 @@ public class CoordinatorCompactionConfigsResourceTest
         mockHttpServletRequest
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         5,
         configManager.numUpdateAttempts
     );
@@ -272,7 +276,7 @@ public class CoordinatorCompactionConfigsResourceTest
         mockHttpServletRequest
     );
 
-    Assert.assertEquals(1, configManager.numUpdateAttempts);
+    Assertions.assertEquals(1, configManager.numUpdateAttempts);
   }
 
   @Test
@@ -298,10 +302,10 @@ public class CoordinatorCompactionConfigsResourceTest
 
     final List<DataSourceCompactionConfigAuditEntry> history
         = (List<DataSourceCompactionConfigAuditEntry>) response.getEntity();
-    Assert.assertEquals(3, history.size());
-    Assert.assertEquals(configV1, history.get(0).getCompactionConfig());
-    Assert.assertEquals(configV2, history.get(1).getCompactionConfig());
-    Assert.assertEquals(configV3, history.get(2).getCompactionConfig());
+    Assertions.assertEquals(3, history.size());
+    Assertions.assertEquals(configV1, history.get(0).getCompactionConfig());
+    Assertions.assertEquals(configV2, history.get(1).getCompactionConfig());
+    Assertions.assertEquals(configV3, history.get(2).getCompactionConfig());
   }
 
   @Test
@@ -309,7 +313,7 @@ public class CoordinatorCompactionConfigsResourceTest
   {
     Response response = resource.getCompactionConfigHistory(TestDataSource.WIKI, null, null);
     verifyStatus(Response.Status.OK, response);
-    Assert.assertTrue(((List<?>) response.getEntity()).isEmpty());
+    Assertions.assertTrue(((List<?>) response.getEntity()).isEmpty());
   }
 
   @Test
@@ -324,8 +328,8 @@ public class CoordinatorCompactionConfigsResourceTest
 
     final Response response = resource.addOrUpdateDatasourceCompactionConfig(datasourceConfig, mockHttpServletRequest);
     verifyStatus(Response.Status.BAD_REQUEST, response);
-    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
-    Assert.assertEquals(
+    Assertions.assertTrue(response.getEntity() instanceof ErrorResponse);
+    Assertions.assertEquals(
         "MSQ engine is supported only with supervisor-based compaction on the Overlord.",
         ((ErrorResponse) response.getEntity()).getUnderlyingException().getMessage()
     );
@@ -333,15 +337,15 @@ public class CoordinatorCompactionConfigsResourceTest
   @SuppressWarnings("unchecked")
   private <T> T verifyAndGetPayload(Response response, Class<T> type)
   {
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-    Assert.assertTrue(type.isInstance(response.getEntity()));
+    Assertions.assertTrue(type.isInstance(response.getEntity()));
     return (T) response.getEntity();
   }
 
   private void verifyStatus(Response.Status expectedStatus, Response response)
   {
-    Assert.assertEquals(expectedStatus.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(expectedStatus.getStatusCode(), response.getStatus());
   }
 
   /**

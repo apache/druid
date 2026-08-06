@@ -29,10 +29,10 @@ import org.apache.druid.messages.MessageBatch;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.messages.server.OutboxImpl;
 import org.apache.druid.server.DruidNode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,7 +55,7 @@ public class MessageRelaysTest
   private TestDiscovery discovery;
   private MessageRelays<String> messageRelays;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     outbox = new OutboxImpl<>();
@@ -64,7 +64,7 @@ public class MessageRelaysTest
     messageRelays = new MessageRelays<>(
         () -> discovery,
         node -> {
-          Assert.assertEquals(OUTBOX_NODE, node);
+          Assertions.assertEquals(OUTBOX_NODE, node);
           return new MessageRelay<>(
               MY_HOST,
               node,
@@ -76,11 +76,11 @@ public class MessageRelaysTest
     messageRelays.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     messageRelays.stop();
-    Assert.assertEquals(Collections.emptyList(), discovery.getListeners());
+    Assertions.assertEquals(Collections.emptyList(), discovery.getListeners());
   }
 
   @Test
@@ -88,24 +88,24 @@ public class MessageRelaysTest
   {
     discovery.fire(listener -> listener.nodesAdded(Collections.singletonList(OUTBOX_DISCO_NODE)));
     discovery.fire(listener -> listener.nodesRemoved(Collections.singletonList(OUTBOX_DISCO_NODE)));
-    Assert.assertEquals(1, messageListener.getAdds());
-    Assert.assertEquals(1, messageListener.getRemoves());
+    Assertions.assertEquals(1, messageListener.getAdds());
+    Assertions.assertEquals(1, messageListener.getRemoves());
   }
 
   @Test
   public void test_messageListener()
   {
     discovery.fire(listener -> listener.nodesAdded(Collections.singletonList(OUTBOX_DISCO_NODE)));
-    Assert.assertEquals(1, messageListener.getAdds());
-    Assert.assertEquals(0, messageListener.getRemoves());
+    Assertions.assertEquals(1, messageListener.getAdds());
+    Assertions.assertEquals(0, messageListener.getRemoves());
 
     final ListenableFuture<?> sendFuture = outbox.sendMessage(MY_HOST, "foo");
-    Assert.assertEquals(ImmutableList.of("foo"), messageListener.getMessages());
-    Assert.assertTrue(sendFuture.isDone());
+    Assertions.assertEquals(ImmutableList.of("foo"), messageListener.getMessages());
+    Assertions.assertTrue(sendFuture.isDone());
 
     final ListenableFuture<?> sendFuture2 = outbox.sendMessage(MY_HOST, "bar");
-    Assert.assertEquals(ImmutableList.of("foo", "bar"), messageListener.getMessages());
-    Assert.assertTrue(sendFuture2.isDone());
+    Assertions.assertEquals(ImmutableList.of("foo", "bar"), messageListener.getMessages());
+    Assertions.assertTrue(sendFuture2.isDone());
   }
 
   /**

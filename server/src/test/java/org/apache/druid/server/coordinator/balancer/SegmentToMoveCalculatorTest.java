@@ -28,8 +28,8 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -63,91 +63,91 @@ public class SegmentToMoveCalculatorTest
   @Test
   public void testMaxSegmentsToMove1Thread()
   {
-    Assert.assertEquals(0, computeMaxSegmentsToMove(0, 1));
-    Assert.assertEquals(50, computeMaxSegmentsToMove(50, 1));
-    Assert.assertEquals(100, computeMaxSegmentsToMove(100, 1));
+    Assertions.assertEquals(0, computeMaxSegmentsToMove(0, 1));
+    Assertions.assertEquals(50, computeMaxSegmentsToMove(50, 1));
+    Assertions.assertEquals(100, computeMaxSegmentsToMove(100, 1));
 
-    Assert.assertEquals(100, computeMaxSegmentsToMove(512, 1));
-    Assert.assertEquals(200, computeMaxSegmentsToMove(1_024, 1));
-    Assert.assertEquals(300, computeMaxSegmentsToMove(1_536, 1));
+    Assertions.assertEquals(100, computeMaxSegmentsToMove(512, 1));
+    Assertions.assertEquals(200, computeMaxSegmentsToMove(1_024, 1));
+    Assertions.assertEquals(300, computeMaxSegmentsToMove(1_536, 1));
 
-    Assert.assertEquals(1_900, computeMaxSegmentsToMove(10_000, 1));
-    Assert.assertEquals(9_700, computeMaxSegmentsToMove(50_000, 1));
-    Assert.assertEquals(19_500, computeMaxSegmentsToMove(100_000, 1));
+    Assertions.assertEquals(1_900, computeMaxSegmentsToMove(10_000, 1));
+    Assertions.assertEquals(9_700, computeMaxSegmentsToMove(50_000, 1));
+    Assertions.assertEquals(19_500, computeMaxSegmentsToMove(100_000, 1));
 
-    Assert.assertEquals(10_000, computeMaxSegmentsToMove(200_000, 1));
-    Assert.assertEquals(4_000, computeMaxSegmentsToMove(500_000, 1));
-    Assert.assertEquals(2_000, computeMaxSegmentsToMove(1_000_000, 1));
+    Assertions.assertEquals(10_000, computeMaxSegmentsToMove(200_000, 1));
+    Assertions.assertEquals(4_000, computeMaxSegmentsToMove(500_000, 1));
+    Assertions.assertEquals(2_000, computeMaxSegmentsToMove(1_000_000, 1));
   }
 
   @Test
   public void testMaxSegmentsToMoveIncreasesWithCoordinatorPeriod()
   {
-    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(0)));
-    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(10_000)));
-    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(20_000)));
+    Assertions.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(0)));
+    Assertions.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(10_000)));
+    Assertions.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(20_000)));
 
-    Assert.assertEquals(5_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(30_000)));
-    Assert.assertEquals(10_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(60_000)));
-    Assert.assertEquals(15_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(90_000)));
-    Assert.assertEquals(20_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(120_000)));
+    Assertions.assertEquals(5_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(30_000)));
+    Assertions.assertEquals(10_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(60_000)));
+    Assertions.assertEquals(15_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(90_000)));
+    Assertions.assertEquals(20_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(120_000)));
 
-    Assert.assertEquals(2_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(30_000)));
-    Assert.assertEquals(4_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(60_000)));
-    Assert.assertEquals(6_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(90_000)));
-    Assert.assertEquals(8_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(120_000)));
+    Assertions.assertEquals(2_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(30_000)));
+    Assertions.assertEquals(4_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(60_000)));
+    Assertions.assertEquals(6_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(90_000)));
+    Assertions.assertEquals(8_000, computeMaxSegmentsToMoveInPeriod(500_000, Duration.millis(120_000)));
   }
 
   @Test
   public void testMaxSegmentsToMove8Threads()
   {
-    Assert.assertEquals(0, computeMaxSegmentsToMove(0, 8));
-    Assert.assertEquals(50, computeMaxSegmentsToMove(50, 8));
-    Assert.assertEquals(100, computeMaxSegmentsToMove(100, 8));
+    Assertions.assertEquals(0, computeMaxSegmentsToMove(0, 8));
+    Assertions.assertEquals(50, computeMaxSegmentsToMove(50, 8));
+    Assertions.assertEquals(100, computeMaxSegmentsToMove(100, 8));
 
-    Assert.assertEquals(100, computeMaxSegmentsToMove(512, 8));
-    Assert.assertEquals(200, computeMaxSegmentsToMove(1_024, 8));
-    Assert.assertEquals(300, computeMaxSegmentsToMove(1_536, 8));
+    Assertions.assertEquals(100, computeMaxSegmentsToMove(512, 8));
+    Assertions.assertEquals(200, computeMaxSegmentsToMove(1_024, 8));
+    Assertions.assertEquals(300, computeMaxSegmentsToMove(1_536, 8));
 
-    Assert.assertEquals(33_000, computeMaxSegmentsToMove(500_000, 8));
-    Assert.assertEquals(16_000, computeMaxSegmentsToMove(1_000_000, 8));
-    Assert.assertEquals(8_000, computeMaxSegmentsToMove(2_000_000, 8));
-    Assert.assertEquals(3_000, computeMaxSegmentsToMove(5_000_000, 8));
-    Assert.assertEquals(1_000, computeMaxSegmentsToMove(10_000_000, 8));
+    Assertions.assertEquals(33_000, computeMaxSegmentsToMove(500_000, 8));
+    Assertions.assertEquals(16_000, computeMaxSegmentsToMove(1_000_000, 8));
+    Assertions.assertEquals(8_000, computeMaxSegmentsToMove(2_000_000, 8));
+    Assertions.assertEquals(3_000, computeMaxSegmentsToMove(5_000_000, 8));
+    Assertions.assertEquals(1_000, computeMaxSegmentsToMove(10_000_000, 8));
   }
 
   @Test
   public void testMinSegmentsToMove()
   {
-    Assert.assertEquals(0, computeMinSegmentsToMove(0));
-    Assert.assertEquals(50, computeMinSegmentsToMove(50));
+    Assertions.assertEquals(0, computeMinSegmentsToMove(0));
+    Assertions.assertEquals(50, computeMinSegmentsToMove(50));
 
-    Assert.assertEquals(100, computeMinSegmentsToMove(100));
-    Assert.assertEquals(100, computeMinSegmentsToMove(1_000));
+    Assertions.assertEquals(100, computeMinSegmentsToMove(100));
+    Assertions.assertEquals(100, computeMinSegmentsToMove(1_000));
 
-    Assert.assertEquals(100, computeMinSegmentsToMove(20_000));
-    Assert.assertEquals(100, computeMinSegmentsToMove(50_000));
-    Assert.assertEquals(100, computeMinSegmentsToMove(100_000));
-    Assert.assertEquals(300, computeMinSegmentsToMove(200_000));
-    Assert.assertEquals(700, computeMinSegmentsToMove(500_000));
-    Assert.assertEquals(1_500, computeMinSegmentsToMove(1_000_000));
-    Assert.assertEquals(15_200, computeMinSegmentsToMove(10_000_000));
+    Assertions.assertEquals(100, computeMinSegmentsToMove(20_000));
+    Assertions.assertEquals(100, computeMinSegmentsToMove(50_000));
+    Assertions.assertEquals(100, computeMinSegmentsToMove(100_000));
+    Assertions.assertEquals(300, computeMinSegmentsToMove(200_000));
+    Assertions.assertEquals(700, computeMinSegmentsToMove(500_000));
+    Assertions.assertEquals(1_500, computeMinSegmentsToMove(1_000_000));
+    Assertions.assertEquals(15_200, computeMinSegmentsToMove(10_000_000));
   }
 
   @Test
   public void testMinSegmentsToMoveIncreasesInSteps()
   {
-    Assert.assertEquals(100, computeMinSegmentsToMove(131_071));
-    Assert.assertEquals(200, computeMinSegmentsToMove(131_072));
+    Assertions.assertEquals(100, computeMinSegmentsToMove(131_071));
+    Assertions.assertEquals(200, computeMinSegmentsToMove(131_072));
 
-    Assert.assertEquals(500, computeMinSegmentsToMove(393_215));
-    Assert.assertEquals(600, computeMinSegmentsToMove(393_216));
+    Assertions.assertEquals(500, computeMinSegmentsToMove(393_215));
+    Assertions.assertEquals(600, computeMinSegmentsToMove(393_216));
 
-    Assert.assertEquals(900, computeMinSegmentsToMove(655_359));
-    Assert.assertEquals(1000, computeMinSegmentsToMove(655_360));
+    Assertions.assertEquals(900, computeMinSegmentsToMove(655_359));
+    Assertions.assertEquals(1000, computeMinSegmentsToMove(655_360));
 
-    Assert.assertEquals(9_900, computeMinSegmentsToMove(6_553_599));
-    Assert.assertEquals(10_000, computeMinSegmentsToMove(6_553_600));
+    Assertions.assertEquals(9_900, computeMinSegmentsToMove(6_553_599));
+    Assertions.assertEquals(10_000, computeMinSegmentsToMove(6_553_600));
   }
 
   @Test
@@ -159,17 +159,17 @@ public class SegmentToMoveCalculatorTest
     );
 
     final int minSegmentsToMove = SegmentToMoveCalculator.computeMinSegmentsToMoveInTier(20_000);
-    Assert.assertEquals(100, minSegmentsToMove);
+    Assertions.assertEquals(100, minSegmentsToMove);
 
     final int segmentsToMoveToFixSkew = SegmentToMoveCalculator
         .computeNumSegmentsToMoveToBalanceTier(TIER, historicals);
-    Assert.assertEquals(0, segmentsToMoveToFixSkew);
+    Assertions.assertEquals(0, segmentsToMoveToFixSkew);
 
     // Find segmentsToMove with no limit on maxSegmentsToMove
     final int segmentsToMove = SegmentToMoveCalculator
         .computeNumSegmentsToMoveInTier(TIER, historicals, Integer.MAX_VALUE);
 
-    Assert.assertEquals(minSegmentsToMove, segmentsToMove);
+    Assertions.assertEquals(minSegmentsToMove, segmentsToMove);
   }
 
   @Test
@@ -181,17 +181,17 @@ public class SegmentToMoveCalculatorTest
     );
 
     final int minSegmentsToMove = SegmentToMoveCalculator.computeMinSegmentsToMoveInTier(10_000);
-    Assert.assertEquals(100, minSegmentsToMove);
+    Assertions.assertEquals(100, minSegmentsToMove);
 
     final int segmentsToMoveToFixSkew = SegmentToMoveCalculator
         .computeNumSegmentsToMoveToBalanceTier(TIER, historicals);
-    Assert.assertEquals(5_000, segmentsToMoveToFixSkew);
+    Assertions.assertEquals(5_000, segmentsToMoveToFixSkew);
 
     // Find segmentsToMove with no limit on maxSegmentsToMove
     final int segmentsToMove = SegmentToMoveCalculator
         .computeNumSegmentsToMoveInTier(TIER, historicals, Integer.MAX_VALUE);
 
-    Assert.assertEquals(segmentsToMoveToFixSkew, segmentsToMove);
+    Assertions.assertEquals(segmentsToMoveToFixSkew, segmentsToMove);
   }
 
   @Test
@@ -209,7 +209,7 @@ public class SegmentToMoveCalculatorTest
     // Verify that half the wiki segments need to be moved for balance
     int numToMoveToBalanceCount = SegmentToMoveCalculator
         .computeSegmentsToMoveToBalanceCountsPerDatasource(TIER, historicals);
-    Assert.assertEquals(WIKI_SEGMENTS.size() / 2, numToMoveToBalanceCount);
+    Assertions.assertEquals(WIKI_SEGMENTS.size() / 2, numToMoveToBalanceCount);
   }
 
   private static int computeMaxSegmentsToMove(int totalSegments, int numThreads)

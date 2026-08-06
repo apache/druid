@@ -46,13 +46,14 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.PreparedBatchPart;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -338,7 +339,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     }
     final Set<DataSegment> segmentsSet = new HashSet<>(segments);
     final Set<DataSegment> committedSegments = coordinator.commitSegments(segmentsSet, null);
-    Assert.assertTrue(committedSegments.containsAll(segmentsSet));
+    Assertions.assertTrue(committedSegments.containsAll(segmentsSet));
 
     return segments;
   }
@@ -421,7 +422,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                                                               .getId(),
                                                                                         Function.identity()
                                                                                     ));
-    Assert.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
+    Assertions.assertTrue(expectedIdToSegment.entrySet().stream().allMatch(e -> {
       DataSegmentPlus segmentPlus = actualIdToSegmentPlus.get(e.getKey());
       return segmentPlus != null
              && !segmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
@@ -436,12 +437,12 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       DateTime usedStatusLastUpdatedTime
   )
   {
-    Assert.assertEquals(expectedSegments.size(), actualUnusedSegmentsPlus.size());
+    Assertions.assertEquals(expectedSegments.size(), actualUnusedSegmentsPlus.size());
     for (int i = 0; i < expectedSegments.size(); i++) {
       DataSegment expectedSegment = expectedSegments.get(i);
       DataSegmentPlus actualSegmentPlus = actualUnusedSegmentsPlus.get(i);
-      Assert.assertEquals(expectedSegment.getId(), actualSegmentPlus.getDataSegment().getId());
-      Assert.assertTrue(!actualSegmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
+      Assertions.assertEquals(expectedSegment.getId(), actualSegmentPlus.getDataSegment().getId());
+      Assertions.assertTrue(!actualSegmentPlus.getCreatedDate().isAfter(usedStatusLastUpdatedTime)
                         && actualSegmentPlus.getUsedStatusLastUpdatedDate() != null
                         && actualSegmentPlus.getUsedStatusLastUpdatedDate().equals(usedStatusLastUpdatedTime));
     }
@@ -469,7 +470,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected void markAllSegmentsUnused(Set<DataSegment> segments, DateTime usedStatusLastUpdatedTime)
   {
     for (final DataSegment segment : segments) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           1,
           segmentsTable.update(
               "UPDATE %s SET used = false, used_status_last_updated = ? WHERE id = ?",

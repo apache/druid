@@ -29,9 +29,9 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.broker.QueryConfigSnapshot;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.Map;
@@ -45,7 +45,7 @@ public class BrokerViewOfBrokerConfigTest
   private DefaultQueryConfig defaultQueryConfig;
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     config = BrokerDynamicConfig.builder().build();
@@ -60,7 +60,7 @@ public class BrokerViewOfBrokerConfigTest
   {
     target.start();
     Mockito.verify(coordinatorClient, Mockito.times(1)).getBrokerDynamicConfig();
-    Assert.assertEquals(config, target.getDynamicConfig());
+    Assertions.assertEquals(config, target.getDynamicConfig());
   }
 
   @Test
@@ -75,24 +75,24 @@ public class BrokerViewOfBrokerConfigTest
     target.setDynamicConfig(dynamicConfig);
 
     final Map<String, Object> resolved = target.getContext();
-    Assert.assertEquals(30000, resolved.get("timeout"));
-    Assert.assertEquals(false, resolved.get("useCache"));
-    Assert.assertEquals(5, resolved.get("priority"));
+    Assertions.assertEquals(30000, resolved.get("timeout"));
+    Assertions.assertEquals(false, resolved.get("useCache"));
+    Assertions.assertEquals(5, resolved.get("priority"));
   }
 
   @Test
   public void testResolvedContextEqualsStaticDefaultsWhenDynamicContextIsEmpty()
   {
     target.setDynamicConfig(BrokerDynamicConfig.builder().build());
-    Assert.assertEquals(defaultQueryConfig.getContext(), target.getContext());
+    Assertions.assertEquals(defaultQueryConfig.getContext(), target.getContext());
   }
 
   @Test
   public void testSnapshotBeforeFirstSyncHasStaticDefaultsAndNoDynamicConfig()
   {
     final QueryConfigSnapshot snapshot = target.snapshotForQuery();
-    Assert.assertEquals(defaultQueryConfig.getContext(), snapshot.getResolvedDefaultQueryContext());
-    Assert.assertTrue(snapshot.getQueryBlocklist().isEmpty());
+    Assertions.assertEquals(defaultQueryConfig.getContext(), snapshot.getResolvedDefaultQueryContext());
+    Assertions.assertTrue(snapshot.getQueryBlocklist().isEmpty());
   }
 
   @Test
@@ -108,10 +108,10 @@ public class BrokerViewOfBrokerConfigTest
     target.setDynamicConfig(dynamicConfig);
 
     final QueryConfigSnapshot snapshot = target.snapshotForQuery();
-    Assert.assertSame(target.getContext(), snapshot.getResolvedDefaultQueryContext());
-    Assert.assertEquals(dynamicConfig.getQueryBlocklist(), snapshot.getQueryBlocklist());
-    Assert.assertEquals(5, snapshot.getResolvedDefaultQueryContext().get("priority"));
-    Assert.assertSame(snapshot.getDynamicConfig(), target.getDynamicConfig());
+    Assertions.assertSame(target.getContext(), snapshot.getResolvedDefaultQueryContext());
+    Assertions.assertEquals(dynamicConfig.getQueryBlocklist(), snapshot.getQueryBlocklist());
+    Assertions.assertEquals(5, snapshot.getResolvedDefaultQueryContext().get("priority"));
+    Assertions.assertSame(snapshot.getDynamicConfig(), target.getDynamicConfig());
   }
 
   @Test
@@ -131,7 +131,7 @@ public class BrokerViewOfBrokerConfigTest
                            .build()
     );
 
-    Assert.assertEquals(5, snapshot.getResolvedDefaultQueryContext().get("priority"));
-    Assert.assertEquals(9, target.getContext().get("priority"));
+    Assertions.assertEquals(5, snapshot.getResolvedDefaultQueryContext().get("priority"));
+    Assertions.assertEquals(9, target.getContext().get("priority"));
   }
 }

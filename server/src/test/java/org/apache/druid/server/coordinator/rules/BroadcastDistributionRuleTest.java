@@ -37,9 +37,9 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -53,7 +53,7 @@ public class BroadcastDistributionRuleTest
   private final DataSegment wikiSegment
       = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100).get(0);
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     serverId = 0;
@@ -72,11 +72,11 @@ public class BroadcastDistributionRuleTest
     CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that segment is assigned to servers of all tiers
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
-    Assert.assertTrue(serverT11.isLoadingSegment(wikiSegment));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
+    Assertions.assertTrue(serverT11.isLoadingSegment(wikiSegment));
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, TestDataSource.WIKI));
-    Assert.assertTrue(serverT21.isLoadingSegment(wikiSegment));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, TestDataSource.WIKI));
+    Assertions.assertTrue(serverT21.isLoadingSegment(wikiSegment));
   }
 
   @Test
@@ -92,10 +92,10 @@ public class BroadcastDistributionRuleTest
     CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that serverT11 is already serving and serverT12 is loading segment
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
-    Assert.assertFalse(serverT11.isLoadingSegment(wikiSegment));
-    Assert.assertTrue(serverT11.isServingSegment(wikiSegment));
-    Assert.assertTrue(serverT12.isLoadingSegment(wikiSegment));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
+    Assertions.assertFalse(serverT11.isLoadingSegment(wikiSegment));
+    Assertions.assertTrue(serverT11.isServingSegment(wikiSegment));
+    Assertions.assertTrue(serverT12.isLoadingSegment(wikiSegment));
   }
 
   @Test
@@ -111,9 +111,9 @@ public class BroadcastDistributionRuleTest
     ForeverBroadcastDistributionRule rule = new ForeverBroadcastDistributionRule();
     CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
-    Assert.assertTrue(activeServer.isLoadingSegment(wikiSegment));
-    Assert.assertTrue(decommissioningServer.getLoadingSegments().isEmpty());
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
+    Assertions.assertTrue(activeServer.isLoadingSegment(wikiSegment));
+    Assertions.assertTrue(decommissioningServer.getLoadingSegments().isEmpty());
   }
 
   @Test
@@ -132,9 +132,9 @@ public class BroadcastDistributionRuleTest
     CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that segment is dropped only from the decommissioning server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER_1, TestDataSource.WIKI));
-    Assert.assertTrue(activeServer.getPeon().getSegmentsToDrop().isEmpty());
-    Assert.assertTrue(decommissioningServer.getPeon().getSegmentsToDrop().contains(wikiSegment));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER_1, TestDataSource.WIKI));
+    Assertions.assertTrue(activeServer.getPeon().getSegmentsToDrop().isEmpty());
+    Assertions.assertTrue(decommissioningServer.getPeon().getSegmentsToDrop().contains(wikiSegment));
   }
 
   @Test
@@ -159,13 +159,13 @@ public class BroadcastDistributionRuleTest
     final CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that segment is assigned to historical, broker as well as indexer
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, TestDataSource.WIKI));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, broker.getServer().getTier(), TestDataSource.WIKI));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_2, TestDataSource.WIKI));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, broker.getServer().getTier(), TestDataSource.WIKI));
 
-    Assert.assertTrue(historical.isLoadingSegment(wikiSegment));
-    Assert.assertTrue(indexer.isLoadingSegment(wikiSegment));
-    Assert.assertTrue(broker.isLoadingSegment(wikiSegment));
+    Assertions.assertTrue(historical.isLoadingSegment(wikiSegment));
+    Assertions.assertTrue(indexer.isLoadingSegment(wikiSegment));
+    Assertions.assertTrue(broker.isLoadingSegment(wikiSegment));
   }
 
   @Test
@@ -191,7 +191,7 @@ public class BroadcastDistributionRuleTest
                             .withNumPartitions(1)
                             .eachOfSizeInMb(10);
     segmentsInQueue.forEach(s -> serverWithFullQueue.startOperation(SegmentAction.LOAD, s));
-    Assert.assertTrue(serverWithFullQueue.isLoadQueueFull());
+    Assertions.assertTrue(serverWithFullQueue.isLoadQueueFull());
 
     DruidCluster cluster = DruidCluster.builder()
                                        .add(eligibleServer)
@@ -204,18 +204,18 @@ public class BroadcastDistributionRuleTest
     final CoordinatorRunStats stats = runRuleOnSegment(rule, wikiSegment, params);
 
     // Verify that the segment is broadcast only to the eligible server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER_1, TestDataSource.WIKI));
     RowKey metricKey = RowKey.with(Dimension.DATASOURCE, TestDataSource.WIKI)
                              .with(Dimension.TIER, TIER_1)
                              .with(Dimension.SERVER, serverWithNoDiskSpace.getServer().getName())
                              .and(Dimension.DESCRIPTION, "Not enough disk space");
-    Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
+    Assertions.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
 
     metricKey = RowKey.with(Dimension.DATASOURCE, TestDataSource.WIKI)
                       .with(Dimension.TIER, TIER_1)
                       .with(Dimension.SERVER, serverWithFullQueue.getServer().getName())
                       .and(Dimension.DESCRIPTION, "Load queue is full");
-    Assert.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
+    Assertions.assertEquals(1L, stats.get(Stats.Segments.ASSIGN_SKIPPED, metricKey));
   }
 
   private CoordinatorRunStats runRuleOnSegment(

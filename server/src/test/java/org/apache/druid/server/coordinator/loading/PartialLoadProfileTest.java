@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +53,7 @@ public class PartialLoadProfileTest
   @Test
   public void testForRequestRejectsNullWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    org.apache.druid.error.DruidExceptionAssertions.assertMatches(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forRequest(null, FINGERPRINT)
@@ -66,7 +65,7 @@ public class PartialLoadProfileTest
   @Test
   public void testForRequestRejectsEmptyWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    org.apache.druid.error.DruidExceptionAssertions.assertMatches(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forRequest(Map.of(), FINGERPRINT)
@@ -87,7 +86,7 @@ public class PartialLoadProfileTest
   @Test
   public void testForLoadedRejectsEmptyWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    org.apache.druid.error.DruidExceptionAssertions.assertMatches(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forLoaded(Map.of(), FINGERPRINT, 100L)

@@ -45,12 +45,13 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -80,7 +81,7 @@ public class StrategicSegmentAssignerPartialTest
 
   private final AtomicInteger serverId = new AtomicInteger();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "StrategicSegmentAssignerPartialTest-%d"));
@@ -88,7 +89,7 @@ public class StrategicSegmentAssignerPartialTest
     loadQueueManager = new SegmentLoadQueueManager(null, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     exec.shutdown();
@@ -106,12 +107,12 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     params.getSegmentAssigner().replicateSegmentPartially(segment, profile, ImmutableMap.of(TIER1, 1));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         params.getCoordinatorStats().getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource())
     );
-    Assert.assertTrue(server.getLoadingSegments().contains(segment));
-    Assert.assertEquals(profile, ((TestLoadQueuePeon) server.getPeon()).getProfileFor(segment));
+    Assertions.assertTrue(server.getLoadingSegments().contains(segment));
+    Assertions.assertEquals(profile, ((TestLoadQueuePeon) server.getPeon()).getProfileFor(segment));
   }
 
   @Test
@@ -129,10 +130,10 @@ public class StrategicSegmentAssignerPartialTest
           .replicateSegmentPartially(segment, profile, ImmutableMap.of(TIER1, 1, TIER2, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER2, segment.getDataSource()));
-    Assert.assertEquals(profile, ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment));
-    Assert.assertEquals(profile, ((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER2, segment.getDataSource()));
+    Assertions.assertEquals(profile, ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment));
+    Assertions.assertEquals(profile, ((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
   }
 
   @Test
@@ -150,11 +151,11 @@ public class StrategicSegmentAssignerPartialTest
           .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_ASSIGNED));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-    Assert.assertTrue(s2.getLoadingSegments().isEmpty());
-    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_ASSIGNED));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertTrue(s2.getLoadingSegments().isEmpty());
+    Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
   }
 
   @Test
@@ -467,8 +468,8 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner()
           .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
 
-    Assert.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_ASSIGNED));
-    Assert.assertTrue(s2.getLoadingSegments().isEmpty());
+    Assertions.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_ASSIGNED));
+    Assertions.assertTrue(s2.getLoadingSegments().isEmpty());
   }
 
   @Test
@@ -487,14 +488,14 @@ public class StrategicSegmentAssignerPartialTest
           .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
-    Assert.assertFalse(
-        "Stale must not be dropped before matching has actually loaded",
-        stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED)
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertFalse(
+        stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED),
+        "Stale must not be dropped before matching has actually loaded"
     );
-    Assert.assertTrue(s2.getLoadingSegments().contains(segment));
-    Assert.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
-    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assertions.assertTrue(s2.getLoadingSegments().contains(segment));
+    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
+    Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
   }
 
   @Test
@@ -513,10 +514,10 @@ public class StrategicSegmentAssignerPartialTest
           .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_STALE_DROPPED, TIER1, segment.getDataSource()));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_ASSIGNED));
-    Assert.assertTrue(s2.getPeon().getSegmentsToDrop().contains(segment));
-    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.PARTIAL_STALE_DROPPED, TIER1, segment.getDataSource()));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_ASSIGNED));
+    Assertions.assertTrue(s2.getPeon().getSegmentsToDrop().contains(segment));
+    Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
   }
 
   @Test
@@ -541,11 +542,11 @@ public class StrategicSegmentAssignerPartialTest
           .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 2));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
-    Assert.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment));
-    Assert.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
+    Assertions.assertEquals(2L, stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment));
+    Assertions.assertEquals(profileForRevenue(), ((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
     // Stale must NOT be dropped; matching hasn't loaded yet.
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED));
   }
 
   @Test
@@ -563,8 +564,8 @@ public class StrategicSegmentAssignerPartialTest
           .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER1, segment.getDataSource()));
-    Assert.assertEquals(
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER1, segment.getDataSource()));
+    Assertions.assertEquals(
         1,
         s1.getPeon().getSegmentsToDrop().size() + s2.getPeon().getSegmentsToDrop().size()
     );
@@ -584,14 +585,14 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     params.getSegmentAssigner().replicateSegmentPartially(segment, profile, ImmutableMap.of(TIER1, 1));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         params.getCoordinatorStats().getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource())
     );
-    Assert.assertTrue(decommServer.getLoadingSegments().isEmpty());
-    Assert.assertTrue(activeServer.getLoadingSegments().contains(segment));
-    Assert.assertEquals(profile, ((TestLoadQueuePeon) activeServer.getPeon()).getProfileFor(segment));
-    Assert.assertNull(((TestLoadQueuePeon) decommServer.getPeon()).getProfileFor(segment));
+    Assertions.assertTrue(decommServer.getLoadingSegments().isEmpty());
+    Assertions.assertTrue(activeServer.getLoadingSegments().contains(segment));
+    Assertions.assertEquals(profile, ((TestLoadQueuePeon) activeServer.getPeon()).getProfileFor(segment));
+    Assertions.assertNull(((TestLoadQueuePeon) decommServer.getPeon()).getProfileFor(segment));
   }
 
   @Test
@@ -628,15 +629,15 @@ public class StrategicSegmentAssignerPartialTest
           .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         stats.getSegmentStat(Stats.Segments.PARTIAL_STALE_CANCELLED, TIER1, segment.getDataSource())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource())
     );
-    Assert.assertEquals(profileForRevenue(), peon.getProfileFor(segment));
+    Assertions.assertEquals(profileForRevenue(), peon.getProfileFor(segment));
   }
 
   @Test
@@ -658,16 +659,16 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     rule.run(segment, params.getSegmentAssigner());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         params.getCoordinatorStats().getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource())
     );
     final PartialLoadProfile profile = ((TestLoadQueuePeon) server.getPeon()).getProfileFor(segment);
-    Assert.assertNotNull("Matcher matched, profile should be threaded", profile);
-    Assert.assertEquals("partialProjection", profile.wrappedLoadSpec().get("type"));
-    Assert.assertEquals(List.of("revenue"), profile.wrappedLoadSpec().get("projections"));
-    Assert.assertTrue(profile.fingerprint().startsWith("v1:"));
-    Assert.assertNull("Outbound request profile should not carry loadedBytes", profile.loadedBytes());
+    Assertions.assertNotNull(profile, "Matcher matched, profile should be threaded");
+    Assertions.assertEquals("partialProjection", profile.wrappedLoadSpec().get("type"));
+    Assertions.assertEquals(List.of("revenue"), profile.wrappedLoadSpec().get("projections"));
+    Assertions.assertTrue(profile.fingerprint().startsWith("v1:"));
+    Assertions.assertNull(profile.loadedBytes(), "Outbound request profile should not carry loadedBytes");
   }
 
   @Test
@@ -689,14 +690,14 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     rule.run(segment, params.getSegmentAssigner());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         params.getCoordinatorStats().getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource())
     );
-    Assert.assertTrue(server.getLoadingSegments().contains(segment));
-    Assert.assertNull(
-        "Full-load fallback must not thread a profile to the peon",
-        ((TestLoadQueuePeon) server.getPeon()).getProfileFor(segment)
+    Assertions.assertTrue(server.getLoadingSegments().contains(segment));
+    Assertions.assertNull(
+        ((TestLoadQueuePeon) server.getPeon()).getProfileFor(segment),
+        "Full-load fallback must not thread a profile to the peon"
     );
   }
 
@@ -713,11 +714,11 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
 
-    Assert.assertTrue(moved);
-    Assert.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
+    Assertions.assertTrue(moved);
+    Assertions.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
     final PartialLoadProfile queued = ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment);
-    Assert.assertNotNull("Move destination should be asked for the same parts the source holds", queued);
-    Assert.assertEquals(FP_REVENUE, queued.fingerprint());
+    Assertions.assertNotNull(queued, "Move destination should be asked for the same parts the source holds");
+    Assertions.assertEquals(FP_REVENUE, queued.fingerprint());
   }
 
   @Test
@@ -742,10 +743,10 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
 
-    Assert.assertTrue(moved);
+    Assertions.assertTrue(moved);
     final PartialLoadProfile queued = ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment);
-    Assert.assertNotNull("Cancelled in-flight partial load should be reissued to the destination", queued);
-    Assert.assertEquals(FP_REVENUE, queued.fingerprint());
+    Assertions.assertNotNull(queued, "Cancelled in-flight partial load should be reissued to the destination");
+    Assertions.assertEquals(FP_REVENUE, queued.fingerprint());
   }
 
   @Test
@@ -759,11 +760,11 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
 
-    Assert.assertTrue(moved);
-    Assert.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
-    Assert.assertNull(
-        "Moving a regular full-load replica must not thread a profile",
-        ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment)
+    Assertions.assertTrue(moved);
+    Assertions.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
+    Assertions.assertNull(
+        ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment),
+        "Moving a regular full-load replica must not thread a profile"
     );
   }
 

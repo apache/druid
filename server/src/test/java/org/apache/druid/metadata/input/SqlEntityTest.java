@@ -27,10 +27,10 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,7 +41,7 @@ import java.util.Collections;
 
 public class SqlEntityTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
@@ -51,7 +51,7 @@ public class SqlEntityTest
   String VALID_SQL = "SELECT timestamp,a,b FROM FOOS_TABLE";
   String INVALID_SQL = "DONT SELECT timestamp,a,b FROM FOOS_TABLE";
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     for (Module jacksonModule : new InputSourceModule().getJacksonModules()) {
@@ -80,7 +80,7 @@ public class SqlEntityTest
     String expectedJson = mapper.writeValueAsString(
         Collections.singletonList(((MapBasedInputRow) expectedRow).getEvent())
     );
-    Assert.assertEquals(actualJson, expectedJson);
+    Assertions.assertEquals(actualJson, expectedJson);
     testUtils.dropTable(TABLE_NAME_1);
   }
 
@@ -91,9 +91,9 @@ public class SqlEntityTest
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     testUtils.createTableWithRows(TABLE_NAME_1, 1);
     File tmpFile = File.createTempFile("testQueryResults", "");
-    Assert.assertTrue(tmpFile.exists());
+    Assertions.assertTrue(tmpFile.exists());
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> SqlEntity.openCleanableFile(
             INVALID_SQL,
@@ -105,6 +105,6 @@ public class SqlEntityTest
     );
 
     // Verify that the temporary file is cleaned up
-    Assert.assertFalse(tmpFile.exists());
+    Assertions.assertFalse(tmpFile.exists());
   }
 }

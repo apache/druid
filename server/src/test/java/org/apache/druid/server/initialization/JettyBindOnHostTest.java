@@ -37,8 +37,8 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.server.Server;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -75,14 +75,14 @@ public class JettyBindOnHostTest extends BaseJettyTest
   @Test
   public void testBindOnHost() throws Exception
   {
-    Assert.assertEquals("localhost", server.getURI().getHost());
+    Assertions.assertEquals("localhost", server.getURI().getHost());
 
     final URL url = new URL("http://localhost:" + port + "/default");
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
+    Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
 
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestMethod("POST");
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(post.getInputStream(), StandardCharsets.UTF_8));
+    Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(post.getInputStream(), StandardCharsets.UTF_8));
   }
 }

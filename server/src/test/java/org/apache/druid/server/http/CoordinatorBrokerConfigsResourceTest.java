@@ -26,12 +26,13 @@ import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.util.concurrent.atomic.AtomicReference;
 
 public class CoordinatorBrokerConfigsResourceTest
@@ -40,7 +41,7 @@ public class CoordinatorBrokerConfigsResourceTest
   private AuditManager auditManager;
   private BrokerDynamicConfigSyncer brokerDynamicConfigSyncer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     configManager = EasyMock.createStrictMock(JacksonConfigManager.class);
@@ -70,8 +71,8 @@ public class CoordinatorBrokerConfigsResourceTest
         brokerDynamicConfigSyncer
     ).getBrokerDynamicConfig();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(config, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(config, response.getEntity());
 
     EasyMock.verify(configManager, auditManager, brokerDynamicConfigSyncer);
   }
@@ -107,7 +108,7 @@ public class CoordinatorBrokerConfigsResourceTest
     );
 
     Response response = resource.getBrokerDynamicConfigHistory(null, 10);
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     EasyMock.verify(configManager, auditManager, brokerDynamicConfigSyncer);
   }
@@ -143,7 +144,7 @@ public class CoordinatorBrokerConfigsResourceTest
     );
 
     Response response = resource.getBrokerDynamicConfigHistory(null, null);
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     EasyMock.verify(configManager, auditManager, brokerDynamicConfigSyncer);
   }
@@ -183,7 +184,7 @@ public class CoordinatorBrokerConfigsResourceTest
     );
 
     Response response = resource.setBrokerDynamicConfig(BrokerDynamicConfig.builder(), request);
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
 
     EasyMock.verify(configManager, auditManager, brokerDynamicConfigSyncer);
   }

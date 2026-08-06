@@ -65,15 +65,18 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -92,7 +95,7 @@ import java.util.stream.Collectors;
 
 public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataCacheTestBase
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
@@ -110,12 +113,12 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
   private Supplier<SegmentsMetadataManagerConfig> segmentsMetadataManagerConfigSupplier;
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     setUpData();
     setUpCommon();
-    tmpDir = temporaryFolder.newFolder();
+    tmpDir = newFolder(temporaryFolder, "junit");
     inventoryView = new TestServerInventoryView();
     serverView = newCoordinatorServerView(inventoryView);
     walker = new TestSegmentMetadataQueryWalker(
@@ -205,7 +208,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     exec = Execs.multiThreaded(4, "DruidSchemaConcurrencyTest-%d");
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception
   {
@@ -225,7 +228,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
    * {@link BrokerServerView#getTimeline} is continuously called to mimic user query
    * processing. All these calls must return without heavy contention.
    */
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS)
   public void testSegmentMetadataRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
       throws InterruptedException, ExecutionException, TimeoutException
   {
@@ -317,12 +321,12 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     // for the first 30 segments, we will still have replicas.
     // for the other 20 segments, they will be completely removed from the cluster.
     removeSegmentsFromCluster(numServers, 50);
-    Assert.assertFalse(refreshFuture.isDone());
+    Assertions.assertFalse(refreshFuture.isDone());
 
     for (int i = 0; i < 1000; i++) {
       boolean hasTimeline = exec.submit(() -> (serverView.getTimeline(new TableDataSource(DATASOURCE)) != null))
                                 .get(100, TimeUnit.MILLISECONDS);
-      Assert.assertTrue(hasTimeline);
+      Assertions.assertTrue(hasTimeline);
       // We want to call getTimeline while BrokerServerView is being updated. Sleep might help with timing.
       Thread.sleep(2);
     }
@@ -341,7 +345,8 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
    * called to mimic reading the segments table of SystemSchema. All these calls
    * must return without heavy contention.
    */
-  @Test(timeout = 30000L)
+  @Test
+  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS)
   public void testSegmentMetadataRefreshAndDruidSchemaGetSegmentMetadata()
       throws InterruptedException, ExecutionException, TimeoutException
   {
@@ -415,7 +420,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     );
     addSegmentsToCluster(0, numServers, numExistingSegments);
     // Wait for all segments to be loaded in BrokerServerView
-    Assert.assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
+    Assertions.assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
 
     // Trigger refresh of SegmentMetadataCache. This will internally run the heavy work mimicked
     // by the overridden buildDruidTable
@@ -426,13 +431,13 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
       );
       return null;
     });
-    Assert.assertFalse(refreshFuture.isDone());
+    Assertions.assertFalse(refreshFuture.isDone());
 
     for (int i = 0; i < 1000; i++) {
       Map<SegmentId, AvailableSegmentMetadata> segmentsMetadata = exec.submit(
           () -> schema.getSegmentMetadataSnapshot()
       ).get(100, TimeUnit.MILLISECONDS);
-      Assert.assertFalse(segmentsMetadata.isEmpty());
+      Assertions.assertFalse(segmentsMetadata.isEmpty());
       // We want to call getTimeline while refreshing. Sleep might help with timing.
       Thread.sleep(2);
     }
@@ -594,6 +599,19 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
       Set<DataSegment> segments = segmentsMap.get(serverKey);
       return segments != null && segments.contains(segment);
     }
+
+    private static File newFolder(File root, String... subDirs) throws IOException
+    {
+      if (subDirs.length == 0) {
+        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      }
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
+    }
   }
 
   private static class TestCoordinatorServerView extends CoordinatorServerView
@@ -613,5 +631,31 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     {
       return EasyMock.mock(QueryRunner.class);
     }
+
+    private static File newFolder(File root, String... subDirs) throws IOException
+    {
+      if (subDirs.length == 0) {
+        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      }
+      String subFolder = String.join("/", subDirs);
+      File result = new File(root, subFolder);
+      if (!result.mkdirs()) {
+        throw new IOException("Couldn't create folders " + root);
+      }
+      return result;
+    }
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
+      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+    }
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

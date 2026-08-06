@@ -31,31 +31,26 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceLocations;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
-import org.mockito.quality.Strictness;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+@ExtendWith(MockitoExtension.class)
 public class SpecificTaskServiceLocatorTest
 {
   private static final String TASK_ID = "test-task";
   private static final TaskLocation TASK_LOCATION1 = TaskLocation.create("example.com", -1, 9998);
   private static final ServiceLocation SERVICE_LOCATION1 =
       new ServiceLocation("example.com", -1, 9998, "/druid/worker/v1/chat/test-task");
-
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Mock
   private OverlordClient overlordClient;
@@ -87,7 +82,7 @@ public class SpecificTaskServiceLocatorTest
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();
-    Assert.assertEquals(ServiceLocations.forLocations(Collections.emptySet()), future.get());
+    Assertions.assertEquals(ServiceLocations.forLocations(Collections.emptySet()), future.get());
   }
 
   @Test
@@ -97,7 +92,7 @@ public class SpecificTaskServiceLocatorTest
            .thenReturn(status(TaskState.RUNNING, TASK_LOCATION1));
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
-    Assert.assertEquals(ServiceLocations.forLocation(SERVICE_LOCATION1), locator.locate().get());
+    Assertions.assertEquals(ServiceLocations.forLocation(SERVICE_LOCATION1), locator.locate().get());
   }
 
   @Test
@@ -108,7 +103,7 @@ public class SpecificTaskServiceLocatorTest
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();
-    Assert.assertEquals(ServiceLocations.closed(), future.get());
+    Assertions.assertEquals(ServiceLocations.closed(), future.get());
   }
 
   @Test
@@ -138,7 +133,7 @@ public class SpecificTaskServiceLocatorTest
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();
-    Assert.assertEquals(ServiceLocations.closed(), future.get());
+    Assertions.assertEquals(ServiceLocations.closed(), future.get());
   }
 
   @Test
@@ -168,7 +163,7 @@ public class SpecificTaskServiceLocatorTest
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();
-    Assert.assertEquals(ServiceLocations.closed(), future.get());
+    Assertions.assertEquals(ServiceLocations.closed(), future.get());
   }
 
   @Test
@@ -180,13 +175,13 @@ public class SpecificTaskServiceLocatorTest
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();
 
-    final ExecutionException e = Assert.assertThrows(
+    final ExecutionException e = Assertions.assertThrows(
         ExecutionException.class,
         future::get
     );
 
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("oh no")));
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
+    assertThat(e).hasMessageContaining("oh no");
+    assertThat(e.getCause()).isInstanceOf(IllegalStateException.class);
   }
 
   @Test
@@ -201,9 +196,9 @@ public class SpecificTaskServiceLocatorTest
     final ListenableFuture<ServiceLocations> future = locator.locate();
     locator.close();
 
-    Assert.assertEquals(ServiceLocations.closed(), future.get()); // Call prior to close
-    Assert.assertEquals(ServiceLocations.closed(), locator.locate().get()); // Call after close
-    Assert.assertTrue(overlordFuture.isCancelled());
+    Assertions.assertEquals(ServiceLocations.closed(), future.get()); // Call prior to close
+    Assertions.assertEquals(ServiceLocations.closed(), locator.locate().get()); // Call after close
+    Assertions.assertTrue(overlordFuture.isCancelled());
   }
 
   private static ListenableFuture<Map<String, TaskStatus>> status(final TaskState state, final TaskLocation location)

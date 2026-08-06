@@ -26,15 +26,16 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 
 public class RequestLogLineTest
 {
   private Query query;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     query = new TimeBoundaryQuery(
@@ -46,26 +47,30 @@ public class RequestLogLineTest
     );
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void nullTimestamp()
   {
-    RequestLogLine requestLogLine = RequestLogLine.forNative(
-        query,
-        null,
-        "",
-        new QueryStats(ImmutableMap.of())
-    );
+    org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> {
+      RequestLogLine requestLogLine = RequestLogLine.forNative(
+          query,
+          null,
+          "",
+          new QueryStats(ImmutableMap.of())
+      );
+    });
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void nullQueryStats()
   {
-    RequestLogLine requestLogLine = RequestLogLine.forNative(
-        query,
-        DateTimes.nowUtc(),
-        "",
-        null
-    );
+    org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> {
+      RequestLogLine requestLogLine = RequestLogLine.forNative(
+          query,
+          DateTimes.nowUtc(),
+          "",
+          null
+      );
+    });
   }
 
   @Test
@@ -77,14 +82,14 @@ public class RequestLogLineTest
         null,
         new QueryStats(ImmutableMap.of())
     );
-    Assert.assertEquals("", requestLogLine.getRemoteAddr());
+    Assertions.assertEquals("", requestLogLine.getRemoteAddr());
     requestLogLine.getNativeQueryLine(new DefaultObjectMapper()); // call should not throw exception
 
     requestLogLine = RequestLogLine.forSql(
         "", null, DateTimes.nowUtc(), null, new QueryStats(ImmutableMap.of())
     );
-    Assert.assertEquals("", requestLogLine.getRemoteAddr());
-    Assert.assertEquals(ImmutableMap.<String, Object>of(), requestLogLine.getSqlQueryContext());
+    Assertions.assertEquals("", requestLogLine.getRemoteAddr());
+    Assertions.assertEquals(ImmutableMap.<String, Object>of(), requestLogLine.getSqlQueryContext());
     requestLogLine.getSqlQueryLine(new DefaultObjectMapper()); // call should not throw exception
   }
 

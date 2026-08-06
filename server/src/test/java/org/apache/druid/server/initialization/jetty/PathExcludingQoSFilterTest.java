@@ -21,8 +21,8 @@ package org.apache.druid.server.initialization.jetty;
 
 import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -30,6 +30,7 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
+
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.Map;
@@ -56,9 +57,9 @@ public class PathExcludingQoSFilterTest
 
       filter.doFilter(request, response, chain);
 
-      Assert.assertEquals("Excluded request should be passed straight down the chain", 1, chain.invocations);
-      Assert.assertSame(request, chain.lastRequest);
-      Assert.assertEquals("Excluded request should not be rejected", 0, response.getStatus());
+      Assertions.assertEquals(1, chain.invocations, "Excluded request should be passed straight down the chain");
+      Assertions.assertSame(request, chain.lastRequest);
+      Assertions.assertEquals(0, response.getStatus(), "Excluded request should not be rejected");
     }
   }
 
@@ -75,11 +76,11 @@ public class PathExcludingQoSFilterTest
     // A single request with a free semaphore is accepted and passed down the chain by the standard QoSFilter.
     filter.doFilter(request, response, chain);
 
-    Assert.assertEquals("Non-excluded request should be handled by the QoS filter", 1, chain.invocations);
-    Assert.assertNotEquals(
-        "Accepted request must not be rejected with 503",
+    Assertions.assertEquals(1, chain.invocations, "Non-excluded request should be handled by the QoS filter");
+    Assertions.assertNotEquals(
         HttpServletResponse.SC_SERVICE_UNAVAILABLE,
-        response.getStatus()
+        response.getStatus(),
+        "Accepted request must not be rejected with 503"
     );
   }
 
@@ -88,7 +89,7 @@ public class PathExcludingQoSFilterTest
   {
     // A null exclusion list must not blow up; nothing should be treated as excluded.
     final PathExcludingQoSFilter filter = new PathExcludingQoSFilter(null);
-    Assert.assertNotNull(filter);
+    Assertions.assertNotNull(filter);
   }
 
   private static MockHttpServletRequest request(String requestUri)

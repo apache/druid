@@ -41,11 +41,12 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,7 +60,7 @@ public class KillStalePendingSegmentsTest
   private TestOverlordClient overlordClient;
   private KillStalePendingSegments killDuty;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.overlordClient = new TestOverlordClient();
@@ -73,11 +74,11 @@ public class KillStalePendingSegmentsTest
     killDuty.run(params);
 
     final Interval observedKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
-    Assert.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
+    Assertions.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
 
     // Verify that the cutoff time is no later than 1 day ago from now
     DateTime expectedCutoffTime = DateTimes.nowUtc().minusDays(1);
-    Assert.assertTrue(
+    Assertions.assertTrue(
         expectedCutoffTime.getMillis() - observedKillInterval.getEnd().getMillis() <= 100
     );
   }
@@ -95,8 +96,8 @@ public class KillStalePendingSegmentsTest
     killDuty.run(params);
 
     final Interval observedKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
-    Assert.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
-    Assert.assertEquals(startOfEarliestActiveTask.minusDays(1), observedKillInterval.getEnd());
+    Assertions.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
+    Assertions.assertEquals(startOfEarliestActiveTask.minusDays(1), observedKillInterval.getEnd());
   }
 
   @Test
@@ -112,11 +113,11 @@ public class KillStalePendingSegmentsTest
     killDuty.run(params);
 
     final Interval observedKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
-    Assert.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
-    Assert.assertEquals(startOfLatestCompletedTask.minusDays(1), observedKillInterval.getEnd());
+    Assertions.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
+    Assertions.assertEquals(startOfLatestCompletedTask.minusDays(1), observedKillInterval.getEnd());
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
+    Assertions.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
   }
 
   @Test
@@ -133,12 +134,12 @@ public class KillStalePendingSegmentsTest
 
     DateTime earliestEligibleTask = DateTimes.earlierOf(startOfEarliestActiveTask, startOfLatestCompletedTask);
     final Interval wikiKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
-    Assert.assertEquals(DateTimes.MIN, wikiKillInterval.getStart());
-    Assert.assertEquals(earliestEligibleTask.minusDays(1), wikiKillInterval.getEnd());
+    Assertions.assertEquals(DateTimes.MIN, wikiKillInterval.getStart());
+    Assertions.assertEquals(earliestEligibleTask.minusDays(1), wikiKillInterval.getEnd());
 
     final Interval koalaKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.KOALA);
-    Assert.assertEquals(DateTimes.MIN, koalaKillInterval.getStart());
-    Assert.assertEquals(earliestEligibleTask.minusDays(1), wikiKillInterval.getEnd());
+    Assertions.assertEquals(DateTimes.MIN, koalaKillInterval.getStart());
+    Assertions.assertEquals(earliestEligibleTask.minusDays(1), wikiKillInterval.getEnd());
   }
 
   @Test
@@ -166,11 +167,11 @@ public class KillStalePendingSegmentsTest
 
     // Verify that stale pending segments are killed in "wiki" but not in "koala"
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertTrue(overlordClient.observedKillIntervals.containsKey(TestDataSource.WIKI));
-    Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
+    Assertions.assertTrue(overlordClient.observedKillIntervals.containsKey(TestDataSource.WIKI));
+    Assertions.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
 
-    Assert.assertFalse(overlordClient.observedKillIntervals.containsKey(TestDataSource.KOALA));
-    Assert.assertEquals(0, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.KOALA)));
+    Assertions.assertFalse(overlordClient.observedKillIntervals.containsKey(TestDataSource.KOALA));
+    Assertions.assertEquals(0, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.KOALA)));
   }
 
   private DruidCoordinatorRuntimeParams.Builder createParamsWithDatasources(String... datasources)

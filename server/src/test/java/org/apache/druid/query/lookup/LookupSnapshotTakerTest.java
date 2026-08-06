@@ -25,17 +25,17 @@ import com.google.common.io.Files;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class LookupSnapshotTakerTest
@@ -43,11 +43,8 @@ public class LookupSnapshotTakerTest
   private static final String TIER1 = "tier1";
   private static final String TIER2 = "tier2";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  public File temporaryFolder;
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -55,11 +52,11 @@ public class LookupSnapshotTakerTest
   private LookupSnapshotTaker lookupSnapshotTaker;
   private String basePersistDirectory;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
-    basePersistDirectory = temporaryFolder.newFolder().getAbsolutePath();
+    basePersistDirectory = newFolder(temporaryFolder, "junit").getAbsolutePath();
     lookupSnapshotTaker = new LookupSnapshotTaker(mapper, basePersistDirectory);
   }
 
@@ -86,64 +83,79 @@ public class LookupSnapshotTakerTest
     lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList1);
     List<LookupBean> lookupBeanList2 = Collections.singletonList(lookupBean2);
     lookupSnapshotTaker.takeSnapshot(TIER2, lookupBeanList2);
-    Assert.assertEquals(lookupBeanList1, lookupSnapshotTaker.pullExistingSnapshot(TIER1));
-    Assert.assertEquals(lookupBeanList2, lookupSnapshotTaker.pullExistingSnapshot(TIER2));
+    Assertions.assertEquals(lookupBeanList1, lookupSnapshotTaker.pullExistingSnapshot(TIER1));
+    Assertions.assertEquals(lookupBeanList2, lookupSnapshotTaker.pullExistingSnapshot(TIER2));
   }
 
   @Test
-  public void testIOExceptionDuringLookupPersist() throws IOException
+  public void testIOExceptionDuringLookupPersist()
   {
-    File directory = temporaryFolder.newFolder();
-    LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
-    File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
-    Assert.assertFalse(snapshotFile.exists());
-    Assert.assertTrue(snapshotFile.createNewFile());
-    Assert.assertTrue(snapshotFile.setReadOnly());
-    Assert.assertTrue(snapshotFile.getParentFile().setReadOnly());
-    LookupBean lookupBean = new LookupBean(
-        "name",
-        null,
-        new LookupExtractorFactoryContainer(
-            "v1",
-            new MapLookupExtractorFactory(
-                ImmutableMap.of(
-                    "key",
-                    "value"
-                ), true
-            )
-        )
-    );
-    List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
-
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Exception during serialization of lookups");
-    lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList);
+    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> {
+      File directory = newFolder(temporaryFolder, "junit");
+      LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
+      File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
+      Assertions.assertFalse(snapshotFile.exists());
+      Assertions.assertTrue(snapshotFile.createNewFile());
+      Assertions.assertTrue(snapshotFile.setReadOnly());
+      Assertions.assertTrue(snapshotFile.getParentFile().setReadOnly());
+      LookupBean lookupBean = new LookupBean(
+          "name",
+          null,
+          new LookupExtractorFactoryContainer(
+              "v1",
+              new MapLookupExtractorFactory(
+                  ImmutableMap.of(
+                      "key",
+                      "value"
+                  ), true
+              )
+          )
+      );
+      List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
+      lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList);
+    });
+    assertTrue(exception.getMessage().contains("Exception during serialization of lookups"));
   }
 
   @Test
   public void tesLookupPullingFromEmptyFile() throws IOException
   {
     File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
-    Assert.assertTrue(snapshotFile.createNewFile());
-    Assert.assertEquals(Collections.emptyList(), lookupSnapshotTaker.pullExistingSnapshot(TIER1));
+    Assertions.assertTrue(snapshotFile.createNewFile());
+    Assertions.assertEquals(Collections.emptyList(), lookupSnapshotTaker.pullExistingSnapshot(TIER1));
   }
 
-  @Test(expected = ISE.class)
-  public void tesLookupPullingFromCorruptFile() throws IOException
+  @Test
+  public void tesLookupPullingFromCorruptFile()
   {
-    File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
-    Assert.assertTrue(snapshotFile.createNewFile());
-    byte[] bytes = StringUtils.toUtf8("test corrupt file");
-    Files.write(bytes, snapshotFile);
-    lookupSnapshotTaker.pullExistingSnapshot(TIER1);
+    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> {
+      File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
+      Assertions.assertTrue(snapshotFile.createNewFile());
+      byte[] bytes = StringUtils.toUtf8("test corrupt file");
+      Files.write(bytes, snapshotFile);
+      lookupSnapshotTaker.pullExistingSnapshot(TIER1);
+    });
   }
 
   @Test
   public void testLookupPullingFromNonExistingFile() throws IOException
   {
-    File directory = temporaryFolder.newFolder();
+    File directory = newFolder(temporaryFolder, "junit");
     LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
     List<LookupBean> actualList = lookupSnapshotTaker.pullExistingSnapshot(TIER1);
-    Assert.assertEquals(Collections.emptyList(), actualList);
+    Assertions.assertEquals(Collections.emptyList(), actualList);
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
+      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+    }
+    String subFolder = String.join("/", subDirs);
+    File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

@@ -26,11 +26,13 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.DruidNode;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -42,7 +44,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
 
   private final StubServiceEmitter emitter = new StubServiceEmitter();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     emitter.flush();
@@ -50,7 +52,8 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
     setupServerAndCurator();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testSimple() throws Exception
   {
     curator.start();
@@ -89,7 +92,7 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(leaderSelector1.localTerm() >= 1);
+    Assertions.assertTrue(leaderSelector1.localTerm() >= 1);
 
     CuratorDruidLeaderSelector leaderSelector2 = new CuratorDruidLeaderSelector(
         curator,
@@ -126,9 +129,9 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(leaderSelector2.isLeader());
-    Assert.assertEquals("http://h2:8080", leaderSelector1.getCurrentLeader());
-    Assert.assertEquals(2, leaderSelector2.localTerm());
+    Assertions.assertTrue(leaderSelector2.isLeader());
+    Assertions.assertEquals("http://h2:8080", leaderSelector1.getCurrentLeader());
+    Assertions.assertEquals(2, leaderSelector2.localTerm());
 
     CuratorDruidLeaderSelector leaderSelector3 = new CuratorDruidLeaderSelector(
         curator,
@@ -159,12 +162,13 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Assert.assertTrue(leaderSelector3.isLeader());
-    Assert.assertEquals("http://h3:8080", leaderSelector1.getCurrentLeader());
-    Assert.assertEquals(1, leaderSelector3.localTerm());
+    Assertions.assertTrue(leaderSelector3.isLeader());
+    Assertions.assertEquals("http://h3:8080", leaderSelector1.getCurrentLeader());
+    Assertions.assertEquals(1, leaderSelector3.localTerm());
   }
 
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void test_becomeLeader_triggersCleanup_onFailure() throws InterruptedException
   {
     curator.start();
@@ -201,11 +205,11 @@ public class CuratorDruidLeaderSelectorTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(1, becomeLeaderCalled.get());
-    Assert.assertEquals(1, stopBeingLeaderCalled.get());
+    Assertions.assertEquals(1, becomeLeaderCalled.get());
+    Assertions.assertEquals(1, stopBeingLeaderCalled.get());
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     tearDownServerAndCurator();

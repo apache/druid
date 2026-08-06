@@ -35,17 +35,17 @@ import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.inject.Inject;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DruidInjectorBuilderTest
 {
@@ -190,7 +190,7 @@ public class DruidInjectorBuilderTest
           .withEmptyProperties()
           .build()
     );
-    assertThrows(ISE.class, () -> builder.addInput("I'm not a module"));
+    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> builder.addInput("I'm not a module"));
   }
 
   @Test
@@ -202,7 +202,7 @@ public class DruidInjectorBuilderTest
           .withEmptyProperties()
           .build()
     );
-    assertThrows(ISE.class, () -> builder.addInput(Object.class));
+    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> builder.addInput(Object.class));
   }
 
   @Test
@@ -254,7 +254,7 @@ public class DruidInjectorBuilderTest
         .addInput(MockDruidModule.class)
         .build();
 
-    assertThrows(IOException.class, () -> verifyInjector(injector));
+    org.junit.jupiter.api.Assertions.assertThrows(IOException.class, () -> verifyInjector(injector));
   }
 
   @Test
@@ -286,7 +286,7 @@ public class DruidInjectorBuilderTest
         .addModules(new MockGuiceModule(), new MockRoleModule())
         .build();
 
-    assertThrows(IOException.class, () -> verifyInjector(injector));
+    org.junit.jupiter.api.Assertions.assertThrows(IOException.class, () -> verifyInjector(injector));
   }
 
   @Test

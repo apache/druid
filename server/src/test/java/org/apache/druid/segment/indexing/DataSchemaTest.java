@@ -55,8 +55,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -67,6 +65,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class DataSchemaTest extends InitializedNullHandlingTest
 {
@@ -518,7 +518,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         );
       }
       catch (ValueInstantiationException e) {
-        MatcherAssert.assertThat(
+        org.apache.druid.error.DruidExceptionAssertions.assertMatches(
             entry.getKey(),
             e.getCause(),
             DruidExceptionMatcher.invalidInput().expectMessageIs(
@@ -978,8 +978,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
                        .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
                        .build()
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("segmentGranularitySpec"));
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+    assertThat(t.getMessage()).contains("segmentGranularitySpec");
+    assertThat(t.getMessage()).contains("baseTable");
   }
 
   @Test
@@ -1004,8 +1004,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
                        .withBaseTable(spec)
                        .build()
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("granularitySpec"));
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+    assertThat(t.getMessage()).contains("granularitySpec");
+    assertThat(t.getMessage()).contains("baseTable");
   }
 
   @Test
@@ -1101,6 +1101,6 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> schema.withDimensionsSpec(DimensionsSpec.builder().build())
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("dimensionsSpec"));
+    assertThat(t.getMessage()).contains("dimensionsSpec");
   }
 }

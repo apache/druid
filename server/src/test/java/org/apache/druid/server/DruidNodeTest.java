@@ -24,10 +24,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
+
 
 public class DruidNodeTest
 {
@@ -51,213 +52,237 @@ public class DruidNodeTest
     DruidNode node;
 
     node = new DruidNode(service, null, false, null, null, true, false);
-    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals(DruidNode.getDefaultHost(), node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
     // Hosts which report only ipv6 will have getDefaultHost() report something like fe80::6e40:8ff:fe93:9230
     // but getHostAndPort() reports [fe80::6e40:8ff:fe93:9230]
-    Assert.assertEquals(HostAndPort.fromString(DruidNode.getDefaultHost()).toString(), node.getHostAndPort());
-    Assert.assertEquals(DruidNode.UNKNOWN_VERSION, node.getVersion()); // unknown because not compiled with version
+    Assertions.assertEquals(HostAndPort.fromString(DruidNode.getDefaultHost()).toString(), node.getHostAndPort());
+    Assertions.assertEquals(DruidNode.UNKNOWN_VERSION, node.getVersion()); // unknown because not compiled with version
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", false, -1, null, true, false);
-    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHostAndPort());
+    Assertions.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals("[2001:db8:85a3::8a2e:370:7334]", node.getHostAndPort());
 
     node = new DruidNode(service, "abc:123", false, null, null, true, false);
-    Assert.assertEquals("abc", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals("abc:123", node.getHostAndPort());
+    Assertions.assertEquals("abc", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals("abc:123", node.getHostAndPort());
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", false, null, null, true, false);
-    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
-    Assert.assertTrue(8080 <= node.getPlaintextPort());
+    Assertions.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
+    Assertions.assertTrue(8080 <= node.getPlaintextPort());
 
     node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]", false, null, null, true, false);
-    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
-    Assert.assertTrue(8080 <= node.getPlaintextPort());
+    Assertions.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
+    Assertions.assertTrue(8080 <= node.getPlaintextPort());
 
     node = new DruidNode(service, "abc", false, null, null, true, false);
-    Assert.assertEquals("abc", node.getHost());
-    Assert.assertTrue(8080 <= node.getPlaintextPort());
+    Assertions.assertEquals("abc", node.getHost());
+    Assertions.assertTrue(8080 <= node.getPlaintextPort());
 
     node = new DruidNode(service, "abc", false, 123, null, true, false);
-    Assert.assertEquals("abc", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals("abc:123", node.getHostAndPort());
+    Assertions.assertEquals("abc", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals("abc:123", node.getHostAndPort());
 
     node = new DruidNode(service, "abc:123", false, 123, null, true, false);
-    Assert.assertEquals("abc", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals("abc:123", node.getHostAndPort());
+    Assertions.assertEquals("abc", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals("abc:123", node.getHostAndPort());
 
     node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]:123", false, null, null, true, false);
-    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
+    Assertions.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
     node = new DruidNode(service, "2001:db8:85a3::8a2e:370:7334", false, 123, null, true, false);
-    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
+    Assertions.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
     node = new DruidNode(service, "[2001:db8:85a3::8a2e:370:7334]", false, 123, null, true, false);
-    Assert.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
+    Assertions.assertEquals("2001:db8:85a3::8a2e:370:7334", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals("[2001:db8:85a3::8a2e:370:7334]:123", node.getHostAndPort());
 
     node = new DruidNode(service, null, false, 123, null, true, false);
-    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(DruidNode.getDefaultHost(), node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
 
     node = new DruidNode(service, null, false, 123, 123, true, false);
-    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(-1, node.getTlsPort());
+    Assertions.assertEquals(DruidNode.getDefaultHost(), node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(-1, node.getTlsPort());
 
     node = new DruidNode(service, "host", false, 123, 123, true, false);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(-1, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(-1, node.getTlsPort());
 
     node = new DruidNode(service, "host:123", false, null, 123, true, false);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(-1, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(-1, node.getTlsPort());
 
     node = new DruidNode("test", "host:123", false, null, 214, true, true);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(214, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(214, node.getTlsPort());
 
     node = new DruidNode("test", "host", false, 123, 214, true, true);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(214, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(214, node.getTlsPort());
 
     node = new DruidNode("test", "host:123", false, 123, 214, true, true);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(214, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(214, node.getTlsPort());
 
     node = new DruidNode("test", null, false, 123, 214, true, true);
-    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(214, node.getTlsPort());
+    Assertions.assertEquals(DruidNode.getDefaultHost(), node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(214, node.getTlsPort());
 
     node = new DruidNode("test", "host:123", false, null, 214, false, true);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
-    Assert.assertEquals(214, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals(214, node.getTlsPort());
 
     node = new DruidNode("test", "host:123", false, null, 123, false, true);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
-    Assert.assertEquals(123, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals(123, node.getTlsPort());
 
     node = new DruidNode("test", null, false, null, 123, false, true);
-    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
-    Assert.assertEquals(123, node.getTlsPort());
+    Assertions.assertEquals(DruidNode.getDefaultHost(), node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals(123, node.getTlsPort());
 
     node = new DruidNode("test", null, false, -1, 123, false, true);
-    Assert.assertEquals(DruidNode.getDefaultHost(), node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
-    Assert.assertEquals(123, node.getTlsPort());
+    Assertions.assertEquals(DruidNode.getDefaultHost(), node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals(123, node.getTlsPort());
 
     node = new DruidNode("test", "host", false, -1, null, 123, false, true, ImmutableMap.of("labelKey1", "labelValue1"));
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
-    Assert.assertEquals(123, node.getTlsPort());
-    Assert.assertEquals(ImmutableMap.of("labelKey1", "labelValue1"), node.getLabels());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals(123, node.getTlsPort());
+    Assertions.assertEquals(ImmutableMap.of("labelKey1", "labelValue1"), node.getLabels());
 
     node = new DruidNode("test", "host", false, -1, null, 123, true, false, ImmutableMap.of("labelKey1", "labelValue1", "labelKey2", "labelValue2"));
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(-1, node.getPlaintextPort());
-    Assert.assertEquals(-1, node.getTlsPort());
-    Assert.assertEquals(ImmutableMap.of("labelKey1", "labelValue1", "labelKey2", "labelValue2"), node.getLabels());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(-1, node.getPlaintextPort());
+    Assertions.assertEquals(-1, node.getTlsPort());
+    Assertions.assertEquals(ImmutableMap.of("labelKey1", "labelValue1", "labelKey2", "labelValue2"), node.getLabels());
 
     node = new DruidNode("test", "host:123", false, 123, null, true, false);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(-1, node.getTlsPort());
-    Assert.assertNull(node.getLabels());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(-1, node.getTlsPort());
+    Assertions.assertNull(node.getLabels());
 
     node = new DruidNode("test", "host:123", false, null, 123, true, false);
-    Assert.assertEquals("host", node.getHost());
-    Assert.assertEquals(123, node.getPlaintextPort());
-    Assert.assertEquals(-1, node.getTlsPort());
+    Assertions.assertEquals("host", node.getHost());
+    Assertions.assertEquals(123, node.getPlaintextPort());
+    Assertions.assertEquals(-1, node.getTlsPort());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testConflictingPorts()
   {
-    new DruidNode("test/service", "abc:123", false, 456, null, true, false);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test/service", "abc:123", false, 456, null, true, false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testAtLeastTlsOrPlainTextIsSet()
   {
-    new DruidNode("test", "host:123", false, null, 123, false, false);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", "host:123", false, null, 123, false, false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testSamePlainTextAndTlsPort()
   {
-    new DruidNode("test", "host:123", false, null, 123, true, true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", "host:123", false, null, 123, true, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testSamePlainTextAndTlsPort1()
   {
-    new DruidNode("test", "host", false, 123, 123, true, true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", "host", false, 123, 123, true, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullTlsPort()
   {
-    new DruidNode("test", "host:123", false, null, null, true, true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", "host:123", false, null, null, true, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullPlainTextAndTlsPort1()
   {
-    new DruidNode("test", "host", false, null, null, true, true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", "host", false, null, null, true, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullTlsPort1()
   {
-    new DruidNode("test", "host:123", false, 123, null, true, true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", "host:123", false, 123, null, true, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullPlainTextAndTlsPort()
   {
-    new DruidNode("test", null, false, null, null, true, true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", null, false, null, null, true, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testConflictingPlainTextPort()
   {
-    new DruidNode("test", "host:123", false, 321, null, true, true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test", "host:123", false, 321, null, true, true);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidIPv6WithPort()
   {
-    new DruidNode("test/service", "[abc:fff]:123", false, 456, null, true, false);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test/service", "[abc:fff]:123", false, 456, null, true, false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidIPv6()
   {
-    new DruidNode("test/service", "abc:fff", false, 456, null, true, false);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test/service", "abc:fff", false, 456, null, true, false);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testConflictingPortsNonsense()
   {
-    new DruidNode("test/service", "[2001:db8:85a3::8a2e:370:7334]:123", false, 456, null, true, false);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      new DruidNode("test/service", "[2001:db8:85a3::8a2e:370:7334]:123", false, 456, null, true, false);
+    });
   }
 
   @Test
@@ -267,11 +292,11 @@ public class DruidNodeTest
     final String host = "some.host";
     final int port = 9898;
     final Map<String, String> labels = ImmutableMap.of("key1", "value1");
-    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, null, true, false, labels), new DruidNode(serviceName, host, false, port, null, null, true, false, labels));
-    Assert.assertEquals(new DruidNode(serviceName, host, false, port, null, null, true, false, labels), new DruidNode(serviceName, host, false, port, null, null, true, false, ImmutableMap.of("key1", "value1")));
-    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, host, false, -1, null, true, false));
-    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, "other.host", false, port, null, true, false));
-    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode("otherServiceName", host, false, port, null, true, false));
+    Assertions.assertEquals(new DruidNode(serviceName, host, false, port, null, null, true, false, labels), new DruidNode(serviceName, host, false, port, null, null, true, false, labels));
+    Assertions.assertEquals(new DruidNode(serviceName, host, false, port, null, null, true, false, labels), new DruidNode(serviceName, host, false, port, null, null, true, false, ImmutableMap.of("key1", "value1")));
+    Assertions.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, host, false, -1, null, true, false));
+    Assertions.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode(serviceName, "other.host", false, port, null, true, false));
+    Assertions.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false), new DruidNode("otherServiceName", host, false, port, null, true, false));
   }
 
   @Test
@@ -282,14 +307,14 @@ public class DruidNodeTest
     final String host = "some.host";
     final int port = 9898;
     final Map<String, String> labels = ImmutableMap.of("key1", "value1");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new DruidNode(serviceName, host, false, port, null, null, true, false, labels).hashCode(),
         new DruidNode(serviceName, host, false, port, null, null, true, false, labels).hashCode()
     );
     // Potential hash collision if hashCode method ever changes
-    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, host, false, -1, null, true, false).hashCode());
-    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, "other.host", false, port, null, true, false).hashCode());
-    Assert.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode("otherServiceName", host, false, port, null, true, false).hashCode());
+    Assertions.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, host, false, -1, null, true, false).hashCode());
+    Assertions.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode(serviceName, "other.host", false, port, null, true, false).hashCode());
+    Assertions.assertNotEquals(new DruidNode(serviceName, host, false, port, null, true, false).hashCode(), new DruidNode("otherServiceName", host, false, port, null, true, false).hashCode());
   }
 
 
@@ -300,14 +325,14 @@ public class DruidNodeTest
         mapper.writeValueAsString(new DruidNode("service", "host", true, 1234, null, 5678, true, true, ImmutableMap.of("key1", "value1"))),
         DruidNode.class
     );
-    Assert.assertEquals("service", actual.getServiceName());
-    Assert.assertEquals("host", actual.getHost());
-    Assert.assertTrue(actual.isBindOnHost());
-    Assert.assertTrue(actual.isEnablePlaintextPort());
-    Assert.assertTrue(actual.isEnableTlsPort());
-    Assert.assertEquals(1234, actual.getPlaintextPort());
-    Assert.assertEquals(5678, actual.getTlsPort());
-    Assert.assertEquals(ImmutableMap.of("key1", "value1"), actual.getLabels());
+    Assertions.assertEquals("service", actual.getServiceName());
+    Assertions.assertEquals("host", actual.getHost());
+    Assertions.assertTrue(actual.isBindOnHost());
+    Assertions.assertTrue(actual.isEnablePlaintextPort());
+    Assertions.assertTrue(actual.isEnableTlsPort());
+    Assertions.assertEquals(1234, actual.getPlaintextPort());
+    Assertions.assertEquals(5678, actual.getTlsPort());
+    Assertions.assertEquals(ImmutableMap.of("key1", "value1"), actual.getLabels());
   }
 
   @Test
@@ -317,14 +342,14 @@ public class DruidNodeTest
         mapper.writeValueAsString(new DruidNode("service", "host", false, 1234, null, 5678, null, false, null)),
         DruidNode.class
     );
-    Assert.assertEquals("service", actual.getServiceName());
-    Assert.assertEquals("host", actual.getHost());
-    Assert.assertFalse(actual.isBindOnHost());
-    Assert.assertTrue(actual.isEnablePlaintextPort());
-    Assert.assertFalse(actual.isEnableTlsPort());
-    Assert.assertEquals(1234, actual.getPlaintextPort());
-    Assert.assertEquals(-1, actual.getTlsPort());
-    Assert.assertNull(actual.getLabels());
+    Assertions.assertEquals("service", actual.getServiceName());
+    Assertions.assertEquals("host", actual.getHost());
+    Assertions.assertFalse(actual.isBindOnHost());
+    Assertions.assertTrue(actual.isEnablePlaintextPort());
+    Assertions.assertFalse(actual.isEnableTlsPort());
+    Assertions.assertEquals(1234, actual.getPlaintextPort());
+    Assertions.assertEquals(-1, actual.getTlsPort());
+    Assertions.assertNull(actual.getLabels());
   }
 
   @Test
@@ -334,14 +359,14 @@ public class DruidNodeTest
         mapper.writeValueAsString(new DruidNode("service", "host", true, 1234, null, 5678, false, true, ImmutableMap.of("key1", "value1", "key2", "value2"))),
         DruidNode.class
     );
-    Assert.assertEquals("service", actual.getServiceName());
-    Assert.assertEquals("host", actual.getHost());
-    Assert.assertTrue(actual.isBindOnHost());
-    Assert.assertFalse(actual.isEnablePlaintextPort());
-    Assert.assertTrue(actual.isEnableTlsPort());
-    Assert.assertEquals(-1, actual.getPlaintextPort());
-    Assert.assertEquals(5678, actual.getTlsPort());
-    Assert.assertEquals(ImmutableMap.of("key1", "value1", "key2", "value2"), actual.getLabels());
+    Assertions.assertEquals("service", actual.getServiceName());
+    Assertions.assertEquals("host", actual.getHost());
+    Assertions.assertTrue(actual.isBindOnHost());
+    Assertions.assertFalse(actual.isEnablePlaintextPort());
+    Assertions.assertTrue(actual.isEnableTlsPort());
+    Assertions.assertEquals(-1, actual.getPlaintextPort());
+    Assertions.assertEquals(5678, actual.getTlsPort());
+    Assertions.assertEquals(ImmutableMap.of("key1", "value1", "key2", "value2"), actual.getLabels());
   }
 
   @Test
@@ -360,12 +385,12 @@ public class DruidNodeTest
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", true, 1234, null, 5678, true, true, ImmutableMap.of("key1", "value1")), actual);
+    Assertions.assertEquals(new DruidNode("service", "host", true, 1234, null, 5678, true, true, ImmutableMap.of("key1", "value1")), actual);
 
-    Assert.assertEquals("https", actual.getServiceScheme());
-    Assert.assertEquals("host:1234", actual.getHostAndPort());
-    Assert.assertEquals("host:5678", actual.getHostAndTlsPort());
-    Assert.assertEquals("host:5678", actual.getHostAndPortToUse());
+    Assertions.assertEquals("https", actual.getServiceScheme());
+    Assertions.assertEquals("host:1234", actual.getHostAndPort());
+    Assertions.assertEquals("host:5678", actual.getHostAndTlsPort());
+    Assertions.assertEquals("host:5678", actual.getHostAndPortToUse());
   }
 
   @Test
@@ -381,12 +406,12 @@ public class DruidNodeTest
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, true, false, null), actual);
+    Assertions.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, true, false, null), actual);
 
-    Assert.assertEquals("http", actual.getServiceScheme());
-    Assert.assertEquals("host:1234", actual.getHostAndPort());
-    Assert.assertNull(actual.getHostAndTlsPort());
-    Assert.assertEquals("host:1234", actual.getHostAndPortToUse());
+    Assertions.assertEquals("http", actual.getServiceScheme());
+    Assertions.assertEquals("host:1234", actual.getHostAndPort());
+    Assertions.assertNull(actual.getHostAndTlsPort());
+    Assertions.assertEquals("host:1234", actual.getHostAndPortToUse());
   }
 
   @Test
@@ -401,12 +426,12 @@ public class DruidNodeTest
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, null, false, null), actual);
+    Assertions.assertEquals(new DruidNode("service", "host", false, 1234, null, 5678, null, false, null), actual);
 
-    Assert.assertEquals("http", actual.getServiceScheme());
-    Assert.assertEquals("host:1234", actual.getHostAndPort());
-    Assert.assertNull(actual.getHostAndTlsPort());
-    Assert.assertEquals("host:1234", actual.getHostAndPortToUse());
+    Assertions.assertEquals("http", actual.getServiceScheme());
+    Assertions.assertEquals("host:1234", actual.getHostAndPort());
+    Assertions.assertNull(actual.getHostAndTlsPort());
+    Assertions.assertEquals("host:1234", actual.getHostAndPortToUse());
   }
 
   @Test
@@ -421,12 +446,12 @@ public class DruidNodeTest
 
 
     DruidNode actual = mapper.readValue(json, DruidNode.class);
-    Assert.assertEquals(new DruidNode("service", "host", false, null, 1234, 5678, null, false, null), actual);
+    Assertions.assertEquals(new DruidNode("service", "host", false, null, 1234, 5678, null, false, null), actual);
 
-    Assert.assertEquals("http", actual.getServiceScheme());
-    Assert.assertEquals("host:1234", actual.getHostAndPort());
-    Assert.assertNull(actual.getHostAndTlsPort());
-    Assert.assertEquals("host:1234", actual.getHostAndPortToUse());
+    Assertions.assertEquals("http", actual.getServiceScheme());
+    Assertions.assertEquals("host:1234", actual.getHostAndPort());
+    Assertions.assertNull(actual.getHostAndTlsPort());
+    Assertions.assertEquals("host:1234", actual.getHostAndPortToUse());
   }
 
 }

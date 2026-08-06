@@ -28,19 +28,21 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.coordination.SegmentLoadDropHandler;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
 
 public class SegmentStatsMonitorTest
 {
@@ -54,7 +56,7 @@ public class SegmentStatsMonitorTest
   private SegmentStatsMonitor monitor;
   private final SegmentLoaderConfig segmentLoaderConfig = SegmentLoaderConfig.builder().build();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     druidServerConfig = Mockito.mock(DruidServerConfig.class);
@@ -69,14 +71,16 @@ public class SegmentStatsMonitorTest
     Mockito.when(druidServerConfig.getPriority()).thenReturn(PRIORITY);
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testLazyLoadOnStartThrowsException()
   {
-    SegmentLoaderConfig segmentLoaderConfig = Mockito.mock(SegmentLoaderConfig.class);
-    Mockito.when(segmentLoaderConfig.isLazyLoadOnStart()).thenReturn(true);
+    org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> {
+      SegmentLoaderConfig segmentLoaderConfig = Mockito.mock(SegmentLoaderConfig.class);
+      Mockito.when(segmentLoaderConfig.isLazyLoadOnStart()).thenReturn(true);
 
-    //should throw an exception here
-    new SegmentStatsMonitor(druidServerConfig, segmentLoadDropMgr, segmentLoaderConfig);
+      //should throw an exception here
+      new SegmentStatsMonitor(druidServerConfig, segmentLoadDropMgr, segmentLoaderConfig);
+    });
   }
 
   @Test
@@ -111,7 +115,7 @@ public class SegmentStatsMonitorTest
     List<Map<String, Object>> expectedEventsAsMap = getEventMaps(expectedEvents);
     Map<String, Map<String, Object>> expected = metricKeyedMap(expectedEventsAsMap);
 
-    Assert.assertEquals("different number of metrics were returned", expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size(), "different number of metrics were returned");
     for (Map.Entry<String, Map<String, Object>> expectedKeyedEntry : expected.entrySet()) {
       Map<String, Object> actualValue = actual.get(expectedKeyedEntry.getKey());
       assertMetricMapsEqual(expectedKeyedEntry.getKey(), expectedKeyedEntry.getValue(), actualValue);
@@ -155,7 +159,7 @@ public class SegmentStatsMonitorTest
     List<Map<String, Object>> expectedEventsAsMap = getEventMaps(expectedEvents);
     Map<String, Map<String, Object>> expected = metricKeyedMap(expectedEventsAsMap);
 
-    Assert.assertEquals("different number of metrics were returned", expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size(), "different number of metrics were returned");
     for (Map.Entry<String, Map<String, Object>> expectedKeyedEntry : expected.entrySet()) {
       Map<String, Object> actualValue = actual.get(expectedKeyedEntry.getKey());
       assertMetricMapsEqual(expectedKeyedEntry.getKey(), expectedKeyedEntry.getValue(), actualValue);
@@ -164,12 +168,12 @@ public class SegmentStatsMonitorTest
 
   private void assertMetricMapsEqual(String messagePrefix, Map<String, Object> expected, Map<String, Object> actual)
   {
-    Assert.assertEquals("different number of expected values for metrics", expected.size(), actual.size());
+    Assertions.assertEquals(expected.size(), actual.size(), "different number of expected values for metrics");
     for (Map.Entry<String, Object> expectedMetricEntry : expected.entrySet()) {
-      Assert.assertEquals(
-          messagePrefix + " " + expectedMetricEntry.getKey(),
+      Assertions.assertEquals(
           expectedMetricEntry.getValue(),
-          actual.get(expectedMetricEntry.getKey())
+          actual.get(expectedMetricEntry.getKey()),
+          messagePrefix + " " + expectedMetricEntry.getKey()
       );
     }
   }
