@@ -170,6 +170,25 @@ public interface ShardSpec
   boolean possibleInDomain(Map<String, RangeSet<String>> domain);
 
   /**
+   * A type-aware, set-membership parallel to {@link #possibleInDomain(Map)}. Given a domain of typed value sets
+   * (produced by {@link org.apache.druid.query.filter.DimFilter#getDimensionValueSet(String)} for equality/IN
+   * filters), return false only if this shard provably cannot contain any of the requested values; otherwise return
+   * true.
+   *
+   * <p>The default returns {@code true} (no pruning); only {@link DimensionValueSetShardSpec} overrides it.
+   * {@link DimensionRangeShardSpec} deliberately does not participate: its pruning is lexicographic-ordering based
+   * (see [#19408]) and is not safe for numeric equality, so this no-op default keeps numeric filters from reaching it
+   * and reintroducing that bug.
+   *
+   * @return possibility of the requested values being present in this shard
+   */
+  @JsonIgnore
+  default boolean possibleInValueDomain(Map<String, TypedValueSet> valueDomain)
+  {
+    return true;
+  }
+
+  /**
    * Get the type name of this ShardSpec.
    */
   @JsonIgnore

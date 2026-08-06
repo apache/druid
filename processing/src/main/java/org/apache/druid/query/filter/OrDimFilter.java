@@ -26,8 +26,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.partition.TypedValueSet;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -117,6 +120,31 @@ public class OrDimFilter extends AbstractOptimizableDimFilter implements DimFilt
       }
     }
     return retSet;
+  }
+
+  @Nullable
+  @Override
+  public TypedValueSet getDimensionValueSet(String dimension)
+  {
+    // A row matches OR iff it matches any branch, so the allowed value set is the union of the branches' value sets.
+    // If any branch is unconstrained (null) it could match any value, so the OR cannot prune — return null. Mirrors
+    // getDimensionRangeSet.
+    final Set<String> retValues = new HashSet<>();
+    ColumnType retType = null;
+    for (DimFilter field : fields) {
+      final TypedValueSet valueSet = field.getDimensionValueSet(dimension);
+      if (valueSet == null) {
+        return null;
+      }
+      if (retType == null) {
+        retType = valueSet.getType();
+      } else if (!retType.equals(valueSet.getType())) {
+        // Mixed types across branches cannot be unioned into one type-gated set; don't prune.
+        return null;
+      }
+      retValues.addAll(valueSet.getValues());
+    }
+    return retType == null ? null : new TypedValueSet(retValues, retType);
   }
 
   @Override

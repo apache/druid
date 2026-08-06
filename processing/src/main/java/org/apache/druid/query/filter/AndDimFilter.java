@@ -26,8 +26,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.timeline.partition.TypedValueSet;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -112,6 +115,33 @@ public class AndDimFilter extends AbstractOptimizableDimFilter implements DimFil
       }
     }
     return retSet;
+  }
+
+  @Nullable
+  @Override
+  public TypedValueSet getDimensionValueSet(String dimension)
+  {
+    // A row matches AND iff it matches every branch, so the allowed value set is the intersection of the constraining
+    // branches' value sets. Unconstrained (null) branches are ignored, mirroring getDimensionRangeSet above.
+    Set<String> retValues = null;
+    ColumnType retType = null;
+    for (DimFilter field : fields) {
+      final TypedValueSet valueSet = field.getDimensionValueSet(dimension);
+      if (valueSet == null) {
+        continue;
+      }
+      if (retValues == null) {
+        retValues = new HashSet<>(valueSet.getValues());
+        retType = valueSet.getType();
+      } else {
+        // Bail out on a type mismatch: intersecting across incompatible canonicalizations would risk unsound pruning.
+        if (!retType.equals(valueSet.getType())) {
+          return null;
+        }
+        retValues.retainAll(valueSet.getValues());
+      }
+    }
+    return retValues == null ? null : new TypedValueSet(retValues, retType);
   }
 
   @Override
