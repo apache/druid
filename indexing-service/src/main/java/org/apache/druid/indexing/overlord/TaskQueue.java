@@ -947,6 +947,26 @@ public class TaskQueue
                      ));
   }
 
+  public Map<String, Map<RowKey, Long>> getRunningTaskCountByCategory()
+  {
+    final Map<String, Collection<? extends TaskRunnerWorkItem>> byCategory =
+        taskRunner.getRunningTasksByCategory();
+    if (byCategory.isEmpty()) {
+      return null;
+    }
+    final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
+    final Map<String, Map<RowKey, Long>> result = new HashMap<>();
+    byCategory.forEach((category, items) -> {
+      final Map<RowKey, Long> countsByKey = new HashMap<>();
+      for (final TaskRunnerWorkItem item : items) {
+        final RowKey key = taskDatasources.getOrDefault(item.getTaskId(), RowKey.empty());
+        countsByKey.merge(key, 1L, Long::sum);
+      }
+      result.put(category, countsByKey);
+    });
+    return result;
+  }
+
   public Map<RowKey, Long> getPendingTaskCount()
   {
     final Map<String, RowKey> taskDatasources = getCurrentTaskDatasources();
