@@ -93,6 +93,10 @@
           <artifactId>jakarta.ws.rs-api</artifactId>
           <groupId>jakarta.ws.rs</groupId>
         </exclusion>
+        <exclusion>
+          <artifactId>lz4-java</artifactId>
+          <groupId>org.lz4</groupId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>

@@ -22,8 +22,8 @@ package org.apache.druid.data.input;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.Pair;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -39,97 +39,97 @@ public class MapPopulatorTest
   public void test_getByteLengthOfObject_string_stringLength()
   {
     String o = "string";
-    Assert.assertEquals((o.length() * Character.BYTES) + 40, MapPopulator.getByteLengthOfObject(o));
+    Assertions.assertEquals((o.length() * Character.BYTES) + 40, MapPopulator.getByteLengthOfObject(o));
   }
 
   @Test
   public void test_getByteLengthOfObject_double_8()
   {
-    Assert.assertEquals(EIGHT_BYTES, MapPopulator.getByteLengthOfObject(12.0));
+    Assertions.assertEquals(EIGHT_BYTES, MapPopulator.getByteLengthOfObject(12.0));
   }
 
   @Test
   public void test_getByteLengthOfObject_float_4()
   {
-    Assert.assertEquals(FOUR_BYTES, MapPopulator.getByteLengthOfObject(12.0F));
+    Assertions.assertEquals(FOUR_BYTES, MapPopulator.getByteLengthOfObject(12.0F));
   }
 
   @Test
   public void test_getByteLengthOfObject_int_4()
   {
-    Assert.assertEquals(FOUR_BYTES, MapPopulator.getByteLengthOfObject(12));
+    Assertions.assertEquals(FOUR_BYTES, MapPopulator.getByteLengthOfObject(12));
   }
 
   @Test
   public void test_getByteLengthOfObject_long_8()
   {
-    Assert.assertEquals(EIGHT_BYTES, MapPopulator.getByteLengthOfObject(12L));
+    Assertions.assertEquals(EIGHT_BYTES, MapPopulator.getByteLengthOfObject(12L));
   }
 
   @Test
   public void test_getByteLengthOfObject_null_0()
   {
-    Assert.assertEquals(0, MapPopulator.getByteLengthOfObject(null));
+    Assertions.assertEquals(0, MapPopulator.getByteLengthOfObject(null));
   }
 
   @Test
   public void test_getByteLengthOfObject_map_0()
   {
-    Assert.assertEquals(0, MapPopulator.getByteLengthOfObject(ImmutableMap.of()));
+    Assertions.assertEquals(0, MapPopulator.getByteLengthOfObject(ImmutableMap.of()));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_stringKeyAndStringValue_true()
   {
-    Assert.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined("key", "value"));
+    Assertions.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined("key", "value"));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_doubleKeyAndDoubleValue_true()
   {
-    Assert.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1.0, 2.0));
+    Assertions.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1.0, 2.0));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_floatKeyAndFloatValue_true()
   {
-    Assert.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1.0F, 2.0F));
+    Assertions.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1.0F, 2.0F));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_intKeyAndIntValue_true()
   {
-    Assert.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1, 2));
+    Assertions.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1, 2));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_longKeyAndLongValue_true()
   {
-    Assert.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1L, 2L));
+    Assertions.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(1L, 2L));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_nullKeyAndNullValue_true()
   {
-    Assert.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(null, null));
+    Assertions.assertTrue(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(null, null));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_mapKeyAndmapValue_false()
   {
-    Assert.assertFalse(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(ImmutableMap.of(), ImmutableMap.of()));
+    Assertions.assertFalse(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(ImmutableMap.of(), ImmutableMap.of()));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_nullKeyAndmapValue_false()
   {
-    Assert.assertFalse(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(null, ImmutableMap.of()));
+    Assertions.assertFalse(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(null, ImmutableMap.of()));
   }
 
   @Test
   public void test_canKeyAndValueTypesByteSizesBeDetermined_mapKeyAndNullValue_false()
   {
-    Assert.assertFalse(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(ImmutableMap.of(), null));
+    Assertions.assertFalse(MapPopulator.canKeyAndValueTypesByteSizesBeDetermined(ImmutableMap.of(), null));
   }
 
   @Test
@@ -139,10 +139,10 @@ public class MapPopulatorTest
     Map<String, String> map = new HashMap<>();
     MapPopulator.PopulateResult result =
         MapPopulator.populateAndWarnAtByteLimit(pairs.iterator(), map, -1, "");
-    Assert.assertTrue(map.isEmpty());
-    Assert.assertEquals(0, result.getEntries());
-    Assert.assertEquals(0, result.getLines());
-    Assert.assertEquals(0L, result.getBytes());
+    Assertions.assertTrue(map.isEmpty());
+    Assertions.assertEquals(0, result.getEntries());
+    Assertions.assertEquals(0, result.getLines());
+    Assertions.assertEquals(0L, result.getBytes());
   }
 
   @Test
@@ -160,10 +160,10 @@ public class MapPopulatorTest
     Map<Object, Object> map = new HashMap<>();
     MapPopulator.PopulateResult result =
         MapPopulator.populateAndWarnAtByteLimit(pairs.iterator(), map, -1, null);
-    Assert.assertEquals(expectedMap, map);
-    Assert.assertEquals(4, result.getEntries());
-    Assert.assertEquals(0, result.getLines());
-    Assert.assertEquals(0L, result.getBytes());
+    Assertions.assertEquals(expectedMap, map);
+    Assertions.assertEquals(4, result.getEntries());
+    Assertions.assertEquals(0, result.getLines());
+    Assertions.assertEquals(0L, result.getBytes());
   }
 
   @Test
@@ -181,10 +181,10 @@ public class MapPopulatorTest
     Map<Object, Object> map = new HashMap<>();
     MapPopulator.PopulateResult result =
         MapPopulator.populateAndWarnAtByteLimit(pairs.iterator(), map, 10, null);
-    Assert.assertEquals(expectedMap, map);
-    Assert.assertEquals(4, result.getEntries());
-    Assert.assertEquals(0, result.getLines());
-    Assert.assertEquals(192L, result.getBytes());
+    Assertions.assertEquals(expectedMap, map);
+    Assertions.assertEquals(4, result.getEntries());
+    Assertions.assertEquals(0, result.getLines());
+    Assertions.assertEquals(192L, result.getBytes());
   }
 
   @Test
@@ -199,9 +199,9 @@ public class MapPopulatorTest
     Map<Object, Object> map = new HashMap<>();
     MapPopulator.PopulateResult result =
         MapPopulator.populateAndWarnAtByteLimit(pairs.iterator(), map, 10, null);
-    Assert.assertEquals(expectedMap, map);
-    Assert.assertEquals(2, result.getEntries());
-    Assert.assertEquals(0, result.getLines());
-    Assert.assertEquals(0L, result.getBytes());
+    Assertions.assertEquals(expectedMap, map);
+    Assertions.assertEquals(2, result.getEntries());
+    Assertions.assertEquals(0, result.getLines());
+    Assertions.assertEquals(0L, result.getBytes());
   }
 }
