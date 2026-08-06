@@ -276,6 +276,12 @@ public class BrokerServerView implements TimelineServerView
       // loop...
       if (!server.getType().equals(ServerType.BROKER)) {
         log.debug("Adding segment[%s] for server[%s]", segment, server);
+        if (server.getType().equals(ServerType.INDEXER_EXECUTOR)) {
+          System.out.println("==== BrokerServerView: realtime segment added"
+                             + " segmentId=" + segmentId
+                             + " version=" + segment.getVersion()
+                             + " server=" + server.getName());
+        }
         ServerSelector selector = selectors.get(segmentId);
         if (selector == null) {
           selector = new ServerSelector(segment, historicalTierSelectorStrategy, realtimeTierSelectorStrategy, brokerViewOfCoordinatorConfig);
