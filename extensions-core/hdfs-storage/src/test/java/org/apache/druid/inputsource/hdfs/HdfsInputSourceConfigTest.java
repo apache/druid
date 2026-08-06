@@ -20,8 +20,8 @@
 package org.apache.druid.inputsource.hdfs;
 
 import com.google.common.collect.ImmutableSet;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HdfsInputSourceConfigTest
 {
@@ -29,20 +29,20 @@ public class HdfsInputSourceConfigTest
   public void testNullAllowedProtocolsUseDefault()
   {
     HdfsInputSourceConfig config = new HdfsInputSourceConfig(null);
-    Assert.assertEquals(HdfsInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
+    Assertions.assertEquals(HdfsInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
   }
 
   @Test
   public void testEmptyAllowedProtocolsUseDefault()
   {
     HdfsInputSourceConfig config = new HdfsInputSourceConfig(ImmutableSet.of());
-    Assert.assertEquals(HdfsInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
+    Assertions.assertEquals(HdfsInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
   }
 
   @Test
   public void testCustomAllowedProtocols()
   {
     HdfsInputSourceConfig config = new HdfsInputSourceConfig(ImmutableSet.of("druid"));
-    Assert.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
+    Assertions.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
   }
 }

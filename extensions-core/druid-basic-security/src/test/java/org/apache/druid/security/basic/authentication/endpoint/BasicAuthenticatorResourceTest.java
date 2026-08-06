@@ -21,19 +21,24 @@ package org.apache.druid.security.basic.authentication.endpoint;
 
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.server.security.AuthValidator;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import javax.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
 
-@RunWith(MockitoJUnitRunner.class)
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class BasicAuthenticatorResourceTest
 {
   private static final String AUTHENTICATOR_NAME = "AUTHENTICATOR_NAME";
@@ -51,7 +56,7 @@ public class BasicAuthenticatorResourceTest
 
   private BasicAuthenticatorResource target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     Mockito.doThrow(IllegalArgumentException.class)
@@ -64,84 +69,91 @@ public class BasicAuthenticatorResourceTest
   @Test
   public void authenticatorUpdateListenerShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.authenticatorUpdateListener(req, AUTHENTICATOR_NAME, SERIALIZED_USER_MAP));
+    Assertions.assertNotNull(target.authenticatorUpdateListener(req, AUTHENTICATOR_NAME, SERIALIZED_USER_MAP));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void authenticatorUpdateListenerWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.authenticatorUpdateListener(req, INVALID_AUTHENTICATOR_NAME, SERIALIZED_USER_MAP);
+    assertThrows(IllegalArgumentException.class, () ->
+      target.authenticatorUpdateListener(req, INVALID_AUTHENTICATOR_NAME, SERIALIZED_USER_MAP));
   }
 
   @Test
   public void getCachedSerializedUserMapShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME));
+    Assertions.assertNotNull(target.getCachedSerializedUserMap(req, AUTHENTICATOR_NAME));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void getCachedSerializedUserMapWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.getCachedSerializedUserMap(req, INVALID_AUTHENTICATOR_NAME);
+    assertThrows(IllegalArgumentException.class, () ->
+      target.getCachedSerializedUserMap(req, INVALID_AUTHENTICATOR_NAME));
   }
 
   @Test
   public void updateUserCredentialsShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.updateUserCredentials(req, AUTHENTICATOR_NAME, USER_NAME, update));
+    Assertions.assertNotNull(target.updateUserCredentials(req, AUTHENTICATOR_NAME, USER_NAME, update));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void updateUserCredentialsWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.updateUserCredentials(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, update);
+    assertThrows(IllegalArgumentException.class, () ->
+      target.updateUserCredentials(req, INVALID_AUTHENTICATOR_NAME, USER_NAME, update));
   }
 
   @Test
   public void deleteUserShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.deleteUser(req, AUTHENTICATOR_NAME, USER_NAME));
+    Assertions.assertNotNull(target.deleteUser(req, AUTHENTICATOR_NAME, USER_NAME));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void deleteUserWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.deleteUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME);
+    assertThrows(IllegalArgumentException.class, () ->
+      target.deleteUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME));
   }
 
   @Test
   public void createUserShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.createUser(req, AUTHENTICATOR_NAME, USER_NAME));
+    Assertions.assertNotNull(target.createUser(req, AUTHENTICATOR_NAME, USER_NAME));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void createUserWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.createUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME);
+    assertThrows(IllegalArgumentException.class, () ->
+      target.createUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME));
   }
 
   @Test
   public void getUserShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.getUser(req, AUTHENTICATOR_NAME, USER_NAME));
+    Assertions.assertNotNull(target.getUser(req, AUTHENTICATOR_NAME, USER_NAME));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void getUserWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.getUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME);
+    assertThrows(IllegalArgumentException.class, () ->
+      target.getUser(req, INVALID_AUTHENTICATOR_NAME, USER_NAME));
   }
 
   @Test
   public void getAllUsersShouldReturnExpectedResponse()
   {
-    Assert.assertNotNull(target.getAllUsers(req, AUTHENTICATOR_NAME));
+    Assertions.assertNotNull(target.getAllUsers(req, AUTHENTICATOR_NAME));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void getAllUsersWithInvalidAuthenticatorNameShouldReturnExpectedResponse()
   {
-    target.getAllUsers(req, INVALID_AUTHENTICATOR_NAME);
+    assertThrows(IllegalArgumentException.class, () ->
+      target.getAllUsers(req, INVALID_AUTHENTICATOR_NAME));
   }
 }

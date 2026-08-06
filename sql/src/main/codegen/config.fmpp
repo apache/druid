@@ -89,6 +89,7 @@ data: {
     nonReservedKeywordsToAdd: [
       "OVERWRITE"
       "EXTERN"
+      "VARIANT"
       "IF"
       "PROPERTIES"
       "PROJECTION"

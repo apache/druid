@@ -180,26 +180,33 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
   /**
    * Moves the given segment from serverA to serverB.
+   * <p>
+   * If the segment on serverA is a partial load, the partial loadprofile is used to create the request to load
+   * the segment on serverB, ensuring that an equivalent partial load is loaded on serverB.
    */
   private boolean moveSegment(DataSegment segment, ServerHolder serverA, ServerHolder serverB)
   {
     final String tier = serverA.getServer().getTier();
+
+    final PartialLoadProfile profile = serverA.getProjectedProfile(segment);
+    final PartialLoadProfile request = profile == null ? null : profile.asCloneRequest();
+
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
       if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
         int loadedCountOnTier = replicaCountMap.get(segment.getId(), tier)
                                                .loadedNotDropping();
         if (loadedCountOnTier >= 1) {
-          return replicateSegment(segment, serverB, null);
+          return replicateSegment(segment, serverB, request);
         } else {
-          return loadSegment(segment, serverB, null);
+          return loadSegment(segment, serverB, request);
         }
       }
 
       // Could not cancel load, let the segment load on serverA and count it as unmoved
       return false;
     } else if (serverA.isServingSegment(segment)) {
-      return loadQueueManager.moveSegment(segment, serverA, serverB);
+      return loadQueueManager.moveSegment(segment, serverA, serverB, request);
     } else {
       return false;
     }
@@ -807,7 +814,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // Drop as many replicas as possible from decommissioning servers
     int remainingNumToDrop = numToDrop;
     int numDropsQueued =
-        dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator(), tier);
+        dropReplicasFromServers(remainingNumToDrop, segment, eligibleDyingServers.iterator());
 
     // Drop replicas from active servers if required
     if (numToDrop > numDropsQueued) {
@@ -816,7 +823,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
           (useRoundRobinAssignment || eligibleLiveServers.size() <= remainingNumToDrop)
           ? eligibleLiveServers.iterator()
           : strategy.findServersToDropSegment(segment, new ArrayList<>(eligibleLiveServers));
-      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator, tier);
+      numDropsQueued += dropReplicasFromServers(remainingNumToDrop, segment, serverIterator);
     }
 
     return numDropsQueued;
@@ -829,8 +836,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private int dropReplicasFromServers(
       int numToDrop,
       DataSegment segment,
-      Iterator<ServerHolder> serverIterator,
-      String tier
+      Iterator<ServerHolder> serverIterator
   )
   {
     int numDropsQueued = 0;

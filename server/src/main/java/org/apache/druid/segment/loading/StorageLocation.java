@@ -536,6 +536,7 @@ public class StorageLocation
   {
     lock.writeLock().lock();
     try {
+      final WeakCacheEntry[] evicted = new WeakCacheEntry[1];
       weakCacheEntries.computeIfPresent(
           id,
           (cacheEntryIdentifier, weakCacheEntry) -> {
@@ -544,16 +545,37 @@ public class StorageLocation
             }
             final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
             unlinkWeakEntry(weakCacheEntry);
-            weakCacheEntry.unmount();
             if (isMounted) {
               weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
             }
+            evicted[0] = weakCacheEntry;
             return null;
           }
       );
+      unmountEvictedWeakEntry(evicted[0]);
     }
     finally {
       lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Fire {@link WeakCacheEntry#unmount()} for an entry that has just been removed from {@link #weakCacheEntries}.
+   * <p>
+   * MUST be called <em>after</em> the enclosing {@link Map#computeIfPresent}/{@link Map#computeIfAbsent} callback has
+   * returned, never from inside it. Unmounting a partial bundle entry drains its {@link Phaser}, whose termination
+   * cascades into {@code PartialSegmentBundleCacheEntry.doActualUnmount} -> parent bundle hold release ->
+   * {@code weakCacheEntries.computeIfPresent} for a <em>different</em> key. Structurally modifying
+   * {@link #weakCacheEntries} from within another entry's compute callback trips HashMap's fail-fast check
+   * (a {@link java.util.ConcurrentModificationException}). Removing the entry first, then unmounting, keeps the
+   * cascade's map mutations sequential. Callers hold the write lock across both steps so no reserve/re-mount can race
+   * the not-yet-drained phaser.
+   */
+  @GuardedBy("lock")
+  private void unmountEvictedWeakEntry(@Nullable WeakCacheEntry evicted)
+  {
+    if (evicted != null) {
+      evicted.unmount();
     }
   }
 
@@ -578,6 +600,7 @@ public class StorageLocation
 
       lock.writeLock().lock();
       try {
+        final WeakCacheEntry[] evicted = new WeakCacheEntry[1];
         weakCacheEntries.computeIfPresent(
             weakEntry.cacheEntry.getId(),
             (cacheEntryIdentifier, weakCacheEntry) -> {
@@ -587,16 +610,17 @@ public class StorageLocation
               if ((isNewEntry && !isMounted)
                   || (areWeakEntriesEphemeral && !weakCacheEntry.isHeld())) {
                 unlinkWeakEntry(weakCacheEntry);
-                weakCacheEntry.unmount(); // call even if never mounted, to terminate the phaser
                 if (isMounted) {
                   weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
                 }
+                evicted[0] = weakCacheEntry;
                 return null;
               } else {
                 return weakCacheEntry;
               }
             }
         );
+        unmountEvictedWeakEntry(evicted[0]);
       }
       finally {
         lock.writeLock().unlock();
@@ -739,6 +763,7 @@ public class StorageLocation
   private void unmountReclaimed(ReclaimResult reclaimResult)
   {
     if (reclaimResult != null) {
+      final List<WeakCacheEntry> toUnmount = new ArrayList<>();
       for (WeakCacheEntry removed : reclaimResult.getEvictions()) {
         weakCacheEntries.computeIfAbsent(
             removed.cacheEntry.getId(),
@@ -747,12 +772,15 @@ public class StorageLocation
               weakStats.getAndUpdate(s -> s.evict(removed.cacheEntry.getSize()));
               // .. but make sure the same identifier wasn't moved to a static load before we actually unmount it
               if (!staticCacheEntries.containsKey(cacheEntryIdentifier)) {
-                removed.unmount();
+                toUnmount.add(removed);
                 weakStats.getAndUpdate(WeakStats::unmount);
               }
               return null;
             }
         );
+      }
+      for (WeakCacheEntry removed : toUnmount) {
+        unmountEvictedWeakEntry(removed);
       }
     }
   }
@@ -839,11 +867,17 @@ public class StorageLocation
         entry.unmount();
       }
       staticCacheEntries.clear();
-      while (head != null) {
-        head.unmount();
-        head = head.next;
+      final List<WeakCacheEntry> weakToUnmount = new ArrayList<>();
+      for (WeakCacheEntry entry = head; entry != null; entry = entry.next) {
+        weakToUnmount.add(entry);
       }
+      head = null;
+      tail = null;
+      hand = null;
       weakCacheEntries.clear();
+      for (WeakCacheEntry entry : weakToUnmount) {
+        entry.unmount();
+      }
     }
     finally {
       lock.writeLock().unlock();

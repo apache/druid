@@ -52,28 +52,28 @@ public class BloomKFilterTest
 
     bf.add(val);
     BloomKFilter.add(buffer, val);
-    BloomKFilter rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    BloomKFilter rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.test(val));
     Assert.assertFalse(rehydrated.test(val1));
     Assert.assertFalse(rehydrated.test(val2));
     Assert.assertFalse(rehydrated.test(val3));
     BloomKFilter.add(buffer, val1);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.test(val));
     Assert.assertTrue(rehydrated.test(val1));
     Assert.assertFalse(rehydrated.test(val2));
     Assert.assertFalse(rehydrated.test(val3));
     BloomKFilter.add(buffer, val2);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.test(val));
     Assert.assertTrue(rehydrated.test(val1));
     Assert.assertTrue(rehydrated.test(val2));
     Assert.assertFalse(rehydrated.test(val3));
     BloomKFilter.add(buffer, val3);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.test(val));
     Assert.assertTrue(rehydrated.test(val1));
@@ -86,7 +86,7 @@ public class BloomKFilterTest
       BloomKFilter.add(buffer, randVal);
     }
     // last value should be present
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     Assert.assertTrue(rehydrated.test(randVal));
     // most likely this value should not exist
     randVal[0] = 0;
@@ -114,28 +114,28 @@ public class BloomKFilterTest
     byte val3 = Byte.MAX_VALUE;
 
     BloomKFilter.addLong(buffer, val);
-    BloomKFilter rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    BloomKFilter rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertFalse(rehydrated.testLong(val1));
     Assert.assertFalse(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val1);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
     Assert.assertFalse(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val2);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
     Assert.assertTrue(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val3);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
@@ -148,7 +148,7 @@ public class BloomKFilterTest
       BloomKFilter.addLong(buffer, randVal);
     }
 
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
 
     // last value should be present
     Assert.assertTrue(rehydrated.testLong(randVal));
@@ -173,28 +173,28 @@ public class BloomKFilterTest
     int val3 = Integer.MAX_VALUE;
 
     BloomKFilter.addLong(buffer, val);
-    BloomKFilter rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    BloomKFilter rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertFalse(rehydrated.testLong(val1));
     Assert.assertFalse(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val1);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
     Assert.assertFalse(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val2);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
     Assert.assertTrue(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val3);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
@@ -206,7 +206,7 @@ public class BloomKFilterTest
       randVal = rand.nextInt();
       BloomKFilter.addLong(buffer, randVal);
     }
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     // last value should be present
     Assert.assertTrue(rehydrated.testLong(randVal));
     // most likely this value should not exist
@@ -230,28 +230,28 @@ public class BloomKFilterTest
     long val3 = Long.MAX_VALUE;
 
     BloomKFilter.addLong(buffer, val);
-    BloomKFilter rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    BloomKFilter rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertFalse(rehydrated.testLong(val1));
     Assert.assertFalse(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val1);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
     Assert.assertFalse(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val2);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
     Assert.assertTrue(rehydrated.testLong(val2));
     Assert.assertFalse(rehydrated.testLong(val3));
     BloomKFilter.addLong(buffer, val3);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testLong(val));
     Assert.assertTrue(rehydrated.testLong(val1));
@@ -263,7 +263,7 @@ public class BloomKFilterTest
       randVal = rand.nextInt();
       BloomKFilter.addLong(buffer, randVal);
     }
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     // last value should be present
     Assert.assertTrue(rehydrated.testLong(randVal));
     // most likely this value should not exist
@@ -287,28 +287,28 @@ public class BloomKFilterTest
     float val3 = Float.POSITIVE_INFINITY;
 
     BloomKFilter.addFloat(buffer, val);
-    BloomKFilter rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    BloomKFilter rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testFloat(val));
     Assert.assertFalse(rehydrated.testFloat(val1));
     Assert.assertFalse(rehydrated.testFloat(val2));
     Assert.assertFalse(rehydrated.testFloat(val3));
     BloomKFilter.addFloat(buffer, val1);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testFloat(val));
     Assert.assertTrue(rehydrated.testFloat(val1));
     Assert.assertFalse(rehydrated.testFloat(val2));
     Assert.assertFalse(rehydrated.testFloat(val3));
     BloomKFilter.addFloat(buffer, val2);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testFloat(val));
     Assert.assertTrue(rehydrated.testFloat(val1));
     Assert.assertTrue(rehydrated.testFloat(val2));
     Assert.assertFalse(rehydrated.testFloat(val3));
     BloomKFilter.addFloat(buffer, val3);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testFloat(val));
     Assert.assertTrue(rehydrated.testFloat(val1));
@@ -320,7 +320,7 @@ public class BloomKFilterTest
       randVal = rand.nextFloat();
       BloomKFilter.addFloat(buffer, randVal);
     }
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
 
     // last value should be present
     Assert.assertTrue(rehydrated.testFloat(randVal));
@@ -345,28 +345,28 @@ public class BloomKFilterTest
     double val3 = Double.POSITIVE_INFINITY;
 
     BloomKFilter.addDouble(buffer, val);
-    BloomKFilter rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    BloomKFilter rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testDouble(val));
     Assert.assertFalse(rehydrated.testDouble(val1));
     Assert.assertFalse(rehydrated.testDouble(val2));
     Assert.assertFalse(rehydrated.testDouble(val3));
     BloomKFilter.addDouble(buffer, val1);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testDouble(val));
     Assert.assertTrue(rehydrated.testDouble(val1));
     Assert.assertFalse(rehydrated.testDouble(val2));
     Assert.assertFalse(rehydrated.testDouble(val3));
     BloomKFilter.addDouble(buffer, val2);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testDouble(val));
     Assert.assertTrue(rehydrated.testDouble(val1));
     Assert.assertTrue(rehydrated.testDouble(val2));
     Assert.assertFalse(rehydrated.testDouble(val3));
     BloomKFilter.addDouble(buffer, val3);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testDouble(val));
     Assert.assertTrue(rehydrated.testDouble(val1));
@@ -378,7 +378,7 @@ public class BloomKFilterTest
       randVal = rand.nextDouble();
       BloomKFilter.addDouble(buffer, randVal);
     }
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
 
     // last value should be present
     Assert.assertTrue(rehydrated.testDouble(randVal));
@@ -403,28 +403,28 @@ public class BloomKFilterTest
     String val3 = "cuckoo filter";
 
     BloomKFilter.addString(buffer, val);
-    BloomKFilter rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    BloomKFilter rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testString(val));
     Assert.assertFalse(rehydrated.testString(val1));
     Assert.assertFalse(rehydrated.testString(val2));
     Assert.assertFalse(rehydrated.testString(val3));
     BloomKFilter.addString(buffer, val1);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testString(val));
     Assert.assertTrue(rehydrated.testString(val1));
     Assert.assertFalse(rehydrated.testString(val2));
     Assert.assertFalse(rehydrated.testString(val3));
     BloomKFilter.addString(buffer, val2);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testString(val));
     Assert.assertTrue(rehydrated.testString(val1));
     Assert.assertTrue(rehydrated.testString(val2));
     Assert.assertFalse(rehydrated.testString(val3));
     BloomKFilter.addString(buffer, val3);
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     buffer.position(0);
     Assert.assertTrue(rehydrated.testString(val));
     Assert.assertTrue(rehydrated.testString(val1));
@@ -436,7 +436,7 @@ public class BloomKFilterTest
       randVal = rand.nextLong();
       BloomKFilter.addString(buffer, Long.toString(randVal));
     }
-    rehydrated = BloomKFilter.deserialize(new ByteBufferInputStream(buffer));
+    rehydrated = deserializeBloomFilter(buffer);
     // last value should be present
     Assert.assertTrue(rehydrated.testString(Long.toString(randVal)));
     // most likely this value should not exist
@@ -535,5 +535,12 @@ public class BloomKFilterTest
     Assert.assertTrue(
         BloomKFilter.getNumSetBits(bufWithValues, 0) > BloomKFilter.getNumSetBits(bufWithNull, 0)
     );
+  }
+
+  private static BloomKFilter deserializeBloomFilter(final ByteBuffer buffer) throws IOException
+  {
+    try (final ByteBufferInputStream inputStream = new ByteBufferInputStream(buffer)) {
+      return BloomKFilter.deserialize(inputStream);
+    }
   }
 }

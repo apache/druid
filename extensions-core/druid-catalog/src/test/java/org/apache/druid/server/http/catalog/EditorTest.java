@@ -50,12 +50,12 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -63,28 +63,28 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class EditorTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE = new JUnit5TestDerbyConnector();
 
   private CatalogTests.DbFixture dbFixture;
   private CatalogStorage catalog;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
-    dbFixture = new CatalogTests.DbFixture(derbyConnectorRule);
+    dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTOR_RULE);
     catalog = dbFixture.storage;
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     CatalogTests.tearDown(dbFixture);
@@ -570,7 +570,7 @@ public class EditorTest
             new TableEditRequest.AddColumns(Collections.singletonList(new ColumnSpec("dim", "BIGINT", null)))
         )
     );
-    assertTrue(e.getMessage(), e.getMessage().contains("Column [dim] already exists"));
+    assertTrue(e.getMessage().contains("Column [dim] already exists"), e.getMessage());
     // The rejected add did not change the existing column's type.
     assertEquals("VARCHAR", columnType(tableName, "dim"));
   }
@@ -602,7 +602,7 @@ public class EditorTest
             new TableEditRequest.AlterColumns(Collections.singletonList(new ColumnSpec("typo", "BIGINT", null)))
         )
     );
-    assertTrue(e.getMessage(), e.getMessage().contains("Column [typo] does not exist"));
+    assertTrue(e.getMessage().contains("Column [typo] does not exist"), e.getMessage());
     // The misspelled target was not created.
     assertEquals(
         Arrays.asList(Columns.TIME_COLUMN, "dim"),

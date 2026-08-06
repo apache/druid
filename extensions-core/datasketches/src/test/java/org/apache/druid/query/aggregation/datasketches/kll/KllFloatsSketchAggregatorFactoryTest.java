@@ -33,8 +33,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -66,7 +66,7 @@ public class KllFloatsSketchAggregatorFactoryTest
         json,
         AggregatorFactory.class
     );
-    Assert.assertEquals(factory, fromJson);
+    Assertions.assertEquals(factory, fromJson);
   }
 
   @Test
@@ -79,8 +79,8 @@ public class KllFloatsSketchAggregatorFactoryTest
         null
     );
 
-    Assert.assertEquals(KllSketchAggregatorFactory.DEFAULT_K, factory.getK());
-    Assert.assertEquals(KllSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH, factory.getMaxStreamLength());
+    Assertions.assertEquals(KllSketchAggregatorFactory.DEFAULT_K, factory.getK());
+    Assertions.assertEquals(KllSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH, factory.getMaxStreamLength());
   }
 
   @Test
@@ -92,10 +92,10 @@ public class KllFloatsSketchAggregatorFactoryTest
         200,
         null
     );
-    Assert.assertEquals(836, factory.guessAggregatorHeapFootprint(1));
-    Assert.assertEquals(836, factory.guessAggregatorHeapFootprint(100));
-    Assert.assertEquals(1732, factory.guessAggregatorHeapFootprint(1000));
-    Assert.assertEquals(3272, factory.guessAggregatorHeapFootprint(1_000_000_000_000L));
+    Assertions.assertEquals(836, factory.guessAggregatorHeapFootprint(1));
+    Assertions.assertEquals(836, factory.guessAggregatorHeapFootprint(100));
+    Assertions.assertEquals(1732, factory.guessAggregatorHeapFootprint(1000));
+    Assertions.assertEquals(3272, factory.guessAggregatorHeapFootprint(1_000_000_000_000L));
   }
 
   @Test
@@ -107,7 +107,7 @@ public class KllFloatsSketchAggregatorFactoryTest
         200,
         null
     );
-    Assert.assertEquals(2912, factory.getMaxIntermediateSize());
+    Assertions.assertEquals(2912, factory.getMaxIntermediateSize());
 
     factory = new KllFloatsSketchAggregatorFactory(
         "myFactory",
@@ -115,7 +115,7 @@ public class KllFloatsSketchAggregatorFactoryTest
         200,
         1_000_000_000_000L
     );
-    Assert.assertEquals(3272, factory.getMaxIntermediateSize());
+    Assertions.assertEquals(3272, factory.getMaxIntermediateSize());
   }
 
   @Test
@@ -139,7 +139,7 @@ public class KllFloatsSketchAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

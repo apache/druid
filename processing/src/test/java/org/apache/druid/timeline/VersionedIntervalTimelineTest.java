@@ -34,6 +34,8 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,13 +45,29 @@ import java.util.Set;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTestBase
 {
+  @Parameterized.Parameters
+  public static Collection<Boolean> parameters()
+  {
+    return Arrays.asList(
+            false,
+            true
+    );
+  }
+
+  public VersionedIntervalTimelineTest(boolean fastIntervalSearch)
+  {
+    this.fastIntervalSearch = fastIntervalSearch;
+  }
+
+  private final boolean fastIntervalSearch;
 
   @Before
   public void setUp()
   {
-    timeline = makeStringIntegerTimeline();
+    timeline = makeStringIntegerTimeline(fastIntervalSearch);
   }
 
   @Test

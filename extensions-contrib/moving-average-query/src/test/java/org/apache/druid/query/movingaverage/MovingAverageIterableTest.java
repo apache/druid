@@ -35,6 +35,7 @@ import org.apache.druid.query.movingaverage.averagers.ConstantAveragerFactory;
 import org.apache.druid.query.movingaverage.averagers.LongMeanAveragerFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 import org.junit.Assert;
@@ -144,7 +145,7 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
     r = iter.next();
     Assert.assertEquals(JAN_3, r.getTimestamp());
     Assert.assertEquals("US", r.getRaw(COUNTRY));
-    Assert.assertThat(r.getRaw(AGE), CoreMatchers.not(CoreMatchers.equalTo(r2.getRaw(AGE))));
+    MatcherAssert.assertThat(r.getRaw(AGE), CoreMatchers.not(CoreMatchers.equalTo(r2.getRaw(AGE))));
 
     Assert.assertTrue(iter.hasNext());
     r = iter.next();

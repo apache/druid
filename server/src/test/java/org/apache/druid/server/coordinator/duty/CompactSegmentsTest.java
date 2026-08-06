@@ -716,8 +716,7 @@ public class CompactSegmentsTest
   @Test
   public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsOverMaxSlot()
   {
-    int maxCompactionSlot = 3;
-    Assert.assertTrue(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
+    final int maxCompactionSlot = 3;
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
@@ -736,8 +735,7 @@ public class CompactSegmentsTest
   @Test
   public void testRunMultipleCompactionTaskSlotsWithUseAutoScaleSlotsUnderMaxSlot()
   {
-    int maxCompactionSlot = 100;
-    Assert.assertFalse(maxCompactionSlot < MAXIMUM_CAPACITY_WITH_AUTO_SCALE);
+    final int maxCompactionSlot = 100;
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
     final CoordinatorRunStats stats =
@@ -1053,6 +1051,7 @@ public class CompactSegmentsTest
             dataSource,
             engine,
             new Period("PT0H"),
+            null,
             0,
             null,
             500L,
