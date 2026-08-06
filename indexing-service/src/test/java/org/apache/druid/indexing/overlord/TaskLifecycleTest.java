@@ -639,7 +639,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new TaskQueue(
         lockConfig,
         tqc,
-        new DefaultTaskConfig(null),
+        new DefaultTaskConfig(),
         ts,
         tr,
         tac,

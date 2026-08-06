@@ -118,7 +118,7 @@ public class TaskLockConfigTest
     return new TaskQueue(
         lockConfig,
         queueConfig,
-        new DefaultTaskConfig(null),
+        new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
         actionClientFactory,

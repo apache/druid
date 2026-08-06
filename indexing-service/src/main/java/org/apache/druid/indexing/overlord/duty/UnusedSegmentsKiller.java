@@ -76,13 +76,6 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
   private static final String TASK_ID_PREFIX = "overlord-issued";
 
-  /**
-   * Use concurrent locks by default.
-   *
-   * @see KillUnusedSegmentsTask Behaviour of kill tasks with concurrent locks
-   */
-  private static final boolean DEFAULT_USE_CONCURRENT_LOCKS = false;
-
   private static final int INITIAL_KILL_QUEUE_SIZE = 1000;
   private static final int MAX_INTERVALS_TO_KILL = 10_000;
   private static final int MAX_SEGMENTS_TO_KILL_IN_BATCH = 1000;

@@ -19,9 +19,8 @@
 
 package org.apache.druid.indexing.overlord.config;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.Configs;
+import com.google.common.collect.ImmutableMap;
 
 import java.util.Map;
 
@@ -36,15 +35,7 @@ import java.util.Map;
 public class DefaultTaskConfig
 {
   @JsonProperty
-  private final Map<String, Object> context;
-
-  @JsonCreator
-  public DefaultTaskConfig(
-      @JsonProperty("context") Map<String, Object> context
-  )
-  {
-    this.context = Configs.valueOrDefault(context, Map.of());
-  }
+  private final Map<String, Object> context = ImmutableMap.of();
 
   public Map<String, Object> getContext()
   {

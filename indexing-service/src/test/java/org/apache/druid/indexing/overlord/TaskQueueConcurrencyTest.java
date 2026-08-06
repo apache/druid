@@ -72,7 +72,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(3, null, null, null, null, null),
-        new DefaultTaskConfig(null),
+        new DefaultTaskConfig(),
         getTaskStorage(),
         new TaskQueueTest.SimpleTaskRunner(NoopServiceEmitter.instance())
         {

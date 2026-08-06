@@ -151,7 +151,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
         new TaskQueueConfig(null, new Period(0L), null, null, null, null),
-        new DefaultTaskConfig(null),
+        new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
         taskActionClientFactory,
