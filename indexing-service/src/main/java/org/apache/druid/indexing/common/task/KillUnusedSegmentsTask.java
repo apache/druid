@@ -47,6 +47,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -216,6 +217,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   {
     // Track stats for reporting
     int numSegmentsKilled = 0;
+    int totalSegmentsDeletedFromMetadataStore = 0;
     int numBatchesProcessed = 0;
 
     // List unused segments
@@ -300,14 +302,23 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       }
 
       // 3. Nuke all eligible unused segments
-      taskActionClient.submit(new SegmentNukeAction(unusedSegments));
-      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, unusedIdToSegmentPlus.size());
+      final Number nukeResult = taskActionClient.submit(new SegmentNukeAction(unusedSegments));
+
+      // Older versions of the Overlord return a null value from the SegmentNukeAction
+      final int numSegmentsDeletedFromMetadataStore =
+          nukeResult == null ? unusedSegments.size() : nukeResult.intValue();
+      emitMetric(
+          toolbox.getEmitter(),
+          TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE,
+          numSegmentsDeletedFromMetadataStore
+      );
 
       // 4. Delete deep store files only for segments which do not share load specs with other segments
       toolbox.getDataSegmentKiller().kill(segmentsToKillFromDeepStore);
       emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, segmentsToKillFromDeepStore.size());
 
       numBatchesProcessed++;
+      totalSegmentsDeletedFromMetadataStore += numSegmentsDeletedFromMetadataStore;
       numSegmentsKilled += segmentsToKillFromDeepStore.size();
 
       logInfo("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
@@ -318,8 +329,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     final String taskId = getId();
     logInfo(
         "Finished kill task[%s] for dataSource[%s] and interval[%s]."
-        + " Deleted total [%d] unused segments in [%d] batches.",
-        taskId, getDataSource(), getInterval(), numSegmentsKilled, numBatchesProcessed
+        + " Deleted [%d] unused segments from metadata store and files for"
+        + " [%d] segments from deep store in [%d] batches.",
+        taskId, getDataSource(), getInterval(),
+        totalSegmentsDeletedFromMetadataStore, numSegmentsKilled, numBatchesProcessed
     );
 
     final KillTaskReport.Stats stats =
@@ -517,12 +530,14 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    final boolean useConcurrentLocks = TaskLocks.shouldUseConcurrentLocksForReplace(
-        getContext(),
-        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+    final boolean useConcurrentLocks = Boolean.TRUE.equals(
+        QueryContexts.getAsBoolean(
+            Tasks.USE_CONCURRENT_LOCKS,
+            getContextValue(Tasks.USE_CONCURRENT_LOCKS)
+        )
     );
 
-    final TaskLockType actualLockType = useConcurrentLocks ? TaskLockType.REPLACE : TaskLockType.EXCLUSIVE;
+    final TaskLockType actualLockType = determineLockType(useConcurrentLocks);
 
     final TaskLock lock = taskActionClient.submit(
         new TimeChunkLockTryAcquireAction(
@@ -535,5 +550,21 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     }
     lock.assertNotRevoked();
     return true;
+  }
+
+  private TaskLockType determineLockType(boolean useConcurrentLocks)
+  {
+    TaskLockType actualLockType;
+    if (useConcurrentLocks) {
+      actualLockType = TaskLockType.REPLACE;
+    } else {
+      actualLockType = QueryContexts.getAsEnum(
+          Tasks.TASK_LOCK_TYPE,
+          getContextValue(Tasks.TASK_LOCK_TYPE),
+          TaskLockType.class,
+          TaskLockType.EXCLUSIVE
+      );
+    }
+    return actualLockType;
   }
 }
