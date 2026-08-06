@@ -28,7 +28,6 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.SegmentStatusManager;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -65,7 +64,6 @@ public class OverlordDataSourcesResource
 {
   private static final Logger log = new Logger(OverlordDataSourcesResource.class);
 
-  private final SegmentStatusManager segmentStatusManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final TaskMaster taskMaster;
   private final AuditManager auditManager;
@@ -73,14 +71,12 @@ public class OverlordDataSourcesResource
   @Inject
   public OverlordDataSourcesResource(
       TaskMaster taskMaster,
-      SegmentStatusManager segmentStatusManager,
       IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuditManager auditManager
   )
   {
     this.taskMaster = taskMaster;
     this.auditManager = auditManager;
-    this.segmentStatusManager = segmentStatusManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
   }
 
@@ -99,7 +95,7 @@ public class OverlordDataSourcesResource
       @Context HttpServletRequest req
   )
   {
-    SegmentUpdateOperation operation = () -> segmentStatusManager
+    SegmentUpdateOperation operation = () -> metadataStorageCoordinator
         .markAllNonOvershadowedSegmentsAsUsed(dataSourceName);
     return performSegmentUpdate(dataSourceName, operation);
   }
@@ -145,14 +141,14 @@ public class OverlordDataSourcesResource
         final Interval interval = payload.getInterval();
         final List<String> versions = payload.getVersions();
         if (interval != null) {
-          return segmentStatusManager.markNonOvershadowedSegmentsAsUsed(dataSourceName, interval, versions);
+          return metadataStorageCoordinator.markNonOvershadowedSegmentsAsUsed(dataSourceName, interval, versions);
         } else {
           final Set<String> segmentIds = payload.getSegmentIds();
           if (segmentIds == null || segmentIds.isEmpty()) {
             return 0;
           }
 
-          return segmentStatusManager.markNonOvershadowedSegmentsAsUsed(
+          return metadataStorageCoordinator.markNonOvershadowedSegmentsAsUsed(
               dataSourceName,
               IdUtils.getValidSegmentIds(dataSourceName, segmentIds)
           );
@@ -231,7 +227,7 @@ public class OverlordDataSourcesResource
     }
 
     SegmentUpdateOperation operation =
-        () -> segmentStatusManager.markSegmentAsUsed(segmentId);
+        () -> metadataStorageCoordinator.markSegmentAsUsed(segmentId) ? 1 : 0;
     return performSegmentUpdate(dataSourceName, operation);
   }
 

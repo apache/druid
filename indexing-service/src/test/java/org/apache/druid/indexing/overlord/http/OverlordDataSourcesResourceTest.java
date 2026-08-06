@@ -20,26 +20,11 @@
 package org.apache.druid.indexing.overlord.http;
 
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.error.ErrorResponse;
-import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
-import org.apache.druid.indexing.common.config.TaskStorageConfig;
-import org.apache.druid.indexing.common.task.NoopTask;
-import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
-import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
-import org.apache.druid.indexing.overlord.SegmentStatusManager;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskMaster;
-import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -71,7 +56,6 @@ public class OverlordDataSourcesResourceTest
   private TestIndexerMetadataStorageCoordinator storageCoordinator;
 
   private OverlordDataSourcesResource dataSourcesResource;
-  private GlobalTaskLockbox taskLockbox;
 
   @Before
   public void setup()
@@ -80,12 +64,8 @@ public class OverlordDataSourcesResourceTest
     storageCoordinator = new TestIndexerMetadataStorageCoordinator();
 
     TaskMaster taskMaster = new TaskMaster(null, null);
-    TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    taskLockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
-    taskLockbox.syncFromStorage();
     dataSourcesResource = new OverlordDataSourcesResource(
         taskMaster,
-        new SegmentStatusManager(taskLockbox, storageCoordinator, LockActionClient::new, new StubServiceEmitter()),
         storageCoordinator,
         auditManager
     );
@@ -219,34 +199,6 @@ public class OverlordDataSourcesResourceTest
     Assert.assertEquals(
         "Could not parse Segment ID[some&lt;script&gt;Segment] for DataSource[wiki]",
         response.getEntity()
-    );
-  }
-
-  @Test
-  public void test_markSegmentAsUsed_fails_ifIntervalIsAlreadyLocked()
-  {
-    final DataSegment segment = WIKI_SEGMENTS_10X1D.get(0);
-    final String segmentId = segment.getId().toString();
-    dataSourcesResource.markSegmentAsUnused(TestDataSource.WIKI, segmentId);
-
-    // Lock the interval for an indexing task
-    final Task appendTask = new NoopTask("a1", null, TestDataSource.WIKI, 1L, 0L, null);
-    taskLockbox.add(appendTask);
-    taskLockbox.tryLock(
-        appendTask,
-        new TimeChunkLockRequest(TaskLockType.APPEND, appendTask, segment.getInterval(), null)
-    );
-
-    // Verify that marking the segment as used fails due to the lock conflict
-    Response response = dataSourcesResource.markSegmentAsUsed(TestDataSource.WIKI, segmentId);
-    Assert.assertEquals(409, response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof ErrorResponse);
-
-    final ErrorResponse errorResponse = (ErrorResponse) response.getEntity();
-    Assert.assertEquals(
-        "Could not acquire lock over interval[2024-01-01T00:00:00.000Z/2024-01-02T00:00:00.000Z]"
-        + " of datasource[wiki] since other tasks are in progress. Retry after the tasks have completed.",
-        errorResponse.getAsMap().get("errorMessage")
     );
   }
 
@@ -423,29 +375,5 @@ public class OverlordDataSourcesResourceTest
     EasyMock.replay(request);
 
     return request;
-  }
-
-  private class LockActionClient implements TaskActionClient
-  {
-    private final Task task;
-
-    private LockActionClient(Task task)
-    {
-      this.task = task;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <R> R submit(TaskAction<R> taskAction)
-    {
-      if (taskAction instanceof TimeChunkLockTryAcquireAction lockAction) {
-        return (R) taskLockbox.tryLock(
-            task,
-            new TimeChunkLockRequest(lockAction.getType(), task, lockAction.getInterval(), null)
-        ).getTaskLock();
-      } else {
-        throw new ISE("Unexpected task action[%s]", taskAction);
-      }
-    }
   }
 }

@@ -214,18 +214,18 @@ public class UnusedSegmentsKillerTest
   }
 
   @Test
-  public void test_embeddedKillTask_usesConcurrentLocks_byDefault()
+  public void test_embeddedKillTask_usesExclusiveLocks_byDefault()
   {
-    verifyEmbeddedTasksUseLockType("REPLACE");
+    verifyEmbeddedTasksUseLockType("EXCLUSIVE");
   }
 
   @Test
-  public void test_embeddedKillTask_usesExclusiveLock_ifUseConcurrentLocksIsDisabled()
+  public void test_embeddedKillTask_usesExclusiveLock_ifUseConcurrentLocksIsEnabled()
   {
-    defaultTaskConfig = new DefaultTaskConfig(Map.of(Tasks.USE_CONCURRENT_LOCKS, false));
+    defaultTaskConfig = new DefaultTaskConfig(Map.of(Tasks.USE_CONCURRENT_LOCKS, true));
     initKiller();
 
-    verifyEmbeddedTasksUseLockType("EXCLUSIVE");
+    verifyEmbeddedTasksUseLockType("REPLACE");
   }
 
   private void verifyEmbeddedTasksUseLockType(String expectedLockType)

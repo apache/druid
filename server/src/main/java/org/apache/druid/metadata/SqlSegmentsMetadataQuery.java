@@ -1081,7 +1081,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @return List of distinct unused segment intervals for the specified datasource
    * containing at least 1 entry if there is any unused segment for the datasource,
-   * upto a maximum of {@code limit} entries.
+   * up to a maximum of {@code limit} entries.
    */
   public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
@@ -1119,7 +1119,7 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Scans upto {@code maxSegmentsToScan} unused segments which are eligible for
+   * Scans up to {@code maxSegmentsToScan} unused segments which are eligible for
    * kill and returns the unique datasource-interval for the segments scanned.
    * <p>
    * This method ensures that if there is any unused segment in any datasource
@@ -1127,7 +1127,7 @@ public class SqlSegmentsMetadataQuery
    * map is not empty. However, it does NOT guarantee that:
    * <ul>
    * <li>the candidates in the returned map would be ordered by datasource or interval</li>
-   * <li>the result would contain {@code limit} entries when there are more distinct
+   * <li>the result would contain {@code maxResultSize} entries when there are more distinct
    * intervals with eligible unused segments in the metadata store.</li>
    * </ul>
    *

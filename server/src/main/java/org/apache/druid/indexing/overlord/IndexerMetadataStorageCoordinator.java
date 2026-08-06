@@ -620,26 +620,8 @@ public interface IndexerMetadataStorageCoordinator
   List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit);
 
   /**
-   * Scans upto {@code maxSegmentsToScan} unused segments which are eligible for
-   * kill and returns the unique datasource-interval for the segments scanned.
-   * <p>
-   * This method ensures that if there is any unused segment in any datasource
-   * which was updated earlier than {@code maxUpdatedTime}, then the returned
-   * map is not empty. However, it does NOT guarantee that:
-   * <ul>
-   * <li>the candidates in the returned map would be ordered by datasource or interval</li>
-   * <li>the result would contain {@code limit} entries when there are more distinct
-   * intervals with eligible unused segments in the metadata store.</li>
-   * </ul>
-   *
-   * @param maxUpdatedTime    Unused segments are considered eligible for kill
-   *                          if they were last updated before this time.
-   * @param maxResultSize     Maximum number of candidate intervals to return
-   *                          across all datasources.
-   * @param maxSegmentsToScan Maximum number of eligible unused segments to scan
-   *                          in the metadata store.
-   * @return Map from {@link DatasourceInterval} to the number of unused segments
-   * eligible for kill.
+   * Extracts eligible unused segments intervals from the metadata store using
+   * {@link org.apache.druid.metadata.SqlSegmentsMetadataQuery#retrieveSomeUnusedSegmentIntervals(DateTime, int, int)}
    */
   Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
       DateTime maxUpdatedTime,

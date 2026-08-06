@@ -115,6 +115,9 @@ Some of the parameters used in the task payload are further explained below:
 :::warning
 - The `kill` task permanently removes all information about the affected segments from the metadata store and
 deep storage. This operation cannot be undone.
+- When using [concurrent locks](../ingestion/concurrent-append-replace.md) to run a `kill` task, ensure to keep a large
+enough buffer period before killing segments after they have been marked as unused. Otherwise, there may be a potential
+data loss if a concurrent append job upgrades one of the segments that are being killed.
 :::
 
 ### Auto-kill data using Coordinator duties
@@ -140,8 +143,7 @@ These embedded tasks offer several advantages over auto-kill performed by the Co
 - run on the Overlord and do not take up task slots.
 - finish faster as they save on the overhead of launching a task process.
 - kill a small number of segments per task, to ensure that locks on an interval are not held for too long.
-- use concurrent locks by default to ensure that ingestion continues into an interval while unused segments get cleaned up in the background.
-- skip intervals locked by an incompatible lock type to avoid head-of-line blocking in kill tasks.
+- skip locked intervals to avoid head-of-line blocking in kill tasks.
 - require little to no configuration.
 - can keep up with a large number of unused segments in the cluster.
 - take advantage of the segment metadata cache on the Overlord.
