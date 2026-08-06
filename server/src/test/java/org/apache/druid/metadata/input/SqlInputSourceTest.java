@@ -38,7 +38,6 @@ import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputStatsImpl;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.SQLInputSourceDatabaseConnector;
@@ -46,11 +45,11 @@ import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.easymock.EasyMock;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.skife.jdbi.v2.DBI;
 
 import java.io.File;
@@ -66,7 +65,6 @@ import java.util.stream.Stream;
 
 public class SqlInputSourceTest
 {
-  private static final List<File> INPUT_SOURCE_TMP_DIRS = new ArrayList<>();
   private final String TABLE_1 = "FOOS_TABLE_1";
   private final String TABLE_2 = "FOOS_TABLE_2";
 
@@ -80,6 +78,8 @@ public class SqlInputSourceTest
 
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
   private TestDerbyConnector derbyConnector;
 
@@ -91,24 +91,9 @@ public class SqlInputSourceTest
     }
   }
 
-  @AfterClass
-  public static void teardown() throws IOException
-  {
-    for (File dir : INPUT_SOURCE_TMP_DIRS) {
-      org.apache.commons.io.FileUtils.forceDelete(dir);
-    }
-  }
-
   private File createInputSourceTmpDir(String dirSuffix) throws IOException
   {
-    final File inputSourceTempDir = File.createTempFile(
-        SqlInputSourceTest.class.getSimpleName(),
-        dirSuffix
-    );
-    org.apache.commons.io.FileUtils.forceDelete(inputSourceTempDir);
-    FileUtils.mkdirp(inputSourceTempDir);
-    INPUT_SOURCE_TMP_DIRS.add(inputSourceTempDir);
-    return inputSourceTempDir;
+    return temporaryFolder.newFolder(SqlInputSourceTest.class.getSimpleName() + dirSuffix);
   }
 
   @Test

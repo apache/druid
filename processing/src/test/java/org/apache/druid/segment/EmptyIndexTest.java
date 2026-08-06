@@ -65,13 +65,7 @@ public class EmptyIndexTest
   @Test
   public void testEmptyIndex() throws Exception
   {
-    File tmpDir = File.createTempFile("emptyIndex", "");
-    if (!tmpDir.delete()) {
-      throw new IllegalStateException("tmp delete failed");
-    }
-    if (!tmpDir.mkdir()) {
-      throw new IllegalStateException("tmp mkdir failed");
-    }
+    final File tmpDir = FileUtils.createTempDir("emptyIndex");
 
     try {
       IncrementalIndex emptyIndex = new OnheapIncrementalIndex.Builder()

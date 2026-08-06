@@ -29,6 +29,7 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
@@ -222,8 +223,9 @@ public class FrameTest
         @Override
         Frame wrap(Closer closer) throws IOException
         {
-          final File file = File.createTempFile("frame-test", "");
-          closer.register(file::delete);
+          final File temporaryFolder = FileUtils.createTempDir("frame-test");
+          final File file = new File(temporaryFolder, "frame");
+          closer.register(() -> FileUtils.deleteDirectory(temporaryFolder));
           Files.write(FRAME_DATA, file);
           final MappedByteBuffer buf = Files.map(file);
           closer.register(() -> ByteBufferUtils.unmap(buf));
@@ -233,8 +235,9 @@ public class FrameTest
         @Override
         Frame decompress(Closer closer) throws IOException
         {
-          final File file = File.createTempFile("frame-test", "");
-          closer.register(file::delete);
+          final File temporaryFolder = FileUtils.createTempDir("frame-test");
+          final File file = new File(temporaryFolder, "frame");
+          closer.register(() -> FileUtils.deleteDirectory(temporaryFolder));
           Files.write(FRAME_DATA_COMPRESSED, file);
           final MappedByteBuffer buf = Files.map(file);
           closer.register(() -> ByteBufferUtils.unmap(buf));

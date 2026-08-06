@@ -35,6 +35,7 @@ import org.joda.time.format.ISODateTimeFormat;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 
 /**
@@ -104,7 +105,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     File zipOutFile = null;
 
     try {
-      final File outFile = zipOutFile = File.createTempFile("index", ".zip");
+      final File outFile = zipOutFile = Files.createTempFile("index", ".zip").toFile();
       final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
       return uploadDataSegment(segment, binaryVersion, size, outFile, azurePath);

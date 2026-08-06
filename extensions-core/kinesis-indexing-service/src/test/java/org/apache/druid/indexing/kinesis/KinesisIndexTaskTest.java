@@ -104,7 +104,6 @@ import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Instant;
@@ -223,7 +222,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     maxParseExceptions = null;
     maxSavedParseExceptions = null;
     doHandoff = true;
-    reportsFile = File.createTempFile("KinesisIndexTaskTestReports-" + System.currentTimeMillis(), "json");
+    reportsFile = tempFolder.newFile("KinesisIndexTaskTestReports.json");
     maxRecordsPerPoll = 1;
     maxBytesPerPoll = 1_000_000;
 
