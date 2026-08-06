@@ -23,7 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.base.Throwables;
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

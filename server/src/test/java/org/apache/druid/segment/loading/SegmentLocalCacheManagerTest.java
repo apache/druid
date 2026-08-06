@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.FileUtils;
@@ -44,6 +43,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.TestSegmentUtils;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
@@ -1420,13 +1420,11 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   private static File newFolder(File root, String... subDirs) throws IOException
   {
     if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
-      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(root.toPath(), "junit");
     }
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
+    org.apache.druid.java.util.common.FileUtils.mkdirp(result);
     return result;
   }
 }

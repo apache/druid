@@ -22,7 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

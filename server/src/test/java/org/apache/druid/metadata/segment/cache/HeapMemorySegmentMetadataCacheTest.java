@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -48,6 +47,7 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;

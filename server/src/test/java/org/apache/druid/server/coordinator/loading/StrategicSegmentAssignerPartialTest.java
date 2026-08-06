@@ -173,16 +173,19 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
     );
-    Assert.assertTrue("in-place reload must be queued on the pinned server", s1.getLoadingSegments().contains(segment));
-    Assert.assertNull(
-        "revert must carry no profile so the historical receives the plain unwrapped load spec",
-        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment)
+    Assertions.assertTrue(s1.getLoadingSegments().contains(segment), "in-place reload must be queued on the pinned server");
+    Assertions.assertNull(
+        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment),
+        "revert must carry no profile so the historical receives the plain unwrapped load spec"
     );
-    Assert.assertTrue("the replica is still serving and must not be dropped", s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assertions.assertTrue(
+        s1.getPeon().getSegmentsToDrop().isEmpty(),
+        "the replica is still serving and must not be dropped"
+    );
   }
 
   @Test
@@ -197,10 +200,10 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
-    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
-    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
+    Assertions.assertTrue(s1.getLoadingSegments().isEmpty());
+    Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
   }
 
   @Test
@@ -216,9 +219,9 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 0));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
-    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
-    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().contains(segment));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assertions.assertTrue(s1.getLoadingSegments().isEmpty());
+    Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().contains(segment));
   }
 
   @Test
@@ -236,17 +239,20 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER1, segment.getDataSource()));
-    Assert.assertEquals(
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER1, segment.getDataSource()));
+    Assertions.assertEquals(
         1L,
         stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
     );
 
     final ServerHolder dropped = s1.getPeon().getSegmentsToDrop().contains(segment) ? s1 : s2;
     final ServerHolder survivor = dropped == s1 ? s2 : s1;
-    Assert.assertTrue(dropped.getPeon().getSegmentsToDrop().contains(segment));
-    Assert.assertTrue("a server queued for drop must not also be reloaded", dropped.getLoadingSegments().isEmpty());
-    Assert.assertTrue(survivor.getLoadingSegments().contains(segment));
+    Assertions.assertTrue(dropped.getPeon().getSegmentsToDrop().contains(segment));
+    Assertions.assertTrue(
+        dropped.getLoadingSegments().isEmpty(),
+        "a server queued for drop must not also be reloaded"
+    );
+    Assertions.assertTrue(survivor.getLoadingSegments().contains(segment));
   }
 
   @Test
@@ -264,15 +270,15 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 2));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource()));
-    Assert.assertEquals(
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertEquals(
         1L,
         stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
     );
-    Assert.assertTrue("deficit must be filled on the empty server", s2.getLoadingSegments().contains(segment));
-    Assert.assertTrue("pinned replica must still be reverted", s1.getLoadingSegments().contains(segment));
-    Assert.assertNull(((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment));
-    Assert.assertNull(((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
+    Assertions.assertTrue(s2.getLoadingSegments().contains(segment), "deficit must be filled on the empty server");
+    Assertions.assertTrue(s1.getLoadingSegments().contains(segment), "pinned replica must still be reverted");
+    Assertions.assertNull(((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment));
+    Assertions.assertNull(((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
   }
 
   @Test
@@ -292,12 +298,12 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().replicateSegment(segment2, ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(
-        "only one revert fits in this run's queue budget; the rest wait for a later run",
+    Assertions.assertEquals(
         1L,
-        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment1.getDataSource())
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment1.getDataSource()),
+        "only one revert fits in this run's queue budget; the rest wait for a later run"
     );
-    Assert.assertEquals(1, s1.getLoadingSegments().size());
+    Assertions.assertEquals(1, s1.getLoadingSegments().size());
   }
 
   @Test
@@ -328,15 +334,18 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertTrue(
-        "the in-flight revert must still be queued, not cancelled as surplus",
-        s1.getLoadingSegments().contains(segment)
+    Assertions.assertTrue(
+        s1.getLoadingSegments().contains(segment),
+        "the in-flight revert must still be queued, not cancelled as surplus"
     );
-    Assert.assertFalse("a pending revert must not be mistaken for a surplus replica", stats.hasStat(Stats.Segments.DROPPED));
-    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
-    Assert.assertFalse(
-        "the revert is already in flight, so this run has nothing more to queue",
-        stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED)
+    Assertions.assertFalse(
+        stats.hasStat(Stats.Segments.DROPPED),
+        "a pending revert must not be mistaken for a surplus replica"
+    );
+    Assertions.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assertions.assertFalse(
+        stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED),
+        "the revert is already in flight, so this run has nothing more to queue"
     );
   }
 
@@ -363,8 +372,8 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
 
-    Assert.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
-    Assert.assertFalse(s1.getLoadingSegments().contains(segment));
+    Assertions.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assertions.assertFalse(s1.getLoadingSegments().contains(segment));
   }
 
   @Test
@@ -381,18 +390,18 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().broadcastSegment(segment);
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1L,
         stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
     );
-    Assert.assertTrue(s1.getLoadingSegments().contains(segment));
-    Assert.assertNull(
-        "the broadcast revert must carry no profile, same as on the replication path",
-        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment)
+    Assertions.assertTrue(s1.getLoadingSegments().contains(segment));
+    Assertions.assertNull(
+        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment),
+        "the broadcast revert must carry no profile, same as on the replication path"
     );
-    Assert.assertFalse(
-        "an in-place revert is not a new assignment",
-        stats.hasStat(Stats.Segments.ASSIGNED)
+    Assertions.assertFalse(
+        stats.hasStat(Stats.Segments.ASSIGNED),
+        "an in-place revert is not a new assignment"
     );
   }
 
@@ -408,9 +417,9 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().broadcastSegment(segment);
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
-    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
+    Assertions.assertTrue(s1.getLoadingSegments().isEmpty());
   }
 
   @Test
@@ -427,9 +436,9 @@ public class StrategicSegmentAssignerPartialTest
     params.getSegmentAssigner().broadcastSegment(segment);
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource()));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
-    Assert.assertTrue(s1.getLoadingSegments().contains(segment));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource()));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assertions.assertTrue(s1.getLoadingSegments().contains(segment));
   }
 
   @Test
@@ -444,8 +453,8 @@ public class StrategicSegmentAssignerPartialTest
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
     params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
 
-    Assert.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
-    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+    Assertions.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assertions.assertTrue(s1.getLoadingSegments().isEmpty());
   }
 
   @Test

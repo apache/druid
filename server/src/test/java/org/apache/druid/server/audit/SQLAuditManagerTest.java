@@ -251,7 +251,7 @@ public class SQLAuditManagerTest
     // Verify that all the fields are the same except for the payload
     AuditEntry dbEntry = lookupAuditEntryForKey(entry.getKey());
     Assertions.assertEquals(entry.getKey(), dbEntry.getKey());
-    // Assert.assertNotEquals(entry.getPayload(), dbEntry.getPayload());
+    // TODO: assert that the database payload differs from the original payload.
     Assertions.assertEquals(
         "Payload truncated as it exceeds 'druid.audit.manager.maxPayloadSizeBytes'[10].",
         dbEntry.getPayload().serialized()

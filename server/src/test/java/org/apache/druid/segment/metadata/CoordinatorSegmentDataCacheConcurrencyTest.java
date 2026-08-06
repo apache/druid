@@ -303,7 +303,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     );
     addSegmentsToCluster(0, numServers, numExistingSegments);
     // Wait for all segments to be loaded in BrokerServerView
-    //Assert.assertTrue(segmentLoadLatch.await(5, TimeUnit.SECONDS));
+    // TODO: assert that the segment load latch completes within the timeout.
 
     // Trigger refresh of DruidSchema. This will internally run the heavy work
     // mimicked by the overridden buildDruidTable
@@ -603,13 +603,11 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     private static File newFolder(File root, String... subDirs) throws IOException
     {
       if (subDirs.length == 0) {
-        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+        return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(root.toPath(), "junit");
       }
       String subFolder = String.join("/", subDirs);
       File result = new File(root, subFolder);
-      if (!result.mkdirs()) {
-        throw new IOException("Couldn't create folders " + root);
-      }
+      org.apache.druid.java.util.common.FileUtils.mkdirp(result);
       return result;
     }
   }
@@ -635,13 +633,11 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     private static File newFolder(File root, String... subDirs) throws IOException
     {
       if (subDirs.length == 0) {
-        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+        return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(root.toPath(), "junit");
       }
       String subFolder = String.join("/", subDirs);
       File result = new File(root, subFolder);
-      if (!result.mkdirs()) {
-        throw new IOException("Couldn't create folders " + root);
-      }
+      org.apache.druid.java.util.common.FileUtils.mkdirp(result);
       return result;
     }
   }
@@ -649,13 +645,11 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
   private static File newFolder(File root, String... subDirs) throws IOException
   {
     if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
-      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
+      return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(root.toPath(), "junit");
     }
     String subFolder = String.join("/", subDirs);
     File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
+    org.apache.druid.java.util.common.FileUtils.mkdirp(result);
     return result;
   }
 }

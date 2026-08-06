@@ -20,11 +20,11 @@
 package org.apache.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;

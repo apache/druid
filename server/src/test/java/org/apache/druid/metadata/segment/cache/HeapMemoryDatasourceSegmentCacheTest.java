@@ -19,13 +19,13 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -210,7 +210,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
 
     cache.insertSegments(Set.of(unusedSegmentPlus));
 
-    // TODO: Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
+    // TODO: assert that the highest unused segment ID matches the expected segment ID.
     Assertions.assertNull(cache.findUsedSegment(segmentId));
 
     final DataSegmentPlus usedSegmentPlus = new DataSegmentPlus(

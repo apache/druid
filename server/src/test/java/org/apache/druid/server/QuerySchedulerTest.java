@@ -57,7 +57,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.having.HavingSpec;
@@ -390,7 +389,7 @@ public class QuerySchedulerTest
         SERVER_CONFIG_WITH_TOTAL
     );
 
-    QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    QueryRunnerFactory factory = QueryStackTests.makeGroupByQueryRunnerFactory(
         new GroupByQueryConfig()
         {
 

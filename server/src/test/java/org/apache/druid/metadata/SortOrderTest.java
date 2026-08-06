@@ -19,7 +19,7 @@
 
 package org.apache.druid.metadata;
 
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.security;
 
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

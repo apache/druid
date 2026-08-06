@@ -21,7 +21,6 @@ package org.apache.druid.metadata;
 
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.SegmentCreateRequest;
@@ -42,6 +41,7 @@ import org.apache.druid.segment.metadata.NoopSegmentSchemaCache;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;

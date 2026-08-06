@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord.supervisor;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.server.junit5.DruidExceptionMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

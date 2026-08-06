@@ -28,8 +28,8 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.server.junit5.LoggerCapture;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.junit.jupiter.api.AfterEach;
@@ -51,18 +51,18 @@ public final class CuratorModuleTest
   private static final String CURATOR_CONNECTION_TIMEOUT_MS_KEY =
       CuratorConfig.CONFIG_PREFIX + "." + CuratorConfig.CONNECTION_TIMEOUT_MS;
 
-  public final LoggerCaptureRule logger = new LoggerCaptureRule(CuratorModule.class);
+  public final LoggerCapture logger = new LoggerCapture(CuratorModule.class);
 
   @BeforeEach
   public void setUpLoggerCapture()
   {
-    logger.before();
+    logger.start();
   }
 
   @AfterEach
   public void tearDownLoggerCapture()
   {
-    logger.after();
+    logger.stop();
   }
 
   @Test
