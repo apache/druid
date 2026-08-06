@@ -244,6 +244,9 @@ public class AWSClientConfig
    * Builds the strategy to hand to {@code ClientOverrideConfiguration.retryStrategy}. Kept as a plain function of the
    * config because a built AWS client does not expose the strategy it was given, so this is the only place the
    * mapping can be tested.
+   * <p>
+   * Returns a new instance per call; clients must not share one, since the strategies hold their circuit-breaker
+   * quota (and, for adaptive, their rate limiter) on the instance.
    */
   public RetryStrategy getRetryStrategy()
   {
