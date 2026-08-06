@@ -72,7 +72,6 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -227,7 +226,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals("10", result);
 
     // Now fetch the report using the SQL query ID
-    final GetQueryReportResponse reportResponse = msqApis.getDartQueryReport(sqlQueryId, broker1);
+    final GetQueryReportResponse reportResponse = waitForCompletedReports(sqlQueryId, broker1).get(0);
 
     // Verify the report response
     Assertions.assertNotNull(reportResponse, "Report response should not be null");
@@ -332,12 +331,12 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(1, sqlClients1.getAllClients().size(), "Broker1 should have 1 client (broker2)");
     Assertions.assertEquals(1, sqlClients2.getAllClients().size(), "Broker2 should have 1 client (broker1)");
 
-    // Fetch the report from both brokers, to verify cross-broker lookup is working
-    final GetQueryReportResponse reportFromBroker1 = msqApis.getDartQueryReport(sqlQueryId, broker1);
-    final GetQueryReportResponse reportFromBroker2 = msqApis.getDartQueryReport(sqlQueryId, broker2);
+    // Wait for the completed report to be available from both brokers. The SQL result can be returned
+    // before the controller is deregistered and its completed report is published.
+    final List<GetQueryReportResponse> completedReports = waitForCompletedReports(sqlQueryId, broker1, broker2);
 
     // Verify the report content
-    for (GetQueryReportResponse report : Arrays.asList(reportFromBroker1, reportFromBroker2)) {
+    for (GetQueryReportResponse report : completedReports) {
       Assertions.assertNotNull(report);
       final DartQueryInfo queryInfo = (DartQueryInfo) report.getQueryInfo();
       Assertions.assertEquals(sqlQueryId, queryInfo.getSqlQueryId());
@@ -600,6 +599,48 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
       }
     }
     throw new ISE("Timed out after[%,d] ms waiting for query to be in RUNNING state", timeout);
+  }
+
+  /**
+   * Polls the report API on the specified brokers until completed reports are available from all of them.
+   */
+  private List<GetQueryReportResponse> waitForCompletedReports(
+      final String sqlQueryId,
+      final EmbeddedBroker... targetBrokers
+  )
+  {
+    final long timeout = 30_000;
+    final long deadline = System.currentTimeMillis() + timeout;
+
+    while (System.currentTimeMillis() < deadline) {
+      final List<GetQueryReportResponse> reports = new ArrayList<>(targetBrokers.length);
+      boolean allReportsCompleted = true;
+
+      for (final EmbeddedBroker targetBroker : targetBrokers) {
+        final GetQueryReportResponse report = msqApis.getDartQueryReport(sqlQueryId, targetBroker);
+        if (report == null
+            || !(report.getQueryInfo() instanceof DartQueryInfo queryInfo)
+            || queryInfo.getDurationMs() == null) {
+          allReportsCompleted = false;
+          break;
+        }
+        reports.add(report);
+      }
+
+      if (allReportsCompleted) {
+        return reports;
+      }
+
+      try {
+        Thread.sleep(100);
+      }
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException(e);
+      }
+    }
+
+    throw new ISE("Timed out after[%,d] ms waiting for completed reports", timeout);
   }
 
   /**
