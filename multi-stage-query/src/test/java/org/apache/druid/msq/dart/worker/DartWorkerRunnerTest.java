@@ -36,9 +36,11 @@ import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.joda.time.Period;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -55,6 +57,11 @@ import org.mockito.MockitoAnnotations;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -77,6 +84,13 @@ public class DartWorkerRunnerTest
 
   private ListeningExecutorService workerExec;
   private DartWorkerRunner workerRunner;
+  private TestClock clock;
+
+  /**
+   * Graceful shutdown timeout returned by the {@link ServerConfig} given to {@link #workerRunner}. Defaults to
+   * {@link Period#ZERO} so most tests cancel workers immediately on {@link DartWorkerRunner#stop()}.
+   */
+  private Period gracefulShutdownTimeout;
   private AutoCloseable mockCloser;
 
   @TempDir
@@ -104,13 +118,24 @@ public class DartWorkerRunnerTest
   public void setUp()
   {
     mockCloser = MockitoAnnotations.openMocks(this);
+    clock = new TestClock(0L);
+    gracefulShutdownTimeout = Period.ZERO;
     workerRunner = new DartWorkerRunner(
         workerFactory,
         workerExec = MoreExecutors.listeningDecorator(Execs.multiThreaded(MAX_WORKERS, "worker-exec-%s")),
         discoveryProvider,
         new DartResourcePermissionMapper(),
         authorizerMapper,
-        temporaryFolder.toFile()
+        new ServerConfig()
+        {
+          @Override
+          public Period getGracefulShutdownTimeout()
+          {
+            return gracefulShutdownTimeout;
+          }
+        },
+        temporaryFolder.toFile(),
+        clock
     );
 
     // "discoveryProvider" provides "discovery".
@@ -191,7 +216,7 @@ public class DartWorkerRunnerTest
     MatcherAssert.assertThat(
         e,
         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-            "Received startWorker request for unknown controller"))
+            "Received startWorker request for query[abc] with controller[" + CONTROLLER_SERVER_HOST + "]"))
     );
   }
 
@@ -283,5 +308,80 @@ public class DartWorkerRunnerTest
     // Worker should go away.
     workerRunner.awaitQuerySet(Set::isEmpty);
     Assertions.assertEquals(0, workerRunner.getWorkersResponse().getWorkers().size());
+  }
+
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  public void test_stop_cancelsWorkerAfterTimeoutElapses() throws InterruptedException
+  {
+    gracefulShutdownTimeout = Period.seconds(30);
+    discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
+    workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
+    Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
+
+    // Advance the clock 40 seconds (past the 30-second timeout) after it is first read. This causes the worker runner
+    // to cancel the worker on stop().
+    clock.advanceOnNextRead(Duration.ofSeconds(40));
+    workerRunner.stop();
+
+    workerRunner.awaitQuerySet(Set::isEmpty);
+    Assertions.assertEquals(0, workerRunner.getWorkersResponse().getWorkers().size());
+  }
+
+  /**
+   * A manually-advanced {@link Clock} for tests.
+   */
+  private static class TestClock extends Clock
+  {
+    private final ZoneId zone;
+    private long nowMillis;
+    private long advanceOnNextReadMillis;
+
+    TestClock(final long nowMillis)
+    {
+      this(nowMillis, ZoneOffset.UTC);
+    }
+
+    private TestClock(final long nowMillis, final ZoneId zone)
+    {
+      this.nowMillis = nowMillis;
+      this.zone = zone;
+    }
+
+    /**
+     * Arrange for the clock to jump forward by the given duration immediately after the next read. The triggering
+     * read returns the pre-jump time; subsequent reads return the post-jump time.
+     */
+    public void advanceOnNextRead(final Duration duration)
+    {
+      advanceOnNextReadMillis = duration.toMillis();
+    }
+
+    @Override
+    public long millis()
+    {
+      final long current = nowMillis;
+      nowMillis += advanceOnNextReadMillis;
+      advanceOnNextReadMillis = 0;
+      return current;
+    }
+
+    @Override
+    public Instant instant()
+    {
+      return Instant.ofEpochMilli(millis());
+    }
+
+    @Override
+    public ZoneId getZone()
+    {
+      return zone;
+    }
+
+    @Override
+    public Clock withZone(final ZoneId zone)
+    {
+      return new TestClock(nowMillis, zone);
+    }
   }
 }
