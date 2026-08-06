@@ -93,13 +93,18 @@ public interface WritableFrameChannel extends Closeable
   void fail(@Nullable Throwable cause) throws IOException;
 
   /**
+   * Returns a future that resolves when {@link #write} is able to receive a new batch of data without blocking or
+   * throwing an exception. The future never resolves to an exception.
+   */
+  ListenableFuture<?> writabilityFuture();
+
+  /**
    * Finish writing to this channel.
    *
    * When this method is called without {@link #fail(Throwable)} having previously been called, the writer is
    * understood to have completed successfully.
    *
-   * After calling this method, no additional calls to {@link #write}, {@link #fail(Throwable)}, or this method
-   * are permitted.
+   * After calling this method, no additional calls to are permitted to any methods other than {@link #isClosed()}.
    */
   @Override
   void close() throws IOException;
@@ -108,10 +113,4 @@ public interface WritableFrameChannel extends Closeable
    * Whether {@link #close()} has been called on this channel.
    */
   boolean isClosed();
-
-  /**
-   * Returns a future that resolves when {@link #write} is able to receive a new batch of data without blocking or
-   * throwing an exception. The future never resolves to an exception.
-   */
-  ListenableFuture<?> writabilityFuture();
 }

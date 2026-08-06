@@ -45,7 +45,7 @@ public class InfiniteFrameProcessor implements FrameProcessor<Long>
   private final Frame frame;
   private final WritableFrameChannel outChannel;
   private final AtomicBoolean stop = new AtomicBoolean(false);
-  private final AtomicBoolean didCleanup = new AtomicBoolean(false);
+  private final AtomicLong cleanupCount = new AtomicLong();
   private final AtomicLong numFrames = new AtomicLong();
 
   public InfiniteFrameProcessor(
@@ -86,7 +86,7 @@ public class InfiniteFrameProcessor implements FrameProcessor<Long>
   public void cleanup() throws IOException
   {
     FrameProcessors.closeAll(inputChannels(), outputChannels());
-    didCleanup.set(true);
+    cleanupCount.incrementAndGet();
   }
 
   public long getNumFrames()
@@ -99,8 +99,8 @@ public class InfiniteFrameProcessor implements FrameProcessor<Long>
     stop.set(true);
   }
 
-  public boolean didCleanup()
+  public long getCleanupCount()
   {
-    return didCleanup.get();
+    return cleanupCount.get();
   }
 }
