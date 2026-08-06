@@ -19,14 +19,18 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import com.google.common.collect.Sets;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Contains a mapping from tier to {@link SegmentReplicaCount}s.
@@ -49,15 +53,30 @@ public class SegmentReplicaCountMap
     cluster.getManagedHistoricals().forEach(
         (tier, historicals) -> historicals.forEach(
             serverHolder -> {
-              // Add segments already loaded on this server
-              for (DataSegment segment : serverHolder.getServedSegments()) {
-                computeIfAbsent(segment.getId(), tier).incrementLoaded();
+              // Add segments already loaded on this server.
+              final Collection<DataSegment> servedSegments = serverHolder.getServedSegments();
+              final Set<SegmentId> servedSegmentIds = Sets.newHashSetWithExpectedSize(servedSegments.size());
+              for (DataSegment segment : servedSegments) {
+                servedSegmentIds.add(segment.getId());
+                final SegmentReplicaCount replicaCount = computeIfAbsent(segment.getId(), tier);
+                if (DataSegmentAndLoadProfile.profileOf(segment) == null) {
+                  replicaCount.incrementLoaded();
+                } else {
+                  replicaCount.incrementLoadedWithPartialProfile();
+                }
               }
 
               // Add segments queued for load, drop or move on this server
               serverHolder.getQueuedSegments().forEach(
-                  (segment, state) -> computeIfAbsent(segment.getId(), tier)
-                      .incrementQueued(state)
+                  (segment, state) -> {
+                    // A load queued on a server that is already serving the segment is an in-place reload, not an
+                    // additional replica: the replica exists and was counted above, and the reload only changes which
+                    // parts of it the server holds.
+                    if (state == SegmentAction.LOAD && servedSegmentIds.contains(segment.getId())) {
+                      return;
+                    }
+                    computeIfAbsent(segment.getId(), tier).incrementQueued(state);
+                  }
               );
             }
         )
