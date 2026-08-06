@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import static org.easymock.EasyMock.anyObject;
 import static org.easymock.EasyMock.expect;
@@ -193,7 +194,8 @@ public class SupervisorResourceFilterTest
         authorizer.authorize(
             authResult,
             new Resource(datasource, ResourceType.DATASOURCE),
-            expectedAction
+            expectedAction,
+            Map.of()
         )
     ).andReturn(new Access(userHasAccess)).anyTimes();
 
