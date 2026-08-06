@@ -34,21 +34,22 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+
 public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHandlingTest
 {
   private CursorFactory cursorFactory;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     final QueryableIndex index = TestIndex.getMMappedTestIndex();
@@ -101,7 +102,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testString()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(
             "automotive",
             "business",
@@ -121,7 +122,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testLong()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(1000L, 1100L, 1200L, 1300L, 1400L, 1500L, 1600L, 1700L, 1800L, 1400L),
         readColumn("qualityLong", 10)
     );
@@ -130,7 +131,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testFloat()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(10000f, 11000f, 12000f, 13000f, 14000f, 15000f, 16000f, 17000f, 18000f, 14000f),
         readColumn("qualityFloat", 10)
     );
@@ -139,7 +140,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testDouble()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(10000.0, 11000.0, 12000.0, 13000.0, 14000.0, 15000.0, 16000.0, 17000.0, 18000.0, 14000.0),
         readColumn("qualityDouble", 10)
     );
@@ -148,7 +149,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   @Test
   public void testMultiString()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(
             Arrays.asList("a", "preferred"),
             Arrays.asList("b", "preferred"),
@@ -169,7 +170,7 @@ public class ToObjectVectorColumnProcessorFactoryTest extends InitializedNullHan
   public void testComplexSketch()
   {
     final Object sketch = Iterables.getOnlyElement(readColumn("quality_uniques", 1));
-    MatcherAssert.assertThat(sketch, CoreMatchers.instanceOf(HyperLogLogCollector.class));
+    assertThat(sketch, CoreMatchers.instanceOf(HyperLogLogCollector.class));
   }
 
   private CursorHolder makeCursorHolder()

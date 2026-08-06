@@ -35,15 +35,14 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -54,25 +53,23 @@ import java.util.List;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlingTest
 {
-  private final AggregationTestHelper helper;
+  private AggregationTestHelper helper;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
-  public FixedBucketsHistogramAggregationTest(final GroupByQueryConfig config)
+  public void initFixedBucketsHistogramAggregationTest(final GroupByQueryConfig config)
   {
     ApproximateHistogramDruidModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
         Lists.newArrayList(new ApproximateHistogramDruidModule().getJacksonModules()),
         config,
         tempFolder
     );
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -82,21 +79,23 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
     return constructors;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     helper.close();
   }
 
-  @Test
-  public void testIngestWithNullsIgnoredAndQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testIngestWithNullsIgnoredAndQuery(final GroupByQueryConfig config) throws Exception
   {
+    initFixedBucketsHistogramAggregationTest(config);
     MapBasedRow row = ingestAndQuery(this.getClass().getClassLoader().getResourceAsStream("sample.data.tsv"));
     FixedBucketsHistogram histogram = (FixedBucketsHistogram) row.getRaw("index_fbh");
-    Assert.assertEquals(5, histogram.getCount());
-    Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
-    Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
-    Assert.assertEquals(135.9499969482422, row.getMetric("index_quantile").floatValue(), 0.0001);
+    Assertions.assertEquals(5, histogram.getCount());
+    Assertions.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
+    Assertions.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
+    Assertions.assertEquals(135.9499969482422, row.getMetric("index_quantile").floatValue(), 0.0001);
   }
 
   /**
@@ -105,9 +104,11 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
    * {@link org.apache.druid.query.aggregation.AggregateCombiner#reset} gets called. This is the only path
    * that calls this method.
    */
-  @Test
-  public void testAggregateCombinerReset() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testAggregateCombinerReset(final GroupByQueryConfig config) throws Exception
   {
+    initFixedBucketsHistogramAggregationTest(config);
     String inputRows = "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t10\n"
                        + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t20\n"
                        + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t30\n"
@@ -120,11 +121,11 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
                        + "2011-04-15T00:00:00.000Z\tspot\thealth\tpreferred\ta\u0001preferred\t50\n";
     MapBasedRow row = ingestAndQuery(new ByteArrayInputStream(inputRows.getBytes(StandardCharsets.UTF_8)));
     FixedBucketsHistogram histogram = (FixedBucketsHistogram) row.getRaw("index_fbh");
-    Assert.assertEquals(10, histogram.getCount());
-    Assert.assertEquals(10, row.getMetric("index_min").floatValue(), 0.0001);
-    Assert.assertEquals(50, row.getMetric("index_max").floatValue(), 0.0001);
+    Assertions.assertEquals(10, histogram.getCount());
+    Assertions.assertEquals(10, row.getMetric("index_min").floatValue(), 0.0001);
+    Assertions.assertEquals(50, row.getMetric("index_max").floatValue(), 0.0001);
     // Current interpolation logic doesn't consider min/max: it assumes the values seen were evenly-distributed between 50 and 51.
-    Assert.assertEquals(50.95, row.getMetric("index_quantile").floatValue(), 0.0001);
+    Assertions.assertEquals(50.95, row.getMetric("index_quantile").floatValue(), 0.0001);
   }
 
   private MapBasedRow ingestAndQuery(InputStream inputDataStream) throws Exception
