@@ -17,27 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.query.aggregation.datasketches.theta;
+package org.apache.druid.metadata;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.io.IOException;
-
-public class SketchEstimateWithErrorBoundsTest
+public class JUnit5TestDerbyConnector extends DerbyConnectorRule implements BeforeEachCallback, AfterEachCallback
 {
-
-  @Test
-  public void testSerde() throws IOException
+  @Override
+  public void beforeEach(ExtensionContext context)
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
-
-    SketchEstimateWithErrorBounds est = new SketchEstimateWithErrorBounds(100.0, 101.5, 98.5, 2);
-    
-    Assertions.assertEquals(est, mapper.readValue(
-            mapper.writeValueAsString(est), SketchEstimateWithErrorBounds.class));
+    before();
   }
 
+  @Override
+  public void afterEach(ExtensionContext context)
+  {
+    after();
+  }
 }

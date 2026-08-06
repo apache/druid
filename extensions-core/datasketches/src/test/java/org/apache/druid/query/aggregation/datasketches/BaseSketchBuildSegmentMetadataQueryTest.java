@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.datasketches;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -57,11 +58,10 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.util.Collections;
@@ -82,15 +82,15 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
   protected static final String SKETCH_COLUMN = "sketch";
   protected static final String DIM_COLUMN = "dim";
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   private IndexIO indexIO;
   private IndexMergerV9 indexMerger;
   private QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery> queryRunnerFactory;
   private Closer closer;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
@@ -147,7 +147,7 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     // Create a QueryableIndex (simulates historical/persisted segment)
     IncrementalIndex indexToPersist = closer.register(createIncrementalIndex(aggregators));
     addRows(indexToPersist, 100, 200);
-    File segmentDir = tempFolder.newFolder();
+    File segmentDir = newFolder(tempFolder, "junit");
     indexMerger.persist(indexToPersist, segmentDir, IndexSpec.getDefault(), null);
     QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(segmentDir));
 
@@ -174,54 +174,54 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     Sequence<SegmentAnalysis> results = mergedRunner.run(QueryPlus.wrap(query));
     List<SegmentAnalysis> resultList = results.toList();
 
-    Assert.assertEquals(1, resultList.size());
+    Assertions.assertEquals(1, resultList.size());
     SegmentAnalysis mergedAnalysis = resultList.get(0);
 
     // Verify row count: 100 rows per segment, no rollup due to unique timestamps
-    Assert.assertEquals("Merged row count should be 200", 200, mergedAnalysis.getNumRows());
+    Assertions.assertEquals(200, mergedAnalysis.getNumRows(), "Merged row count should be 200");
 
-    Assert.assertEquals("Should have 4 columns", 4, mergedAnalysis.getColumns().size());
-    Assert.assertTrue("Should contain __time column", mergedAnalysis.getColumns().containsKey("__time"));
-    Assert.assertTrue("Should contain dim column", mergedAnalysis.getColumns().containsKey(DIM_COLUMN));
-    Assert.assertTrue("Should contain count column", mergedAnalysis.getColumns().containsKey("count"));
-    Assert.assertTrue("Should contain sketch column", mergedAnalysis.getColumns().containsKey(SKETCH_COLUMN));
+    Assertions.assertEquals(4, mergedAnalysis.getColumns().size(), "Should have 4 columns");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey("__time"), "Should contain __time column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey(DIM_COLUMN), "Should contain dim column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey("count"), "Should contain count column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey(SKETCH_COLUMN), "Should contain sketch column");
 
     // Verify no column has merge errors
     for (Map.Entry<String, ColumnAnalysis> entry : mergedAnalysis.getColumns().entrySet()) {
-      Assert.assertFalse(
-          "Column '" + entry.getKey() + "' should not have error: " + entry.getValue().getErrorMessage(),
-          entry.getValue().isError()
+      Assertions.assertFalse(
+          entry.getValue().isError(),
+          "Column '" + entry.getKey() + "' should not have error: " + entry.getValue().getErrorMessage()
       );
     }
 
     // Make sure the merge went through ok
     ColumnAnalysis timeColumnAnalysis = mergedAnalysis.getColumns().get("__time");
-    Assert.assertEquals(ColumnType.LONG, timeColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals(ColumnType.LONG, timeColumnAnalysis.getTypeSignature());
     ColumnAnalysis dimColumnAnalysis = mergedAnalysis.getColumns().get(DIM_COLUMN);
-    Assert.assertEquals(ColumnType.STRING, dimColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals(ColumnType.STRING, dimColumnAnalysis.getTypeSignature());
     ColumnAnalysis countColumnAnalysis = mergedAnalysis.getColumns().get("count");
-    Assert.assertEquals(ColumnType.LONG, countColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals(ColumnType.LONG, countColumnAnalysis.getTypeSignature());
     ColumnAnalysis sketchColumnAnalysis = mergedAnalysis.getColumns().get(SKETCH_COLUMN);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedCanonicalColumnType(),
         sketchColumnAnalysis.getTypeSignature()
     );
-    Assert.assertFalse("Sketch column should not have multiple values", sketchColumnAnalysis.isHasMultipleValues());
+    Assertions.assertFalse(sketchColumnAnalysis.isHasMultipleValues(), "Sketch column should not have multiple values");
 
-    Assert.assertNotNull("Aggregators should be present", mergedAnalysis.getAggregators());
-    Assert.assertEquals("Should have exactly 2 aggregators", 2, mergedAnalysis.getAggregators().size());
-    Assert.assertTrue(
-        "Should contain count aggregator",
-        mergedAnalysis.getAggregators().containsKey("count")
+    Assertions.assertNotNull(mergedAnalysis.getAggregators(), "Aggregators should be present");
+    Assertions.assertEquals(2, mergedAnalysis.getAggregators().size(), "Should have exactly 2 aggregators");
+    Assertions.assertTrue(
+        mergedAnalysis.getAggregators().containsKey("count"),
+        "Should contain count aggregator"
     );
-    Assert.assertTrue(
-        "Should contain sketch aggregator",
-        mergedAnalysis.getAggregators().containsKey(SKETCH_COLUMN)
+    Assertions.assertTrue(
+        mergedAnalysis.getAggregators().containsKey(SKETCH_COLUMN),
+        "Should contain sketch aggregator"
     );
 
     // Verify sketch aggregator
     AggregatorFactory sketchAggregator = mergedAnalysis.getAggregators().get(SKETCH_COLUMN);
-    Assert.assertNotNull("Sketch aggregator should not be null", sketchAggregator);
+    Assertions.assertNotNull(sketchAggregator, "Sketch aggregator should not be null");
     assertMergedSketchAggregator(sketchAggregator, SKETCH_COLUMN);
   }
 
@@ -240,13 +240,13 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     // Create two persisted segments
     IncrementalIndex index1 = closer.register(createIncrementalIndex(aggregators));
     addRows(index1, 0, 100);
-    File segmentDir1 = tempFolder.newFolder();
+    File segmentDir1 = newFolder(tempFolder, "junit");
     indexMerger.persist(index1, segmentDir1, IndexSpec.getDefault(), null);
     QueryableIndex queryableIndex1 = closer.register(indexIO.loadIndex(segmentDir1));
 
     IncrementalIndex index2 = closer.register(createIncrementalIndex(aggregators));
     addRows(index2, 100, 200);
-    File segmentDir2 = tempFolder.newFolder();
+    File segmentDir2 = newFolder(tempFolder, "junit");
     indexMerger.persist(index2, segmentDir2, IndexSpec.getDefault(), null);
     QueryableIndex queryableIndex2 = closer.register(indexIO.loadIndex(segmentDir2));
 
@@ -256,10 +256,10 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     ColumnAnalysis analysis1 = analyzeColumn(segment1, SKETCH_COLUMN);
     ColumnAnalysis analysis2 = analyzeColumn(segment2, SKETCH_COLUMN);
 
-    Assert.assertEquals(
-        "Both persisted segments should report the same type",
+    Assertions.assertEquals(
         analysis1.getTypeSignature(),
-        analysis2.getTypeSignature()
+        analysis2.getTypeSignature(),
+        "Both persisted segments should report the same type"
     );
 
     SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
@@ -285,42 +285,42 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     Sequence<SegmentAnalysis> results = mergedRunner.run(QueryPlus.wrap(query));
     List<SegmentAnalysis> resultList = results.toList();
 
-    Assert.assertEquals(1, resultList.size());
+    Assertions.assertEquals(1, resultList.size());
     SegmentAnalysis mergedAnalysis = resultList.get(0);
 
     // Verify all columns exist
-    Assert.assertEquals("Should have 4 columns", 4, mergedAnalysis.getColumns().size());
-    Assert.assertTrue("Should contain __time column", mergedAnalysis.getColumns().containsKey("__time"));
-    Assert.assertTrue("Should contain dim column", mergedAnalysis.getColumns().containsKey(DIM_COLUMN));
-    Assert.assertTrue("Should contain count column", mergedAnalysis.getColumns().containsKey("count"));
-    Assert.assertTrue("Should contain sketch column", mergedAnalysis.getColumns().containsKey(SKETCH_COLUMN));
+    Assertions.assertEquals(4, mergedAnalysis.getColumns().size(), "Should have 4 columns");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey("__time"), "Should contain __time column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey(DIM_COLUMN), "Should contain dim column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey("count"), "Should contain count column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey(SKETCH_COLUMN), "Should contain sketch column");
 
     // Verify no column has merge errors
     for (Map.Entry<String, ColumnAnalysis> entry : mergedAnalysis.getColumns().entrySet()) {
-      Assert.assertFalse(
-          "Column '" + entry.getKey() + "' should not have error: " + entry.getValue().getErrorMessage(),
-          entry.getValue().isError()
+      Assertions.assertFalse(
+          entry.getValue().isError(),
+          "Column '" + entry.getKey() + "' should not have error: " + entry.getValue().getErrorMessage()
       );
     }
 
     // Verify time
     ColumnAnalysis timeColumnAnalysis = mergedAnalysis.getColumns().get("__time");
-    Assert.assertEquals(ColumnType.LONG, timeColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals(ColumnType.LONG, timeColumnAnalysis.getTypeSignature());
 
     // Verify dim column: type STRING, min/max/cardinality
     ColumnAnalysis dimColumnAnalysis = mergedAnalysis.getColumns().get(DIM_COLUMN);
-    Assert.assertEquals(ColumnType.STRING, dimColumnAnalysis.getTypeSignature());
-    Assert.assertEquals("dim min value", "dim_value_0", dimColumnAnalysis.getMinValue());
-    Assert.assertEquals("dim max value", "dim_value_9", dimColumnAnalysis.getMaxValue());
-    Assert.assertEquals("dim cardinality should be 10", 10, dimColumnAnalysis.getCardinality().intValue());
+    Assertions.assertEquals(ColumnType.STRING, dimColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals("dim_value_0", dimColumnAnalysis.getMinValue(), "dim min value");
+    Assertions.assertEquals("dim_value_9", dimColumnAnalysis.getMaxValue(), "dim max value");
+    Assertions.assertEquals(10, dimColumnAnalysis.getCardinality().intValue(), "dim cardinality should be 10");
 
     // Verify count column: type LONG (min/max not computed for metric columns by default)
     ColumnAnalysis countColumnAnalysis = mergedAnalysis.getColumns().get("count");
-    Assert.assertEquals(ColumnType.LONG, countColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals(ColumnType.LONG, countColumnAnalysis.getTypeSignature());
 
     // Verify count column: ensure type signature matches
     ColumnAnalysis sketchColumnAnalysis = mergedAnalysis.getColumns().get(SKETCH_COLUMN);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedCanonicalColumnType(),
         sketchColumnAnalysis.getTypeSignature()
     );
@@ -351,10 +351,10 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     ColumnAnalysis analysis1 = analyzeColumn(segment1, SKETCH_COLUMN);
     ColumnAnalysis analysis2 = analyzeColumn(segment2, SKETCH_COLUMN);
 
-    Assert.assertEquals(
-        "Both realtime segments should report the same type",
+    Assertions.assertEquals(
         analysis1.getTypeSignature(),
-        analysis2.getTypeSignature()
+        analysis2.getTypeSignature(),
+        "Both realtime segments should report the same type"
     );
 
     SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
@@ -380,42 +380,42 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     Sequence<SegmentAnalysis> results = mergedRunner.run(QueryPlus.wrap(query));
     List<SegmentAnalysis> resultList = results.toList();
 
-    Assert.assertEquals(1, resultList.size());
+    Assertions.assertEquals(1, resultList.size());
     SegmentAnalysis mergedAnalysis = resultList.get(0);
 
     // Verify all columns exist
-    Assert.assertEquals("Should have 4 columns", 4, mergedAnalysis.getColumns().size());
-    Assert.assertTrue("Should contain __time column", mergedAnalysis.getColumns().containsKey("__time"));
-    Assert.assertTrue("Should contain dim column", mergedAnalysis.getColumns().containsKey(DIM_COLUMN));
-    Assert.assertTrue("Should contain count column", mergedAnalysis.getColumns().containsKey("count"));
-    Assert.assertTrue("Should contain sketch column", mergedAnalysis.getColumns().containsKey(SKETCH_COLUMN));
+    Assertions.assertEquals(4, mergedAnalysis.getColumns().size(), "Should have 4 columns");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey("__time"), "Should contain __time column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey(DIM_COLUMN), "Should contain dim column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey("count"), "Should contain count column");
+    Assertions.assertTrue(mergedAnalysis.getColumns().containsKey(SKETCH_COLUMN), "Should contain sketch column");
 
     // Verify no column has merge errors
     for (Map.Entry<String, ColumnAnalysis> entry : mergedAnalysis.getColumns().entrySet()) {
-      Assert.assertFalse(
-          "Column '" + entry.getKey() + "' should not have error: " + entry.getValue().getErrorMessage(),
-          entry.getValue().isError()
+      Assertions.assertFalse(
+          entry.getValue().isError(),
+          "Column '" + entry.getKey() + "' should not have error: " + entry.getValue().getErrorMessage()
       );
     }
 
     // Verify time
     ColumnAnalysis timeColumnAnalysis = mergedAnalysis.getColumns().get("__time");
-    Assert.assertEquals(ColumnType.LONG, timeColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals(ColumnType.LONG, timeColumnAnalysis.getTypeSignature());
 
     // Verify dim column: type STRING, min/max/cardinality
     ColumnAnalysis dimColumnAnalysis = mergedAnalysis.getColumns().get(DIM_COLUMN);
-    Assert.assertEquals(ColumnType.STRING, dimColumnAnalysis.getTypeSignature());
-    Assert.assertEquals("dim min value", "dim_value_0", dimColumnAnalysis.getMinValue());
-    Assert.assertEquals("dim max value", "dim_value_9", dimColumnAnalysis.getMaxValue());
-    Assert.assertEquals("dim cardinality should be 10", 10, dimColumnAnalysis.getCardinality().intValue());
+    Assertions.assertEquals(ColumnType.STRING, dimColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals("dim_value_0", dimColumnAnalysis.getMinValue(), "dim min value");
+    Assertions.assertEquals("dim_value_9", dimColumnAnalysis.getMaxValue(), "dim max value");
+    Assertions.assertEquals(10, dimColumnAnalysis.getCardinality().intValue(), "dim cardinality should be 10");
 
     // Verify count column: type LONG (min/max not computed for metric columns by default)
     ColumnAnalysis countColumnAnalysis = mergedAnalysis.getColumns().get("count");
-    Assert.assertEquals(ColumnType.LONG, countColumnAnalysis.getTypeSignature());
+    Assertions.assertEquals(ColumnType.LONG, countColumnAnalysis.getTypeSignature());
 
     // Verify count column: ensure type signature matches
     ColumnAnalysis sketchColumnAnalysis = mergedAnalysis.getColumns().get(SKETCH_COLUMN);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedCanonicalColumnType(),
         sketchColumnAnalysis.getTypeSignature()
     );
@@ -461,7 +461,12 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     QueryRunner<SegmentAnalysis> runner = queryRunnerFactory.createRunner(segment);
     List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(query)).toList();
 
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     return results.get(0).getColumns().get(columnName);
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs) + "-");
   }
 }

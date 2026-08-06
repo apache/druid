@@ -21,8 +21,11 @@ package org.apache.druid.security.basic.authentication.validator;
 
 import com.google.common.cache.CacheStats;
 import org.apache.druid.security.basic.BasicAuthUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 public class PasswordHashGeneratorTest
 {
@@ -35,11 +38,12 @@ public class PasswordHashGeneratorTest
     byte[] salt = BasicAuthUtils.generateSalt();
     byte[] hash = PasswordHashGenerator.computePasswordHash(password, salt, iterations);
 
-    Assert.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
-    Assert.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
+    Assertions.assertEquals(BasicAuthUtils.SALT_LENGTH, salt.length);
+    Assertions.assertEquals(PasswordHashGenerator.KEY_LENGTH / 8, hash.length);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testHashIsNotRecomputedWhenCached()
   {
     final PasswordHashGenerator hashGenerator = new PasswordHashGenerator();
@@ -52,18 +56,18 @@ public class PasswordHashGeneratorTest
 
     // Verify that the first computation takes a few ms
     byte[] firstHash = hashGenerator.getOrComputePasswordHash(password, salt, iterations);
-    Assert.assertArrayEquals(expectedHash, firstHash);
+    Assertions.assertArrayEquals(expectedHash, firstHash);
     CacheStats stats = hashGenerator.getCacheStats();
-    Assert.assertEquals(0, stats.hitCount());
-    Assert.assertEquals(1, stats.missCount());
+    Assertions.assertEquals(0, stats.hitCount());
+    Assertions.assertEquals(1, stats.missCount());
 
     // Verify that each subsequent computation takes less than 1ms
     for (int i = 0; i < 10; ++i) {
       byte[] recomputedHash = hashGenerator.getOrComputePasswordHash(password, salt, iterations);
-      Assert.assertArrayEquals(expectedHash, recomputedHash);
+      Assertions.assertArrayEquals(expectedHash, recomputedHash);
       stats = hashGenerator.getCacheStats();
-      Assert.assertEquals(i + 1, stats.hitCount());
-      Assert.assertEquals(1, stats.missCount());
+      Assertions.assertEquals(i + 1, stats.hitCount());
+      Assertions.assertEquals(1, stats.missCount());
     }
   }
 
