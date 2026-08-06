@@ -38,7 +38,7 @@ export class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.log('Module content error:', error, errorInfo);
+    console.error('Module content error:', error, errorInfo);
   }
 
   render() {
