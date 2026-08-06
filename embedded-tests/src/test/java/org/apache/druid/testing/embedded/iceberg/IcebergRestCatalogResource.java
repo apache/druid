@@ -150,6 +150,21 @@ public class IcebergRestCatalogResource extends TestcontainerResource<GenericCon
   }
 
   /**
+   * Creates a table with custom properties (e.g., format-version=2 for v2 tables).
+   */
+  public Table createTable(
+      String namespace,
+      String tableName,
+      Schema schema,
+      org.apache.iceberg.PartitionSpec partitionSpec,
+      Map<String, String> properties
+  )
+  {
+    final TableIdentifier tableId = TableIdentifier.of(namespace, tableName);
+    return getClientCatalog().createTable(tableId, schema, partitionSpec, properties);
+  }
+
+  /**
    * Drops a table from the REST catalog. Best-effort; ignores errors.
    */
   public void dropTable(String namespace, String tableName)

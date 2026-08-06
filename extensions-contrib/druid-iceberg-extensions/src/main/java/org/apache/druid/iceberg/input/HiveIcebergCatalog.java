@@ -37,6 +37,7 @@ import org.apache.iceberg.hive.HiveCatalog;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -93,6 +94,16 @@ public class HiveIcebergCatalog extends IcebergCatalog
       hiveCatalog = setupCatalog();
     }
     return hiveCatalog;
+  }
+
+  @Override
+  public Map<String, String> getHadoopConfigOverrides()
+  {
+    final Map<String, String> overrides = new LinkedHashMap<>();
+    for (final Map.Entry<String, String> entry : configuration) {
+      overrides.put(entry.getKey(), entry.getValue());
+    }
+    return overrides;
   }
 
   private HiveCatalog setupCatalog()
