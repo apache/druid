@@ -39,6 +39,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.LoadSpec;
+import org.apache.druid.segment.loading.LocalDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
@@ -107,16 +108,18 @@ public class ShuffleDataSegmentPusherTest
       intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     } else if (DEEPSTORE.equals(intermediateDataStore)) {
       localDeepStore = temporaryFolder.newFolder("localStorage");
+      final LocalDataSegmentPusherConfig pusherConfig = new LocalDataSegmentPusherConfig()
+      {
+        @Override
+        public File getStorageDirectory()
+        {
+          return localDeepStore;
+        }
+      };
       intermediaryDataManager = new DeepStorageIntermediaryDataManager(
-          new LocalDataSegmentPusher(
-              new LocalDataSegmentPusherConfig()
-              {
-                @Override
-                public File getStorageDirectory()
-                {
-                  return localDeepStore;
-                }
-              }));
+          new LocalDataSegmentPusher(pusherConfig),
+          new LocalDataSegmentKiller(pusherConfig)
+      );
     }
     intermediaryDataManager.start();
     segmentPusher = new ShuffleDataSegmentPusher("supervisorTaskId", "subTaskId", intermediaryDataManager);

@@ -23,6 +23,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.common.aws.AWSModule;
 import org.apache.druid.guice.DruidSecondaryModule;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.segment.loading.OmniDataSegmentArchiver;
@@ -74,6 +75,7 @@ public class S3StorageDruidModuleTest
     final Injector startupInjector = new StartupInjectorBuilder().forServer().build();
     return Guice.createInjector(
         startupInjector.getInstance(DruidSecondaryModule.class),
+        new LocalDataStorageDruidModule(),
         new AWSModule(),
         new S3StorageDruidModule(),
         new ServerModule()

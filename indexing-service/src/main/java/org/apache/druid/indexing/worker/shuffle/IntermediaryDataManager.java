@@ -75,10 +75,9 @@ public interface IntermediaryDataManager
   Optional<ByteSource> findPartitionFile(String supervisorTaskId, String subTaskId, Interval interval, int bucketId);
 
   /**
-   * Delete the partitions
+   * Deletes all intermediary partitions for the given supervisor task.
    *
    * @param supervisorTaskId - Supervisor task id of the partitions to delete
-   *
    */
   void deletePartitions(String supervisorTaskId) throws IOException;
 
