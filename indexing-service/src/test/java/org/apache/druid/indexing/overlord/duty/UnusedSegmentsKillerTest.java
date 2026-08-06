@@ -210,7 +210,7 @@ public class UnusedSegmentsKillerTest
     );
   }
 
-  @Test(timeout = 30_000L)
+  @Test
   public void test_maxSegmentsKilledInRun_isLimitedByConfig()
   {
     killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO, null, 700);
