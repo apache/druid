@@ -256,7 +256,6 @@ public class CliOverlord extends ServerRunnable
             binder.bind(DruidInputSourceFactory.class).in(LazySingleton.class);
             binder.bind(ScheduledBatchTaskManager.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
-            binder.bind(SegmentStatusManager.class).in(LazySingleton.class);
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
