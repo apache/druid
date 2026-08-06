@@ -375,16 +375,12 @@ public class ServerSideEncryptingAmazonS3
       S3Configuration s3Config = S3Configuration.builder()
                                                 .chunkedEncodingEnabled(!awsClientConfig.isDisableChunkedEncoding())
                                                 .build();
-      final ClientOverrideConfiguration retryOverrides =
-          ClientOverrideConfiguration.builder()
-                                     .retryStrategy(awsClientConfig.getRetryStrategy())
-                                     .build();
       clientBuilder.serviceConfiguration(s3Config)
                    .forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
                    .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled())
-                   .overrideConfiguration(retryOverrides);
+                   .overrideConfiguration(retryOverride(awsClientConfig));
       final S3TransferConfig transferConfig = s3StorageConfig.getS3TransferConfig();
-      asyncClientBuilder.overrideConfiguration(retryOverrides)
+      asyncClientBuilder.overrideConfiguration(retryOverride(awsClientConfig))
                         .forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
                         .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled())
                         .httpClientBuilder(AsyncHttpClientType.fromString(transferConfig.getAsyncHttpClientType()).buildBuilder(awsClientConfig))
@@ -430,7 +426,19 @@ public class ServerSideEncryptingAmazonS3
     return ServerSideEncryptingAmazonS3.builder()
                                        .setS3ClientSupplier(clientBuilder::build)
                                        .setS3AsyncClientSupplier(asyncClientBuilder::build)
-                                       .setS3StorageConfig(s3StorageConfig);
+                                       .setS3StorageConfig(s3StorageConfig)
+                                       .setAwsClientConfig(awsClientConfig);
+  }
+
+  /**
+   * Builds the retry override for a single client. Every client needs its own {@code RetryStrategy} instance: the
+   * standard strategy holds its circuit-breaker token bucket on the instance, and the adaptive strategy additionally
+   * holds its client-side rate limiter there. Sharing one instance would let throttled TransferManager uploads drain
+   * the quota of, or throttle, synchronous reads and listings.
+   */
+  private static ClientOverrideConfiguration retryOverride(AWSClientConfig awsClientConfig)
+  {
+    return ClientOverrideConfiguration.builder().retryStrategy(awsClientConfig.getRetryStrategy()).build();
   }
 
   @Nonnull
@@ -468,10 +476,10 @@ public class ServerSideEncryptingAmazonS3
     if (awsEndpointConfig != null && awsEndpointConfig.getSigningRegion() != null) {
       stsBuilder.region(Region.of(awsEndpointConfig.getSigningRegion()));
     }
+    // A null config leaves the SDK defaults in place, so callers should pass the process configuration rather than
+    // null when a spec supplies no override of its own.
     if (awsClientConfig != null) {
-      stsBuilder.overrideConfiguration(
-          ClientOverrideConfiguration.builder().retryStrategy(awsClientConfig.getRetryStrategy()).build()
-      );
+      stsBuilder.overrideConfiguration(retryOverride(awsClientConfig));
     }
 
     AssumeRoleRequest.Builder assumeRoleRequestBuilder =
@@ -494,6 +502,8 @@ public class ServerSideEncryptingAmazonS3
     @Nullable
     private Supplier<S3AsyncClient> s3AsyncClientSupplier;
     private S3StorageConfig s3StorageConfig = new S3StorageConfig(new NoopServerSideEncryption(), null);
+    @Nullable
+    private AWSClientConfig awsClientConfig;
 
     public Builder setS3ClientSupplier(Supplier<S3Client> s3ClientSupplier)
     {
@@ -516,6 +526,24 @@ public class ServerSideEncryptingAmazonS3
     public S3StorageConfig getS3StorageConfig()
     {
       return this.s3StorageConfig;
+    }
+
+    public Builder setAwsClientConfig(@Nullable AWSClientConfig awsClientConfig)
+    {
+      this.awsClientConfig = awsClientConfig;
+      return this;
+    }
+
+    /**
+     * The client configuration the clients of this builder are configured with. Exposed, like
+     * {@link #getS3StorageConfig()}, so a caller that rebuilds a client for a per-spec override can fall back to it
+     * instead of dropping process-level settings. Null when the builder was not
+     * created from an {@link AWSClientConfig}, in which case the clients keep the SDK defaults.
+     */
+    @Nullable
+    public AWSClientConfig getAwsClientConfig()
+    {
+      return this.awsClientConfig;
     }
 
     /**

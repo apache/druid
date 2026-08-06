@@ -100,6 +100,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -348,6 +349,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig()).andStubReturn(S3_STORAGE_CONFIG);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAwsClientConfig()).andStubReturn(null);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withPrefixes = new S3InputSource(
         SERVICE,
@@ -375,6 +377,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
   {
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig()).andStubReturn(S3_STORAGE_CONFIG);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAwsClientConfig()).andStubReturn(null);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     final S3InputSource withSessionToken = new S3InputSource(
         SERVICE,
@@ -407,6 +410,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
     EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig())
             .andStubReturn(S3_STORAGE_CONFIG);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAwsClientConfig()).andStubReturn(null);
     EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
 
     final AWSEndpointConfig schemelessEndpoint = MAPPER.readValue(
@@ -431,6 +435,49 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     // Forces s3ClientSupplier evaluation, which hits S3Utils.useHttps and confirms a null client config does not blow up.
     inputSource.createEntity(new CloudObjectLocation("bucket", "path"));
 
+    EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+  }
+
+  @Test
+  public void testClientConfigOmittedFromSpecFallsBackToProcessConfig()
+  {
+    // A spec that overrides credentials but not the client config must still get the process-wide client settings
+    final AtomicInteger strategiesRequested = new AtomicInteger();
+    final AWSClientConfig processClientConfig = new AWSClientConfig()
+    {
+      @Override
+      public RetryStrategy getRetryStrategy()
+      {
+        strategiesRequested.incrementAndGet();
+        return super.getRetryStrategy();
+      }
+    };
+
+    EasyMock.reset(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getS3StorageConfig()).andStubReturn(S3_STORAGE_CONFIG);
+    EasyMock.expect(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER.getAwsClientConfig())
+            .andStubReturn(processClientConfig);
+    EasyMock.replay(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
+
+    final S3InputSource inputSource = new S3InputSource(
+        SERVICE,
+        SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER,
+        INPUT_DATA_CONFIG,
+        null,
+        null,
+        EXPECTED_LOCATION,
+        null,
+        CLOUD_CONFIG_PROPERTIES,
+        null,
+        ENDPOINT_CONFIG,
+        null
+    );
+
+    // Forces s3ClientSupplier evaluation, which is where the clients are configured.
+    inputSource.createEntity(new CloudObjectLocation("bucket", "path"));
+
+    // One per client, sync and async.
+    Assertions.assertEquals(2, strategiesRequested.get());
     EasyMock.verify(SERVER_SIDE_ENCRYPTING_AMAZON_S3_BUILDER);
   }
 
@@ -520,7 +567,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(mockAwsClientConfig.getConnectionTimeoutMillis()).andStubReturn(10_000);
     EasyMock.expect(mockAwsClientConfig.getSocketTimeoutMillis()).andStubReturn(50_000);
     EasyMock.expect(mockAwsClientConfig.getMaxConnections()).andStubReturn(50);
-    EasyMock.expect(mockAwsClientConfig.getRetryStrategy()).andReturn(EasyMock.createMock(RetryStrategy.class));
+    // Once for the sync client and once for the async one, since the two must not share a strategy instance.
+    EasyMock.expect(mockAwsClientConfig.getRetryStrategy())
+            .andReturn(EasyMock.createMock(RetryStrategy.class))
+            .times(2);
 
     EasyMock.expect(mockAwsProxyConfig.getHost()).andStubReturn("");
     EasyMock.expect(mockAwsProxyConfig.getPort()).andStubReturn(-1);

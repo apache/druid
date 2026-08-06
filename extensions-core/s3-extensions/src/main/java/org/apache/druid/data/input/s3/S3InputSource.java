@@ -127,7 +127,7 @@ public class S3InputSource extends CloudObjectInputSource
           s3ClientBuilder.getS3StorageConfig(),
           awsProxyConfig,
           awsEndpointConfig,
-          awsClientConfig,
+          awsClientConfig != null ? awsClientConfig : s3ClientBuilder.getAwsClientConfig(),
           s3InputSourceConfig,
           null
       ).build();
