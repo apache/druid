@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -95,6 +94,31 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
         .build();
   }
 
+  @Override
+  public boolean hasUnappliedDeletionRules(
+      DataSourceCompactionConfig config,
+      CompactionCandidate candidate,
+      CompactionJobParams params
+  )
+  {
+    if (config.getTransformSpec() == null) {
+      return false;
+    }
+    final DimFilter filter = config.getTransformSpec().getFilter();
+    if (!(filter instanceof NotDimFilter)) {
+      return false;
+    }
+
+    // Compare the decomposed NOT(OR(...)) clauses (as optimizeConfig does) rather than the whole
+    // transformSpec, so a spec differing only by folded-in partitioning virtual columns isn't mistaken
+    // for a pending deletion. Unlike optimizeConfig, never-compacted candidates are not short-circuited.
+    return computeRequiredSetOfFilterRulesForCandidate(
+        candidate,
+        (NotDimFilter) filter,
+        params.getFingerprintMapper()
+    ) != null;
+  }
+
   /**
    * Computes the required set of deletion rules to be applied for the given {@link CompactionCandidate}.
    * <p>
@@ -121,15 +145,19 @@ public class ReindexingDeletionRuleOptimizer implements ReindexingConfigOptimize
       expectedFilters = ((OrDimFilter) expectedFilter.getField()).getFields();
     }
 
-    Set<String> uniqueFingerprints = candidateSegments.getSegments().stream()
-                                                      .map(DataSegment::getIndexingStateFingerprint)
-                                                      .filter(Objects::nonNull)
-                                                      .collect(Collectors.toSet());
-
-    if (uniqueFingerprints.isEmpty()) {
-      // no fingerprints means that no candidate segments have transforms to compare against. Return all filters eagerly.
+    // If any segment has no fingerprint, we cannot prove the deletion rules were applied to it, so we
+    // cannot prune anything: report every rule as unapplied. This also subsumes the all-null case (no
+    // segment can prove application). Only when every segment has a fingerprint do we compare applied
+    // filters against expected.
+    final boolean anySegmentMissingFingerprint = candidateSegments.getSegments().stream()
+                                                                  .anyMatch(s -> s.getIndexingStateFingerprint() == null);
+    if (anySegmentMissingFingerprint) {
       return expectedFilter;
     }
+
+    Set<String> uniqueFingerprints = candidateSegments.getSegments().stream()
+                                                      .map(DataSegment::getIndexingStateFingerprint)
+                                                      .collect(Collectors.toSet());
 
     Set<DimFilter> unappliedRules = new HashSet<>();
 
