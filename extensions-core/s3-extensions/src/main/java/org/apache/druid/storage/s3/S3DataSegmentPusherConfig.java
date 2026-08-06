@@ -45,7 +45,7 @@ public class S3DataSegmentPusherConfig
 
   public void setBucket(String bucket)
   {
-    this.bucket = bucket;
+    this.bucket = S3Utils.normalizeBucketName(bucket);
   }
 
   public void setBaseKey(String baseKey)
