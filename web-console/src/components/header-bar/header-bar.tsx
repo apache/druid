@@ -415,6 +415,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
       {doctorDialogOpen && <DoctorDialog onClose={() => setDoctorDialogOpen(false)} />}
       {coordinatorDynamicConfigDialogOpen && (
         <CoordinatorDynamicConfigDialog
+          capabilities={capabilities}
           onClose={() => setCoordinatorDynamicConfigDialogOpen(false)}
         />
       )}
