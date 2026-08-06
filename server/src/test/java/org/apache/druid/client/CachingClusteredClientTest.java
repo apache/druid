@@ -3222,6 +3222,61 @@ public class CachingClusteredClientTest
     Assert.assertEquals(1, remainingResponseMap.get(queryInclude.getId()).intValue());
   }
 
+  @Test
+  public void testQueryableHistoricalTiersQueryContext()
+  {
+    final Interval interval = Intervals.of("2016-01-01/2016-01-02");
+    final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
+    final DataSegment dataSegment = DataSegment.builder(
+        SegmentId.of("dataSource", interval, "ver", NoneShardSpec.instance())
+    )
+                                               .loadSpec(ImmutableMap.of("type", "hdfs", "path", "/tmp"))
+                                               .dimensions(ImmutableList.of("product"))
+                                               .metrics(ImmutableList.of("visited_sum"))
+                                               .binaryVersion(9)
+                                               .size(12334)
+                                               .build();
+    final ServerSelector selector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(servers[0], null), dataSegment);
+    timeline.add(interval, "ver", new SingleElementPartitionChunk<>(selector));
+
+    final TimeBoundaryQuery disallowedTierQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                        .dataSource(DATA_SOURCE)
+                                                        .intervals(new MultipleIntervalSegmentSpec(
+                                                            ImmutableList.of(queryInterval)
+                                                        ))
+                                                        .context(ImmutableMap.of(
+                                                            QueryContexts.QUERYABLE_HISTORICAL_TIERS,
+                                                            ImmutableList.of("hot")
+                                                        ))
+                                                        .randomQueryId()
+                                                        .build();
+    final TimeBoundaryQuery allowedTierQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                     .dataSource(DATA_SOURCE)
+                                                     .intervals(new MultipleIntervalSegmentSpec(
+                                                         ImmutableList.of(queryInterval)
+                                                     ))
+                                                     .context(ImmutableMap.of(
+                                                         QueryContexts.QUERYABLE_HISTORICAL_TIERS,
+                                                         ImmutableList.of("bye")
+                                                     ))
+                                                     .randomQueryId()
+                                                     .build();
+
+    final ResponseContext responseContext = initializeResponseContext();
+    getDefaultQueryRunner().run(QueryPlus.wrap(disallowedTierQuery), responseContext);
+    getDefaultQueryRunner().run(QueryPlus.wrap(allowedTierQuery), responseContext);
+
+    final Map<String, Integer> remainingResponseMap =
+        (Map<String, Integer>) responseContext.get(ResponseContext.Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
+    Assert.assertEquals(0, remainingResponseMap.get(disallowedTierQuery.getId()).intValue());
+    Assert.assertEquals(1, remainingResponseMap.get(allowedTierQuery.getId()).intValue());
+  }
+
   @SuppressWarnings("unchecked")
   private QueryRunner getDefaultQueryRunner()
   {

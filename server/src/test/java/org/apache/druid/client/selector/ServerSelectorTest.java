@@ -25,8 +25,13 @@ import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.CloneQueryMode;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
@@ -166,6 +171,118 @@ public class ServerSelectorTest
         HistoricalFilter.IDENTITY_FILTER
     );
     Assert.assertTrue(selector.hasData());
+  }
+
+  @Test
+  public void testQueryableHistoricalTiersFiltersHistoricalServers()
+  {
+    final DataSegment segment = createSegmentForQueryableHistoricalTiers();
+    final ServerSelector selector = new ServerSelector(
+        segment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+    final DruidServer coldServer = new DruidServer(
+        "cold",
+        "cold",
+        null,
+        0,
+        null,
+        ServerType.HISTORICAL,
+        "cold",
+        10
+    );
+    final DruidServer hotServer = new DruidServer(
+        "hot",
+        "hot",
+        null,
+        0,
+        null,
+        ServerType.HISTORICAL,
+        "hot",
+        0
+    );
+    selector.addServerAndUpdateSegment(
+        new QueryableDruidServer(coldServer, EasyMock.createMock(DirectDruidClient.class)),
+        segment
+    );
+    selector.addServerAndUpdateSegment(
+        new QueryableDruidServer(hotServer, EasyMock.createMock(DirectDruidClient.class)),
+        segment
+    );
+
+    final Query<?> hotTierQuery = Druids.newTimeBoundaryQueryBuilder()
+                                        .dataSource("test")
+                                        .intervals("2012/2013")
+                                        .context(ImmutableMap.of(
+                                            QueryContexts.QUERYABLE_HISTORICAL_TIERS,
+                                            ImmutableList.of("hot")
+                                        ))
+                                        .build();
+    final Query<?> missingTierQuery = Druids.newTimeBoundaryQueryBuilder()
+                                            .dataSource("test")
+                                            .intervals("2012/2013")
+                                            .context(ImmutableMap.of(
+                                                QueryContexts.QUERYABLE_HISTORICAL_TIERS,
+                                                ImmutableList.of("warm")
+                                            ))
+                                            .build();
+
+    Assert.assertEquals(
+        hotServer,
+        selector.pick(hotTierQuery, CloneQueryMode.EXCLUDECLONES).getServer()
+    );
+    Assert.assertTrue(selector.hasQueryableServer(hotTierQuery, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertNull(selector.pick(missingTierQuery, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertFalse(selector.hasQueryableServer(missingTierQuery, CloneQueryMode.EXCLUDECLONES));
+  }
+
+  @Test
+  public void testQueryableHistoricalTiersDoesNotFallBackToRealtime()
+  {
+    final DataSegment segment = createSegmentForQueryableHistoricalTiers();
+    final ServerSelector selector = new ServerSelector(
+        segment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
+        HistoricalFilter.IDENTITY_FILTER
+    );
+    selector.addServerAndUpdateSegment(
+        new QueryableDruidServer(
+            new DruidServer("realtime", "realtime", null, 0, null, ServerType.REALTIME, "hot", 0),
+            EasyMock.createMock(DirectDruidClient.class)
+        ),
+        segment
+    );
+
+    final Query<?> hotTierQuery = Druids.newTimeBoundaryQueryBuilder()
+                                        .dataSource("test")
+                                        .intervals("2012/2013")
+                                        .context(ImmutableMap.of(
+                                            QueryContexts.QUERYABLE_HISTORICAL_TIERS,
+                                            ImmutableList.of("hot")
+                                        ))
+                                        .build();
+
+    Assert.assertNull(selector.pick(hotTierQuery, CloneQueryMode.EXCLUDECLONES));
+    Assert.assertFalse(selector.hasQueryableServer(hotTierQuery, CloneQueryMode.EXCLUDECLONES));
+  }
+
+  private static DataSegment createSegmentForQueryableHistoricalTiers()
+  {
+    return DataSegment.builder(
+        SegmentId.of(
+            "test_broker_server_view",
+            Intervals.of("2012/2013"),
+            "v1",
+            NoneShardSpec.instance()
+        )
+    )
+                      .loadSpec(ImmutableMap.of("type", "local", "path", "somewhere"))
+                      .dimensions(ImmutableList.of())
+                      .metrics(ImmutableList.of())
+                      .binaryVersion(9)
+                      .size(0)
+                      .build();
   }
 
 }

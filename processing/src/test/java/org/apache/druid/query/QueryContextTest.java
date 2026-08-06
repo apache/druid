@@ -23,7 +23,9 @@ import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
@@ -46,6 +48,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -119,6 +122,37 @@ public class QueryContextTest
     assertEquals("foo", context.getString("non-exist", "foo"));
 
     assertThrows(BadQueryContextException.class, () -> context.getString("key2"));
+  }
+
+  @Test
+  public void testGetStringSet()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of(
+            "key1", ImmutableList.of("hot", "cold", "hot"),
+            "key2", "hot",
+            "key3", ImmutableList.of("hot", 1),
+            "key4", 1
+        )
+    );
+
+    assertEquals(ImmutableSet.of("hot", "cold"), context.getStringSet("key1"));
+    assertEquals(Collections.singleton("hot"), context.getStringSet("key2"));
+    assertNull(context.getStringSet("non-exist"));
+
+    assertThrows(BadQueryContextException.class, () -> context.getStringSet("key3"));
+    assertThrows(BadQueryContextException.class, () -> context.getStringSet("key4"));
+  }
+
+  @Test
+  public void testGetQueryableHistoricalTiers()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of(QueryContexts.QUERYABLE_HISTORICAL_TIERS, ImmutableList.of("hot", "cold"))
+    );
+
+    final Set<String> queryableHistoricalTiers = context.getQueryableHistoricalTiers();
+    assertEquals(ImmutableSet.of("hot", "cold"), queryableHistoricalTiers);
   }
 
   @Test
