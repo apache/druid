@@ -5128,6 +5128,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testJoinOnRestrictedBroadcast(Map<String, Object> queryContext)
   {
+    // Join cursor does not support vectorization.
+    cannotVectorize();
+
     String sql = "SELECT druid.restrictedBroadcastDatasource_m1_is_6.dim4, COUNT(*)\n"
                  + "FROM druid.numfoo\n"
                  + "INNER JOIN druid.restrictedBroadcastDatasource_m1_is_6 ON numfoo.dim4 = restrictedBroadcastDatasource_m1_is_6.dim4\n"
@@ -5188,6 +5191,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
   public void testTopNOnStringWithNonSortedOrUniqueDictionary(Map<String, Object> queryContext)
   {
+    // Join cursor does not support vectorization.
+    cannotVectorize();
+
     testQuery(
         "SELECT druid.broadcast.dim4, COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -5230,6 +5236,9 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   public void testTopNOnStringWithNonSortedOrUniqueDictionaryOrderByDim(Map<String, Object> queryContext)
 
   {
+    // Join cursor does not support vectorization.
+    cannotVectorize();
+
     final Map<String, Object> contextWithLexicographicTopN =
         QueryContexts.override(queryContext, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(

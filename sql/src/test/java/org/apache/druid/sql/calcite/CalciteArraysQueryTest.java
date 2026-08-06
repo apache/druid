@@ -3495,6 +3495,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayAggGroupByArrayAggFromSubquery()
   {
+    cannotVectorize();
+
     final Map<String, Object> context =
         QueryContexts.override(QUERY_CONTEXT_NO_STRINGIFY_ARRAY, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
@@ -5002,6 +5004,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithGroupByOrderByWithLimit()
   {
+    cannotVectorize();
+
     final Map<String, Object> context =
         QueryContexts.override(QUERY_CONTEXT_UNNEST, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
     testQuery(
