@@ -68,7 +68,6 @@ public abstract class ProjectionPartialLoadMatcher implements PartialLoadMatcher
    * them are present on {@code segment}.
    */
   @Override
-  @Nullable
   public MatchResult match(DataSegment segment, Map<String, Object> baseLoadSpec)
   {
     final List<String> resolved = resolveProjectionNames(segment);
