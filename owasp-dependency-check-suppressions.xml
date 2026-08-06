@@ -245,6 +245,7 @@
     <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
     <notes><![CDATA[
    file name: netty-3.10.6.Final.jar
+   The CVEs in this rule are suppressed only for io.netty:netty:3.10.6.Final.
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.6.Final$</packageUrl>
     <cve>CVE-2019-16869</cve>
@@ -261,9 +262,10 @@
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve> <!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
     <!--
-      The following advisories affect Netty 4 module artifacts, but Dependency-Check also matches them to the
-      monolithic Netty 3 artifact through the generic netty:netty CPE. Keep the CVEs explicit so that future
-      Netty advisories remain visible and can be assessed independently.
+      The CVEs below are suppressed only for the Netty 3 artifact selected by the packageUrl above. These
+      advisories affect Netty 4 module artifacts, but Dependency-Check also matches them to the monolithic Netty 3
+      artifact through the generic netty:netty CPE. Keep the CVEs explicit so that future Netty advisories remain
+      visible and can be assessed independently.
     -->
     <cve>CVE-2024-29025</cve>
     <cve>CVE-2024-47535</cve>
