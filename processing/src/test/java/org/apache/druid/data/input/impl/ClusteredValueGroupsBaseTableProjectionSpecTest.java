@@ -19,8 +19,10 @@
 
 package org.apache.druid.data.input.impl;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -37,6 +39,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHandlingTest
 {
@@ -292,6 +295,117 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
     );
     Assertions.assertTrue(e.getMessage().contains("dot notation"));
     Assertions.assertTrue(e.getMessage().contains("[dotty]"));
+  }
+
+  @Test
+  void testWithAdditionalColumnsAppendsAfterDeclaredColumns()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = tenantSpec().withAdditionalColumns(
+        ImmutableList.of(new LongDimensionSchema("cnt"), new StringDimensionSchema("city"))
+    );
+
+    Assertions.assertEquals(
+        ImmutableList.of("tenant", "region", "__time", "cnt", "city"),
+        spec.getColumns().stream().map(DimensionSchema::getName).collect(Collectors.toList())
+    );
+    // The clustering prefix is untouched: the appended columns are stored and sorted by, but not clustered on.
+    Assertions.assertEquals(ImmutableList.of("tenant"), spec.getClusteringColumnNames());
+    Assertions.assertEquals(
+        ImmutableList.of("tenant"),
+        spec.getClusteringColumns().stream().map(DimensionSchema::getName).collect(Collectors.toList())
+    );
+    Assertions.assertEquals(
+        ImmutableList.of("region", "__time", "cnt", "city"),
+        spec.getNonClusteringColumns().stream().map(DimensionSchema::getName).collect(Collectors.toList())
+    );
+    // Rows are physically sorted by every column present, so the appended columns join the ordering at the end.
+    Assertions.assertEquals(
+        ImmutableList.of(
+            OrderBy.ascending("tenant"),
+            OrderBy.ascending("region"),
+            OrderBy.ascending("__time"),
+            OrderBy.ascending("cnt"),
+            OrderBy.ascending("city")
+        ),
+        spec.getOrdering()
+    );
+    Assertions.assertEquals(spec.getColumns(), spec.getDimensionsSpec().getDimensions());
+  }
+
+  @Test
+  void testWithAdditionalColumnsNullAndEmptyAreNoOps()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = tenantSpec();
+    Assertions.assertSame(spec, spec.withAdditionalColumns(null));
+    Assertions.assertSame(spec, spec.withAdditionalColumns(Collections.emptyList()));
+  }
+
+  @Test
+  void testWithAdditionalColumnsKeepsVirtualColumnsAndQueryGranularity()
+  {
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .columns(
+            new StringDimensionSchema("tenant"),
+            new StringDimensionSchema("region"),
+            new StringDimensionSchema("region_upper"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant")
+        .build()
+        .withQueryGranularity(Granularities.HOUR)
+        .withAdditionalColumns(ImmutableList.of(new LongDimensionSchema("cnt")));
+
+    Assertions.assertNotNull(spec.getVirtualColumns().getVirtualColumn("region_upper"));
+    Assertions.assertEquals(Granularities.HOUR, spec.getQueryGranularity());
+    Assertions.assertEquals("cnt", spec.getColumns().get(spec.getColumns().size() - 1).getName());
+  }
+
+  @Test
+  void testWithAdditionalColumnsRejectsTimeColumn()
+  {
+    // __time marks a position in the column list, so it can never arrive as an appended extra.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withAdditionalColumns(ImmutableList.of(new LongDimensionSchema("__time")))
+    );
+    Assertions.assertTrue(e.getMessage().contains("[__time]"));
+  }
+
+  @Test
+  void testWithAdditionalColumnsRejectsDuplicateOfDeclaredColumn()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> tenantSpec().withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("region")))
+    );
+    Assertions.assertTrue(e.getMessage().contains("duplicate name [region]"));
+  }
+
+  @Test
+  void testWithAdditionalColumnsRejectsDuplicateOfVirtualColumnOutput()
+  {
+    // region_upper is materialized by a virtual column, so an incoming column of the same name is not an extra; it is a
+    // collision with a column the spec already declares.
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .virtualColumns(VirtualColumns.create(
+                new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+            ))
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new StringDimensionSchema("region_upper"),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tenant")
+            .build()
+            .withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("region_upper")))
+    );
+    Assertions.assertTrue(e.getMessage().contains("duplicate name [region_upper]"));
   }
 
   /**
