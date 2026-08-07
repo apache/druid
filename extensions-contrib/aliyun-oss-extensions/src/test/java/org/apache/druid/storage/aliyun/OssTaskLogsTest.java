@@ -422,8 +422,8 @@ public class OssTaskLogsTest extends EasyMockSupport
     OssInputDataConfig inputDataConfig = new OssInputDataConfig();
     OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
 
-    String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
-    File logFile = new File(tempFolder, "test_log_file");
+    final String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
+    final File logFile = new File(tempFolder, "test_log_file");
     Assertions.assertTrue(logFile.createNewFile());
 
     taskLogs.pushTaskLog(taskId, logFile);

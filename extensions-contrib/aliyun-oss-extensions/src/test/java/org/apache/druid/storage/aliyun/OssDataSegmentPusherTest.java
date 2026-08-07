@@ -90,7 +90,7 @@ public class OssDataSegmentPusherTest
     OssDataSegmentPusher pusher = new OssDataSegmentPusher(client, config);
 
     // Create a mock segment on disk
-    File tmp = new File(tempFolder, "version.bin");
+    final File tmp = new File(tempFolder, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
     Files.write(data, tmp);
