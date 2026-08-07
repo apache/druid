@@ -41,6 +41,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -154,6 +155,20 @@ public class GlobalTaskLockboxTest
     lockbox.syncFromStorage();
 
     validator = new TaskLockboxValidator(lockbox, taskStorage);
+  }
+
+  private static Task newKillTask(int priority)
+  {
+    return new KillUnusedSegmentsTask(
+        null,
+        "none",
+        Intervals.of("2000/3000"),
+        null,
+        Map.of(Tasks.PRIORITY_KEY, priority),
+        100,
+        null,
+        null
+    );
   }
 
   private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
@@ -1849,6 +1864,79 @@ public class GlobalTaskLockboxTest
   }
 
   @Test
+  public void testKillLockCompatibility()
+  {
+    final Task killTask = newKillTask(MEDIUM_PRIORITY);
+    final TaskLock theLock = validator.expectKillLockCreated(killTask, Intervals.of("2017/2018"));
+
+    // A KILL lock cannot coexist with another KILL lock on an overlapping interval
+    validator.expectKillLockNotGranted(newKillTask(MEDIUM_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
+
+    // A KILL lock can coexist with all other lock types
+    final TaskLock exclusiveLock = validator.expectLockCreated(
+        TaskLockType.EXCLUSIVE,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
+    );
+    final TaskLock sharedLock = validator.expectLockCreated(
+        TaskLockType.SHARED,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
+    );
+    final TaskLock replaceLock = validator.expectLockCreated(
+        TaskLockType.REPLACE,
+        Intervals.of("2017-03-01/2017-09-01"),
+        MEDIUM_PRIORITY
+    );
+    final TaskLock appendLock = validator.expectLockCreated(
+        TaskLockType.APPEND,
+        Intervals.of("2017-05-01/2017-06-01"),
+        MEDIUM_PRIORITY
+    );
+
+    validator.expectActiveLocks(theLock, exclusiveLock, sharedLock, replaceLock, appendLock);
+    validator.expectRevokedLocks();
+  }
+
+  @Test
+  public void testKillLockCanRevokeIncompatibleKillLock()
+  {
+    final TaskLock lowPriorityKillLock = validator.expectKillLockCreated(
+        newKillTask(LOW_PRIORITY),
+        Intervals.of("2017-05-01/2017-06-01")
+    );
+
+    // A higher-priority KILL lock can revoke a lower-priority KILL lock
+    final TaskLock highPriorityKillLock = validator.expectKillLockCreated(
+        newKillTask(HIGH_PRIORITY),
+        Intervals.of("2017/2018")
+    );
+
+    validator.expectActiveLocks(highPriorityKillLock);
+    validator.expectRevokedLocks(lowPriorityKillLock);
+  }
+
+  @Test
+  public void testKillLockCannotRevokeHigherPriorityKillLock()
+  {
+    validator.expectKillLockCreated(newKillTask(HIGH_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
+    validator.expectKillLockNotGranted(newKillTask(LOW_PRIORITY), Intervals.of("2017/2018"));
+  }
+
+  @Test
+  public void testOnlyKillTaskCanAcquireKillLock()
+  {
+    final Task nonKillTask = NoopTask.ofPriority(MEDIUM_PRIORITY);
+    lockbox.add(nonKillTask);
+    taskStorage.insert(nonKillTask, TaskStatus.running(nonKillTask.getId()));
+
+    Assert.assertThrows(
+        ISE.class,
+        () -> lockbox.tryLock(nonKillTask, new TimeChunkLockRequest(TaskLockType.KILL, nonKillTask, Intervals.of("2017/2018"), null))
+    );
+  }
+
+  @Test
   public void testTimechunkLockTypeTransitionForSameTaskGroup()
   {
     Task task = NoopTask.create();
@@ -2157,6 +2245,20 @@ public class GlobalTaskLockboxTest
     private TaskLock tryTaskLock(TaskLockType type, Interval interval, int priority)
     {
       return tryTaskLock(type, NoopTask.ofPriority(priority), interval);
+    }
+
+    public TaskLock expectKillLockCreated(Task killTask, Interval interval)
+    {
+      final TaskLock lock = tryTaskLock(TaskLockType.KILL, killTask, interval);
+      Assert.assertNotNull(lock);
+      Assert.assertFalse(lock.isRevoked());
+      return lock;
+    }
+
+    public void expectKillLockNotGranted(Task killTask, Interval interval)
+    {
+      final TaskLock lock = tryTaskLock(TaskLockType.KILL, killTask, interval);
+      Assert.assertNull(lock);
     }
 
     private Set<TaskLock> getAllActiveLocks()
