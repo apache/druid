@@ -34,6 +34,7 @@ import org.junit.Assert;
 
 import java.util.ArrayDeque;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 
 /**
@@ -50,12 +51,15 @@ public class MockServiceClient implements ServiceClient
       final HttpResponseHandler<IntermediateType, FinalType> handler
   )
   {
-    final Expectation expectation = expectations.poll();
+    final Expectation expectation = Objects.requireNonNull(
+        expectations.poll(),
+        "No expectation configured for the next request"
+    );
 
     requestNumber++;
     Assert.assertEquals(
         "request[" + requestNumber + "]",
-        expectation == null ? null : expectation.request,
+        expectation.request,
         requestBuilder
     );
 

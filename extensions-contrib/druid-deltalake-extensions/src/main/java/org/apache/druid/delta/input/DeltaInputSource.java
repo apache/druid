@@ -61,6 +61,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -160,7 +161,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
         final StructType fullSnapshotSchema = snapshot.getSchema(engine);
         final StructType prunedSchema = pruneSchema(
             fullSnapshotSchema,
-            inputRowSchema.getColumnsFilter()
+            Objects.requireNonNull(inputRowSchema, "inputRowSchema").getColumnsFilter()
         );
 
         final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine);
