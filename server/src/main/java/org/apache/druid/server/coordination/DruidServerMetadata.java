@@ -22,6 +22,7 @@ package org.apache.druid.server.coordination;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -74,6 +75,18 @@ public class DruidServerMetadata
   public String getHost()
   {
     return getHostAndTlsPort() != null ? getHostAndTlsPort() : getHostAndPort();
+  }
+
+  /**
+   * Base URL used to reach this server over HTTP, preferring TLS when the server announced a TLS port.
+   */
+  public String getURL()
+  {
+    if (getHostAndTlsPort() != null) {
+      return StringUtils.nonStrictFormat("https://%s", getHostAndTlsPort());
+    } else {
+      return StringUtils.nonStrictFormat("http://%s", getHostAndPort());
+    }
   }
 
   @Nullable
