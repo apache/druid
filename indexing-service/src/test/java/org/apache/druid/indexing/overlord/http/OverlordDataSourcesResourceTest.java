@@ -43,7 +43,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 public class OverlordDataSourcesResourceTest
 {
@@ -210,7 +209,7 @@ public class OverlordDataSourcesResourceTest
     final String version2 = WIKI_SEGMENTS_10X1D.get(0).getVersion() + "__2";
     final List<DataSegment> wikiSegmentsV2 = WIKI_SEGMENTS_10X1D.stream().map(
         segment -> DataSegment.builder(segment).version(version2).build()
-    ).collect(Collectors.toList());
+    ).toList();
 
     storageCoordinator.commitSegments(Set.copyOf(wikiSegmentsV2), null);
 
