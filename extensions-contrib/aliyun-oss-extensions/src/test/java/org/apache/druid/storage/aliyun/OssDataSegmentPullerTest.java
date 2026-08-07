@@ -210,9 +210,7 @@ public class OssDataSegmentPullerTest
   {
     final String subFolder = String.join("/", subDirs);
     final File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
+    FileUtils.mkdirp(result);
     return result;
   }
 
