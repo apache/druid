@@ -66,7 +66,7 @@ public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache
   };
 
   @BeforeEach
-  public void setUp() throws IOException
+  public void initializeCache() throws IOException
   {
     server = RedisServer.newRedisServer().start();
     JedisPool pool = new JedisPool(server.getHost(), server.getBindPort());
@@ -74,7 +74,7 @@ public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache
   }
 
   @AfterEach
-  public void tearDown() throws IOException
+  public void closeCache() throws IOException
   {
     server.stop();
   }

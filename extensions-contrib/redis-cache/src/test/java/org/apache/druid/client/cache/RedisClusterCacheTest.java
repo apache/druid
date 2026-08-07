@@ -60,7 +60,7 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
   private RedisServer server;
 
   @BeforeEach
-  public void setUp() throws IOException
+  public void initializeCache() throws IOException
   {
     ServiceOptions options = ServiceOptions.defaultOptions().withClusterModeEnabled();
     server = RedisServer.newRedisServer().setOptions(options).start();
@@ -70,7 +70,7 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
   }
 
   @AfterEach
-  public void tearDown() throws IOException
+  public void closeCache() throws IOException
   {
     server.stop();
   }
