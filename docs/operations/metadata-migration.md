@@ -24,7 +24,8 @@ title: "Metadata Migration"
 
 
 If you have been running an evaluation Druid cluster using the built-in Derby metadata storage and wish to migrate to a
-more production-capable metadata store such as MySQL or PostgreSQL, this document describes the necessary steps.
+more production-capable metadata store such as MySQL or PostgreSQL, or if you need to migrate metadata between
+production stores (e.g., from PostgreSQL to MySQL), this document describes the necessary steps.
 
 ## Shut down cluster services
 
@@ -35,7 +36,7 @@ When migrating from Derby, the coordinator processes will still need to be up in
 
 ## Exporting metadata
 
-Druid provides an [Export Metadata Tool](../operations/export-metadata.md) for exporting metadata from Derby into CSV files
+Druid provides an [Export Metadata Tool](../operations/export-metadata.md) for exporting metadata from Derby or PostgreSQL into CSV files
 which can then be imported into your new metadata store.
 
 The tool also provides options for rewriting the deep storage locations of segments; this is useful

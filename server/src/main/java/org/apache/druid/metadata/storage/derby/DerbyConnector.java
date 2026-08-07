@@ -36,9 +36,11 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import javax.annotation.Nullable;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Locale;
 
 @ManageLifecycle
@@ -131,24 +133,29 @@ public class DerbyConnector extends SQLMetadataConnector
   @Override
   public void exportTable(
       String tableName,
-      String outputPath
+      String outputPath,
+      @Nullable List<String> columns
   )
   {
     retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(
-                StringUtils.format(
-                    "CALL SYSCS_UTIL.SYSCS_EXPORT_TABLE (null, '%s', '%s', null, null, null)",
-                    tableName,
-                    outputPath
-                )
-            ).execute();
-            return null;
+        (HandleCallback<Void>) handle -> {
+          final String statement;
+          if (columns == null || columns.isEmpty()) {
+            statement = StringUtils.format(
+                "CALL SYSCS_UTIL.SYSCS_EXPORT_TABLE (null, '%s', '%s', null, null, null)",
+                tableName,
+                outputPath
+            );
+          } else {
+            statement = StringUtils.format(
+                "CALL SYSCS_UTIL.SYSCS_EXPORT_QUERY ('SELECT %s FROM %s', '%s', null, null, null)",
+                makeExportSelectList(handle.getConnection(), columns),
+                tableName,
+                outputPath
+            );
           }
+          handle.createStatement(statement).execute();
+          return null;
         }
     );
   }

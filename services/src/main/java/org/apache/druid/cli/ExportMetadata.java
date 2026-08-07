@@ -29,13 +29,16 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.opencsv.CSVParser;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
@@ -55,13 +58,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Command(
     name = "export-metadata",
-    description = "Exports the contents of a Druid Derby metadata store to CSV files to assist with cluster migration. This tool also provides the ability to rewrite segment locations in the Derby metadata to assist with deep storage migration."
+    description = "Exports the contents of a Druid metadata store (Derby or PostgreSQL) to CSV files to assist with cluster migration. This tool also provides the ability to rewrite segment locations in the metadata to assist with deep storage migration."
 )
 public class ExportMetadata extends GuiceRunnable
 {
@@ -120,9 +125,30 @@ public class ExportMetadata extends GuiceRunnable
       description = "Write boolean values as true/false strings instead of 1/0")
   public boolean booleansAsStrings = false;
 
-  private static final Logger log = new Logger(ExportMetadata.class);
+  /**
+   * Canonical order in which the columns of the segments table are exported, matching the import
+   * commands documented in {@code docs/operations/export-metadata.md}. Columns which do not exist in
+   * the source table are skipped, and any column not listed here is appended after these, in the
+   * order reported by the source database.
+   */
+  private static final List<String> SEGMENTS_COLUMN_ORDER = ImmutableList.of(
+      "id",
+      "dataSource",
+      "created_date",
+      "start",
+      "end",
+      "partitioned",
+      "version",
+      "used",
+      "payload",
+      "used_status_last_updated",
+      "indexing_state_fingerprint",
+      "upgraded_from_segment_id",
+      "schema_fingerprint",
+      "num_rows"
+  );
 
-  private static final CSVParser PARSER = new CSVParser();
+  private static final Logger log = new Logger(ExportMetadata.class);
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
@@ -217,7 +243,7 @@ public class ExportMetadata extends GuiceRunnable
     rewriteDatasourceExport(metadataStorageTablesConfig.getDataSourceTable());
 
     log.info("Exporting segments table: " + metadataStorageTablesConfig.getSegmentsTable());
-    exportTable(dbConnector, metadataStorageTablesConfig.getSegmentsTable(), true);
+    exportSegmentsTable(dbConnector, metadataStorageTablesConfig.getSegmentsTable());
     rewriteSegmentsExport(metadataStorageTablesConfig.getSegmentsTable());
 
     log.info("Exporting rules table: " + metadataStorageTablesConfig.getRulesTable());
@@ -245,10 +271,63 @@ public class ExportMetadata extends GuiceRunnable
     } else {
       pathFormatString = "%s/%s.csv";
     }
+    final String exportTableName = isDerby() ? StringUtils.toUpperCase(tableName) : tableName;
     dbConnector.exportTable(
-        StringUtils.toUpperCase(tableName),
+        exportTableName,
         StringUtils.format(pathFormatString, outputPath, tableName)
     );
+  }
+
+  /**
+   * Exports the segments table with the columns emitted in {@link #SEGMENTS_COLUMN_ORDER}, so that the
+   * output does not depend on the physical column order of the source table.
+   */
+  private void exportSegmentsTable(
+      SQLMetadataConnector dbConnector,
+      String tableName
+  )
+  {
+    final String exportTableName = isDerby() ? StringUtils.toUpperCase(tableName) : tableName;
+    final List<String> columns = orderSegmentsColumns(dbConnector.getTableColumns(exportTableName));
+    if (columns.isEmpty()) {
+      throw new ISE(
+          "Could not read the columns of table[%s]. Cannot export the segments table in a stable column order.",
+          exportTableName
+      );
+    }
+
+    dbConnector.exportTable(
+        exportTableName,
+        StringUtils.format("%s/%s_raw.csv", outputPath, tableName),
+        columns
+    );
+  }
+
+  /**
+   * Orders the given actual column names of the segments table by {@link #SEGMENTS_COLUMN_ORDER},
+   * appending any unknown columns at the end in their original order.
+   */
+  static List<String> orderSegmentsColumns(List<String> actualColumns)
+  {
+    final Map<String, String> remaining = new LinkedHashMap<>();
+    for (String column : actualColumns) {
+      remaining.put(StringUtils.toLowerCase(column), column);
+    }
+
+    final List<String> ordered = new ArrayList<>(actualColumns.size());
+    for (String column : SEGMENTS_COLUMN_ORDER) {
+      final String actualColumn = remaining.remove(StringUtils.toLowerCase(column));
+      if (actualColumn != null) {
+        ordered.add(actualColumn);
+      }
+    }
+    ordered.addAll(remaining.values());
+    return ordered;
+  }
+
+  private boolean isDerby()
+  {
+    return connectURI != null && connectURI.startsWith("jdbc:derby");
   }
 
   private void rewriteDatasourceExport(
@@ -258,19 +337,15 @@ public class ExportMetadata extends GuiceRunnable
     String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, datasourceTableName);
     String outFile = StringUtils.format("%s/%s.csv", outputPath, datasourceTableName);
     try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
+        CSVReader reader = openCsvReader(inFile);
         OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //dataSource
-                         + parsed[1] + "," //created_date
+      String[] parsed;
+      while ((parsed = readRecord(reader, inFile, 4)) != null) {
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //dataSource
+                         + SQLMetadataConnector.csvEscape(parsed[1]) + "," //created_date
                          + rewriteHexPayloadAsEscapedJson(parsed[2]) + "," //commit_metadata_payload
-                         + parsed[3] //commit_metadata_sha1
+                         + SQLMetadataConnector.csvEscape(parsed[3]) //commit_metadata_sha1
                          + "\n";
         writer.write(newLine);
 
@@ -288,18 +363,14 @@ public class ExportMetadata extends GuiceRunnable
     String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, rulesTableName);
     String outFile = StringUtils.format("%s/%s.csv", outputPath, rulesTableName);
     try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
+        CSVReader reader = openCsvReader(inFile);
         OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //id
-                         + parsed[1] + "," //dataSource
-                         + parsed[2] + "," //version
+      String[] parsed;
+      while ((parsed = readRecord(reader, inFile, 4)) != null) {
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //id
+                         + SQLMetadataConnector.csvEscape(parsed[1]) + "," //dataSource
+                         + SQLMetadataConnector.csvEscape(parsed[2]) + "," //version
                          + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
                          + "\n";
         writer.write(newLine);
@@ -318,16 +389,12 @@ public class ExportMetadata extends GuiceRunnable
     String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, configTableName);
     String outFile = StringUtils.format("%s/%s.csv", outputPath, configTableName);
     try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
+        CSVReader reader = openCsvReader(inFile);
         OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //name
+      String[] parsed;
+      while ((parsed = readRecord(reader, inFile, 2)) != null) {
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //name
                          + rewriteHexPayloadAsEscapedJson(parsed[1]) //payload
                          + "\n";
         writer.write(newLine);
@@ -346,18 +413,14 @@ public class ExportMetadata extends GuiceRunnable
     String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, supervisorTableName);
     String outFile = StringUtils.format("%s/%s.csv", outputPath, supervisorTableName);
     try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
+        CSVReader reader = openCsvReader(inFile);
         OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //id
-                         + parsed[1] + "," //spec_id
-                         + parsed[2] + "," //created_date
+      String[] parsed;
+      while ((parsed = readRecord(reader, inFile, 4)) != null) {
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //id
+                         + SQLMetadataConnector.csvEscape(parsed[1]) + "," //spec_id
+                         + SQLMetadataConnector.csvEscape(parsed[2]) + "," //created_date
                          + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
                          + "\n";
         writer.write(newLine);
@@ -370,35 +433,39 @@ public class ExportMetadata extends GuiceRunnable
   }
 
 
-  private void rewriteSegmentsExport(
+  void rewriteSegmentsExport(
       String segmentsTableName
   )
   {
     String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, segmentsTableName);
     String outFile = StringUtils.format("%s/%s.csv", outputPath, segmentsTableName);
     try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
+        CSVReader reader = openCsvReader(inFile);
         OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
     ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
+      String[] parsed;
+      while ((parsed = readRecord(reader, inFile, 9)) != null) {
         StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //id
-        newLineBuilder.append(parsed[1]).append(","); //dataSource
-        newLineBuilder.append(parsed[2]).append(","); //created_date
-        newLineBuilder.append(parsed[3]).append(","); //start
-        newLineBuilder.append(parsed[4]).append(","); //end
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[0])).append(","); //id
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[1])).append(","); //dataSource
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[2])).append(","); //created_date
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[3])).append(","); //start
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[4])).append(","); //end
         newLineBuilder.append(convertBooleanString(parsed[5])).append(","); //partitioned
-        newLineBuilder.append(parsed[6]).append(","); //version
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[6])).append(","); //version
         newLineBuilder.append(convertBooleanString(parsed[7])).append(","); //used
 
         if (s3Bucket != null || hadoopStorageDirectory != null || newLocalPath != null) {
           newLineBuilder.append(makePayloadWithConvertedLoadSpec(parsed[8]));
         } else {
           newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[8])); //payload
+        }
+
+        // Preserve any additional columns after payload (e.g. used_status_last_updated,
+        // indexing_state_fingerprint, upgraded_from_segment_id, schema_fingerprint, num_rows)
+        for (int i = 9; i < parsed.length; i++) {
+          newLineBuilder.append(",");
+          newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[i]));
         }
         newLineBuilder.append("\n");
         writer.write(newLineBuilder.toString());
@@ -408,6 +475,50 @@ public class ExportMetadata extends GuiceRunnable
     catch (IOException ioex) {
       throw new RuntimeException(ioex);
     }
+  }
+
+  /**
+   * Opens a record-aware CSV reader on the given file. A single CSV record may span multiple physical
+   * lines if a field value contains a newline, so records must be read with
+   * {@link CSVReader#readNext()} rather than by reading one line at a time.
+   *
+   * The parser follows RFC 4180, matching the output written by the export stage: quotes are doubled and
+   * backslashes are not escape characters. Carriage returns are kept, so that a carriage return which is
+   * part of a value is preserved rather than silently dropped. This relies on the raw CSV using LF line
+   * endings, which is the case for the files written by the export stage.
+   */
+  private static CSVReader openCsvReader(String inFile) throws IOException
+  {
+    return new CSVReaderBuilder(
+        new BufferedReader(new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8))
+    )
+        .withCSVParser(new RFC4180ParserBuilder().build())
+        .withKeepCarriageReturn(true)
+        .build();
+  }
+
+  /**
+   * Reads the next record of the given reader, or returns null at the end of the file.
+   *
+   * @param minFields minimum number of fields the record must have, to fail with a useful message
+   *                  instead of an {@link ArrayIndexOutOfBoundsException} on a malformed file
+   */
+  private static String[] readRecord(CSVReader reader, String inFile, int minFields) throws IOException
+  {
+    final String[] record = reader.readNext();
+    if (record == null) {
+      return null;
+    }
+    if (record.length < minFields) {
+      throw new ISE(
+          "Row[%d] of file[%s] has [%d] fields, expected at least [%d].",
+          reader.getLinesRead(),
+          inFile,
+          record.length,
+          minFields
+      );
+    }
+    return record;
   }
 
   /**
