@@ -77,10 +77,9 @@ import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.testing.junit5.JUnit5Assertions;
-import org.apache.druid.testing.junit5.TempDirExtension;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import javax.validation.Validation;
@@ -100,8 +99,8 @@ import static org.easymock.EasyMock.mock;
 
 public class CliPeonTest
 {
-  @RegisterExtension
-  public final TempDirExtension temporaryFolder = new TempDirExtension();
+  @TempDir
+  public File temporaryFolder;
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -201,7 +200,7 @@ public class CliPeonTest
   public void testCliPeonLocalTmpStorage() throws IOException
   {
     final Properties properties = new Properties();
-    File file = temporaryFolder.newFile("task.json");
+    final File file = new File(temporaryFolder, "task.json");
     FileUtils.write(file, mapper.writeValueAsString(NoopTask.create()), StandardCharsets.UTF_8);
     final Injector peonInjector = makePeonInjector(file, properties);
 
@@ -319,9 +318,9 @@ public class CliPeonTest
     return peon.makeInjector(Set.of(NodeRole.PEON));
   }
 
-  public static Injector makePeonInjectorWithStubEmitter(Task task, TempDirExtension temporaryFolder, ObjectMapper mapper) throws IOException
+  public static Injector makePeonInjectorWithStubEmitter(Task task, File temporaryFolder, ObjectMapper mapper) throws IOException
   {
-    File taskFile = temporaryFolder.newFile("task.json");
+    final File taskFile = new File(temporaryFolder, "task.json");
     FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
 
     final Properties properties = new Properties();
@@ -358,7 +357,7 @@ public class CliPeonTest
 
   private Injector makePeonInjector(Task task, Properties properties) throws IOException
   {
-    File taskFile = temporaryFolder.newFile("task.json");
+    final File taskFile = new File(temporaryFolder, "task.json");
     FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
     return makePeonInjector(taskFile, properties);
   }
