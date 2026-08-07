@@ -639,7 +639,7 @@ public class KafkaEmitterTest
       final Map<String, List<EventMap>> feedToActualEvents
   )
   {
-    Assertions.assertEquals(feedToExpectedEvents.size(), feedToActualEvents.size());
+    Assertions.assertEquals(feedToExpectedEvents.keySet(), feedToActualEvents.keySet());
 
     for (final Map.Entry<String, List<EventMap>> actualEntry : feedToActualEvents.entrySet()) {
       final String feed = actualEntry.getKey();

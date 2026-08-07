@@ -81,7 +81,7 @@ public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
   @Test
   public void testWithMapColumn()
   {
-    Throwable exception = assertThrows(UnsupportedOperationException.class, () -> {
+    final Throwable exception = assertThrows(UnsupportedOperationException.class, () -> {
       final TopNQuery query = new TopNQuery(
           new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
           VirtualColumns.create(
