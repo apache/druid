@@ -20,26 +20,27 @@
 package org.apache.druid.cli;
 
 import com.google.inject.Injector;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.util.Locale;
 
 public class CreateTablesTest
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
-      = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public final JUnit5TestDerbyConnector derbyConnectorRule
+      = new JUnit5TestDerbyConnector();
 
   private TestDerbyConnector connector;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.connector = derbyConnectorRule.getConnector();
@@ -49,18 +50,18 @@ public class CreateTablesTest
   public void testRunCreatesAllTables()
   {
     final MetadataStorageTablesConfig config = derbyConnectorRule.metadataTablesConfigSupplier().get();
-    Assert.assertNotNull(config);
+    JUnit5Assertions.assertNotNull(config);
 
     // Verify that tables do not exist before starting
-    Assert.assertFalse(tableExists(config.getDataSourceTable()));
-    Assert.assertFalse(tableExists(config.getSegmentsTable()));
-    Assert.assertFalse(tableExists(config.getPendingSegmentsTable()));
-    Assert.assertFalse(tableExists(config.getUpgradeSegmentsTable()));
-    Assert.assertFalse(tableExists(config.getConfigTable()));
-    Assert.assertFalse(tableExists(config.getRulesTable()));
-    Assert.assertFalse(tableExists(config.getAuditTable()));
-    Assert.assertFalse(tableExists(config.getSupervisorTable()));
-    Assert.assertFalse(tableExists(config.getTaskLockTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getDataSourceTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getSegmentsTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getPendingSegmentsTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getUpgradeSegmentsTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getConfigTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getRulesTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getAuditTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getSupervisorTable()));
+    JUnit5Assertions.assertFalse(tableExists(config.getTaskLockTable()));
 
     // Run CreateTables
     CreateTables createTables = new CreateTables()
@@ -76,15 +77,15 @@ public class CreateTablesTest
     createTables.run();
 
     // Verify that tables have now been created
-    Assert.assertTrue(tableExists(config.getDataSourceTable()));
-    Assert.assertTrue(tableExists(config.getSegmentsTable()));
-    Assert.assertTrue(tableExists(config.getPendingSegmentsTable()));
-    Assert.assertTrue(tableExists(config.getUpgradeSegmentsTable()));
-    Assert.assertTrue(tableExists(config.getConfigTable()));
-    Assert.assertTrue(tableExists(config.getRulesTable()));
-    Assert.assertTrue(tableExists(config.getAuditTable()));
-    Assert.assertTrue(tableExists(config.getSupervisorTable()));
-    Assert.assertTrue(tableExists(config.getTaskLockTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getDataSourceTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getSegmentsTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getPendingSegmentsTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getUpgradeSegmentsTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getConfigTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getRulesTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getAuditTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getSupervisorTable()));
+    JUnit5Assertions.assertTrue(tableExists(config.getTaskLockTable()));
   }
 
   private boolean tableExists(String tableName)

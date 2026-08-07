@@ -34,9 +34,9 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.testing.cluster.overlord.FaultyLagAggregator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedMetricEventPredicates;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
-import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
@@ -141,10 +141,11 @@ public class FaultyClusterTest extends StreamIndexTestBase
 
     // Wait for supervisor to report the expected lag
     final long expectedLag = (long) totalPublishedRecords * lagMultiplier;
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("ingest/kafka/lag")
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisorSpec.getId())
-                      .hasValueMatching(Matchers.greaterThanOrEqualTo(expectedLag))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        "ingest/kafka/lag",
+        Map.of(DruidMetrics.SUPERVISOR_ID, supervisorSpec.getId()),
+        value -> value >= expectedLag
     );
 
     final String path = StringUtils.format("/druid/indexer/v1/supervisor/%s/status", supervisorSpec.getId());

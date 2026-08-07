@@ -35,10 +35,10 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.apache.druid.testing.junit5.TempDirExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -48,8 +48,8 @@ import java.util.Collections;
 
 public class ValidateSegmentsTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public TempDirExtension temporaryFolder = new TempDirExtension();
 
   @Test
   public void testValidateSegments() throws IOException
@@ -109,9 +109,9 @@ public class ValidateSegmentsTest extends InitializedNullHandlingTest
         Collections.emptySet(),
         validator.getModules()
     );
-    Assert.assertNotNull(injector.getInstance(ColumnConfig.class));
-    Assert.assertEquals("druid/tool", injector.getInstance(Key.get(String.class, Names.named("serviceName"))));
-    Assert.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
-    Assert.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
+    JUnit5Assertions.assertNotNull(injector.getInstance(ColumnConfig.class));
+    JUnit5Assertions.assertEquals(injector.getInstance(Key.get(String.class, Names.named("serviceName"))), "druid/tool");
+    JUnit5Assertions.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
+    JUnit5Assertions.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
   }
 }

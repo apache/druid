@@ -39,11 +39,11 @@ import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedDruidServer;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedMetricEventPredicates;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.Assertions;
@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 /**
@@ -128,10 +129,11 @@ public class HighAvailabilityTest extends EmbeddedClusterTestBase
         .dimensions()
         .withId(taskId);
     cluster.callApi().runTask(task, overlord1);
-    coordinator1.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/metadataCache/used/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueMatching(Matchers.greaterThanOrEqualTo(10L))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        coordinator1.latchableEmitter(),
+        "segment/metadataCache/used/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource),
+        value -> value >= 10L
     );
 
     // Run sys queries, switch leaders, repeat

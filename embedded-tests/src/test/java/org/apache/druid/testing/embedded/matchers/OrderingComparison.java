@@ -17,15 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.testing.embedded.matchers;
 
-import org.junit.jupiter.api.Test;
-
-public class CliMainTest
+public class OrderingComparison
 {
-  @Test
-  public void testHelp()
+  private OrderingComparison()
   {
-    Main.main(new String[]{"help"});
+  }
+
+  public static <T extends Comparable<T>> Matcher<T> greaterThanOrEqualTo(final T expected)
+  {
+    return Matchers.greaterThanOrEqualTo(expected);
+  }
+
+  public static <T extends Comparable<T>> Matcher<T> lessThanOrEqualTo(final T expected)
+  {
+    return Matchers.lessThanOrEqualTo(expected);
   }
 }

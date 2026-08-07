@@ -17,15 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.testing.embedded.matchers;
 
-import org.junit.jupiter.api.Test;
-
-public class CliMainTest
+public class ThrowableCauseMatcher
 {
-  @Test
-  public void testHelp()
+  private ThrowableCauseMatcher()
   {
-    Main.main(new String[]{"help"});
+  }
+
+  public static Matcher<Throwable> hasCause(final Matcher<? super Throwable> causeMatcher)
+  {
+    return throwable -> throwable instanceof Throwable && causeMatcher.matches(((Throwable) throwable).getCause());
   }
 }

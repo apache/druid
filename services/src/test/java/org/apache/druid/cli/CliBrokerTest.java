@@ -41,11 +41,12 @@ import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.jackson.JacksonModule;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -59,15 +60,15 @@ public class CliBrokerTest
     final Injector injector = makeBrokerInjector(new Properties());
 
     final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
-    Assert.assertNotNull(historicalBalancer);
-    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertNotNull(historicalBalancer);
+    JUnit5Assertions.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
 
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
-    Assert.assertNotNull(realtimeBalancer);
-    Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
-    Assert.assertSame(realtimeBalancer, historicalBalancer);
+    JUnit5Assertions.assertNotNull(realtimeBalancer);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertSame(realtimeBalancer, historicalBalancer);
   }
 
   @Test
@@ -76,9 +77,9 @@ public class CliBrokerTest
     final Injector injector = makeBrokerInjector(new Properties());
     TierSelectorStrategy historicalTierSelector = injector.getInstance(TierSelectorStrategy.class);
     TierSelectorStrategy realtimeTierSelector = injector.getInstance(Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR)));
-    Assert.assertTrue(historicalTierSelector instanceof HighestPriorityTierSelectorStrategy);
-    Assert.assertTrue(realtimeTierSelector instanceof HighestPriorityTierSelectorStrategy);
-    Assert.assertSame(realtimeTierSelector, historicalTierSelector);
+    JUnit5Assertions.assertTrue(historicalTierSelector instanceof HighestPriorityTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeTierSelector instanceof HighestPriorityTierSelectorStrategy);
+    JUnit5Assertions.assertSame(realtimeTierSelector, historicalTierSelector);
   }
 
   @Test
@@ -88,8 +89,8 @@ public class CliBrokerTest
     properties.setProperty("druid.broker.select.tier", "lowestPriority");
 
     final Injector injector = makeBrokerInjector(properties);
-    Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof LowestPriorityTierSelectorStrategy);
-    Assert.assertTrue(
+    JUnit5Assertions.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof LowestPriorityTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(
         injector.getInstance(Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR)))
         instanceof LowestPriorityTierSelectorStrategy
     );
@@ -109,15 +110,15 @@ public class CliBrokerTest
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(realtime instanceof CustomTierSelectorStrategy);
-    Assert.assertEquals(List.of(2, 1, 0), ((CustomTierSelectorStrategy) realtime).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(realtime instanceof CustomTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(2, 1, 0), ((CustomTierSelectorStrategy) realtime).getConfig().getPriorities());
 
-    Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
 
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
-    Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
   }
 
   @Test
@@ -139,11 +140,11 @@ public class CliBrokerTest
     );
 
     // Verify tier selector strategies with strategy-specific config paths
-    Assert.assertTrue(historical instanceof CustomTierSelectorStrategy);
-    Assert.assertEquals(List.of(0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(historical instanceof CustomTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
 
-    Assert.assertTrue(realtime instanceof CustomTierSelectorStrategy);
-    Assert.assertEquals(List.of(2, 1), ((CustomTierSelectorStrategy) realtime).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(realtime instanceof CustomTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(2, 1), ((CustomTierSelectorStrategy) realtime).getConfig().getPriorities());
 
     // Verify different server selector strategies
     final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
@@ -151,8 +152,8 @@ public class CliBrokerTest
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
-    Assert.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
   }
 
 
@@ -168,13 +169,13 @@ public class CliBrokerTest
     final Injector injector = makeBrokerInjector(properties);
 
     final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
-    Assert.assertTrue(historical instanceof CustomTierSelectorStrategy);
-    Assert.assertEquals(List.of(0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(historical instanceof CustomTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
 
     final TierSelectorStrategy realtime = injector.getInstance(
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
-    Assert.assertTrue(realtime instanceof LowestPriorityTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtime instanceof LowestPriorityTierSelectorStrategy);
   }
 
 
@@ -193,12 +194,12 @@ public class CliBrokerTest
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
-    Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
 
     final TierSelectorStrategy historical = injector.getInstance(TierSelectorStrategy.class);
-    Assert.assertTrue(historical instanceof CustomTierSelectorStrategy);
-    Assert.assertEquals(List.of(0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(historical instanceof CustomTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(0), ((CustomTierSelectorStrategy) historical).getConfig().getPriorities());
   }
 
   @Test
@@ -221,23 +222,23 @@ public class CliBrokerTest
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historical instanceof PreferredTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(historical instanceof PreferredTierSelectorStrategy);
     PreferredTierSelectorStrategyConfig historicalPreferredTierConfig = ((PreferredTierSelectorStrategy) historical).getConfig();
-    Assert.assertEquals("historical-tier", historicalPreferredTierConfig.getTier());
-    Assert.assertEquals("highest", historicalPreferredTierConfig.getPriority());
+    JUnit5Assertions.assertEquals(historicalPreferredTierConfig.getTier(), "historical-tier");
+    JUnit5Assertions.assertEquals(historicalPreferredTierConfig.getPriority(), "highest");
 
-    Assert.assertTrue(realtime instanceof PreferredTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtime instanceof PreferredTierSelectorStrategy);
     PreferredTierSelectorStrategyConfig realtimePreferredTierConfig = ((PreferredTierSelectorStrategy) realtime).getConfig();
-    Assert.assertEquals("realtime-tier", realtimePreferredTierConfig.getTier());
-    Assert.assertEquals("lowest", realtimePreferredTierConfig.getPriority());
+    JUnit5Assertions.assertEquals(realtimePreferredTierConfig.getTier(), "realtime-tier");
+    JUnit5Assertions.assertEquals(realtimePreferredTierConfig.getPriority(), "lowest");
 
     final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
-    Assert.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
   }
 
   @Test
@@ -254,22 +255,22 @@ public class CliBrokerTest
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historical instanceof PreferredTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(historical instanceof PreferredTierSelectorStrategy);
     PreferredTierSelectorStrategyConfig historicalPreferredTierConfig = ((PreferredTierSelectorStrategy) historical).getConfig();
-    Assert.assertEquals("default-tier", historicalPreferredTierConfig.getTier());
-    Assert.assertEquals("highest", historicalPreferredTierConfig.getPriority());
+    JUnit5Assertions.assertEquals(historicalPreferredTierConfig.getTier(), "default-tier");
+    JUnit5Assertions.assertEquals(historicalPreferredTierConfig.getPriority(), "highest");
 
-    Assert.assertTrue(realtime instanceof PreferredTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtime instanceof PreferredTierSelectorStrategy);
     PreferredTierSelectorStrategyConfig realtimePreferredTierConfig = ((PreferredTierSelectorStrategy) realtime).getConfig();
-    Assert.assertSame(realtimePreferredTierConfig, historicalPreferredTierConfig);
+    JUnit5Assertions.assertSame(realtimePreferredTierConfig, historicalPreferredTierConfig);
 
     final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
-    Assert.assertSame(realtimeBalancer, historicalBalancer);
+    JUnit5Assertions.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertSame(realtimeBalancer, historicalBalancer);
   }
 
   @Test
@@ -286,16 +287,16 @@ public class CliBrokerTest
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(realtime instanceof StrictTierSelectorStrategy);
-    Assert.assertEquals(List.of(2, 1, 0), ((StrictTierSelectorStrategy) realtime).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(realtime instanceof StrictTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(2, 1, 0), ((StrictTierSelectorStrategy) realtime).getConfig().getPriorities());
 
     // Historical should use default (highest priority)
-    Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
 
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
-    Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
   }
 
   @Test
@@ -316,11 +317,11 @@ public class CliBrokerTest
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historical instanceof StrictTierSelectorStrategy);
-    Assert.assertEquals(List.of(0, 1), ((StrictTierSelectorStrategy) historical).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(historical instanceof StrictTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(0, 1), ((StrictTierSelectorStrategy) historical).getConfig().getPriorities());
 
-    Assert.assertTrue(realtime instanceof StrictTierSelectorStrategy);
-    Assert.assertEquals(List.of(2, 1, 0), ((StrictTierSelectorStrategy) realtime).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(realtime instanceof StrictTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(List.of(2, 1, 0), ((StrictTierSelectorStrategy) realtime).getConfig().getPriorities());
   }
 
   @Test
@@ -331,16 +332,16 @@ public class CliBrokerTest
     properties.setProperty("druid.broker.realtime.select.tier", "strict");
 
     final Injector injector = makeBrokerInjector(properties);
-    ProvisionException e1 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(TierSelectorStrategy.class));
-    Assert.assertTrue(e1.getMessage().contains(
+    ProvisionException e1 = JUnit5Assertions.assertThrows(ProvisionException.class, () -> injector.getInstance(TierSelectorStrategy.class));
+    JUnit5Assertions.assertTrue(e1.getMessage().contains(
         "Problem parsing object at prefix[druid.broker.select.tier.strict]: Cannot construct instance of"
         + " `StrictTierSelectorStrategyConfig`, problem: priorities must be non-empty when using strict tier selector on the Broker. Found priorities[null]."
     ));
 
-    ProvisionException e2 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(
+    ProvisionException e2 = JUnit5Assertions.assertThrows(ProvisionException.class, () -> injector.getInstance(
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     ));
-    Assert.assertTrue(e2.getMessage().contains(
+    JUnit5Assertions.assertTrue(e2.getMessage().contains(
         "Problem parsing object at prefix[druid.broker.realtime.select.tier.strict]: Cannot construct instance of"
         + " `StrictTierSelectorStrategyConfig`, problem: priorities must be non-empty when using strict tier selector on the Broker. Found priorities[null]."
     ));
@@ -365,11 +366,11 @@ public class CliBrokerTest
     );
 
     // Verify tier selector strategies with strategy-specific config paths
-    Assert.assertTrue(historical instanceof PooledTierSelectorStrategy);
-    Assert.assertEquals(Set.of(0), ((PooledTierSelectorStrategy) historical).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(historical instanceof PooledTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(Set.of(0), ((PooledTierSelectorStrategy) historical).getConfig().getPriorities());
 
-    Assert.assertTrue(realtime instanceof PooledTierSelectorStrategy);
-    Assert.assertEquals(Set.of(2, 1), ((PooledTierSelectorStrategy) realtime).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(realtime instanceof PooledTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(Set.of(2, 1), ((PooledTierSelectorStrategy) realtime).getConfig().getPriorities());
 
     // Verify different server selector strategies
     final ServerSelectorStrategy historicalBalancer = injector.getInstance(ServerSelectorStrategy.class);
@@ -377,8 +378,8 @@ public class CliBrokerTest
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
-    Assert.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(historicalBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof ConnectionCountServerSelectorStrategy);
   }
 
   @Test
@@ -395,16 +396,16 @@ public class CliBrokerTest
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
 
-    Assert.assertTrue(realtime instanceof PooledTierSelectorStrategy);
-    Assert.assertEquals(Set.of(2, 1, 0), ((PooledTierSelectorStrategy) realtime).getConfig().getPriorities());
+    JUnit5Assertions.assertTrue(realtime instanceof PooledTierSelectorStrategy);
+    JUnit5Assertions.assertEquals(Set.of(2, 1, 0), ((PooledTierSelectorStrategy) realtime).getConfig().getPriorities());
 
     // Historical should use default (highest priority)
-    Assert.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
+    JUnit5Assertions.assertTrue(injector.getInstance(TierSelectorStrategy.class) instanceof HighestPriorityTierSelectorStrategy);
 
     final ServerSelectorStrategy realtimeBalancer = injector.getInstance(
         Key.get(ServerSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     );
-    Assert.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
+    JUnit5Assertions.assertTrue(realtimeBalancer instanceof RandomServerSelectorStrategy);
   }
 
   @Test
@@ -415,16 +416,16 @@ public class CliBrokerTest
     properties.setProperty("druid.broker.realtime.select.tier", "pooled");
 
     final Injector injector = makeBrokerInjector(properties);
-    ProvisionException e1 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(TierSelectorStrategy.class));
-    Assert.assertTrue(e1.getMessage().contains(
+    ProvisionException e1 = JUnit5Assertions.assertThrows(ProvisionException.class, () -> injector.getInstance(TierSelectorStrategy.class));
+    JUnit5Assertions.assertTrue(e1.getMessage().contains(
         "Problem parsing object at prefix[druid.broker.select.tier.pooled]: Cannot construct instance of"
         + " `PooledTierSelectorStrategyConfig`, problem: priorities must be non-empty when using pooled tier selector on the Broker. Found priorities[null]."
     ));
 
-    ProvisionException e2 = Assert.assertThrows(ProvisionException.class, () -> injector.getInstance(
+    ProvisionException e2 = JUnit5Assertions.assertThrows(ProvisionException.class, () -> injector.getInstance(
         Key.get(TierSelectorStrategy.class, Names.named(BrokerServerView.REALTIME_SELECTOR))
     ));
-    Assert.assertTrue(e2.getMessage().contains(
+    JUnit5Assertions.assertTrue(e2.getMessage().contains(
         "Problem parsing object at prefix[druid.broker.realtime.select.tier.pooled]: Cannot construct instance of"
         + " `PooledTierSelectorStrategyConfig`, problem: priorities must be non-empty when using pooled tier selector on the Broker. Found priorities[null]."
     ));

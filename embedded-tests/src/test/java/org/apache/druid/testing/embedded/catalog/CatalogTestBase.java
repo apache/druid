@@ -21,21 +21,20 @@ package org.apache.druid.testing.embedded.catalog;
 
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
-import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.query.http.ClientSqlQuery;
-import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedExceptionAssertions;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.List;
 import java.util.Map;
+
 
 public abstract class CatalogTestBase extends EmbeddedClusterTestBase
 {
@@ -70,18 +69,15 @@ public abstract class CatalogTestBase extends EmbeddedClusterTestBase
 
   void verifySubmitSqlTaskFailsWith400BadRequest(String sql, String expectedMessageSubstring)
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
-                b -> b.submitSqlTask(
-                    new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
-                )
+    final Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> cluster.callApi().onAnyBroker(
+            b -> b.submitSqlTask(
+                new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
             )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("400 Bad Request")
-                        .expectMessageContains(expectedMessageSubstring)
+        )
     );
+    EmbeddedExceptionAssertions.assertMessageInChain(exception, "400 Bad Request");
+    EmbeddedExceptionAssertions.assertMessageInChain(exception, expectedMessageSubstring);
   }
 }

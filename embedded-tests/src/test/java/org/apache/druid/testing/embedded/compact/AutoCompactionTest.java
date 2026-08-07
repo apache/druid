@@ -81,13 +81,13 @@ import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedMetricEventPredicates;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
+import org.apache.druid.testing.embedded.matchers.Matcher;
+import org.apache.druid.testing.embedded.matchers.Matchers;
 import org.apache.druid.timeline.DataSegment;
-import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -104,9 +104,12 @@ import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.testing.embedded.matchers.MatcherAssert.assertThat;
 
 /**
  * Embedded mode of integration-tests originally present in {@code ITAutoCompactionTest}.
@@ -773,7 +776,7 @@ public class AutoCompactionTest extends CompactionTestBase
           1,
           1,
           0);
-      MatcherAssert.assertThat(
+      assertThat(
           Long.parseLong(compactionResource.getCompactionProgress(fullDatasourceName).get("remainingSegmentSize")),
           Matchers.greaterThan(0L)
       );
@@ -1847,10 +1850,11 @@ public class AutoCompactionTest extends CompactionTestBase
       updateClusterConfig(config.toBuilder().compactionPolicy(policy).build());
 
       // Wait for all compaction jobs to be submitted
-      overlord.latchableEmitter().waitForEvent(
-          event -> event.hasMetricName("interval/waitCompact/count")
-                        .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                        .hasValueMatching(Matchers.equalTo(0L))
+      EmbeddedMetricEventPredicates.waitForMetric(
+          overlord.latchableEmitter(),
+          "interval/waitCompact/count",
+          Map.of(DruidMetrics.DATASOURCE, dataSource),
+          value -> value == 0L
       );
       waitForCompactionToFinish(numExpectedSegmentsAfterCompaction);
 
@@ -1926,7 +1930,7 @@ public class AutoCompactionTest extends CompactionTestBase
       }
     }
     for (DataSegment compactedSegment : foundCompactedSegments) {
-      MatcherAssert.assertThat(
+      assertThat(
           dimensionSchemas,
           Matchers.containsInAnyOrder(
               compactedSegment.getLastCompactionState()
@@ -1977,9 +1981,9 @@ public class AutoCompactionTest extends CompactionTestBase
     AutoCompactionSnapshot actualStatus = compactionResource.getCompactionStatus(fullDatasourceName);
     Assertions.assertNotNull(actualStatus);
     Assertions.assertEquals(actualStatus.getScheduleStatus(), AutoCompactionSnapshot.ScheduleStatus.RUNNING);
-    MatcherAssert.assertThat(actualStatus.getBytesAwaitingCompaction(), bytesAwaitingCompactionMatcher);
-    MatcherAssert.assertThat(actualStatus.getBytesCompacted(), bytesCompactedMatcher);
-    MatcherAssert.assertThat(actualStatus.getBytesSkipped(), bytesSkippedMatcher);
+    assertThat(actualStatus.getBytesAwaitingCompaction(), bytesAwaitingCompactionMatcher);
+    assertThat(actualStatus.getBytesCompacted(), bytesCompactedMatcher);
+    assertThat(actualStatus.getBytesSkipped(), bytesSkippedMatcher);
     Assertions.assertEquals(actualStatus.getSegmentCountAwaitingCompaction(), segmentCountAwaitingCompaction);
     Assertions.assertEquals(actualStatus.getSegmentCountCompacted(), segmentCountCompacted);
     Assertions.assertEquals(actualStatus.getSegmentCountSkipped(), segmentCountSkipped);

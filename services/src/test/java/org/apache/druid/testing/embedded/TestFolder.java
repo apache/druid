@@ -26,7 +26,7 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * Modeled after JUnit {@code TemporaryFolder} but uses Druid {@link FileUtils}.
+ * Test folder resource backed by Druid {@link FileUtils}.
  */
 public class TestFolder implements EmbeddedResource
 {

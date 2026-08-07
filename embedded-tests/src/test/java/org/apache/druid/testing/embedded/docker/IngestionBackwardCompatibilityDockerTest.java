@@ -37,6 +37,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -122,6 +123,7 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
   }
 
   @Override
+  @Test
   @Disabled("modified/restarted response semantics and skipRestartIfUnmodified are not supported by the old Overlord")
   public void test_kafkaSupervisor_modifiedAndRestartedCombinations()
   {

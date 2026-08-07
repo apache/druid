@@ -23,9 +23,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.azure.output.AzureStorageConnectorModule;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.JUnitAssertions;
 import org.apache.druid.testing.embedded.indexer.AbstractCloudInputSourceParallelIndexTest;
-import org.junit.Assert;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 
 import java.net.URI;
@@ -65,7 +64,7 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
     catch (Exception e) {
       LOG.error(e, "Unable to upload files to azure");
       // Fail if exception
-      Assertions.fail();
+      JUnitAssertions.fail();
     }
   }
 
@@ -79,7 +78,7 @@ public abstract class AbstractAzureInputSourceParallelIndexTest extends Abstract
       LOG.warn(e, "Failed to validate that azure segment files were deleted.");
     }
     finally {
-      Assert.assertEquals(
+      JUnitAssertions.assertEquals(
             "Some segment files were not deleted: " + segmentFiles,
             segmentFiles.size(),
             0

@@ -43,12 +43,10 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DirectQueryProcessingPool;
-import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
@@ -56,6 +54,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
@@ -66,11 +65,12 @@ import org.apache.druid.segment.file.SegmentFileMetadata;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.apache.druid.testing.junit5.TempDirExtension;
+import org.apache.druid.timeline.SegmentId;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -84,8 +84,8 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
 {
   private final Closer closer;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TempDirExtension tempFolder = new TempDirExtension();
 
   public DumpSegmentTest()
   {
@@ -93,7 +93,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     this.closer = Closer.create();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     closer.close();
@@ -119,7 +119,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(mergeRunner.run(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(expected);
     Mockito.when(index.getOrdering()).thenReturn(Collections.emptyList());
     Sequence actual = DumpSegment.executeQuery(injector, index, query);
-    Assert.assertSame(expected, actual);
+    JUnit5Assertions.assertSame(expected, actual);
   }
 
   @Test
@@ -157,7 +157,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
                             + "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"z\":\"b\"},\"count\":1}\n"
                             + "{\"__time\":1609459200000,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
                             + "{\"__time\":1609459200000,\"nest\":{\"y\":3.3,\"z\":\"b\"},\"count\":1}\n";
-    Assert.assertEquals(expected, output);
+    JUnit5Assertions.assertEquals(expected, output);
   }
 
   @Test
@@ -193,7 +193,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         ImmutableList.of("x", "y"),
         false
     );
-    Assert.assertTrue(true);
+    JUnit5Assertions.assertTrue(true);
   }
 
   @Test
@@ -223,10 +223,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     final String output = StringUtils.fromUtf8(fileBytes);
-    Assert.assertEquals(
-        "{\"nest\":{\"fields\":[{\"path\":\"$.x\",\"types\":[\"LONG\"]},{\"path\":\"$.y\",\"types\":[\"DOUBLE\"]},{\"path\":\"$.z\",\"types\":[\"STRING\"]}],\"dictionaries\":{\"strings\":[{\"globalId\":0,\"value\":null},{\"globalId\":1,\"value\":\"a\"},{\"globalId\":2,\"value\":\"b\"}],\"longs\":[{\"globalId\":3,\"value\":100},{\"globalId\":4,\"value\":200},{\"globalId\":5,\"value\":400}],\"doubles\":[{\"globalId\":6,\"value\":1.1},{\"globalId\":7,\"value\":2.2},{\"globalId\":8,\"value\":3.3}],\"nullRows\":[]}}}",
-        output
-    );
+    JUnit5Assertions.assertEquals(output, "{\"nest\":{\"fields\":[{\"path\":\"$.x\",\"types\":[\"LONG\"]},{\"path\":\"$.y\",\"types\":[\"DOUBLE\"]},{\"path\":\"$.z\",\"types\":[\"STRING\"]}],\"dictionaries\":{\"strings\":[{\"globalId\":0,\"value\":null},{\"globalId\":1,\"value\":\"a\"},{\"globalId\":2,\"value\":\"b\"}],\"longs\":[{\"globalId\":3,\"value\":100},{\"globalId\":4,\"value\":200},{\"globalId\":5,\"value\":400}],\"doubles\":[{\"globalId\":6,\"value\":1.1},{\"globalId\":7,\"value\":2.2},{\"globalId\":8,\"value\":3.3}],\"nullRows\":[]}}}");
   }
 
   @Test
@@ -257,10 +254,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     final String output = StringUtils.fromUtf8(fileBytes);
-    Assert.assertEquals(
-        "{\"bitmapSerdeFactory\":{\"type\":\"roaring\"},\"nest\":{\"$.x\":{\"types\":[\"LONG\"],\"dictionary\":[{\"localId\":0,\"globalId\":0,\"value\":null,\"rows\":[4]},{\"localId\":1,\"globalId\":3,\"value\":\"100\",\"rows\":[3]},{\"localId\":2,\"globalId\":4,\"value\":\"200\",\"rows\":[0,2]},{\"localId\":3,\"globalId\":5,\"value\":\"400\",\"rows\":[1]}],\"column\":[{\"row\":0,\"raw\":{\"x\":200,\"y\":2.2},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":1,\"raw\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"fieldId\":3,\"fieldValue\":\"400\"},{\"row\":2,\"raw\":{\"x\":200,\"z\":\"b\"},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":3,\"raw\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"fieldId\":1,\"fieldValue\":\"100\"},{\"row\":4,\"raw\":{\"y\":3.3,\"z\":\"b\"},\"fieldId\":0,\"fieldValue\":null}]}}}",
-        output
-    );
+    JUnit5Assertions.assertEquals(output, "{\"bitmapSerdeFactory\":{\"type\":\"roaring\"},\"nest\":{\"$.x\":{\"types\":[\"LONG\"],\"dictionary\":[{\"localId\":0,\"globalId\":0,\"value\":null,\"rows\":[4]},{\"localId\":1,\"globalId\":3,\"value\":\"100\",\"rows\":[3]},{\"localId\":2,\"globalId\":4,\"value\":\"200\",\"rows\":[0,2]},{\"localId\":3,\"globalId\":5,\"value\":\"400\",\"rows\":[1]}],\"column\":[{\"row\":0,\"raw\":{\"x\":200,\"y\":2.2},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":1,\"raw\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"fieldId\":3,\"fieldValue\":\"400\"},{\"row\":2,\"raw\":{\"x\":200,\"z\":\"b\"},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":3,\"raw\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"fieldId\":1,\"fieldValue\":\"100\"},{\"row\":4,\"raw\":{\"y\":3.3,\"z\":\"b\"},\"fieldId\":0,\"fieldValue\":null}]}}}");
   }
 
   @Test
@@ -272,10 +266,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         Collections.emptySet(),
         dumpSegment.getModules()
     );
-    Assert.assertNotNull(injector.getInstance(ColumnConfig.class));
-    Assert.assertEquals("druid/tool", injector.getInstance(Key.get(String.class, Names.named("serviceName"))));
-    Assert.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
-    Assert.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
+    JUnit5Assertions.assertNotNull(injector.getInstance(ColumnConfig.class));
+    JUnit5Assertions.assertEquals(injector.getInstance(Key.get(String.class, Names.named("serviceName"))), "druid/tool");
+    JUnit5Assertions.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
+    JUnit5Assertions.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
   }
 
   @Test
@@ -303,10 +297,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     SegmentFileMetadata dumped = mapper.readValue(fileBytes, SegmentFileMetadata.class);
-    Assert.assertNotNull(dumped);
-    Assert.assertEquals(1, dumped.getContainers().size());
-    Assert.assertEquals(2, dumped.getColumnDescriptors().size());
-    Assert.assertEquals(12, dumped.getFiles().size());
+    JUnit5Assertions.assertNotNull(dumped);
+    JUnit5Assertions.assertEquals(1, dumped.getContainers().size());
+    JUnit5Assertions.assertEquals(2, dumped.getColumnDescriptors().size());
+    JUnit5Assertions.assertEquals(12, dumped.getFiles().size());
   }
 
 
@@ -346,24 +340,41 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
 
 
   public static List<Segment> createSegments(
-      TemporaryFolder tempFolder,
+      TempDirExtension tempFolder,
       Closer closer
   ) throws Exception
   {
-    return NestedDataTestUtils.createSegments(
-        tempFolder,
-        closer,
-        "nested-test-data.json",
-        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
-        TimestampSpec.DEFAULT,
-        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-        null,
-        new AggregatorFactory[] {
-            new CountAggregatorFactory("count")
-        },
-        Granularities.HOUR,
-        true,
-        IndexSpec.getDefault()
+    final File segmentDir = tempFolder.newFolder();
+    final IndexBuilder bob = IndexBuilder.create()
+                                         .tmpDir(segmentDir)
+                                         .schema(
+                                             IncrementalIndexSchema.builder()
+                                                                   .withTimestampSpec(TimestampSpec.DEFAULT)
+                                                                   .withDimensionsSpec(
+                                                                       DimensionsSpec.builder()
+                                                                                     .useSchemaDiscovery(true)
+                                                                                     .build()
+                                                                   )
+                                                                   .withMetrics(new CountAggregatorFactory("count"))
+                                                                   .withQueryGranularity(Granularities.HOUR)
+                                                                   .withRollup(true)
+                                                                   .withMinTimestamp(0)
+                                                                   .build()
+                                         )
+                                         .indexSpec(IndexSpec.getDefault())
+                                         .inputSource(
+                                             ResourceInputSource.of(
+                                                 DumpSegmentTest.class.getClassLoader(),
+                                                 "nested-test-data.json"
+                                             )
+                                         )
+                                         .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
+                                         .inputTmpDir(tempFolder.newFolder());
+    return Collections.singletonList(
+        new QueryableIndexSegment(
+            closer.register(bob.buildMMappedIndex()),
+            SegmentId.dummy("test_datasource")
+        )
     );
   }
 }

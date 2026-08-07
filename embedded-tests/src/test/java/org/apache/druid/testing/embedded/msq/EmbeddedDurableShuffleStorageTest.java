@@ -40,9 +40,8 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.embedded.matchers.Matchers;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -57,6 +56,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.testing.embedded.matchers.MatcherAssert.assertThat;
 
 /**
  * Embedded test to batch-ingest wikipedia data from {@link #loadWikipediaTable()}, then query that data
@@ -355,7 +356,7 @@ public class EmbeddedDurableShuffleStorageTest extends EmbeddedClusterTestBase
   )
   {
     final List<MSQStagesReport.Stage> stages = reportPayload.getStages().getStages();
-    MatcherAssert.assertThat(stages.size(), Matchers.greaterThanOrEqualTo(1));
+    assertThat(stages.size(), Matchers.greaterThanOrEqualTo(1));
 
     for (final MSQStagesReport.Stage stage : stages) {
       final OutputChannelMode expectedOutputChannelMode;

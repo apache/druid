@@ -29,9 +29,9 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.apache.druid.testing.junit5.JUnit5Assertions.assertEquals;
+import static org.apache.druid.testing.junit5.JUnit5Assertions.assertFalse;
+import static org.apache.druid.testing.junit5.JUnit5Assertions.assertTrue;
 
 public class TestcontainerResourceTest
 {

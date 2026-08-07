@@ -20,26 +20,25 @@
 package org.apache.druid.testing.embedded.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.server.coordinator.InlineSchemaDataSourceCompactionConfig;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedExceptionAssertions;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+
 
 public class KillSupervisorsCustomDutyTest extends EmbeddedClusterTestBase
 {
@@ -96,16 +95,14 @@ public class KillSupervisorsCustomDutyTest extends EmbeddedClusterTestBase
     );
 
     // Verify that the history now returns 404 Not Found
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            RuntimeException.class,
-            () -> getSupervisorHistory(supervisor.getId())
-        ),
-        ExceptionMatcher.of(RuntimeException.class).expectRootCause(
-            ExceptionMatcher.of(HttpResponseException.class)
-                            .expectMessageContains("404 Not Found")
-                            .expectMessageContains(StringUtils.format("No history for [%s]", supervisor.getId()))
-        )
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> getSupervisorHistory(supervisor.getId())
+    );
+    EmbeddedExceptionAssertions.assertMessageInChain(exception, "404 Not Found");
+    EmbeddedExceptionAssertions.assertMessageInChain(
+        exception,
+        StringUtils.format("No history for [%s]", supervisor.getId())
     );
   }
 

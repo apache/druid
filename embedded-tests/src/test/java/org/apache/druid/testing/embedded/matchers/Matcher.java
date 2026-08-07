@@ -17,15 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.testing.embedded.matchers;
 
-import org.junit.jupiter.api.Test;
-
-public class CliMainTest
+public interface Matcher<T>
 {
-  @Test
-  public void testHelp()
+  boolean matches(Object actual);
+
+  default String describe()
   {
-    Main.main(new String[]{"help"});
+    return "value to match";
+  }
+
+  default void describeMismatch(final Object actual, final Description description)
+  {
+    description.appendText("was " + actual);
+  }
+
+  default void describeTo(final Description description)
+  {
+    description.appendText(describe());
   }
 }

@@ -19,8 +19,8 @@
 
 package org.apache.druid.cli;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -33,11 +33,8 @@ public class Log4JShutdownPropertyCheckerTest
     Properties properties = new Properties();
     checker.checkProperties(properties);
 
-    Assert.assertEquals(
-        "org.apache.druid.common.config.Log4jShutdown",
-        properties.getProperty("log4j.shutdownCallbackRegistry")
-    );
-    Assert.assertEquals("true", properties.getProperty("log4j.shutdownHookEnabled"));
-    Assert.assertEquals("false", properties.getProperty("log4j2.is.webapp"));
+    JUnit5Assertions.assertEquals(properties.getProperty("log4j.shutdownCallbackRegistry"), "org.apache.druid.common.config.Log4jShutdown");
+    JUnit5Assertions.assertEquals(properties.getProperty("log4j.shutdownHookEnabled"), "true");
+    JUnit5Assertions.assertEquals(properties.getProperty("log4j2.is.webapp"), "false");
   }
 }

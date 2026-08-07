@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.derby;
 
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedResource;
@@ -28,11 +29,11 @@ import org.apache.druid.testing.embedded.EmbeddedResource;
  */
 public class InMemoryDerbyResource implements EmbeddedResource
 {
-  private final TestDerbyConnector.DerbyConnectorRule dbRule;
+  private final JUnit5TestDerbyConnector dbRule;
 
   public InMemoryDerbyResource()
   {
-    this.dbRule = new TestDerbyConnector.DerbyConnectorRule();
+    this.dbRule = new JUnit5TestDerbyConnector();
   }
 
   @Override

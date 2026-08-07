@@ -41,19 +41,21 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.http.ServersResource;
 import org.apache.druid.server.http.TiersResource;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.testing.junit5.ExpectedToThrow;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("data")
 public class SecurityResourceFilterTest extends ResourceFilterTestHelper
 {
-  @Parameterized.Parameters(name = "{index}: requestPath={0}, requestMethod={1}, resourceFilter={2}")
+
   public static Collection<Object[]> data()
   {
     return ImmutableList.copyOf(
@@ -97,7 +99,7 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     this.injector = injector;
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     setUp(resourceFilter);
@@ -112,14 +114,15 @@ public class SecurityResourceFilterTest extends ResourceFilterTestHelper
     EasyMock.verify(req, request, authorizerMapper);
   }
 
-  @Test(expected = ForbiddenException.class)
+  @Test
+  @ExpectedToThrow(ForbiddenException.class)
   public void testResourcesFilteringNoAccess()
   {
     setUpMockExpectations(requestPath, false, requestMethod);
     EasyMock.replay(req, request, authorizerMapper);
     try {
       resourceFilter.getRequestFilter().filter(request);
-      Assert.fail();
+      JUnit5Assertions.fail();
     }
     catch (ForbiddenException e) {
       EasyMock.verify(req, request, authorizerMapper);

@@ -21,10 +21,10 @@ package org.apache.druid.cli;
 
 import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.server.coordinator.DruidCoordinator;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class CoordinatorOverlordRedirectInfoTest
 {
@@ -32,7 +32,7 @@ public class CoordinatorOverlordRedirectInfoTest
   private DruidCoordinator coordinator;
   private CoordinatorOverlordRedirectInfo redirectInfo;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     overlord = EasyMock.createMock(DruidOverlord.class);
@@ -45,9 +45,9 @@ public class CoordinatorOverlordRedirectInfoTest
   {
     EasyMock.expect(overlord.isLeader()).andReturn(true).anyTimes();
     EasyMock.replay(overlord);
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
-    Assert.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
+    JUnit5Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
+    JUnit5Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    JUnit5Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
     EasyMock.verify(overlord);
   }
 }

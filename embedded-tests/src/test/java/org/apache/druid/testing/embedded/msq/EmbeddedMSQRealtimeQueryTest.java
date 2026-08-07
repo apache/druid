@@ -36,9 +36,8 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.apache.druid.testing.embedded.matchers.CoreMatchers;
+import org.apache.druid.testing.embedded.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -47,6 +46,8 @@ import org.junit.jupiter.api.Timeout;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.apache.druid.testing.embedded.matchers.MatcherAssert.assertThat;
 
 /**
  * Embedded test to ingest {@link TestIndex#getMMappedWikipediaIndex()} into Kafka tasks, then query
@@ -241,7 +242,7 @@ public class EmbeddedMSQRealtimeQueryTest extends BaseRealtimeQueryTest
                        + "  LIMIT 1\n"
                        + ")";
 
-    MatcherAssert.assertThat(
+    assertThat(
         Assertions.assertThrows(
             RuntimeException.class,
             () -> msqApis.runDartSql(sql, dataSource, dataSource)

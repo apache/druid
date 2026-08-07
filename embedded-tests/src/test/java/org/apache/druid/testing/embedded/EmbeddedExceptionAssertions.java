@@ -17,15 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.testing.embedded;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Assertions;
 
-public class CliMainTest
+public class EmbeddedExceptionAssertions
 {
-  @Test
-  public void testHelp()
+  private EmbeddedExceptionAssertions()
   {
-    Main.main(new String[]{"help"});
+  }
+
+  public static boolean hasMessageInChain(final Throwable throwable, final String expectedMessage)
+  {
+    Throwable current = throwable;
+    while (current != null) {
+      if (current.getMessage() != null && current.getMessage().contains(expectedMessage)) {
+        return true;
+      }
+      current = current.getCause();
+    }
+    return false;
+  }
+
+  public static void assertMessageInChain(final Throwable throwable, final String expectedMessage)
+  {
+    Assertions.assertTrue(
+        hasMessageInChain(throwable, expectedMessage),
+        () -> "Expected message [" + expectedMessage + "] in exception chain: " + throwable
+    );
   }
 }

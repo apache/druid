@@ -45,10 +45,10 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.Metric;
 import org.apache.druid.server.metrics.LatchableEmitter;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.jupiter.api.Assertions;
 
 import java.io.Closeable;
 import java.util.ArrayList;
@@ -158,7 +158,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void verifySqlQuery(String query, String dataSource, String expectedResultCsv)
   {
-    Assertions.assertEquals(
+    JUnit5Assertions.assertEquals(
         expectedResultCsv,
         cluster.runSql(query, dataSource),
         StringUtils.format("Query[%s] failed", query)
@@ -194,7 +194,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
   public void waitForTaskToSucceed(String taskId, EmbeddedOverlord overlord)
   {
     TaskStatus taskStatus = waitForTaskToFinish(taskId, overlord.latchableEmitter());
-    Assertions.assertEquals(
+    JUnit5Assertions.assertEquals(
         TaskState.SUCCESS,
         taskStatus.getStatusCode(),
         StringUtils.format("Task[%s] failed with error[%s]", taskId, taskStatus.getErrorMsg())
@@ -208,7 +208,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    */
   public void waitForTaskToSucceed(String taskId, LatchableEmitter emitter)
   {
-    Assertions.assertEquals(
+    JUnit5Assertions.assertEquals(
         TaskState.SUCCESS,
         waitForTaskToFinish(taskId, emitter).getStatusCode()
     );
@@ -282,12 +282,12 @@ public class EmbeddedClusterApis implements EmbeddedResource
   public void verifyNumVisibleSegmentsIs(int numExpectedSegments, String dataSource, EmbeddedOverlord overlord)
   {
     int segmentCount = getVisibleUsedSegments(dataSource, overlord).size();
-    Assertions.assertEquals(
+    JUnit5Assertions.assertEquals(
         numExpectedSegments,
         segmentCount,
         "Segment count mismatch"
     );
-    Assertions.assertEquals(
+    JUnit5Assertions.assertEquals(
         String.valueOf(segmentCount),
         runSql(
             "SELECT COUNT(*) FROM sys.segments WHERE datasource='%s'"
@@ -389,13 +389,13 @@ public class EmbeddedClusterApis implements EmbeddedResource
     final TaskStatusResponse currentStatus = onLeaderOverlord(
         o -> o.taskStatus(taskId)
     );
-    Assertions.assertNotNull(currentStatus.getStatus());
-    Assertions.assertEquals(
+    JUnit5Assertions.assertNotNull(currentStatus.getStatus());
+    JUnit5Assertions.assertEquals(
         expectedStatus.getStatusCode(),
         currentStatus.getStatus().getStatusCode(),
         StringUtils.format("Task[%s] has unexpected status", taskId)
     );
-    Assertions.assertEquals(
+    JUnit5Assertions.assertEquals(
         expectedStatus.getErrorMsg(),
         currentStatus.getStatus().getErrorMsg(),
         StringUtils.format("Task[%s] has unexpected error message", taskId)
@@ -408,7 +408,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
   public TaskStatus getTaskStatus(String taskId)
   {
     final TaskStatusPlus statusPlus = onLeaderOverlord(o -> o.taskStatus(taskId)).getStatus();
-    Assertions.assertNotNull(statusPlus);
+    JUnit5Assertions.assertNotNull(statusPlus);
 
     return new TaskStatus(
         statusPlus.getId(),
@@ -462,6 +462,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
   /**
    * Creates a random datasource name prefixed with {@code datasource_}.
    */
+
   public static String createTestDatasourceName()
   {
     return "datasource_" + IdUtils.getRandomId();
@@ -470,6 +471,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
   /**
    * Creates a random task ID prefixed with the {@code dataSource}.
    */
+
   public static String newTaskId(String dataSource)
   {
     return dataSource + "_" + IdUtils.getRandomId();
@@ -480,6 +482,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    * post JSON payloads to a Druid API. Using a generic map allows the client
    * to make requests even if required types are not loaded.
    */
+
   public static Map<String, Object> deserializeJsonToMap(String payload)
   {
     try {
@@ -495,6 +498,7 @@ public class EmbeddedClusterApis implements EmbeddedResource
    * and overlap the original list of given intervals. If the original list is
    * sorted, the returned list would be sorted too.
    */
+
   public static List<Interval> createAlignedIntervals(
       List<Interval> original,
       Granularity targetGranularity

@@ -27,8 +27,8 @@ import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
 
@@ -45,11 +45,11 @@ public class CliOverlordTest
 
     final SegmentMetadataCache segmentMetadataCache
         = overlordInjector.getInstance(SegmentMetadataCache.class);
-    Assert.assertTrue(segmentMetadataCache instanceof HeapMemorySegmentMetadataCache);
+    JUnit5Assertions.assertTrue(segmentMetadataCache instanceof HeapMemorySegmentMetadataCache);
 
     final SegmentsMetadataManager segmentsMetadataManager
         = overlordInjector.getInstance(SegmentsMetadataManager.class);
-    Assert.assertTrue(segmentsMetadataManager instanceof SqlSegmentsMetadataManagerV2);
+    JUnit5Assertions.assertTrue(segmentsMetadataManager instanceof SqlSegmentsMetadataManagerV2);
   }
 
 
@@ -57,24 +57,24 @@ public class CliOverlordTest
   public void testGetDefaultMaxConcurrentRequests()
   {
     // Small thread count where
-    Assert.assertEquals(8, ServerConfig.getDefaultMaxConcurrentRequests(10));
+    JUnit5Assertions.assertEquals(8, ServerConfig.getDefaultMaxConcurrentRequests(10));
     
     // Medium thread count where
-    Assert.assertEquals(21, ServerConfig.getDefaultMaxConcurrentRequests(25));
-    Assert.assertEquals(26, ServerConfig.getDefaultMaxConcurrentRequests(30));
+    JUnit5Assertions.assertEquals(21, ServerConfig.getDefaultMaxConcurrentRequests(25));
+    JUnit5Assertions.assertEquals(26, ServerConfig.getDefaultMaxConcurrentRequests(30));
 
 
     // Large thread count
-    Assert.assertEquals(46, ServerConfig.getDefaultMaxConcurrentRequests(50));
-    Assert.assertEquals(96, ServerConfig.getDefaultMaxConcurrentRequests(100));
+    JUnit5Assertions.assertEquals(46, ServerConfig.getDefaultMaxConcurrentRequests(50));
+    JUnit5Assertions.assertEquals(96, ServerConfig.getDefaultMaxConcurrentRequests(100));
     
     // Test edge cases - return atleast 1 thread
-    Assert.assertEquals(1, ServerConfig.getDefaultMaxConcurrentRequests(-1));
-    Assert.assertEquals(1, ServerConfig.getDefaultMaxConcurrentRequests(0));
+    JUnit5Assertions.assertEquals(1, ServerConfig.getDefaultMaxConcurrentRequests(-1));
+    JUnit5Assertions.assertEquals(1, ServerConfig.getDefaultMaxConcurrentRequests(0));
 
     // Test small clustesr
-    Assert.assertEquals(2, ServerConfig.getDefaultMaxConcurrentRequests(3));
-    Assert.assertEquals(3, ServerConfig.getDefaultMaxConcurrentRequests(4));
-    Assert.assertEquals(4, ServerConfig.getDefaultMaxConcurrentRequests(5));
+    JUnit5Assertions.assertEquals(2, ServerConfig.getDefaultMaxConcurrentRequests(3));
+    JUnit5Assertions.assertEquals(3, ServerConfig.getDefaultMaxConcurrentRequests(4));
+    JUnit5Assertions.assertEquals(4, ServerConfig.getDefaultMaxConcurrentRequests(5));
   }
 }

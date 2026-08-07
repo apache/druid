@@ -17,15 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.testing.embedded.matchers;
 
-import org.junit.jupiter.api.Test;
-
-public class CliMainTest
+public abstract class DiagnosingMatcher<T> implements Matcher<T>
 {
-  @Test
-  public void testHelp()
+  @Override
+  public boolean matches(final Object actual)
   {
-    Main.main(new String[]{"help"});
+    return matches(actual, new Description());
+  }
+
+  protected abstract boolean matches(Object actual, Description mismatchDescription);
+
+  public abstract void describeTo(Description description);
+
+  @Override
+  public String describe()
+  {
+    final Description description = new Description();
+    describeTo(description);
+    return description.toString();
   }
 }

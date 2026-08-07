@@ -43,13 +43,14 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -69,7 +70,7 @@ public class TieredBrokerHostSelectorTest
   private DiscoveryDruidNode node2;
   private DiscoveryDruidNode node3;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     druidNodeDiscoveryProvider = EasyMock.createStrictMock(DruidNodeDiscoveryProvider.class);
@@ -146,7 +147,7 @@ public class TieredBrokerHostSelectorTest
     brokerSelector.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     brokerSelector.stop();
@@ -166,16 +167,16 @@ public class TieredBrokerHostSelectorTest
                                   .build();
 
     Pair<String, Server> p = brokerSelector.select(query);
-    Assert.assertEquals("coldBroker", p.lhs);
-    Assert.assertEquals("coldHost1:8080", p.rhs.getHost());
+    JUnit5Assertions.assertEquals(p.lhs, "coldBroker");
+    JUnit5Assertions.assertEquals(p.rhs.getHost(), "coldHost1:8080");
 
     p = brokerSelector.select(query);
-    Assert.assertEquals("coldBroker", p.lhs);
-    Assert.assertEquals("coldHost2:8080", p.rhs.getHost());
+    JUnit5Assertions.assertEquals(p.lhs, "coldBroker");
+    JUnit5Assertions.assertEquals(p.rhs.getHost(), "coldHost2:8080");
 
     p = brokerSelector.select(query);
-    Assert.assertEquals("coldBroker", p.lhs);
-    Assert.assertEquals("coldHost1:8080", p.rhs.getHost());
+    JUnit5Assertions.assertEquals(p.lhs, "coldBroker");
+    JUnit5Assertions.assertEquals(p.rhs.getHost(), "coldHost1:8080");
   }
 
 
@@ -191,8 +192,8 @@ public class TieredBrokerHostSelectorTest
               .build()
     );
 
-    Assert.assertEquals("hotBroker", p.lhs);
-    Assert.assertEquals("hotHost:8080", p.rhs.getHost());
+    JUnit5Assertions.assertEquals(p.lhs, "hotBroker");
+    JUnit5Assertions.assertEquals(p.rhs.getHost(), "hotHost:8080");
   }
 
   @Test
@@ -207,7 +208,7 @@ public class TieredBrokerHostSelectorTest
               .build()
     ).lhs;
 
-    Assert.assertEquals("hotBroker", brokerName);
+    JUnit5Assertions.assertEquals(brokerName, "hotBroker");
   }
 
   @Test
@@ -228,7 +229,7 @@ public class TieredBrokerHostSelectorTest
               ).build()
     ).lhs;
 
-    Assert.assertEquals("coldBroker", brokerName);
+    JUnit5Assertions.assertEquals(brokerName, "coldBroker");
   }
 
   @Test
@@ -249,7 +250,7 @@ public class TieredBrokerHostSelectorTest
               ).build()
     ).lhs;
 
-    Assert.assertEquals("coldBroker", brokerName);
+    JUnit5Assertions.assertEquals(brokerName, "coldBroker");
   }
 
   @Test
@@ -272,7 +273,7 @@ public class TieredBrokerHostSelectorTest
               .build()
     ).lhs;
 
-    Assert.assertEquals("hotBroker", brokerName);
+    JUnit5Assertions.assertEquals(brokerName, "hotBroker");
   }
 
   @Test
@@ -295,7 +296,7 @@ public class TieredBrokerHostSelectorTest
               .build()
     ).lhs;
 
-    Assert.assertEquals("hotBroker", brokerName);
+    JUnit5Assertions.assertEquals(brokerName, "hotBroker");
   }
 
   @Test
@@ -311,59 +312,47 @@ public class TieredBrokerHostSelectorTest
                   )
               );
 
-    Assert.assertEquals(
+    JUnit5Assertions.assertEquals(
         brokerSelector.getDefaultServiceName(),
         brokerSelector.select(queryBuilder.build()).lhs
     );
-    Assert.assertEquals(
-        "hotBroker",
-        brokerSelector.select(
+    JUnit5Assertions.assertEquals(brokerSelector.select(
             queryBuilder
                 .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "hotBroker"))
                 .build()
-        ).lhs
-    );
-    Assert.assertEquals(
-        "coldBroker",
-        brokerSelector.select(
+        ).lhs, "hotBroker");
+    JUnit5Assertions.assertEquals(brokerSelector.select(
             queryBuilder
                 .context(ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "coldBroker"))
                 .build()
-        ).lhs
-    );
+        ).lhs, "coldBroker");
   }
 
   @Test
   public void testSelectForSql()
   {
-    Assert.assertEquals(
+    JUnit5Assertions.assertEquals(
         brokerSelector.getDefaultServiceName(),
         brokerSelector.selectForSql(
             createSqlQueryWithContext(null)
         ).lhs
     );
-    Assert.assertEquals(
-        "hotBroker",
-        brokerSelector.selectForSql(
+    JUnit5Assertions.assertEquals(brokerSelector.selectForSql(
             createSqlQueryWithContext(
                 ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "hotBroker")
             )
-        ).lhs
-    );
-    Assert.assertEquals(
-        "coldBroker",
-        brokerSelector.selectForSql(
+        ).lhs, "hotBroker");
+    JUnit5Assertions.assertEquals(brokerSelector.selectForSql(
             createSqlQueryWithContext(
                 ImmutableMap.of(QueryContexts.BROKER_SERVICE_NAME, "coldBroker")
             )
-        ).lhs
-    );
+        ).lhs, "coldBroker");
   }
 
   @Test
   public void testGetAllBrokers()
   {
-    Assert.assertEquals(
+    JUnit5Assertions.assertEquals(
         ImmutableMap.of(
             "mediumBroker", ImmutableList.of(),
             "coldBroker", ImmutableList.of("coldHost1:8080", "coldHost2:8080"),

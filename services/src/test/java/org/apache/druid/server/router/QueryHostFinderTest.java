@@ -26,11 +26,11 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -41,7 +41,7 @@ public class QueryHostFinderTest
   private TieredBrokerHostSelector brokerSelector;
   private Server server;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     brokerSelector = EasyMock.createMock(TieredBrokerHostSelector.class);
@@ -79,7 +79,7 @@ public class QueryHostFinderTest
     EasyMock.replay(brokerSelector);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(brokerSelector);
@@ -103,6 +103,6 @@ public class QueryHostFinderTest
         )
     );
 
-    Assert.assertEquals("foo", server.getHost());
+    JUnit5Assertions.assertEquals(server.getHost(), "foo");
   }
 }

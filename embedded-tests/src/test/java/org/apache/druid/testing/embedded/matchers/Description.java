@@ -17,15 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.testing.embedded.matchers;
 
-import org.junit.jupiter.api.Test;
-
-public class CliMainTest
+public class Description
 {
-  @Test
-  public void testHelp()
+  private final StringBuilder builder = new StringBuilder();
+
+  public Description appendText(final String text)
   {
-    Main.main(new String[]{"help"});
+    builder.append(text);
+    return this;
+  }
+
+  @Override
+  public String toString()
+  {
+    return builder.toString();
   }
 }

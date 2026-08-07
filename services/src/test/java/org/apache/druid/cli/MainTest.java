@@ -21,7 +21,7 @@ package org.apache.druid.cli;
 
 import com.google.inject.Injector;
 import org.apache.druid.guice.GuiceInjectors;
-import org.junit.jupiter.api.Assertions;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -49,6 +49,6 @@ public class MainTest
   {
     final Injector injector = GuiceInjectors.makeStartupInjector();
     injector.injectMembers(runnable);
-    Assertions.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
+    JUnit5Assertions.assertNotNull(runnable.makeInjector(runnable.getNodeRoles(new Properties())));
   }
 }

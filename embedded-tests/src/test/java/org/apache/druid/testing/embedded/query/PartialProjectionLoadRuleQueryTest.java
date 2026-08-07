@@ -57,10 +57,10 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.catalog.TestCatalogClient;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.embedded.matchers.MatcherAssert;
+import org.apache.druid.testing.embedded.matchers.Matchers;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -73,6 +73,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.LongPredicate;
+
+import static org.apache.druid.testing.embedded.matchers.MatcherAssert.assertThat;
 
 /**
  * End-to-end coverage for the partial-load-rule wiring: a segment with a clustered base + aggregate projection
@@ -295,12 +297,12 @@ class PartialProjectionLoadRuleQueryTest extends EmbeddedClusterTestBase
 
     emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BEGIN_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
 
-    MatcherAssert.assertThat(
+    assertThat(
         "expected on-demand file loads for a projection-miss Dart query that needs the base-table bundles",
         emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_COUNT),
         Matchers.greaterThan(0L)
     );
-    MatcherAssert.assertThat(
+    assertThat(
         "expected non-zero on-demand load bytes for a projection-miss Dart query",
         emitter.getMetricEventLongSum(StorageMonitor.VSF_LOAD_BYTES),
         Matchers.greaterThan(0L)

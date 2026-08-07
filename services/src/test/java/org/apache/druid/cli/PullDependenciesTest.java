@@ -22,6 +22,9 @@ package org.apache.druid.cli;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.junit5.ExpectedToThrow;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.apache.druid.testing.junit5.TempDirExtension;
 import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
 import org.eclipse.aether.DefaultRepositorySystemSession;
 import org.eclipse.aether.RepositorySystem;
@@ -46,11 +49,9 @@ import org.eclipse.aether.spi.connector.transport.TransporterFactory;
 import org.eclipse.aether.transport.http.HttpTransporterFactory;
 import org.eclipse.aether.util.artifact.JavaScopes;
 import org.eclipse.aether.util.repository.AuthenticationBuilder;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,14 +76,14 @@ public class PullDependenciesTest
   private static final String DEPENDENCY_GROUPID = "groupid";
   private static File localRepo; // a mock local repository that stores jars
   private static Map<Artifact, List<String>> extensionToDependency;
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TempDirExtension temporaryFolder = new TempDirExtension();
   private final Artifact extension_A = new DefaultArtifact(EXTENSION_A_COORDINATE);
   private final Artifact extension_B = new DefaultArtifact(EXTENSION_B_COORDINATE);
   private PullDependencies pullDependencies;
   private File rootExtensionsDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     localRepo = temporaryFolder.newFolder("local_repo");
@@ -175,7 +176,7 @@ public class PullDependenciesTest
   /**
    * If --clean is not specified and root extension directory already exists, skip creating.
    */
-  @Test()
+  @Test
   public void testPullDependencies_root_extension_dir_exists()
   {
     pullDependencies.run();
@@ -184,11 +185,12 @@ public class PullDependenciesTest
   /**
    * A file exists on the root extension directory path, but it's not a directory, throw exception.
    */
-  @Test(expected = RuntimeException.class)
+  @Test
+  @ExpectedToThrow(RuntimeException.class)
   public void testPullDependencies_root_extension_dir_bad_state() throws IOException
   {
-    Assert.assertTrue(rootExtensionsDir.delete());
-    Assert.assertTrue(rootExtensionsDir.createNewFile());
+    JUnit5Assertions.assertTrue(rootExtensionsDir.delete());
+    JUnit5Assertions.assertTrue(rootExtensionsDir.createNewFile());
     pullDependencies.run();
   }
 
@@ -198,29 +200,29 @@ public class PullDependenciesTest
     pullDependencies.run();
     final File[] actualExtensions = rootExtensionsDir.listFiles();
     Arrays.sort(actualExtensions);
-    Assert.assertEquals(2, actualExtensions.length);
-    Assert.assertEquals(extension_A.getArtifactId(), actualExtensions[0].getName());
-    Assert.assertEquals(extension_B.getArtifactId(), actualExtensions[1].getName());
+    JUnit5Assertions.assertEquals(2, actualExtensions.length);
+    JUnit5Assertions.assertEquals(extension_A.getArtifactId(), actualExtensions[0].getName());
+    JUnit5Assertions.assertEquals(extension_B.getArtifactId(), actualExtensions[1].getName());
 
     final List<File> jarsUnderExtensionA = Arrays.asList(actualExtensions[0].listFiles());
     Collections.sort(jarsUnderExtensionA);
-    Assert.assertEquals(getExpectedJarFiles(extension_A), jarsUnderExtensionA);
+    JUnit5Assertions.assertEquals(getExpectedJarFiles(extension_A), jarsUnderExtensionA);
 
     final List<File> jarsUnderExtensionB = Arrays.asList(actualExtensions[1].listFiles());
     Collections.sort(jarsUnderExtensionB);
-    Assert.assertEquals(getExpectedJarFiles(extension_B), jarsUnderExtensionB);
+    JUnit5Assertions.assertEquals(getExpectedJarFiles(extension_B), jarsUnderExtensionB);
   }
 
   @Test
   public void testPullDependenciesCleanFlag() throws IOException
   {
     File dummyFile1 = new File(rootExtensionsDir, "dummy.txt");
-    Assert.assertTrue(dummyFile1.createNewFile());
+    JUnit5Assertions.assertTrue(dummyFile1.createNewFile());
 
     pullDependencies.clean = true;
     pullDependencies.run();
 
-    Assert.assertFalse(dummyFile1.exists());
+    JUnit5Assertions.assertFalse(dummyFile1.exists());
   }
 
   @Test
@@ -232,8 +234,8 @@ public class PullDependenciesTest
     pullDependencies.run();
 
     List<RemoteRepository> repositories = pullDependencies.getRemoteRepositories();
-    Assert.assertEquals(1, repositories.size());
-    Assert.assertEquals("https://custom.repo", repositories.get(0).getUrl());
+    JUnit5Assertions.assertEquals(1, repositories.size());
+    JUnit5Assertions.assertEquals(repositories.get(0).getUrl(), "https://custom.repo");
   }
 
   @Test
@@ -242,9 +244,9 @@ public class PullDependenciesTest
     if (rootExtensionsDir.exists()) {
       rootExtensionsDir.delete();
     }
-    Assert.assertTrue(rootExtensionsDir.createNewFile());
+    JUnit5Assertions.assertTrue(rootExtensionsDir.createNewFile());
 
-    Assert.assertThrows(IllegalArgumentException.class, () -> pullDependencies.run());
+    JUnit5Assertions.assertThrows(IllegalArgumentException.class, () -> pullDependencies.run());
   }
 
   @Test
@@ -252,20 +254,16 @@ public class PullDependenciesTest
   {
     String coordinate = "groupX:artifactX:1.0.0";
     DefaultArtifact artifact = (DefaultArtifact) pullDependencies.getArtifact(coordinate);
-    Assert.assertEquals("groupX", artifact.getGroupId());
-    Assert.assertEquals("artifactX", artifact.getArtifactId());
-    Assert.assertEquals("1.0.0", artifact.getVersion());
+    JUnit5Assertions.assertEquals(artifact.getGroupId(), "groupX");
+    JUnit5Assertions.assertEquals(artifact.getArtifactId(), "artifactX");
+    JUnit5Assertions.assertEquals(artifact.getVersion(), "1.0.0");
   }
 
   @Test
   public void testGetArtifactwithCoordinateWithoutDefaultVersion()
   {
     String coordinate = "groupY:artifactY";
-    Assert.assertThrows(
-        "Bad artifact coordinates groupY:artifactY, expected format is <groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>",
-        IllegalArgumentException.class,
-        () -> pullDependencies.getArtifact(coordinate)
-    );
+    JUnit5Assertions.assertThrows(IllegalArgumentException.class, () -> pullDependencies.getArtifact(coordinate), "Bad artifact coordinates groupY:artifactY, expected format is <groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>");
 
   }
 
@@ -275,9 +273,9 @@ public class PullDependenciesTest
     pullDependencies.defaultVersion = "2.0.0";
     String coordinate = "groupY:artifactY";
     DefaultArtifact artifact = (DefaultArtifact) pullDependencies.getArtifact(coordinate);
-    Assert.assertEquals("groupY", artifact.getGroupId());
-    Assert.assertEquals("artifactY", artifact.getArtifactId());
-    Assert.assertEquals("2.0.0", artifact.getVersion());
+    JUnit5Assertions.assertEquals(artifact.getGroupId(), "groupY");
+    JUnit5Assertions.assertEquals(artifact.getArtifactId(), "artifactY");
+    JUnit5Assertions.assertEquals(artifact.getVersion(), "2.0.0");
   }
 
   @Test
@@ -287,9 +285,9 @@ public class PullDependenciesTest
     pullDependencies.remoteRepositories = ImmutableList.of("https://custom.repo");
 
     List<RemoteRepository> repositories = pullDependencies.getRemoteRepositories();
-    Assert.assertEquals(2, repositories.size());
-    Assert.assertEquals("https://repo1.maven.org/maven2/", repositories.get(0).getUrl());
-    Assert.assertEquals("https://custom.repo", repositories.get(1).getUrl());
+    JUnit5Assertions.assertEquals(2, repositories.size());
+    JUnit5Assertions.assertEquals(repositories.get(0).getUrl(), "https://repo1.maven.org/maven2/");
+    JUnit5Assertions.assertEquals(repositories.get(1).getUrl(), "https://custom.repo");
   }
 
   @Test
@@ -305,7 +303,7 @@ public class PullDependenciesTest
     DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
 
     LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
-    Assert.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+    JUnit5Assertions.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
 
     Proxy proxy = session.getProxySelector().getProxy(
         new RemoteRepository.Builder("test", "default", "http://example.com").build()
@@ -314,13 +312,13 @@ public class PullDependenciesTest
         .setProxy(proxy)
         .build();
 
-    Assert.assertNotNull(proxy);
-    Assert.assertEquals("localhost", proxy.getHost());
-    Assert.assertEquals(8080, proxy.getPort());
-    Assert.assertEquals("http", proxy.getType());
+    JUnit5Assertions.assertNotNull(proxy);
+    JUnit5Assertions.assertEquals(proxy.getHost(), "localhost");
+    JUnit5Assertions.assertEquals(8080, proxy.getPort());
+    JUnit5Assertions.assertEquals(proxy.getType(), "http");
 
     Authentication auth = new AuthenticationBuilder().addUsername("user").addPassword("password").build();
-    Assert.assertEquals(auth, proxy.getAuthentication());
+    JUnit5Assertions.assertEquals(auth, proxy.getAuthentication());
   }
 
   @Test
@@ -329,15 +327,16 @@ public class PullDependenciesTest
     pullDependencies.useProxy = false;
     DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
     LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
-    Assert.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+    JUnit5Assertions.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
     Proxy proxy = session.getProxySelector().getProxy(
         new RemoteRepository.Builder("test", "default", "http://example.com").build()
     );
-    Assert.assertNull(proxy);
+    JUnit5Assertions.assertNull(proxy);
   }
 
   private static class RealRepositorySystemUtil
   {
+
     public static RepositorySystem newRepositorySystem()
     {
       DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();

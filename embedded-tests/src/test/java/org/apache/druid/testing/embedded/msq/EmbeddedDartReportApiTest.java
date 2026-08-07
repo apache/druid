@@ -62,11 +62,10 @@ import org.apache.druid.testing.embedded.auth.EmbeddedBasicAuthResource;
 import org.apache.druid.testing.embedded.auth.HttpUtil;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
+import org.apache.druid.testing.embedded.matchers.CoreMatchers;
+import org.apache.druid.testing.embedded.matchers.ThrowableMessageMatcher;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -79,6 +78,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.testing.embedded.matchers.MatcherAssert.assertThat;
 
 /**
  * Embedded test for the Dart report API at {@code /druid/v2/sql/queries/{id}/reports}.
@@ -492,7 +493,7 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
         RuntimeException.class,
         () -> getReportWithClient(adminQueryId, regularUserClient)
     );
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("404 Not Found")));
+    assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("404 Not Found")));
     Assertions.assertNotNull(getReportWithClient(regularUserQueryId, regularUserClient));
   }
 

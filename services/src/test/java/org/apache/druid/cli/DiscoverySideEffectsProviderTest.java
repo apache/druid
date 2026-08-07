@@ -36,19 +36,19 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class DiscoverySideEffectsProviderTest
 {
   private NodeRole nodeRole;
@@ -65,7 +65,7 @@ public class DiscoverySideEffectsProviderTest
 
   private ServerRunnable.DiscoverySideEffectsProvider target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     nodeRole = NodeRole.HISTORICAL;
@@ -74,7 +74,7 @@ public class DiscoverySideEffectsProviderTest
       DiscoveryDruidNode discoveryDruidNode = invocation.getArgument(0);
       boolean isAllServicesDiscoverable =
           discoveryDruidNode.getServices().values().stream().allMatch(DruidService::isDiscoverable);
-      Assert.assertTrue(isAllServicesDiscoverable);
+      JUnit5Assertions.assertTrue(isAllServicesDiscoverable);
       return null;
     }).when(discoverableOnlyAnnouncer).announce(ArgumentMatchers.any(DiscoveryDruidNode.class));
     Mockito
@@ -91,8 +91,8 @@ public class DiscoverySideEffectsProviderTest
         ImmutableList.of(new DiscoverableServiceTestModule(), new UndiscoverableServiceTestModule())
     ).injectMembers(target);
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
-    Assert.assertNotNull(child);
-    Assert.assertEquals(1, lifecycleHandlers.size());
+    JUnit5Assertions.assertNotNull(child);
+    JUnit5Assertions.assertEquals(1, lifecycleHandlers.size());
     // Start the lifecycle handler. This will make announcements via the announcer
     lifecycleHandlers.get(0).start();
   }
@@ -102,8 +102,8 @@ public class DiscoverySideEffectsProviderTest
   {
     createInjector(ImmutableList.of()).injectMembers(target);
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
-    Assert.assertNotNull(child);
-    Assert.assertEquals(1, lifecycleHandlers.size());
+    JUnit5Assertions.assertNotNull(child);
+    JUnit5Assertions.assertEquals(1, lifecycleHandlers.size());
     // Start the lifecycle handler. This will make announcements via the announcer
     lifecycleHandlers.get(0).start();
   }

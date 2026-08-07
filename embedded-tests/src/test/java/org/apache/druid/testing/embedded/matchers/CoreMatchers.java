@@ -17,15 +17,11 @@
  * under the License.
  */
 
-package org.apache.druid.cli;
+package org.apache.druid.testing.embedded.matchers;
 
-import org.junit.jupiter.api.Test;
-
-public class CliMainTest
+public class CoreMatchers extends Matchers
 {
-  @Test
-  public void testHelp()
+  private CoreMatchers()
   {
-    Main.main(new String[]{"help"});
   }
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.testing.embedded.auth;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
@@ -35,6 +34,7 @@ import org.apache.druid.storage.s3.output.S3ExportStorageProvider;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedExceptionAssertions;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedServiceClient;
@@ -42,7 +42,6 @@ import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.indexing.Resources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
 import org.apache.druid.testing.embedded.msq.MSQExportDirectory;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,6 +51,7 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+
 
 public class BasicAuthMSQTest extends EmbeddedClusterTestBase
 {
@@ -251,7 +251,8 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
   {
     return RetryUtils.retry(
         () -> submitSqlTaskAsUser(sql),
-        e -> unauthorizedExceptionMatcher().matches(e) || forbiddenExceptionMatcher().matches(e),
+        e -> EmbeddedExceptionAssertions.hasMessageInChain(e, "401 Unauthorized")
+             || EmbeddedExceptionAssertions.hasMessageInChain(e, "403 Forbidden"),
         AUTH_PROPAGATION_ATTEMPTS
     );
   }
@@ -264,23 +265,13 @@ public class BasicAuthMSQTest extends EmbeddedClusterTestBase
     try {
       RetryUtils.retry(
           () -> submitSqlTaskAsUser(sql),
-          e -> unauthorizedExceptionMatcher().matches(e),
+          e -> EmbeddedExceptionAssertions.hasMessageInChain(e, "401 Unauthorized"),
           AUTH_PROPAGATION_ATTEMPTS
       );
       Assertions.fail("Expected submit to fail with 403 Forbidden");
     }
     catch (Exception e) {
-      MatcherAssert.assertThat(e, forbiddenExceptionMatcher());
+      EmbeddedExceptionAssertions.assertMessageInChain(e, "403 Forbidden");
     }
-  }
-
-  private static ExceptionMatcher unauthorizedExceptionMatcher()
-  {
-    return ExceptionMatcher.of(Exception.class).expectMessageContains("401 Unauthorized");
-  }
-
-  private static ExceptionMatcher forbiddenExceptionMatcher()
-  {
-    return ExceptionMatcher.of(Exception.class).expectMessageContains("403 Forbidden");
   }
 }

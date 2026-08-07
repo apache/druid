@@ -32,9 +32,9 @@ import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
+import org.apache.druid.testing.embedded.EmbeddedMetricEventPredicates;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.druid.testing.embedded.indexing.StreamIndexTestBase;
-import org.hamcrest.Matchers;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -127,9 +127,10 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // Wait for autoscaler to emit optimalTaskCount metric indicating scale-down
     // We expect the optimal task count less than 6
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
-                      .hasValueMatching(Matchers.lessThanOrEqualTo(6L))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        OPTIMAL_TASK_COUNT_METRIC,
+        value -> value <= 6L
     );
 
     // Suspend the supervisor
@@ -181,9 +182,10 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // With 50 partitions and high lag creating a low idle ratio (< 0.2),
     // the cost function must recommend scaling up to at least 2 tasks.
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
-                      .hasValueMatching(Matchers.greaterThan(1L))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        OPTIMAL_TASK_COUNT_METRIC,
+        value -> value > 1L
     );
 
     // Suspend the supervisor
@@ -229,9 +231,10 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
 
     // With 50 partitions and high lag saturating the single task's processing rate,
     // the utilization ratio must drive the cost function to recommend scaling up.
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName(OPTIMAL_TASK_COUNT_METRIC)
-                      .hasValueMatching(Matchers.greaterThan(1L))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        OPTIMAL_TASK_COUNT_METRIC,
+        value -> value > 1L
     );
 
     // Suspend the supervisor
@@ -280,20 +283,22 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
     }
 
     // Wait for tasks to scale up
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/updatedCount")
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
-                      .hasValueMatching(Matchers.greaterThan(1L))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        "task/autoScaler/updatedCount",
+        Map.of(DruidMetrics.SUPERVISOR_ID, supervisor.getId()),
+        value -> value > 1L
     );
     Assertions.assertTrue(getCurrentTaskCount(supervisor.getId()) > 1);
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
     // Let the tasks work through the lag.
     // Do not publish any more records so that the idleness causes scale-down
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/updatedCount")
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
-                      .hasValueMatching(Matchers.equalTo(1L))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        "task/autoScaler/updatedCount",
+        Map.of(DruidMetrics.SUPERVISOR_ID, supervisor.getId()),
+        value -> value == 1L
     );
     Assertions.assertEquals(1, getCurrentTaskCount(supervisor.getId()));
 
@@ -350,10 +355,11 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                                                    .hasDimension(DruidMetrics.DATASOURCE, dataSource));
 
     // Wait for autoscaler to emit metric indicating scale-down, it should be just less than the current task count.
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("task/autoScaler/updatedCount")
-                      .hasDimension(DruidMetrics.SUPERVISOR_ID, spec.getId())
-                      .hasValueMatching(Matchers.lessThan((long) initialTaskCount))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        "task/autoScaler/updatedCount",
+        Map.of(DruidMetrics.SUPERVISOR_ID, spec.getId()),
+        value -> value < initialTaskCount
     );
 
     // After rollover, verify that the running task count has decreased

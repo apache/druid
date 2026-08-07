@@ -34,14 +34,14 @@ import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.testing.junit5.ExpectedFailureExtension;
+import org.apache.druid.testing.junit5.JUnit5Assertions;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -57,8 +57,8 @@ public class CoordinatorRuleManagerTest
       new ForeverLoadRule(ImmutableMap.of("__default", 2), null)
   );
 
-  @org.junit.Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @org.junit.jupiter.api.extension.RegisterExtension
+  public ExpectedFailureExtension expectedException = ExpectedFailureExtension.none();
 
   private final TieredBrokerConfig tieredBrokerConfig = new TieredBrokerConfig();
 
@@ -108,7 +108,7 @@ public class CoordinatorRuleManagerTest
         client
     );
 
-    Assert.assertThrows(ISE.class, manager::poll);
+    JUnit5Assertions.assertThrows(ISE.class, manager::poll);
   }
 
 
@@ -121,7 +121,7 @@ public class CoordinatorRuleManagerTest
     );
     manager.poll();
     final List<Rule> rules = manager.getRulesWithDefault("unknown");
-    Assert.assertEquals(DEFAULT_RULES, rules);
+    JUnit5Assertions.assertEquals(DEFAULT_RULES, rules);
   }
 
   @Test
@@ -137,7 +137,7 @@ public class CoordinatorRuleManagerTest
     expectedRules.add(new ForeverLoadRule(null, null));
     expectedRules.add(new IntervalDropRule(Intervals.of("2020-01-01/2020-01-02")));
     expectedRules.addAll(DEFAULT_RULES);
-    Assert.assertEquals(expectedRules, rules);
+    JUnit5Assertions.assertEquals(expectedRules, rules);
   }
 
   private CoordinatorClient mockClient()

@@ -29,23 +29,23 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.sql.http.SqlQuery;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.druid.testing.junit5.JUnit5Assertions.assertEquals;
+import static org.apache.druid.testing.junit5.JUnit5Assertions.assertNull;
+import static org.apache.druid.testing.junit5.JUnit5Assertions.assertTrue;
 
 public class ManualTieredBrokerSelectorStrategyTest
 {
   private TieredBrokerConfig tieredBrokerConfig;
   private Druids.TimeseriesQueryBuilder queryBuilder;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     tieredBrokerConfig = new TieredBrokerConfig()

@@ -21,7 +21,6 @@ package org.apache.druid.testing.embedded.query;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.broker.BrokerClient;
-import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryContexts;
@@ -30,9 +29,9 @@ import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.testing.embedded.EmbeddedClusterApis;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.HashMap;
 import java.util.List;
@@ -76,104 +75,72 @@ public class QueryErrorTest extends QueryTestBase
   @Test
   public void testSqlParseException()
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.runSql("FROM foo_bar")
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("400 Bad Request")
+    assertHttpError(
+        () -> cluster.runSql("FROM foo_bar"),
+        "400 Bad Request"
     );
   }
 
   @Test
   public void testSqlValidationException()
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.runSql("SELECT * FROM foo_bar")
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("400 Bad Request")
+    assertHttpError(
+        () -> cluster.runSql("SELECT * FROM foo_bar"),
+        "400 Bad Request"
     );
   }
 
   @Test
   public void testQueryTimeout()
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> sqlQueryFuture(b, QUERY_TIMEOUT_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("504")
+            ),
+        "504"
     );
 
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> nativeQueryFuture(b, QUERY_TIMEOUT_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("504")
+            ),
+        "504"
     );
   }
 
   @Test
   public void testQueryCapacityExceeded()
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> sqlQueryFuture(b, QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("429")
+            ),
+        "429"
     );
 
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> nativeQueryFuture(b, QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("429")
+            ),
+        "429"
     );
   }
 
   @Test
   public void testQueryUnsupported()
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> sqlQueryFuture(b, QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("501")
+            ),
+        "501"
     );
 
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> nativeQueryFuture(b, QUERY_UNSUPPORTED_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("501")
+            ),
+        "501"
     );
   }
 
@@ -181,54 +148,49 @@ public class QueryErrorTest extends QueryTestBase
   public void testQueryResourceLimitExceeded()
   {
     // SQL
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> sqlQueryFuture(b, RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("400")
+            ),
+        "400"
     );
 
     // Native
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> nativeQueryFuture(b, RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("400")
+            ),
+        "400"
     );
   }
 
   @Test
   public void testQueryFailure()
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> sqlQueryFuture(b, QUERY_FAILURE_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("500")
+            ),
+        "500"
     );
 
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
+    assertHttpError(
+        () -> cluster.callApi().onAnyBroker(
                 b -> nativeQueryFuture(b, QUERY_FAILURE_TEST_CONTEXT_KEY)
-            )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("500")
+            ),
+        "500"
     );
+  }
+
+  private static void assertHttpError(final Executable executable, final String expectedMessage)
+  {
+    final Exception exception = Assertions.assertThrows(Exception.class, executable);
+    Throwable cause = exception;
+    while (cause != null && !(cause instanceof HttpResponseException)) {
+      cause = cause.getCause();
+    }
+    Assertions.assertNotNull(cause, "Expected HttpResponseException in cause chain");
+    Assertions.assertTrue(cause.getMessage().contains(expectedMessage), cause::getMessage);
   }
 
   private static Map<String, Object> buildTestContext(String key)

@@ -43,11 +43,10 @@ import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.embedded.matchers.Matchers;
 import org.apache.druid.testing.embedded.minio.MinIOStorageResource;
 import org.apache.druid.testing.embedded.msq.EmbeddedDurableShuffleStorageTest;
 import org.apache.druid.testing.embedded.msq.EmbeddedMSQApis;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -61,6 +60,8 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+
+import static org.apache.druid.testing.embedded.matchers.MatcherAssert.assertThat;
 
 /**
  * Virtual storage mode tests for classic native JSON queries
@@ -297,18 +298,18 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(0L, inputChannelSums.queries());
     Assertions.assertEquals(0L, inputChannelSums.totalQueries());
     Assertions.assertEquals(39244L, inputChannelSums.rows());
-    MatcherAssert.assertThat(inputChannelSums.bytes(), Matchers.greaterThan(0L));
-    MatcherAssert.assertThat(inputChannelSums.bytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
+    assertThat(inputChannelSums.bytes(), Matchers.greaterThan(0L));
+    assertThat(inputChannelSums.bytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
 
     // Verify stage 0 (segment read) VSF load counters
     // partial loading is only partially metered at the moment, so depending on how stuff landed in and was evicted
     // from the cache,there can be 0 loads (because loads are currently only counted when the metadata entry is mounted)
-    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.greaterThanOrEqualTo(0L));
-    MatcherAssert.assertThat(inputChannelSums.loadFiles(), Matchers.lessThanOrEqualTo(24L));
-    MatcherAssert.assertThat(inputChannelSums.loadTime(), Matchers.greaterThanOrEqualTo(0L));
-    MatcherAssert.assertThat(inputChannelSums.loadWait(), Matchers.greaterThanOrEqualTo(0L));
-    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.greaterThanOrEqualTo(0L));
-    MatcherAssert.assertThat(inputChannelSums.loadBytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
+    assertThat(inputChannelSums.loadFiles(), Matchers.greaterThanOrEqualTo(0L));
+    assertThat(inputChannelSums.loadFiles(), Matchers.lessThanOrEqualTo(24L));
+    assertThat(inputChannelSums.loadTime(), Matchers.greaterThanOrEqualTo(0L));
+    assertThat(inputChannelSums.loadWait(), Matchers.greaterThanOrEqualTo(0L));
+    assertThat(inputChannelSums.loadBytes(), Matchers.greaterThanOrEqualTo(0L));
+    assertThat(inputChannelSums.loadBytes(), Matchers.lessThanOrEqualTo(SIZE_BYTES));
   }
 
   @Test
@@ -329,7 +330,7 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
 
     long loadCount = getMetricLatestValue(emitter, DefaultQueryMetrics.QUERY_ON_DEMAND_LOAD_COUNT, expectedEventCount);
     if (expectedLoadCount != null) {
-      MatcherAssert.assertThat(loadCount, Matchers.lessThanOrEqualTo(expectedLoadCount));
+      assertThat(loadCount, Matchers.lessThanOrEqualTo(expectedLoadCount));
     }
     boolean hasLoads = loadCount > 0;
 

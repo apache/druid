@@ -89,19 +89,18 @@ import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
+import org.apache.druid.testing.embedded.EmbeddedMetricEventPredicates;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
+import org.apache.druid.testing.embedded.matchers.Matchers;
 import org.apache.druid.testing.embedded.tools.EventSerializer;
 import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
 import org.apache.druid.testing.embedded.tools.StreamGenerator;
 import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
-import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -117,6 +116,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static org.apache.druid.testing.embedded.matchers.MatcherAssert.assertThat;
 
 /**
  * Embedded test that runs compaction supervisors of various types.
@@ -287,10 +288,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     waitForAllCompactionTasksToFinish();
 
     // wait for new segments have been updated to the cache
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("segment/metadataCache/used/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueMatching(Matchers.greaterThan(totalUsed)));
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        "segment/metadataCache/used/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource),
+        value -> value > totalUsed
+    );
 
     // performed minor compaction: 1 previously compacted segment + 1 recently compacted segment from minor compaction
     Assertions.assertEquals(2, getNumSegmentsWith(Granularities.DAY));
@@ -536,8 +539,8 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
       Assertions.assertNotNull(event.getUserDims().get("taskId"));
       Assertions.assertNotNull(event.getUserDims().get("groupId"));
     }
-    MatcherAssert.assertThat(loadBeginCount, Matchers.greaterThan(0L));
-    MatcherAssert.assertThat(loadCount, Matchers.greaterThan(0L));
+    assertThat(loadBeginCount, Matchers.greaterThan(0L));
+    assertThat(loadCount, Matchers.greaterThan(0L));
   }
 
   @Test
@@ -1180,10 +1183,11 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   private void waitForAllCompactionTasksToFinish()
   {
     // Wait for all intervals to be compacted
-    overlord.latchableEmitter().waitForEvent(
-        event -> event.hasMetricName("interval/waitCompact/count")
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource)
-                      .hasValueMatching(Matchers.equalTo(0L))
+    EmbeddedMetricEventPredicates.waitForMetric(
+        overlord.latchableEmitter(),
+        "interval/waitCompact/count",
+        Map.of(DruidMetrics.DATASOURCE, dataSource),
+        value -> value == 0L
     );
 
     // Wait for all submitted compaction jobs to finish
@@ -1192,15 +1196,13 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         Map.of(DruidMetrics.DATASOURCE, dataSource)
     ).stream().mapToInt(Number::intValue).sum();
 
-    final Matcher<Object> taskTypeMatcher = Matchers.anyOf(
-        Matchers.equalTo("query_controller"),
-        Matchers.equalTo("compact")
-    );
-    overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("task/run/time")
-                      .hasDimensionMatching(DruidMetrics.TASK_TYPE, taskTypeMatcher)
-                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
-        agg -> agg.hasCountAtLeast(numSubmittedTasks)
+    EmbeddedMetricEventPredicates.waitForMetricCount(
+        overlord.latchableEmitter(),
+        "task/run/time",
+        Map.of(DruidMetrics.DATASOURCE, dataSource),
+        DruidMetrics.TASK_TYPE,
+        taskType -> "query_controller".equals(taskType) || "compact".equals(taskType),
+        numSubmittedTasks
     );
   }
 
