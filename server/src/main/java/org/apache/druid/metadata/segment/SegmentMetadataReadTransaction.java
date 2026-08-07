@@ -38,7 +38,9 @@ public interface SegmentMetadataReadTransaction
   Handle getHandle();
 
   /**
-   * @return SQL tool to read or update the metadata store directly.
+   * SQL tool to read or update the metadata store directly, without affecting
+   * the cache. Use this when performing a no-cache operation inside a transaction
+   * that otherwise uses the cache for some operations.
    */
   SqlSegmentsMetadataQuery noCacheSql();
 

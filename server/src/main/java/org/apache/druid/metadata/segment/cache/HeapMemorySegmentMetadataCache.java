@@ -134,6 +134,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final Duration pollDuration;
   private final UsageMode cacheMode;
   private final MetadataStorageTablesConfig tablesConfig;
+  private final SegmentsMetadataManagerConfig managerConfig;
   private final SQLMetadataConnector connector;
 
   private final boolean useSchemaCache;
@@ -183,6 +184,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.cacheMode = config.get().getCacheUsageMode();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
     this.tablesConfig = tablesConfig.get();
+    this.managerConfig = config.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
     this.useIndexingStateCache = indexingStateCache.isEnabled();
@@ -750,7 +752,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     return inReadOnlyTransaction(
         (handle, status) -> sqlFunction.apply(
             SqlSegmentsMetadataQuery
-                .forHandle(handle, connector, tablesConfig, jsonMapper)
+                .forHandle(handle, connector, tablesConfig, managerConfig, jsonMapper)
         )
     );
   }
@@ -780,7 +782,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       try (
           CloseableIterator<DataSegmentPlus> iterator =
               SqlSegmentsMetadataQuery
-                  .forHandle(handle, connector, tablesConfig, jsonMapper)
+                  .forHandle(handle, connector, tablesConfig, managerConfig, jsonMapper)
                   .retrieveSegmentsByIdIterator(dataSource, segmentIdsToRefresh, useSchemaCache)
       ) {
         iterator.forEachRemaining(summary.usedSegments::add);
