@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -46,7 +45,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -61,7 +60,6 @@ import static org.apache.druid.segment.column.ColumnType.FLOAT;
 import static org.apache.druid.segment.column.ColumnType.LONG;
 import static org.apache.druid.segment.column.ColumnType.STRING;
 import static org.apache.druid.segment.column.ColumnType.ofComplex;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 {
@@ -404,7 +402,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("REPLACE INTO \"in/valid\" OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
-            DruidExceptionMatcher
+            DruidExceptionAssertions
                 .invalidInput()
                 .expectMessageIs("Invalid value for field [table]: Value [in/valid] cannot contain '/'.")
         )
@@ -634,7 +632,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
       }
       catch (JsonProcessingException e) {
         // Won't reach here
-        Assert.fail(e.getMessage());
+        Assertions.fail(e.getMessage());
       }
 
       testIngestionQuery()
@@ -668,10 +666,10 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Exception should be thrown");
+      Assertions.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs(
               "Invalid granularity['invalid_granularity'] specified after PARTITIONED BY clause."
@@ -952,7 +950,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
   public void testExplainReplaceFromExternalUnauthorized()
   {
     // Use testQuery for EXPLAIN (not testIngestionQuery).
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ForbiddenException.class,
         () ->
             testQuery(
@@ -1107,7 +1105,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(DruidExceptionMatcher.invalidInput().expectMessageIs(
+        .expectValidationError(DruidExceptionAssertions.invalidInput().expectMessageIs(
             "Context parameter [sqlOuterLimit] cannot be provided on operator [REPLACE]"
         ))
         .verify();

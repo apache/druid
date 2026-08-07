@@ -27,7 +27,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -52,9 +51,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -68,7 +65,6 @@ import static org.apache.druid.segment.column.ColumnType.DOUBLE;
 import static org.apache.druid.segment.column.ColumnType.FLOAT;
 import static org.apache.druid.segment.column.ColumnType.LONG;
 import static org.apache.druid.segment.column.ColumnType.STRING;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
 {
@@ -216,7 +212,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO \"in/valid\" SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
-            DruidExceptionMatcher.invalidInput().expectMessageIs(
+            DruidExceptionAssertions.invalidInput().expectMessageIs(
                 "Invalid value for field [table]: Value [in/valid] cannot contain '/'."
             )
         )
@@ -581,12 +577,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
         .expectLogicalPlanFrom("insertFromExternal")
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(CalciteIngestDmlTestException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("getTypes()"))
-            )
-        )
+        .expectValidationError(CalciteIngestDmlTestException.class, "getTypes()")
         .verify();
   }
 
@@ -649,7 +640,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       }
       catch (JsonProcessingException e) {
         // Won't reach here
-        Assert.fail(e.getMessage());
+        Assertions.fail(e.getMessage());
       }
 
       testIngestionQuery()
@@ -696,7 +687,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
       }
       catch (JsonProcessingException e) {
         // Won't reach here
-        Assert.fail(e.getMessage());
+        Assertions.fail(e.getMessage());
       }
 
       testIngestionQuery()
@@ -1136,10 +1127,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Exception should be thrown");
+      Assertions.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs(
+      assertDruidException(e, invalidSqlIs(
           "Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead"
       ));
     }
@@ -1155,10 +1146,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Exception should be thrown");
+      Assertions.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs(
               "Invalid granularity['invalid_granularity'] specified after PARTITIONED BY clause."
@@ -1182,10 +1173,10 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Exception should be thrown");
+      Assertions.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("Cannot use an ORDER BY clause on a Query of type [INSERT], use CLUSTERED BY instead")
       );
@@ -1198,7 +1189,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   @Test
   public void testInsertWithoutPartitionedBy()
   {
-    DruidException e = Assert.assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () ->
             testQuery(
@@ -1208,7 +1199,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             )
     );
 
-    assertThat(
+    assertDruidException(
         e,
         invalidSqlIs("Operation [INSERT] requires a PARTITIONED BY to be explicitly defined, but none was found.")
     );
@@ -1322,7 +1313,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   public void testExplainInsertFromExternalUnauthorized()
   {
     // Use testQuery for EXPLAIN (not testIngestionQuery).
-    Assert.assertThrows(
+    Assertions.assertThrows(
         ForbiddenException.class,
         () ->
             testQuery(
@@ -1535,16 +1526,17 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("insert into foo1 select __time, dim1 FROM foo partitioned by time_floor(__time, 'PT2H')")
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(DruidException.class, e);
+          Assertions.assertTrue(
+              e.getMessage().contains(
                     "Invalid granularity[`time_floor`(`__time`, 'PT2H')] specified after PARTITIONED BY clause."
                     + " Expected 'SECOND', 'MINUTE', 'FIVE_MINUTE', 'TEN_MINUTE', 'FIFTEEN_MINUTE', 'THIRTY_MINUTE',"
                     + " 'HOUR', 'SIX_HOUR', 'EIGHT_HOUR', 'DAY', 'MONTH', 'QUARTER', 'YEAR', 'ALL',"
-                    + " ALL TIME, FLOOR() or TIME_FLOOR()"))
-            )
-        )
+                    + " ALL TIME, FLOOR() or TIME_FLOOR()"
+              )
+          );
+        })
         .verify();
   }
 
@@ -1563,13 +1555,12 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
             "INSERT INTO dst SELECT __time FROM %s PARTITIONED BY ALL TIME",
             externSql(restrictedSignature)
         )
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                    "EXTERN function with __time column can be used when __time column is of type long"))
-            )
-        )
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(DruidException.class, e);
+          Assertions.assertTrue(
+              e.getMessage().contains("EXTERN function with __time column can be used when __time column is of type long")
+          );
+        })
         .verify();
   }
 
@@ -1605,7 +1596,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionMatcher(
+                            new DruidExceptionAssertions(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"
@@ -1633,7 +1624,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionMatcher(
+                            new DruidExceptionAssertions(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"
@@ -1660,7 +1651,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionMatcher(
+                            new DruidExceptionAssertions(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"
@@ -1688,7 +1679,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionMatcher(
+                            new DruidExceptionAssertions(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"

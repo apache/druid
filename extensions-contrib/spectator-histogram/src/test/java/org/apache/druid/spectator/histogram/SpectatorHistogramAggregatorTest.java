@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
@@ -52,7 +53,6 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -75,14 +75,13 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -90,7 +89,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
 public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTest
 {
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
@@ -102,8 +100,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   private static final DelimitedInputFormat INPUT_FORMAT = DelimitedInputFormat.forColumns(
       List.of("timestamp", "product", "cost")
   );
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   private static final SegmentMetadataQueryRunnerFactory METADATA_QR_FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
@@ -125,35 +123,80 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     EXPECTED_HISTOGRAMS.put("C", histogram);
   }
 
-  private final AggregationTestHelper helper;
-  private final AggregationTestHelper timeSeriesHelper;
+  private AggregationTestHelper helper;
+  private AggregationTestHelper timeSeriesHelper;
 
-  public SpectatorHistogramAggregatorTest(final GroupByQueryConfig config)
+  public void initSpectatorHistogramAggregatorTest(final GroupByQueryConfig config)
   {
     SpectatorHistogramModule.registerSerde();
     SpectatorHistogramModule module = new SpectatorHistogramModule();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
         module.getJacksonModules(), config, tempFolder);
-    timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
+    timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         module.getJacksonModules(),
         tempFolder
     );
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  private static List<GroupByQueryConfig> testConfigs()
+  {
+    return List.of(
+        new GroupByQueryConfig()
+        {
+          @Override
+          public int getBufferGrouperInitialBuckets()
+          {
+            return 4;
+          }
+        },
+        new GroupByQueryConfig()
+        {
+          @Override
+          public int getBufferGrouperMaxSize()
+          {
+            return 2;
+          }
+
+          @Override
+          public HumanReadableBytes getMaxOnDiskStorage()
+          {
+            return HumanReadableBytes.valueOf(10L * 1024 * 1024);
+          }
+        },
+        new org.apache.druid.jackson.DefaultObjectMapper().convertValue(
+            java.util.Map.of(
+                "maxSelectorDictionarySize", 20,
+                "maxMergingDictionarySize", 400,
+                "maxOnDiskStorage", 10L * 1024 * 1024
+            ),
+            GroupByQueryConfig.class
+        ),
+        new GroupByQueryConfig()
+        {
+          @Override
+          public int getNumParallelCombineThreads()
+          {
+            return 2;
+          }
+        }
+    );
+  }
+
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
-    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+    for (GroupByQueryConfig config : testConfigs()) {
       constructors.add(new Object[]{config});
     }
     return constructors;
   }
 
   // this is to test Json properties and equals
-  @Test
-  public void serializeDeserializeFactoryWithFieldName() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void serializeDeserializeFactoryWithFieldName(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new SpectatorHistogramModule().getJacksonModules().forEach(objectMapper::registerModule);
     SpectatorHistogramAggregatorFactory factory = new SpectatorHistogramAggregatorFactory(
@@ -166,12 +209,14 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, other);
+    Assertions.assertEquals(factory, other);
   }
 
-  @Test
-  public void testBuildingHistogramQueryTime() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testBuildingHistogramQueryTime(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -194,9 +239,11 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     assertResultsMatch(results, 2, "C");
   }
 
-  @Test
-  public void testBuildingAndMergingHistograms() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testBuildingAndMergingHistograms(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -220,13 +267,15 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expected, results.get(0).get(0));
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(expected, results.get(0).get(0));
   }
 
-  @Test
-  public void testBuildingAndMergingHistogramsTimeseriesQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testBuildingAndMergingHistogramsTimeseriesQuery(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     TimeseriesQuery tsQuery = Druids.newTimeseriesQueryBuilder()
         .dataSource("test_datasource")
         .granularity(Granularities.ALL)
@@ -251,14 +300,16 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
     List<Result<TimeseriesResultValue>> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     SpectatorHistogram value = (SpectatorHistogram) results.get(0).getValue().getMetric("merged_cost_histogram");
-    Assert.assertEquals(expected, value);
+    Assertions.assertEquals(expected, value);
   }
 
-  @Test
-  public void testBuildingAndMergingGroupbyHistograms() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testBuildingAndMergingGroupbyHistograms(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -277,31 +328,33 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(6, results.size());
+    Assertions.assertEquals(6, results.size());
 
     SpectatorHistogram expectedA = new SpectatorHistogram();
     expectedA.add(PercentileBuckets.indexOf(10), 1L);
-    Assert.assertEquals(expectedA, results.get(0).get(1));
+    Assertions.assertEquals(expectedA, results.get(0).get(1));
 
     SpectatorHistogram expectedB = new SpectatorHistogram();
     expectedB.add(PercentileBuckets.indexOf(30), 1L);
     expectedB.add(PercentileBuckets.indexOf(40), 3L);
     expectedB.add(PercentileBuckets.indexOf(50), 2L);
-    Assert.assertEquals(expectedB, results.get(1).get(1));
+    Assertions.assertEquals(expectedB, results.get(1).get(1));
 
     SpectatorHistogram expectedC = new SpectatorHistogram();
     expectedC.add(PercentileBuckets.indexOf(50), 1L);
     expectedC.add(PercentileBuckets.indexOf(20000), 1L);
-    Assert.assertEquals(expectedC, results.get(2).get(1));
+    Assertions.assertEquals(expectedC, results.get(2).get(1));
 
-    Assert.assertNull(results.get(3).get(1));
-    Assert.assertNull(results.get(4).get(1));
-    Assert.assertNull(results.get(5).get(1));
+    Assertions.assertNull(results.get(3).get(1));
+    Assertions.assertNull(results.get(4).get(1));
+    Assertions.assertNull(results.get(5).get(1));
   }
 
-  @Test
-  public void testBuildingAndCountingHistograms() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testBuildingAndCountingHistograms(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -322,16 +375,18 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     // Check longSum
-    Assert.assertEquals(9L, results.get(0).get(0));
+    Assertions.assertEquals(9L, results.get(0).get(0));
     // Check doubleSum
-    Assert.assertEquals(9.0, (Double) results.get(0).get(1), 0.001);
+    Assertions.assertEquals(9.0, (Double) results.get(0).get(1), 0.001);
   }
 
-  @Test
-  public void testBuildingAndCountingHistogramsWithNullFilter() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testBuildingAndCountingHistogramsWithNullFilter(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -356,16 +411,18 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     // Check longSum
-    Assert.assertEquals(9L, results.get(0).get(0));
+    Assertions.assertEquals(9L, results.get(0).get(0));
     // Check doubleSum
-    Assert.assertEquals(9.0, (Double) results.get(0).get(1), 0.001);
+    Assertions.assertEquals(9.0, (Double) results.get(0).get(1), 0.001);
   }
 
-  @Test
-  public void testIngestAsHistogramDistribution() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testIngestAsHistogramDistribution(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -389,13 +446,15 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expected, results.get(0).get(0));
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(expected, results.get(0).get(0));
   }
 
-  @Test
-  public void testIngestHistogramsTimer() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testIngestHistogramsTimer(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -419,13 +478,15 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expected, results.get(0).get(0));
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(expected, results.get(0).get(0));
   }
 
-  @Test
-  public void testIngestingPreaggregatedHistograms() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testIngestingPreaggregatedHistograms(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     TimeseriesQuery preAggTsQuery = Druids.newTimeseriesQueryBuilder()
         .dataSource("test_datasource")
         .granularity(Granularities.ALL)
@@ -450,15 +511,17 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
     List<Result<TimeseriesResultValue>> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     SpectatorHistogram value = (SpectatorHistogram) results.get(0).getValue().getMetric("merged_cost_histogram");
-    Assert.assertEquals(expected, value);
+    Assertions.assertEquals(expected, value);
   }
 
-  @Test
-  public void testMetadataQueryTimer() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testMetadataQueryTimer(final GroupByQueryConfig config) throws Exception
   {
-    File segmentDir = tempFolder.newFolder();
+    initSpectatorHistogramAggregatorTest(config);
+    File segmentDir = newFolder(tempFolder, "junit");
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -495,16 +558,18 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
                                                       .build();
     List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery)).toList();
     System.out.println(results);
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     Map<String, ColumnAnalysis> columns = results.get(0).getColumns();
-    Assert.assertNotNull(columns.get("histogram"));
-    Assert.assertEquals("spectatorHistogramTimer", columns.get("histogram").getType());
+    Assertions.assertNotNull(columns.get("histogram"));
+    Assertions.assertEquals("spectatorHistogramTimer", columns.get("histogram").getType());
   }
 
-  @Test
-  public void testMetadataQueryDistribution() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testMetadataQueryDistribution(final GroupByQueryConfig config) throws Exception
   {
-    File segmentDir = tempFolder.newFolder();
+    initSpectatorHistogramAggregatorTest(config);
+    File segmentDir = newFolder(tempFolder, "junit");
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -541,15 +606,17 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
                                                       .build();
     List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery)).toList();
     System.out.println(results);
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     Map<String, ColumnAnalysis> columns = results.get(0).getColumns();
-    Assert.assertNotNull(columns.get("histogram"));
-    Assert.assertEquals("spectatorHistogramDistribution", columns.get("histogram").getType());
+    Assertions.assertNotNull(columns.get("histogram"));
+    Assertions.assertEquals("spectatorHistogramDistribution", columns.get("histogram").getType());
   }
 
-  @Test
-  public void testPercentilePostAggregator() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testPercentilePostAggregator(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -585,9 +652,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     expected.add(PercentileBuckets.indexOf(20000), 1L);
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     // Check on Median (true median is 40)
-    Assert.assertEquals(40.0, (double) results.get(0).get(1), 0.2);
+    Assertions.assertEquals(40.0, (double) results.get(0).get(1), 0.2);
     // True percentiles for 25, 50, 75, 99
     double[] expectedPercentiles = new double[]{40.0, 40.0, 50.0, 18404.0};
     double[] resultPercentiles = (double[]) results.get(0).get(2);
@@ -597,13 +664,15 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
       double resultPercentile = resultPercentiles[i];
       double error18pcnt = expectedPercentile * 0.18;
       // Should be within 18%
-      Assert.assertEquals(expectedPercentile, resultPercentile, error18pcnt);
+      Assertions.assertEquals(expectedPercentile, resultPercentile, error18pcnt);
     }
   }
 
-  @Test
-  public void testBuildingAndCountingHistogramsIncrementalIndex() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testBuildingAndCountingHistogramsIncrementalIndex(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     List<String> dimensions = Collections.singletonList("d");
     int n = 10;
     DateTime startOfDay = DateTimes.of("2000-01-01");
@@ -652,16 +721,18 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Sequence<ResultRow> seq = helper.runQueryOnSegmentsObjs(segments, query);
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     // Check timestamp
-    Assert.assertEquals(startOfDay.getMillis(), results.get(0).get(0));
+    Assertions.assertEquals(startOfDay.getMillis(), results.get(0).get(0));
     // Check doubleSum
-    Assert.assertEquals(n * segments.size(), (Double) results.get(0).get(1), 0.001);
+    Assertions.assertEquals(n * segments.size(), (Double) results.get(0).get(1), 0.001);
   }
 
-  @Test
-  public void testPercentilePostAggregatorWithNullSketch() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testPercentilePostAggregatorWithNullSketch(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -687,22 +758,24 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(6, results.size());
+    Assertions.assertEquals(6, results.size());
 
     // First three rows should have valid histograms and percentile values
-    Assert.assertNotNull("Row [0] should have non-null percentile", results.get(0).get(2));
-    Assert.assertNotNull("Row [1] should have non-null percentile", results.get(1).get(2));
-    Assert.assertNotNull("Row [2] should have non-null percentile", results.get(2).get(2));
+    Assertions.assertNotNull(results.get(0).get(2), "Row [0] should have non-null percentile");
+    Assertions.assertNotNull(results.get(1).get(2), "Row [1] should have non-null percentile");
+    Assertions.assertNotNull(results.get(2).get(2), "Row [2] should have non-null percentile");
 
     // Last three rows have null histograms, so percentile should also be null
-    Assert.assertNull("Row [3] should have null percentile when histogram is null", results.get(3).get(2));
-    Assert.assertNull("Row [4] should have null percentile when histogram is null", results.get(4).get(2));
-    Assert.assertNull("Row [5] should have null percentile when histogram is null", results.get(5).get(2));
+    Assertions.assertNull(results.get(3).get(2), "Row [3] should have null percentile when histogram is null");
+    Assertions.assertNull(results.get(4).get(2), "Row [4] should have null percentile when histogram is null");
+    Assertions.assertNull(results.get(5).get(2), "Row [5] should have null percentile when histogram is null");
   }
 
-  @Test
-  public void testPercentilesPostAggregatorWithNullSketch() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testPercentilesPostAggregatorWithNullSketch(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -728,25 +801,27 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(6, results.size());
+    Assertions.assertEquals(6, results.size());
 
     // First three rows should have valid histograms and percentiles arrays
-    Assert.assertNotNull("Row [0] should have non-null percentiles array", results.get(0).get(2));
-    Assert.assertTrue("Row [0] percentiles should be double array", results.get(0).get(2) instanceof double[]);
-    Assert.assertNotNull("Row [1] should have non-null percentiles array", results.get(1).get(2));
-    Assert.assertTrue("Row [1] percentiles should be double array", results.get(1).get(2) instanceof double[]);
-    Assert.assertNotNull("Row [2] should have non-null percentiles array", results.get(2).get(2));
-    Assert.assertTrue("Row [2] percentiles should be double array", results.get(2).get(2) instanceof double[]);
+    Assertions.assertNotNull(results.get(0).get(2), "Row [0] should have non-null percentiles array");
+    Assertions.assertTrue(results.get(0).get(2) instanceof double[], "Row [0] percentiles should be double array");
+    Assertions.assertNotNull(results.get(1).get(2), "Row [1] should have non-null percentiles array");
+    Assertions.assertTrue(results.get(1).get(2) instanceof double[], "Row [1] percentiles should be double array");
+    Assertions.assertNotNull(results.get(2).get(2), "Row [2] should have non-null percentiles array");
+    Assertions.assertTrue(results.get(2).get(2) instanceof double[], "Row [2] percentiles should be double array");
 
     // Last three rows have null histograms, so percentiles should also be null
-    Assert.assertNull("Row [3] should have null percentiles when histogram is null", results.get(3).get(2));
-    Assert.assertNull("Row [4] should have null percentiles when histogram is null", results.get(4).get(2));
-    Assert.assertNull("Row [5] should have null percentiles when histogram is null", results.get(5).get(2));
+    Assertions.assertNull(results.get(3).get(2), "Row [3] should have null percentiles when histogram is null");
+    Assertions.assertNull(results.get(4).get(2), "Row [4] should have null percentiles when histogram is null");
+    Assertions.assertNull(results.get(5).get(2), "Row [5] should have null percentiles when histogram is null");
   }
 
-  @Test
-  public void testCountPostAggregator() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testCountPostAggregator(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -770,14 +845,16 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     // The merged histogram has 9 total observations (1+1+3+3+1 from the buckets)
-    Assert.assertEquals(9L, results.get(0).get(1));
+    Assertions.assertEquals(9L, results.get(0).get(1));
   }
 
-  @Test
-  public void testCountPostAggregatorWithNullSketch() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testCountPostAggregatorWithNullSketch(final GroupByQueryConfig config) throws Exception
   {
+    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -802,34 +879,44 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(6, results.size());
+    Assertions.assertEquals(6, results.size());
 
     // First three rows should have valid histograms and count values
     // Product A: 1 observation
-    Assert.assertEquals(1L, results.get(0).get(2));
+    Assertions.assertEquals(1L, results.get(0).get(2));
     // Product B: 6 observations (1+3+2 from buckets at indices 30, 40, 50)
-    Assert.assertEquals(6L, results.get(1).get(2));
+    Assertions.assertEquals(6L, results.get(1).get(2));
     // Product C: 2 observations (1+1 from buckets at indices 50, 20000)
-    Assert.assertEquals(2L, results.get(2).get(2));
+    Assertions.assertEquals(2L, results.get(2).get(2));
 
     // Last three rows have null histograms, so count should also be null
-    Assert.assertNull("Row [3] should have null count when histogram is null", results.get(3).get(2));
-    Assert.assertNull("Row [4] should have null count when histogram is null", results.get(4).get(2));
-    Assert.assertNull("Row [5] should have null count when histogram is null", results.get(5).get(2));
+    Assertions.assertNull(results.get(3).get(2), "Row [3] should have null count when histogram is null");
+    Assertions.assertNull(results.get(4).get(2), "Row [4] should have null count when histogram is null");
+    Assertions.assertNull(results.get(5).get(2), "Row [5] should have null count when histogram is null");
   }
 
   private static void assertResultsMatch(List<ResultRow> results, int rowNum, String expectedProduct)
   {
     ResultRow row = results.get(rowNum);
     Object product = row.get(0);
-    Assert.assertTrue("Expected dimension of type String", product instanceof String);
-    Assert.assertEquals("Product values didn't match", expectedProduct, product);
+    Assertions.assertTrue(product instanceof String, "Expected dimension of type String");
+    Assertions.assertEquals(expectedProduct, product, "Product values didn't match");
     Object histogram = row.get(1);
-    Assert.assertTrue(
-        "Expected histogram metric of type SpectatorHistogramUtils.HistogramMap",
-        histogram instanceof SpectatorHistogram
+    Assertions.assertTrue(
+        histogram instanceof SpectatorHistogram,
+        "Expected histogram metric of type SpectatorHistogramUtils.HistogramMap"
     );
-    Assert.assertEquals("Count values didn't match", EXPECTED_HISTOGRAMS.get(product), histogram);
+    Assertions.assertEquals(EXPECTED_HISTOGRAMS.get(product), histogram, "Count values didn't match");
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    final String subFolder = String.join("/", subDirs);
+    final File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 
 }

@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -54,6 +53,8 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement.ResultSet;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.DruidExceptionAssertions;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -62,9 +63,9 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestQueryStack;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -107,7 +108,7 @@ public class SqlStatementTest
   public static void setUpClass()
   {
     resourceCloser = Closer.create();
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
+    conglomerate = SqlTestQueryStack.createQueryRunnerFactoryConglomerate(resourceCloser);
 
     final QueryScheduler scheduler = new QueryScheduler(
         5,
@@ -293,9 +294,9 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
-          DruidExceptionMatcher
+          DruidExceptionAssertions
               .invalidSqlInput()
               .expectMessageContains("Object 'bogus' not found within 'druid'")
       );
@@ -356,9 +357,9 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
-          DruidExceptionMatcher
+          DruidExceptionAssertions
               .invalidSqlInput()
               .expectMessageContains("Object 'bogus' not found within 'druid'")
       );
@@ -460,9 +461,9 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
-          DruidExceptionMatcher
+          DruidExceptionAssertions
               .invalidSqlInput()
               .expectMessageContains("Object 'bogus' not found within 'druid'")
       );

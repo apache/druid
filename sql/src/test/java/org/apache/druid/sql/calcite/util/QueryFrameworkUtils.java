@@ -38,7 +38,6 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.log.NoopRequestLogger;
@@ -139,7 +138,7 @@ public class QueryFrameworkUtils
         plannerFactory,
         NoopServiceEmitter.instance(),
         NoopRequestLogger.instance(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        SqlTestQueryStack.DEFAULT_NOOP_SCHEDULER,
         new SqlLifecycleManager()
     );
   }
@@ -314,7 +313,7 @@ public class QueryFrameworkUtils
 
   public static JoinableFactory createDefaultJoinableFactory(Injector injector)
   {
-    return QueryStackTests.makeJoinableFactoryFromDefault(
+    return SqlTestQueryStack.makeJoinableFactoryFromDefault(
         injector.getInstance(LookupExtractorFactoryContainerProvider.class),
         ImmutableSet.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE),
         ImmutableMap.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)

@@ -35,7 +35,6 @@ import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrat
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -70,7 +69,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryScheduler;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -91,6 +89,8 @@ import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.DruidExceptionAssertions;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -104,6 +104,7 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestQueryStack;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -143,8 +144,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 @SuppressWarnings("ALL")
 public class SqlResourceTest extends CalciteTestBase
@@ -197,7 +196,7 @@ public class SqlResourceTest extends CalciteTestBase
   @BeforeAll
   public static void setupClass(@TempDir File tempDir)
   {
-    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(staticCloser);
+    conglomerate = SqlTestQueryStack.createQueryRunnerFactoryConglomerate(staticCloser);
     scheduler = new QueryScheduler(
         5,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -1779,9 +1778,9 @@ public class SqlResourceTest extends CalciteTestBase
         Status.BAD_REQUEST.getStatusCode()
     );
 
-    assertThat(
+    BaseCalciteQueryTest.assertDruidException(
         exception.getUnderlyingException(),
-        DruidExceptionMatcher
+        DruidExceptionAssertions
             .invalidSqlInput()
             .expectMessageIs("Calcite assertion violated: [not a literal: assertion_error()]")
     );

@@ -55,7 +55,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
@@ -193,7 +192,7 @@ public class AggregationTestHelper implements Closeable
     for (Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
     }
-    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
         mapper,
         config,
         groupByBuffers
