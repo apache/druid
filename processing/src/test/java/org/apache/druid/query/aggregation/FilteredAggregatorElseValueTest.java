@@ -25,10 +25,9 @@ import org.apache.druid.query.filter.vector.VectorMatch;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -37,8 +36,7 @@ import java.nio.ByteBuffer;
  * Direct unit tests for the {@code elseValue} path of {@link FilteredAggregator},
  * {@link FilteredBufferAggregator}, and {@link FilteredVectorAggregator}.
  */
-@RunWith(Enclosed.class)
-public class FilteredAggregatorElseValueTest
+public class FilteredAggregatorElseValueTest extends InitializedNullHandlingTest
 {
   private static final int VECTOR_SIZE = 8;
 
@@ -61,7 +59,8 @@ public class FilteredAggregatorElseValueTest
     }
   }
 
-  public static class AggregatorTest extends InitializedNullHandlingTest
+  @Nested
+  public class AggregatorTest
   {
     @Test
     public void testEmptyInputReturnsNull()
@@ -69,8 +68,8 @@ public class FilteredAggregatorElseValueTest
       final StubAggregator delegate = new StubAggregator();
       final FilteredAggregator agg = new FilteredAggregator(new StubValueMatcher(), delegate, 0);
 
-      Assert.assertTrue(agg.isNull());
-      Assert.assertNull(agg.get());
+      Assertions.assertTrue(agg.isNull());
+      Assertions.assertNull(agg.get());
     }
 
     @Test
@@ -84,11 +83,11 @@ public class FilteredAggregatorElseValueTest
         agg.aggregate();
       }
 
-      Assert.assertFalse(agg.isNull());
-      Assert.assertEquals(3L, agg.getLong());
-      Assert.assertEquals(3L, agg.get());
-      Assert.assertEquals(3.0d, agg.getDouble(), 0.0);
-      Assert.assertEquals(3.0f, agg.getFloat(), 0.0f);
+      Assertions.assertFalse(agg.isNull());
+      Assertions.assertEquals(3L, agg.getLong());
+      Assertions.assertEquals(3L, agg.get());
+      Assertions.assertEquals(3.0d, agg.getDouble(), 0.0);
+      Assertions.assertEquals(3.0f, agg.getFloat(), 0.0f);
     }
 
     @Test
@@ -102,11 +101,11 @@ public class FilteredAggregatorElseValueTest
         agg.aggregate();
       }
 
-      Assert.assertFalse(agg.isNull());
-      Assert.assertEquals(0L, agg.getLong());
-      Assert.assertEquals(0, agg.get());
-      Assert.assertEquals(0.0d, agg.getDouble(), 0.0);
-      Assert.assertEquals(0.0f, agg.getFloat(), 0.0f);
+      Assertions.assertFalse(agg.isNull());
+      Assertions.assertEquals(0L, agg.getLong());
+      Assertions.assertEquals(0, agg.get());
+      Assertions.assertEquals(0.0d, agg.getDouble(), 0.0);
+      Assertions.assertEquals(0.0f, agg.getFloat(), 0.0f);
     }
 
     @Test
@@ -120,8 +119,8 @@ public class FilteredAggregatorElseValueTest
         agg.aggregate();
       }
 
-      Assert.assertTrue(agg.isNull());
-      Assert.assertNull(agg.get());
+      Assertions.assertTrue(agg.isNull());
+      Assertions.assertNull(agg.get());
     }
 
     @Test
@@ -135,12 +134,13 @@ public class FilteredAggregatorElseValueTest
         agg.aggregate();
       }
 
-      Assert.assertFalse(agg.isNull());
-      Assert.assertEquals(2L, agg.getLong());
+      Assertions.assertFalse(agg.isNull());
+      Assertions.assertEquals(2L, agg.getLong());
     }
   }
 
-  public static class BufferAggregatorTest extends InitializedNullHandlingTest
+  @Nested
+  public class BufferAggregatorTest
   {
     @Test
     public void testEmptyInputReturnsNull()
@@ -190,12 +190,12 @@ public class FilteredAggregatorElseValueTest
       copySlot(src, srcPos, dst, dstPos, SLOT_SIZE);
       agg.relocate(srcPos, dstPos, src, dst);
 
-      Assert.assertFalse(agg.isNull(dst, dstPos));
-      Assert.assertEquals(0, agg.get(dst, dstPos));
-      Assert.assertEquals(0L, agg.getLong(dst, dstPos));
+      Assertions.assertFalse(agg.isNull(dst, dstPos));
+      Assertions.assertEquals(0, agg.get(dst, dstPos));
+      Assertions.assertEquals(0L, agg.getLong(dst, dstPos));
     }
 
-    private static void runScenario(
+    private void runScenario(
         @Nullable final Number elseValue,
         @Nullable final Long expectedValue,
         final boolean[] matchDecisions
@@ -213,17 +213,18 @@ public class FilteredAggregatorElseValueTest
         agg.aggregate(buf, position);
       }
 
-      Assert.assertEquals(expectedValue == null, agg.isNull(buf, position));
+      Assertions.assertEquals(expectedValue == null, agg.isNull(buf, position));
       if (expectedValue == null) {
-        Assert.assertNull(agg.get(buf, position));
+        Assertions.assertNull(agg.get(buf, position));
       } else {
-        Assert.assertEquals(expectedValue.longValue(), ((Number) agg.get(buf, position)).longValue());
-        Assert.assertEquals(expectedValue.longValue(), agg.getLong(buf, position));
+        Assertions.assertEquals(expectedValue.longValue(), ((Number) agg.get(buf, position)).longValue());
+        Assertions.assertEquals(expectedValue.longValue(), agg.getLong(buf, position));
       }
     }
   }
 
-  public static class VectorAggregatorTest extends InitializedNullHandlingTest
+  @Nested
+  public class VectorAggregatorTest
   {
     @Test
     public void testAggregateRangeEmptyInputReturnsNull()
@@ -268,8 +269,8 @@ public class FilteredAggregatorElseValueTest
 
       agg.aggregate(buf, position, 0, 2);
 
-      Assert.assertEquals(2L, ((Number) agg.get(buf, position)).longValue());
-      Assert.assertEquals(0, buf.get(position));
+      Assertions.assertEquals(2L, ((Number) agg.get(buf, position)).longValue());
+      Assertions.assertEquals(0, buf.get(position));
     }
 
     @Test
@@ -286,8 +287,8 @@ public class FilteredAggregatorElseValueTest
 
       agg.aggregate(buf, 4, positions, null, 0);
 
-      Assert.assertEquals(2L, ((Number) agg.get(buf, positions[0])).longValue());
-      Assert.assertEquals(0, agg.get(buf, positions[1]));
+      Assertions.assertEquals(2L, ((Number) agg.get(buf, positions[0])).longValue());
+      Assertions.assertEquals(0, agg.get(buf, positions[1]));
     }
 
     @Test
@@ -315,8 +316,8 @@ public class FilteredAggregatorElseValueTest
       rows[3] = 7;
       agg.aggregate(buf, 4, positions, rows, 0);
 
-      Assert.assertEquals(1L, ((Number) agg.get(buf, slotA)).longValue());
-      Assert.assertEquals(1L, ((Number) agg.get(buf, slotB)).longValue());
+      Assertions.assertEquals(1L, ((Number) agg.get(buf, slotA)).longValue());
+      Assertions.assertEquals(1L, ((Number) agg.get(buf, slotB)).longValue());
     }
 
     @Test
@@ -336,10 +337,10 @@ public class FilteredAggregatorElseValueTest
       copySlot(src, srcPos, dst, dstPos, SLOT_SIZE);
       agg.relocate(srcPos, dstPos, src, dst);
 
-      Assert.assertEquals(0, agg.get(dst, dstPos));
+      Assertions.assertEquals(0, agg.get(dst, dstPos));
     }
 
-    private static void runRange(
+    private void runRange(
         @Nullable final Number elseValue,
         @Nullable final Long expectedValue,
         final boolean[] matchedRows
@@ -354,13 +355,13 @@ public class FilteredAggregatorElseValueTest
       }
 
       if (expectedValue == null) {
-        Assert.assertNull(agg.get(buf, position));
+        Assertions.assertNull(agg.get(buf, position));
       } else {
-        Assert.assertEquals(expectedValue.longValue(), ((Number) agg.get(buf, position)).longValue());
+        Assertions.assertEquals(expectedValue.longValue(), ((Number) agg.get(buf, position)).longValue());
       }
     }
 
-    private static FilteredVectorAggregator newAggregator(final boolean[] matchedRows, @Nullable final Number elseValue)
+    private FilteredVectorAggregator newAggregator(final boolean[] matchedRows, @Nullable final Number elseValue)
     {
       final StubVectorAggregator delegate = new StubVectorAggregator();
       final StubVectorValueMatcher matcher = new StubVectorValueMatcher(matchedRows);
