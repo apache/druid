@@ -20,11 +20,15 @@
 package org.apache.druid.query.operator.window.value;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.operator.window.Processor;
+import org.apache.druid.query.operator.window.WindowFrame;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
+import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 
 import java.util.Collections;
 import java.util.List;
@@ -107,5 +111,64 @@ public abstract class WindowValueProcessorBase implements Processor
   public List<String> getOutputColumnNames()
   {
     return Collections.singletonList(outputColumn);
+  }
+
+  /**
+   * Computes first or last value for each row respecting the given window frame. For each row, selects
+   * either the first or last element of the frame. Entries for rows where the frame is empty are left as null.
+   *
+   * @param first if true, selects the first element of the frame; if false, selects the last
+   */
+  static void computeFirstOrLastValueFramed(
+      final RowsAndColumns rac,
+      final ColumnAccessor accessor,
+      final WindowFrame frame,
+      final Object[] results,
+      final boolean first
+  )
+  {
+    final int numRows = accessor.numRows();
+    final WindowFrame.Rows rowsFrame = frame.unwrap(WindowFrame.Rows.class);
+    if (rowsFrame != null) {
+      final int lower = rowsFrame.getLowerOffsetClamped(numRows);
+      final int upper = rowsFrame.getUpperOffsetClamped(numRows);
+      for (int i = 0; i < numRows; i++) {
+        final int frameLower = Math.max(0, i + lower);
+        final int frameUpper = Math.min(numRows - 1, i + upper);
+        if (frameLower <= frameUpper) {
+          results[i] = accessor.getObject(first ? frameLower : frameUpper);
+        }
+      }
+      return;
+    }
+
+    // Note that this logic would not be correct for SQL like:
+    //   FIRST_VALUE(x) OVER (ORDER BY t RANGE BETWEEN 1 PRECEDING AND CURRENT ROW)
+    // The SQL validator will reject queries with offset-based RANGE frames such as this.
+    // See https://github.com/apache/druid/issues/15767 for more details.
+    final WindowFrame.Groups groupsFrame = frame.unwrap(WindowFrame.Groups.class);
+    if (groupsFrame != null) {
+      final int[] boundaries =
+          ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(groupsFrame.getOrderByColumns());
+      final int numGroups = boundaries.length - 1;
+      final int lower = groupsFrame.getLowerOffsetClamped(numGroups);
+      final int upper = groupsFrame.getUpperOffsetClamped(numGroups);
+
+      for (int g = 0; g < numGroups; g++) {
+        final int lowerGroup = Math.max(0, g + lower);
+        final int upperGroup = Math.min(numGroups - 1, g + upper);
+        if (lowerGroup <= upperGroup) {
+          final Object value = first
+              ? accessor.getObject(boundaries[lowerGroup])
+              : accessor.getObject(boundaries[upperGroup + 1] - 1);
+          for (int i = boundaries[g]; i < boundaries[g + 1]; i++) {
+            results[i] = value;
+          }
+        }
+      }
+      return;
+    }
+
+    throw DruidException.defensive("Unable to handle WindowFrame[%s]", frame);
   }
 }
