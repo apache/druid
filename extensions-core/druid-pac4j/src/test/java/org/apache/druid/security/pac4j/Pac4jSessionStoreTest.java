@@ -82,7 +82,7 @@ public class Pac4jSessionStoreTest
     sessionStore.set(webContext1, "key", "value");
 
     Cookie cookie = cookieCapture.getValue();
-    Assertions.assertTrue(cookie.isSecure()); // Should still be secure due to our fix
+    Assertions.assertTrue(cookie.isSecure());
     Assertions.assertTrue(cookie.isHttpOnly());
     Assertions.assertEquals(900, cookie.getMaxAge());
 
@@ -106,7 +106,7 @@ public class Pac4jSessionStoreTest
     Cookie cookie = cookieCapture.getValue();
     Assertions.assertTrue(cookie.isSecure());
     Assertions.assertTrue(cookie.isHttpOnly());
-    Assertions.assertEquals(0, cookie.getMaxAge()); // Should be 0 for null values
+    Assertions.assertEquals(0, cookie.getMaxAge());
     Assertions.assertEquals("", cookie.getValue());
 
     EasyMock.verify(webContext);
@@ -129,7 +129,7 @@ public class Pac4jSessionStoreTest
     Cookie cookie = cookieCapture.getValue();
     Assertions.assertTrue(cookie.isSecure());
     Assertions.assertTrue(cookie.isHttpOnly());
-    Assertions.assertEquals(0, cookie.getMaxAge()); // Should be 0 for empty string
+    Assertions.assertEquals(0, cookie.getMaxAge());
     Assertions.assertEquals("", cookie.getValue());
 
     EasyMock.verify(webContext);
@@ -152,7 +152,7 @@ public class Pac4jSessionStoreTest
     Cookie cookie = cookieCapture.getValue();
     Assertions.assertTrue(cookie.isSecure());
     Assertions.assertTrue(cookie.isHttpOnly());
-    Assertions.assertEquals(0, cookie.getMaxAge()); // Should be 0 for empty map
+    Assertions.assertEquals(0, cookie.getMaxAge());
     Assertions.assertEquals("", cookie.getValue());
 
     EasyMock.verify(webContext);
@@ -367,4 +367,3 @@ public class Pac4jSessionStoreTest
     EasyMock.verify(webContext);
   }
 }
-
