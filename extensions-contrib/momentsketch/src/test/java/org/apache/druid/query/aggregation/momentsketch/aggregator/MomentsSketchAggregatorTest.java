@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -38,15 +39,12 @@ import org.apache.druid.query.aggregation.momentsketch.MomentSketchWrapper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -54,35 +52,79 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Parameterized.class)
 public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
 {
-  private final AggregationTestHelper helper;
+  private AggregationTestHelper helper;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
-  public MomentsSketchAggregatorTest(final GroupByQueryConfig config)
+  public void initMomentsSketchAggregatorTest(final GroupByQueryConfig config)
   {
     MomentSketchModule.registerSerde();
     DruidModule module = new MomentSketchModule();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
         module.getJacksonModules(), config, tempFolder);
   }
 
-  @Parameterized.Parameters(name = "{0}")
+  private static List<GroupByQueryConfig> testConfigs()
+  {
+    return List.of(
+        new GroupByQueryConfig()
+        {
+          @Override
+          public int getBufferGrouperInitialBuckets()
+          {
+            return 4;
+          }
+        },
+        new GroupByQueryConfig()
+        {
+          @Override
+          public int getBufferGrouperMaxSize()
+          {
+            return 2;
+          }
+
+          @Override
+          public HumanReadableBytes getMaxOnDiskStorage()
+          {
+            return HumanReadableBytes.valueOf(10L * 1024 * 1024);
+          }
+        },
+        new org.apache.druid.jackson.DefaultObjectMapper().convertValue(
+            java.util.Map.of(
+                "maxSelectorDictionarySize", 20,
+                "maxMergingDictionarySize", 400,
+                "maxOnDiskStorage", 10L * 1024 * 1024
+            ),
+            GroupByQueryConfig.class
+        ),
+        new GroupByQueryConfig()
+        {
+          @Override
+          public int getNumParallelCombineThreads()
+          {
+            return 2;
+          }
+        }
+    );
+  }
+
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
-    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+    for (GroupByQueryConfig config : testConfigs()) {
       constructors.add(new Object[]{config});
     }
     return constructors;
   }
 
-  @Test
-  public void buildingSketchesAtIngestionTime() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void buildingSketchesAtIngestionTime(final GroupByQueryConfig config) throws Exception
   {
+    initMomentsSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -145,51 +187,53 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
                     .build()
     );
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
     MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.get(0); // "sketch"
     // 400 total products since this is pre-rollup
-    Assert.assertEquals(400.0, sketchObject.getPowerSums()[0], 1e-10);
+    Assertions.assertEquals(400.0, sketchObject.getPowerSums()[0], 1e-10);
 
     MomentSketchWrapper sketchObjectWithNulls = (MomentSketchWrapper) row.get(1); // "sketchWithNulls"
     // 23 null values (377 when nulls are not replaced with default)
-    Assert.assertEquals(
+    Assertions.assertEquals(
         377.0,
         sketchObjectWithNulls.getPowerSums()[0],
         1e-10
     );
 
     double[] quantilesArray = (double[]) row.get(2); // "quantiles"
-    Assert.assertEquals(0, quantilesArray[0], 0.05);
-    Assert.assertEquals(.5, quantilesArray[1], 0.05);
-    Assert.assertEquals(1.0, quantilesArray[2], 0.05);
+    Assertions.assertEquals(0, quantilesArray[0], 0.05);
+    Assertions.assertEquals(.5, quantilesArray[1], 0.05);
+    Assertions.assertEquals(1.0, quantilesArray[2], 0.05);
 
     Double minValue = (Double) row.get(3); // "min"
-    Assert.assertEquals(0.0011, minValue, 0.0001);
+    Assertions.assertEquals(0.0011, minValue, 0.0001);
 
     Double maxValue = (Double) row.get(4); // "max"
-    Assert.assertEquals(0.9969, maxValue, 0.0001);
+    Assertions.assertEquals(0.9969, maxValue, 0.0001);
 
     double[] quantilesArrayWithNulls = (double[]) row.get(5); // "quantilesWithNulls"
-    Assert.assertEquals(5.0, quantilesArrayWithNulls[0], 0.05);
-    Assert.assertEquals(
+    Assertions.assertEquals(5.0, quantilesArrayWithNulls[0], 0.05);
+    Assertions.assertEquals(
         7.57,
         quantilesArrayWithNulls[1],
         0.05
     );
-    Assert.assertEquals(10.0, quantilesArrayWithNulls[2], 0.05);
+    Assertions.assertEquals(10.0, quantilesArrayWithNulls[2], 0.05);
 
     Double minValueWithNulls = (Double) row.get(6); // "minWithNulls"
-    Assert.assertEquals(5.0164, minValueWithNulls, 0.0001);
+    Assertions.assertEquals(5.0164, minValueWithNulls, 0.0001);
 
     Double maxValueWithNulls = (Double) row.get(7); // "maxWithNulls"
-    Assert.assertEquals(9.9788, maxValueWithNulls, 0.0001);
+    Assertions.assertEquals(9.9788, maxValueWithNulls, 0.0001);
 
   }
 
-  @Test
-  public void buildingSketchesAtQueryTime() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void buildingSketchesAtQueryTime(final GroupByQueryConfig config) throws Exception
   {
+    initMomentsSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -225,15 +269,15 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
 
     MomentSketchWrapper sketchObject = (MomentSketchWrapper) row.get(0); // "sketch"
     // 385 total products since roll-up limited by valueWithNulls column
-    Assert.assertEquals(385.0, sketchObject.getPowerSums()[0], 1e-10);
+    Assertions.assertEquals(385.0, sketchObject.getPowerSums()[0], 1e-10);
 
     MomentSketchWrapper sketchObjectWithNulls = (MomentSketchWrapper) row.get(1); // "sketchWithNulls"
 
-    Assert.assertEquals(377.0, sketchObjectWithNulls.getPowerSums()[0], 1e-10);
+    Assertions.assertEquals(377.0, sketchObjectWithNulls.getPowerSums()[0], 1e-10);
   }
 }
