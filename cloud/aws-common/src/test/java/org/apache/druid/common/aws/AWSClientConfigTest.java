@@ -156,7 +156,7 @@ public class AWSClientConfigTest
   @Test
   public void testConfiguredAttemptCountIsApplied()
   {
-    Assertions.assertEquals(8, bind(Map.of("maxRetryAttempts", 8)).getRetryStrategy().maxAttempts());
+    Assertions.assertEquals(8, bind(Map.of("maxAttempts", 8)).getRetryStrategy().maxAttempts());
   }
 
   @ParameterizedTest(name = "{0}")
