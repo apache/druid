@@ -20,26 +20,26 @@
 package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ResidualFilterModeTest
 {
   @Test
   public void testFromString()
   {
-    Assert.assertEquals(ResidualFilterMode.IGNORE, ResidualFilterMode.fromString("ignore"));
-    Assert.assertEquals(ResidualFilterMode.FAIL, ResidualFilterMode.fromString("fail"));
+    Assertions.assertEquals(ResidualFilterMode.IGNORE, ResidualFilterMode.fromString("ignore"));
+    Assertions.assertEquals(ResidualFilterMode.FAIL, ResidualFilterMode.fromString("fail"));
 
     // Test case insensitivity
-    Assert.assertEquals(ResidualFilterMode.IGNORE, ResidualFilterMode.fromString("IGNORE"));
-    Assert.assertEquals(ResidualFilterMode.FAIL, ResidualFilterMode.fromString("FAIL"));
+    Assertions.assertEquals(ResidualFilterMode.IGNORE, ResidualFilterMode.fromString("IGNORE"));
+    Assertions.assertEquals(ResidualFilterMode.FAIL, ResidualFilterMode.fromString("FAIL"));
   }
 
   @Test
   public void testFromStringInvalid()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> ResidualFilterMode.fromString("invalid")
     );
@@ -48,8 +48,8 @@ public class ResidualFilterModeTest
   @Test
   public void testGetValue()
   {
-    Assert.assertEquals("ignore", ResidualFilterMode.IGNORE.getValue());
-    Assert.assertEquals("fail", ResidualFilterMode.FAIL.getValue());
+    Assertions.assertEquals("ignore", ResidualFilterMode.IGNORE.getValue());
+    Assertions.assertEquals("fail", ResidualFilterMode.FAIL.getValue());
   }
 
   @Test
@@ -58,11 +58,11 @@ public class ResidualFilterModeTest
     ObjectMapper mapper = new ObjectMapper();
 
     // Test serialization
-    Assert.assertEquals("\"ignore\"", mapper.writeValueAsString(ResidualFilterMode.IGNORE));
-    Assert.assertEquals("\"fail\"", mapper.writeValueAsString(ResidualFilterMode.FAIL));
+    Assertions.assertEquals("\"ignore\"", mapper.writeValueAsString(ResidualFilterMode.IGNORE));
+    Assertions.assertEquals("\"fail\"", mapper.writeValueAsString(ResidualFilterMode.FAIL));
 
     // Test deserialization
-    Assert.assertEquals(ResidualFilterMode.IGNORE, mapper.readValue("\"ignore\"", ResidualFilterMode.class));
-    Assert.assertEquals(ResidualFilterMode.FAIL, mapper.readValue("\"fail\"", ResidualFilterMode.class));
+    Assertions.assertEquals(ResidualFilterMode.IGNORE, mapper.readValue("\"ignore\"", ResidualFilterMode.class));
+    Assertions.assertEquals(ResidualFilterMode.FAIL, mapper.readValue("\"fail\"", ResidualFilterMode.class));
   }
 }

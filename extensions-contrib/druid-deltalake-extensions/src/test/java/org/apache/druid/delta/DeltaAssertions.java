@@ -17,20 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.iceberg.filter;
+package org.apache.druid.delta;
 
-import org.apache.iceberg.expressions.Expression;
-import org.apache.iceberg.expressions.Expressions;
+import org.apache.druid.error.DruidException;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
 
-public class IcebergEqualsFilterTest
+public class DeltaAssertions
 {
-  @Test
-  public void testFilter()
+  private DeltaAssertions()
   {
-    IcebergEqualsFilter testFilter = new IcebergEqualsFilter("column1", "value1");
-    Expression expectedExpression = Expressions.equal("column1", "value1");
-    Assertions.assertEquals(expectedExpression.toString(), testFilter.getFilterExpression().toString());
+  }
+
+  public static void assertInvalidInput(final DruidException exception, final String expectedMessage)
+  {
+    Assertions.assertAll(
+        () -> Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory()),
+        () -> Assertions.assertEquals(expectedMessage, exception.getMessage())
+    );
   }
 }
