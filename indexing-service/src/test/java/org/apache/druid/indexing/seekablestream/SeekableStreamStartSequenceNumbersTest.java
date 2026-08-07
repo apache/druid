@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -54,7 +54,7 @@ public class SeekableStreamStartSequenceNumbersTest
         new TypeReference<>() {}
     );
 
-    Assert.assertEquals("Round trip", partitions, partitions2);
+    Assertions.assertEquals(partitions, partitions2, "Round trip");
 
     // Check backwards compatibility.
     final Map<String, Object> asMap = OBJECT_MAPPER.readValue(
@@ -62,15 +62,15 @@ public class SeekableStreamStartSequenceNumbersTest
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(stream, asMap.get("stream"));
-    Assert.assertEquals(stream, asMap.get("topic"));
+    Assertions.assertEquals(stream, asMap.get("stream"));
+    Assertions.assertEquals(stream, asMap.get("topic"));
 
     // Jackson will deserialize the maps as string -> int maps, not int -> long.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionSequenceNumberMap"), new TypeReference<Map<Integer, Long>>() {})
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         offsetMap,
         OBJECT_MAPPER.convertValue(asMap.get("partitionOffsetMap"), new TypeReference<Map<Integer, Long>>() {})
     );
@@ -93,7 +93,7 @@ public class SeekableStreamStartSequenceNumbersTest
         offsetMap2,
         ImmutableSet.of(6)
     );
-    Assert.assertEquals(1, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
+    Assertions.assertEquals(1, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
   }
 
   @Test
@@ -113,6 +113,6 @@ public class SeekableStreamStartSequenceNumbersTest
         offsetMap2,
         ImmutableSet.of(6)
     );
-    Assert.assertEquals(0, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
+    Assertions.assertEquals(0, partitions1.compareTo(partitions2, Comparator.naturalOrder()));
   }
 }

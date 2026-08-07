@@ -46,7 +46,6 @@ import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.metrics.KafkaMetric;
 import org.apache.kafka.common.serialization.Deserializer;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -65,7 +64,6 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KafkaRecordSupplierTest
@@ -265,16 +263,22 @@ public class KafkaRecordSupplierTest
 
     properties.put("sasl.oauthbearer.token.endpoint.url", "http://localhost:8080/token");
 
-    assertThat(
-        assertThrows(KafkaException.class, () -> new KafkaRecordSupplier(properties, OBJECT_MAPPER, null, false, null)),
-        CoreMatchers.instanceOf(KafkaException.class)
+    Assertions.assertInstanceOf(
+        KafkaException.class,
+        Assertions.assertThrows(
+            KafkaException.class,
+            () -> new KafkaRecordSupplier(properties, OBJECT_MAPPER, null, false, null)
+        )
     );
 
     properties.remove("sasl.oauthbearer.token.endpoint.url");
     properties.put("sasl.oauthbearer.jwks.endpoint.url", "http://localhost:8080/jwks");
-    assertThat(
-        assertThrows(KafkaException.class, () -> new KafkaRecordSupplier(properties, OBJECT_MAPPER, null, false, null)),
-        CoreMatchers.instanceOf(KafkaException.class)
+    Assertions.assertInstanceOf(
+        KafkaException.class,
+        Assertions.assertThrows(
+            KafkaException.class,
+            () -> new KafkaRecordSupplier(properties, OBJECT_MAPPER, null, false, null)
+        )
     );
   }
 
