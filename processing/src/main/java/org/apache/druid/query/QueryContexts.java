@@ -256,7 +256,9 @@ public class QueryContexts
     /** Query only realtime segments. */
     EXCLUSIVE,
     /** Skip realtime segments; query only historical. */
-    EXCLUDE;
+    EXCLUDE,
+    /** Skip partial in memory realtime segments that have not yet been indexed */
+    EXCLUDE_INCREMENTAL;
 
     @JsonCreator
     public static RealtimeSegmentsMode fromString(String str)
