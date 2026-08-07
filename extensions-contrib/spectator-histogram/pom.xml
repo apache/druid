@@ -51,6 +51,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.netflix.spectator</groupId>
       <artifactId>spectator-api</artifactId>
       <version>1.9.0</version>
