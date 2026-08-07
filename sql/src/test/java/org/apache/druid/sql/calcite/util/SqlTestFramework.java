@@ -126,6 +126,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.inject.Named;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -986,21 +987,21 @@ public class SqlTestFramework
     @LazySingleton
     public DruidProcessingConfig makeProcessingConfig(Builder builder)
     {
-      return QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+      return SqlTestQueryStack.getProcessingConfig(builder.mergeBufferCount);
     }
 
     @Provides
     @LazySingleton
     public TestBufferPool makeTestBufferPool(Builder builder)
     {
-      return QueryStackTests.makeTestBufferPool(builder.resourceCloser);
+      return SqlTestQueryStack.makeTestBufferPool(builder.resourceCloser);
     }
 
     @Provides
     @LazySingleton
     public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig, Builder builder)
     {
-      return QueryStackTests.makeGroupByBuffers(builder.resourceCloser, processingConfig);
+      return SqlTestQueryStack.makeGroupByBuffers(builder.resourceCloser, processingConfig);
     }
 
     @Provides
