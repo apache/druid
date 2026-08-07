@@ -843,8 +843,9 @@ public class TaskLockbox
         throw new ISE("Cannot revoke lock for inactive task[%s]", taskId);
       }
 
+      // Embedded kill tasks can hold locks but are not persisted in TaskStorage
       final Task task = taskStorage.getTask(taskId).orNull();
-      if (task == null) {
+      if (task == null && lock.getType() != TaskLockType.KILL) {
         throw new ISE("Cannot revoke lock for unknown task[%s]", taskId);
       }
 
