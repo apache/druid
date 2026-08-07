@@ -159,10 +159,9 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY PT1D"
      */
-    @ParameterizedTest(name = "{1}")
-    @MethodSource("constructorFeeder")
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("periodConstructorFeeder")
     public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier(
-        TimeUnit timeUnit,
         Period period,
         Granularity expectedGranularity
     )
@@ -175,10 +174,9 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY 'PT1D'"
      */
-    @ParameterizedTest(name = "{1}")
-    @MethodSource("constructorFeeder")
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("periodConstructorFeeder")
     public void testConvertSqlNodeToPeriodFormGranularityAsLiteral(
-        TimeUnit timeUnit,
         Period period,
         Granularity expectedGranularity
     )
