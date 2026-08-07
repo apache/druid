@@ -810,4 +810,85 @@ class K8sTaskAdapterTest
     );
     Assertions.assertEquals(1, additionalProperties.getAdditionalProperties().size());
   }
+
+  @Test
+  void testTaskContextResourceOverrides()
+  {
+    final ResourceRequirements baseRequirements = K8sTaskAdapter.getResourceRequirements(
+        null,
+        100,
+        1000
+    );
+    final Task task = new NoopTask(
+        "id",
+        "id",
+        "datasource",
+        0,
+        0,
+        ImmutableMap.of(
+            DruidK8sConstants.TASK_CONTEXT_RESOURCES_KEY,
+            ImmutableMap.of(
+                "memory", "4Gi",
+                "ephemeral-storage", "20Gi",
+                "example.com/custom-resource", "1",
+                "requests", ImmutableMap.of("cpu", "1500m"),
+                "limits", ImmutableMap.of("cpu", "2"),
+                "byTaskType", ImmutableMap.of(
+                    NoopTask.TYPE,
+                    ImmutableMap.of(
+                        "limits",
+                        ImmutableMap.of(
+                            "ephemeral-storage", "40Gi",
+                            "example.com/custom-resource", "2"
+                        )
+                    )
+                )
+            )
+        )
+    );
+
+    final ResourceRequirements result = K8sTaskResourceContext.applyTaskResourceOverrides(baseRequirements, task);
+
+    Assertions.assertEquals("1500m", result.getRequests().get("cpu").toString());
+    Assertions.assertEquals("4Gi", result.getRequests().get("memory").toString());
+    Assertions.assertEquals("20Gi", result.getRequests().get("ephemeral-storage").toString());
+    Assertions.assertEquals("1", result.getRequests().get("example.com/custom-resource").toString());
+
+    Assertions.assertEquals("2", result.getLimits().get("cpu").toString());
+    Assertions.assertEquals("4Gi", result.getLimits().get("memory").toString());
+    Assertions.assertEquals("40Gi", result.getLimits().get("ephemeral-storage").toString());
+    Assertions.assertEquals("2", result.getLimits().get("example.com/custom-resource").toString());
+  }
+
+  @Test
+  void testTaskContextResourceOverridesIgnoreOtherTaskTypes()
+  {
+    final ResourceRequirements baseRequirements = K8sTaskAdapter.getResourceRequirements(
+        null,
+        100,
+        1000
+    );
+    final Task task = new NoopTask(
+        "id",
+        "id",
+        "datasource",
+        0,
+        0,
+        ImmutableMap.of(
+            DruidK8sConstants.TASK_CONTEXT_RESOURCES_KEY,
+            ImmutableMap.of(
+                "requests", ImmutableMap.of("memory", "2Gi"),
+                "byTaskType", ImmutableMap.of(
+                    "partial_index_generate",
+                    ImmutableMap.of("requests", ImmutableMap.of("memory", "8Gi"))
+                )
+            )
+        )
+    );
+
+    final ResourceRequirements result = K8sTaskResourceContext.applyTaskResourceOverrides(baseRequirements, task);
+
+    Assertions.assertEquals("2Gi", result.getRequests().get("memory").toString());
+    Assertions.assertEquals("100", result.getLimits().get("memory").toString());
+  }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
+import io.fabric8.kubernetes.api.model.ResourceRequirements;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -139,6 +140,53 @@ public class PodTemplateTaskAdapterTest
     Job expected = K8sTestUtils.fileToResource("expectedNoopJobNoTaskJson.yaml", Job.class);
 
     Assertions.assertEquals(actual, expected);
+  }
+
+  @Test
+  public void test_fromTask_withResourceOverridesInTaskContext() throws IOException
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = new NoopTask(
+        "id",
+        "id",
+        "datasource",
+        0,
+        0,
+        ImmutableMap.of(
+            DruidK8sConstants.TASK_CONTEXT_RESOURCES_KEY,
+            ImmutableMap.of(
+                "memory", "4Gi",
+                "requests", ImmutableMap.of(
+                    "cpu", "500m",
+                    "ephemeral-storage", "10Gi"
+                ),
+                "limits", ImmutableMap.of(
+                    "cpu", "2",
+                    "example.com/custom-resource", "1"
+                )
+            )
+        )
+    );
+
+    Job actual = adapter.fromTask(task);
+    ResourceRequirements resources = actual.getSpec().getTemplate().getSpec().getContainers().get(0).getResources();
+
+    Assertions.assertEquals("500m", resources.getRequests().get("cpu").toString());
+    Assertions.assertEquals("4Gi", resources.getRequests().get("memory").toString());
+    Assertions.assertEquals("10Gi", resources.getRequests().get("ephemeral-storage").toString());
+    Assertions.assertEquals("2", resources.getLimits().get("cpu").toString());
+    Assertions.assertEquals("4Gi", resources.getLimits().get("memory").toString());
+    Assertions.assertEquals("1", resources.getLimits().get("example.com/custom-resource").toString());
   }
 
   @Test
@@ -427,6 +475,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
     EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
+    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_RESOURCES_KEY)).andReturn(null).anyTimes();
 
     EasyMock.replay(task);
     Job actual = adapter.fromTask(task);
@@ -460,6 +509,7 @@ public class PodTemplateTaskAdapterTest
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
     EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
     EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
+    EasyMock.expect(task.getContextValue(DruidK8sConstants.TASK_CONTEXT_RESOURCES_KEY)).andReturn(null).anyTimes();
 
     EasyMock.replay(task);
     Job actual = adapter.fromTask(task);

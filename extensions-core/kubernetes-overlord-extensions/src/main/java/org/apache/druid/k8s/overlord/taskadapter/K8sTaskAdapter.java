@@ -343,6 +343,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
 
   protected Container setupMainContainer(
       PodSpec podSpec,
+      Task task,
       PeonCommandContext context,
       long containerSize,
       String taskContents
@@ -374,6 +375,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
         containerSize,
         context.getCpuMicroCore()
     );
+    requirements = K8sTaskResourceContext.applyTaskResourceOverrides(requirements, task);
     mainContainer.setResources(requirements);
     return mainContainer;
   }
@@ -517,26 +519,26 @@ public abstract class K8sTaskAdapter implements TaskAdapter
   @VisibleForTesting
   static ResourceRequirements getResourceRequirements(ResourceRequirements requirements, long containerSize, int cpuMicroCore)
   {
-    Map<String, Quantity> resourceMap = new HashMap<>();
+    final Map<String, Quantity> resourceMap = new HashMap<>();
     resourceMap.put(
         "cpu",
         new Quantity(String.valueOf(cpuMicroCore > 0 ? cpuMicroCore : DruidK8sConstants.DEFAULT_CPU_MILLICORES), "m")
     );
     resourceMap.put("memory", new Quantity(String.valueOf(containerSize)));
-    ResourceRequirementsBuilder result = new ResourceRequirementsBuilder();
+    final ResourceRequirementsBuilder result = new ResourceRequirementsBuilder();
     if (requirements != null) {
       if (requirements.getRequests() == null || requirements.getRequests().isEmpty()) {
-        requirements.setRequests(resourceMap);
+        requirements.setRequests(new HashMap<>(resourceMap));
       } else {
         requirements.getRequests().putAll(resourceMap);
       }
       if (requirements.getLimits() == null || requirements.getLimits().isEmpty()) {
-        requirements.setLimits(resourceMap);
+        requirements.setLimits(new HashMap<>(resourceMap));
       } else {
         requirements.getLimits().putAll(resourceMap);
       }
     } else {
-      requirements = result.withRequests(resourceMap).withLimits(resourceMap).build();
+      requirements = result.withRequests(new HashMap<>(resourceMap)).withLimits(new HashMap<>(resourceMap)).build();
     }
     return requirements;
   }
