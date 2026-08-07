@@ -428,6 +428,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
                 .withConsumerProperties(kafkaServer.consumerProperties())
                 .withTaskCount(taskCount)
         )
+        .withContext(Map.of("useConcurrentLocks", true))
         .withId(supervisorId)
         .build(dataSource, TOPIC);
   }

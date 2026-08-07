@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
@@ -40,6 +41,9 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScaler;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostBasedAutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.CostMetrics;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
@@ -641,6 +645,90 @@ public class SupervisorManager implements SupervisorStatsProvider
       );
       return false;
     }
+  }
+
+  /**
+   * Simulates the effects of the {@code costBased} auto-scaler by computing the optimal
+   * task count under various values of aggregate lag.
+   */
+  public Map<String, Object> simulateAutoscaling(
+      String supervisorId,
+      CostBasedAutoScalerConfig config,
+      int maxProcessingRatePerTask,
+      @Nullable Integer requestedTaskCount
+  )
+  {
+    // Validate that this is a SeekableStreamSupervisor
+    final Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(supervisorId);
+    if (supervisorPair == null || supervisorPair.rhs == null || supervisorPair.lhs == null) {
+      throw NotFound.exception("Invalid supervisor[%s]", supervisorId);
+    } else if (!(supervisorPair.rhs instanceof SeekableStreamSupervisorSpec)) {
+      throw InvalidInput.exception(
+          "Cannot simulate autoscaling for supervisor[%s] of type[%s]",
+          supervisorId, supervisorPair.rhs.getType()
+      );
+    }
+
+    final SeekableStreamSupervisorSpec supervisorSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
+
+    // Validate the inputs
+    final long criticalLag = Configs.valueOrDefault(config.getCriticalLagThreshold(), 1_000_000);
+    InvalidInput.conditionalException(
+        criticalLag >= 1000,
+        "Value of critical lag[%d] must be 1000 or more",
+        criticalLag
+    );
+    InvalidInput.conditionalException(
+        maxProcessingRatePerTask >= 100,
+        "Value of maxProcessingRatePerTask[%d] must be 100 events per second or more",
+        maxProcessingRatePerTask
+    );
+    InvalidInput.conditionalException(
+        requestedTaskCount == null
+        || (requestedTaskCount >= config.getTaskCountMin() && requestedTaskCount <= config.getTaskCountMax()),
+        "Value of currentTaskCount[%d] must be within taskCountMin[%d] and taskCountMax[%d]",
+        requestedTaskCount, config.getTaskCountMin(), config.getTaskCountMax()
+    );
+
+    // Simulate from the supervisor's live task count unless the caller pins one.
+    final int currentTaskCount = supervisorSpec.getIoConfig().getTaskCount();
+    final int simulationTaskCount = Math.max(
+        config.getTaskCountMin(),
+        Math.min(
+            Configs.valueOrDefault(requestedTaskCount, currentTaskCount),
+            config.getTaskCountMax()
+        )
+    );
+
+    // Use the partition count and task duration from the supervisor spec
+    final int partitionCount = ((SeekableStreamSupervisor<?, ?, ?>) supervisorPair.lhs).getKnownPartitionCount();
+    final long taskDurationSeconds = supervisorSpec.getIoConfig().getTaskDuration().getStandardSeconds();
+
+    // Assume that the tasks are fully used since there is some lag
+    final double idleRatio = config.getOptimalTaskIdleRatio();
+
+    // Invoke the cost function for lag in the range [0, 2 * criticalLagThreshold)
+    final Object[] rows = new Object[200];
+    final int lagStepSize = (int) (criticalLag / 100);
+    final CostBasedAutoScaler autoscaleSimulator = CostBasedAutoScaler.createSimulator(config, supervisorId);
+    for (int i = 0; i < 200; ++i) {
+      final double observedAggregateLag = (double) lagStepSize * i;
+      final CostMetrics costMetrics = new CostMetrics(
+          observedAggregateLag / partitionCount,
+          observedAggregateLag,
+          simulationTaskCount,
+          partitionCount,
+          idleRatio,
+          taskDurationSeconds,
+          maxProcessingRatePerTask,
+          maxProcessingRatePerTask * 1.0
+      );
+      final int optimalTaskCount = autoscaleSimulator.computeOptimalTaskCountInternal(costMetrics, true);
+      rows[i] = Map.of("lag", observedAggregateLag, "taskCount", optimalTaskCount);
+    }
+
+    // Collect the results and return
+    return Map.of("data", rows);
   }
 
   /**
