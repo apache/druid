@@ -1134,7 +1134,8 @@ public class MSQSelectTest extends MSQTestBase
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0:count"),
                                 notNull("m2"),
-                                "a0:count"
+                                "a0:count",
+                                null
                             )
                         )
                     )
@@ -2429,7 +2430,8 @@ public class MSQSelectTest extends MSQTestBase
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0"),
                                 notNull("dim3"),
-                                "a0"
+                                "a0",
+                                null
                             )
                         )
                     )

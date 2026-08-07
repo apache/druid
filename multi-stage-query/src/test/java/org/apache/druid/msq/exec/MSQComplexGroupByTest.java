@@ -495,7 +495,8 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                          new FilteredAggregatorFactory(
                                              new CountAggregatorFactory("a0"),
                                              new NotDimFilter(innerFilter),
-                                             "a0"
+                                             "a0",
+                                             null
                                          )
                                      )
                                      .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
@@ -587,7 +588,8 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                          new FilteredAggregatorFactory(
                                              new CountAggregatorFactory("a0"),
                                              new NotDimFilter(innerFilter),
-                                             "a0"
+                                             "a0",
+                                             null
                                          )
                                      )
                                      .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
