@@ -497,7 +497,7 @@ name: JsonPath
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.9.0
+version: 3.0.0
 libraries:
   - com.jayway.jsonpath: json-path
 
@@ -1828,7 +1828,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.5.2
+version: 2.6.0
 libraries:
   - net.minidev: json-smart
 
@@ -2899,7 +2899,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: druid-pac4j
 license_name: Apache License version 2.0
-version: 2.5.2
+version: 2.6.0
 libraries:
   - net.minidev: json-smart
 ---
@@ -2908,7 +2908,7 @@ name: JSON Small and Fast Parser
 license_category: binary
 module: druid-pac4j
 license_name: Apache License version 2.0
-version: 2.5.2
+version: 2.6.0
 libraries:
   - net.minidev: accessors-smart
 ---
