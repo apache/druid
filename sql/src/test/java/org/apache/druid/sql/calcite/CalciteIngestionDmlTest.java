@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -328,7 +329,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
       return this;
     }
 
-    public IngestionDmlTester expectValidationError(DruidExceptionAssertions exceptionMatcher)
+    public IngestionDmlTester expectValidationError(DruidExceptionMatcher exceptionMatcher)
     {
       return expectValidationError(e -> {
         Assertions.assertInstanceOf(DruidException.class, e);

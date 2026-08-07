@@ -31,6 +31,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidException.Category;
 import org.apache.druid.error.DruidException.Persona;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -95,6 +96,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -516,14 +518,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST);
   }
 
-  protected static DruidExceptionAssertions invalidSqlIs(String s)
+  protected static DruidExceptionMatcher invalidSqlIs(String s)
   {
-    return DruidExceptionAssertions.invalidSqlInput().expectMessageIs(s);
+    return DruidExceptionMatcher.invalidSqlInput().expectMessageIs(s);
   }
 
-  protected static DruidExceptionAssertions invalidSqlContains(String s)
+  protected static DruidExceptionMatcher invalidSqlContains(String s)
   {
-    return DruidExceptionAssertions.invalidSqlInput().expectMessageContains(s);
+    return DruidExceptionMatcher.invalidSqlInput().expectMessageContains(s);
   }
 
   @RegisterExtension
@@ -567,12 +569,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
   }
 
-  private DruidExceptionAssertions buildUnplannableExceptionMatcher()
+  private DruidExceptionMatcher buildUnplannableExceptionMatcher()
   {
     if (testBuilder().isDecoupledMode()) {
-      return new DruidExceptionAssertions(Persona.USER, Category.INVALID_INPUT, "invalidInput");
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
     } else {
-      return new DruidExceptionAssertions(Persona.USER, Category.INVALID_INPUT, "general");
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "general");
     }
   }
 
@@ -1069,7 +1071,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public void testQueryThrows(
       final String sql,
-      final DruidExceptionAssertions exceptionMatcher
+      final DruidExceptionMatcher exceptionMatcher
   )
   {
     testQueryThrows(sql, null, DruidException.class, e -> assertDruidException(e, exceptionMatcher));
@@ -1078,7 +1080,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public void testQueryThrows(
       final String sql,
       final Class<DruidException> exceptionType,
-      final DruidExceptionAssertions exceptionMatcher
+      final DruidExceptionMatcher exceptionMatcher
   )
   {
     testQueryThrows(sql, null, exceptionType, e -> assertDruidException(e, exceptionMatcher));
@@ -1088,7 +1090,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final String sql,
       final Map<String, Object> queryContext,
       final Class<DruidException> exceptionType,
-      final DruidExceptionAssertions exceptionMatcher
+      final DruidExceptionMatcher exceptionMatcher
   )
   {
     testQueryThrows(sql, queryContext, exceptionType, e -> assertDruidException(e, exceptionMatcher));
@@ -1137,10 +1139,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static void assertDruidException(
       final DruidException exception,
-      final DruidExceptionAssertions exceptionMatcher
+      final DruidExceptionMatcher exceptionMatcher
   )
   {
-    exceptionMatcher.assertMatches(exception);
+    MatcherAssert.assertThat(exception, exceptionMatcher);
   }
 
   public void analyzeResources(

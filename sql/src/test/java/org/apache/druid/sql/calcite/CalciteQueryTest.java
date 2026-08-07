@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
@@ -8539,7 +8540,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT DISTINCT\n"
         + "  REGEXP_EXTRACT(dim1, '^(.))', 1)\n"
         + "FROM foo",
-        DruidExceptionAssertions.invalidInput().expectMessageContains(
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
             "An invalid pattern [^(.))] was provided for the [regexp_extract] function, " +
             "error: [Unmatched closing ')' near index 3\n^(.))\n   ^]"
         )

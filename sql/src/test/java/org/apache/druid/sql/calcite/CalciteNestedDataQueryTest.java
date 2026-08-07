@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -4887,7 +4888,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "JSON_VALUE(nester, '.array.[1]'), "
         + "SUM(cnt) "
         + "FROM druid.nested GROUP BY 1",
-        DruidExceptionAssertions
+        DruidExceptionMatcher
             .invalidInput()
             .expectMessageIs("JSONPath [.array.[1]] is invalid, it must start with '$'")
     );
