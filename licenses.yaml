@@ -5393,7 +5393,7 @@ name: cron-utils
 license_category: binary
 module: core
 license_name: Apache License version 2.0
-version: 9.2.0
+version: 9.2.1
 license_file_path: licenses/bin/cron-utils.APACHE2
 libraries:
   - com.cronutils: cron-utils
