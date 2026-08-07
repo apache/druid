@@ -1089,10 +1089,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * Returns the columns of the given table, in the order reported by the database.
    * Returns an empty list if the table does not exist or the metadata cannot be read.
    *
-   * The lookup is scoped to the schema of the current connection, which is the schema an unqualified
-   * table name resolves to. The table name is folded to the case in which the database stores
-   * unquoted identifiers, and escaped so that it is matched literally rather than as a
-   * {@link DatabaseMetaData#getColumns} search pattern.
+   * The lookup is scoped to the schema returned by {@link #getMetadataTableSchema(Connection)}, which is the schema
+   * an unqualified table name resolves to. The table name is folded to the case in which the database stores unquoted
+   * identifiers, since {@link DatabaseMetaData#getColumns} patterns are case-sensitive.
    */
   public List<String> getTableColumns(final String tableName)
   {
@@ -1102,14 +1101,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         if (tableExists(handle, tableName)) {
           final Connection conn = handle.getConnection();
           final DatabaseMetaData dbMetaData = conn.getMetaData();
-          try (ResultSet rs = dbMetaData.getColumns(
-              null,
-              escapeMetaDataSearchString(dbMetaData, conn.getSchema()),
-              escapeMetaDataSearchString(dbMetaData, foldIdentifierCase(dbMetaData, tableName)),
-              null
-          )) {
+          final String storedName = foldIdentifierCase(dbMetaData, tableName);
+          try (ResultSet rs = dbMetaData.getColumns(null, getMetadataTableSchema(conn), storedName, null)) {
             while (rs.next()) {
-              columns.add(rs.getString("COLUMN_NAME"));
+              // '_' is a wildcard in the table name pattern, so match the returned table name exactly
+              if (storedName.equals(rs.getString("TABLE_NAME"))) {
+                columns.add(rs.getString("COLUMN_NAME"));
+              }
             }
           }
         }
@@ -1119,6 +1117,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       }
       return columns;
     });
+  }
+
+  /**
+   * Returns the schema that the Druid metadata tables live in, i.e. the schema that an unqualified
+   * table name in a Druid SQL statement resolves to, or null if the schema is unknown and lookups
+   * should not be scoped to a schema.
+   *
+   * Connectors that scope {@link #tableExists} to a configured schema must override this so that
+   * both lookups agree.
+   */
+  @Nullable
+  protected String getMetadataTableSchema(final Connection connection) throws SQLException
+  {
+    return connection.getSchema();
   }
 
   /**
@@ -1142,46 +1154,17 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   /**
-   * Escapes the wildcard characters of a {@link DatabaseMetaData} search pattern, so that the given
-   * value is matched literally. Returns null if the given value is null, which matches any value.
-   */
-  @Nullable
-  private static String escapeMetaDataSearchString(
-      final DatabaseMetaData dbMetaData,
-      @Nullable final String value
-  ) throws SQLException
-  {
-    final String escape = dbMetaData.getSearchStringEscape();
-    if (value == null || escape == null || escape.isEmpty()) {
-      return value;
-    }
-    final StringBuilder escaped = new StringBuilder(value.length());
-    for (int i = 0; i < value.length(); i++) {
-      final char c = value.charAt(i);
-      if (c == '_' || c == '%' || c == escape.charAt(0)) {
-        escaped.append(escape);
-      }
-      escaped.append(c);
-    }
-    return escaped.toString();
-  }
-
-  /**
    * Builds the select list for an export query, quoting each column with the database's
    * identifier quote string so that reserved words such as "end" are handled correctly.
    */
   protected String makeExportSelectList(final Connection conn, final List<String> columns) throws SQLException
   {
-    String quote = conn.getMetaData().getIdentifierQuoteString();
+    final String quote = conn.getMetaData().getIdentifierQuoteString();
     if (quote == null || " ".equals(quote)) {
-      quote = "";
+      return String.join(",", columns);
     }
-    final String quoteString = quote;
     return columns.stream()
-                  .map(column -> quoteString.isEmpty()
-                                 ? column
-                                 : quoteString + StringUtils.replace(column, quoteString, quoteString + quoteString)
-                                   + quoteString)
+                  .map(column -> quote + StringUtils.replace(column, quote, quote + quote) + quote)
                   .collect(Collectors.joining(","));
   }
 
@@ -1203,62 +1186,69 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     // PostgreSQL JDBC requires autoCommit=false and a positive fetch size
     // to use cursor-based streaming instead of buffering the entire ResultSet.
     retryTransaction(
-            (TransactionCallback<Void>) (handle, status) -> {
-              final Connection conn = handle.getConnection();
-              try (Statement stmt = conn.createStatement()) {
-                final int fetchSize = getStreamingFetchSize();
-                if (fetchSize > 0) {
-                  stmt.setFetchSize(fetchSize);
+        (TransactionCallback<Void>) (handle, status) -> {
+          final Connection conn = handle.getConnection();
+          final String selectList = columns == null || columns.isEmpty() ? "*" : makeExportSelectList(conn, columns);
+          try (Statement stmt = conn.createStatement()) {
+            final int fetchSize = getStreamingFetchSize();
+            if (fetchSize > 0) {
+              stmt.setFetchSize(fetchSize);
+            }
+            try (ResultSet rs = stmt.executeQuery(StringUtils.format("SELECT %s FROM %s", selectList, tableName));
+                 OutputStreamWriter writer =
+                     new OutputStreamWriter(new FileOutputStream(outputPath), StandardCharsets.UTF_8)) {
+              final int columnCount = rs.getMetaData().getColumnCount();
+              final List<String> values = new ArrayList<>(columnCount);
+              while (rs.next()) {
+                values.clear();
+                for (int i = 1; i <= columnCount; i++) {
+                  values.add(readCsvValue(rs, i));
                 }
-                final String selectList =
-                    columns == null || columns.isEmpty() ? "*" : makeExportSelectList(conn, columns);
-                try (ResultSet rs = stmt.executeQuery(
-                         StringUtils.format("SELECT %s FROM %s", selectList, tableName)
-                     );
-                     FileOutputStream fos = new FileOutputStream(outputPath);
-                     OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
-                  final ResultSetMetaData meta = rs.getMetaData();
-                  final int columnCount = meta.getColumnCount();
-                  while (rs.next()) {
-                    for (int i = 1; i <= columnCount; i++) {
-                      if (i > 1) {
-                        writer.write(',');
-                      }
-                      final int colType = meta.getColumnType(i);
-                      if (colType == Types.BINARY || colType == Types.VARBINARY
-                          || colType == Types.LONGVARBINARY || colType == Types.BLOB
-                          || (colType == Types.OTHER && "bytea".equalsIgnoreCase(meta.getColumnTypeName(i)))) {
-                        final byte[] bytes = rs.getBytes(i);
-                        if (bytes != null) {
-                          writer.write(BaseEncoding.base16().encode(bytes));
-                        }
-                      } else if (colType == Types.BOOLEAN || colType == Types.BIT) {
-                        final boolean val = rs.getBoolean(i);
-                        if (!rs.wasNull()) {
-                          writer.write(String.valueOf(val));
-                        }
-                      } else {
-                        final String val = rs.getString(i);
-                        if (val != null) {
-                          if (val.contains(",") || val.contains("\"") || val.contains("\n") || val.contains("\r")) {
-                            writer.write('"');
-                            writer.write(StringUtils.replace(val, "\"", "\"\""));
-                            writer.write('"');
-                          } else {
-                            writer.write(val);
-                          }
-                        }
-                      }
-                    }
-                    writer.write('\n');
-                  }
-                }
+                writer.write(String.join(",", values));
+                writer.write('\n');
               }
-              return null;
-            },
-            QUIET_RETRIES,
-            DEFAULT_MAX_TRIES
+            }
+          }
+          return null;
+        },
+        QUIET_RETRIES,
+        DEFAULT_MAX_TRIES
     );
+  }
+
+  /**
+   * Reads the given column of the current row as a CSV field. Binary values are hex-encoded, booleans are written
+   * as true/false and NULLs as empty fields.
+   */
+  private static String readCsvValue(final ResultSet rs, final int column) throws SQLException
+  {
+    final ResultSetMetaData meta = rs.getMetaData();
+    final int type = meta.getColumnType(column);
+    if (type == Types.BINARY || type == Types.VARBINARY || type == Types.LONGVARBINARY || type == Types.BLOB
+        || (type == Types.OTHER && "bytea".equalsIgnoreCase(meta.getColumnTypeName(column)))) {
+      final byte[] bytes = rs.getBytes(column);
+      return bytes == null ? "" : BaseEncoding.base16().encode(bytes);
+    } else if (type == Types.BOOLEAN || type == Types.BIT) {
+      final boolean value = rs.getBoolean(column);
+      return rs.wasNull() ? "" : String.valueOf(value);
+    } else {
+      return csvEscape(rs.getString(column));
+    }
+  }
+
+  /**
+   * Escapes a value for CSV output as per RFC 4180: values containing a comma, double quote or line break are
+   * wrapped in double quotes, with inner double quotes doubled. A null value is written as an empty field.
+   */
+  public static String csvEscape(@Nullable final String value)
+  {
+    if (value == null) {
+      return "";
+    } else if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+      return "\"" + StringUtils.replace(value, "\"", "\"\"") + "\"";
+    } else {
+      return value;
+    }
   }
 
   @Override
