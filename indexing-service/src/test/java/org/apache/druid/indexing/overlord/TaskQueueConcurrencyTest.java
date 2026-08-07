@@ -37,8 +37,11 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -62,9 +65,11 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   private Map<String, UpdateAction> threadToUpdateAction;
   private CountDownLatch taskRunnerShutdownLatch;
 
+  @BeforeEach
   @Override
   public void setUpIngestionTestBase() throws IOException
   {
+    derbyConnectorRule.before();
     super.setUpIngestionTestBase();
 
     threadToUpdateAction = new HashMap<>();
@@ -130,7 +135,20 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     };
   }
 
-  @Test(timeout = 20_000L)
+  @AfterEach
+  @Override
+  public void tearDownIngestionTestBase()
+  {
+    try {
+      super.tearDownIngestionTestBase();
+    }
+    finally {
+      derbyConnectorRule.after();
+    }
+  }
+
+  @Timeout(20)
+  @Test
   public void test_start_blocks_add_forAnyTaskId()
   {
     // Add task1 to storage and mark it as running
@@ -143,18 +161,19 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.start()
         ).withEndState(
-            () -> Assert.assertEquals(List.of(task1), taskQueue.getTasks())
+            () -> Assertions.assertEquals(List.of(task1), taskQueue.getTasks())
         )
     ).blocks(
         update(
             () -> taskQueue.add(task2)
         ).withEndState(
-            () -> Assert.assertEquals(List.of(task1, task2), taskQueue.getTasks())
+            () -> Assertions.assertEquals(List.of(task1, task2), taskQueue.getTasks())
         )
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_add_blocks_stop()
   {
     taskQueue.setActive(true);
@@ -164,18 +183,19 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task)
         ).withEndState(
-            () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(task.getId()))
+            () -> Assertions.assertEquals(Optional.of(task), taskQueue.getActiveTask(task.getId()))
         )
     ).blocks(
         update(
             () -> taskQueue.stop()
         ).withEndState(
-            () -> Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task.getId()))
+            () -> Assertions.assertEquals(Optional.absent(), taskQueue.getActiveTask(task.getId()))
         )
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_add_blocks_syncFromStorage_forSameTaskId()
   {
     taskQueue.setActive(true);
@@ -187,18 +207,19 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task)
         ).withEndState(
-            () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
+            () -> Assertions.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
         )
     ).blocks(
         update(
             () -> taskQueue.syncFromStorage()
         ).withEndState(
-            () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
+            () -> Assertions.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
         )
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_syncFromStorage_blocks_add_forSameTaskId()
   {
     final String taskId = "t2";
@@ -207,8 +228,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     // Add the task to queue and storage
     taskQueue.setActive(true);
     taskQueue.add(task);
-    Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId));
-    Assert.assertEquals(Optional.of(task), getTaskStorage().getTask(taskId));
+    Assertions.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId));
+    Assertions.assertEquals(Optional.of(task), getTaskStorage().getTask(taskId));
 
     // Mark the task as completed and remove it from storage but not queue
     taskQueue.shutdown(taskId, "test");
@@ -218,18 +239,19 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.syncFromStorage()
         ).withEndState(
-            () -> Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(taskId))
+            () -> Assertions.assertEquals(Optional.absent(), taskQueue.getActiveTask(taskId))
         )
     ).blocks(
         update(
             () -> taskQueue.add(task)
         ).withEndState(
-            () -> Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
+            () -> Assertions.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId))
         )
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_manageQueuedTasks_blocks_shutdown_forSameTaskId()
   {
     final String taskId = "t2";
@@ -237,13 +259,13 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
     taskQueue.setActive(true);
     taskQueue.add(task);
-    Assert.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId));
+    Assertions.assertEquals(Optional.of(task), taskQueue.getActiveTask(taskId));
 
     ActionVerifier.verifyThat(
         update(
             () -> taskQueue.manageQueuedTasks()
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(TaskStatus.running(taskId)),
                 taskQueue.getTaskStatus(taskId)
             )
@@ -252,7 +274,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.shutdown(taskId, "test")
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(TaskStatus.failure(taskId, "test")),
                 taskQueue.getTaskStatus(taskId)
             )
@@ -260,7 +282,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_add_blocks_shutdownWithSuccess_forSameTaskId()
   {
     taskQueue.setActive(true);
@@ -272,7 +295,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task)
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(task),
                 taskQueue.getActiveTask(taskId)
             )
@@ -281,7 +304,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.shutdownWithSuccess(task.getId(), "test")
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(TaskStatus.success(taskId)),
                 taskQueue.getTaskStatus(taskId)
             )
@@ -289,7 +312,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_add_blocks_shutdown_forSameTaskId()
   {
     taskQueue.setActive(true);
@@ -301,7 +325,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task)
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(task),
                 taskQueue.getActiveTask(taskId)
             )
@@ -310,7 +334,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.shutdown(task.getId(), "test")
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(TaskStatus.failure(taskId, "test")),
                 taskQueue.getTaskStatus(taskId)
             )
@@ -318,7 +342,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_add_doesNotBlock_add_forDifferentTaskId()
   {
     taskQueue.setActive(true);
@@ -330,7 +355,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task1)
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(task1),
                 taskQueue.getActiveTask(task1.getId())
             )
@@ -339,7 +364,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task2)
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(task2),
                 taskQueue.getActiveTask(task2.getId())
             )
@@ -347,7 +372,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_add_doesNotBlock_shutdown_forDifferentTaskId()
   {
     taskQueue.setActive(true);
@@ -361,7 +387,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task2)
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(task2),
                 taskQueue.getActiveTask(task2.getId())
             )
@@ -370,7 +396,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.shutdown(task1.getId(), "killed")
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(TaskStatus.failure(task1.getId(), "killed")),
                 taskQueue.getTaskStatus(task1.getId())
             )
@@ -378,7 +404,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_shutdown_doesNotBlock_add_forDifferentTaskId()
   {
     taskQueue.setActive(true);
@@ -392,7 +419,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.shutdown(task1.getId(), "killed")
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(TaskStatus.failure(task1.getId(), "killed")),
                 taskQueue.getTaskStatus(task1.getId())
             )
@@ -401,7 +428,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.add(task2)
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(task2),
                 taskQueue.getActiveTask(task2.getId())
             )
@@ -409,7 +436,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     );
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_shutdown_then_manageQueuedTasks_blocks_syncFromStorage_and_forcesTaskRemoval()
   {
     taskQueue.setActive(true);
@@ -426,7 +454,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.manageQueuedTasks()
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.of(TaskStatus.failure(task1.getId(), "shutdown")),
                 taskQueue.getTaskStatus(task1.getId())
             )
@@ -435,17 +463,18 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.syncFromStorage()
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.absent(),
                 taskQueue.getActiveTask(task1.getId())
             )
         )
     );
 
-    Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
+    Assertions.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_shutdown_then_syncFromStorage_blocks_manageQueuedTasks_and_forcesTaskRemoval()
   {
     taskQueue.setActive(true);
@@ -462,7 +491,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.syncFromStorage()
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.absent(),
                 taskQueue.getActiveTask(task1.getId())
             )
@@ -471,14 +500,14 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.manageQueuedTasks()
         ).withEndState(
-            () -> Assert.assertEquals(
+            () -> Assertions.assertEquals(
                 Optional.absent(),
                 taskQueue.getActiveTask(task1.getId())
             )
         )
     );
 
-    Assert.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
+    Assertions.assertEquals(Optional.absent(), taskQueue.getActiveTask(task1.getId()));
   }
 
   @Test
@@ -497,13 +526,13 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         update(
             () -> taskQueue.shutdown(task1.getId(), "killed")
         ).withEndState(
-            () -> Assert.assertEquals(List.of(task1), taskQueue.getTasks())
+            () -> Assertions.assertEquals(List.of(task1), taskQueue.getTasks())
         )
     ).blocks(
         update(
             () -> taskQueue.syncFromStorage()
         ).withEndState(
-            () -> Assert.assertTrue(taskQueue.getTasks().isEmpty())
+            () -> Assertions.assertTrue(taskQueue.getTasks().isEmpty())
         )
     );
   }
@@ -515,7 +544,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
 
     final Task task1 = createTask("t1");
     taskQueue.add(task1);
-    Assert.assertEquals(List.of(task1), taskQueue.getTasks());
+    Assertions.assertEquals(List.of(task1), taskQueue.getTasks());
 
     // Keep the task shutdown blocked on the TaskRunner
     taskRunnerShutdownLatch = new CountDownLatch(1);
@@ -524,8 +553,8 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
     taskQueue.shutdown(task1.getId(), "killed");
 
     Optional<TaskInfo> taskInfo = taskQueue.getActiveTaskInfo(task1.getId());
-    Assert.assertTrue(taskInfo.isPresent());
-    Assert.assertEquals(TaskStatus.failure(task1.getId(), "killed"), taskInfo.get().getStatus());
+    Assertions.assertTrue(taskInfo.isPresent());
+    Assertions.assertEquals(TaskStatus.failure(task1.getId(), "killed"), taskInfo.get().getStatus());
 
     taskRunnerShutdownLatch.countDown();
   }
@@ -556,7 +585,7 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   {
     try {
       boolean done = latch.await(5, TimeUnit.SECONDS);
-      Assert.assertTrue(StringUtils.format("Latch[%s] is still blocked", latch), done);
+      Assertions.assertTrue(done, StringUtils.format("Latch[%s] is still blocked", latch));
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -754,19 +783,19 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
       }
 
       // Verify that update 2 is not ready to start critical section yet
-      Assert.assertFalse(update2.isReadyToStartCritical());
+      Assertions.assertFalse(update2.isReadyToStartCritical());
 
       update1.startCritical();
 
       // Wait for update 1 critical to reach finish
       // and verify that update 2 critical is not ready to start yet
       update1.waitUntilCriticalIsReadyToFinish();
-      Assert.assertFalse(update2.isReadyToStartCritical());
+      Assertions.assertFalse(update2.isReadyToStartCritical());
 
       // Finish update 1 critical and verify that update 2 is now ready to start
       update1.finishCritical();
       update2.waitUntilCriticalIsReadyToStart();
-      Assert.assertTrue(update2.isReadyToStartCritical());
+      Assertions.assertTrue(update2.isReadyToStartCritical());
 
       // Finish update 1
       update1.waitToFinishAndVerify();

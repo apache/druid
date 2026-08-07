@@ -33,8 +33,8 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.coordination.ChangeRequestHttpSyncer;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -90,8 +90,8 @@ public class WorkerHolderTest
 
     ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> syncListener = workerHolder.createSyncListener();
 
-    Assert.assertFalse(workerHolder.isEnabled());
-    Assert.assertFalse(workerHolder.isInitialized());
+    Assertions.assertFalse(workerHolder.isEnabled());
+    Assertions.assertFalse(workerHolder.isInitialized());
 
     syncListener.fullSync(
         ImmutableList.of(
@@ -114,23 +114,23 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertTrue(workerHolder.isEnabled());
+    Assertions.assertTrue(workerHolder.isEnabled());
 
-    Assert.assertEquals(4, updates.size());
+    Assertions.assertEquals(4, updates.size());
 
-    Assert.assertEquals(task1.getId(), updates.get(0).getTaskId());
-    Assert.assertTrue(updates.get(0).getTaskStatus().isSuccess());
+    Assertions.assertEquals(task1.getId(), updates.get(0).getTaskId());
+    Assertions.assertTrue(updates.get(0).getTaskStatus().isSuccess());
 
-    Assert.assertEquals(task2.getId(), updates.get(1).getTaskId());
-    Assert.assertTrue(updates.get(1).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task2.getId(), updates.get(1).getTaskId());
+    Assertions.assertTrue(updates.get(1).getTaskStatus().isRunnable());
 
-    Assert.assertEquals(task3.getId(), updates.get(2).getTaskId());
-    Assert.assertTrue(updates.get(2).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task3.getId(), updates.get(2).getTaskId());
+    Assertions.assertTrue(updates.get(2).getTaskStatus().isRunnable());
 
-    Assert.assertEquals(task0.getId(), updates.get(3).getTaskId());
-    Assert.assertTrue(updates.get(3).getTaskStatus().isFailure());
-    Assert.assertNotNull(updates.get(3).getTaskStatus().getErrorMsg());
-    Assert.assertTrue(
+    Assertions.assertEquals(task0.getId(), updates.get(3).getTaskId());
+    Assertions.assertTrue(updates.get(3).getTaskStatus().isFailure());
+    Assertions.assertNotNull(updates.get(3).getTaskStatus().getErrorMsg());
+    Assertions.assertTrue(
         updates.get(3).getTaskStatus().getErrorMsg().startsWith(
             "This task disappeared on the worker where it was assigned"
         )
@@ -153,20 +153,20 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertTrue(workerHolder.isEnabled());
-    Assert.assertEquals(2, updates.size());
+    Assertions.assertTrue(workerHolder.isEnabled());
+    Assertions.assertEquals(2, updates.size());
 
-    Assert.assertEquals(task2.getId(), updates.get(0).getTaskId());
-    Assert.assertTrue(updates.get(0).getTaskStatus().isFailure());
-    Assert.assertNotNull(updates.get(0).getTaskStatus().getErrorMsg());
-    Assert.assertTrue(
+    Assertions.assertEquals(task2.getId(), updates.get(0).getTaskId());
+    Assertions.assertTrue(updates.get(0).getTaskStatus().isFailure());
+    Assertions.assertNotNull(updates.get(0).getTaskStatus().getErrorMsg());
+    Assertions.assertTrue(
         updates.get(0).getTaskStatus().getErrorMsg().startsWith(
             "This task disappeared on the worker where it was assigned"
         )
     );
 
-    Assert.assertEquals(task3.getId(), updates.get(1).getTaskId());
-    Assert.assertTrue(updates.get(1).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task3.getId(), updates.get(1).getTaskId());
+    Assertions.assertTrue(updates.get(1).getTaskStatus().isRunnable());
 
     updates.clear();
 
@@ -191,18 +191,18 @@ public class WorkerHolderTest
         )
     );
 
-    Assert.assertFalse(workerHolder.isEnabled());
+    Assertions.assertFalse(workerHolder.isEnabled());
 
-    Assert.assertEquals(3, updates.size());
+    Assertions.assertEquals(3, updates.size());
 
-    Assert.assertEquals(task1.getId(), updates.get(0).getTaskId());
-    Assert.assertTrue(updates.get(0).getTaskStatus().isSuccess());
+    Assertions.assertEquals(task1.getId(), updates.get(0).getTaskId());
+    Assertions.assertTrue(updates.get(0).getTaskStatus().isSuccess());
 
-    Assert.assertEquals(task2.getId(), updates.get(1).getTaskId());
-    Assert.assertTrue(updates.get(1).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task2.getId(), updates.get(1).getTaskId());
+    Assertions.assertTrue(updates.get(1).getTaskStatus().isRunnable());
 
-    Assert.assertEquals(task3.getId(), updates.get(2).getTaskId());
-    Assert.assertTrue(updates.get(2).getTaskStatus().isRunnable());
+    Assertions.assertEquals(task3.getId(), updates.get(2).getTaskId());
+    Assertions.assertTrue(updates.get(2).getTaskStatus().isRunnable());
 
     updates.clear();
   }
