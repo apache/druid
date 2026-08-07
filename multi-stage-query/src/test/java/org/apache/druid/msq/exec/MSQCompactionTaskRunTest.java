@@ -113,7 +113,6 @@ import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -188,7 +187,7 @@ public class MSQCompactionTaskRunTest extends CompactionTaskRunBase
       boolean useConcurrentLocks,
       Interval inputInterval,
       Granularity compactionGranularities
-  ) throws IOException
+  )
   {
     super(
         name,
