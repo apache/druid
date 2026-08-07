@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.Period;
 
@@ -35,6 +36,14 @@ public class UnusedSegmentKillerConfig
 {
   private static final Logger log = new Logger(UnusedSegmentKillerConfig.class);
 
+  /**
+   * Maximum number of segments that should be killed in a single run of the duty.
+   * A value of 200k typically causes the search query to finish within ~5s and
+   * allows the kill queue to finish processing in about (200 * 30s) = 100 minutes,
+   * since a batch of 1000 segments takes about 30s to be processed.
+   */
+  public static final int DEFAULT_MAX_SEGMENTS_TO_KILL = 200_000;
+
   @JsonProperty("enabled")
   private final boolean enabled;
 
@@ -44,15 +53,33 @@ public class UnusedSegmentKillerConfig
   @JsonProperty("dutyPeriod")
   private final Period dutyPeriod;
 
+  @JsonProperty("maxSegmentsToKill")
+  private final Integer maxSegmentsToKill;
+
   @JsonCreator
   public UnusedSegmentKillerConfig(
       @JsonProperty("enabled") @Nullable Boolean enabled,
       @JsonProperty("bufferPeriod") @Nullable Period bufferPeriod,
-      @JsonProperty("dutyPeriod") @Nullable Period dutyPeriod
+      @JsonProperty("dutyPeriod") @Nullable Period dutyPeriod,
+      @JsonProperty("maxSegmentsToKill") @Nullable Integer maxSegmentsToKill
   )
   {
     this.enabled = Configs.valueOrDefault(enabled, false);
     this.bufferPeriod = Configs.valueOrDefault(bufferPeriod, Period.days(30));
+    this.maxSegmentsToKill = Configs.valueOrDefault(maxSegmentsToKill, DEFAULT_MAX_SEGMENTS_TO_KILL);
+
+    if (this.maxSegmentsToKill > DEFAULT_MAX_SEGMENTS_TO_KILL) {
+      log.warn(
+          "Setting a high value[%d] for 'druid.manager.segments.killUnused.maxSegmentsToKill'."
+          + " This may slow down the segment killer and/or put undue strain on the metadata store.",
+          this.maxSegmentsToKill
+      );
+    } else {
+      InvalidInput.conditionalException(
+          this.maxSegmentsToKill > 0,
+          "'druid.manager.segments.killUnused.maxSegmentsToKill' must be greater than zero"
+      );
+    }
 
     if (dutyPeriod == null) {
       this.dutyPeriod = Period.hours(1);
@@ -68,6 +95,7 @@ public class UnusedSegmentKillerConfig
 
   /**
    * Period for which segments are retained even after being marked as unused.
+   * Default value is 30 days.
    */
   public Period getBufferPeriod()
   {
@@ -82,6 +110,15 @@ public class UnusedSegmentKillerConfig
   public Period getDutyPeriod()
   {
     return dutyPeriod;
+  }
+
+  /**
+   * Maximum number of segments to kill in a single run of the duty. Default
+   * value is {@link #DEFAULT_MAX_SEGMENTS_TO_KILL}.
+   */
+  public int getMaxSegmentsToKill()
+  {
+    return maxSegmentsToKill;
   }
 
   public boolean isEnabled()

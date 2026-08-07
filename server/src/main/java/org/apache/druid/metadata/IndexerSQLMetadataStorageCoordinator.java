@@ -61,6 +61,7 @@ import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -168,6 +169,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     return inReadOnlyTransaction(
         sql -> sql.retrieveSomeUnusedSegmentIntervals(dataSource, limit)
+    );
+  }
+
+  @Override
+  public Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  )
+  {
+    return inReadOnlyTransaction(
+        sql -> sql.retrieveSomeUnusedSegmentIntervals(maxUpdatedTime, maxResultSize, maxSegmentsToScan)
     );
   }
 

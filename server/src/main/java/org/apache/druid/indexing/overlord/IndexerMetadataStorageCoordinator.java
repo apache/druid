@@ -28,6 +28,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -617,6 +618,16 @@ public interface IndexerMetadataStorageCoordinator
    * upto a maximum of {@code limit} entries.
    */
   List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit);
+
+  /**
+   * Extracts eligible unused segments intervals from the metadata store using
+   * {@link org.apache.druid.metadata.SqlSegmentsMetadataQuery#retrieveSomeUnusedSegmentIntervals(DateTime, int, int)}
+   */
+  Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  );
 
   /**
    * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,

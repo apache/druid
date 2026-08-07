@@ -32,7 +32,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
@@ -49,7 +49,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.DefaultQueryMetrics;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.metrics.SupervisorStatsProvider;
 
@@ -778,22 +777,9 @@ public class SupervisorManager implements SupervisorStatsProvider
    */
   private static boolean specHasConcurrentLocks(SeekableStreamSupervisorSpec spec)
   {
-    Map<String, Object> context = spec.getContext();
-    if (context == null) {
-      return Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
-    }
-    Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
-        Tasks.USE_CONCURRENT_LOCKS,
-        context.get(Tasks.USE_CONCURRENT_LOCKS)
+    return TaskLocks.shouldUseConcurrentLocksForAppend(
+        spec.getContext(),
+        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
     );
-    if (useConcurrentLocks != null) {
-      return useConcurrentLocks;
-    }
-    TaskLockType taskLockType = QueryContexts.getAsEnum(
-        Tasks.TASK_LOCK_TYPE,
-        context.get(Tasks.TASK_LOCK_TYPE),
-        TaskLockType.class
-    );
-    return taskLockType == TaskLockType.APPEND;
   }
 }
