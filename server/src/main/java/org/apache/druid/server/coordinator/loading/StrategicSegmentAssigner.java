@@ -345,10 +345,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    * <ol>
    *   <li><b>Classify.</b> Build {@link PartialSegmentStatusInTier} for this tier; every server falls into at most
    *       one of: matching-loaded, stale-loaded (optionally also eligible-for-additive-reload),
-   *       matching-in-flight, stale-in-flight, eligible-for-fresh-load, or unclassified (drop/move pending; see
-   *       {@link PartialSegmentStatusInTier#classify} for why). Matching means the announced fingerprint equals
-   *       this request's fingerprint; stale is anything else, including a non-profile regular full-load replica.</li>
-   *   <li><b>Compute matching count:</b> matching-loaded + matching-in-flight − pending-move-drop.</li>
+   *       matching-in-flight, stale-in-flight, eligible-for-fresh-load, or unclassified (drop or move source
+   *       pending; see {@link PartialSegmentStatusInTier#classify} for why). Matching means the announced
+   *       fingerprint equals this request's fingerprint; stale is anything else, including a non-profile regular
+   *       full-load replica. A balancer move counts once, at its destination.</li>
+   *   <li><b>Compute matching count:</b> matching-loaded + matching-in-flight. Unlike
+   *       {@link #updateReplicasInTier}, no {@link SegmentReplicaCount#moveCompletedPendingDrop()} correction is
+   *       needed, because the classification never counts both endpoints of a move.</li>
    *   <li><b>If matching count is short of {@code requiredReplicas}</b> (deficit):
    *     <ol type="a">
    *       <li>Cancel stale-in-flight loads to free their slots. Canceled servers become same-run fresh-load
@@ -389,7 +392,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   {
     final SegmentReplicaCount replicaCountOnTier = replicaCountMap.get(segment.getId(), tier);
     final int movingReplicas = replicaCountOnTier.moving();
-    final int moveCompletedPendingDrop = Math.max(0, replicaCountOnTier.moveCompletedPendingDrop());
 
     final PartialSegmentStatusInTier status = new PartialSegmentStatusInTier(
         segment,
@@ -398,8 +400,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     );
 
     final int matchingProjected = status.getMatchingLoaded().size()
-                                  + status.getMatchingInFlight().size()
-                                  - moveCompletedPendingDrop;
+                                  + status.getMatchingInFlight().size();
     final boolean shouldCancelMoves = requiredReplicas == 0 && movingReplicas > 0;
 
     // If everything's already in shape and no stale work, fast-exit.
