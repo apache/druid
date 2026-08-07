@@ -105,6 +105,20 @@ public class DruidSqlParserUtilsTest
       );
     }
 
+    public static Iterable<Object[]> periodConstructorFeeder()
+    {
+      return ImmutableList.of(
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.SECOND), Granularities.SECOND},
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.MINUTE), Granularities.MINUTE},
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.HOUR), Granularities.HOUR},
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.DAY), Granularities.DAY},
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.WEEK), Granularities.WEEK},
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.MONTH), Granularities.MONTH},
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.QUARTER), Granularities.QUARTER},
+          new Object[]{TimeUnits.toPeriod(TimeUnitRange.YEAR), Granularities.YEAR}
+      );
+    }
+
     @ParameterizedTest(name = "{1}")
     @MethodSource("constructorFeeder")
     public void testGetGranularityFromFloor(TimeUnit timeUnit, Period period, Granularity expectedGranularity)
@@ -137,10 +151,9 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY PT1D"
      */
-    @ParameterizedTest(name = "{1}")
-    @MethodSource("constructorFeeder")
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("periodConstructorFeeder")
     public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier(
-        TimeUnit timeUnit,
         Period period,
         Granularity expectedGranularity
     )
@@ -153,10 +166,9 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY 'PT1D'"
      */
-    @ParameterizedTest(name = "{1}")
-    @MethodSource("constructorFeeder")
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("periodConstructorFeeder")
     public void testConvertSqlNodeToPeriodFormGranularityAsLiteral(
-        TimeUnit timeUnit,
         Period period,
         Granularity expectedGranularity
     )

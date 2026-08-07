@@ -34,6 +34,7 @@ import java.util.List;
 
 public class CompressedBigDecimalMaxAggregatorGroupByTest extends CompressedBigDecimalAggregatorGroupByTestBase
 {
+  @Override
   @ParameterizedTest
   @MethodSource("constructorFeeder")
   public void testIngestAndGroupByAllQuery(
