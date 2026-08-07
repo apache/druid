@@ -26,7 +26,6 @@ import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
 import org.apache.druid.segment.loading.PartialProjectionLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
