@@ -49,6 +49,11 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.tdunning</groupId>
       <artifactId>t-digest</artifactId>
       <version>3.2</version>

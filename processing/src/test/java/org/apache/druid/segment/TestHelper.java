@@ -442,7 +442,7 @@ public class TestHelper
       if (expectedValue != null && expectedValue.getClass().isArray()) {
         // spilled results will materialize into lists, coerce them back to arrays if we expected arrays
         if (actualValue instanceof List) {
-          Assertions.assertEquals(
+          Assertions.assertArrayEquals(
               (Object[]) expectedValue,
               (Object[]) ExprEval.coerceListToArray((List) actualValue, true).rhs,
               message

@@ -96,7 +96,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -122,6 +121,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -1142,7 +1142,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final DruidExceptionMatcher exceptionMatcher
   )
   {
-    MatcherAssert.assertThat(exception, exceptionMatcher);
+    assertThat(exception, exceptionMatcher);
   }
 
   public void analyzeResources(
