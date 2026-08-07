@@ -40,12 +40,9 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 
@@ -53,9 +50,6 @@ public class TaskSerdeTest
 {
   private final ObjectMapper jsonMapper;
   private final IndexSpec indexSpec = IndexSpec.getDefault();
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   public TaskSerdeTest()
   {
@@ -75,8 +69,8 @@ public class TaskSerdeTest
         IndexTask.IndexIOConfig.class
     );
 
-    Assert.assertEquals(false, ioConfig.isAppendToExisting());
-    Assert.assertEquals(false, ioConfig.isDropExisting());
+    Assertions.assertEquals(false, ioConfig.isAppendToExisting());
+    Assertions.assertEquals(false, ioConfig.isDropExisting());
   }
 
   @Test
@@ -87,13 +81,13 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertFalse(tuningConfig.isReportParseExceptions());
-    Assert.assertEquals(IndexSpec.getDefault(), tuningConfig.getIndexSpec());
-    Assert.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
-    Assert.assertEquals(0, tuningConfig.getMaxPendingPersists());
-    Assert.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
-    Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertFalse(tuningConfig.isReportParseExceptions());
+    Assertions.assertEquals(IndexSpec.getDefault(), tuningConfig.getIndexSpec());
+    Assertions.assertEquals(new Period(Integer.MAX_VALUE), tuningConfig.getIntermediatePersistPeriod());
+    Assertions.assertEquals(0, tuningConfig.getMaxPendingPersists());
+    Assertions.assertEquals(1000000, tuningConfig.getMaxRowsInMemory());
+    Assertions.assertNull(tuningConfig.getNumShards());
+    Assertions.assertNull(tuningConfig.getMaxRowsPerSegment());
   }
 
   @Test
@@ -104,67 +98,69 @@ public class TaskSerdeTest
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
-    Assert.assertNull(tuningConfig.getNumShards());
+    Assertions.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\"}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertNull(tuningConfig.getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"maxRowsPerSegment\":10}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
-    Assert.assertNull(tuningConfig.getNumShards());
+    Assertions.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertNull(tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(10, (int) tuningConfig.getNumShards());
+    Assertions.assertNull(tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":10, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(10, (int) tuningConfig.getNumShards());
+    Assertions.assertNull(tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertEquals(10, (int) tuningConfig.getNumShards());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":-1}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertNull(tuningConfig.getNumShards());
+    Assertions.assertEquals(10, (int) tuningConfig.getMaxRowsPerSegment());
 
     tuningConfig = jsonMapper.readValue(
         "{\"type\":\"index\", \"targetPartitionSize\":-1, \"numShards\":-1, \"forceGuaranteedRollup\": true}",
         IndexTask.IndexTuningConfig.class
     );
 
-    Assert.assertNull(tuningConfig.getNumShards());
-    Assert.assertNotNull(tuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, tuningConfig.getMaxRowsPerSegment().intValue());
+    Assertions.assertNull(tuningConfig.getNumShards());
+    Assertions.assertNotNull(tuningConfig.getMaxRowsPerSegment());
+    Assertions.assertEquals(PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT, tuningConfig.getMaxRowsPerSegment().intValue());
   }
 
   @Test
   public void testIndexTaskTuningConfigTargetPartitionSizeAndNumShards() throws Exception
   {
-    thrown.expectCause(CoreMatchers.isA(IllegalArgumentException.class));
-
-    jsonMapper.readValue(
-        "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":10, \"forceGuaranteedRollup\": true}",
-        IndexTask.IndexTuningConfig.class
+    final Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> jsonMapper.readValue(
+            "{\"type\":\"index\", \"targetPartitionSize\":10, \"numShards\":10, \"forceGuaranteedRollup\": true}",
+            IndexTask.IndexTuningConfig.class
+        )
     );
+    Assertions.assertInstanceOf(IllegalArgumentException.class, exception.getCause());
   }
 
   @Test
@@ -174,39 +170,48 @@ public class TaskSerdeTest
         "{\"availabilityGroup\":\"index_xxx_mmm\", \"requiredCapacity\":1}",
         TaskResource.class
     );
-    Assert.assertNotNull(actual);
-    Assert.assertNotNull(actual.getAvailabilityGroup());
-    Assert.assertTrue(actual.getRequiredCapacity() > 0);
+    Assertions.assertNotNull(actual);
+    Assertions.assertNotNull(actual.getAvailabilityGroup());
+    Assertions.assertTrue(actual.getRequiredCapacity() > 0);
   }
 
   @Test
   public void testTaskResourceWithNullAvailabilityGroupShouldFail() throws Exception
   {
-    thrown.expectCause(CoreMatchers.isA(NullPointerException.class));
-    jsonMapper.readValue(
-        "{\"availabilityGroup\":null, \"requiredCapacity\":10}",
-        TaskResource.class
+    final Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> jsonMapper.readValue(
+            "{\"availabilityGroup\":null, \"requiredCapacity\":10}",
+            TaskResource.class
+        )
     );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
   }
 
   @Test
   public void testTaskResourceWithZeroRequiredCapacityShouldFail() throws Exception
   {
-    thrown.expectCause(CoreMatchers.isA(NullPointerException.class));
-    jsonMapper.readValue(
-        "{\"availabilityGroup\":null, \"requiredCapacity\":0}",
-        TaskResource.class
+    final Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> jsonMapper.readValue(
+            "{\"availabilityGroup\":null, \"requiredCapacity\":0}",
+            TaskResource.class
+        )
     );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
   }
 
   @Test
   public void testTaskResourceWithNegativeRequiredCapacityShouldFail() throws Exception
   {
-    thrown.expectCause(CoreMatchers.isA(NullPointerException.class));
-    jsonMapper.readValue(
-        "{\"availabilityGroup\":null, \"requiredCapacity\":-1}",
-        TaskResource.class
+    final Exception exception = Assertions.assertThrows(
+        Exception.class,
+        () -> jsonMapper.readValue(
+            "{\"availabilityGroup\":null, \"requiredCapacity\":-1}",
+            TaskResource.class
+        )
     );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
   }
 
   @Test
@@ -247,35 +252,35 @@ public class TaskSerdeTest
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final IndexTask task2 = (IndexTask) jsonMapper.readValue(json, Task.class);
 
-    Assert.assertEquals("foo", task.getDataSource());
+    Assertions.assertEquals("foo", task.getDataSource());
 
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assertions.assertEquals(task.getId(), task2.getId());
+    Assertions.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assertions.assertEquals(task.getDataSource(), task2.getDataSource());
 
     IndexTask.IndexIOConfig taskIoConfig = task.getIngestionSchema().getIOConfig();
     IndexTask.IndexIOConfig task2IoConfig = task2.getIngestionSchema().getIOConfig();
 
-    Assert.assertTrue(taskIoConfig.getInputSource() instanceof LocalInputSource);
-    Assert.assertTrue(task2IoConfig.getInputSource() instanceof LocalInputSource);
-    Assert.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
-    Assert.assertEquals(taskIoConfig.isDropExisting(), task2IoConfig.isDropExisting());
+    Assertions.assertTrue(taskIoConfig.getInputSource() instanceof LocalInputSource);
+    Assertions.assertTrue(task2IoConfig.getInputSource() instanceof LocalInputSource);
+    Assertions.assertEquals(taskIoConfig.isAppendToExisting(), task2IoConfig.isAppendToExisting());
+    Assertions.assertEquals(taskIoConfig.isDropExisting(), task2IoConfig.isDropExisting());
 
     IndexTask.IndexTuningConfig taskTuningConfig = task.getIngestionSchema().getTuningConfig();
     IndexTask.IndexTuningConfig task2TuningConfig = task2.getIngestionSchema().getTuningConfig();
 
-    Assert.assertEquals(taskTuningConfig.getBasePersistDirectory(), task2TuningConfig.getBasePersistDirectory());
-    Assert.assertEquals(taskTuningConfig.getIndexSpec(), task2TuningConfig.getIndexSpec());
-    Assert.assertEquals(
+    Assertions.assertEquals(taskTuningConfig.getBasePersistDirectory(), task2TuningConfig.getBasePersistDirectory());
+    Assertions.assertEquals(taskTuningConfig.getIndexSpec(), task2TuningConfig.getIndexSpec());
+    Assertions.assertEquals(
         taskTuningConfig.getIntermediatePersistPeriod(),
         task2TuningConfig.getIntermediatePersistPeriod()
     );
-    Assert.assertEquals(taskTuningConfig.getMaxPendingPersists(), task2TuningConfig.getMaxPendingPersists());
-    Assert.assertEquals(taskTuningConfig.getMaxRowsInMemory(), task2TuningConfig.getMaxRowsInMemory());
-    Assert.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
-    Assert.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
-    Assert.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
-    Assert.assertEquals(taskTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(), task2TuningConfig.getAwaitSegmentAvailabilityTimeoutMillis());
+    Assertions.assertEquals(taskTuningConfig.getMaxPendingPersists(), task2TuningConfig.getMaxPendingPersists());
+    Assertions.assertEquals(taskTuningConfig.getMaxRowsInMemory(), task2TuningConfig.getMaxRowsInMemory());
+    Assertions.assertEquals(taskTuningConfig.getNumShards(), task2TuningConfig.getNumShards());
+    Assertions.assertEquals(taskTuningConfig.getMaxRowsPerSegment(), task2TuningConfig.getMaxRowsPerSegment());
+    Assertions.assertEquals(taskTuningConfig.isReportParseExceptions(), task2TuningConfig.isReportParseExceptions());
+    Assertions.assertEquals(taskTuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(), task2TuningConfig.getAwaitSegmentAvailabilityTimeoutMillis());
   }
 
   @Test
@@ -315,17 +320,17 @@ public class TaskSerdeTest
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final IndexTask task2 = (IndexTask) jsonMapper.readValue(json, Task.class);
 
-    Assert.assertEquals("foo", task.getDataSource());
+    Assertions.assertEquals("foo", task.getDataSource());
 
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(2, task.getTaskResource().getRequiredCapacity());
-    Assert.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
-    Assert.assertEquals(task.getTaskResource().getRequiredCapacity(), task2.getTaskResource().getRequiredCapacity());
-    Assert.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertTrue(task.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
-    Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
+    Assertions.assertEquals(task.getId(), task2.getId());
+    Assertions.assertEquals(2, task.getTaskResource().getRequiredCapacity());
+    Assertions.assertEquals("rofl", task.getTaskResource().getAvailabilityGroup());
+    Assertions.assertEquals(task.getTaskResource().getRequiredCapacity(), task2.getTaskResource().getRequiredCapacity());
+    Assertions.assertEquals(task.getTaskResource().getAvailabilityGroup(), task2.getTaskResource().getAvailabilityGroup());
+    Assertions.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assertions.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assertions.assertTrue(task.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
+    Assertions.assertTrue(task2.getIngestionSchema().getIOConfig().getInputSource() instanceof LocalInputSource);
   }
 
   @Test
@@ -343,13 +348,13 @@ public class TaskSerdeTest
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final ArchiveTask task2 = (ArchiveTask) jsonMapper.readValue(json, Task.class);
 
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
+    Assertions.assertEquals("foo", task.getDataSource());
+    Assertions.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assertions.assertEquals(task.getId(), task2.getId());
+    Assertions.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assertions.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assertions.assertEquals(task.getInterval(), task2.getInterval());
   }
 
   @Test
@@ -367,13 +372,13 @@ public class TaskSerdeTest
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final RestoreTask task2 = (RestoreTask) jsonMapper.readValue(json, Task.class);
 
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
+    Assertions.assertEquals("foo", task.getDataSource());
+    Assertions.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
 
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assertions.assertEquals(task.getId(), task2.getId());
+    Assertions.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assertions.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assertions.assertEquals(task.getInterval(), task2.getInterval());
   }
 
   @Test
@@ -393,14 +398,14 @@ public class TaskSerdeTest
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
     final MoveTask task2 = (MoveTask) jsonMapper.readValue(json, Task.class);
 
-    Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
-    Assert.assertEquals(ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"), task.getTargetLoadSpec());
+    Assertions.assertEquals("foo", task.getDataSource());
+    Assertions.assertEquals(Intervals.of("2010-01-01/P1D"), task.getInterval());
+    Assertions.assertEquals(ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"), task.getTargetLoadSpec());
 
-    Assert.assertEquals(task.getId(), task2.getId());
-    Assert.assertEquals(task.getGroupId(), task2.getGroupId());
-    Assert.assertEquals(task.getDataSource(), task2.getDataSource());
-    Assert.assertEquals(task.getInterval(), task2.getInterval());
-    Assert.assertEquals(task.getTargetLoadSpec(), task2.getTargetLoadSpec());
+    Assertions.assertEquals(task.getId(), task2.getId());
+    Assertions.assertEquals(task.getGroupId(), task2.getGroupId());
+    Assertions.assertEquals(task.getDataSource(), task2.getDataSource());
+    Assertions.assertEquals(task.getInterval(), task2.getInterval());
+    Assertions.assertEquals(task.getTargetLoadSpec(), task2.getTargetLoadSpec());
   }
 }
