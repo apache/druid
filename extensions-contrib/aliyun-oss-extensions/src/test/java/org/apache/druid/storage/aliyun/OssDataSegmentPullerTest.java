@@ -29,10 +29,9 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -50,8 +49,8 @@ import java.util.zip.GZIPOutputStream;
  */
 public class OssDataSegmentPullerTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   @Test
   public void testSimpleGetVersion() throws IOException
@@ -83,7 +82,7 @@ public class OssDataSegmentPullerTest
 
     EasyMock.verify(ossClient);
 
-    Assert.assertEquals(StringUtils.format("%d", new Date(0).getTime()), version);
+    Assertions.assertEquals(StringUtils.format("%d", new Date(0).getTime()), version);
   }
 
   @Test
@@ -94,7 +93,7 @@ public class OssDataSegmentPullerTest
     final OSS ossClient = EasyMock.createStrictMock(OSS.class);
     final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
-    final File tmpFile = temporaryFolder.newFile("gzTest.gz");
+    final File tmpFile = new File(temporaryFolder, "gzTest.gz");
 
     try (final FileOutputStream fileOutputStream = new FileOutputStream(tmpFile);
          final OutputStream outputStream = new GZIPOutputStream(fileOutputStream)) {
@@ -114,7 +113,7 @@ public class OssDataSegmentPullerTest
     final ObjectMetadata objectMetadata = new ObjectMetadata();
     objectMetadata.setLastModified(new Date(1));
 
-    final File tmpDir = temporaryFolder.newFolder("gzTestDir");
+    final File tmpDir = newFolder(temporaryFolder, "gzTestDir");
 
     try (final InputStream objectContent = new FileInputStream(tmpFile)) {
       object0.setObjectContent(objectContent);
@@ -138,10 +137,10 @@ public class OssDataSegmentPullerTest
       );
       EasyMock.verify(ossClient);
 
-      Assert.assertEquals(value.length, result.size());
+      Assertions.assertEquals(value.length, result.size());
       final File expected = new File(tmpDir, "renames-0");
-      Assert.assertTrue(expected.exists());
-      Assert.assertEquals(value.length, expected.length());
+      Assertions.assertTrue(expected.exists());
+      Assertions.assertEquals(value.length, expected.length());
     }
   }
 
@@ -153,7 +152,7 @@ public class OssDataSegmentPullerTest
     final OSS ossClient = EasyMock.createStrictMock(OSS.class);
     final byte[] value = bucket.getBytes(StandardCharsets.UTF_8);
 
-    final File tmpFile = temporaryFolder.newFile("gzTest.gz");
+    final File tmpFile = new File(temporaryFolder, "gzTest.gz");
 
     try (final FileOutputStream fileOutputStream = new FileOutputStream(tmpFile);
          final OutputStream outputStream = new GZIPOutputStream(fileOutputStream)) {
@@ -169,7 +168,7 @@ public class OssDataSegmentPullerTest
     final ObjectMetadata objectMetadata = new ObjectMetadata();
     objectMetadata.setLastModified(new Date(0));
 
-    File tmpDir = temporaryFolder.newFolder("gzTestDir");
+    File tmpDir = newFolder(temporaryFolder, "gzTestDir");
 
     OSSException exception = new OSSException("OssDataSegmentPullerTest", "NoSuchKey", null, null, null, null, null);
     try (final InputStream objectContent = new FileInputStream(tmpFile)) {
@@ -200,11 +199,21 @@ public class OssDataSegmentPullerTest
       );
       EasyMock.verify(ossClient);
 
-      Assert.assertEquals(value.length, result.size());
+      Assertions.assertEquals(value.length, result.size());
       final File expected = new File(tmpDir, "renames-0");
-      Assert.assertTrue(expected.exists());
-      Assert.assertEquals(value.length, expected.length());
+      Assertions.assertTrue(expected.exists());
+      Assertions.assertEquals(value.length, expected.length());
     }
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    final String subFolder = String.join("/", subDirs);
+    final File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 
 }

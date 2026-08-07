@@ -19,9 +19,8 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.core.IsInstanceOf;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class LongMeanNoNullAveragerFactoryTest
 {
@@ -29,6 +28,6 @@ public class LongMeanNoNullAveragerFactoryTest
   public void testCreateAverager()
   {
     AveragerFactory<?, ?> fac = new LongMeanNoNullAveragerFactory("test", 5, 1, "field");
-    MatcherAssert.assertThat(fac.createAverager(), IsInstanceOf.instanceOf(LongMeanNoNullAverager.class));
+    Assertions.assertInstanceOf(LongMeanNoNullAverager.class, fac.createAverager());
   }
 }

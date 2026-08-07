@@ -71,17 +71,14 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -90,6 +87,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class OssInputSourceTest extends InitializedNullHandlingTest
 {
@@ -141,11 +140,8 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     INPUT_DATA_CONFIG.setMaxListingLength(MAX_LISTING_LENGTH);
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  public File temporaryFolder;
 
   @Test
   public void testSerdeWithUris() throws Exception
@@ -161,8 +157,8 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null
     );
     final OssInputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), OssInputSource.class);
-    Assert.assertEquals(withUris, serdeWithUris);
-    Assert.assertEquals(Collections.emptySet(), serdeWithUris.getConfiguredSystemFields());
+    Assertions.assertEquals(withUris, serdeWithUris);
+    Assertions.assertEquals(Collections.emptySet(), serdeWithUris.getConfiguredSystemFields());
   }
 
   @Test
@@ -179,8 +175,8 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null
     );
     final OssInputSource serdeWithUris = MAPPER.readValue(MAPPER.writeValueAsString(withUris), OssInputSource.class);
-    Assert.assertEquals(withUris, serdeWithUris);
-    Assert.assertEquals(
+    Assertions.assertEquals(withUris, serdeWithUris);
+    Assertions.assertEquals(
         EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
         serdeWithUris.getConfiguredSystemFields()
     );
@@ -201,7 +197,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
     final OssInputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), OssInputSource.class);
-    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    Assertions.assertEquals(withPrefixes, serdeWithPrefixes);
   }
 
   @Test
@@ -219,7 +215,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
     final OssInputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), OssInputSource.class);
-    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    Assertions.assertEquals(withPrefixes, serdeWithPrefixes);
   }
 
   @Test
@@ -242,7 +238,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null,
         mockConfigPropertiesWithoutKeyAndSecret
     );
-    Assert.assertNotNull(withPrefixes);
+    Assertions.assertNotNull(withPrefixes);
 
     withPrefixes.createEntity(new CloudObjectLocation("bucket", "path"));
     EasyMock.verify(mockConfigPropertiesWithoutKeyAndSecret);
@@ -265,7 +261,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
     final OssInputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), OssInputSource.class);
-    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    Assertions.assertEquals(withPrefixes, serdeWithPrefixes);
     EasyMock.verify(clientConfig);
   }
 
@@ -286,7 +282,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
     final OssInputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), OssInputSource.class);
-    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    Assertions.assertEquals(withPrefixes, serdeWithPrefixes);
     EasyMock.verify(clientConfig);
   }
 
@@ -305,58 +301,61 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     );
     final OssInputSource serdeWithPrefixes =
         MAPPER.readValue(MAPPER.writeValueAsString(withPrefixes), OssInputSource.class);
-    Assert.assertEquals(withPrefixes, serdeWithPrefixes);
+    Assertions.assertEquals(withPrefixes, serdeWithPrefixes);
   }
 
   @Test
   public void testSerdeWithInvalidArgs()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    // constructor will explode
-    new OssInputSource(
-        OSSCLIENT,
-        INPUT_DATA_CONFIG,
-        EXPECTED_URIS,
-        PREFIXES,
-        EXPECTED_LOCATION,
-        null,
-        null,
-        null
-    );
+    assertThrows(IllegalArgumentException.class, () -> {
+      // constructor will explode
+      new OssInputSource(
+          OSSCLIENT,
+          INPUT_DATA_CONFIG,
+          EXPECTED_URIS,
+          PREFIXES,
+          EXPECTED_LOCATION,
+          null,
+          null,
+          null
+      );
+    });
   }
 
   @Test
   public void testSerdeWithOtherInvalidArgs()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    // constructor will explode
-    new OssInputSource(
-        OSSCLIENT,
-        INPUT_DATA_CONFIG,
-        EXPECTED_URIS,
-        PREFIXES,
-        ImmutableList.of(),
-        null,
-        null,
-        null
-    );
+    assertThrows(IllegalArgumentException.class, () -> {
+      // constructor will explode
+      new OssInputSource(
+          OSSCLIENT,
+          INPUT_DATA_CONFIG,
+          EXPECTED_URIS,
+          PREFIXES,
+          ImmutableList.of(),
+          null,
+          null,
+          null
+      );
+    });
   }
 
   @Test
   public void testSerdeWithOtherOtherInvalidArgs()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    // constructor will explode
-    new OssInputSource(
-        OSSCLIENT,
-        INPUT_DATA_CONFIG,
-        ImmutableList.of(),
-        PREFIXES,
-        EXPECTED_LOCATION,
-        null,
-        null,
-        null
-    );
+    assertThrows(IllegalArgumentException.class, () -> {
+      // constructor will explode
+      new OssInputSource(
+          OSSCLIENT,
+          INPUT_DATA_CONFIG,
+          ImmutableList.of(),
+          PREFIXES,
+          EXPECTED_LOCATION,
+          null,
+          null,
+          null
+      );
+    });
   }
 
   @Test
@@ -385,7 +384,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         new MaxSizeSplitHintSpec(10, null)
     );
 
-    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    Assertions.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
     EasyMock.verify(OSSCLIENT);
   }
 
@@ -413,7 +412,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         new MaxSizeSplitHintSpec(null, 1)
     );
 
-    Assert.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
+    Assertions.assertEquals(EXPECTED_COORDS, splits.map(InputSplit::get).collect(Collectors.toList()));
     EasyMock.verify(OSSCLIENT);
   }
 
@@ -441,7 +440,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         new MaxSizeSplitHintSpec(new HumanReadableBytes(CONTENT.length * 3L), null)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(EXPECTED_URIS.stream().map(CloudObjectLocation::new).collect(Collectors.toList())),
         splits.map(InputSplit::get).collect(Collectors.toList())
     );
@@ -471,7 +470,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
         null
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(ImmutableList.of(new CloudObjectLocation(EXPECTED_URIS.get(0)))),
         splits.map(InputSplit::get).collect(Collectors.toList())
     );
@@ -497,15 +496,20 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null
     );
 
-    expectedException.expectMessage("Failed to get object summaries from aliyun OSS bucket[bar], prefix[foo/file2.csv]");
-    expectedException.expectCause(
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("can't list that bucket"))
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> inputSource.createSplits(
+            new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
+            null
+        ).collect(Collectors.toList())
     );
-
-    inputSource.createSplits(
-        new JsonInputFormat(JSONPathSpec.DEFAULT, null, null, null, null),
-        null
-    ).collect(Collectors.toList());
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Failed to get object summaries from aliyun OSS bucket[bar], prefix[foo/file2.csv]"
+        )
+    );
+    Assertions.assertNotNull(exception.getCause());
+    Assertions.assertTrue(exception.getCause().getMessage().contains("can't list that bucket"));
   }
 
   @Test
@@ -538,7 +542,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     InputSourceReader reader = inputSource.reader(
         someSchema,
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
-        temporaryFolder.newFolder()
+        newFolder(temporaryFolder, "junit")
     );
 
     final InputStats inputStats = new InputStatsImpl();
@@ -546,12 +550,12 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
 
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
-      Assert.assertEquals(NOW, nextRow.getTimestamp());
-      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
-      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+      Assertions.assertEquals(NOW, nextRow.getTimestamp());
+      Assertions.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assertions.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
 
-    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
+    Assertions.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
     EasyMock.verify(OSSCLIENT);
   }
 
@@ -585,7 +589,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     InputSourceReader reader = inputSource.reader(
         someSchema,
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
-        temporaryFolder.newFolder()
+        newFolder(temporaryFolder, "junit")
     );
 
     final InputStats inputStats = new InputStatsImpl();
@@ -593,12 +597,12 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
 
     while (iterator.hasNext()) {
       InputRow nextRow = iterator.next();
-      Assert.assertEquals(NOW, nextRow.getTimestamp());
-      Assert.assertEquals("hello", nextRow.getDimension("dim1").get(0));
-      Assert.assertEquals("world", nextRow.getDimension("dim2").get(0));
+      Assertions.assertEquals(NOW, nextRow.getTimestamp());
+      Assertions.assertEquals("hello", nextRow.getDimension("dim1").get(0));
+      Assertions.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
 
-    Assert.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
+    Assertions.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
     EasyMock.verify(OSSCLIENT);
   }
 
@@ -616,7 +620,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null
     );
 
-    Assert.assertEquals(ImmutableSet.of(OssStorageDruidModule.SCHEME), inputSource.getTypes());
+    Assertions.assertEquals(ImmutableSet.of(OssStorageDruidModule.SCHEME), inputSource.getTypes());
   }
 
   @Test
@@ -633,16 +637,16 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         EnumSet.of(SystemField.URI, SystemField.BUCKET, SystemField.PATH),
         inputSource.getConfiguredSystemFields()
     );
 
     final OssEntity entity = new OssEntity(null, new CloudObjectLocation("foo", "bar"));
 
-    Assert.assertEquals("oss://foo/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
-    Assert.assertEquals("foo", inputSource.getSystemFieldValue(entity, SystemField.BUCKET));
-    Assert.assertEquals("bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
+    Assertions.assertEquals("oss://foo/bar", inputSource.getSystemFieldValue(entity, SystemField.URI));
+    Assertions.assertEquals("foo", inputSource.getSystemFieldValue(entity, SystemField.BUCKET));
+    Assertions.assertEquals("bar", inputSource.getSystemFieldValue(entity, SystemField.PATH));
   }
 
   @Test
@@ -774,6 +778,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     {
       return OSSCLIENT;
     }
+
   }
 
   public static class ItemDeserializer<T> extends StdDeserializer<T>
@@ -793,6 +798,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     {
       throw new UnsupportedOperationException();
     }
+
   }
 
   private static ObjectMetadata objectMetadataWithSize(final long size)
@@ -800,5 +806,15 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     final ObjectMetadata retVal = new ObjectMetadata();
     retVal.setContentLength(size);
     return retVal;
+  }
+
+  private static File newFolder(File root, String... subDirs) throws IOException
+  {
+    final String subFolder = String.join("/", subDirs);
+    final File result = new File(root, subFolder);
+    if (!result.mkdirs()) {
+      throw new IOException("Couldn't create folders " + root);
+    }
+    return result;
   }
 }

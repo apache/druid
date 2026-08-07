@@ -37,14 +37,13 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.utils.CurrentTimeMillisSupplier;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -60,7 +59,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class OssTaskLogsTest extends EasyMockSupport
 {
 
@@ -85,8 +84,8 @@ public class OssTaskLogsTest extends EasyMockSupport
   @Mock
   private OSS ossClient;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   @Test
   public void testTaskLogsPushWithAclDisabled() throws Exception
@@ -96,8 +95,8 @@ public class OssTaskLogsTest extends EasyMockSupport
 
     List<Grant> grantList = testPushInternal(true, ownerId, ownerDisplayName);
 
-    Assert.assertNotNull("Grant list should not be null", grantList);
-    Assert.assertEquals("Grant list should be empty as ACL is disabled", 0, grantList.size());
+    Assertions.assertNotNull(grantList, "Grant list should not be null");
+    Assertions.assertEquals(0, grantList.size(), "Grant list should be empty as ACL is disabled");
   }
 
   @Test
@@ -192,7 +191,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(ossClient, timeSupplier);
   }
@@ -279,7 +278,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(ossClient, timeSupplier);
   }
@@ -306,7 +305,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       taskLogs = reader.lines().collect(Collectors.joining("\n"));
     }
 
-    Assert.assertEquals(LOG_CONTENTS, taskLogs);
+    Assertions.assertEquals(LOG_CONTENTS, taskLogs);
   }
 
   @Test
@@ -331,7 +330,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       taskLogs = reader.lines().collect(Collectors.joining("\n"));
     }
 
-    Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
+    Assertions.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
 
   @Test
@@ -356,7 +355,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       taskLogs = reader.lines().collect(Collectors.joining("\n"));
     }
 
-    Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
+    Assertions.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
 
 
@@ -382,7 +381,7 @@ public class OssTaskLogsTest extends EasyMockSupport
       report = reader.lines().collect(Collectors.joining("\n"));
     }
 
-    Assert.assertEquals(REPORT_CONTENTS, report);
+    Assertions.assertEquals(REPORT_CONTENTS, report);
   }
 
   @Nonnull
@@ -424,7 +423,8 @@ public class OssTaskLogsTest extends EasyMockSupport
     OssTaskLogs taskLogs = new OssTaskLogs(ossClient, config, inputDataConfig, timeSupplier);
 
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
-    File logFile = tempFolder.newFile("test_log_file");
+    File logFile = new File(tempFolder, "test_log_file");
+    Assertions.assertTrue(logFile.createNewFile());
 
     taskLogs.pushTaskLog(taskId, logFile);
 

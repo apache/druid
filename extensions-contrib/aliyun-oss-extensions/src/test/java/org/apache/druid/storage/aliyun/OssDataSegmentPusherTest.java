@@ -26,10 +26,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -56,8 +55,8 @@ public class OssDataSegmentPusherTest
     }
   }
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   @Test
   public void testPush() throws Exception
@@ -91,7 +90,7 @@ public class OssDataSegmentPusherTest
     OssDataSegmentPusher pusher = new OssDataSegmentPusher(client, config);
 
     // Create a mock segment on disk
-    File tmp = tempFolder.newFile("version.bin");
+    File tmp = new File(tempFolder, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
     Files.write(data, tmp);
@@ -109,16 +108,16 @@ public class OssDataSegmentPusherTest
         size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, useUniquePath);
+    DataSegment segment = pusher.push(tempFolder, segmentToPush, useUniquePath);
 
-    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
-    Assert.assertEquals(1, (int) segment.getBinaryVersion());
-    Assert.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
-    Assert.assertTrue(
-        segment.getLoadSpec().get("key").toString(),
-        Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches()
+    Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
+    Assertions.assertEquals(1, (int) segment.getBinaryVersion());
+    Assertions.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
+    Assertions.assertTrue(
+        Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches(),
+        segment.getLoadSpec().get("key").toString()
     );
-    Assert.assertEquals("oss_zip", segment.getLoadSpec().get("type"));
+    Assertions.assertEquals("oss_zip", segment.getLoadSpec().get("type"));
 
     EasyMock.verify(client);
   }
