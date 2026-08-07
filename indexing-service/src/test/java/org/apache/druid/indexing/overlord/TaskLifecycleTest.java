@@ -524,7 +524,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       DataSegmentPusher dataSegmentPusher,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       TestIndexerMetadataStorageCoordinator mdc
-  ) throws IOException
+  )
   {
     return setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, new TestAppenderatorsManager());
   }
@@ -534,7 +534,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       TestIndexerMetadataStorageCoordinator mdc,
       AppenderatorsManager appenderatorsManager
-  ) throws IOException
+  )
   {
     Preconditions.checkNotNull(queryRunnerFactoryConglomerate);
     Preconditions.checkNotNull(monitorScheduler);
