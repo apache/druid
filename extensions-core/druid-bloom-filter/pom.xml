@@ -134,14 +134,10 @@
       <artifactId>reflections</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Required because the processing and SQL test JARs expose Hamcrest types in shared fixture APIs. -->
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
