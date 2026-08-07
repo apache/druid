@@ -25,6 +25,7 @@ import com.github.fppt.jedismock.RedisServer;
 import com.github.fppt.jedismock.server.ServiceOptions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import org.apache.druid.client.CacheUtil;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -72,6 +73,16 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
   public void tearDown() throws IOException
   {
     server.stop();
+  }
+
+  @Override
+  @Test
+  public void testKeyContainingNegativeBytes()
+  {
+    byte[] value = new byte[] {1, 0, -10, -55, 111};
+    Cache.NamedKey key = CacheUtil.computeResultLevelCacheKey(new byte[] {1, 0, -10, 0});
+    cache.put(key, value);
+    Assertions.assertArrayEquals(value, cache.get(key));
   }
 
   @Test

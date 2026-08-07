@@ -50,6 +50,25 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
   }
 
   @Test
+  public void testSimpleInjection()
+  {
+    configProvider.inject(testProperties, configurator);
+    DropwizardEmitterConfig config = configProvider.get();
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("reporters")), config.getReporters().toString());
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("prefix")), config.getPrefix());
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("includeHost")), String.valueOf(config.getIncludeHost()));
+    Assertions.assertEquals(
+        propertyValues.get(getPropertyKey("dimensionMapPath")),
+        String.valueOf(config.getDimensionMapPath())
+    );
+    Assertions.assertEquals(propertyValues.get(getPropertyKey("alertEmitters")), config.getAlertEmitters().toString());
+    Assertions.assertEquals(
+        propertyValues.get(getPropertyKey("maxMetricsRegistrySize")),
+        String.valueOf(config.getMaxMetricsRegistrySize())
+    );
+  }
+
+  @Test
   public void testSerDeserDropwizardEmitterConfig() throws IOException
   {
     DropwizardEmitterConfig dropwizardEmitterConfig = new DropwizardEmitterConfig(
@@ -83,4 +102,3 @@ public class DropwizardEmitterConfigTest extends JsonConfigTesterBase<Dropwizard
   }
 
 }
-

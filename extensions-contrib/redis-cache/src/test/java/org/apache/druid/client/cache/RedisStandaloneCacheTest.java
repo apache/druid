@@ -27,6 +27,7 @@ import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
+import org.apache.druid.client.CacheUtil;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.ManageLifecycle;
@@ -76,6 +77,16 @@ public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache
   public void tearDown() throws IOException
   {
     server.stop();
+  }
+
+  @Override
+  @Test
+  public void testKeyContainingNegativeBytes()
+  {
+    byte[] value = new byte[] {1, 0, -10, -55, 111};
+    Cache.NamedKey key = CacheUtil.computeResultLevelCacheKey(new byte[] {1, 0, -10, 0});
+    cache.put(key, value);
+    Assertions.assertArrayEquals(value, cache.get(key));
   }
 
   @Test
@@ -207,4 +218,3 @@ class RedisCacheProviderWithConfig extends RedisCacheProvider
     return RedisCacheFactory.create(config);
   }
 }
-
