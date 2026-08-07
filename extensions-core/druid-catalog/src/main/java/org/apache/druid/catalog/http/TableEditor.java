@@ -518,7 +518,6 @@ public class TableEditor
   }
 
   private TableSpec withProjections(TableMetadata table, List<DatasourceProjectionMetadata> projections)
-      throws CatalogException
   {
     final TableSpec existingSpec = table.spec();
     final Map<String, Object> revised = new HashMap<>(existingSpec.properties());
