@@ -20,8 +20,8 @@
 package org.apache.druid.sql;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.DruidExceptionAssertions;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ public class SqlQueryPlusTest
 
     BaseCalciteQueryTest.assertDruidException(
         e,
-        DruidExceptionAssertions
+        DruidExceptionMatcher
             .invalidSqlInput()
             .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
     );
@@ -66,7 +66,7 @@ public class SqlQueryPlusTest
 
     BaseCalciteQueryTest.assertDruidException(
         e,
-        DruidExceptionAssertions
+        DruidExceptionMatcher
             .invalidSqlInput()
             .expectMessageContains("Incorrect syntax near the keyword 'AS' at line 1, column 31")
     );

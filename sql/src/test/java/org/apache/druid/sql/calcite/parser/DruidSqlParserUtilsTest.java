@@ -36,11 +36,11 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.DruidExceptionAssertions;
 import org.apache.druid.sql.calcite.expression.TimeUnits;
 import org.apache.druid.sql.calcite.expression.builtin.TimeFloorOperatorConversion;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -313,7 +313,7 @@ public class DruidSqlParserUtilsTest
       );
       clusteredByArgs.add(sqlBasicCall);
 
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs("Invalid CLUSTERED BY clause [`DIM4` DESC]: cannot sort in descending order.")
           .assertThrowsAndMatches(() -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs));
@@ -331,7 +331,7 @@ public class DruidSqlParserUtilsTest
       clusteredByArgs.add(new SqlIdentifier("3", SqlParserPos.ZERO));
       clusteredByArgs.add(SqlLiteral.createExactNumeric("-10", SqlParserPos.ZERO));
 
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs("Ordinal [-10] specified in the CLUSTERED BY clause is invalid. It must be a positive integer.")
           .assertThrowsAndMatches(() -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs));
@@ -351,7 +351,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.CEIL.createCall(args);
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs(
               "Invalid operator[CEIL] specified. PARTITIONED BY clause only supports FLOOR(__time TO <unit>)"
@@ -369,7 +369,7 @@ public class DruidSqlParserUtilsTest
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs(
               "FLOOR in PARTITIONED BY clause must have 2 arguments, but only [1] provided."
@@ -387,7 +387,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
       args.add(new SqlIntervalQualifier(TimeUnit.DAY, null, SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs(
               "Invalid argument[timestamps] provided. The first argument to FLOOR in PARTITIONED BY"
@@ -406,7 +406,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("timestamps", SqlParserPos.ZERO));
       args.add(SqlLiteral.createCharString("PT1H", SqlParserPos.ZERO));
       final SqlNode sqlNode = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs(
               "Invalid argument[timestamps] provided. The first argument to TIME_FLOOR in"
@@ -425,7 +425,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(new SqlIntervalQualifier(TimeUnit.ISOYEAR, null, SqlParserPos.ZERO));
       final SqlNode sqlNode = SqlStdOperatorTable.FLOOR.createCall(args);
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs(
               "ISOYEAR is not a valid period granularity for ingestion."
@@ -443,7 +443,7 @@ public class DruidSqlParserUtilsTest
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
       args.add(SqlLiteral.createCharString("abc", SqlParserPos.ZERO));
       final SqlNode sqlNode = TimeFloorOperatorConversion.SQL_FUNCTION.createCall(args);
-      DruidExceptionAssertions
+      DruidExceptionMatcher
           .invalidSqlInput()
           .expectMessageIs(
               "granularity['abc'] is an invalid period literal."
@@ -614,7 +614,7 @@ public class DruidSqlParserUtilsTest
 
       BaseCalciteQueryTest.assertDruidException(
           e,
-          DruidExceptionAssertions
+          DruidExceptionMatcher
               .invalidSqlInput()
               .expectMessageContains("Cannot get a timestamp from sql expression")
       );

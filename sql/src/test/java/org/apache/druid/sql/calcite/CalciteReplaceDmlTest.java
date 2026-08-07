@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -402,7 +403,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("REPLACE INTO \"in/valid\" OVERWRITE ALL SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
-            DruidExceptionAssertions
+            DruidExceptionMatcher
                 .invalidInput()
                 .expectMessageIs("Invalid value for field [table]: Value [in/valid] cannot contain '/'.")
         )
@@ -1105,7 +1106,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .context(context)
         .sql("REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL TIME")
-        .expectValidationError(DruidExceptionAssertions.invalidInput().expectMessageIs(
+        .expectValidationError(DruidExceptionMatcher.invalidInput().expectMessageIs(
             "Context parameter [sqlOuterLimit] cannot be provided on operator [REPLACE]"
         ))
         .verify();

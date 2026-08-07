@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -1576,7 +1577,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     catch (DruidException e) {
       assertDruidException(
           e,
-          new DruidExceptionAssertions(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
+          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
                   "Query could not be planned. A possible reason is "
                   + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "

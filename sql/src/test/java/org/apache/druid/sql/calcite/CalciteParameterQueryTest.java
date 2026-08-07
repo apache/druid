@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -585,7 +586,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     );
     assertDruidException(
         exception,
-        DruidExceptionAssertions.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
   }
 
@@ -605,7 +606,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
     );
     assertDruidException(
         exception,
-        DruidExceptionAssertions.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
     );
   }
 
@@ -627,7 +628,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
 
     assertDruidException(
         exception,
-        DruidExceptionAssertions.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
+        DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
   }
 

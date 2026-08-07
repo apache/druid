@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.LazySequence;
@@ -54,7 +55,6 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement.ResultSet;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.DruidExceptionAssertions;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -296,7 +296,7 @@ public class SqlStatementTest
     catch (DruidException e) {
       BaseCalciteQueryTest.assertDruidException(
           e,
-          DruidExceptionAssertions
+          DruidExceptionMatcher
               .invalidSqlInput()
               .expectMessageContains("Object 'bogus' not found within 'druid'")
       );
@@ -359,7 +359,7 @@ public class SqlStatementTest
     catch (DruidException e) {
       BaseCalciteQueryTest.assertDruidException(
           e,
-          DruidExceptionAssertions
+          DruidExceptionMatcher
               .invalidSqlInput()
               .expectMessageContains("Object 'bogus' not found within 'druid'")
       );
@@ -463,7 +463,7 @@ public class SqlStatementTest
     catch (DruidException e) {
       BaseCalciteQueryTest.assertDruidException(
           e,
-          DruidExceptionAssertions
+          DruidExceptionMatcher
               .invalidSqlInput()
               .expectMessageContains("Object 'bogus' not found within 'druid'")
       );

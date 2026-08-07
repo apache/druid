@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -212,7 +213,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     testIngestionQuery()
         .sql("INSERT INTO \"in/valid\" SELECT dim1, dim2 FROM foo PARTITIONED BY ALL TIME")
         .expectValidationError(
-            DruidExceptionAssertions.invalidInput().expectMessageIs(
+            DruidExceptionMatcher.invalidInput().expectMessageIs(
                 "Invalid value for field [table]: Value [in/valid] cannot contain '/'."
             )
         )
@@ -1596,7 +1597,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionAssertions(
+                            new DruidExceptionMatcher(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"
@@ -1624,7 +1625,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionAssertions(
+                            new DruidExceptionMatcher(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"
@@ -1651,7 +1652,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionAssertions(
+                            new DruidExceptionMatcher(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"
@@ -1679,7 +1680,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
     HashMap<String, Object> context = new HashMap<>(DEFAULT_CONTEXT);
     testIngestionQuery().context(context).sql(sqlString)
                         .expectValidationError(
-                            new DruidExceptionAssertions(
+                            new DruidExceptionMatcher(
                                 DruidException.Persona.USER,
                                 DruidException.Category.INVALID_INPUT,
                                 "invalidInput"
