@@ -31,7 +31,9 @@ public class DeltaAssertions
   public static void assertInvalidInput(final DruidException exception, final String expectedMessage)
   {
     Assertions.assertAll(
+        () -> Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona()),
         () -> Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory()),
+        () -> Assertions.assertEquals("invalidInput", exception.getErrorCode()),
         () -> Assertions.assertEquals(expectedMessage, exception.getMessage())
     );
   }
