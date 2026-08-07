@@ -27,6 +27,7 @@ import com.opencsv.ICSVParser;
 import com.opencsv.RFC4180ParserBuilder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -137,45 +138,15 @@ public class ExportMetadataTest
   }
 
   @Test
-  public void testCsvEscapeField_plainValue()
+  public void testCsvEscape()
   {
-    Assert.assertEquals("hello", ExportMetadata.csvEscapeField("hello"));
-  }
-
-  @Test
-  public void testCsvEscapeField_withComma()
-  {
-    Assert.assertEquals("\"value,with,commas\"", ExportMetadata.csvEscapeField("value,with,commas"));
-  }
-
-  @Test
-  public void testCsvEscapeField_withDoubleQuote()
-  {
-    Assert.assertEquals("\"value\"\"with\"\"quotes\"", ExportMetadata.csvEscapeField("value\"with\"quotes"));
-  }
-
-  @Test
-  public void testCsvEscapeField_withNewline()
-  {
-    Assert.assertEquals("\"line1\nline2\"", ExportMetadata.csvEscapeField("line1\nline2"));
-  }
-
-  @Test
-  public void testCsvEscapeField_withCarriageReturn()
-  {
-    Assert.assertEquals("\"line1\rline2\"", ExportMetadata.csvEscapeField("line1\rline2"));
-  }
-
-  @Test
-  public void testCsvEscapeField_null()
-  {
-    Assert.assertEquals("", ExportMetadata.csvEscapeField(null));
-  }
-
-  @Test
-  public void testCsvEscapeField_empty()
-  {
-    Assert.assertEquals("", ExportMetadata.csvEscapeField(""));
+    Assert.assertEquals("hello", SQLMetadataConnector.csvEscape("hello"));
+    Assert.assertEquals("\"value,with,commas\"", SQLMetadataConnector.csvEscape("value,with,commas"));
+    Assert.assertEquals("\"value\"\"with\"\"quotes\"", SQLMetadataConnector.csvEscape("value\"with\"quotes"));
+    Assert.assertEquals("\"line1\nline2\"", SQLMetadataConnector.csvEscape("line1\nline2"));
+    Assert.assertEquals("\"line1\rline2\"", SQLMetadataConnector.csvEscape("line1\rline2"));
+    Assert.assertEquals("", SQLMetadataConnector.csvEscape(null));
+    Assert.assertEquals("", SQLMetadataConnector.csvEscape(""));
   }
 
   @Test
@@ -262,13 +233,13 @@ public class ExportMetadataTest
     final String version = "v\"quoted\"";
 
     // Column order: id, dataSource, created_date, start, end, partitioned, version, used, payload, ...
-    final String rawLineCorrected = csvEscapeField("seg,id,1") + ","
-                                    + csvEscapeField(datasource) + ","
+    final String rawLineCorrected = SQLMetadataConnector.csvEscape("seg,id,1") + ","
+                                    + SQLMetadataConnector.csvEscape(datasource) + ","
                                     + "2024-01-15,"
                                     + "2024-01-01,"
                                     + "2024-01-02,"
                                     + "true,"
-                                    + csvEscapeField(version) + ","
+                                    + SQLMetadataConnector.csvEscape(version) + ","
                                     + "false,"
                                     + payloadHex + ","
                                     + "2024-06-01";
@@ -362,18 +333,18 @@ public class ExportMetadataTest
     final String payloadJson = "{\"type\":\"test\",\"path\":\"C:\\\\druid\\\\segments\"}";
     final String payloadHex = BaseEncoding.base16().encode(StringUtils.toUtf8(payloadJson));
 
-    final String rawLine = csvEscapeField(id) + ","
-                           + csvEscapeField(datasource) + ","
+    final String rawLine = SQLMetadataConnector.csvEscape(id) + ","
+                           + SQLMetadataConnector.csvEscape(datasource) + ","
                            + "2024-01-15,"
                            + "2024-01-01,"
                            + "2024-01-02,"
                            + "true,"
-                           + csvEscapeField(version) + ","
+                           + SQLMetadataConnector.csvEscape(version) + ","
                            + "true,"
                            + payloadHex + ","
                            + "2024-06-01,"
                            + "fp\\123,"
-                           + csvEscapeField(upgradedFrom);
+                           + SQLMetadataConnector.csvEscape(upgradedFrom);
 
     final File rawFile = new File(outputDir, tableName + "_raw.csv");
     try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(rawFile), StandardCharsets.UTF_8)) {
@@ -560,13 +531,5 @@ public class ExportMetadataTest
 
     final ISE e = Assert.assertThrows(ISE.class, () -> exporter.rewriteSegmentsExport(tableName));
     Assert.assertTrue(e.getMessage(), e.getMessage().contains("has [2] fields, expected at least [9]"));
-  }
-
-  /**
-   * Local helper matching ExportMetadata.csvEscapeField for building test input.
-   */
-  private static String csvEscapeField(String value)
-  {
-    return ExportMetadata.csvEscapeField(value);
   }
 }

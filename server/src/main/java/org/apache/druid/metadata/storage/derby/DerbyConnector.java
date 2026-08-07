@@ -138,25 +138,25 @@ public class DerbyConnector extends SQLMetadataConnector
   )
   {
     retryWithHandle(
-            (HandleCallback<Void>) handle -> {
-              final String statement;
-              if (columns == null || columns.isEmpty()) {
-                statement = StringUtils.format(
-                    "CALL SYSCS_UTIL.SYSCS_EXPORT_TABLE (null, '%s', '%s', null, null, null)",
-                    tableName,
-                    outputPath
-                );
-              } else {
-                statement = StringUtils.format(
-                    "CALL SYSCS_UTIL.SYSCS_EXPORT_QUERY ('SELECT %s FROM %s', '%s', null, null, null)",
-                    makeExportSelectList(handle.getConnection(), columns),
-                    tableName,
-                    outputPath
-                );
-              }
-              handle.createStatement(statement).execute();
-              return null;
-            }
+        (HandleCallback<Void>) handle -> {
+          final String statement;
+          if (columns == null || columns.isEmpty()) {
+            statement = StringUtils.format(
+                "CALL SYSCS_UTIL.SYSCS_EXPORT_TABLE (null, '%s', '%s', null, null, null)",
+                tableName,
+                outputPath
+            );
+          } else {
+            statement = StringUtils.format(
+                "CALL SYSCS_UTIL.SYSCS_EXPORT_QUERY ('SELECT %s FROM %s', '%s', null, null, null)",
+                makeExportSelectList(handle.getConnection(), columns),
+                tableName,
+                outputPath
+            );
+          }
+          handle.createStatement(statement).execute();
+          return null;
+        }
     );
   }
 

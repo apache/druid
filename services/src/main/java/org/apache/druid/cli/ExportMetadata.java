@@ -342,10 +342,10 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String[] parsed;
       while ((parsed = readRecord(reader, inFile, 4)) != null) {
-        String newLine = csvEscapeField(parsed[0]) + "," //dataSource
-                         + csvEscapeField(parsed[1]) + "," //created_date
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //dataSource
+                         + SQLMetadataConnector.csvEscape(parsed[1]) + "," //created_date
                          + rewriteHexPayloadAsEscapedJson(parsed[2]) + "," //commit_metadata_payload
-                         + csvEscapeField(parsed[3]) //commit_metadata_sha1
+                         + SQLMetadataConnector.csvEscape(parsed[3]) //commit_metadata_sha1
                          + "\n";
         writer.write(newLine);
 
@@ -368,9 +368,9 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String[] parsed;
       while ((parsed = readRecord(reader, inFile, 4)) != null) {
-        String newLine = csvEscapeField(parsed[0]) + "," //id
-                         + csvEscapeField(parsed[1]) + "," //dataSource
-                         + csvEscapeField(parsed[2]) + "," //version
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //id
+                         + SQLMetadataConnector.csvEscape(parsed[1]) + "," //dataSource
+                         + SQLMetadataConnector.csvEscape(parsed[2]) + "," //version
                          + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
                          + "\n";
         writer.write(newLine);
@@ -394,7 +394,7 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String[] parsed;
       while ((parsed = readRecord(reader, inFile, 2)) != null) {
-        String newLine = csvEscapeField(parsed[0]) + "," //name
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //name
                          + rewriteHexPayloadAsEscapedJson(parsed[1]) //payload
                          + "\n";
         writer.write(newLine);
@@ -418,9 +418,9 @@ public class ExportMetadata extends GuiceRunnable
     ) {
       String[] parsed;
       while ((parsed = readRecord(reader, inFile, 4)) != null) {
-        String newLine = csvEscapeField(parsed[0]) + "," //id
-                         + csvEscapeField(parsed[1]) + "," //spec_id
-                         + csvEscapeField(parsed[2]) + "," //created_date
+        String newLine = SQLMetadataConnector.csvEscape(parsed[0]) + "," //id
+                         + SQLMetadataConnector.csvEscape(parsed[1]) + "," //spec_id
+                         + SQLMetadataConnector.csvEscape(parsed[2]) + "," //created_date
                          + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
                          + "\n";
         writer.write(newLine);
@@ -446,13 +446,13 @@ public class ExportMetadata extends GuiceRunnable
       String[] parsed;
       while ((parsed = readRecord(reader, inFile, 9)) != null) {
         StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(csvEscapeField(parsed[0])).append(","); //id
-        newLineBuilder.append(csvEscapeField(parsed[1])).append(","); //dataSource
-        newLineBuilder.append(csvEscapeField(parsed[2])).append(","); //created_date
-        newLineBuilder.append(csvEscapeField(parsed[3])).append(","); //start
-        newLineBuilder.append(csvEscapeField(parsed[4])).append(","); //end
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[0])).append(","); //id
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[1])).append(","); //dataSource
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[2])).append(","); //created_date
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[3])).append(","); //start
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[4])).append(","); //end
         newLineBuilder.append(convertBooleanString(parsed[5])).append(","); //partitioned
-        newLineBuilder.append(csvEscapeField(parsed[6])).append(","); //version
+        newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[6])).append(","); //version
         newLineBuilder.append(convertBooleanString(parsed[7])).append(","); //used
 
         if (s3Bucket != null || hadoopStorageDirectory != null || newLocalPath != null) {
@@ -465,7 +465,7 @@ public class ExportMetadata extends GuiceRunnable
         // indexing_state_fingerprint, upgraded_from_segment_id, schema_fingerprint, num_rows)
         for (int i = 9; i < parsed.length; i++) {
           newLineBuilder.append(",");
-          newLineBuilder.append(csvEscapeField(parsed[i]));
+          newLineBuilder.append(SQLMetadataConnector.csvEscape(parsed[i]));
         }
         newLineBuilder.append("\n");
         writer.write(newLineBuilder.toString());
@@ -582,22 +582,6 @@ public class ExportMetadata extends GuiceRunnable
   private String escapeJSONForCSV(String json)
   {
     return "\"" + StringUtils.replace(json, "\"", "\"\"") + "\"";
-  }
-
-  /**
-   * Escapes a field value for CSV output following RFC 4180.
-   * If the value contains commas, double quotes, or newlines, it is wrapped
-   * in double quotes with internal double quotes escaped by doubling.
-   */
-  static String csvEscapeField(String value)
-  {
-    if (value == null) {
-      return "";
-    }
-    if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
-      return "\"" + StringUtils.replace(value, "\"", "\"\"") + "\"";
-    }
-    return value;
   }
 
   private Map<String, Object> makeS3LoadSpec(

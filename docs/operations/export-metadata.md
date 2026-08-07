@@ -179,15 +179,15 @@ NULL values are written as empty fields. An empty field is imported as an empty 
 ### Derby
 
 ```sql
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_SEGMENTS','/tmp/csv/druid_segments.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_SEGMENTS','id,dataSource,created_date,start,"end",partitioned,version,used,payload,used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id',null,'/tmp/csv/druid_segments.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_RULES','/tmp/csv/druid_rules.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_RULES','id,dataSource,version,payload',null,'/tmp/csv/druid_rules.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_CONFIG','/tmp/csv/druid_config.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_CONFIG','name,payload',null,'/tmp/csv/druid_config.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_DATASOURCE','/tmp/csv/druid_dataSource.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_DATASOURCE','dataSource,created_date,commit_metadata_payload,commit_metadata_sha1',null,'/tmp/csv/druid_dataSource.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_SUPERVISORS','/tmp/csv/druid_supervisors.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_SUPERVISORS','id,spec_id,created_date,payload',null,'/tmp/csv/druid_supervisors.csv',',','"',null,0);
 ```
 
 ### MySQL
