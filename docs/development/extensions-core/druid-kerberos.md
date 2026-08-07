@@ -121,5 +121,19 @@ To access Coordinator/Overlord console from browser you will need to configure y
     1. Configure trusted websites to include `"druid-coordinator-hostname"` and `"druid-overlord-hostname"`
     2. Allow negotiation for the UI website.
 
+## User identity and `authToLocal` rules
+
+The Kerberos authenticator uses the short name produced by `authToLocal` rules as the authenticated user identity.
+For example, if the Kerberos principal is `user@EXAMPLE.COM` and the `authToLocal` rule maps it to `user`, then the
+identity used for authorization is `user`, not the full principal `user@EXAMPLE.COM`.
+
+When configuring authorizer permissions, use the short (local) user name rather than the full Kerberos principal.
+
+:::info
+In previous versions, the authenticated identity was incorrectly set to the full Kerberos principal
+(e.g., `user@EXAMPLE.COM`) instead of the short name (e.g., `user`). If you have authorizer rules that
+reference full Kerberos principals, update them to use the short name after upgrading.
+:::
+
 ## Sending Queries programmatically
 Many HTTP client libraries, such as Apache Commons [HttpComponents](https://hc.apache.org/), already have support for performing SPNEGO authentication. You can use any of the available HTTP client library to communicate with druid cluster.
