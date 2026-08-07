@@ -27,6 +27,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -74,6 +75,6 @@ public class InlineSegmentWranglerTest
     Assert.assertEquals(1, segments.size());
 
     final Segment segment = Iterables.getOnlyElement(segments);
-    Assert.assertThat(segment, CoreMatchers.instanceOf(RowBasedSegment.class));
+    MatcherAssert.assertThat(segment, CoreMatchers.instanceOf(RowBasedSegment.class));
   }
 }

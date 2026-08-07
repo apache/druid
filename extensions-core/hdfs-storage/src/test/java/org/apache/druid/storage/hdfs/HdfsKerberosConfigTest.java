@@ -20,8 +20,8 @@
 package org.apache.druid.storage.hdfs;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -33,7 +33,7 @@ public class HdfsKerberosConfigTest
   public void testSerDesr() throws IOException
   {
     HdfsKerberosConfig hdfsKerberosConfig = new HdfsKerberosConfig("principal", "keytab");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         hdfsKerberosConfig,
         mapper.readerFor(HdfsKerberosConfig.class).readValue(mapper.writeValueAsString(hdfsKerberosConfig))
     );

@@ -26,7 +26,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
@@ -42,7 +41,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -518,52 +516,13 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(row.getDimension("dim"), dimList);
     Assert.assertEquals(row.getRaw("dim"), dimList);
 
-    final InputRow actualTranformedRow = transformer.transform(new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return new ArrayList<>(row.getEvent().keySet());
-      }
-
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return 0;
-      }
-
-      @Override
-      public DateTime getTimestamp()
-      {
-        return row.getTimestamp();
-      }
-
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return row.getDimension(dimension);
-      }
-
-      @Nullable
-      @Override
-      public Object getRaw(String dimension)
-      {
-        return row.getRaw(dimension);
-      }
-
-      @Nullable
-      @Override
-      public Number getMetric(String metric)
-      {
-        return row.getMetric(metric);
-      }
-
-      @Override
-      public int compareTo(Row o)
-      {
-        return row.compareTo(o);
-      }
-    });
+    final InputRow actualTranformedRow = transformer.transform(
+        new MapBasedInputRow(
+            row.getTimestamp(),
+            new ArrayList<>(row.getEvent().keySet()),
+            row.getEvent()
+        )
+    );
     Assert.assertEquals(actualTranformedRow.getDimension("dim"), dimList.subList(0, 5));
     Assert.assertArrayEquals(dimList.subList(0, 5).toArray(), (Object[]) actualTranformedRow.getRaw("dim"));
     Assert.assertEquals(ImmutableList.of("a"), actualTranformedRow.getDimension("dim1"));

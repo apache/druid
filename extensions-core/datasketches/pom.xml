@@ -145,6 +145,12 @@
     </dependency>
 
     <!-- Test Dependencies -->
+    <!--
+      AggregationTestHelper comes from processing's test-jar and currently exposes
+      org.junit.rules.TemporaryFolder in its public test-helper API. Keep the JUnit 4
+      API dependency (but not the Vintage engine) until that shared helper is migrated
+      to a JUnit 5-compatible temp-directory API.
+    -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -162,22 +168,12 @@
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-migrationsupport</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.reflections</groupId>
       <artifactId>reflections</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

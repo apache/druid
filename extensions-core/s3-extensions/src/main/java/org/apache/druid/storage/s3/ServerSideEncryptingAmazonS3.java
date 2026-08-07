@@ -71,6 +71,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.Type;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
+import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
 import software.amazon.awssdk.services.sts.StsClient;
 import software.amazon.awssdk.services.sts.StsClientBuilder;
 import software.amazon.awssdk.services.sts.auth.StsAssumeRoleCredentialsProvider;
@@ -376,10 +377,15 @@ public class ServerSideEncryptingAmazonS3
       clientBuilder.serviceConfiguration(s3Config)
                    .forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
                    .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled());
+      final S3TransferConfig transferConfig = s3StorageConfig.getS3TransferConfig();
       asyncClientBuilder.forcePathStyle(awsClientConfig.isEnablePathStyleAccess())
                         .crossRegionAccessEnabled(awsClientConfig.isCrossRegionAccessEnabled())
-                        .httpClientBuilder(AsyncHttpClientType.fromString(s3StorageConfig.getS3TransferConfig().getAsyncHttpClientType()).buildBuilder(awsClientConfig))
-                        .multipartEnabled(true);
+                        .httpClientBuilder(AsyncHttpClientType.fromString(transferConfig.getAsyncHttpClientType()).buildBuilder(awsClientConfig))
+                        .multipartEnabled(true)
+                        .multipartConfiguration(
+                            MultipartConfiguration.builder().minimumPartSizeInBytes(transferConfig.getMinimumUploadPartSize())
+                                .thresholdInBytes(transferConfig.getMultipartUploadThreshold())
+                                .build());
     }
 
     // Configure HTTP client with proxy if needed

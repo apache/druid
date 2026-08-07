@@ -397,9 +397,22 @@ public class HashBasedNumberedShardSpecTest
   {
     private final int hashcode;
 
-    HashInputRow(int hashcode)
+    HashInputRow(final int hashcode)
     {
       this.hashcode = hashcode;
+    }
+
+    @Override
+    public boolean equals(final Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof HashInputRow)) {
+        return false;
+      }
+      final HashInputRow that = (HashInputRow) o;
+      return hashcode == that.hashcode;
     }
 
     @Override
@@ -445,9 +458,16 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
-    public int compareTo(Row o)
+    public int compareTo(final Row o)
     {
-      return 0;
+      if (o instanceof HashInputRow) {
+        return Integer.compare(hashcode, ((HashInputRow) o).hashcode);
+      }
+
+      final int timestampComparison = Long.compare(getTimestampFromEpoch(), o.getTimestampFromEpoch());
+      return timestampComparison != 0
+             ? timestampComparison
+             : getClass().getName().compareTo(o.getClass().getName());
     }
   }
 

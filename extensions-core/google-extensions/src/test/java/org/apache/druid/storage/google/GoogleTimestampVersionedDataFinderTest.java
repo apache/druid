@@ -21,8 +21,8 @@ package org.apache.druid.storage.google;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.util.regex.Pattern;
@@ -50,7 +50,7 @@ public class GoogleTimestampVersionedDataFinderTest
     Pattern pattern = Pattern.compile("v.*");
     URI latest = finder.getLatestVersion(URI.create(StringUtils.format("gs://%s/%s", bucket, keyPrefix)), pattern);
     URI expected = URI.create(StringUtils.format("gs://%s/%s", bucket, storageObject3.getName()));
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 
   @Test
@@ -74,6 +74,6 @@ public class GoogleTimestampVersionedDataFinderTest
     Pattern pattern = Pattern.compile("v.*");
     URI latest = finder.getLatestVersion(URI.create(StringUtils.format("gs://%s/%s", bucket, keyPrefix)), pattern);
     URI expected = URI.create(StringUtils.format("gs://%s/%s", bucket, storageObject3.getName()));
-    Assert.assertEquals(expected, latest);
+    Assertions.assertEquals(expected, latest);
   }
 }

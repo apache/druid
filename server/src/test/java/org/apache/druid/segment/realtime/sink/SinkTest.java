@@ -25,7 +25,6 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -55,13 +54,11 @@ import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -99,52 +96,7 @@ public class SinkTest extends InitializedNullHandlingTest
         TuningConfig.DEFAULT_APPENDABLE_INDEX.getDefaultMaxBytesInMemory()
     );
 
-    sink.add(
-        new InputRow()
-        {
-          @Override
-          public List<String> getDimensions()
-          {
-            return new ArrayList<>();
-          }
-
-          @Override
-          public long getTimestampFromEpoch()
-          {
-            return DateTimes.of("2013-01-01").getMillis();
-          }
-
-          @Override
-          public DateTime getTimestamp()
-          {
-            return DateTimes.of("2013-01-01");
-          }
-
-          @Override
-          public List<String> getDimension(String dimension)
-          {
-            return new ArrayList<>();
-          }
-
-          @Override
-          public Number getMetric(String metric)
-          {
-            return 0;
-          }
-
-          @Override
-          public Object getRaw(String dimension)
-          {
-            return null;
-          }
-
-          @Override
-          public int compareTo(Row o)
-          {
-            return 0;
-          }
-        }
-    );
+    sink.add(new MapBasedInputRow(DateTimes.of("2013-01-01"), ImmutableList.of(), ImmutableMap.of()));
 
     FireHydrant currHydrant = sink.getCurrHydrant();
     Assert.assertEquals(Intervals.of("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
@@ -152,52 +104,7 @@ public class SinkTest extends InitializedNullHandlingTest
 
     FireHydrant swapHydrant = sink.swap();
 
-    sink.add(
-        new InputRow()
-        {
-          @Override
-          public List<String> getDimensions()
-          {
-            return new ArrayList<>();
-          }
-
-          @Override
-          public long getTimestampFromEpoch()
-          {
-            return DateTimes.of("2013-01-01").getMillis();
-          }
-
-          @Override
-          public DateTime getTimestamp()
-          {
-            return DateTimes.of("2013-01-01");
-          }
-
-          @Override
-          public List<String> getDimension(String dimension)
-          {
-            return new ArrayList<>();
-          }
-
-          @Override
-          public Number getMetric(String metric)
-          {
-            return 0;
-          }
-
-          @Override
-          public Object getRaw(String dimension)
-          {
-            return null;
-          }
-
-          @Override
-          public int compareTo(Row o)
-          {
-            return 0;
-          }
-        }
-    );
+    sink.add(new MapBasedInputRow(DateTimes.of("2013-01-01"), ImmutableList.of(), ImmutableMap.of()));
 
     Assert.assertEquals(currHydrant, swapHydrant);
     Assert.assertNotSame(currHydrant, sink.getCurrHydrant());

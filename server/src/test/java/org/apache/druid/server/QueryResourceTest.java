@@ -1038,11 +1038,16 @@ public class QueryResourceTest
   @Test
   public void testResourceLimitExceeded() throws IOException
   {
-    Response response = queryResource.doPost(
-        new ExceptionalInputStream(() -> new ResourceLimitExceededException("You require too much of something")),
-        null /*pretty*/,
-        testServletRequest
-    );
+    final Response response;
+    try (final ExceptionalInputStream inputStream = new ExceptionalInputStream(
+        () -> new ResourceLimitExceededException("You require too much of something")
+    )) {
+      response = queryResource.doPost(
+          inputStream,
+          null /*pretty*/,
+          testServletRequest
+      );
+    }
     Assert.assertNotNull(response);
     Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
@@ -1054,11 +1059,16 @@ public class QueryResourceTest
   public void testUnsupportedQueryThrowsException() throws IOException
   {
     String errorMessage = "This will be support in Druid 9999";
-    Response response = queryResource.doPost(
-        new ExceptionalInputStream(() -> new QueryUnsupportedException(errorMessage)),
-        null /*pretty*/,
-        testServletRequest
-    );
+    final Response response;
+    try (final ExceptionalInputStream inputStream = new ExceptionalInputStream(
+        () -> new QueryUnsupportedException(errorMessage)
+    )) {
+      response = queryResource.doPost(
+          inputStream,
+          null /*pretty*/,
+          testServletRequest
+      );
+    }
     Assert.assertNotNull(response);
     Assert.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
     QueryException ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);

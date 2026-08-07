@@ -116,6 +116,27 @@ public class PartialLoadProfileTest
   }
 
   @Test
+  public void testAsCloneRequestDropsTheAnnouncedFootprint()
+  {
+    // The realized footprint belongs to the announcement of the server that loaded the segment, not to the request the
+    // clone target or move destination is about to get. Everything that identifies the request carries over as-is.
+    final PartialLoadProfile loaded = PartialLoadProfile.forLoaded(WRAPPED, FINGERPRINT, 12345L);
+
+    final PartialLoadProfile request = loaded.asCloneRequest();
+
+    Assertions.assertNull(request.loadedBytes(), "a request carries no realized footprint");
+    Assertions.assertEquals(WRAPPED, request.wrappedLoadSpec());
+    Assertions.assertEquals(FINGERPRINT, request.fingerprint());
+  }
+
+  @Test
+  public void testAsCloneRequestOfARequestIsItself()
+  {
+    final PartialLoadProfile request = PartialLoadProfile.forRequest(WRAPPED, FINGERPRINT);
+    Assertions.assertSame(request, request.asCloneRequest());
+  }
+
+  @Test
   public void testEquals()
   {
     EqualsVerifier.forClass(PartialLoadProfile.class)

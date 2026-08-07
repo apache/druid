@@ -24,8 +24,8 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.TestFloatColumnSelector;
 import org.apache.druid.segment.TestObjectColumnSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -104,8 +104,8 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
       for (float f : values) {
         holder.add(f);
       }
-      Assert.assertEquals(holder.getVariance(true), variance_pop, 0.001);
-      Assert.assertEquals(holder.getVariance(false), variance_sample, 0.001);
+      Assertions.assertEquals(holder.getVariance(true), variance_pop, 0.001);
+      Assertions.assertEquals(holder.getVariance(false), variance_sample, 0.001);
 
       for (int mergeOn : new int[] {2, 3, 5, 9}) {
         List<VarianceAggregatorCollector> holders1 = Lists.newArrayListWithCapacity(mergeOn);
@@ -138,8 +138,8 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
           merger.aggregate(buffer, 0);
         }
         VarianceAggregatorCollector holder2 = (VarianceAggregatorCollector) merger.get(buffer, 0);
-        Assert.assertEquals(holder2.getVariance(true), variance_pop, 0.01);
-        Assert.assertEquals(holder2.getVariance(false), variance_sample, 0.01);
+        Assertions.assertEquals(holder2.getVariance(true), variance_pop, 0.01);
+        Assertions.assertEquals(holder2.getVariance(false), variance_sample, 0.01);
       }
     }
   }
@@ -149,8 +149,8 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
   {
     VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
     VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(3, 5d, 2.0);
-    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
-    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
+    Assertions.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
+    Assertions.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
   }
 
   @Test
@@ -158,8 +158,8 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
   {
     VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
     VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(3, 5d, 1.0);
-    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) > 0);
-    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) < 0);
+    Assertions.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) > 0);
+    Assertions.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) < 0);
   }
 
   @Test
@@ -167,10 +167,10 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
   {
     VarianceAggregatorCollector v1 = new VarianceAggregatorCollector(4, 2d, 1.0);
     VarianceAggregatorCollector v2 = new VarianceAggregatorCollector(4, 5d, 1.0);
-    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
-    Assert.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
+    Assertions.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v1, v2) < 0);
+    Assertions.assertTrue(VarianceAggregatorCollector.COMPARATOR.compare(v2, v1) > 0);
     v2.sum = v1.sum;
-    Assert.assertEquals(0, VarianceAggregatorCollector.COMPARATOR.compare(v1, v2));
+    Assertions.assertEquals(0, VarianceAggregatorCollector.COMPARATOR.compare(v1, v2));
   }
 
   @Test
@@ -178,7 +178,7 @@ public class VarianceAggregatorCollectorTest extends InitializedNullHandlingTest
   {
     VarianceAggregatorCollector collector =
         (VarianceAggregatorCollector) VarianceAggregatorCollector.combineValues(null, null);
-    Assert.assertNull(collector);
+    Assertions.assertNull(collector);
   }
 
   private static class FloatHandOver extends TestFloatColumnSelector

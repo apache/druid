@@ -36,8 +36,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Map;
@@ -58,8 +58,8 @@ public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -70,7 +70,7 @@ public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregatorTest
         new ConstantPostAggregator("", 0)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}}",
         postAgg.toString()
     );
@@ -97,7 +97,7 @@ public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregatorTest
         field1
     );
     double[] expectedOutput = {4.0, 8.0};
-    Assert.assertTrue(Arrays.equals(expectedOutput, (double[]) postAgg.compute(ImmutableMap.of())));
+    Assertions.assertTrue(Arrays.equals(expectedOutput, (double[]) postAgg.compute(ImmutableMap.of())));
   }
 
 
@@ -108,8 +108,8 @@ public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregatorTest
         "a",
         new ConstantPostAggregator("", 0)
     );
-    Exception exception = Assert.assertThrows(IAE.class, () -> postAgg.getComparator());
-    Assert.assertEquals("Comparing arrays of estimate values is not supported", exception.getMessage());
+    Exception exception = Assertions.assertThrows(IAE.class, () -> postAgg.getComparator());
+    Assertions.assertEquals("Comparing arrays of estimate values is not supported", exception.getMessage());
   }
 
   @Test
@@ -141,7 +141,7 @@ public class ArrayOfDoublesSketchToMetricsSumEstimatePostAggregatorTest
             )
             .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
             .addTimeColumn()
             .add("count", ColumnType.LONG)
