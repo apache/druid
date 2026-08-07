@@ -26,10 +26,10 @@ import com.github.fppt.jedismock.server.ServiceOptions;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
 
@@ -58,7 +58,7 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
 
   private RedisServer server;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     ServiceOptions options = ServiceOptions.defaultOptions().withClusterModeEnabled();
@@ -68,7 +68,7 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
     cache = new RedisClusterCache(cluster, cacheConfig);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     server.stop();
@@ -79,16 +79,16 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
   {
     ObjectMapper mapper = new ObjectMapper();
     RedisCacheConfig fromJson = mapper.readValue("{\"expiration\": 1000}", RedisCacheConfig.class);
-    Assert.assertEquals(1, fromJson.getExpiration().getSeconds());
+    Assertions.assertEquals(1, fromJson.getExpiration().getSeconds());
 
     fromJson = mapper.readValue("{\"expiration\": \"PT1H\"}", RedisCacheConfig.class);
-    Assert.assertEquals(3600, fromJson.getExpiration().getSeconds());
+    Assertions.assertEquals(3600, fromJson.getExpiration().getSeconds());
   }
 
   @Test
   public void testCache()
   {
-    Assert.assertNull(cache.get(new Cache.NamedKey("the", HI)));
+    Assertions.assertNull(cache.get(new Cache.NamedKey("the", HI)));
 
     Cache.NamedKey key1 = new Cache.NamedKey("the", HI);
     Cache.NamedKey key2 = new Cache.NamedKey("the", HO);
@@ -99,11 +99,11 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
     cache.put(key1, new byte[]{1, 2, 3, 4});
     cache.put(key2, new byte[]{2, 3, 4, 5});
     cache.put(key3, new byte[]{3, 4, 5, 6});
-    Assert.assertEquals(0x01020304, Ints.fromByteArray(cache.get(key1)));
-    Assert.assertEquals(0x02030405, Ints.fromByteArray(cache.get(key2)));
-    Assert.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
-    Assert.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
-    Assert.assertNull(cache.get(notExist));
+    Assertions.assertEquals(0x01020304, Ints.fromByteArray(cache.get(key1)));
+    Assertions.assertEquals(0x02030405, Ints.fromByteArray(cache.get(key2)));
+    Assertions.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
+    Assertions.assertEquals(0x03040506, Ints.fromByteArray(cache.get(key3)));
+    Assertions.assertNull(cache.get(notExist));
 
     //test multi get
     Map<Cache.NamedKey, byte[]> result = cache.getBulk(
@@ -115,9 +115,9 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
         )
     );
 
-    Assert.assertEquals(3, result.size());
-    Assert.assertEquals(0x01020304, Ints.fromByteArray(result.get(key1)));
-    Assert.assertEquals(0x02030405, Ints.fromByteArray(result.get(key2)));
-    Assert.assertEquals(0x03040506, Ints.fromByteArray(result.get(key3)));
+    Assertions.assertEquals(3, result.size());
+    Assertions.assertEquals(0x01020304, Ints.fromByteArray(result.get(key1)));
+    Assertions.assertEquals(0x02030405, Ints.fromByteArray(result.get(key2)));
+    Assertions.assertEquals(0x03040506, Ints.fromByteArray(result.get(key3)));
   }
 }

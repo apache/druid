@@ -38,10 +38,11 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -53,9 +54,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -64,13 +64,13 @@ public class KafkaEmitterTest
 {
   private KafkaProducer<String, String> producer;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     producer = mock(KafkaProducer.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     producer.close();
@@ -136,7 +136,8 @@ public class KafkaEmitterTest
    * Only {@link KafkaEmitterConfig.EventType}s is subscribed in the config, so the expectation is that the
    * events are emitted without any drops.
    */
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testServiceMetricEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
@@ -169,19 +170,19 @@ public class KafkaEmitterTest
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
-    Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
 
     kafkaEmitter.logLostMessagesStatus();
 
-    Assert.assertEquals(0, kafkaEmitter.getPreviousMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousRequestLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousSegmentMetadataLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousSegmentMetadataLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousInvalidLostCount());
   }
 
   /**
@@ -190,7 +191,8 @@ public class KafkaEmitterTest
    * All {@link KafkaEmitterConfig.EventType}s are subscribed in the config, so the expectation is that all the
    * events are emitted without any drops.
    */
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testAllEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
@@ -228,11 +230,11 @@ public class KafkaEmitterTest
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
-    Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
   /**
@@ -240,7 +242,8 @@ public class KafkaEmitterTest
    * The default event types (alerts and metrics) are subscribed in the config, so the expectation is that both input
    * event types should be emitted without any drops.
    */
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testDefaultEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
@@ -276,11 +279,11 @@ public class KafkaEmitterTest
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
-    Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
   /**
@@ -289,7 +292,8 @@ public class KafkaEmitterTest
    * Only alerts are subscribed in the config, so the expectation is that only alert events
    * should be emitted, and everything else should be dropped.
    */
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testAlertsPlusUnsubscribedEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
@@ -329,30 +333,30 @@ public class KafkaEmitterTest
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
-    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
 
-    Assert.assertEquals(0, kafkaEmitter.getPreviousAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousInvalidLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousSegmentMetadataLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getPreviousRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousSegmentMetadataLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getPreviousRequestLostCount());
 
     // Others would be dropped as we've only subscribed to alert events.
-    Assert.assertEquals(SERVICE_METRIC_EVENTS.size(), kafkaEmitter.getMetricLostCount());
-    Assert.assertNotEquals(kafkaEmitter.getMetricLostCount(), kafkaEmitter.getPreviousMetricLostCount());
-    Assert.assertEquals(SEGMENT_METADATA_EVENTS.size(), kafkaEmitter.getSegmentMetadataLostCount());
-    Assert.assertNotEquals(kafkaEmitter.getSegmentMetadataLostCount(), kafkaEmitter.getPreviousSegmentMetadataLostCount());
-    Assert.assertEquals(REQUEST_LOG_EVENTS.size(), kafkaEmitter.getRequestLostCount());
-    Assert.assertNotEquals(kafkaEmitter.getRequestLostCount(), kafkaEmitter.getPreviousRequestLostCount());
+    Assertions.assertEquals(SERVICE_METRIC_EVENTS.size(), kafkaEmitter.getMetricLostCount());
+    Assertions.assertNotEquals(kafkaEmitter.getMetricLostCount(), kafkaEmitter.getPreviousMetricLostCount());
+    Assertions.assertEquals(SEGMENT_METADATA_EVENTS.size(), kafkaEmitter.getSegmentMetadataLostCount());
+    Assertions.assertNotEquals(kafkaEmitter.getSegmentMetadataLostCount(), kafkaEmitter.getPreviousSegmentMetadataLostCount());
+    Assertions.assertEquals(REQUEST_LOG_EVENTS.size(), kafkaEmitter.getRequestLostCount());
+    Assertions.assertNotEquals(kafkaEmitter.getRequestLostCount(), kafkaEmitter.getPreviousRequestLostCount());
 
     kafkaEmitter.logLostMessagesStatus();
 
-    Assert.assertEquals(kafkaEmitter.getMetricLostCount(), kafkaEmitter.getPreviousMetricLostCount());
-    Assert.assertEquals(kafkaEmitter.getAlertLostCount(), kafkaEmitter.getPreviousAlertLostCount());
-    Assert.assertEquals(kafkaEmitter.getRequestLostCount(), kafkaEmitter.getPreviousRequestLostCount());
-    Assert.assertEquals(kafkaEmitter.getSegmentMetadataLostCount(), kafkaEmitter.getPreviousSegmentMetadataLostCount());
-    Assert.assertEquals(kafkaEmitter.getInvalidLostCount(), kafkaEmitter.getPreviousInvalidLostCount());
+    Assertions.assertEquals(kafkaEmitter.getMetricLostCount(), kafkaEmitter.getPreviousMetricLostCount());
+    Assertions.assertEquals(kafkaEmitter.getAlertLostCount(), kafkaEmitter.getPreviousAlertLostCount());
+    Assertions.assertEquals(kafkaEmitter.getRequestLostCount(), kafkaEmitter.getPreviousRequestLostCount());
+    Assertions.assertEquals(kafkaEmitter.getSegmentMetadataLostCount(), kafkaEmitter.getPreviousSegmentMetadataLostCount());
+    Assertions.assertEquals(kafkaEmitter.getInvalidLostCount(), kafkaEmitter.getPreviousInvalidLostCount());
   }
 
   /**
@@ -364,7 +368,8 @@ public class KafkaEmitterTest
    * is that all input events are emitted without any drops.
    * </p>
    */
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testAllEventsWithCommonTopic() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
@@ -403,11 +408,11 @@ public class KafkaEmitterTest
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
-    Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
   /**
@@ -416,7 +421,8 @@ public class KafkaEmitterTest
    * {@link ServiceMetricEvent} is expected to be emitted, while dropping all unknown {@link TestEvent}s.
    * </p>
    */
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testUnknownEvents() throws InterruptedException, JsonProcessingException
   {
     final KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
@@ -453,11 +459,11 @@ public class KafkaEmitterTest
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
-    Assert.assertEquals(0, kafkaEmitter.getMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
-    Assert.assertEquals(UNKNOWN_EVENTS.size(), kafkaEmitter.getInvalidLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assertions.assertEquals(UNKNOWN_EVENTS.size(), kafkaEmitter.getInvalidLostCount());
   }
 
   /**
@@ -467,7 +473,8 @@ public class KafkaEmitterTest
    * the config, so the expectation is that all {@link ServiceMetricEvent}s up to {@code n - bufferEventsDrop} will be
    * emitted, {@code n} being the total number of input events, while dropping the last {@code bufferEventsDrop} events.
    */
-  @Test(timeout = 10_000)
+  @Test
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
   public void testDropEventsWhenQueueFull() throws JsonProcessingException, InterruptedException
   {
     final List<Event> inputEvents = flattenEvents(
@@ -482,19 +489,19 @@ public class KafkaEmitterTest
     );
 
     final int bufferEventsDrop = 3;
-    Assert.assertTrue(
+    Assertions.assertTrue(
+        inputEvents.size() - bufferEventsDrop > 0,
         StringUtils.format(
             "Total events to emit: %d. There must at least be %d events to drop.",
             inputEvents.size(),
             bufferEventsDrop
-        ),
-        inputEvents.size() - bufferEventsDrop > 0
+        )
     );
 
-    Assert.assertEquals(
-        "Currently the test only supports having 1 feed",
+    Assertions.assertEquals(
         1,
-        feedToAllEventsBeforeDrop.size()
+        feedToAllEventsBeforeDrop.size(),
+        "Currently the test only supports having 1 feed"
     );
 
     // Note: this only accounts for one feed currently. If we want to test the queuing behavior across all feeds,
@@ -536,11 +543,11 @@ public class KafkaEmitterTest
 
     validateEvents(feedToExpectedEvents, feedToActualEvents);
 
-    Assert.assertEquals(bufferEventsDrop, kafkaEmitter.getMetricLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getAlertLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getRequestLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
-    Assert.assertEquals(0, kafkaEmitter.getInvalidLostCount());
+    Assertions.assertEquals(bufferEventsDrop, kafkaEmitter.getMetricLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getAlertLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getRequestLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getSegmentMetadataLostCount());
+    Assertions.assertEquals(0, kafkaEmitter.getInvalidLostCount());
   }
 
   private KafkaEmitter initKafkaEmitter(
@@ -632,13 +639,19 @@ public class KafkaEmitterTest
       final Map<String, List<EventMap>> feedToActualEvents
   )
   {
-    Assert.assertEquals(feedToExpectedEvents.size(), feedToActualEvents.size());
+    Assertions.assertEquals(feedToExpectedEvents.size(), feedToActualEvents.size());
 
     for (final Map.Entry<String, List<EventMap>> actualEntry : feedToActualEvents.entrySet()) {
       final String feed = actualEntry.getKey();
       final List<EventMap> actualEvents = actualEntry.getValue();
       final List<EventMap> expectedEvents = feedToExpectedEvents.get(feed);
-      assertThat(actualEvents, containsInAnyOrder(expectedEvents.toArray(new Map[0])));
+      Assertions.assertEquals(expectedEvents.size(), actualEvents.size());
+      Assertions.assertTrue(
+          expectedEvents.stream().allMatch(
+              expectedEvent -> Collections.frequency(expectedEvents, expectedEvent)
+                               == Collections.frequency(actualEvents, expectedEvent)
+          )
+      );
     }
   }
 

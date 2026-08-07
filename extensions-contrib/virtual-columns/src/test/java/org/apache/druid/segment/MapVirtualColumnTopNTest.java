@@ -42,25 +42,24 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   private QueryRunner<Result<TopNResultValue>> runner;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final IncrementalIndex incrementalIndex = MapVirtualColumnTestBase.generateIndex();
@@ -82,25 +81,25 @@ public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
   @Test
   public void testWithMapColumn()
   {
-    final TopNQuery query = new TopNQuery(
-        new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
-        VirtualColumns.create(
-            new MapVirtualColumn("keys", "values", "params")
-        ),
-        new DefaultDimensionSpec("params", "params"), // params is the map type
-        new NumericTopNMetricSpec("count"),
-        1,
-        new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
-        null,
-        Granularities.ALL,
-        ImmutableList.of(new CountAggregatorFactory("count")),
-        null,
-        null
-    );
-
-    expectedException.expect(UnsupportedOperationException.class);
-    expectedException.expectMessage("Map column doesn't support getRow()");
-    runner.run(QueryPlus.wrap(query)).toList();
+    Throwable exception = assertThrows(UnsupportedOperationException.class, () -> {
+      final TopNQuery query = new TopNQuery(
+          new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
+          VirtualColumns.create(
+              new MapVirtualColumn("keys", "values", "params")
+          ),
+          new DefaultDimensionSpec("params", "params"), // params is the map type
+          new NumericTopNMetricSpec("count"),
+          1,
+          new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2011/2012"))),
+          null,
+          Granularities.ALL,
+          ImmutableList.of(new CountAggregatorFactory("count")),
+          null,
+          null
+      );
+      runner.run(QueryPlus.wrap(query)).toList();
+    });
+    assertTrue(exception.getMessage().contains("Map column doesn't support getRow()"));
   }
 
   @Test
@@ -135,6 +134,6 @@ public class MapVirtualColumnTopNTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 }
