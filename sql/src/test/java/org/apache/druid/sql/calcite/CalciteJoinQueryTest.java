@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -91,10 +90,9 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -106,7 +104,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -1574,12 +1571,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
           ImmutableList.of(),
           ImmutableList.of()
       );
-      Assert.fail("Expected exception to be thrown.");
+      Assertions.fail("Expected exception to be thrown.");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
-          new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
+          new DruidExceptionAssertions(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(
                   "Query could not be planned. A possible reason is "
                   + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
@@ -5075,7 +5072,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, AuthorizationResult.ALLOW_NO_RESTRICTION)
                      .getResults();
     List<Object> results = seq.toList();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(ResultRow.of("def")),
         results
     );
@@ -5164,7 +5161,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    Exception e = Assert.assertThrows(
+    Exception e = Assertions.assertThrows(
         Exception.class,
         () -> testQuery(
             PLANNER_CONFIG_DEFAULT,
@@ -5175,9 +5172,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
-        e.getMessage(),
-        CoreMatchers.containsString(
+    Assertions.assertTrue(
+        e.getMessage().contains(
             "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"
         )
     );
@@ -5505,7 +5501,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    Assert.assertTrue("filter pushdown must be enabled", query.context().getEnableJoinFilterPushDown());
+    Assertions.assertTrue(query.context().getEnableJoinFilterPushDown(), "filter pushdown must be enabled");
 
     // no results will be produced since the filter values aren't in the table
     testQuery(
@@ -5615,7 +5611,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .context(queryContext)
         .build();
 
-    Assert.assertTrue("filter pushdown must be enabled", query.context().getEnableJoinFilterPushDown());
+    Assertions.assertTrue(query.context().getEnableJoinFilterPushDown(), "filter pushdown must be enabled");
 
     // (dim1, dim2, m1) in foo look like
     // [, a, 1.0]

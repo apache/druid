@@ -24,8 +24,8 @@ import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggr
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,12 +34,14 @@ import java.util.List;
 
 public class CompressedBigDecimalMaxAggregatorGroupByTest extends CompressedBigDecimalAggregatorGroupByTestBase
 {
-  public CompressedBigDecimalMaxAggregatorGroupByTest(
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testIngestAndGroupByAllQuery(
       GroupByQueryConfig config,
       CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig
-  )
+  ) throws Exception
   {
-    super(config, cbdGroupByQueryConfig);
+    super.testIngestAndGroupByAllQuery(config, cbdGroupByQueryConfig);
   }
 
   /**
@@ -47,7 +49,6 @@ public class CompressedBigDecimalMaxAggregatorGroupByTest extends CompressedBigD
    *
    * @return constructors
    */
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
     List<Object[]> constructors = new ArrayList<>();
@@ -67,7 +68,7 @@ public class CompressedBigDecimalMaxAggregatorGroupByTest extends CompressedBigD
         "9999999999.000000000",
         "9999999999.000000000"
     );
-    for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+    for (GroupByQueryConfig config : testConfigs()) {
       constructors.add(new Object[]{config, cbdGroupByQueryConfig});
     }
     return constructors;

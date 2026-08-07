@@ -24,15 +24,14 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class TDigestSketchToQuantilesPostAggregatorTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSerde() throws Exception
@@ -46,9 +45,9 @@ public class TDigestSketchToQuantilesPostAggregatorTest
         TDigestSketchToQuantilesPostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
-    Assert.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there.getDependentFields(), andBackAgain.getDependentFields());
   }
 
   @Test
@@ -60,7 +59,7 @@ public class TDigestSketchToQuantilesPostAggregatorTest
         new double[]{0.25, 0.75}
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "TDigestSketchToQuantilesPostAggregator{name='post', field=ConstantPostAggregator{name='', constantValue=100}, fractions=[0.25, 0.75]}",
         postAgg.toString()
     );
@@ -69,14 +68,15 @@ public class TDigestSketchToQuantilesPostAggregatorTest
   @Test
   public void testComparator()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("Comparing arrays of quantiles is not supported");
-    PostAggregator postAgg = new TDigestSketchToQuantilesPostAggregator(
-        "post",
-        new ConstantPostAggregator("", 100),
-        new double[]{0.25, 0.75}
-    );
-    postAgg.getComparator();
+    Throwable exception = assertThrows(IAE.class, () -> {
+      PostAggregator postAgg = new TDigestSketchToQuantilesPostAggregator(
+          "post",
+          new ConstantPostAggregator("", 100),
+          new double[]{0.25, 0.75}
+      );
+      postAgg.getComparator();
+    });
+    assertTrue(exception.getMessage().contains("Comparing arrays of quantiles is not supported"));
   }
 
   @Test
