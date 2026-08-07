@@ -969,7 +969,7 @@ name: kubernetes fabric java client
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 7.6.0
+version: 7.8.0
 libraries:
   - io.fabric8: kubernetes-client-api
   - io.fabric8: kubernetes-model-batch
@@ -1034,7 +1034,7 @@ name: vertx
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 4.5.27
+version: 4.5.28
 libraries:
   - io.vertx: vertx-auth-common
   - io.vertx: vertx-core
@@ -1193,7 +1193,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.3.2
+version: 5.4.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1205,7 +1205,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.3.2
+version: 5.4.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1217,7 +1217,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.16.4
+version: 3.17.0
 libraries:
   - com.squareup.okio: okio
   - com.squareup.okio: okio-jvm
@@ -1228,7 +1228,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 3.16.4
+version: 3.17.0
 libraries:
   - com.squareup.okio: okio-jvm
 
