@@ -109,12 +109,10 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -167,11 +165,27 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  protected final File temporaryFolder = FileUtils.createTempDir();
 
-  @Rule
-  public final TestName testName = new TestName();
+  protected final File createTempDir()
+  {
+    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
+  }
+
+  protected final File createTempDir(final String prefix)
+  {
+    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), prefix);
+  }
+
+  protected final void deleteTempDir()
+  {
+    try {
+      FileUtils.deleteDirectory(temporaryFolder);
+    }
+    catch (IOException e) {
+      throw new ISE(e, "Failed to delete temporary directory[%s]", temporaryFolder);
+    }
+  }
 
   /**
    * Transient task failure rate emulated by the taskKiller in {@link SimpleThreadingTaskRunner}.
@@ -217,15 +231,23 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     this.transientApiCallFailureRate = transientApiCallFailureRate;
   }
 
-  @Before
-  public void setUpAbstractParallelIndexSupervisorTaskTest() throws IOException
+  @BeforeEach
+  public void setUpAbstractParallelIndexSupervisorTaskTest(TestInfo testInfo) throws IOException
   {
-    localDeepStorage = temporaryFolder.newFolder("localStorage");
-    taskRunner = new SimpleThreadingTaskRunner(testName.getMethodName());
+    localDeepStorage = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "localStorage");
+    taskRunner = new SimpleThreadingTaskRunner(testInfo.getTestMethod().orElseThrow().getName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
+        .setShuffleDataLocations(
+            ImmutableList.of(
+                new StorageLocationConfig(
+                    FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "shuffle"),
+                    null,
+                    null
+                )
+            )
+        )
         .build();
     intermediaryDataManager = new LocalIntermediaryDataManager(new WorkerConfig(), taskConfig, null);
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
@@ -233,12 +255,12 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     prepareObjectMapper(objectMapper, getIndexIO());
   }
 
-  @After
+  @AfterEach
   public void tearDownAbstractParallelIndexSupervisorTaskTest()
   {
     remoteApiExecutor.shutdownNow();
     taskRunner.shutdown();
-    temporaryFolder.delete();
+    deleteTempDir();
   }
 
   protected ParallelIndexTuningConfig newTuningConfig(
@@ -675,9 +697,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         )
         .dataSegmentKiller(new NoopDataSegmentKiller())
         .joinableFactory(NoopJoinableFactory.INSTANCE)
-        .segmentCacheManager(newSegmentLoader(temporaryFolder.newFolder()))
+        .segmentCacheManager(
+            newSegmentLoader(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "segmentCache"))
+        )
         .jsonMapper(objectMapper)
-        .taskWorkDir(temporaryFolder.newFolder(task.getId()))
+        .taskWorkDir(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), task.getId()))
         .indexIO(getIndexIO())
         .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)
@@ -827,22 +851,22 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     final java.util.Optional<IngestionStatsAndErrorsTaskReport> actualReportOptional
         = actualReports.findReport("ingestionStatsAndErrors");
 
-    Assert.assertTrue(expectedReportOptional.isPresent());
-    Assert.assertTrue(actualReportOptional.isPresent());
+    Assertions.assertTrue(expectedReportOptional.isPresent());
+    Assertions.assertTrue(actualReportOptional.isPresent());
 
     final IngestionStatsAndErrorsTaskReport expectedReport = expectedReportOptional.get();
     final IngestionStatsAndErrorsTaskReport actualReport = actualReportOptional.get();
 
-    Assert.assertEquals(expectedReport.getTaskId(), actualReport.getTaskId());
-    Assert.assertEquals(expectedReport.getReportKey(), actualReport.getReportKey());
+    Assertions.assertEquals(expectedReport.getTaskId(), actualReport.getTaskId());
+    Assertions.assertEquals(expectedReport.getReportKey(), actualReport.getReportKey());
 
     final IngestionStatsAndErrors expectedPayload = expectedReport.getPayload();
     final IngestionStatsAndErrors actualPayload = actualReport.getPayload();
-    Assert.assertEquals(expectedPayload.getIngestionState(), actualPayload.getIngestionState());
+    Assertions.assertEquals(expectedPayload.getIngestionState(), actualPayload.getIngestionState());
 
     Map<String, Object> expectedTotals = expectedPayload.getRowStats();
     Map<String, Object> actualTotals = actualPayload.getRowStats();
-    Assert.assertEquals(expectedTotals, actualTotals);
+    Assertions.assertEquals(expectedTotals, actualTotals);
 
     List<ParseExceptionReport> expectedParseExceptionReports =
         (List<ParseExceptionReport>) (expectedPayload.getUnparseableEvents()).get("buildSegments");
@@ -854,13 +878,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .stream().map(r -> r.getDetails().get(0)).collect(Collectors.toList());
     List<String> actualMessages = actualParseExceptionReports
         .stream().map(r -> r.getDetails().get(0)).collect(Collectors.toList());
-    Assert.assertEquals(expectedMessages, actualMessages);
+    Assertions.assertEquals(expectedMessages, actualMessages);
 
     List<String> expectedInputs = expectedParseExceptionReports
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
     List<String> actualInputs = actualParseExceptionReports
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
-    Assert.assertEquals(expectedInputs, actualInputs);
+    Assertions.assertEquals(expectedInputs, actualInputs);
   }
 
   static class LocalParallelIndexTaskClientProvider implements ParallelIndexSupervisorTaskClientProvider

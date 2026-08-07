@@ -29,16 +29,16 @@ import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.utils.CompressionUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,11 +53,10 @@ public class DeepStorageShuffleClientTest
   private File segmentFile;
   private String segmentFileName;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  private final File temporaryFolder = FileUtils.createTempDir();
 
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
@@ -76,7 +75,7 @@ public class DeepStorageShuffleClientTest
     );
     deepStorageShuffleClient = new DeepStorageShuffleClient(mapper);
 
-    File temp = temporaryFolder.newFile();
+    final File temp = File.createTempFile("junit", null, temporaryFolder);
     segmentFileName = temp.getName();
     try (Writer writer = Files.newBufferedWriter(temp.toPath(), StandardCharsets.UTF_8)) {
       for (int j = 0; j < 10; j++) {
@@ -87,12 +86,18 @@ public class DeepStorageShuffleClientTest
     CompressionUtils.zip(segmentFile.getParentFile(), segmentFile);
   }
 
+  @AfterEach
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(temporaryFolder);
+  }
+
   @Test
   public void fetchSegmentFile() throws IOException
   {
-    File partitionDir = temporaryFolder.newFolder();
-    String subTaskId = "subTask";
-    File unzippedDir = deepStorageShuffleClient.fetchSegmentFile(
+    final File partitionDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
+    final String subTaskId = "subTask";
+    final File unzippedDir = deepStorageShuffleClient.fetchSegmentFile(
         partitionDir,
         "testSupervisor",
         new DeepStoragePartitionLocation(
@@ -102,12 +107,12 @@ public class DeepStorageShuffleClientTest
             ImmutableMap.of("type", "local", "path", segmentFile.getAbsolutePath())
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringUtils.format("%s/unzipped_%s", partitionDir.getAbsolutePath(), subTaskId),
         unzippedDir.getAbsolutePath()
     );
     File fetchedSegmentFile = unzippedDir.listFiles((dir, name) -> name.endsWith(".tmp"))[0];
-    Assert.assertEquals(segmentFileName, fetchedSegmentFile.getName());
-    Assert.assertTrue(fetchedSegmentFile.length() > 0);
+    Assertions.assertEquals(segmentFileName, fetchedSegmentFile.getName());
+    Assertions.assertTrue(fetchedSegmentFile.length() > 0);
   }
 }
