@@ -42,6 +42,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.StringDeserializer;
 
 import javax.annotation.Nonnull;
@@ -52,6 +53,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
@@ -176,6 +178,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       final ListenableFuture<?> future = executorService.submit(() -> {
         final Consumer<String, String> consumer = getConsumer();
         consumer.subscribe(Collections.singletonList(topic));
+        Map<TopicPartition, Long> startupEndOffsets = null;
         try {
           while (!executorService.isShutdown()) {
             try {
@@ -183,7 +186,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
                 break;
               }
               final ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
-              startingReads.countDown();
+              if (startingReads.getCount() > 0) {
+                final Set<TopicPartition> assignment = consumer.assignment();
+                if (!assignment.isEmpty()
+                    && (startupEndOffsets == null || !startupEndOffsets.keySet().equals(assignment))) {
+                  startupEndOffsets = consumer.endOffsets(assignment);
+                }
+              }
 
               for (final ConsumerRecord<String, String> record : records) {
                 final String key = record.key();
@@ -203,6 +212,11 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
                 map.put(key, message);
                 doubleEventCount.incrementAndGet();
                 LOG.trace("Placed key[%s] val[%s]", key, message);
+              }
+              if (startingReads.getCount() > 0
+                  && startupEndOffsets != null
+                  && hasReachedEndOffsets(consumer, startupEndOffsets)) {
+                startingReads.countDown();
               }
             }
             catch (Exception e) {
@@ -251,10 +265,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
       catch (InterruptedException | ExecutionException | TimeoutException e) {
-        executorService.shutdown();
-        future.cancel(true);
         LOG.error(e, "Failed to start kafka extraction factory");
-        cacheHandler.close();
+        shutdownExecutorAndCloseCache();
         return false;
       }
 
@@ -272,13 +284,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         return !started.get();
       }
       started.set(false);
-      executorService.shutdown();
-
-      final ListenableFuture<?> future = this.future;
-      if (future != null) {
-        future.cancel(true);
-      }
-      cacheHandler.close();
+      shutdownExecutorAndCloseCache();
       return true;
     }
   }
@@ -379,6 +385,36 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   ListenableFuture<?> getFuture()
   {
     return future;
+  }
+
+  boolean awaitExecutorTermination(final long timeout, final TimeUnit unit) throws InterruptedException
+  {
+    return executorService.awaitTermination(timeout, unit);
+  }
+
+  private void shutdownExecutorAndCloseCache()
+  {
+    // The executor is single-threaded, so the cache is not closed until the Kafka worker stops using it.
+    executorService.execute(cacheHandler::close);
+    executorService.shutdown();
+
+    final ListenableFuture<?> future = this.future;
+    if (future != null) {
+      future.cancel(true);
+    }
+  }
+
+  private static boolean hasReachedEndOffsets(
+      final Consumer<String, String> consumer,
+      final Map<TopicPartition, Long> endOffsets
+  )
+  {
+    for (final Map.Entry<TopicPartition, Long> endOffset : endOffsets.entrySet()) {
+      if (consumer.position(endOffset.getKey()) < endOffset.getValue()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
