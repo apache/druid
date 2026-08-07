@@ -55,13 +55,14 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.rules.ExternalResource;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-public class TaskActionTestKit implements BeforeEachCallback, AfterEachCallback
+public class TaskActionTestKit extends ExternalResource implements BeforeEachCallback, AfterEachCallback
 {
   private final MetadataStorageTablesConfig metadataStorageTablesConfig = MetadataStorageTablesConfig.fromBase("druid");
 
@@ -193,6 +194,7 @@ public class TaskActionTestKit implements BeforeEachCallback, AfterEachCallback
     taskActionDelegate.put(actionType, function);
   }
 
+  @Override
   public void before()
   {
     Preconditions.checkState(configFinalized.compareAndSet(false, true));
@@ -331,6 +333,7 @@ public class TaskActionTestKit implements BeforeEachCallback, AfterEachCallback
     };
   }
 
+  @Override
   public void after()
   {
     testDerbyConnector.tearDown();

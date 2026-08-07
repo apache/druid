@@ -28,7 +28,6 @@ import org.joda.time.Interval;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,7 +85,7 @@ public class NativeCompactionTaskRunTest extends CompactionTaskRunBase
       boolean useConcurrentLocks,
       Interval inputInterval,
       Granularity compactionGranularity
-  ) throws IOException
+  )
   {
     super(
         name,

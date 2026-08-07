@@ -219,7 +219,7 @@ public abstract class CompactionTaskRunBase
       boolean useConcurrentLocks,
       Interval inputInterval,
       Granularity segmentGranularity
-  ) throws IOException
+  )
   {
     this.lockGranularity = lockGranularity;
     this.useCentralizedDatasourceSchema = useCentralizedDatasourceSchema;
@@ -1667,7 +1667,7 @@ public abstract class CompactionTaskRunBase
 
   protected abstract Builder compactionTaskBuilder(ClientCompactionTaskGranularitySpec granularitySpec);
 
-  private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient) throws IOException
+  private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient)
   {
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
         .locations(new StorageLocationConfig(localDeepStorage, null, null))
