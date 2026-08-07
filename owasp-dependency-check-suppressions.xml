@@ -308,6 +308,12 @@
     <cve>CVE-2026-50560</cve>
     <cve>CVE-2026-56816</cve>
     <cve>CVE-2026-56820</cve>
+    <cve>CVE-2026-59898</cve> <!-- Netty 3.x not affected; WebSocket issue only in Netty 4.x -->
+    <cve>CVE-2026-59899</cve> <!-- Netty 3.x not affected; HTTP content encoder issue only in Netty 4.x -->
+    <cve>CVE-2026-59900</cve> <!-- Netty 3.x not affected; HTTP/2 issue only in Netty 4.x -->
+    <cve>CVE-2026-59901</cve> <!-- Netty 3.x not affected; Bzip2 decoder issue only in Netty 4.x -->
+    <cve>CVE-2026-59919</cve> <!-- Netty 3.x not affected; HAProxy codec issue only in Netty 4.x -->
+    <cve>CVE-2026-59920</cve> <!-- Netty 3.x not affected; STOMP codec issue only in Netty 4.x -->
   </suppress>
 
   <suppress>
