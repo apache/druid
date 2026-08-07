@@ -615,8 +615,16 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final int movingReplicas = replicaCountOnTier.moving();
     final boolean shouldCancelMoves = requiredReplicas == 0 && movingReplicas > 0;
 
+    // A replica serving under a partial-load profile is pinned by a partial-load rule, but we got here through the
+    // regular full-load path, so that rule no longer applies: the datasource's partial-load rule was replaced or
+    // shadowed by a higher-priority load rule, or its matcher stopped resolving and fell through to FULL_LOAD. That
+    // replica needs an in-place reload carrying the plain unwrapped load spec so the historical releases its rule
+    // holds. When the tier wants no replicas at all we skip it, the drops below are already on their way and dropping
+    // clears the rule on the historical.
+    final int replicasToRevert = requiredReplicas > 0 ? replicaCountOnTier.loadedWithPartialProfile() : 0;
+
     // Check if there is any action required on this tier
-    if (projectedReplicas == requiredReplicas && !shouldCancelMoves) {
+    if (projectedReplicas == requiredReplicas && !shouldCancelMoves && replicasToRevert <= 0) {
       return 0;
     }
 
@@ -645,6 +653,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     // Cancel loads and queue drops if the projected count exceeds the requirement
+    int dropsQueuedOnTier = 0;
     if (projectedReplicas > requiredReplicas) {
       int replicaSurplus = projectedReplicas - requiredReplicas;
       int canceledLoads =
@@ -652,13 +661,66 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
       int numReplicasToDrop = Math.min(replicaSurplus - canceledLoads, maxReplicasToDrop);
       if (numReplicasToDrop > 0) {
-        int dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
+        dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
         incrementStat(Stats.Segments.DROPPED, segment, tier, dropsQueuedOnTier);
-        return dropsQueuedOnTier;
       }
     }
 
-    return 0;
+    // Release partial-load rules that no longer apply. Done last so the load/drop decisions above claim their
+    // servers first: a replica that just picked up an action is no longer `isServingSegment`, so it is skipped here
+    // and reverted on a later run if it is still around.
+    if (replicasToRevert > 0) {
+      final int reverted = revertPartialProfileReplicas(segment, tier);
+      if (reverted > 0) {
+        incrementStat(Stats.Segments.PARTIAL_RULE_REVERTED, segment, tier, reverted);
+      }
+    }
+
+    return dropsQueuedOnTier;
+  }
+
+  /**
+   * Queues an in-place reload on every server in {@code tier} that serves {@code segment} under a
+   * {@link PartialLoadProfile}. The request carries the plain unwrapped {@code segment}, which is what tells the
+   * historical to release its rule holds rather than apply or swap one.
+   * <p>
+   * The replica count is deliberately left alone: these servers <em>are</em> serving, so they still satisfy the
+   * rule's replication requirement and must not be double-counted as a deficit. This only refreshes what they hold.
+   * <p>
+   * Servers are skipped when:
+   * <ul>
+   *   <li>they have any queued action, via {@link ServerHolder#isServingSegment}, which covers both the load/drop
+   *       decisions made earlier in this run and operations left over from a previous one;</li>
+   *   <li>their load queue is already at the configured {@code maxSegmentsInNodeLoadingQueue} budget for this run.</li>
+   *   <li>they are decommissioning, since their replicas are on the way out and reloading them is wasted work.</li>
+   * </ul>
+   * These are the same two eligibility conditions {@code PartialSegmentStatusInTier.canReloadAdditively} applies to
+   * the partial-load reconciler's in-place reload. {@link ServerHolder#canLoadSegment} is not usable here because it
+   * requires the server to <em>not</em> already have the segment, which is precisely the case being handled.
+   */
+  private int revertPartialProfileReplicas(DataSegment segment, String tier)
+  {
+    int numReverted = 0;
+    for (ServerHolder server : cluster.getManagedHistoricalsByTier(tier)) {
+      if (revertPartialProfileReplica(segment, server)) {
+        ++numReverted;
+      }
+    }
+    return numReverted;
+  }
+
+  /**
+   * Queues the in-place reload described by {@link #revertPartialProfileReplicas} on a single server, if that server
+   * is holding {@code segment} under a partial-load rule and has room in its load queue. Returns whether a reload was
+   * queued.
+   */
+  private boolean revertPartialProfileReplica(DataSegment segment, ServerHolder server)
+  {
+    return server.isServingSegment(segment)
+           && !server.isDecommissioning()
+           && !server.isLoadQueueFull()
+           && server.getServer().getPartialLoadProfile(segment.getId()) != null
+           && loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, null);
   }
 
   private void reportTierCapacityStats(DataSegment segment, int requiredReplicas, String tier)
@@ -697,11 +759,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       // Drop from decommissioning servers and load on active servers
       int numDropsQueued = 0;
       int numLoadsQueued = 0;
+      int numRevertsQueued = 0;
       if (server.isDecommissioning()) {
         numDropsQueued += dropBroadcastSegment(segment, server) ? 1 : 0;
       } else {
         tierToRequiredReplicas.addTo(tier, 1);
         numLoadsQueued += loadBroadcastSegment(segment, server) ? 1 : 0;
+        // A broadcast rule wants the whole segment on every target, so a replica still pinned by a partial-load rule
+        // has to be reloaded unwrapped, exactly as on the replication path. loadBroadcastSegment cannot do this
+        // itself: it returns early for a server that is already serving, which is precisely the case here. The two
+        // are mutually exclusive, since a server that just had a genuine load queued is no longer `isServingSegment`.
+        numRevertsQueued += revertPartialProfileReplica(segment, server) ? 1 : 0;
       }
 
       if (numLoadsQueued > 0) {
@@ -709,6 +777,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       }
       if (numDropsQueued > 0) {
         incrementStat(Stats.Segments.DROPPED, segment, tier, numDropsQueued);
+      }
+      if (numRevertsQueued > 0) {
+        incrementStat(Stats.Segments.PARTIAL_RULE_REVERTED, segment, tier, numRevertsQueued);
       }
     }
 
