@@ -202,7 +202,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         @Override
         public void setTaskThreadContext()
         {
-          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
+          if (workerConfig.isUseSeparateTaskLogFiles()) {
+            Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
+          }
         }
       };
 
@@ -250,7 +252,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         @Override
         public void setTaskThreadContext()
         {
-          Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
+          if (workerConfig.isUseSeparateTaskLogFiles()) {
+            Appenderators.setTaskThreadContextForIndexers(taskId, taskDirectory.getTaskLogFile(taskId));
+          }
         }
       };
       datasourceBundle.addAppenderator(taskId, appenderator);
@@ -555,16 +559,26 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
     )
     {
-      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          () ->
-              baseMerger.persist(
+      // Include calling thread's name in the mergeExecutor thread name. This includes at least the task ID.
+      final String callerThreadName = Thread.currentThread().getName();
+      final ListenableFuture<File> mergeFuture = mergeExecutor.submit(
+          () -> {
+            final String runnableThreadName = Thread.currentThread().getName();
+            try {
+              Thread.currentThread().setName(runnableThreadName + "[" + callerThreadName + "]");
+              return baseMerger.persist(
                   index,
                   dataInterval,
                   outDir,
                   indexSpec,
                   progress,
                   segmentWriteOutMediumFactory
-              )
+              );
+            }
+            finally {
+              Thread.currentThread().setName(runnableThreadName);
+            }
+          }
       );
 
       try {
@@ -604,9 +618,14 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
         int maxColumnsToMerge
     )
     {
-      ListenableFuture<File> mergeFuture = mergeExecutor.submit(
-          () ->
-              baseMerger.mergeQueryableIndex(
+      // Include calling thread's name in the mergeExecutor thread name. This includes at least the task ID.
+      final String callerThreadName = Thread.currentThread().getName();
+      final ListenableFuture<File> mergeFuture = mergeExecutor.submit(
+          () -> {
+            final String runnableThreadName = Thread.currentThread().getName();
+            try {
+              Thread.currentThread().setName(runnableThreadName + "[" + callerThreadName + "]");
+              return baseMerger.mergeQueryableIndex(
                   indexes,
                   rollup,
                   metricAggs,
@@ -617,7 +636,12 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
                   new BaseProgressIndicator(),
                   segmentWriteOutMediumFactory,
                   maxColumnsToMerge
-              )
+              );
+            }
+            finally {
+              Thread.currentThread().setName(runnableThreadName);
+            }
+          }
       );
 
       try {

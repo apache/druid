@@ -42,6 +42,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -264,7 +265,7 @@ public class FileUtils
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
     //noinspection unused
-    try (final Closeable deleter = () -> Files.deleteIfExists(tmpFile.toPath())) {
+    try (final Closeable ignoredDeleter = () -> Files.deleteIfExists(tmpFile.toPath())) {
       final T retVal;
 
       try (
@@ -446,6 +447,30 @@ public class FileUtils
     return new File(parentDirectory).toPath();
   }
 
+  /**
+   * Resolves {@code path} below {@code directory}, rejecting absolute paths and parent traversal that would escape it.
+   * This is intended for paths containing externally supplied identifiers.
+   */
+  public static File resolveFileWithinDirectory(final File directory, final String path)
+  {
+    final Path normalizedDirectory = directory.toPath().toAbsolutePath().normalize();
+    final Path childPath;
+    try {
+      childPath = Path.of(path);
+    }
+    catch (InvalidPathException e) {
+      throw new IAE(e, "Path[%s] is not within directory[%s]", path, directory);
+    }
+    if (childPath.isAbsolute()) {
+      throw new IAE("Path[%s] is not within directory[%s]", path, directory);
+    }
+    final Path resolvedPath = normalizedDirectory.resolve(childPath).normalize();
+    if (!resolvedPath.startsWith(normalizedDirectory)) {
+      throw new IAE("Path[%s] is not within directory[%s]", path, directory);
+    }
+    return resolvedPath.toFile();
+  }
+
   @SuppressForbidden(reason = "Files#createTempDirectory")
   public static File createTempDirInLocation(final Path parentDirectory, @Nullable final String prefix)
   {
@@ -497,6 +522,39 @@ public class FileUtils
   public static void deleteDirectory(final File directory) throws IOException
   {
     org.apache.commons.io.FileUtils.deleteDirectory(directory);
+  }
+
+  /**
+   * Deletes {@code directory} (recursively, like {@link #deleteDirectory(File)}), then walks up deleting each
+   * now-empty ancestor directory, stopping at the first non-empty ancestor or when {@code stopAt} is reached,
+   * whichever comes first. {@code stopAt} itself is never deleted, so callers can pass a base directory that must
+   * survive.
+   * <p>
+   * Because an ancestor is removed only once it is empty, this is safe when intermediate directories are shared by
+   * several sibling leaves: the shared ancestor is deleted only after its last child is gone. It is not safe for
+   * concurrent deletion of overlapping paths under the same {@code stopAt}.
+   */
+  public static void deleteDirectoryAndEmptyAncestors(final File directory, final File stopAt) throws IOException
+  {
+    if (directory == null || directory.equals(stopAt)) {
+      return;
+    }
+    deleteDirectory(directory);
+    // Walk up removing now-empty ancestors.
+    File parent = directory.getParentFile();
+    while (parent != null && !parent.equals(stopAt)) {
+      final String[] children = parent.list();
+      if (children == null || children.length > 0) {
+        // Non-empty, or contents could not be listed: leave it in place and stop climbing.
+        break;
+      }
+      // delete() removes only an empty directory. If a concurrent write landed a child between the list() above and
+      // here, the delete fails, and we stop rather than removing a directory that just gained content.
+      if (!parent.delete()) {
+        break;
+      }
+      parent = parent.getParentFile();
+    }
   }
 
   /**

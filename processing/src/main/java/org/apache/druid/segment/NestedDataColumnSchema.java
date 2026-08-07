@@ -36,6 +36,13 @@ import java.util.Objects;
  */
 public class NestedDataColumnSchema extends DimensionSchema
 {
+  /**
+   * The current (and only supported) nested column format version. This is sort of a lie: the segment does not
+   * actually contain a v5 nested column, rather v0 of the 'nested common format', but as far as this schema is
+   * concerned it is v5.
+   */
+  public static final int DEFAULT_FORMAT_VERSION = 5;
+
   final int formatVersion;
   @Nullable
   final NestedCommonFormatColumnFormatSpec columnFormatSpec;
@@ -54,9 +61,7 @@ public class NestedDataColumnSchema extends DimensionSchema
     } else if (defaultFormatConfig.getNestedColumnFormatVersion() != null) {
       formatVersion = defaultFormatConfig.getNestedColumnFormatVersion();
     } else {
-      // this is sort of a lie... it's not really v5 in the segment, rather its v0 of the 'nested common format'
-      // but as far as this is concerned it is v5
-      formatVersion = 5;
+      formatVersion = DEFAULT_FORMAT_VERSION;
     }
     DefaultColumnFormatConfig.validateNestedFormatVersion(formatVersion);
     if (columnFormatSpec == null) {

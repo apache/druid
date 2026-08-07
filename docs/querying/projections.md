@@ -249,36 +249,36 @@ To use compaction on a datasource that includes projections, you need to set the
 <Tabs>
   <TabItem value="Coordinator duties">
 
-```json
-{
-    "type": "catalog",
-    "dataSource": YOUR_DATASOURCE,
-    "engine": "native",
-    "skipOffsetFromLatest": "PT0H",
-    "taskPriority": 25,
-    "inputSegmentSizeBytes": 100000000000000,
-    "taskContext": null
-  }
-```
-
-</TabItem>
-  <TabItem value="Supervisors"> 
-  
   ```json
   {
-  "type": "autocompact",
-  "spec": {
-    "type": "catalog",
-    "dataSource": YOUR_DATASOURCE,
-    "engine": "native",
-    "skipOffsetFromLatest": "PT0H",
-    "taskPriority": 25,
-    "inputSegmentSizeBytes": 100000000000000,
-    "taskContext": null
-  },
-  "suspended": true
-}
-```
+      "type": "catalog",
+      "dataSource": YOUR_DATASOURCE,
+      "engine": "native",
+      "skipOffsetFromLatest": "PT0H",
+      "taskPriority": 25,
+      "inputSegmentSizeBytes": 100000000000000,
+      "taskContext": null
+  }
+  ```
+
+  </TabItem>
+  <TabItem value="Supervisors">
+
+  ```json
+  {
+      "type": "autocompact",
+      "spec": {
+        "type": "catalog",
+        "dataSource": YOUR_DATASOURCE,
+        "engine": "native",
+        "skipOffsetFromLatest": "PT0H",
+        "taskPriority": 25,
+        "inputSegmentSizeBytes": 100000000000000,
+        "taskContext": null
+      },
+      "suspended": true
+  }
+  ```
 
   </TabItem>
 </Tabs>

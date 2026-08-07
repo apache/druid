@@ -540,7 +540,7 @@ public interface VirtualColumn extends Cacheable
    * virtual column, regardless of the output name. If this method returns null, it does not participate in equivalence
    * comparisons.
    *
-   * @see VirtualColumns#findEquivalent(VirtualColumns, VirtualColumn)
+   * @see VirtualColumns#findEquivalent(VirtualColumns.Node)
    */
   @Nullable
   default EquivalenceKey getEquivalanceKey()

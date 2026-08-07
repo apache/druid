@@ -59,4 +59,12 @@ public interface LogicalStage
    * Returns the inputs of this stage.
    */
   List<LogicalInputSpec> getInputSpecs();
+
+  /**
+   * Whether this stage must run on a single worker.
+   */
+  default boolean isSingleWorker()
+  {
+    return false;
+  }
 }

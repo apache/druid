@@ -53,11 +53,13 @@ import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.worker.DartDataServerQueryHandlerFactory;
+import org.apache.druid.msq.dart.worker.DartSegmentsInputSliceReaderProvider;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactory;
 import org.apache.druid.msq.dart.worker.DartWorkerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.apache.druid.msq.guice.MSQBinders;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -104,6 +106,11 @@ public class DartWorkerModule implements DruidModule
       binder.bind(ResourcePermissionMapper.class)
             .annotatedWith(Dart.class)
             .to(DartResourcePermissionMapper.class);
+
+      MSQBinders.inputSliceReaderProviderBinder(binder, Dart.class)
+                .addBinding()
+                .to(DartSegmentsInputSliceReaderProvider.class)
+                .in(LazySingleton.class);
     }
 
     @Provides

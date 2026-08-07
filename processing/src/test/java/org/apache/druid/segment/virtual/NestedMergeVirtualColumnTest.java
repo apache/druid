@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -44,7 +44,7 @@ public class NestedMergeVirtualColumnTest
     );
     String json = JSON_MAPPER.writeValueAsString(there);
     NestedMergeVirtualColumn andBackAgain = JSON_MAPPER.readValue(json, NestedMergeVirtualColumn.class);
-    Assert.assertEquals(there, andBackAgain);
+    Assertions.assertEquals(there, andBackAgain);
   }
 
   @Test
@@ -57,7 +57,7 @@ public class NestedMergeVirtualColumnTest
     );
     String json = JSON_MAPPER.writeValueAsString(there);
     NestedMergeVirtualColumn andBackAgain = JSON_MAPPER.readValue(json, NestedMergeVirtualColumn.class);
-    Assert.assertEquals(there, andBackAgain);
+    Assertions.assertEquals(there, andBackAgain);
   }
 
   @Test
@@ -68,7 +68,7 @@ public class NestedMergeVirtualColumnTest
         Arrays.asList("col1", "col2", "col3"),
         TestExprMacroTable.INSTANCE
     );
-    Assert.assertEquals(Arrays.asList("col1", "col2", "col3"), column.getColumns());
+    Assertions.assertEquals(Arrays.asList("col1", "col2", "col3"), column.getColumns());
   }
 
   @Test
@@ -90,10 +90,10 @@ public class NestedMergeVirtualColumnTest
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertNotEquals(v1, v2);
-    Assert.assertEquals(v1.getEquivalanceKey(), v2.getEquivalanceKey());
-    Assert.assertNotEquals(v1, v3);
-    Assert.assertNotEquals(v1.getEquivalanceKey(), v3.getEquivalanceKey());
+    Assertions.assertNotEquals(v1, v2);
+    Assertions.assertEquals(v1.getEquivalanceKey(), v2.getEquivalanceKey());
+    Assertions.assertNotEquals(v1, v3);
+    Assertions.assertNotEquals(v1.getEquivalanceKey(), v3.getEquivalanceKey());
   }
 
   @Test
@@ -105,7 +105,7 @@ public class NestedMergeVirtualColumnTest
         TestExprMacroTable.INSTANCE
     );
     String expected = "NestedMergeVirtualColumn{name='merged', columns=[col1, col2]}";
-    Assert.assertEquals(expected, column.toString());
+    Assertions.assertEquals(expected, column.toString());
   }
 
   @Test

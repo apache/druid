@@ -31,9 +31,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.URI;
@@ -70,7 +70,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   private GoogleAccountConfig accountConfig;
   private GoogleInputDataConfig inputDataConfig;
 
-  @Before
+  @BeforeEach
   public void before()
   {
     accountConfig = createMock(GoogleAccountConfig.class);
@@ -98,7 +98,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
   @Test
   public void killWithErrorTest()
   {
-    Assert.assertThrows(SegmentLoadingException.class, () -> {
+    Assertions.assertThrows(SegmentLoadingException.class, () -> {
       storage.delete(EasyMock.eq(BUCKET), EasyMock.eq(INDEX_PATH));
       EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION);
 
@@ -138,7 +138,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
     EasyMock.replay(storage, inputDataConfig, accountConfig);
 
-    Assert.assertThrows(ISE.class, killer::killAll);
+    Assertions.assertThrows(ISE.class, killer::killAll);
 
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }
@@ -216,7 +216,7 @@ public class GoogleDataSegmentKillerTest extends EasyMockSupport
 
     GoogleDataSegmentKiller killer = new GoogleDataSegmentKiller(storage, accountConfig, inputDataConfig);
 
-    Assert.assertThrows(IOException.class, killer::killAll);
+    Assertions.assertThrows(IOException.class, killer::killAll);
 
     EasyMock.verify(accountConfig, inputDataConfig, storage);
   }

@@ -22,6 +22,7 @@ package org.apache.druid.msq.indexing.destination;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -85,20 +86,6 @@ public final class SegmentGenerationUtils
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
     final boolean isRollupQuery = isRollupQuery(query);
-    final boolean forceSegmentSortByTime =
-        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
-
-    final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
-        makeDimensionsAndAggregatorsForIngestion(
-            querySignature,
-            queryClusterBy,
-            destination.getSegmentSortOrder(),
-            forceSegmentSortByTime,
-            columnMappings,
-            isRollupQuery,
-            query,
-            destination.getDimensionSchemas()
-        );
 
     final TransformSpec transformSpec;
     if (query.getFilter() != null) {
@@ -112,6 +99,35 @@ public final class SegmentGenerationUtils
     } else {
       transformSpec = null;
     }
+
+    // base-table mode, the destination supplies the base-table shape
+    if (destination.getBaseTable() != null) {
+      final Granularity queryGranularity =
+          query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
+      final BaseTableProjectionSpec baseTable =
+          destination.getBaseTable().withQueryGranularity(queryGranularity);
+      return DataSchema.builder()
+                       .withDataSource(destination.getDataSource())
+                       .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
+                       .withTransform(transformSpec)
+                       .withBaseTable(baseTable)
+                       .withProjections(destination.getProjections())
+                       .build();
+    }
+
+    final boolean forceSegmentSortByTime =
+        MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getContext());
+    final NonnullPair<DimensionsSpec, List<AggregatorFactory>> dimensionsAndAggregators =
+        makeDimensionsAndAggregatorsForIngestion(
+            querySignature,
+            queryClusterBy,
+            destination.getSegmentSortOrder(),
+            forceSegmentSortByTime,
+            columnMappings,
+            isRollupQuery,
+            query,
+            destination.getDimensionSchemas()
+        );
     return DataSchema.builder()
                      .withDataSource(destination.getDataSource())
                      .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))

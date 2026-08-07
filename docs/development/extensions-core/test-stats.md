@@ -23,14 +23,14 @@ title: "Test stats aggregators"
   -->
 
 
-The `druid-stats` extension for Apache Druid incorporates aggregators to compute test statistics, including z-scores and p-values.
+The `druid-stats` extension for Apache&circledR; Druid incorporates aggregators to compute test statistics, including z-scores and p-values.
 Please refer to [Democratizing Experimentation Data for Product Innovations](https://medium.com/paypal-tech/democratizing-experimentation-data-for-product-innovations-8b6e1cf40c27) for math background and details.
 
 Make sure to include `druid-stats` extension in order to use these aggregators.
 
 ## Z-Score for two sample ztests post aggregator
 
-Please refer to [Making Sense of the Two-Proportions Test](https://www.isixsigma.com/tools-templates/hypothesis-testing/making-sense-two-proportions-test/) and [An Introduction to Statistics: Comparing Two Means](https://userweb.ucs.louisiana.edu/~jcb0773/Berry_statbook/427bookall-August2024.pdf) for more details.
+Please refer to [Making Sense of the Two-Proportions Test](https://www.isixsigma.com/hypothesis-testing/making-sense-two-proportions-test/) and [An Introduction to Statistics: Comparing Two Means](https://userweb.ucs.louisiana.edu/~jcb0773/Berry_statbook/427bookall-August2024.pdf) for more details.
 
 ```
 z = (p1 - p2) / S.E.  (assuming null hypothesis is true)

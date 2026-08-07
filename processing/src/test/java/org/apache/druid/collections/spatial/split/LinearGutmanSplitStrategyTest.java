@@ -19,14 +19,14 @@
 
 package org.apache.druid.collections.spatial.split;
 
-import junit.framework.Assert;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.spatial.Node;
 import org.apache.druid.collections.spatial.Point;
 import org.apache.druid.collections.spatial.RTree;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -50,10 +50,10 @@ public class LinearGutmanSplitStrategyTest
     node.enclose();
 
     Node[] groups = strategy.split(node);
-    Assert.assertEquals(groups[0].getMinCoordinates()[0], 1.0f);
-    Assert.assertEquals(groups[0].getMinCoordinates()[1], 4.0f);
-    Assert.assertEquals(groups[1].getMinCoordinates()[0], 9.0f);
-    Assert.assertEquals(groups[1].getMinCoordinates()[1], 8.0f);
+    Assertions.assertEquals(groups[0].getMinCoordinates()[0], 1.0f);
+    Assertions.assertEquals(groups[0].getMinCoordinates()[1], 4.0f);
+    Assertions.assertEquals(groups[1].getMinCoordinates()[0], 9.0f);
+    Assertions.assertEquals(groups[1].getMinCoordinates()[1], 8.0f);
   }
 
   @Test
@@ -71,10 +71,10 @@ public class LinearGutmanSplitStrategyTest
     node.enclose();
 
     Node[] groups = strategy.split(node);
-    Assert.assertEquals(groups[0].getMinCoordinates()[0], 1.0f);
-    Assert.assertEquals(groups[0].getMinCoordinates()[1], 4.0f);
-    Assert.assertEquals(groups[1].getMinCoordinates()[0], 9.0f);
-    Assert.assertEquals(groups[1].getMinCoordinates()[1], 8.0f);
+    Assertions.assertEquals(groups[0].getMinCoordinates()[0], 1.0f);
+    Assertions.assertEquals(groups[0].getMinCoordinates()[1], 4.0f);
+    Assertions.assertEquals(groups[1].getMinCoordinates()[0], 9.0f);
+    Assertions.assertEquals(groups[1].getMinCoordinates()[1], 8.0f);
   }
 
 
@@ -88,7 +88,7 @@ public class LinearGutmanSplitStrategyTest
       tree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }
 
-    Assert.assertTrue(getNumPoints(tree.getRoot()) >= tree.getSize());
+    Assertions.assertTrue(getNumPoints(tree.getRoot()) >= tree.getSize());
   }
 
   @Test
@@ -101,7 +101,7 @@ public class LinearGutmanSplitStrategyTest
       tree.insert(new float[]{rand.nextFloat(), rand.nextFloat()}, i);
     }
 
-    Assert.assertTrue(getNumPoints(tree.getRoot()) >= tree.getSize());
+    Assertions.assertTrue(getNumPoints(tree.getRoot()) >= tree.getSize());
   }
 
   private int getNumPoints(Node node)

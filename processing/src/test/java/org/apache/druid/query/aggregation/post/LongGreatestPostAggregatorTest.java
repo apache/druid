@@ -30,8 +30,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.HashMap;
@@ -65,7 +65,7 @@ public class LongGreatestPostAggregatorTest
         );
 
     greatestPostAggregator = new LongGreatestPostAggregator("greatest", postAggregatorList);
-    Assert.assertEquals(Long.valueOf(6), greatestPostAggregator.compute(metricValues));
+    Assertions.assertEquals(Long.valueOf(6), greatestPostAggregator.compute(metricValues));
   }
 
   @Test
@@ -96,10 +96,10 @@ public class LongGreatestPostAggregatorTest
     metricValues.put(aggName, agg.get());
     Object after = greatestPostAggregator.compute(metricValues);
 
-    Assert.assertEquals(-1, comp.compare(before, after));
-    Assert.assertEquals(0, comp.compare(before, before));
-    Assert.assertEquals(0, comp.compare(after, after));
-    Assert.assertEquals(1, comp.compare(after, before));
+    Assertions.assertEquals(-1, comp.compare(before, after));
+    Assertions.assertEquals(0, comp.compare(before, before));
+    Assertions.assertEquals(0, comp.compare(after, after));
+    Assertions.assertEquals(1, comp.compare(after, before));
   }
 
   @Test
@@ -125,7 +125,7 @@ public class LongGreatestPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

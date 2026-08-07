@@ -30,8 +30,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class VirtualizedColumnSelectorFactoryTest extends InitializedNullHandlingTest
 {
@@ -51,37 +51,37 @@ public class VirtualizedColumnSelectorFactoryTest extends InitializedNullHandlin
   @Test
   public void test_getColumnCapabilities_type()
   {
-    Assert.assertEquals(ValueType.LONG, selectorFactory.getColumnCapabilities("x").getType());
-    Assert.assertEquals(ValueType.DOUBLE, selectorFactory.getColumnCapabilities("y").getType());
-    Assert.assertEquals(ValueType.LONG, selectorFactory.getColumnCapabilities("v0").getType());
-    Assert.assertEquals(ValueType.DOUBLE, selectorFactory.getColumnCapabilities("v1").getType());
-    Assert.assertNull(selectorFactory.getColumnCapabilities("nonexistent"));
+    Assertions.assertEquals(ValueType.LONG, selectorFactory.getColumnCapabilities("x").getType());
+    Assertions.assertEquals(ValueType.DOUBLE, selectorFactory.getColumnCapabilities("y").getType());
+    Assertions.assertEquals(ValueType.LONG, selectorFactory.getColumnCapabilities("v0").getType());
+    Assertions.assertEquals(ValueType.DOUBLE, selectorFactory.getColumnCapabilities("v1").getType());
+    Assertions.assertNull(selectorFactory.getColumnCapabilities("nonexistent"));
   }
 
   @Test
   public void test_makeColumnValueSelector()
   {
-    Assert.assertEquals(10, selectorFactory.makeColumnValueSelector("x").getLong());
-    Assert.assertEquals(20, selectorFactory.makeColumnValueSelector("y").getDouble(), 0.0);
-    Assert.assertEquals(11, selectorFactory.makeColumnValueSelector("v0").getLong());
-    Assert.assertEquals(31, selectorFactory.makeColumnValueSelector("v1").getDouble(), 0.0);
+    Assertions.assertEquals(10, selectorFactory.makeColumnValueSelector("x").getLong());
+    Assertions.assertEquals(20, selectorFactory.makeColumnValueSelector("y").getDouble(), 0.0);
+    Assertions.assertEquals(11, selectorFactory.makeColumnValueSelector("v0").getLong());
+    Assertions.assertEquals(31, selectorFactory.makeColumnValueSelector("v1").getDouble(), 0.0);
 
-    Assert.assertEquals(10L, selectorFactory.makeColumnValueSelector("x").getObject());
-    Assert.assertEquals(20.0, selectorFactory.makeColumnValueSelector("y").getObject());
-    Assert.assertEquals(11L, selectorFactory.makeColumnValueSelector("v0").getObject());
-    Assert.assertEquals(31.0, selectorFactory.makeColumnValueSelector("v1").getObject());
+    Assertions.assertEquals(10L, selectorFactory.makeColumnValueSelector("x").getObject());
+    Assertions.assertEquals(20.0, selectorFactory.makeColumnValueSelector("y").getObject());
+    Assertions.assertEquals(11L, selectorFactory.makeColumnValueSelector("v0").getObject());
+    Assertions.assertEquals(31.0, selectorFactory.makeColumnValueSelector("v1").getObject());
 
-    Assert.assertNull(selectorFactory.makeColumnValueSelector("nonexistent").getObject());
+    Assertions.assertNull(selectorFactory.makeColumnValueSelector("nonexistent").getObject());
   }
 
   @Test
   public void test_makeDimensionSelector()
   {
-    Assert.assertEquals("10", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("x")).getObject());
-    Assert.assertEquals("20.0", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("y")).getObject());
-    Assert.assertEquals("11", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("v0")).getObject());
-    Assert.assertEquals("31.0", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("v1")).getObject());
+    Assertions.assertEquals("10", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("x")).getObject());
+    Assertions.assertEquals("20.0", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("y")).getObject());
+    Assertions.assertEquals("11", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("v0")).getObject());
+    Assertions.assertEquals("31.0", selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("v1")).getObject());
 
-    Assert.assertNull(selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("nonexistent")).getObject());
+    Assertions.assertNull(selectorFactory.makeDimensionSelector(DefaultDimensionSpec.of("nonexistent")).getObject());
   }
 }

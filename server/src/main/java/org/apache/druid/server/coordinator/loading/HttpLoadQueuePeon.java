@@ -54,6 +54,7 @@ import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
@@ -473,6 +474,17 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @Override
   public void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback)
   {
+    loadSegment(segment, action, null, callback);
+  }
+
+  @Override
+  public void loadSegment(
+      DataSegment segment,
+      SegmentAction action,
+      @Nullable PartialLoadProfile profile,
+      LoadPeonCallback callback
+  )
+  {
     if (!action.isLoad()) {
       log.warn("Invalid load action[%s] for segment[%s] on server[%s].", action, segment.getId(), serverId);
       return;
@@ -493,7 +505,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       SegmentHolder holder = segmentsToLoad.get(segment);
       if (holder == null) {
         queuedSize.addAndGet(segment.getSize());
-        holder = new SegmentHolder(segment, action, config.getLoadTimeout(), callback);
+        holder = new SegmentHolder(segment, action, profile, config.getLoadTimeout(), callback);
         segmentsToLoad.put(segment, holder);
         queuedSegments.add(holder);
         processingExecutor.execute(this::doSegmentManagement);

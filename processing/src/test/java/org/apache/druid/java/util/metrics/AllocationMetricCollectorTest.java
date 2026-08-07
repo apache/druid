@@ -20,9 +20,9 @@
 package org.apache.druid.java.util.metrics;
 
 import org.apache.druid.java.util.common.logger.Logger;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,17 +48,17 @@ public class AllocationMetricCollectorTest
     }
 
     long delta = collector.calculateDelta();
-    Assert.assertTrue(delta > 0);
+    Assertions.assertTrue(delta > 0);
     log.info("First delta: %s", delta);
 
     int generatedSize2 = generateObjectsConcurrently(1000);
     long delta2 = collector.calculateDelta();
-    Assert.assertTrue(delta2 > generatedSize2);
+    Assertions.assertTrue(delta2 > generatedSize2);
     log.info("Second delta: %s", delta2);
 
     int generatedSize3 = generateObjectsConcurrently(100000);
     long delta3 = collector.calculateDelta();
-    Assert.assertTrue(delta3 > generatedSize3);
+    Assertions.assertTrue(delta3 > generatedSize3);
     log.info("Third delta: %s", delta3);
   }
 
@@ -95,7 +95,7 @@ public class AllocationMetricCollectorTest
     return totalSize;
   }
 
-  @After
+  @AfterEach
   public void stopThreads()
   {
     // threads are in sleep so that their ids are still present in JVM allocation "registry"

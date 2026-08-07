@@ -29,8 +29,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -98,10 +98,10 @@ public class BufferArrayGrouperTest
     requiredSizes = new long[]{19, 101, 19595788279L, -1};
 
     for (int i = 0; i < cardinalityArray.length; i++) {
-      Assert.assertEquals(
-          StringUtils.format("cardinality[%d]", cardinalityArray[i]),
+      Assertions.assertEquals(
           requiredSizes[i],
-          BufferArrayGrouper.requiredBufferCapacity(cardinalityArray[i], aggregatorFactories)
+          BufferArrayGrouper.requiredBufferCapacity(cardinalityArray[i], aggregatorFactories),
+          StringUtils.format("cardinality[%d]", cardinalityArray[i])
       );
     }
   }

@@ -21,31 +21,28 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class ProcCgroupDiscovererTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
+    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
   }
@@ -53,7 +50,7 @@ public class ProcCgroupDiscovererTest
   @Test
   public void testSimpleProc()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new File(
             cgroupDir,
             "cpu,cpuacct/system.slice/some.service/f12ba7e0-fa16-462e-bb9d-652ccc27f0ee"
@@ -68,10 +65,10 @@ public class ProcCgroupDiscovererTest
     final ProcCgroupDiscoverer.ProcMountsEntry entry = ProcCgroupDiscoverer.ProcMountsEntry.parse(
         "/dev/md126 /ebs xfs rw,seclabel,noatime,attr2,inode64,sunit=1024,swidth=16384,noquota 0 0"
     );
-    Assert.assertEquals("/dev/md126", entry.dev);
-    Assert.assertEquals(Paths.get("/ebs"), entry.path);
-    Assert.assertEquals("xfs", entry.type);
-    Assert.assertEquals(ImmutableSet.of(
+    Assertions.assertEquals("/dev/md126", entry.dev);
+    Assertions.assertEquals(Paths.get("/ebs"), entry.path);
+    Assertions.assertEquals("xfs", entry.type);
+    Assertions.assertEquals(ImmutableSet.of(
         "rw",
         "seclabel",
         "noatime",
@@ -86,17 +83,14 @@ public class ProcCgroupDiscovererTest
   @Test
   public void testNullCgroup()
   {
-    expectedException.expect(NullPointerException.class);
-    Assert.assertNull(new ProcCgroupDiscoverer(procDir.toPath()).discover(null));
+    Assertions.assertThrows(NullPointerException.class, () -> new ProcCgroupDiscoverer(procDir.toPath()).discover(null));
   }
 
   @Test
   public void testFallBack() throws Exception
   {
-    TemporaryFolder temporaryFolder = new TemporaryFolder();
-    temporaryFolder.create();
-    File cgroupDir = temporaryFolder.newFolder();
-    File procDir = temporaryFolder.newFolder();
+    File cgroupDir = FileUtils.createTempDirInLocation(tempDir, "fallbackCgroup");
+    File procDir = FileUtils.createTempDirInLocation(tempDir, "fallbackProc");
     TestUtils.setUpCgroups(procDir, cgroupDir);
 
     // Swap out the cgroup path with a default path
@@ -105,12 +99,12 @@ public class ProcCgroupDiscovererTest
         "cpu,cpuacct/"
     ));
 
-    Assert.assertTrue(new File(
+    Assertions.assertTrue(new File(
         cgroupDir,
         "cpu,cpuacct/"
     ).mkdir());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new File(
             cgroupDir,
             "cpu,cpuacct"

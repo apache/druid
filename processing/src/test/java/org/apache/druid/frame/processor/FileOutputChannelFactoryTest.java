@@ -20,18 +20,17 @@
 package org.apache.druid.frame.processor;
 
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.junit.ClassRule;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
+import java.nio.file.Path;
 
 public class FileOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
-  @ClassRule
-  public static TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  static Path folder;
 
-  public FileOutputChannelFactoryTest() throws IOException
+  public FileOutputChannelFactoryTest()
   {
-    super(new FileOutputChannelFactory(folder.newFolder(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
+    super(new FileOutputChannelFactory(folder.toFile(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
   }
 }

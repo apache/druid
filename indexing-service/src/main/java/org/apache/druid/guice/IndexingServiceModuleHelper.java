@@ -22,8 +22,6 @@ package org.apache.druid.guice;
 import com.google.inject.Binder;
 import org.apache.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
-import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import org.apache.druid.server.initialization.IndexerZkConfig;
 
 /**
  */
@@ -34,8 +32,6 @@ public class IndexingServiceModuleHelper
   public static void configureTaskRunnerConfigs(Binder binder)
   {
     JsonConfigProvider.bind(binder, INDEXER_RUNNER_PROPERTY_PREFIX, ForkingTaskRunnerConfig.class);
-    JsonConfigProvider.bind(binder, INDEXER_RUNNER_PROPERTY_PREFIX, RemoteTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, INDEXER_RUNNER_PROPERTY_PREFIX, HttpRemoteTaskRunnerConfig.class);
-    JsonConfigProvider.bind(binder, "druid.zk.paths.indexer", IndexerZkConfig.class);
   }
 }

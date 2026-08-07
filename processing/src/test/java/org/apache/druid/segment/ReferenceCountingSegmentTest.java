@@ -25,9 +25,9 @@ import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Days;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Closeable;
 import java.util.concurrent.ExecutorService;
@@ -47,7 +47,7 @@ public class ReferenceCountingSegmentTest
   private IndexedTable indexedTable;
   private int underlyingSegmentClosedCount;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     underlyingSegmentClosedCount = 0;
@@ -97,17 +97,17 @@ public class ReferenceCountingSegmentTest
   @Test
   public void testMultipleClose() throws Exception
   {
-    Assert.assertEquals(0, underlyingSegmentClosedCount);
-    Assert.assertFalse(segment.isClosed());
-    Assert.assertTrue(segment.increment());
-    Assert.assertEquals(1, segment.getNumReferences());
+    Assertions.assertEquals(0, underlyingSegmentClosedCount);
+    Assertions.assertFalse(segment.isClosed());
+    Assertions.assertTrue(segment.increment());
+    Assertions.assertEquals(1, segment.getNumReferences());
 
     Closeable closeable = segment.decrementOnceCloseable();
-    Assert.assertEquals(0, underlyingSegmentClosedCount);
+    Assertions.assertEquals(0, underlyingSegmentClosedCount);
     closeable.close();
-    Assert.assertEquals(0, underlyingSegmentClosedCount);
+    Assertions.assertEquals(0, underlyingSegmentClosedCount);
     closeable.close();
-    Assert.assertEquals(0, underlyingSegmentClosedCount);
+    Assertions.assertEquals(0, underlyingSegmentClosedCount);
     exec.submit(
         () -> {
           try {
@@ -118,17 +118,17 @@ public class ReferenceCountingSegmentTest
           }
         }
     ).get();
-    Assert.assertEquals(0, segment.getNumReferences());
-    Assert.assertEquals(0, underlyingSegmentClosedCount);
-    Assert.assertFalse(segment.isClosed());
+    Assertions.assertEquals(0, segment.getNumReferences());
+    Assertions.assertEquals(0, underlyingSegmentClosedCount);
+    Assertions.assertFalse(segment.isClosed());
 
     // close for reals
     segment.close();
-    Assert.assertTrue(segment.isClosed());
-    Assert.assertEquals(1, underlyingSegmentClosedCount);
+    Assertions.assertTrue(segment.isClosed());
+    Assertions.assertEquals(1, underlyingSegmentClosedCount);
     // ... but make sure it only happens once
     segment.close();
-    Assert.assertEquals(1, underlyingSegmentClosedCount);
+    Assertions.assertEquals(1, underlyingSegmentClosedCount);
     exec.submit(
         () -> {
           try {
@@ -140,17 +140,17 @@ public class ReferenceCountingSegmentTest
         }
     ).get();
 
-    Assert.assertEquals(0, segment.getNumReferences());
-    Assert.assertTrue(segment.isClosed());
-    Assert.assertEquals(1, underlyingSegmentClosedCount);
+    Assertions.assertEquals(0, segment.getNumReferences());
+    Assertions.assertTrue(segment.isClosed());
+    Assertions.assertEquals(1, underlyingSegmentClosedCount);
 
     segment.increment();
     segment.increment();
     segment.increment();
-    Assert.assertEquals(0, segment.getNumReferences());
-    Assert.assertEquals(1, underlyingSegmentClosedCount);
+    Assertions.assertEquals(0, segment.getNumReferences());
+    Assertions.assertEquals(1, underlyingSegmentClosedCount);
     segment.close();
-    Assert.assertEquals(0, segment.getNumReferences());
-    Assert.assertEquals(1, underlyingSegmentClosedCount);
+    Assertions.assertEquals(0, segment.getNumReferences());
+    Assertions.assertEquals(1, underlyingSegmentClosedCount);
   }
 }

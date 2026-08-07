@@ -51,11 +51,14 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -70,6 +73,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.log.NoopRequestLogger;
+import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.router.QueryHostFinder;
 import org.apache.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
@@ -467,8 +471,43 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     verifyServletCallsForQuery(query, true, false, hostFinder, properties, true);
   }
 
+  /**
+   * A {@link GenericQueryMetricsFactory} that overrides no-op dimensions (e.g. identity) so tests can assert on them.
+   */
+  private static GenericQueryMetricsFactory makeRouterTestOverrideEmittingFactory()
+  {
+    return new GenericQueryMetricsFactory()
+    {
+      private DefaultQueryMetrics makeOverridingMetrics()
+      {
+        return new DefaultQueryMetrics()
+        {
+          @Override
+          public void identity(String identity)
+          {
+            setDimension("identity", identity);
+          }
+        };
+      }
+
+      @Override
+      public QueryMetrics<Query<?>> makeMetrics(Query<?> query)
+      {
+        DefaultQueryMetrics metrics = makeOverridingMetrics();
+        metrics.query(query);
+        return metrics;
+      }
+
+      @Override
+      public QueryMetrics<Query<?>> makeMetrics()
+      {
+        return makeOverridingMetrics();
+      }
+    };
+  }
+
   @Test
-  public void testMetricsEmittedWithErrorStatusCodeButNoResultException()
+  public void testMetricsEmittedWithErrorStatusCodeButNoResultException() throws IOException
   {
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("foo")
@@ -501,6 +540,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     };
 
     final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
+    final RequestLogger requestLogger = Mockito.mock(RequestLogger.class);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         TestHelper.makeJsonMapper(),
@@ -509,8 +549,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         stubServiceEmitter,
-        NoopRequestLogger.instance(),
-        new DefaultGenericQueryMetricsFactory(),
+        requestLogger,
+        makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
         new ServerConfig()
@@ -528,7 +568,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         504,
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
+    assertNativeQueryStatusCodeMatchesMetric(requestLogger, getEmittedStatusCode(stubServiceEmitter));
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
   @Test
@@ -581,7 +623,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         stubServiceEmitter,
         NoopRequestLogger.instance(),
-        new DefaultGenericQueryMetricsFactory(),
+        makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
         new ServerConfig()
@@ -600,10 +642,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
   @Test
-  public void testOnFailureWithExceptionAndUnassignedStatusCode()
+  public void testOnFailureWithExceptionAndUnassignedStatusCode() throws IOException
   {
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("foo")
@@ -625,6 +668,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Mockito.when(responseMock.getHeaders()).thenReturn(HttpFields.build());
 
     final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
+    final RequestLogger requestLogger = Mockito.mock(RequestLogger.class);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         TestHelper.makeJsonMapper(),
@@ -633,8 +677,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         stubServiceEmitter,
-        NoopRequestLogger.instance(),
-        new DefaultGenericQueryMetricsFactory(),
+        requestLogger,
+        makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
         new ServerConfig()
@@ -653,7 +697,9 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         500, // Should default to 500 when status is 0
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
+    assertNativeQueryStatusCodeMatchesMetric(requestLogger, getEmittedStatusCode(stubServiceEmitter));
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
 
@@ -872,6 +918,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     };
     final Result result = new Result(proxyRequestMock, response);
     final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
+    final RequestLogger requestLogger = Mockito.mock(RequestLogger.class);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         jsonMapper,
@@ -880,7 +927,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         stubServiceEmitter,
-        NoopRequestLogger.instance(),
+        requestLogger,
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         properties,
@@ -926,10 +973,51 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
       );
     }
+    if (!isJDBCSql) {
+      assertStatusCodeMatchesMetric(requestLogger, isNativeSql, getEmittedStatusCode(stubServiceEmitter));
+    }
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.
     EasyMock.verify(hostFinder, requestMock);
     Assert.assertEquals(1, didService.get());
+  }
+
+  private static int getEmittedStatusCode(StubServiceEmitter stubServiceEmitter)
+  {
+    return (int) stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE);
+  }
+
+  private static void assertStatusCodeMatchesMetric(
+      RequestLogger requestLogger,
+      boolean isSqlQuery,
+      int metricStatusCode
+  ) throws IOException
+  {
+    if (isSqlQuery) {
+      final ArgumentCaptor<RequestLogLine> requestLogLineCaptor = ArgumentCaptor.forClass(RequestLogLine.class);
+      Mockito.verify(requestLogger).logSqlQuery(requestLogLineCaptor.capture());
+      assertStatusCode(requestLogLineCaptor.getValue(), metricStatusCode);
+    } else {
+      assertNativeQueryStatusCodeMatchesMetric(requestLogger, metricStatusCode);
+    }
+  }
+
+  private static void assertNativeQueryStatusCodeMatchesMetric(
+      RequestLogger requestLogger,
+      int metricStatusCode
+  ) throws IOException
+  {
+    final ArgumentCaptor<RequestLogLine> requestLogLineCaptor = ArgumentCaptor.forClass(RequestLogLine.class);
+    Mockito.verify(requestLogger).logNativeQuery(requestLogLineCaptor.capture());
+    assertStatusCode(requestLogLineCaptor.getValue(), metricStatusCode);
+  }
+
+  private static void assertStatusCode(RequestLogLine requestLogLine, int metricStatusCode)
+  {
+    Assert.assertEquals(
+        metricStatusCode,
+        requestLogLine.getQueryStats().getStats().get(DruidMetrics.STATUS_CODE)
+    );
   }
 
   private static Server makeTestDeleteServer(int port, final CountDownLatch latch)

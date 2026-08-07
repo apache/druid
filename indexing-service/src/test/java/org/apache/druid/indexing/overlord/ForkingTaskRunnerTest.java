@@ -41,6 +41,8 @@ import org.apache.druid.indexing.seekablestream.TestSeekableStreamIndexTaskIOCon
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorStateTest;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -78,6 +80,52 @@ public class ForkingTaskRunnerTest
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Test
+  public void testGetJavaCommandPrefersRunJavaScriptWhenPresent() throws IOException
+  {
+    final File workingDir = temporaryFolder.newFolder();
+    final File binDir = new File(workingDir, "bin");
+    FileUtils.mkdirp(binDir);
+    Assert.assertTrue(new File(binDir, "run-java").createNewFile());
+
+    // No configured command (null) and the run-java script is present -> use it.
+    Assert.assertEquals(
+        "bin/run-java",
+        ForkingTaskRunner.getJavaCommand(null, workingDir)
+    );
+  }
+
+  @Test
+  public void testGetJavaCommandFallsBackToJavaWhenScriptAbsent() throws IOException
+  {
+    final File workingDir = temporaryFolder.newFolder();
+    Assert.assertEquals(
+        "java",
+        ForkingTaskRunner.getJavaCommand(null, workingDir)
+    );
+  }
+
+  @Test
+  public void testConfigHasNoDefaultJavaCommand()
+  {
+    Assert.assertNull(new ForkingTaskRunnerConfig().getJavaCommand());
+  }
+
+  @Test
+  public void testGetJavaCommandRespectsExplicitOverride() throws IOException
+  {
+    final File workingDir = temporaryFolder.newFolder();
+    final File binDir = new File(workingDir, "bin");
+    FileUtils.mkdirp(binDir);
+    Assert.assertTrue(new File(binDir, "run-java").createNewFile());
+
+    // An explicit, non-default javaCommand must be used verbatim even when the run-java script is present.
+    Assert.assertEquals(
+        "/opt/jdk/bin/java",
+        ForkingTaskRunner.getJavaCommand("/opt/jdk/bin/java", workingDir)
+    );
+  }
 
   // This tests the test to make sure the test fails when it should.
   @Test(expected = AssertionError.class)
@@ -383,6 +431,39 @@ public class ForkingTaskRunnerTest
         3,
         ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickStorageSlot(taskId).getDirectory(), taskId))
     );
+  }
+
+  @Test
+  public void testGettingTheNextAttemptDirFailsIfAttemptDirectoryCannotBeCreated() throws IOException
+  {
+    final File taskDir = temporaryFolder.newFile();
+    final File attemptDir = new File(taskDir, "attempt");
+
+    final ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> ForkingTaskRunner.getNextAttemptID(taskDir)
+    );
+
+    Assert.assertEquals("Error creating directory[" + attemptDir + "]", exception.getMessage());
+    Assert.assertTrue(exception.getCause() instanceof IOException);
+  }
+
+  @Test
+  public void testGettingTheNextAttemptDirFailsIfAttemptCannotBeCreated() throws IOException
+  {
+    final File taskDir = temporaryFolder.newFolder();
+    final File attemptDir = new File(taskDir, "attempt");
+    FileUtils.mkdirp(attemptDir);
+    final File attempt = new File(attemptDir, "1");
+    Assert.assertTrue(attempt.createNewFile());
+
+    final ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> ForkingTaskRunner.getNextAttemptID(taskDir)
+    );
+
+    Assert.assertEquals("Error creating directory[" + attempt + "]", exception.getMessage());
+    Assert.assertTrue(exception.getCause() instanceof IOException);
   }
 
   @Test

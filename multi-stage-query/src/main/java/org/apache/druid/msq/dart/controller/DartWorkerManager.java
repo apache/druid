@@ -156,6 +156,12 @@ public class DartWorkerManager implements WorkerManager
   }
 
   @Override
+  public int getMaxWorkerCount()
+  {
+    return workerIds.size();
+  }
+
+  @Override
   public Map<Integer, List<WorkerStats>> getWorkerStats()
   {
     final Int2ObjectMap<List<WorkerStats>> retVal = new Int2ObjectAVLTreeMap<>();

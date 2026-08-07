@@ -39,6 +39,7 @@ export interface CoordinatorDynamicConfig {
   useRoundRobinSegmentAssignment?: boolean;
   smartSegmentLoading?: boolean;
   turboLoadingNodes?: string[];
+  historicalTierAliases?: Record<string, string[]>;
 
   // Undocumented
   debugDimensions?: any;
@@ -262,6 +263,18 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
           Please use this config with caution. All servers should eventually be removed from this
           list once the segment loading on the respective historicals is finished.
         </p>
+      </>
+    ),
+  },
+  {
+    name: 'historicalTierAliases',
+    type: 'json',
+    placeholder: '{"hot": ["hot_v1", "hot_v2"]}',
+    info: (
+      <>
+        A map of virtual alias tier names to the sets of physical historical tiers they represent.
+        Retention rules can reference an alias tier instead of listing each physical tier
+        separately. An alias tier cannot itself be a physical tier name.
       </>
     ),
   },

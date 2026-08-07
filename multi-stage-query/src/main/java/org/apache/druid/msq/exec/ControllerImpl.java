@@ -58,6 +58,7 @@ import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.SegmentGranularitySpec;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -139,6 +140,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.input.InputSpecSlicerFactory;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.input.MapInputSpecSlicer;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.external.ExternalInputSpecSlicer;
@@ -148,7 +150,6 @@ import org.apache.druid.msq.input.lookup.LookupInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpecSlicer;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.input.stage.StageInputSpecSlicer;
-import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -208,6 +209,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -251,11 +253,19 @@ public class ControllerImpl implements Controller
   private final AtomicReference<MSQErrorReport> workerErrorRef = new AtomicReference<>();
 
   /**
-   * Set by {@link #stop(CancellationReason)}. If non-null, this reason takes priority over any exception
-   * encountered during execution when building the error report. If we didn't do this, interrupts arising
-   * from cancellation could produce errors that are less informative than the actual cancellation reason.
+   * Set by {@link #stop(CancellationReason, Throwable)}. If non-null, this reason takes priority over any
+   * exception encountered during execution when building the error report. If we didn't do this, interrupts
+   * arising from cancellation could produce errors that are less informative than the actual cancellation reason.
    */
   private volatile CancellationReason cancelReason;
+
+  /**
+   * Set by {@link #stop(CancellationReason, Throwable)} when cancellation was triggered by an external error
+   * (such as a failure writing results back to the client). If non-null, this exception is logged and included
+   * in the error report instead of a bare {@link CanceledFault}, so the original error is not lost.
+   */
+  @Nullable
+  private volatile Throwable cancelException;
 
   // For system warning reporting
   private final ConcurrentLinkedQueue<MSQErrorReport> workerWarnings = new ConcurrentLinkedQueue<>();
@@ -374,14 +384,20 @@ public class ControllerImpl implements Controller
   }
 
   @Override
-  public void stop(CancellationReason reason)
+  public void stop(CancellationReason reason, @Nullable Throwable cause)
   {
     final QueryDefinition queryDef = queryDefRef.get();
 
     // stopGracefully() is called when the containing process is terminated, or when the task is canceled.
-    log.info("Query [%s] canceled.", queryDef != null ? queryDef.getQueryId() : "<no id yet>");
+    final String queryIdForLog = queryDef != null ? queryDef.getQueryId() : "<no id yet>";
+    if (cause != null) {
+      log.warn(cause, "Query[%s] canceled, reason[%s].", queryIdForLog, reason);
+    } else {
+      log.info("Query[%s] canceled, reason[%s].", queryIdForLog, reason);
+    }
 
     cancelReason = reason;
+    cancelException = cause;
     stopExternalFetchers();
     kernelManipulationQueue.clear(); // No point processing any possibly-queued commands.
     addToKernelManipulationQueue(
@@ -423,8 +439,11 @@ public class ControllerImpl implements Controller
       closer.register(workerSketchFetcher::close);
 
       // Execution-related: run the multi-stage QueryDefinition.
-      final InputSpecSlicerFactory inputSpecSlicerFactory =
-          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager));
+      final InputSpecSlicerFactory inputSpecSlicerFactory = makeInputSpecSlicerFactory(
+          context,
+          workerManager.getWorkerIds(),
+          getQueryContext()
+      );
 
       final Pair<ControllerQueryKernel, ListenableFuture<?>> queryRunResult =
           new RunQueryUntilDone(
@@ -479,7 +498,14 @@ public class ControllerImpl implements Controller
 
       taskStateForReport = TaskState.FAILED;
 
-      if (cancelReason != null) {
+      if (cancelReason == CancellationReason.UNKNOWN && cancelException != null) {
+        // Cancellation triggered by an external error. Report the original error.
+        if (exceptionEncountered != null) {
+          cancelException.addSuppressed(exceptionEncountered);
+        }
+        errorForReport =
+            MSQErrorReport.fromException(queryId(), selfHost, null, cancelException, querySpec.getColumnMappings());
+      } else if (cancelReason != null) {
         errorForReport = MSQErrorReport.fromFault(queryId(), selfHost, null, new CanceledFault(cancelReason));
       } else {
         errorForReport = MSQTasks.makeErrorReport(queryId(), selfHost, controllerError, workerError);
@@ -487,11 +513,11 @@ public class ControllerImpl implements Controller
 
       // Log the errors we encountered.
       if (controllerError != null) {
-        log.warn("Controller: %s", MSQTasks.errorReportToLogMessage(controllerError));
+        log.warn("Controller: %s", MSQTasks.errorReportToLogMessage(controllerError, context.isDebug()));
       }
 
       if (workerError != null) {
-        log.warn("Worker: %s", MSQTasks.errorReportToLogMessage(workerError));
+        log.warn("Worker: %s", MSQTasks.errorReportToLogMessage(workerError, context.isDebug()));
       }
     }
     if (queryKernel != null && queryKernel.isSuccess()) {
@@ -728,7 +754,7 @@ public class ControllerImpl implements Controller
 
     final QueryContext queryContext = querySpec.getContext();
 
-    final QueryDefinition queryDef;
+    QueryDefinition queryDef;
     if (legacyQuery != null) {
       QueryKitBasedMSQPlanner qkPlanner = new QueryKitBasedMSQPlanner(
           querySpec,
@@ -762,15 +788,21 @@ public class ControllerImpl implements Controller
       }
     }
 
-    QueryValidator.validateQueryDef(queryDef);
-    queryDefRef.set(queryDef);
-
     workerManager = context.newWorkerManager(
         context.queryId(),
         querySpec,
         queryKernelConfig,
         getWorkerFailureListener()
     );
+
+    queryDef = queryDef.withRuntimeBounds(
+        workerManager.getMaxWorkerCount(),
+        context.maxNonLeafWorkerCount(),
+        context.targetPartitionsPerWorker()
+    );
+
+    QueryValidator.validateQueryDef(queryDef);
+    queryDefRef.set(queryDef);
 
     if (queryKernelConfig.isFaultTolerant() && !(workerManager instanceof RetryCapableWorkerManager)) {
       // Not expected to happen, since all WorkerManager impls are currently retry-capable. Defensive check
@@ -1845,13 +1877,26 @@ public class ControllerImpl implements Controller
 
     Granularity segmentGranularity = destination.getSegmentGranularity();
 
-    GranularitySpec granularitySpec = new UniformGranularitySpec(
-        segmentGranularity,
-        querySpec.getContext().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
-        dataSchema.getGranularitySpec().isRollup(),
-        // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
-        destination.getReplaceTimeChunks()
-    );
+    // For baseTable (clustered) mode, segment granularity + intervals live in a SegmentGranularitySpec and query
+    // granularity lives in the baseTable spec's virtual column (already recorded via dataSchema.getBaseTable()), so the
+    // legacy UniformGranularitySpec is left null. For the legacy (non-baseTable) path, the GranularitySpec carries
+    // everything as before and the SegmentGranularitySpec is left null.
+    final GranularitySpec granularitySpec;
+    final SegmentGranularitySpec segmentGranularitySpec;
+    if (dataSchema.getBaseTable() != null) {
+      // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+      segmentGranularitySpec = new SegmentGranularitySpec(segmentGranularity, destination.getReplaceTimeChunks());
+      granularitySpec = null;
+    } else {
+      granularitySpec = new UniformGranularitySpec(
+          segmentGranularity,
+          querySpec.getContext().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
+          dataSchema.getGranularitySpec().isRollup(),
+          // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
+          destination.getReplaceTimeChunks()
+      );
+      segmentGranularitySpec = null;
+    }
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
 
@@ -1885,6 +1930,8 @@ public class ControllerImpl implements Controller
         transformSpec,
         indexSpec,
         granularitySpec,
+        segmentGranularitySpec,
+        dataSchema.getBaseTable(),
         dataSchema.getProjections()
     );
   }
@@ -2143,17 +2190,30 @@ public class ControllerImpl implements Controller
     );
   }
 
-  private static InputSpecSlicerFactory makeInputSpecSlicerFactory(final InputSpecSlicer tableInputSpecSlicer)
+  private static InputSpecSlicerFactory makeInputSpecSlicerFactory(
+      final ControllerContext controllerContext,
+      final List<String> workerIds,
+      final QueryContext queryContext
+  )
   {
-    return (stagePartitionsMap, stageOutputChannelModeMap) -> new MapInputSpecSlicer(
-        ImmutableMap.<Class<? extends InputSpec>, InputSpecSlicer>builder()
-                    .put(StageInputSpec.class, new StageInputSpecSlicer(stagePartitionsMap, stageOutputChannelModeMap))
-                    .put(ExternalInputSpec.class, new ExternalInputSpecSlicer())
-                    .put(InlineInputSpec.class, new InlineInputSpecSlicer())
-                    .put(LookupInputSpec.class, new LookupInputSpecSlicer())
-                    .put(TableInputSpec.class, tableInputSpecSlicer)
-                    .build()
-    );
+    return (stagePartitionsMap, stageOutputChannelModeMap) -> {
+      Map<Class<? extends InputSpec>, InputSpecSlicer> slicers = new LinkedHashMap<>();
+
+      slicers.put(StageInputSpec.class, new StageInputSpecSlicer(stagePartitionsMap, stageOutputChannelModeMap));
+      slicers.put(ExternalInputSpec.class, new ExternalInputSpecSlicer());
+      slicers.put(InlineInputSpec.class, new InlineInputSpecSlicer());
+      slicers.put(LookupInputSpec.class, new LookupInputSpecSlicer());
+
+      // Context-supplied providers override the default ones, so they get added last.
+      for (final InputSpecSlicerProvider slicerProvider : controllerContext.inputSpecSlicerProviders()) {
+        slicers.put(
+            slicerProvider.specClass(),
+            slicerProvider.createSlicer(controllerContext, queryContext, workerIds)
+        );
+      }
+
+      return new MapInputSpecSlicer(slicers);
+    };
   }
 
   private static Map<Integer, Interval> copyOfStageRuntimesEndingAtCurrentTime(

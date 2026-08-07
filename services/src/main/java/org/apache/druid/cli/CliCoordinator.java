@@ -50,6 +50,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SegmentSchemaCacheModule;
 import org.apache.druid.guice.SupervisorCleanupModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
@@ -76,6 +77,7 @@ import org.apache.druid.server.coordinator.CloneStatusManager;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
+import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -104,6 +106,8 @@ import org.apache.druid.server.http.RulesResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.http.ServersResource;
 import org.apache.druid.server.http.TiersResource;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
@@ -197,6 +201,7 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.coordinator.period", CoordinatorPeriodConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
+            JsonConfigProvider.bind(binder, "druid.coordinator.balancer.diskNormalized", DiskNormalizedCostBalancerStrategyConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segment", CoordinatorSegmentWatcherConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
             binder.bind(DruidCoordinatorConfig.class);
@@ -228,6 +233,24 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class)
                   .to(CoordinatorJettyServerInitializer.class);
+
+            // QoS filtering to prevent heavy coordinator API requests from starving health check endpoints.
+            // Set druid.coordinator.server.maxConcurrentRequests=-1 to disable.
+            final int serverHttpNumThreads = ServerConfig.getNumThreadsFromProperties(properties);
+            final int maxConcurrentRequests = properties.containsKey("druid.coordinator.server.maxConcurrentRequests")
+                    ? Integer.parseInt(properties.getProperty("druid.coordinator.server.maxConcurrentRequests"))
+                    : ServerConfig.getDefaultMaxConcurrentRequests(serverHttpNumThreads);
+            if (maxConcurrentRequests > 0) {
+              log.info("Coordinator QoS filtering enabled. Max concurrent requests: [%d]", maxConcurrentRequests);
+              JettyBindings.addQosFilter(
+                  binder,
+                  new String[]{"/druid/coordinator/v1/*", "/druid-internal/*"},
+                  maxConcurrentRequests,
+                  new String[]{"/druid/coordinator/v1/isLeader", "/druid/coordinator/v1/leader"}
+              );
+            } else {
+              log.info("Coordinator QoS filtering disabled.");
+            }
 
             Jerseys.addResource(binder, CoordinatorResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionResource.class);
@@ -308,6 +331,7 @@ public class CliCoordinator extends ServerRunnable
       modules.add(new MSQIndexingModule());
       modules.add(new MSQDurableStorageModule());
       modules.add(new MSQExternalDataSourceModule());
+      modules.add(new RegexEngineModule());
     }
 
     return modules;

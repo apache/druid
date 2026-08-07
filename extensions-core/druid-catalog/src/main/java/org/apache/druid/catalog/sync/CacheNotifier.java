@@ -87,7 +87,7 @@ public class CacheNotifier
           return;
         }
         catch (Throwable t) {
-          LOG.makeAlert(t, callerName + ": Error occured while handling updates.").emit();
+          LOG.makeAlert(t, callerName + ": Error occurred while handling updates.").emit();
         }
       }
     });

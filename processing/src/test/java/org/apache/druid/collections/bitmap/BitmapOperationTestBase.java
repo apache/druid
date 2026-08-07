@@ -23,8 +23,8 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.utils.CloseableUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.roaringbitmap.buffer.BufferFastAggregation;
 import org.roaringbitmap.buffer.ImmutableRoaringBitmap;
 import org.roaringbitmap.buffer.MutableRoaringBitmap;
@@ -90,7 +90,7 @@ public abstract class BitmapOperationTestBase
     final ByteArrayOutputStream out = new ByteArrayOutputStream();
     r.serialize(new DataOutputStream(out));
     final byte[] bytes = out.toByteArray();
-    Assert.assertEquals(buf.remaining(), bytes.length);
+    Assertions.assertEquals(buf.remaining(), bytes.length);
     buf.put(bytes);
     buf.rewind();
     return new ImmutableRoaringBitmap(buf.asReadOnlyBuffer());
@@ -172,7 +172,7 @@ public abstract class BitmapOperationTestBase
   public void testConciseUnion()
   {
     ImmutableConciseSet union = ImmutableConciseSet.union(CONCISE);
-    Assert.assertEquals(unionCount, union.size());
+    Assertions.assertEquals(unionCount, union.size());
   }
 
   @Test
@@ -181,35 +181,35 @@ public abstract class BitmapOperationTestBase
     ImmutableConciseSet union = ImmutableConciseSet.union(
         Arrays.stream(OFF_HEAP_CONCISE).map(ResourceHolder::get).iterator()
     );
-    Assert.assertEquals(unionCount, union.size());
+    Assertions.assertEquals(unionCount, union.size());
   }
 
   @Test
   public void testGenericConciseUnion()
   {
     ImmutableBitmap union = CONCISE_FACTORY.union(Arrays.asList(GENERIC_CONCISE));
-    Assert.assertEquals(unionCount, union.size());
+    Assertions.assertEquals(unionCount, union.size());
   }
 
   @Test
   public void testGenericConciseIntersection()
   {
     ImmutableBitmap intersection = CONCISE_FACTORY.intersection(Arrays.asList(GENERIC_CONCISE));
-    Assert.assertTrue(intersection.size() >= minIntersection);
+    Assertions.assertTrue(intersection.size() >= minIntersection);
   }
 
   @Test
   public void testRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Arrays.asList(ROARING).iterator());
-    Assert.assertEquals(unionCount, union.getCardinality());
+    Assertions.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
   public void testImmutableRoaringUnion()
   {
     ImmutableRoaringBitmap union = BufferFastAggregation.horizontal_or(Arrays.asList(IMMUTABLE_ROARING).iterator());
-    Assert.assertEquals(unionCount, union.getCardinality());
+    Assertions.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
@@ -218,20 +218,20 @@ public abstract class BitmapOperationTestBase
     ImmutableRoaringBitmap union = BufferFastAggregation.naive_or(
         Arrays.stream(OFF_HEAP_ROARING).map(ResourceHolder::get).iterator()
     );
-    Assert.assertEquals(unionCount, union.getCardinality());
+    Assertions.assertEquals(unionCount, union.getCardinality());
   }
 
   @Test
   public void testGenericRoaringUnion()
   {
     ImmutableBitmap union = ROARING_FACTORY.union(Arrays.asList(GENERIC_ROARING));
-    Assert.assertEquals(unionCount, union.size());
+    Assertions.assertEquals(unionCount, union.size());
   }
 
   @Test
   public void testGenericRoaringIntersection()
   {
     ImmutableBitmap intersection = ROARING_FACTORY.intersection(Arrays.asList(GENERIC_ROARING));
-    Assert.assertTrue(intersection.size() >= minIntersection);
+    Assertions.assertTrue(intersection.size() >= minIntersection);
   }
 }

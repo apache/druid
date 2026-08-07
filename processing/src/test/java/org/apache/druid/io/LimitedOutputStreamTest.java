@@ -22,9 +22,9 @@ package org.apache.druid.io;
 import org.apache.druid.java.util.common.StringUtils;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -39,7 +39,7 @@ public class LimitedOutputStreamTest
     try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
          final OutputStream stream =
              new LimitedOutputStream(baos, 0, LimitedOutputStreamTest::makeErrorMessage)) {
-      final IOException e = Assert.assertThrows(
+      final IOException e = Assertions.assertThrows(
           IOException.class,
           () -> stream.write('b')
       );
@@ -57,7 +57,7 @@ public class LimitedOutputStreamTest
       stream.write('a');
       stream.write(new byte[]{'b'});
       stream.write(new byte[]{'c'}, 0, 1);
-      final IOException e = Assert.assertThrows(
+      final IOException e = Assertions.assertThrows(
           IOException.class,
           () -> stream.write('d')
       );
@@ -82,7 +82,7 @@ public class LimitedOutputStreamTest
     try (final DataOutputStream dos = new DataOutputStream(new ByteArrayOutputStream());
          final LimitedOutputStream stream =
              new LimitedOutputStream(dos, 3, LimitedOutputStreamTest::makeErrorMessage)) {
-      Assert.assertThrows(UnsupportedOperationException.class, stream::toByteArray);
+      Assertions.assertThrows(UnsupportedOperationException.class, stream::toByteArray);
     }
   }
 

@@ -34,16 +34,16 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -53,8 +53,8 @@ import java.util.Map;
  */
 public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  Path tempDir;
 
   @Test
   public void testRacMethodThrowsWithoutDeserializerForRacEntry() throws IOException
@@ -87,7 +87,7 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
     final List<Frame> frameList = frames.toList();
 
     // Write frame file with useWireTransferableForFrames = true (RAC format)
-    final File file = temporaryFolder.newFile();
+    final File file = Files.createTempFile(tempDir, "junit", null).toFile();
     try (final FrameFileWriter writer = FrameFileWriter.open(
         Channels.newChannel(Files.newOutputStream(file.toPath())),
         null,
@@ -101,13 +101,13 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
 
     // Try to read using rac(int, null) without deserializer - should throw
     try (final FrameFile frameFile = FrameFile.open(file, null)) {
-      Assert.assertEquals(frameList.size(), frameFile.numFrames());
+      Assertions.assertEquals(frameList.size(), frameFile.numFrames());
 
       // This should throw DruidException because no deserializer was provided
-      Assert.assertThrows(
-          "Should throw DruidException when reading RAC entry without deserializer",
+      Assertions.assertThrows(
           DruidException.class,
-          () -> frameFile.rac(0, null)
+          () -> frameFile.rac(0, null),
+          "Should throw DruidException when reading RAC entry without deserializer"
       );
     }
   }

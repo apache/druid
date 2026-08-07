@@ -30,9 +30,9 @@ import org.apache.druid.segment.serde.cell.NativeClearedByteBufferProvider;
 import org.apache.druid.segment.writeout.HeapByteBufferWriteOutBytes;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -63,7 +63,7 @@ public class SerializablePairLongDoubleBufferStoreTest
   private final SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
   private SerializablePairLongDoubleBufferStore bufferStore;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     bufferStore = new SerializablePairLongDoubleBufferStore(
@@ -85,7 +85,7 @@ public class SerializablePairLongDoubleBufferStoreTest
 
     int i = 0;
     while (iterator.hasNext()) {
-      Assert.assertEquals(integerRangeArr[i], iterator.next());
+      Assertions.assertEquals(integerRangeArr[i], iterator.next());
       i++;
     }
   }
@@ -95,8 +95,8 @@ public class SerializablePairLongDoubleBufferStoreTest
   {
     bufferStore.store(null);
     IOIterator<SerializablePairLongDouble> iterator = bufferStore.iterator();
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertNull(iterator.next());
+    Assertions.assertTrue(iterator.hasNext());
+    Assertions.assertNull(iterator.next());
   }
 
   @Test
@@ -106,23 +106,23 @@ public class SerializablePairLongDoubleBufferStoreTest
 
     IOIterator<SerializablePairLongDouble> iterator = bufferStore.iterator();
 
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
     // expect hasNext() to not modify state
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
   }
 
-  @Test(expected = NoSuchElementException.class)
+  @Test
   public void testIteratorEmptyThrows() throws Exception
   {
     IOIterator<SerializablePairLongDouble> iterator = bufferStore.iterator();
-    iterator.next();
+    Assertions.assertThrows(NoSuchElementException.class, iterator::next);
   }
 
   @Test
   public void testIteratorEmptyHasNext() throws Exception
   {
     IOIterator<SerializablePairLongDouble> iterator = bufferStore.iterator();
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -133,8 +133,8 @@ public class SerializablePairLongDoubleBufferStoreTest
     }
 
     SerializablePairLongDoubleColumnHeader columnHeader = (SerializablePairLongDoubleColumnHeader) bufferStore.createColumnHeader();
-    Assert.assertEquals(integerRangeArr[0].lhs.longValue(), columnHeader.getMinValue());
-    Assert.assertTrue(columnHeader.isUseIntegerDeltas());
+    Assertions.assertEquals(integerRangeArr[0].lhs.longValue(), columnHeader.getMinValue());
+    Assertions.assertTrue(columnHeader.isUseIntegerDeltas());
   }
 
   @Test
@@ -145,8 +145,8 @@ public class SerializablePairLongDoubleBufferStoreTest
     }
 
     SerializablePairLongDoubleColumnHeader columnHeader = (SerializablePairLongDoubleColumnHeader) bufferStore.createColumnHeader();
-    Assert.assertEquals(MIN_LONG, columnHeader.getMinValue());
-    Assert.assertFalse(columnHeader.isUseIntegerDeltas());
+    Assertions.assertEquals(MIN_LONG, columnHeader.getMinValue());
+    Assertions.assertFalse(columnHeader.isUseIntegerDeltas());
   }
 
   @Test
@@ -168,8 +168,8 @@ public class SerializablePairLongDoubleBufferStoreTest
 
       SerializablePairLongDoubleColumnHeader deserializedColumnhHeader =
           (SerializablePairLongDoubleColumnHeader) AbstractSerializablePairLongObjectColumnHeader.fromBuffer(byteBuffer, SerializablePairLongDouble.class);
-      Assert.assertEquals(MIN_INTEGER, deserializedColumnhHeader.getMinValue());
-      Assert.assertTrue(deserializedColumnhHeader.isUseIntegerDeltas());
+      Assertions.assertEquals(MIN_INTEGER, deserializedColumnhHeader.getMinValue());
+      Assertions.assertTrue(deserializedColumnhHeader.isUseIntegerDeltas());
     }
   }
 
@@ -194,8 +194,8 @@ public class SerializablePairLongDoubleBufferStoreTest
 
       SerializablePairLongDoubleColumnHeader deserializedColumnhHeader =
           (SerializablePairLongDoubleColumnHeader) AbstractSerializablePairLongObjectColumnHeader.fromBuffer(byteBuffer, SerializablePairLongDouble.class);
-      Assert.assertEquals(MIN_LONG, deserializedColumnhHeader.getMinValue());
-      Assert.assertFalse(deserializedColumnhHeader.isUseIntegerDeltas());
+      Assertions.assertEquals(MIN_LONG, deserializedColumnhHeader.getMinValue());
+      Assertions.assertFalse(deserializedColumnhHeader.isUseIntegerDeltas());
     }
   }
 
@@ -209,9 +209,9 @@ public class SerializablePairLongDoubleBufferStoreTest
 
     IOIterator<SerializablePairLongDouble> iterator = bufferStore.iterator();
 
-    Assert.assertTrue(iterator.hasNext());
-    Assert.assertEquals(value, iterator.next());
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertTrue(iterator.hasNext());
+    Assertions.assertEquals(value, iterator.next());
+    Assertions.assertFalse(iterator.hasNext());
   }
 
   @Test
@@ -234,14 +234,14 @@ public class SerializablePairLongDoubleBufferStoreTest
 
     SerializablePairLongDoubleColumnHeader columnHeader = (SerializablePairLongDoubleColumnHeader) bufferStore.createColumnHeader();
 
-    Assert.assertEquals(0, columnHeader.getMinValue());
+    Assertions.assertEquals(0, columnHeader.getMinValue());
 
     AbstractSerializablePairLongObjectBufferStore.TransferredBuffer transferredBuffer = bufferStore.transferToRowWriter(
         NativeClearedByteBufferProvider.INSTANCE,
         writeOutMedium
     );
 
-    Assert.assertEquals(94, transferredBuffer.getSerializedSize());
+    Assertions.assertEquals(94, transferredBuffer.getSerializedSize());
   }
 
   @Test
@@ -255,14 +255,14 @@ public class SerializablePairLongDoubleBufferStoreTest
 
     SerializablePairLongDoubleColumnHeader columnHeader = (SerializablePairLongDoubleColumnHeader) bufferStore.createColumnHeader();
 
-    Assert.assertEquals(0, columnHeader.getMinValue());
+    Assertions.assertEquals(0, columnHeader.getMinValue());
 
     AbstractSerializablePairLongObjectBufferStore.TransferredBuffer transferredBuffer = bufferStore.transferToRowWriter(
         NativeClearedByteBufferProvider.INSTANCE,
         writeOutMedium
     );
 
-    Assert.assertEquals(59, transferredBuffer.getSerializedSize());
+    Assertions.assertEquals(59, transferredBuffer.getSerializedSize());
   }
 
   @Test
@@ -272,7 +272,7 @@ public class SerializablePairLongDoubleBufferStoreTest
       bufferStore.store(value);
     }
 
-    Assert.assertTrue(bufferStore.createColumnHeader().isUseIntegerDeltas());
+    Assertions.assertTrue(bufferStore.createColumnHeader().isUseIntegerDeltas());
 
     assertTransferredValuesEqual(integerRangeArr);
   }
@@ -284,7 +284,7 @@ public class SerializablePairLongDoubleBufferStoreTest
       bufferStore.store(value);
     }
 
-    Assert.assertFalse(bufferStore.createColumnHeader().isUseIntegerDeltas());
+    Assertions.assertFalse(bufferStore.createColumnHeader().isUseIntegerDeltas());
 
     assertTransferredValuesEqual(longRangeArr);
   }
@@ -299,14 +299,14 @@ public class SerializablePairLongDoubleBufferStoreTest
     int i = 0;
 
     while (iterator.hasNext()) {
-      Assert.assertEquals(input.get(i), iterator.next());
+      Assertions.assertEquals(input.get(i), iterator.next());
       i++;
     }
 
-    Assert.assertEquals(
-        StringUtils.format("element count mismatch: expected %s, got %s", input.size(), i),
+    Assertions.assertEquals(
         input.size(),
-        i
+        i,
+        StringUtils.format("element count mismatch: expected %s, got %s", input.size(), i)
     );
   }
 
@@ -320,7 +320,7 @@ public class SerializablePairLongDoubleBufferStoreTest
 
     try (SerializablePairLongDoubleComplexColumn column = createComplexColumn(transferredBuffer, resultChannel)) {
       for (int i = 0; i < input.length; i++) {
-        Assert.assertEquals(input[i], column.getRowValue(i));
+        Assertions.assertEquals(input[i], column.getRowValue(i));
       }
     }
   }

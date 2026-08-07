@@ -20,20 +20,17 @@
 package org.apache.druid.query.operator;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class OffsetLimitTest
 {
   @Test
   public void testNone()
   {
-    assertFalse(OffsetLimit.NONE.isPresent());
-    assertFalse(OffsetLimit.NONE.hasOffset());
-    assertFalse(OffsetLimit.NONE.hasLimit());
+    Assertions.assertFalse(OffsetLimit.NONE.isPresent());
+    Assertions.assertFalse(OffsetLimit.NONE.hasOffset());
+    Assertions.assertFalse(OffsetLimit.NONE.hasLimit());
   }
 
   @Test
@@ -41,31 +38,31 @@ public class OffsetLimitTest
   {
     int offset = 3;
     OffsetLimit ol = new OffsetLimit(offset, -1);
-    assertTrue(ol.hasOffset());
-    assertFalse(ol.hasLimit());
-    assertEquals(offset, ol.getOffset());
-    assertEquals(-1, ol.getLimit());
-    assertEquals(Long.MAX_VALUE, ol.getLimitOrMax());
-    assertEquals(offset, ol.getFromIndex(Long.MAX_VALUE));
-    assertEquals(Long.MAX_VALUE, ol.getToIndex(Long.MAX_VALUE));
-    assertEquals(0, ol.getFromIndex(1));
-    assertEquals(0, ol.getFromIndex(offset));
-    assertEquals(0, ol.getToIndex(offset));
+    Assertions.assertTrue(ol.hasOffset());
+    Assertions.assertFalse(ol.hasLimit());
+    Assertions.assertEquals(offset, ol.getOffset());
+    Assertions.assertEquals(-1, ol.getLimit());
+    Assertions.assertEquals(Long.MAX_VALUE, ol.getLimitOrMax());
+    Assertions.assertEquals(offset, ol.getFromIndex(Long.MAX_VALUE));
+    Assertions.assertEquals(Long.MAX_VALUE, ol.getToIndex(Long.MAX_VALUE));
+    Assertions.assertEquals(0, ol.getFromIndex(1));
+    Assertions.assertEquals(0, ol.getFromIndex(offset));
+    Assertions.assertEquals(0, ol.getToIndex(offset));
   }
 
   @Test
   public void testLimit()
   {
     OffsetLimit ol = new OffsetLimit(0, 4);
-    assertFalse(ol.hasOffset());
-    assertTrue(ol.hasLimit());
-    assertEquals(0, ol.getOffset());
-    assertEquals(4, ol.getLimit());
-    assertEquals(4, ol.getLimitOrMax());
-    assertEquals(0, ol.getFromIndex(Long.MAX_VALUE));
-    assertEquals(4, ol.getToIndex(Long.MAX_VALUE));
-    assertEquals(0, ol.getFromIndex(2));
-    assertEquals(2, ol.getToIndex(2));
+    Assertions.assertFalse(ol.hasOffset());
+    Assertions.assertTrue(ol.hasLimit());
+    Assertions.assertEquals(0, ol.getOffset());
+    Assertions.assertEquals(4, ol.getLimit());
+    Assertions.assertEquals(4, ol.getLimitOrMax());
+    Assertions.assertEquals(0, ol.getFromIndex(Long.MAX_VALUE));
+    Assertions.assertEquals(4, ol.getToIndex(Long.MAX_VALUE));
+    Assertions.assertEquals(0, ol.getFromIndex(2));
+    Assertions.assertEquals(2, ol.getToIndex(2));
   }
 
   @Test
@@ -74,23 +71,23 @@ public class OffsetLimitTest
     int offset = 3;
     int limit = 10;
     OffsetLimit ol = new OffsetLimit(offset, limit);
-    assertTrue(ol.hasOffset());
-    assertTrue(ol.hasLimit());
-    assertEquals(offset, ol.getOffset());
-    assertEquals(limit, ol.getLimit());
-    assertEquals(limit, ol.getLimitOrMax());
-    assertEquals(offset, ol.getFromIndex(Long.MAX_VALUE));
-    assertEquals(offset + limit, ol.getToIndex(Long.MAX_VALUE));
-    assertEquals(0, ol.getFromIndex(offset));
-    assertEquals(0, ol.getToIndex(offset));
-    assertEquals(offset, ol.getFromIndex(offset + 1));
-    assertEquals(offset + 1, ol.getToIndex(offset + 1));
+    Assertions.assertTrue(ol.hasOffset());
+    Assertions.assertTrue(ol.hasLimit());
+    Assertions.assertEquals(offset, ol.getOffset());
+    Assertions.assertEquals(limit, ol.getLimit());
+    Assertions.assertEquals(limit, ol.getLimitOrMax());
+    Assertions.assertEquals(offset, ol.getFromIndex(Long.MAX_VALUE));
+    Assertions.assertEquals(offset + limit, ol.getToIndex(Long.MAX_VALUE));
+    Assertions.assertEquals(0, ol.getFromIndex(offset));
+    Assertions.assertEquals(0, ol.getToIndex(offset));
+    Assertions.assertEquals(offset, ol.getFromIndex(offset + 1));
+    Assertions.assertEquals(offset + 1, ol.getToIndex(offset + 1));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidOffset()
   {
-    new OffsetLimit(-1, -1);
+    Assertions.assertThrows(IllegalArgumentException.class, () -> new OffsetLimit(-1, -1));
   }
 
   @Test
@@ -98,7 +95,7 @@ public class OffsetLimitTest
   {
     OffsetLimit ol1 = new OffsetLimit(1, -1);
     OffsetLimit ol2 = new OffsetLimit(1, -2);
-    assertEquals(ol1, ol2);
+    Assertions.assertEquals(ol1, ol2);
   }
 
   @Test

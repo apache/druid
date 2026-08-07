@@ -25,9 +25,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.FunctionTest;
 import org.apache.druid.math.expr.InputBindings;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Test;
 
 public class ExprMacroTest
 {
@@ -60,9 +58,6 @@ public class ExprMacroTest
                   .put("ipv4_broadcast", InputBindings.inputSupplier(ExpressionType.STRING, () -> "192.168.255.255"))
                   .build()
   );
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testLike()

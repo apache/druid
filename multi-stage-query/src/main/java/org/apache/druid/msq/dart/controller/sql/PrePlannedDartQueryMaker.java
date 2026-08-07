@@ -51,8 +51,8 @@ import java.util.Map.Entry;
  */
 class PrePlannedDartQueryMaker implements QueryMaker, QueryMaker.FromDruidLogical
 {
-  private PlannerContext plannerContext;
-  private DartQueryMaker dartQueryMaker;
+  private final PlannerContext plannerContext;
+  private final DartQueryMaker dartQueryMaker;
 
   public PrePlannedDartQueryMaker(PlannerContext plannerContext, DartQueryMaker queryMaker)
   {

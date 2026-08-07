@@ -22,7 +22,9 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 
+import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 
 /**
  * A means of pulling segment files into a destination directory
@@ -37,6 +39,24 @@ public interface LoadSpec
    * @return The byte count of data put in the destination directory
    */
   LoadSpecResult loadSegment(File destDir) throws SegmentLoadingException;
+
+  /**
+   * Open a {@link SegmentRangeReader} for reading byte ranges from the segment file in deep storage. This enables
+   * partial segment downloads where only the needed portions of a segment file are fetched.
+   * <p>
+   * Returns {@code null} if range reads are not supported by this storage backend or for this particular segment
+   * (e.g. if the segment is stored in a compressed archive format that does not support random access). When
+   * {@code null} is returned, callers should fall back to downloading the full segment via {@link #loadSegment(File)}.
+   * <p>
+   * The caller is responsible for closing any streams opened by the returned reader when done.
+   *
+   * @return a {@link SegmentRangeReader} for this segment, or {@code null} if range reads are not supported
+   */
+  @Nullable
+  default SegmentRangeReader openRangeReader() throws IOException
+  {
+    return null;
+  }
 
   // Hold interesting data about the results of the segment load
   class LoadSpecResult

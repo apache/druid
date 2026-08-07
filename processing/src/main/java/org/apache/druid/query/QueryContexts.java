@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -66,9 +67,16 @@ public class QueryContexts
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
   public static final String CLONE_QUERY_MODE = "cloneQueryMode";
-  // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
-  // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
-  // data servers.
+  /**
+   * This flag controls whether {@link AggregatorFactory#optimizeForSegment(PerSegmentQueryOptimizationContext)}
+   * is used. It is undocumented because its main purpose is to help developers debug issues with the optimizations.
+   */
+  public static final String OPTIMIZE_AGGREGATORS_KEY = "optimizeAggregators";
+  /**
+   * This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
+   * instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
+   * data servers.
+   */
   public static final String SQL_JOIN_LEFT_SCAN_DIRECT = "enableJoinLeftTableScanDirect";
   public static final String USE_FILTER_CNF_KEY = "useFilterCNF";
   public static final String NUM_RETRIES_ON_MISSING_SEGMENTS_KEY = "numRetriesOnMissingSegments";
@@ -138,8 +146,19 @@ public class QueryContexts
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
   public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
+  /**
+   * @deprecated Use {@link #REALTIME_SEGMENTS_MODE} instead.
+   */
+  @Deprecated
   public static final String REALTIME_SEGMENTS_ONLY = "realtimeSegmentsOnly";
+  /**
+   * @deprecated Use {@link #DEFAULT_REALTIME_SEGMENTS_MODE} instead.
+   */
+  @Deprecated
   public static final boolean DEFAULT_REALTIME_SEGMENTS_ONLY = false;
+
+  public static final String REALTIME_SEGMENTS_MODE = "realtimeSegmentsMode";
+  public static final RealtimeSegmentsMode DEFAULT_REALTIME_SEGMENTS_MODE = RealtimeSegmentsMode.INCLUDE;
 
   public static final String CTX_PREPLANNED = "prePlanned";
   public static final boolean DEFAULT_PREPLANNED = true;
@@ -176,6 +195,7 @@ public class QueryContexts
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
   public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+  public static final boolean DEFAULT_OPTIMIZE_AGGREGATORS = true;
   public static final boolean DEFAULT_CTX_FULL_REPORT = false;
 
 
@@ -221,6 +241,37 @@ public class QueryContexts
     public String toString()
     {
       return StringUtils.toLowerCase(name()).replace('_', '-');
+    }
+  }
+
+  /**
+   * Classifies segments by whether a historical replica exists
+   * (see {@link org.apache.druid.client.selector.ServerSelector#isRealtimeSegment()}: a segment is
+   * "realtime" only when it has realtime servers and zero historical servers).
+   */
+  public enum RealtimeSegmentsMode
+  {
+    /** Query all segments, including realtime (default). */
+    INCLUDE,
+    /** Query only realtime segments. */
+    EXCLUSIVE,
+    /** Skip realtime segments; query only historical. */
+    EXCLUDE;
+
+    @JsonCreator
+    public static RealtimeSegmentsMode fromString(String str)
+    {
+      if (str == null) {
+        return null;
+      }
+      return RealtimeSegmentsMode.valueOf(StringUtils.toUpperCase(str));
+    }
+
+    @Override
+    @JsonValue
+    public String toString()
+    {
+      return StringUtils.toLowerCase(name());
     }
   }
 

@@ -90,6 +90,33 @@ public class AWSClientUtilTest
   }
 
   @Test
+  public void testRecoverableException_CredentialsProviderChain()
+  {
+    final SdkClientException ex = SdkClientException.builder()
+        .message("Unable to load credentials from any of the providers in the chain AwsCredentialsProviderChain")
+        .build();
+    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_FileSessionCredentialsRefresh()
+  {
+    final SdkClientException ex = SdkClientException.builder()
+        .message("LazyFileSessionCredentialsProvider(): cannot refresh AWS credentials")
+        .build();
+    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
+  public void testRecoverableException_InstanceProfileCredentials()
+  {
+    final SdkClientException ex = SdkClientException.builder()
+        .message("InstanceProfileCredentialsProvider(): Failed to load credentials from IMDS.")
+        .build();
+    Assert.assertTrue(AWSClientUtil.isClientExceptionRecoverable(ex));
+  }
+
+  @Test
   public void testRecoverableException_ClockSkewedError()
   {
     AwsServiceException ex = AwsServiceException.builder()

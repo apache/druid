@@ -24,7 +24,7 @@ description: "Defines a strategy to maintain Druid metadata store performance by
   ~ under the License.
   -->
 
-Apache Druid relies on [metadata storage](../design/metadata-storage.md) to track information on data storage, operations, and system configuration.
+Apache&circledR; Druid relies on [metadata storage](../design/metadata-storage.md) to track information on data storage, operations, and system configuration.
 The metadata store includes the following:
 
 - Segment records

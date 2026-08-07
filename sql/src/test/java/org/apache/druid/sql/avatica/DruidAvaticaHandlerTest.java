@@ -137,6 +137,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * Tests the Avatica-based JDBC implementation using JSON serialization. See
@@ -146,6 +147,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class DruidAvaticaHandlerTest extends CalciteTestBase
 {
+  private static final Pattern IPV4_PATTERN = Pattern.compile("^\\d+\\.\\d+\\.\\d+\\.\\d+$");
+  private static final Pattern IPV6_PATTERN = Pattern.compile("^[0-9a-fA-F:]+$");
+
   private static final int CONNECTION_LIMIT = 4;
   private static final int STATEMENT_LIMIT = 4;
 
@@ -202,7 +206,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
   }
 
-  private class ServerWrapper
+  private class ServerWrapper implements AutoCloseable
   {
     final DruidMeta druidMeta;
     final Server server;
@@ -244,6 +248,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     //  return DriverManager.getConnection(url);
     //}
 
+    @Override
     public void close() throws Exception
     {
       druidMeta.closeAllConnections();
@@ -959,7 +964,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyStatements() throws SQLException
   {
+    // Leave these statements open until tearDown closes client so the test reaches the configured limit.
     for (int i = 0; i < STATEMENT_LIMIT; i++) {
+      // codeql[java/database-resource-leak]
       client.createStatement();
     }
 
@@ -974,7 +981,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testNotTooManyStatementsWhenYouCloseThem() throws SQLException
   {
     for (int i = 0; i < STATEMENT_LIMIT * 2; i++) {
-      client.createStatement().close();
+      try (final Statement ignored = client.createStatement()) {
+        // Closing each statement is the behavior under test.
+      }
     }
   }
 
@@ -1033,7 +1042,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testNotTooManyStatementsWhenClosed()
   {
     for (int i = 0; i < 50; i++) {
-      try (Statement statement = client.createStatement()) {
+      try (final Statement statement = client.createStatement()) {
         statement.executeQuery("SELECT SUM(nonexistent) FROM druid.foo");
         Assert.fail();
       }
@@ -1047,11 +1056,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testAutoReconnectOnNoSuchConnection() throws SQLException
   {
     for (int i = 0; i < 50; i++) {
-      final ResultSet resultSet = client.createStatement().executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
-      Assert.assertEquals(
-          ImmutableList.of(ImmutableMap.of("cnt", 6L)),
-          getRows(resultSet)
-      );
+      try (final Statement statement = client.createStatement()) {
+        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        Assert.assertEquals(
+            ImmutableList.of(ImmutableMap.of("cnt", 6L)),
+            getRows(resultSet)
+        );
+      }
       server.druidMeta.closeAllConnections();
     }
   }
@@ -1059,9 +1070,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testTooManyConnections() throws SQLException
   {
+    // Keep one statement open on each connection until tearDown so all connection slots remain occupied.
+    // codeql[java/database-resource-leak]
     client.createStatement();
+    // codeql[java/database-resource-leak]
     clientLosAngeles.createStatement();
+    // codeql[java/database-resource-leak]
     superuserClient.createStatement();
+    // codeql[java/database-resource-leak]
     clientNoTrailingSlash.createStatement();
 
     AvaticaClientRuntimeException ex = Assert.assertThrows(
@@ -1086,11 +1102,15 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     for (int i = 0; i < CONNECTION_LIMIT * 2; i++) {
       try (Connection connection = server.getUserConnection()) {
         // Note: NOT in a try-catch block. Let the connection close the statement
+        // codeql[java/database-resource-leak]
         final Statement statement = connection.createStatement();
 
         // Again, NOT in a try-catch block: let the statement close the
         // result set.
-        final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+        // codeql[java/database-resource-leak]
+        final ResultSet resultSet = statement.executeQuery(
+            "SELECT COUNT(*) AS cnt FROM druid.foo"
+        );
         Assert.assertTrue(resultSet.next());
       }
     }
@@ -1153,30 +1173,27 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    Connection smallFrameClient = server.getUserConnection();
-
-    final ResultSet resultSet = smallFrameClient.createStatement().executeQuery(
-        "SELECT dim1 FROM druid.foo"
-    );
-    List<Map<String, Object>> rows = getRows(resultSet);
-    Assert.assertEquals(2, frames.size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableMap.of("dim1", ""),
-            ImmutableMap.of("dim1", "10.1"),
-            ImmutableMap.of("dim1", "2"),
-            ImmutableMap.of("dim1", "1"),
-            ImmutableMap.of("dim1", "def"),
-            ImmutableMap.of("dim1", "abc")
-        ),
-        rows
-    );
-
-    resultSet.close();
-    smallFrameClient.close();
-    exec.shutdown();
-    server.close();
+    try (final ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
+         final Connection smallFrameClient = server.getUserConnection();
+         final Statement statement = smallFrameClient.createStatement();
+         final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
+      final List<Map<String, Object>> rows = getRows(resultSet);
+      Assert.assertEquals(2, frames.size());
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableMap.of("dim1", ""),
+              ImmutableMap.of("dim1", "10.1"),
+              ImmutableMap.of("dim1", "2"),
+              ImmutableMap.of("dim1", "1"),
+              ImmutableMap.of("dim1", "def"),
+              ImmutableMap.of("dim1", "abc")
+          ),
+          rows
+      );
+    }
+    finally {
+      exec.shutdown();
+    }
   }
 
   @Test
@@ -1215,33 +1232,32 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
-    Connection smallFrameClient = server.getUserConnection();
-
-    // use a prepared statement because Avatica currently ignores fetchSize on the initial fetch of a Statement
-    PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo");
-    // set a fetch size below the minimum configured threshold
-    statement.setFetchSize(2);
-    final ResultSet resultSet = statement.executeQuery();
-    List<Map<String, Object>> rows = getRows(resultSet);
-    // expect minimum threshold to be used, which should be enough to do this all in first fetch
-    Assert.assertEquals(0, frames.size());
-    Assert.assertEquals(
-        ImmutableList.of(
-            ImmutableMap.of("dim1", ""),
-            ImmutableMap.of("dim1", "10.1"),
-            ImmutableMap.of("dim1", "2"),
-            ImmutableMap.of("dim1", "1"),
-            ImmutableMap.of("dim1", "def"),
-            ImmutableMap.of("dim1", "abc")
-        ),
-        rows
-    );
-
-    resultSet.close();
-    smallFrameClient.close();
-    exec.shutdown();
-    server.close();
+    try (final ServerWrapper server = new ServerWrapper(smallFrameDruidMeta);
+         final Connection smallFrameClient = server.getUserConnection();
+         final PreparedStatement statement = smallFrameClient.prepareStatement("SELECT dim1 FROM druid.foo")) {
+      // use a prepared statement because Avatica currently ignores fetchSize on the initial fetch of a Statement
+      // set a fetch size below the minimum configured threshold
+      statement.setFetchSize(2);
+      try (final ResultSet resultSet = statement.executeQuery()) {
+        final List<Map<String, Object>> rows = getRows(resultSet);
+        // expect minimum threshold to be used, which should be enough to do this all in first fetch
+        Assert.assertEquals(0, frames.size());
+        Assert.assertEquals(
+            ImmutableList.of(
+                ImmutableMap.of("dim1", ""),
+                ImmutableMap.of("dim1", "10.1"),
+                ImmutableMap.of("dim1", "2"),
+                ImmutableMap.of("dim1", "1"),
+                ImmutableMap.of("dim1", "def"),
+                ImmutableMap.of("dim1", "abc")
+            ),
+            rows
+        );
+      }
+    }
+    finally {
+      exec.shutdown();
+    }
   }
 
   @Test
@@ -1826,29 +1842,30 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       }
     };
 
-    ServerWrapper server = new ServerWrapper(druidMeta);
-    try (Connection conn = server.getUserConnection()) {
+    try (final ServerWrapper server = new ServerWrapper(druidMeta)) {
+      try (final Connection conn = server.getUserConnection()) {
 
-      // Test with plain JDBC
-      try (ResultSet resultSet = conn.createStatement().executeQuery(
-          "SELECT dim1 FROM druid.foo")) {
-        List<Map<String, Object>> rows = getRows(resultSet);
-        Assert.assertEquals(6, rows.size());
-        Assert.assertEquals(6, frames.size()); // 3 empty frames and then 3 frames of 2 rows each
+        // Test with plain JDBC
+        try (final Statement statement = conn.createStatement();
+             final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
+          final List<Map<String, Object>> rows = getRows(resultSet);
+          Assert.assertEquals(6, rows.size());
+          Assert.assertEquals(6, frames.size()); // 3 empty frames and then 3 frames of 2 rows each
 
-        Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
-        Assert.assertFalse(frames.get(1).rows.iterator().hasNext());
-        Assert.assertFalse(frames.get(2).rows.iterator().hasNext());
-        Assert.assertTrue(frames.get(3).rows.iterator().hasNext());
-        Assert.assertTrue(frames.get(4).rows.iterator().hasNext());
-        Assert.assertTrue(frames.get(5).rows.iterator().hasNext());
+          Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
+          Assert.assertFalse(frames.get(1).rows.iterator().hasNext());
+          Assert.assertFalse(frames.get(2).rows.iterator().hasNext());
+          Assert.assertTrue(frames.get(3).rows.iterator().hasNext());
+          Assert.assertTrue(frames.get(4).rows.iterator().hasNext());
+          Assert.assertTrue(frames.get(5).rows.iterator().hasNext());
+        }
       }
+
+      testWithJDBI(server.url);
     }
-
-    testWithJDBI(server.url);
-
-    exec.shutdown();
-    server.close();
+    finally {
+      exec.shutdown();
+    }
   }
 
   @Test
@@ -1949,5 +1966,90 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       m.put(entry.lhs, entry.rhs);
     }
     return m;
+  }
+
+  /**
+   * Test that remote address is properly captured and logged for JDBC Avatica connections.
+   * This verifies the fix for issue #19230 which ensures that the client's remote address
+   * is tracked through the entire SQL execution lifecycle.
+   */
+  @Test
+  public void testRemoteAddressInLogs() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (Statement stmt = client.createStatement()) {
+      stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
+    }
+
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
+
+    String remoteAddress = logLine.getRemoteAddr();
+    Assert.assertNotNull("Remote address should not be null", remoteAddress);
+
+    Assert.assertTrue(
+        "Remote address should be a valid IP address, got: " + remoteAddress,
+        IPV4_PATTERN.matcher(remoteAddress).matches() ||
+        IPV6_PATTERN.matcher(remoteAddress).matches()
+    );
+  }
+
+  /**
+   * Test that remote address is captured even when a query fails.
+   */
+  @Test
+  public void testRemoteAddressInFailedQuery() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (Statement stmt = client.createStatement()) {
+      stmt.executeQuery("SELECT nonexistent FROM druid.foo");
+      Assert.fail("Query should have failed");
+    }
+    catch (SQLException e) {
+      // Expected exception
+    }
+
+    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
+
+    String remoteAddress = logLine.getRemoteAddr();
+    Assert.assertNotNull("Remote address should not be null even in failed query", remoteAddress);
+    Assert.assertFalse("Remote address should not be empty even in failed query", remoteAddress.length() == 0);
+  }
+
+  /**
+   * Test that remote address is captured for prepared statements.
+   * Both the prepare-phase and execute-phase log entries must carry the address —
+   * DruidJdbcPreparedStatement.close() emits the prepare-phase reporter, so a
+   * missing address there would leak an empty remoteAddress dimension to metrics.
+   */
+  @Test
+  public void testRemoteAddressInPreparedStatement() throws SQLException
+  {
+    testRequestLogger.clear();
+
+    try (PreparedStatement stmt = client.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo WHERE dim1 = ?")) {
+      stmt.setString(1, "abc");
+      stmt.executeQuery();
+    }
+
+    Assert.assertFalse(
+        "Should have at least one log entry",
+        testRequestLogger.getSqlQueryLogs().isEmpty()
+    );
+
+    for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
+      String remoteAddress = logLine.getRemoteAddr();
+      Assert.assertNotNull(
+          "Every prepared-statement log entry must carry a remote address",
+          remoteAddress
+      );
+      Assert.assertFalse(
+          "Every prepared-statement log entry must carry a non-empty remote address",
+          remoteAddress.isEmpty()
+      );
+    }
   }
 }

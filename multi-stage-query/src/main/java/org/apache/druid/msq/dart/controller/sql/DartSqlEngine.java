@@ -379,7 +379,7 @@ public class DartSqlEngine implements SqlEngine
     if (dartQueryId instanceof String) {
       final ControllerHolder holder = controllerRegistry.getController((String) dartQueryId);
       if (holder != null) {
-        holder.cancel(CancellationReason.USER_REQUEST);
+        holder.cancel(CancellationReason.USER_REQUEST, null);
       }
     } else {
       log.warn(

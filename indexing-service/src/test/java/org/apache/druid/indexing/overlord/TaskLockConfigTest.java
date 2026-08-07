@@ -30,6 +30,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
+import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -110,7 +111,7 @@ public class TaskLockConfigTest
       lockConfig = new TaskLockConfig();
     }
     final TaskQueueConfig queueConfig = new TaskQueueConfig(null, null, null, null, null, null);
-    final TaskRunner taskRunner = EasyMock.createNiceMock(RemoteTaskRunner.class);
+    final TaskRunner taskRunner = EasyMock.createNiceMock(HttpRemoteTaskRunner.class);
     final TaskActionClientFactory actionClientFactory = EasyMock.createNiceMock(LocalTaskActionClientFactory.class);
     final GlobalTaskLockbox lockbox = new GlobalTaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator());
     final ServiceEmitter emitter = new NoopServiceEmitter();

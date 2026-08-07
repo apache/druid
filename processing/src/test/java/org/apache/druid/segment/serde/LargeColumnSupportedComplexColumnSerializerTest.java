@@ -22,6 +22,7 @@ package org.apache.druid.segment.serde;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -34,22 +35,22 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class LargeColumnSupportedComplexColumnSerializerTest
 {
 
   private final HashFunction fn = Hashing.murmur3_128();
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
 
   @Test
   public void testSanity() throws IOException
@@ -67,7 +68,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 
     for (int columnSize : columnSizes) {
       for (int aCase : cases) {
-        File tmpFile = temporaryFolder.newFolder();
+        File tmpFile = FileUtils.createTempDirInLocation(tempDir, "test");
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
         try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
@@ -126,7 +127,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
         for (int i = 0; i < aCase; i++) {
           collector.fold((HyperLogLogCollector) complexColumn.getRowValue(i));
         }
-        Assert.assertEquals(baseCollector.estimateCardinality(), collector.estimateCardinality(), 0.0);
+        Assertions.assertEquals(baseCollector.estimateCardinality(), collector.estimateCardinality(), 0.0);
       }
     }
   }

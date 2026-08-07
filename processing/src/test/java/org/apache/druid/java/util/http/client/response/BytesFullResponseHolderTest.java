@@ -27,8 +27,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -54,7 +54,7 @@ public class BytesFullResponseHolderTest
 
     final ResponseObject deserialize = target.deserialize(objectMapper, new TypeReference<>() {});
 
-    Assert.assertEquals(payload, deserialize);
+    Assertions.assertEquals(payload, deserialize);
     Mockito.verify(target, Mockito.times(1)).deserialize(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 
@@ -66,7 +66,7 @@ public class BytesFullResponseHolderTest
     final BytesFullResponseHolder target = spy(new BytesFullResponseHolder(response));
     Mockito.doThrow(IOException.class).when(objectMapper).readValue(isA(byte[].class), isA(TypeReference.class));
 
-    Assert.assertThrows(RuntimeException.class, () -> target.deserialize(objectMapper, new TypeReference<ResponseObject>() {}));
+    Assertions.assertThrows(RuntimeException.class, () -> target.deserialize(objectMapper, new TypeReference<ResponseObject>() {}));
     Mockito.verify(target, Mockito.times(1)).deserialize(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 

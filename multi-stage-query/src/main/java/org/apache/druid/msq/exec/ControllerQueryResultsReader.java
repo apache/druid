@@ -26,7 +26,6 @@ import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -37,8 +36,6 @@ import java.util.List;
  */
 public class ControllerQueryResultsReader implements FrameProcessor<Void>
 {
-  private static final Logger log = new Logger(ControllerQueryResultsReader.class);
-
   private final ReadableFrameChannel in;
   private final FrameReader frameReader;
   private final QueryListener queryListener;

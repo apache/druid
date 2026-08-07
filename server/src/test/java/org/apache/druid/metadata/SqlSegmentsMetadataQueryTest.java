@@ -441,15 +441,11 @@ public class SqlSegmentsMetadataQueryTest
     derbyConnectorRule.getConnector().createIndexingStatesTable();
 
     CompactionState state1 = createTestIndexingState();
-    CompactionState state2 = new CompactionState(
-        new DynamicPartitionsSpec(200, null),
-        DimensionsSpec.EMPTY,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state2 = CompactionState.builder()
+                                            .partitionsSpec(new DynamicPartitionsSpec(200, null))
+                                            .dimensionsSpec(DimensionsSpec.EMPTY)
+                                            .indexSpec(IndexSpec.getDefault())
+                                            .build();
     CompactionState state3 = createTestIndexingState();
 
     Map<String, CompactionState> indexingStates = new HashMap<>();
@@ -647,15 +643,11 @@ public class SqlSegmentsMetadataQueryTest
 
   private CompactionState createTestIndexingState()
   {
-    return new CompactionState(
-        new DynamicPartitionsSpec(100, null),
-        DimensionsSpec.EMPTY,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(100, null))
+                          .dimensionsSpec(DimensionsSpec.EMPTY)
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 
   private void insertIndexingStates(Map<String, CompactionState> indexingStates)

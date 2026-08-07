@@ -34,10 +34,11 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIngestionSpec;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
-import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTestBase;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
@@ -163,7 +164,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -178,7 +180,27 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
+            .andReturn(SupervisorSpecUpdateResult.of(false, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
+
+    setupMockRequest();
+    setupMockRequestForAudit();
+
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    auditManager.doAudit(EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
+
+    replayAll();
+
+    response = supervisorResource.specPost(spec, false, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(Map.of("id", "my-id", "modified", false, "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -188,6 +210,39 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
+  }
+
+  @Test
+  public void testSpecPost_returnsBadRequest_whenValidateSpecThrows()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
+    {
+      @Override
+      public List<String> getDataSources()
+      {
+        return Collections.singletonList("datasource1");
+      }
+
+      @Override
+      public void validateSpec()
+      {
+        throw org.apache.druid.error.DruidException
+            .forPersona(org.apache.druid.error.DruidException.Persona.USER)
+            .ofCategory(org.apache.druid.error.DruidException.Category.INVALID_INPUT)
+            .build("nope");
+      }
+    };
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    setupMockRequest();
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    replayAll();
+
+    Response response = supervisorResource.specPost(spec, false, request);
+    verifyAll();
+
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("error", "nope"), response.getEntity());
   }
 
   @Test
@@ -204,24 +259,47 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(spec)).andReturn(false);
+    // Changed but no restart needed: persisted without restarting — and the persist must be audited.
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.NONE));
 
     setupMockRequest();
+    setupMockRequestForAudit();
 
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    auditManager.doAudit(EasyMock.anyObject());
+    EasyMock.expectLastCall().once();
     replayAll();
 
     Response response = supervisorResource.specPost(spec, true, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", false), response.getEntity());
 
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.shouldUpdateSupervisor(spec)).andReturn(true);
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
+            .andReturn(SupervisorSpecUpdateResult.of(false, SupervisorSpecUpdateAction.NONE));
+
+    setupMockRequest();
+
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+
+    replayAll();
+
+    response = supervisorResource.specPost(spec, true, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(Map.of("id", "my-id", "modified", false, "restarted", false), response.getEntity());
+
+    resetAll();
+
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, true))
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
 
     setupMockRequest();
     setupMockRequestForAudit();
@@ -236,7 +314,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
   }
 
   @Test
@@ -253,7 +331,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     };
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(true);
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec, false))
+            .andReturn(SupervisorSpecUpdateResult.of(true, SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS));
     setupMockRequest();
     setupMockRequestForAudit();
 
@@ -267,7 +346,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -339,6 +418,25 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
+  }
+
+  @Test
+  public void testSpecGetAllWithPartialAuthorizationForReadAccess()
+  {
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(SUPERVISOR_IDS).atLeastOnce();
+    EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC1.getId())).andReturn(Optional.of(SPEC1));
+    EasyMock.expect(supervisorManager.getSupervisorSpec(SPEC2.getId())).andReturn(Optional.of(SPEC2));
+    setupMockRequestForUser("notDruid");
+    replayAll();
+
+    Response response = supervisorResource.specGetAll(null, null, null, request);
+    verifyAll();
+
+    Assert.assertEquals(200, response.getStatus());
+    // Only id1 (datasource1) should be returned since user lacks READ access to datasource2
+    Set<String> returnedIds = (Set<String>) response.getEntity();
+    Assert.assertEquals(ImmutableSet.of("id1"), returnedIds);
   }
 
   @Test
@@ -1328,6 +1426,100 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
+  public void testResetToLatestAndBackfill()
+  {
+    // 200 - success
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
+    EasyMock.expect(supervisorManager.resetToLatestAndBackfill("my-id", null))
+            .andReturn(ImmutableMap.of("id", "my-id", "backfillSupervisorId", "my-id_backfill_abcdefgh"));
+    replayAll();
+
+    Response response = supervisorResource.resetToLatestAndBackfill("my-id", null);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("id", "my-id", "backfillSupervisorId", "my-id_backfill_abcdefgh"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 404 - supervisor does not exist
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of());
+    replayAll();
+
+    response = supervisorResource.resetToLatestAndBackfill("my-id", null);
+    Assert.assertEquals(404, response.getStatus());
+    verifyAll();
+    resetAll();
+
+    // 400 - IAE (e.g. supervisor not running)
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
+    EasyMock.expect(supervisorManager.resetToLatestAndBackfill("my-id", null))
+            .andThrow(new IllegalArgumentException("Supervisor[my-id] must be in a RUNNING state"));
+    replayAll();
+
+    response = supervisorResource.resetToLatestAndBackfill("my-id", null);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Supervisor[my-id] must be in a RUNNING state"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 500 - ISE (e.g. failed to retrieve offsets)
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.getSupervisorIds()).andReturn(ImmutableSet.of("my-id"));
+    EasyMock.expect(supervisorManager.resetToLatestAndBackfill("my-id", null))
+            .andThrow(new IllegalStateException("Failed to get latest offsets from stream"));
+    replayAll();
+
+    response = supervisorResource.resetToLatestAndBackfill("my-id", null);
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "Failed to get latest offsets from stream"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 400 - invalid backfillTaskCount (zero)
+    replayAll();
+
+    response = supervisorResource.resetToLatestAndBackfill("my-id", 0);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 400 - invalid backfillTaskCount (negative)
+    replayAll();
+
+    response = supervisorResource.resetToLatestAndBackfill("my-id", -1);
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
+        response.getEntity()
+    );
+    verifyAll();
+    resetAll();
+
+    // 503 - no supervisor manager (not leader)
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+
+    response = supervisorResource.resetToLatestAndBackfill("my-id", null);
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
+  }
+
+  @Test
   public void testNoopSupervisorSpecSerde() throws Exception
   {
     ObjectMapper mapper = new ObjectMapper();
@@ -1342,36 +1534,44 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecPostMergeUsesExistingTaskCountHigherPriorityHasBeenMissed()
+  public void testSpecPostMergeUsesExistingTaskCountWhenNewSpecHasNone()
   {
-    // New spec has no taskCount -> should use existing taskCount (5)
-    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
-    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(null, 2, 5);
+    // New spec has no taskCount -> should carry forward existing taskCount (5).
+    final TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
+    final TestSeekableStreamSupervisorSpec newSpec = createTestSpec(null, 2);
 
     newSpec.merge(existingSpec);
-    EasyMock.verify(newSpec.getIoConfig());
+
+    Assert.assertEquals(5, newSpec.getIoConfig().getTaskCount());
   }
 
   @Test
   public void testSpecPostMergeUsesProvidedTaskCountOverExistingTaskCount()
   {
-    // New spec has taskCount=3 -> should use provided taskCount over existing (5)
-    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
-    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(3, 2, 3);
+    // New spec has taskCount=3 -> should keep provided taskCount over existing (5).
+    final TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(5, 1);
+    final TestSeekableStreamSupervisorSpec newSpec = createTestSpec(3, 2);
 
     newSpec.merge(existingSpec);
-    EasyMock.verify(newSpec.getIoConfig());
+
+    Assert.assertEquals(3, newSpec.getIoConfig().getTaskCount());
   }
 
   @Test
-  public void testSpecPostMergeFallsBackToProvidedTaskCountMin()
+  public void testSpecPostMergeCarriesForwardEvenWhenExistingHasOnlyTaskCountMin()
   {
-    // Neither has taskCount -> should fall back to taskCountMin (4)
-    TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(null, 1);
-    TestSeekableStreamSupervisorSpec newSpec = createTestSpecWithExpectedMerge(null, 4, 4);
+    // existingSpec has taskCount = 1, newSpec has no taskCount and taskCountMin = 4
+    //   -> carry forward existing taskCount, keep it at 1. We expect the autoscaler
+    //      to set the taskCount to the new min when it runs.
+    final TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(null, 1);
+    final TestSeekableStreamSupervisorSpec newSpec = createTestSpec(null, 4);
+
+    Assert.assertEquals(1, existingSpec.getIoConfig().getTaskCount());
+    Assert.assertEquals(4, newSpec.getIoConfig().getTaskCount());
 
     newSpec.merge(existingSpec);
-    EasyMock.verify(newSpec.getIoConfig());
+
+    Assert.assertEquals(1, newSpec.getIoConfig().getTaskCount());
   }
 
   @Test
@@ -1398,60 +1598,19 @@ public class SupervisorResourceTest extends EasyMockSupport
 
   private TestSeekableStreamSupervisorSpec createTestSpec(Integer taskCount, int taskCountMin)
   {
-    HashMap<String, Object> autoScalerConfig = new HashMap<>();
-    autoScalerConfig.put("enableTaskAutoScaler", true);
-    autoScalerConfig.put("taskCountMax", 10);
-    autoScalerConfig.put("taskCountMin", taskCountMin);
+    final SeekableStreamSupervisorIOConfig ioConfig = SeekableStreamSupervisorTestBase.createIOConfig(
+        taskCount,
+        SeekableStreamSupervisorTestBase.lagBasedAutoScalerConfig(taskCountMin, 10, null)
+    );
 
-    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(ioConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(autoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(ioConfig.getTaskCount()).andReturn(taskCount).anyTimes();
-    EasyMock.replay(ioConfig);
-
-    DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
+    final DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
     EasyMock.expect(dataSchema.getDataSource()).andReturn("datasource1").anyTimes();
     EasyMock.replay(dataSchema);
 
-    SeekableStreamSupervisorIngestionSpec ingestionSchema =
-        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.replay(ingestionSchema);
-
-    return new TestSeekableStreamSupervisorSpec("my-id", ingestionSchema);
-  }
-
-  private TestSeekableStreamSupervisorSpec createTestSpecWithExpectedMerge(
-      Integer taskCount,
-      int taskCountMin,
-      int expectedTaskCount
-  )
-  {
-    HashMap<String, Object> autoScalerConfig = new HashMap<>();
-    autoScalerConfig.put("enableTaskAutoScaler", true);
-    autoScalerConfig.put("taskCountMax", 10);
-    autoScalerConfig.put("taskCountMin", taskCountMin);
-
-    SeekableStreamSupervisorIOConfig ioConfig = EasyMock.createMock(SeekableStreamSupervisorIOConfig.class);
-    EasyMock.expect(ioConfig.getAutoScalerConfig())
-            .andReturn(OBJECT_MAPPER.convertValue(autoScalerConfig, AutoScalerConfig.class))
-            .anyTimes();
-    EasyMock.expect(ioConfig.getTaskCount()).andReturn(taskCount).anyTimes();
-    ioConfig.setTaskCount(expectedTaskCount);
-    EasyMock.expectLastCall().once();
-    EasyMock.replay(ioConfig);
-
-    DataSchema dataSchema = EasyMock.createMock(DataSchema.class);
-    EasyMock.expect(dataSchema.getDataSource()).andReturn("datasource1").anyTimes();
-    EasyMock.replay(dataSchema);
-
-    SeekableStreamSupervisorIngestionSpec ingestionSchema =
-        EasyMock.createMock(SeekableStreamSupervisorIngestionSpec.class);
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
-    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
-    EasyMock.replay(ingestionSchema);
+    final SeekableStreamSupervisorIngestionSpec ingestionSchema =
+        new SeekableStreamSupervisorIngestionSpec(dataSchema, ioConfig, null)
+        {
+        };
 
     return new TestSeekableStreamSupervisorSpec("my-id", ingestionSchema);
   }
@@ -1647,6 +1806,22 @@ public class SupervisorResourceTest extends EasyMockSupport
     protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
     {
       return null;
+    }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
+    {
+      return null;
+    }
+
+    @Override
+    public Builder<?> toBuilder()
+    {
+      throw new UnsupportedOperationException();
     }
 
     @JsonIgnore

@@ -20,8 +20,8 @@
 package org.apache.druid.java.util.http.client.io;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -71,7 +71,7 @@ public class AppendableByteArrayInputStreamTest
     for (int i = 0; i < expectedBytes.length; i++) {
       final int readByte = in.read();
       if (expectedBytes[i] != (byte) readByte) {
-        Assert.assertEquals(StringUtils.format("%s[%d]", Arrays.toString(expectedBytes), i), expectedBytes[i], readByte);
+        Assertions.assertEquals(expectedBytes[i], readByte, StringUtils.format("%s[%d]", Arrays.toString(expectedBytes), i));
       }
     }
   }
@@ -84,8 +84,8 @@ public class AppendableByteArrayInputStreamTest
     for (byte[] writtenByte : writtenBytes) {
       in.add(writtenByte);
     }
-    Assert.assertEquals(readBytes.length, in.read(readBytes));
-    Assert.assertArrayEquals(expectedBytes, readBytes);
+    Assertions.assertEquals(readBytes.length, in.read(readBytes));
+    Assertions.assertArrayEquals(expectedBytes, readBytes);
   }
 
   @Test
@@ -96,15 +96,15 @@ public class AppendableByteArrayInputStreamTest
     in.add(new byte[]{0, 1, 2});
 
     byte[] readBytes = new byte[3];
-    Assert.assertEquals(3, in.read(readBytes));
-    Assert.assertArrayEquals(new byte[]{0, 1, 2}, readBytes);
+    Assertions.assertEquals(3, in.read(readBytes));
+    Assertions.assertArrayEquals(new byte[]{0, 1, 2}, readBytes);
 
     in.add(new byte[]{3, 4});
     in.add(new byte[]{5, 6, 7});
 
     readBytes = new byte[5];
-    Assert.assertEquals(5, in.read(readBytes));
-    Assert.assertArrayEquals(new byte[]{3, 4, 5, 6, 7}, readBytes);
+    Assertions.assertEquals(5, in.read(readBytes));
+    Assertions.assertArrayEquals(new byte[]{3, 4, 5, 6, 7}, readBytes);
   }
 
   @Test
@@ -116,14 +116,14 @@ public class AppendableByteArrayInputStreamTest
 
     byte[] readBytes = new byte[4];
 
-    Assert.assertEquals(4, in.read(readBytes));
-    Assert.assertArrayEquals(new byte[]{0, 1, 2, 3}, readBytes);
+    Assertions.assertEquals(4, in.read(readBytes));
+    Assertions.assertArrayEquals(new byte[]{0, 1, 2, 3}, readBytes);
 
-    Assert.assertEquals(4, in.read(readBytes));
-    Assert.assertArrayEquals(new byte[]{4, 5, 6, 7}, readBytes);
+    Assertions.assertEquals(4, in.read(readBytes));
+    Assertions.assertArrayEquals(new byte[]{4, 5, 6, 7}, readBytes);
 
-    Assert.assertEquals(2, in.read(readBytes, 0, 2));
-    Assert.assertArrayEquals(new byte[]{8, 9, 6, 7}, readBytes);
+    Assertions.assertEquals(2, in.read(readBytes, 0, 2));
+    Assertions.assertArrayEquals(new byte[]{8, 9, 6, 7}, readBytes);
   }
 
   @Test
@@ -138,14 +138,14 @@ public class AppendableByteArrayInputStreamTest
 
     byte[] readBytes = new byte[4];
 
-    Assert.assertEquals(4, in.read(readBytes));
-    Assert.assertArrayEquals(new byte[]{0, 1, 2, 3}, readBytes);
+    Assertions.assertEquals(4, in.read(readBytes));
+    Assertions.assertArrayEquals(new byte[]{0, 1, 2, 3}, readBytes);
 
-    Assert.assertEquals(4, in.read(readBytes));
-    Assert.assertArrayEquals(new byte[]{4, 5, 6, 7}, readBytes);
+    Assertions.assertEquals(4, in.read(readBytes));
+    Assertions.assertArrayEquals(new byte[]{4, 5, 6, 7}, readBytes);
 
-    Assert.assertEquals(2, in.read(readBytes, 0, 2));
-    Assert.assertArrayEquals(new byte[]{8, 9, 6, 7}, readBytes);
+    Assertions.assertEquals(2, in.read(readBytes, 0, 2));
+    Assertions.assertArrayEquals(new byte[]{8, 9, 6, 7}, readBytes);
   }
 
   @Test
@@ -155,7 +155,7 @@ public class AppendableByteArrayInputStreamTest
 
     in.add(new byte[]{0, 1, 2, 3, 4});
 
-    Assert.assertEquals(5, in.available());
+    Assertions.assertEquals(5, in.available());
 
     Future<byte[]> bytesFuture = Executors.newSingleThreadExecutor().submit(
         new Callable<>()
@@ -173,7 +173,7 @@ public class AppendableByteArrayInputStreamTest
     int count = 0;
     while (in.available() != 0) {
       if (count >= 100) {
-        Assert.fail("available didn't become 0 fast enough.");
+        Assertions.fail("available didn't become 0 fast enough.");
       }
       count++;
       Thread.sleep(10);
@@ -184,15 +184,15 @@ public class AppendableByteArrayInputStreamTest
     count = 0;
     while (in.available() != 1) {
       if (count >= 100) {
-        Assert.fail("available didn't become 1 fast enough.");
+        Assertions.fail("available didn't become 1 fast enough.");
       }
       count++;
       Thread.sleep(10);
     }
 
-    Assert.assertArrayEquals(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, bytesFuture.get());
-    Assert.assertEquals(10, in.read());
-    Assert.assertEquals(0, in.available());
+    Assertions.assertArrayEquals(new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9}, bytesFuture.get());
+    Assertions.assertEquals(10, in.read());
+    Assertions.assertEquals(0, in.available());
   }
 
   @Test
@@ -205,10 +205,10 @@ public class AppendableByteArrayInputStreamTest
     in.add(new byte[]{});
     in.done();
 
-    Assert.assertEquals(1, in.available());
-    Assert.assertEquals(1, in.read());
-    Assert.assertEquals(0, in.available());
-    Assert.assertEquals(-1, in.read());
+    Assertions.assertEquals(1, in.available());
+    Assertions.assertEquals(1, in.read());
+    Assertions.assertEquals(0, in.available());
+    Assertions.assertEquals(-1, in.read());
   }
 
   @Test
@@ -246,14 +246,14 @@ public class AppendableByteArrayInputStreamTest
     in.exceptionCaught(expected);
 
     latch.await();
-    Assert.assertEquals(expected, exceptionThrown.get().getCause());
+    Assertions.assertEquals(expected, exceptionThrown.get().getCause());
 
     try {
       in.read();
-      Assert.fail();
+      Assertions.fail();
     }
     catch (IOException thrown) {
-      Assert.assertEquals(expected, thrown.getCause());
+      Assertions.assertEquals(expected, thrown.getCause());
     }
 
   }

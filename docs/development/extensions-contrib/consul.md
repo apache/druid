@@ -22,7 +22,7 @@ title: "Consul-based Service Discovery"
   ~ under the License.
   -->
 
-Apache Druid extension to enable using HashiCorp Consul for node discovery. This extension allows Druid clusters to use Consul's service catalog for discovering nodes, as an alternative to ZooKeeper or Kubernetes-based discovery.
+Apache&circledR; Druid extension to enable using HashiCorp Consul for node discovery. This extension allows Druid clusters to use Consul's service catalog for discovering nodes, as an alternative to ZooKeeper or discovery using Kubernetes&circledR;.
 
 ## Quick Start
 

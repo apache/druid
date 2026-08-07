@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.collections.spatial.RTreeUtils;
 import org.apache.druid.collections.spatial.SpatialUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -35,19 +35,19 @@ public class RadiusBoundTest
   {
     final float[] coords0 = new float[]{1.0F, 2.0F};
     final float[] coords1 = new float[]{1.1F, 2.1F};
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new RadiusBound(coords0, 3.0F, 10).getCacheKey(),
         new RadiusBound(coords0, 3.0F, 10).getCacheKey()
     );
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertFalse(Arrays.equals(
         new RadiusBound(coords0, 3.0F, 10).getCacheKey(),
         new RadiusBound(coords1, 3.0F, 10).getCacheKey()
     ));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertFalse(Arrays.equals(
         new RadiusBound(coords0, 3.0F, 10).getCacheKey(),
         new RadiusBound(coords0, 3.1F, 10).getCacheKey()
     ));
-    Assert.assertFalse(Arrays.equals(
+    Assertions.assertFalse(Arrays.equals(
         new RadiusBound(coords0, 3.0F, 10).getCacheKey(),
         new RadiusBound(coords0, 3.0F, 9).getCacheKey()
     ));
@@ -74,13 +74,13 @@ public class RadiusBoundTest
 
     for (float[] geoPoint : geoInsidePoints) {
       double distance = RTreeUtils.calculateHaversineDistance(geoPoint[0], geoPoint[1], center[0], center[1]);
-      Assert.assertTrue(distance < circleRadius);
-      Assert.assertTrue(bound.contains(geoPoint));
+      Assertions.assertTrue(distance < circleRadius);
+      Assertions.assertTrue(bound.contains(geoPoint));
       float[] floatPoint = new float[]{
           Float.parseFloat(String.valueOf(geoPoint[0])),
           Float.parseFloat(String.valueOf(geoPoint[1]))
       };
-      Assert.assertTrue(bound.contains(floatPoint));
+      Assertions.assertTrue(bound.contains(floatPoint));
     }
 
     float[][] geoOutsidePoints = SpatialUtils.generateGeoCoordinatesAroundCircle(
@@ -93,13 +93,13 @@ public class RadiusBoundTest
 
     for (float[] geoPoint : geoOutsidePoints) {
       double haversineDistance = RTreeUtils.calculateHaversineDistance(geoPoint[0], geoPoint[1], center[0], center[1]);
-      Assert.assertTrue(haversineDistance > circleRadius); // asserts that point is outside
-      Assert.assertFalse(bound.contains(geoPoint));
+      Assertions.assertTrue(haversineDistance > circleRadius); // asserts that point is outside
+      Assertions.assertFalse(bound.contains(geoPoint));
       float[] floatPoint = new float[]{
           Float.parseFloat(String.valueOf(geoPoint[0])),
           Float.parseFloat(String.valueOf(geoPoint[1]))
       };
-      Assert.assertFalse(bound.contains(floatPoint));
+      Assertions.assertFalse(bound.contains(floatPoint));
     }
   }
 
@@ -114,10 +114,10 @@ public class RadiusBoundTest
     Bound bound = new RadiusBound(center, circleRadius, 100);
     DefaultObjectMapper objectMapper = DefaultObjectMapper.INSTANCE;
     Bound val = objectMapper.readValue(objectMapper.writeValueAsString(bound), Bound.class);
-    Assert.assertEquals(bound, val);
+    Assertions.assertEquals(bound, val);
 
     Bound bound1 = new RadiusBound(center, circleRadius, 100, RadiusBound.RadiusUnit.meters);
     Bound val1 = objectMapper.readValue(objectMapper.writeValueAsString(bound1), Bound.class);
-    Assert.assertEquals(bound1, val1);
+    Assertions.assertEquals(bound1, val1);
   }
 }

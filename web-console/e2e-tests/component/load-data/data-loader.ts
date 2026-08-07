@@ -71,18 +71,19 @@ export class DataLoader {
     await clickButton(this.page, 'Connect data');
   }
 
-  private async connect(connector: DataConnector, validator: (preview: string) => void) {
+  private async connect(connector: DataConnector, validator: (previewLines: string[]) => void) {
     await connector.connect();
     await this.validateConnect(validator);
     const next = this.connector.needParse ? 'Parse data' : 'Transform';
     await clickButton(this.page, `Next: ${next}`);
   }
 
-  private async validateConnect(validator: (preview: string) => void) {
-    const previewSelector = '.raw-lines';
-    await this.page.waitForSelector(previewSelector);
-    const preview = await this.page.$eval(previewSelector, el => (el as HTMLTextAreaElement).value);
-    validator(preview);
+  private async validateConnect(validator: (previewLines: string[]) => void) {
+    await this.page.waitForSelector('.raw-lines');
+    const previewLines = await this.page.$$eval('.raw-lines .raw-line', els =>
+      els.map(el => el.textContent ?? ''),
+    );
+    validator(previewLines);
   }
 
   private async parseData() {
@@ -178,7 +179,7 @@ interface DataLoaderProps {
   readonly page: playwright.Page;
   readonly unifiedConsoleUrl: string;
   readonly connector: DataConnector;
-  readonly connectValidator: (preview: string) => void;
+  readonly connectValidator: (previewLines: string[]) => void;
   readonly configureTimestampConfig?: ConfigureTimestampConfig;
   readonly configureSchemaConfig: ConfigureSchemaConfig;
   readonly partitionConfig: PartitionConfig;

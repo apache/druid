@@ -23,6 +23,7 @@ import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -107,6 +108,8 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   private final boolean hasSpatialIndexes;
   @Nullable
   private final Integer maxStringLength;
+  @Nullable
+  private final StringColumnFormatSpec columnFormatSpec;
 
   public StringDimensionHandler(
       String dimensionName,
@@ -115,7 +118,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       boolean hasSpatialIndexes
   )
   {
-    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, StringDimensionSchema.getDefaultMaxStringLength());
+    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, BuiltInTypesModule.getMaxStringLength());
   }
 
   public StringDimensionHandler(
@@ -126,11 +129,24 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       @Nullable Integer maxStringLength
   )
   {
+    this(dimensionName, multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, maxStringLength, null);
+  }
+
+  public StringDimensionHandler(
+      String dimensionName,
+      MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes,
+      boolean hasSpatialIndexes,
+      @Nullable Integer maxStringLength,
+      @Nullable StringColumnFormatSpec columnFormatSpec
+  )
+  {
     this.dimensionName = dimensionName;
     this.multiValueHandling = multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
     this.maxStringLength = maxStringLength;
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   @Override
@@ -144,6 +160,9 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   {
     if (hasSpatialIndexes) {
       return new NewSpatialDimensionSchema(dimensionName, Collections.singletonList(dimensionName));
+    }
+    if (columnFormatSpec != null) {
+      return new StringDimensionSchema(dimensionName, multiValueHandling, hasBitmapIndexes, columnFormatSpec);
     }
     return new StringDimensionSchema(dimensionName, multiValueHandling, hasBitmapIndexes);
   }
@@ -175,7 +194,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionIndexer<Integer, int[], String> makeIndexer()
   {
-    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, maxStringLength);
+    return new StringDimensionIndexer(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, maxStringLength, columnFormatSpec);
   }
 
   @Override
@@ -206,7 +225,8 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
         capabilities,
         progress,
         segmentBaseDir,
-        closer
+        closer,
+        columnFormatSpec
     );
   }
 }

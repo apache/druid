@@ -28,6 +28,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -161,10 +162,11 @@ public interface IndexerMetadataStorageCoordinator
    * @param maxUpdatedTime Returned segments must have a {@code used_status_last_updated}
    *                       which is either null or earlier than this value.
    * @param limit          Maximum number of segments to return.
-   *
    * @return Unsorted list of unused segments that match the given parameters.
+   * The entries in the list are required to have the {@link DataSegmentPlus#getDataSegment()}
+   * and {@link DataSegmentPlus#getUpgradedFromSegmentId()} fields populated.
    */
-  List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
+  List<DataSegmentPlus> retrieveUnusedSegmentsWithExactInterval(
       String dataSource,
       Interval interval,
       DateTime maxUpdatedTime,
@@ -600,12 +602,32 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Retrieves intervals of the specified datasource that contain any unused segments.
-   * There is no guarantee on the order of intervals in the list or on whether
-   * the limited list contains the earliest or latest intervals of the datasource.
+   * <p>
+   * This method ensures that if there is any unused segment for the datasource,
+   * the returned list is not empty. However, it does NOT guarantee that:
+   * <ul>
+   * <li>the intervals in the result would be ordered</li>
+   * <li>the result would contain the earliest or latest intervals for this datasource</li>
+   * <li>it would scan all unused segments for this datasource. So, the result
+   * may contain less than {@code limit} entries even when there are more distinct
+   * unused segment intervals in the metadata store for this datasource.</li>
+   * </ul>
    *
-   * @return Unsorted list of unused segment intervals containing upto {@code limit} entries.
+   * @return List of distinct unused segment intervals for the specified datasource
+   * containing at least 1 entry if there is any unused segment for the datasource,
+   * upto a maximum of {@code limit} entries.
    */
-  List<Interval> retrieveUnusedSegmentIntervals(String dataSource, int limit);
+  List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit);
+
+  /**
+   * Extracts eligible unused segments intervals from the metadata store using
+   * {@link org.apache.druid.metadata.SqlSegmentsMetadataQuery#retrieveSomeUnusedSegmentIntervals(DateTime, int, int)}
+   */
+  Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  );
 
   /**
    * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,

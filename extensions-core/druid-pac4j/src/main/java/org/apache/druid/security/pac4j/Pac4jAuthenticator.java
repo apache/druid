@@ -27,6 +27,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.primitives.Ints;
 import com.google.inject.Provider;
+import com.nimbusds.oauth2.sdk.auth.ClientAuthenticationMethod;
 import com.nimbusds.oauth2.sdk.http.HTTPRequest;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -132,6 +133,10 @@ public class Pac4jAuthenticator implements Authenticator
     oidcConf.setSecret(oidcConfig.getClientSecret().getPassword());
     oidcConf.setDiscoveryURI(oidcConfig.getDiscoveryURI());
     oidcConf.setScope(oidcConfig.getScope());
+    if (oidcConfig.getClientAuthenticationMethod() != null) {
+      oidcConf.setClientAuthenticationMethod(
+          ClientAuthenticationMethod.parse(oidcConfig.getClientAuthenticationMethod()));
+    }
     oidcConf.setExpireSessionWithToken(true);
     oidcConf.setUseNonce(true);
     oidcConf.setReadTimeout(Ints.checkedCast(pac4jCommonConfig.getReadTimeout().getMillis()));

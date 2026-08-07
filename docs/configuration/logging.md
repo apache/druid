@@ -133,38 +133,3 @@ Java runtime itself.
 This file is not rotated, but it is generally small due to the low volume of messages.
 If necessary, you can truncate it using the Linux command `truncate --size 0 log/historical.stdout.log`.
 
-## Set the logs to asynchronously write
-
-If your logs are really chatty, you can set them to write asynchronously.
-The following example shows a `log4j2.xml` that configures some of the more chatty classes to write asynchronously:
-
-```
-<?xml version="1.0" encoding="UTF-8" ?>
-<Configuration status="WARN">
-  <Appenders>
-    <Console name="Console" target="SYSTEM_OUT">
-      <PatternLayout pattern="%d{ISO8601} %p [%t] %c -%notEmpty{ [%markerSimpleName]} %m%n"/>
-    </Console>
-  </Appenders>
-  
-<Loggers>
-    <!-- AsyncLogger instead of Logger -->
-    <AsyncLogger name="org.apache.druid.curator.inventory.CuratorInventoryManager" level="debug" additivity="false">
-      <AppenderRef ref="Console"/>
-    </AsyncLogger>
-    <AsyncLogger name="org.apache.druid.client.BatchServerInventoryView" level="debug" additivity="false">
-      <AppenderRef ref="Console"/>
-    </AsyncLogger>
-    <!-- Make extra sure nobody adds logs in a bad way that can hurt performance -->
-    <AsyncLogger name="org.apache.druid.client.ServerInventoryView" level="debug" additivity="false">
-      <AppenderRef ref="Console"/>
-    </AsyncLogger>
-    <AsyncLogger name ="org.apache.druid.java.util.http.client.pool.ChannelResourceFactory" level="info" additivity="false">
-      <AppenderRef ref="Console"/>
-    </AsyncLogger>
-    <Root level="info">
-      <AppenderRef ref="Console"/>
-    </Root>
-  </Loggers>
-</Configuration>
-```

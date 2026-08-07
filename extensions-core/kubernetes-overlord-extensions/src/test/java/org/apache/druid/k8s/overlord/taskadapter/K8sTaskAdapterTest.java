@@ -31,6 +31,7 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.Quantity;
 import io.fabric8.kubernetes.api.model.ResourceRequirements;
@@ -56,6 +57,7 @@ import org.apache.druid.k8s.overlord.KubernetesTaskRunnerStaticConfig;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
+import org.apache.druid.k8s.overlord.common.KubernetesClientApi;
 import org.apache.druid.k8s.overlord.common.KubernetesExecutor;
 import org.apache.druid.k8s.overlord.common.KubernetesResourceNotFoundException;
 import org.apache.druid.k8s.overlord.common.PeonCommandContext;
@@ -164,6 +166,90 @@ class K8sTaskAdapterTest
     // SingleContainerTaskAdapter will not store OVERLORD_NAMESPACE_KEY.
     Assertions.assertFalse(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
     Assertions.assertFalse(jobFromSpec.getMetadata().getLabels().containsKey("annotation_key"));
+  }
+
+  @Test
+  void testFromTaskUsesOverlordPodSourceClient() throws IOException
+  {
+    final Pod pod = new PodBuilder()
+        .withNewMetadata()
+        .withName("overlord-pod")
+        .withNamespace("overlord-namespace")
+        .endMetadata()
+        .withSpec(K8sTestUtils.getDummyPodSpec())
+        .build();
+    client.pods().inNamespace("overlord-namespace").resource(pod).create();
+    final KubernetesClientApi podSourceClient = new TestKubernetesClient(client, "overlord-namespace");
+    final KubernetesClientApi targetClient = new TestKubernetesClient(client, "remote-task-namespace")
+    {
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor)
+      {
+        throw new AssertionError("fromTask should not read the Overlord pod from the target cluster client");
+      }
+    };
+    final KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("remote-task-namespace")
+                                                                              .build();
+    final K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        podSourceClient,
+        "overlord-namespace",
+        targetClient,
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    )
+    {
+      @Override
+      protected String getCurrentPodName()
+      {
+        return "overlord-pod";
+      }
+    };
+
+    final Job job = adapter.fromTask(K8sTestUtils.getTask());
+
+    Assertions.assertNotNull(job);
+    Assertions.assertNotNull(job.getSpec().getTemplate().getSpec());
+  }
+
+  @Test
+  void testFromTaskWithMissingOverlordPodFailsWithActionableMessage()
+  {
+    final KubernetesClientApi podSourceClient = new TestKubernetesClient(client, "overlord-namespace")
+    {
+      @SuppressWarnings("unchecked")
+      @Override
+      public <T> T executeRequest(KubernetesExecutor<T> executor)
+      {
+        return null;
+      }
+    };
+    final KubernetesTaskRunnerStaticConfig config = KubernetesTaskRunnerConfig.builder()
+                                                                              .withNamespace("remote-task-namespace")
+                                                                              .build();
+    final K8sTaskAdapter adapter = new SingleContainerTaskAdapter(
+        podSourceClient,
+        "overlord-namespace",
+        new TestKubernetesClient(client, "remote-task-namespace"),
+        config,
+        taskConfig,
+        startupLoggingConfig,
+        node,
+        jsonMapper,
+        taskLogs
+    );
+
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> adapter.fromTask(K8sTestUtils.getTask())
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Could not load Overlord pod"));
+    Assertions.assertTrue(exception.getMessage().contains("overlord-namespace"));
+    Assertions.assertTrue(exception.getMessage().contains("customTemplateAdapter"));
   }
 
   @Test

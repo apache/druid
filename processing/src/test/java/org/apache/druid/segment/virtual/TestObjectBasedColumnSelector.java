@@ -22,12 +22,8 @@ package org.apache.druid.segment.virtual;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ObjectBasedColumnSelector;
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TestObjectBasedColumnSelector
 {
@@ -65,18 +61,18 @@ public class TestObjectBasedColumnSelector
   public void testNull()
   {
     MyObjectColumnSelector selector = new MyObjectColumnSelector(null);
-    assertThrows(DruidException.class, () -> selector.getFloat());
-    assertThrows(DruidException.class, () -> selector.getDouble());
-    assertThrows(DruidException.class, () -> selector.getLong());
-    assertTrue(selector.isNull());
+    Assertions.assertThrows(DruidException.class, () -> selector.getFloat());
+    Assertions.assertThrows(DruidException.class, () -> selector.getDouble());
+    Assertions.assertThrows(DruidException.class, () -> selector.getLong());
+    Assertions.assertTrue(selector.isNull());
   }
 
   @Test
   public void testLong()
   {
     MyObjectColumnSelector selector = new MyObjectColumnSelector(Long.valueOf(11L));
-    assertFalse(selector.isNull());
-    assertEquals(11f, selector.getLong(), 0.0f);
+    Assertions.assertFalse(selector.isNull());
+    Assertions.assertEquals(11f, selector.getLong(), 0.0f);
   }
 
   @Test
@@ -84,9 +80,9 @@ public class TestObjectBasedColumnSelector
   {
     MyObjectColumnSelector selector = new MyObjectColumnSelector(getClass());
 
-    DruidException e = assertThrows(DruidException.class, () -> selector.isNull());
+    DruidException e = Assertions.assertThrows(DruidException.class, () -> selector.isNull());
 
-    assertEquals(
+    Assertions.assertEquals(
         e.getMessage(),
         "isNull() may only be called in case the underlying object is a Number but it was [java.lang.Class]"
     );

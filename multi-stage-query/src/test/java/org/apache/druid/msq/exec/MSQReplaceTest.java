@@ -2915,15 +2915,14 @@ public class MSQReplaceTest extends MSQTestBase
     );
     List<AggregatorFactory> metricsSpec = Collections.emptyList();
 
-    return new CompactionState(
-        partitionsSpec,
-        dimensionsSpec,
-        metricsSpec,
-        transformSpec,
-        indexSpec,
-        granularitySpec,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(partitionsSpec)
+                          .dimensionsSpec(dimensionsSpec)
+                          .metricsSpec(metricsSpec)
+                          .transformSpec(transformSpec)
+                          .indexSpec(indexSpec)
+                          .granularitySpec(granularitySpec)
+                          .build();
 
   }
 }

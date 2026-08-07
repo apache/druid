@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -43,7 +44,6 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   private final boolean suspended;
   private final DataSourceCompactionConfig spec;
   private final CompactionScheduler scheduler;
-  private final CompactionConfigValidationResult validationResult;
 
   public static String getSupervisorIdForDatasource(String dataSource)
   {
@@ -60,7 +60,6 @@ public class CompactionSupervisorSpec implements SupervisorSpec
     this.spec = spec;
     this.suspended = Configs.valueOrDefault(suspended, false);
     this.scheduler = scheduler;
-    this.validationResult = scheduler == null ? null : scheduler.validateCompactionConfig(spec);
   }
 
   @JsonProperty
@@ -82,9 +81,20 @@ public class CompactionSupervisorSpec implements SupervisorSpec
     return getSupervisorIdForDatasource(spec.getDataSource());
   }
 
-  public CompactionConfigValidationResult getValidationResult()
+  /**
+   * Validates the underlying {@link DataSourceCompactionConfig} against the
+   * current cluster compaction config. Throws a {@link DruidException} of
+   * category {@link DruidException.Category#INVALID_INPUT} if invalid.
+   */
+  @Override
+  public void validateSpec()
   {
-    return validationResult;
+    final CompactionConfigValidationResult result = scheduler.validateCompactionConfig(spec);
+    if (!result.isValid()) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("Invalid compaction supervisor spec: %s", result.getReason());
+    }
   }
 
   @Override

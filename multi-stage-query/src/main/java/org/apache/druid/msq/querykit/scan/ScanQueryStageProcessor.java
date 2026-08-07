@@ -28,8 +28,11 @@ import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.msq.exec.FrameContext;
+import org.apache.druid.msq.exec.std.StandardPartitionReader;
+import org.apache.druid.msq.input.PhysicalInputSlice;
 import org.apache.druid.msq.querykit.BaseLeafStageProcessor;
 import org.apache.druid.msq.querykit.ReadableInput;
+import org.apache.druid.msq.querykit.ReadableInputQueue;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.filter.DimFilter;
@@ -38,9 +41,11 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 @JsonTypeName("scan")
@@ -121,6 +126,18 @@ public class ScanQueryStageProcessor extends BaseLeafStageProcessor
         outputChannelHolder,
         frameWriterFactoryHolder
     );
+  }
+
+  @Override
+  protected ReadableInputQueue makeReadableInputQueue(
+      StandardPartitionReader partitionReader,
+      List<PhysicalInputSlice> slices,
+      int loadahead
+  )
+  {
+    // Scan reads segments through the async cursor API, so acquire them partially: only the columns the query
+    // touches are downloaded.
+    return new ReadableInputQueue(partitionReader, slices, loadahead, AcquireMode.PARTIAL);
   }
 
   @Override

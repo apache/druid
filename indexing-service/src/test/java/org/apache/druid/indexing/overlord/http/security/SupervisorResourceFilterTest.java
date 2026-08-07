@@ -180,13 +180,13 @@ public class SupervisorResourceFilterTest
     HttpServletRequest servletRequest = EasyMock.createMock(HttpServletRequest.class);
     expect(servletRequest.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH))
         .andReturn(null).anyTimes();
-    expect(servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-        .andReturn(null).anyTimes();
-    servletRequest.setAttribute(isA(String.class), anyObject());
-
     final String authorizerName = "authorizer";
     AuthenticationResult authResult = EasyMock.createMock(AuthenticationResult.class);
     expect(authResult.getAuthorizerName()).andReturn(authorizerName).anyTimes();
+
+    expect(servletRequest.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+        .andReturn(null).anyTimes();
+    servletRequest.setAttribute(isA(String.class), anyObject());
 
     Authorizer authorizer = EasyMock.createMock(Authorizer.class);
     expect(
@@ -200,6 +200,7 @@ public class SupervisorResourceFilterTest
     expect(authorizerMapper.getAuthorizer(authorizerName))
         .andReturn(authorizer)
         .atLeastOnce();
+    expect(authorizerMapper.getServiceEmitter()).andReturn(null).anyTimes();
 
     expect(servletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
         .andReturn(authResult)

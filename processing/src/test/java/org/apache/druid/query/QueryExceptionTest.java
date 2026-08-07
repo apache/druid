@@ -20,8 +20,8 @@
 package org.apache.druid.query;
 
 import org.apache.druid.query.QueryException.FailType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -41,16 +41,16 @@ public class QueryExceptionTest
     AtomicLong callCount = new AtomicLong(0);
     QueryException actual = queryException.sanitize(s -> {
       callCount.incrementAndGet();
-      Assert.assertEquals(ERROR_MESSAGE_ORIGINAL, s);
+      Assertions.assertEquals(ERROR_MESSAGE_ORIGINAL, s);
       return null;
     });
 
-    Assert.assertNotNull(actual);
-    Assert.assertEquals(actual.getErrorCode(), ERROR_CODE);
-    Assert.assertNull(actual.getMessage());
-    Assert.assertNull(actual.getHost());
-    Assert.assertNull(actual.getErrorClass());
-    Assert.assertEquals(1, callCount.get());
+    Assertions.assertNotNull(actual);
+    Assertions.assertEquals(ERROR_CODE, actual.getErrorCode());
+    Assertions.assertNull(actual.getMessage());
+    Assertions.assertNull(actual.getHost());
+    Assertions.assertNull(actual.getErrorClass());
+    Assertions.assertEquals(1, callCount.get());
   }
 
   @Test
@@ -61,16 +61,16 @@ public class QueryExceptionTest
     AtomicLong callCount = new AtomicLong(0);
     QueryException actual = queryException.sanitize(s -> {
       callCount.incrementAndGet();
-      Assert.assertEquals(ERROR_MESSAGE_ORIGINAL, s);
+      Assertions.assertEquals(ERROR_MESSAGE_ORIGINAL, s);
       return ERROR_MESSAGE_TRANSFORMED;
     });
 
-    Assert.assertNotNull(actual);
-    Assert.assertEquals(actual.getErrorCode(), ERROR_CODE);
-    Assert.assertEquals(actual.getMessage(), ERROR_MESSAGE_TRANSFORMED);
-    Assert.assertNull(actual.getHost());
-    Assert.assertNull(actual.getErrorClass());
-    Assert.assertEquals(1, callCount.get());
+    Assertions.assertNotNull(actual);
+    Assertions.assertEquals(ERROR_CODE, actual.getErrorCode());
+    Assertions.assertEquals(ERROR_MESSAGE_TRANSFORMED, actual.getMessage());
+    Assertions.assertNull(actual.getHost());
+    Assertions.assertNull(actual.getErrorClass());
+    Assertions.assertEquals(1, callCount.get());
   }
 
   @Test
@@ -109,8 +109,8 @@ public class QueryExceptionTest
         "test"
     );
 
-    Assert.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, exception.getErrorCode());
-    Assert.assertNull(exception.getMessage());
+    Assertions.assertEquals(QueryException.UNKNOWN_EXCEPTION_ERROR_CODE, exception.getErrorCode());
+    Assertions.assertNull(exception.getMessage());
   }
 
   @Test
@@ -118,17 +118,17 @@ public class QueryExceptionTest
   {
     QueryException queryException = new QueryException(ERROR_CODE, ERROR_MESSAGE_ORIGINAL, ERROR_CLASS, HOST);
     String exceptionToString = queryException.toString();
-    Assert.assertTrue(exceptionToString.startsWith(QueryException.class.getSimpleName()));
-    Assert.assertTrue(exceptionToString.contains("msg=" + ERROR_MESSAGE_ORIGINAL));
-    Assert.assertTrue(exceptionToString.contains("code=" + ERROR_CODE));
-    Assert.assertTrue(exceptionToString.contains("class=" + ERROR_CLASS));
-    Assert.assertTrue(exceptionToString.contains("host=" + HOST));
+    Assertions.assertTrue(exceptionToString.startsWith(QueryException.class.getSimpleName()));
+    Assertions.assertTrue(exceptionToString.contains("msg=" + ERROR_MESSAGE_ORIGINAL));
+    Assertions.assertTrue(exceptionToString.contains("code=" + ERROR_CODE));
+    Assertions.assertTrue(exceptionToString.contains("class=" + ERROR_CLASS));
+    Assertions.assertTrue(exceptionToString.contains("host=" + HOST));
   }
 
   private void expectFailTypeForCode(FailType expected, String code)
   {
     QueryException exception = new QueryException(new Exception(), code, "java.lang.Exception", "test");
 
-    Assert.assertEquals(code, expected, exception.getFailType());
+    Assertions.assertEquals(expected, exception.getFailType(), code);
   }
 }

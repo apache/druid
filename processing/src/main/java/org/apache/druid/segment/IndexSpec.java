@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.CompressionStrategy;
+import org.apache.druid.segment.file.SegmentFileBuilderV10;
 import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 
@@ -75,6 +76,8 @@ public class IndexSpec
   @Nullable
   private final NestedCommonFormatColumnFormatSpec autoColumnFormatSpec;
   @Nullable
+  private final StringColumnFormatSpec stringColumnFormatSpec;
+  @Nullable
   private final CompressionStrategy metadataCompression;
 
   /**
@@ -109,6 +112,8 @@ public class IndexSpec
    *                                 used to load the written segment
    * @param autoColumnFormatSpec     specify the default {@link NestedCommonFormatColumnFormatSpec} to use for json and
    *                                 auto columns. Defaults to null upon calling {@link #getEffectiveSpec()}.
+   * @param stringColumnFormatSpec   specify the default {@link StringColumnFormatSpec} to use for string columns.
+   *                                 Defaults to null upon calling {@link #getEffectiveSpec()}.
    */
   @JsonCreator
   public IndexSpec(
@@ -121,7 +126,8 @@ public class IndexSpec
       @JsonProperty("complexMetricCompression") @Nullable CompressionStrategy complexMetricCompression,
       @Deprecated @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
       @JsonProperty("segmentLoader") @Nullable SegmentizerFactory segmentLoader,
-      @JsonProperty("autoColumnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec autoColumnFormatSpec
+      @JsonProperty("autoColumnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec autoColumnFormatSpec,
+      @JsonProperty("stringColumnFormatSpec") @Nullable StringColumnFormatSpec stringColumnFormatSpec
   )
   {
     this.bitmapSerdeFactory = bitmapSerdeFactory;
@@ -134,6 +140,7 @@ public class IndexSpec
     this.jsonCompression = jsonCompression;
     this.segmentLoader = segmentLoader;
     this.autoColumnFormatSpec = autoColumnFormatSpec;
+    this.stringColumnFormatSpec = stringColumnFormatSpec;
   }
 
   @JsonProperty("bitmap")
@@ -212,6 +219,14 @@ public class IndexSpec
     return autoColumnFormatSpec;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
+  public StringColumnFormatSpec getStringColumnFormatSpec()
+  {
+    return stringColumnFormatSpec;
+  }
+
   /**
    * Populate all null fields of {@link IndexSpec}, first from {@link #getDefault()} and finally falling back to hard
    * coded defaults if no overrides are defined.
@@ -235,7 +250,7 @@ public class IndexSpec
     } else if (defaultSpec.metadataCompression != null) {
       bob.withMetadataCompression(defaultSpec.metadataCompression);
     } else {
-      bob.withMetadataCompression(CompressionStrategy.NONE);
+      bob.withMetadataCompression(SegmentFileBuilderV10.DEFAULT_METADATA_COMPRESSION);
     }
 
     if (dimensionCompression != null) {
@@ -298,6 +313,16 @@ public class IndexSpec
       );
     }
 
+    if (stringColumnFormatSpec != null) {
+      bob.withStringColumnFormatSpec(
+          StringColumnFormatSpec.getEffectiveFormatSpec(stringColumnFormatSpec, this)
+      );
+    } else if (defaultSpec.stringColumnFormatSpec != null) {
+      bob.withStringColumnFormatSpec(
+          StringColumnFormatSpec.getEffectiveFormatSpec(defaultSpec.stringColumnFormatSpec, this)
+      );
+    }
+
     return bob.build();
   }
 
@@ -320,7 +345,8 @@ public class IndexSpec
            Objects.equals(complexMetricCompression, indexSpec.complexMetricCompression) &&
            Objects.equals(jsonCompression, indexSpec.jsonCompression) &&
            Objects.equals(segmentLoader, indexSpec.segmentLoader) &&
-           Objects.equals(autoColumnFormatSpec, indexSpec.autoColumnFormatSpec);
+           Objects.equals(autoColumnFormatSpec, indexSpec.autoColumnFormatSpec) &&
+           Objects.equals(stringColumnFormatSpec, indexSpec.stringColumnFormatSpec);
   }
 
   @Override
@@ -336,7 +362,8 @@ public class IndexSpec
         complexMetricCompression,
         jsonCompression,
         segmentLoader,
-        autoColumnFormatSpec
+        autoColumnFormatSpec,
+        stringColumnFormatSpec
     );
   }
 
@@ -352,6 +379,7 @@ public class IndexSpec
            ", longEncoding=" + longEncoding +
            ", complexMetricCompression=" + complexMetricCompression +
            ", autoColumnFormatSpec=" + autoColumnFormatSpec +
+           ", stringColumnFormatSpec=" + stringColumnFormatSpec +
            ", jsonCompression=" + jsonCompression +
            ", segmentLoader=" + segmentLoader +
            '}';
@@ -379,6 +407,8 @@ public class IndexSpec
     private SegmentizerFactory segmentLoader;
     @Nullable
     private NestedCommonFormatColumnFormatSpec autoColumnFormatSpec;
+    @Nullable
+    private StringColumnFormatSpec stringColumnFormatSpec;
 
     public Builder withBitmapSerdeFactory(@Nullable BitmapSerdeFactory bitmapSerdeFactory)
     {
@@ -441,6 +471,12 @@ public class IndexSpec
       return this;
     }
 
+    public Builder withStringColumnFormatSpec(@Nullable StringColumnFormatSpec stringColumnFormatSpec)
+    {
+      this.stringColumnFormatSpec = stringColumnFormatSpec;
+      return this;
+    }
+
     public IndexSpec build()
     {
       return new IndexSpec(
@@ -453,7 +489,8 @@ public class IndexSpec
           complexMetricCompression,
           jsonCompression,
           segmentLoader,
-          autoColumnFormatSpec
+          autoColumnFormatSpec,
+          stringColumnFormatSpec
       );
     }
   }

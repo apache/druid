@@ -250,7 +250,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   {
     MSQTestTaskDetails old = taskDetailsByQueryId.get(queryId);
     if (old != null) {
-      throw DruidException.defensive("There is an existing queryId {}!", queryId);
+      throw DruidException.defensive("There is an existing queryId [%s]!", queryId);
     }
     taskDetailsByQueryId.put(queryId, msqTestTaskDetails);
   }
@@ -258,7 +258,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   @Override
   public ListenableFuture<Void> cancelTask(String taskId)
   {
-    getControllerForQueryId(taskId).stop(CancellationReason.TASK_SHUTDOWN);
+    getControllerForQueryId(taskId).stop(CancellationReason.TASK_SHUTDOWN, null);
     return Futures.immediateFuture(null);
   }
 

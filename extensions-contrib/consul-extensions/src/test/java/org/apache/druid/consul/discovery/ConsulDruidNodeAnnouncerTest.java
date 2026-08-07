@@ -22,6 +22,7 @@ package org.apache.druid.consul.discovery;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.server.DruidNode;
+import org.apache.http.NoHttpResponseException;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
@@ -90,6 +91,32 @@ public class ConsulDruidNodeAnnouncerTest
     Assert.assertEquals(testNode, nodeCapture.getValue());
 
     // Explicitly stop to trigger cleanup
+    announcer.stop();
+
+    EasyMock.verify(mockConsulApiClient);
+  }
+
+  @Test
+  public void testAnnounceRetriesTransientFailure() throws Exception
+  {
+    mockConsulApiClient.registerService(EasyMock.eq(testNode));
+    EasyMock.expectLastCall().andThrow(new NoHttpResponseException("Consul did not respond"));
+
+    mockConsulApiClient.registerService(EasyMock.eq(testNode));
+    EasyMock.expectLastCall().once();
+
+    mockConsulApiClient.passTtlCheck(EasyMock.anyString(), EasyMock.anyString());
+    EasyMock.expectLastCall().anyTimes();
+
+    mockConsulApiClient.deregisterService(EasyMock.anyString());
+    EasyMock.expectLastCall().once();
+
+    EasyMock.replay(mockConsulApiClient);
+
+    announcer = new ConsulDruidNodeAnnouncer(mockConsulApiClient, config);
+    announcer.start();
+
+    announcer.announce(testNode);
     announcer.stop();
 
     EasyMock.verify(mockConsulApiClient);

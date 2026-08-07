@@ -29,8 +29,8 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -68,7 +68,7 @@ public class CompactionTransformSpecTest
         json,
         CompactionTransformSpec.class
     );
-    Assert.assertEquals(expected, fromJson);
+    Assertions.assertEquals(expected, fromJson);
   }
 
   @Test
@@ -94,20 +94,20 @@ public class CompactionTransformSpecTest
 
     // Both should produce identical JSON (no virtualColumns field)
     // This ensures fingerprint consistency: old segments (no VC) match new segments (EMPTY VC)
-    Assert.assertEquals(
-        "VirtualColumns.EMPTY should serialize identically to null for fingerprint consistency",
+    Assertions.assertEquals(
         jsonWithNull,
-        jsonWithEmpty
+        jsonWithEmpty,
+        "VirtualColumns.EMPTY should serialize identically to null for fingerprint consistency"
     );
 
     // Verify virtualColumns field is not present in either JSON
-    Assert.assertFalse(
-        "virtualColumns field should not appear in JSON when empty",
-        jsonWithEmpty.contains("virtualColumns")
+    Assertions.assertFalse(
+        jsonWithEmpty.contains("virtualColumns"),
+        "virtualColumns field should not appear in JSON when empty"
     );
-    Assert.assertFalse(
-        "virtualColumns field should not appear in JSON when null",
-        jsonWithNull.contains("virtualColumns")
+    Assertions.assertFalse(
+        jsonWithNull.contains("virtualColumns"),
+        "virtualColumns field should not appear in JSON when null"
     );
   }
 
@@ -125,8 +125,8 @@ public class CompactionTransformSpecTest
     );
 
     // Should deserialize to VirtualColumns.EMPTY, not null
-    Assert.assertNotNull("virtualColumns should not be null after deserialization", deserialized.getVirtualColumns());
-    Assert.assertEquals("virtualColumns should be EMPTY", VirtualColumns.EMPTY, deserialized.getVirtualColumns());
-    Assert.assertTrue("virtualColumns should be empty", deserialized.getVirtualColumns().isEmpty());
+    Assertions.assertNotNull(deserialized.getVirtualColumns(), "virtualColumns should not be null after deserialization");
+    Assertions.assertEquals(VirtualColumns.EMPTY, deserialized.getVirtualColumns(), "virtualColumns should be EMPTY");
+    Assertions.assertTrue(deserialized.getVirtualColumns().isEmpty(), "virtualColumns should be empty");
   }
 }

@@ -26,8 +26,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -74,7 +74,7 @@ public class LoggerTest
     Logger.logSegments(logger, Collections.emptyList(), "None segments");
     Logger.logSegmentIds(logger, Stream.empty(), "None segments");
 
-    Assert.assertEquals(0, messages.size());
+    Assertions.assertEquals(0, messages.size());
   }
 
   @Test
@@ -85,11 +85,11 @@ public class LoggerTest
     Logger.LogFunction logger = getLogToListFunction(messages);
     Logger.logSegments(logger, segments, "Test segments");
 
-    Assert.assertEquals(1, messages.size());
+    Assertions.assertEquals(1, messages.size());
     final String expected =
         "Test segments: [someDataSource_2012-01-01T00:00:00.000Z_2012-01-03T00:00:00.000Z_2020-02-02T00:00:00.000Z,"
         + " someDataSource_2012-01-02T00:00:00.000Z_2012-01-04T00:00:00.000Z_2020-02-02T00:00:00.000Z]";
-    Assert.assertEquals(expected, messages.get(0));
+    Assertions.assertEquals(expected, messages.get(0));
   }
 
 
@@ -101,11 +101,11 @@ public class LoggerTest
     Logger.LogFunction logger = getLogToListFunction(messages);
     Logger.logSegmentIds(logger, segments, "Test segments");
 
-    Assert.assertEquals(1, messages.size());
+    Assertions.assertEquals(1, messages.size());
     final String expected =
         "Test segments: [someDataSource_2012-01-01T00:00:00.000Z_2012-01-03T00:00:00.000Z_2020-02-02T00:00:00.000Z,"
         + " someDataSource_2012-01-02T00:00:00.000Z_2012-01-04T00:00:00.000Z_2020-02-02T00:00:00.000Z]";
-    Assert.assertEquals(expected, messages.get(0));
+    Assertions.assertEquals(expected, messages.get(0));
   }
 
 
@@ -118,21 +118,21 @@ public class LoggerTest
 
     final Logger.LogFunction logger = (msg, format) -> {
       String message = StringUtils.format(msg, format);
-      Assert.assertTrue(message.startsWith("Many segments: ["));
-      Assert.assertTrue(message.endsWith("]"));
+      Assertions.assertTrue(message.startsWith("Many segments: ["));
+      Assertions.assertTrue(message.endsWith("]"));
       msgCount.increment();
     };
     Logger.logSegmentIds(logger, segments, "Many segments");
 
     final int expected = (int) Math.ceil((double) numSegments / Logger.SEGMENTS_PER_LOG_MESSAGE);
-    Assert.assertEquals(expected, msgCount.intValue());
+    Assertions.assertEquals(expected, msgCount.intValue());
   }
 
   @Test
   public void testGetName()
   {
     String expected = "org.apache.druid.java.util.common.logger.LoggerTest";
-    Assert.assertEquals(expected, log.getName());
+    Assertions.assertEquals(expected, log.getName());
   }
 
   private Logger.LogFunction getLogToListFunction(List<String> messages)

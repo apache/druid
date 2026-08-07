@@ -35,8 +35,8 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
@@ -66,7 +66,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
   {
     OutputChannel channel = outputChannelFactory.openChannel(1);
 
-    Assert.assertEquals(1, channel.getPartitionNumber());
+    Assertions.assertEquals(1, channel.getPartitionNumber());
 
     // write data to the channel
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
@@ -79,7 +79,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
         channel.getReadableChannel(),
         sourceCursorFactory
     );
-    Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
+    Assertions.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
   }
 
   @Test
@@ -87,7 +87,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
   {
     OutputChannel channel = outputChannelFactory.openChannel(1);
 
-    Assert.assertEquals(1, channel.getPartitionNumber());
+    Assertions.assertEquals(1, channel.getPartitionNumber());
 
     // write data to the channel
     WritableFrameChannel writableFrameChannel = channel.getWritableChannel();
@@ -100,7 +100,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
         channel.getReadableChannel(),
         sourceCursorFactory
     );
-    Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
+    Assertions.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
   }
 
   @Test
@@ -124,7 +124,7 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
           partitionedReadableFrameChannelSupplier.get().getReadableFrameChannel(partition),
           sourceCursorFactory
       );
-      Assert.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
+      Assertions.assertEquals(frameSize, channel.getFrameMemoryAllocator().capacity());
     }
   }
 
@@ -143,8 +143,8 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
     }
     Frame readbackFrame = readableFrameChannel.readFrame();
     readableFrameChannel.readabilityFuture().get();
-    Assert.assertFalse(readableFrameChannel.canRead());
-    Assert.assertTrue(readableFrameChannel.isFinished());
+    Assertions.assertFalse(readableFrameChannel.canRead());
+    Assertions.assertTrue(readableFrameChannel.isFinished());
     readableFrameChannel.close();
 
     CursorFactory frameCursorFactory = FrameReader.create(cursorFactory.getRowSignature()).makeCursorFactory(readbackFrame);
@@ -161,12 +161,12 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
           frameCursorFactory.getRowSignature()
       ).toList();
 
-      Assert.assertEquals(
-          "Read rows count is different from written rows count",
+      Assertions.assertEquals(
           writtenData.size(),
-          readData.size()
+          readData.size(),
+          "Read rows count is different from written rows count"
       );
-      Assert.assertEquals("Read data is different from written data", writtenData, readData);
+      Assertions.assertEquals(writtenData, readData, "Read data is different from written data");
     }
   }
 
@@ -175,8 +175,8 @@ public abstract class OutputChannelFactoryTest extends InitializedNullHandlingTe
   {
     final OutputChannel channel = outputChannelFactory.openNilChannel(1);
 
-    Assert.assertEquals(1, channel.getPartitionNumber());
-    Assert.assertTrue(channel.getReadableChannel().isFinished());
-    Assert.assertThrows(DruidException.class, channel::getWritableChannel);
+    Assertions.assertEquals(1, channel.getPartitionNumber());
+    Assertions.assertTrue(channel.getReadableChannel().isFinished());
+    Assertions.assertThrows(DruidException.class, channel::getWritableChannel);
   }
 }

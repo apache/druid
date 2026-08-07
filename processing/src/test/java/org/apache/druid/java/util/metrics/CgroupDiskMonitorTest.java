@@ -23,30 +23,30 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class CgroupDiskMonitorTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  Path tempDir;
   private File procDir;
   private File cgroupDir;
   private File servicedFile;
   private File serviceBytesFile;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
+    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File blkioDir = new File(
@@ -66,15 +66,15 @@ public class CgroupDiskMonitorTest
   {
     final CgroupDiskMonitor monitor = new CgroupDiskMonitor(discoverer, "some_feed");
     final StubServiceEmitter emitter = StubServiceEmitter.createStarted();
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(0, emitter.getNumEmittedEvents());
 
     TestUtils.copyOrReplaceResource("/blkio.throttle.io_service_bytes-2", serviceBytesFile);
     TestUtils.copyOrReplaceResource("/blkio.throttle.io_serviced-2", servicedFile);
 
-    Assert.assertTrue(monitor.doMonitor(emitter));
-    Assert.assertEquals(8, emitter.getNumEmittedEvents());
-    Assert.assertTrue(
+    Assertions.assertTrue(monitor.doMonitor(emitter));
+    Assertions.assertEquals(8, emitter.getNumEmittedEvents());
+    Assertions.assertTrue(
         emitter
             .getEvents()
             .stream()

@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.aggregation.simd.SimdFloatSumVectorAggregator;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
@@ -81,6 +83,9 @@ public class FloatSumAggregatorFactory extends SimpleFloatAggregatorFactory
       VectorValueSelector selector
   )
   {
+    if (ExpressionProcessing.useVectorApi()) {
+      return new SimdFloatSumVectorAggregator(selector);
+    }
     return new FloatSumVectorAggregator(selector);
   }
 

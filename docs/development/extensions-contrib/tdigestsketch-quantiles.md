@@ -41,6 +41,14 @@ To use this aggregator, make sure you [include](../../configuration/extensions.m
 druid.extensions.loadList=["druid-tdigestsketch"]
 ```
 
+### Configuration
+
+The following runtime property can be set in `runtime.properties`:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.tdigest.maxCompression`|Upper bound on the `compression` parameter accepted by the `tDigestSketch` aggregator and the `TDIGEST_GENERATE_SKETCH`/`TDIGEST_QUANTILE` SQL functions. When a query specifies a compression value exceeding this limit, the value is silently capped to `maxCompression`. Has no effect when unset.|None (no cap)|
+
 ### Aggregator
 
 The result of the aggregation is a T-Digest sketch that is built ingesting numeric values from the raw data or from
@@ -80,7 +88,7 @@ Example:
 |type|This String should always be "tDigestSketch"|yes|
 |name|A String for the output (result) name of the calculation.|yes|
 |fieldName|A String for the name of the input field containing raw numeric values or pre-generated T-Digest sketches.|yes|
-|compression|Parameter that determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches.|no, defaults to 100|
+|compression|Parameter that determines the accuracy and size of the sketch. Higher compression means higher accuracy but more space to store sketches. Capped by `druid.tdigest.maxCompression` when set.|no, defaults to 100|
 
 
 ### Post Aggregators
@@ -159,6 +167,7 @@ Once you load the T-Digest extension, you can use the following SQL functions.
 Builds a T-Digest sketch on values produced by an expression.
 Compression parameter (default value 100) determines the accuracy and size of the sketch.
 Higher compression provides higher accuracy but requires more storage space.
+The compression value is capped by `druid.tdigest.maxCompression` when set.
 
 * **Syntax**: `TDIGEST_GENERATE_SKETCH(expr, [compression])`
 * **Default**: Empty Base64-encoded T-Digest sketch string
@@ -169,6 +178,7 @@ Higher compression provides higher accuracy but requires more storage space.
 Builds a T-Digest sketch on values produced by an expression and returns the value for the quantile.
 Compression parameter (default value 100) determines the accuracy and size of the sketch.
 Higher compression provides higher accuracy but requires more storage space.
+The compression value is capped by `druid.tdigest.maxCompression` when set.
 
 * **Syntax**: `TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
 * **Default**: `Double.NaN`

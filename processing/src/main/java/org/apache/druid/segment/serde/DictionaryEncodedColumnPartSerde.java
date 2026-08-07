@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
@@ -28,10 +29,12 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.StringColumnFormatSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.SelectableColumn;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumnFormat;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
@@ -106,28 +109,34 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   @JsonCreator
   public static DictionaryEncodedColumnPartSerde createDeserializer(
       @JsonProperty("bitmapSerdeFactory") @Nullable BitmapSerdeFactory bitmapSerdeFactory,
-      @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder
+      @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder,
+      @JsonProperty("columnFormatSpec") @Nullable StringColumnFormatSpec columnFormatSpec
   )
   {
     return new DictionaryEncodedColumnPartSerde(
         byteOrder,
         bitmapSerdeFactory != null ? bitmapSerdeFactory : new BitmapSerde.LegacyBitmapSerdeFactory(),
+        columnFormatSpec,
         null
     );
   }
 
   private final ByteOrder byteOrder;
   private final BitmapSerdeFactory bitmapSerdeFactory;
+  @Nullable
+  private final StringColumnFormatSpec columnFormatSpec;
   private final Serializer serializer;
 
   private DictionaryEncodedColumnPartSerde(
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
+      @Nullable StringColumnFormatSpec columnFormatSpec,
       @Nullable Serializer serializer
   )
   {
     this.byteOrder = byteOrder;
     this.bitmapSerdeFactory = bitmapSerdeFactory;
+    this.columnFormatSpec = columnFormatSpec;
     this.serializer = serializer;
   }
 
@@ -141,6 +150,14 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
   public ByteOrder getByteOrder()
   {
     return byteOrder;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public StringColumnFormatSpec getColumnFormatSpec()
+  {
+    return columnFormatSpec;
   }
 
   public static SerializerBuilder serializerBuilder()
@@ -166,6 +183,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     private ByteBufferWriter<ImmutableRTree> spatialIndexWriter = null;
     @Nullable
     private ByteOrder byteOrder = null;
+    @Nullable
+    private StringColumnFormatSpec columnFormatSpec = null;
 
     public SerializerBuilder withDictionary(DictionaryWriter<String> dictionaryWriter)
     {
@@ -203,6 +222,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return this;
     }
 
+    public SerializerBuilder withColumnFormatSpec(@Nullable StringColumnFormatSpec columnFormatSpec)
+    {
+      this.columnFormatSpec = columnFormatSpec;
+      return this;
+    }
+
     public SerializerBuilder withValue(ColumnarIntsSerializer valueWriter, boolean hasMultiValue, boolean compressed)
     {
       this.valueWriter = valueWriter;
@@ -234,6 +259,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       return new DictionaryEncodedColumnPartSerde(
           byteOrder,
           bitmapSerdeFactory,
+          columnFormatSpec,
           new Serializer()
           {
             @Override
@@ -380,6 +406,14 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               rSpatialIndex != null
           );
         }
+
+        builder.setColumnFormat(new StringDictionaryEncodedColumnFormat(
+            hasMultipleValues,
+            hasNulls,
+            rBitmaps != null,
+            rSpatialIndex != null,
+            columnFormatSpec
+        ));
       }
 
       private WritableSupplier<ColumnarInts> readSingleValuedColumn(

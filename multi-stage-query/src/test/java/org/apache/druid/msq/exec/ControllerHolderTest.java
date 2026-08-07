@@ -47,6 +47,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class ControllerHolderTest
 {
@@ -107,7 +108,7 @@ public class ControllerHolderTest
     final ListenableFuture<?> future = holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
 
     controllerStarted.await();
-    holder.cancel(CancellationReason.USER_REQUEST);
+    holder.cancel(CancellationReason.USER_REQUEST, null);
     controllerFinished.await();
 
     try {
@@ -146,7 +147,7 @@ public class ControllerHolderTest
       }
 
       @Override
-      public void stop(final CancellationReason reason)
+      public void stop(final CancellationReason reason, @Nullable Throwable cause)
       {
         stopCalled.set(true);
       }
@@ -156,10 +157,52 @@ public class ControllerHolderTest
     holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
 
     controllerStarted.await();
-    holder.cancel(CancellationReason.USER_REQUEST);
+    holder.cancel(CancellationReason.USER_REQUEST, null);
     controllerFinished.await();
 
     Assert.assertTrue("stop() should have been called as failsafe", stopCalled.get());
+  }
+
+  @Test
+  public void testCancelPassesCauseToStop() throws Exception
+  {
+    final CountDownLatch controllerStarted = new CountDownLatch(1);
+    final CountDownLatch controllerFinished = new CountDownLatch(1);
+    final AtomicReference<Throwable> stopCause = new AtomicReference<>();
+    final RuntimeException cause = new RuntimeException("error writing to client");
+    final Controller controller = new TestController("test-query")
+    {
+      @Override
+      public void run(final QueryListener listener)
+      {
+        try {
+          controllerStarted.countDown();
+          Thread.sleep(300_000);
+        }
+        catch (InterruptedException e) {
+          // expected
+        }
+        finally {
+          listener.onQueryComplete(makeSuccessReport());
+          controllerFinished.countDown();
+        }
+      }
+
+      @Override
+      public void stop(final CancellationReason reason, @Nullable final Throwable cause)
+      {
+        stopCause.set(cause);
+      }
+    };
+
+    final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
+    holder.runAsync(new NoopQueryListener(), null, controllerThreadPool);
+
+    controllerStarted.await();
+    holder.cancel(CancellationReason.UNKNOWN, cause);
+    controllerFinished.await();
+
+    Assert.assertSame("stop() should have received the cause", cause, stopCause.get());
   }
 
   @Test
@@ -198,7 +241,7 @@ public class ControllerHolderTest
     final ControllerHolder holder = new ControllerHolder(controller, "sql-1", null, null, DateTimes.nowUtc());
 
     // Cancel before run
-    holder.cancel(CancellationReason.USER_REQUEST);
+    holder.cancel(CancellationReason.USER_REQUEST, null);
     Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
 
     // Run should complete quickly without running the controller
@@ -238,8 +281,8 @@ public class ControllerHolderTest
     controllerStarted.await();
 
     // Cancel twice — should not throw
-    holder.cancel(CancellationReason.USER_REQUEST);
-    holder.cancel(CancellationReason.USER_REQUEST);
+    holder.cancel(CancellationReason.USER_REQUEST, null);
+    holder.cancel(CancellationReason.USER_REQUEST, null);
     controllerFinished.await();
 
     Assert.assertEquals(ControllerHolder.State.CANCELED, holder.getState());
@@ -264,7 +307,7 @@ public class ControllerHolderTest
     Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
 
     // Cancel after completion — should be a no-op
-    holder.cancel(CancellationReason.USER_REQUEST);
+    holder.cancel(CancellationReason.USER_REQUEST, null);
     Assert.assertEquals(ControllerHolder.State.SUCCESS, holder.getState());
   }
 
@@ -391,7 +434,7 @@ public class ControllerHolderTest
     }
 
     @Override
-    public void stop(final CancellationReason reason)
+    public void stop(final CancellationReason reason, @Nullable Throwable cause)
     {
     }
 

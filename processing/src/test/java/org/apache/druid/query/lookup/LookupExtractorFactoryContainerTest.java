@@ -22,8 +22,8 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
@@ -51,7 +51,7 @@ public class LookupExtractorFactoryContainerTest
         LookupExtractorFactoryContainer.class
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new LookupExtractorFactoryContainer(
             "v1",
             new TestLookupExtractorFactory()
@@ -68,11 +68,11 @@ public class LookupExtractorFactoryContainerTest
     LookupExtractorFactoryContainer l2 = new LookupExtractorFactoryContainer("v0", new TestLookupExtractorFactory());
     LookupExtractorFactoryContainer l3 = new LookupExtractorFactoryContainer("v1", new TestLookupExtractorFactory());
 
-    Assert.assertTrue(l0.replaces(l1));
-    Assert.assertFalse(l1.replaces(l2));
-    Assert.assertTrue(l2.replaces(l1));
-    Assert.assertFalse(l2.replaces(l3));
-    Assert.assertTrue(l3.replaces(l2));
+    Assertions.assertTrue(l0.replaces(l1));
+    Assertions.assertFalse(l1.replaces(l2));
+    Assertions.assertTrue(l2.replaces(l1));
+    Assertions.assertFalse(l2.replaces(l3));
+    Assertions.assertTrue(l3.replaces(l2));
   }
 
   @JsonTypeName("test")

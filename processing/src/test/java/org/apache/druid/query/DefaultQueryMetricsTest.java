@@ -31,8 +31,8 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -72,23 +72,23 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     queryMetrics.queryId("dummy");
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
-    Assert.assertEquals(13, actualEvent.size());
-    Assert.assertTrue(actualEvent.containsKey("feed"));
-    Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("localhost", actualEvent.get("host"));
-    Assert.assertEquals("testing", actualEvent.get("service"));
-    Assert.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
-    Assert.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
+    Assertions.assertEquals(13, actualEvent.size());
+    Assertions.assertTrue(actualEvent.containsKey("feed"));
+    Assertions.assertTrue(actualEvent.containsKey("timestamp"));
+    Assertions.assertEquals("localhost", actualEvent.get("host"));
+    Assertions.assertEquals("testing", actualEvent.get("service"));
+    Assertions.assertEquals("xx", actualEvent.get(DruidMetrics.DATASOURCE));
+    Assertions.assertEquals(query.getType(), actualEvent.get(DruidMetrics.TYPE));
     List<Interval> expectedIntervals = QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC.getIntervals();
     List<String> expectedStringIntervals =
         expectedIntervals.stream().map(Interval::toString).collect(Collectors.toList());
-    Assert.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
-    Assert.assertEquals("true", actualEvent.get("hasFilters"));
-    Assert.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
-    Assert.assertEquals("dummy", actualEvent.get(DruidMetrics.ID));
-    Assert.assertEquals("query/time", actualEvent.get("metric"));
-    Assert.assertEquals(0L, actualEvent.get("value"));
-    Assert.assertEquals(ImmutableMap.of("testKey", "testValue"), actualEvent.get("context"));
+    Assertions.assertEquals(expectedStringIntervals, actualEvent.get(DruidMetrics.INTERVAL));
+    Assertions.assertEquals("true", actualEvent.get("hasFilters"));
+    Assertions.assertEquals(expectedIntervals.get(0).toDuration().toString(), actualEvent.get("duration"));
+    Assertions.assertEquals("dummy", actualEvent.get(DruidMetrics.ID));
+    Assertions.assertEquals("query/time", actualEvent.get("metric"));
+    Assertions.assertEquals(0L, actualEvent.get("value"));
+    Assertions.assertEquals(ImmutableMap.of("testKey", "testValue"), actualEvent.get("context"));
   }
 
   @Test
@@ -138,7 +138,7 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     // Verify that Queried Segment Count does not get emitted by the DefaultQueryMetrics
     // and the total number of emitted metrics remains unchanged
     queryMetrics.reportQueriedSegmentCount(25).emit(serviceEmitter);
-    Assert.assertEquals(10, serviceEmitter.getNumEmittedEvents());
+    Assertions.assertEquals(10, serviceEmitter.getNumEmittedEvents());
   }
 
   @Test
@@ -149,13 +149,13 @@ public class DefaultQueryMetricsTest extends InitializedNullHandlingTest
     queryMetrics.vectorized(true);
     queryMetrics.reportSegmentTime(0).emit(serviceEmitter);
     Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
-    Assert.assertEquals(7, actualEvent.size());
-    Assert.assertTrue(actualEvent.containsKey("feed"));
-    Assert.assertTrue(actualEvent.containsKey("timestamp"));
-    Assert.assertEquals("localhost", actualEvent.get("host"));
-    Assert.assertEquals("testing", actualEvent.get("service"));
-    Assert.assertEquals("query/segment/time", actualEvent.get("metric"));
-    Assert.assertEquals(0L, actualEvent.get("value"));
-    Assert.assertEquals(true, actualEvent.get("vectorized"));
+    Assertions.assertEquals(7, actualEvent.size());
+    Assertions.assertTrue(actualEvent.containsKey("feed"));
+    Assertions.assertTrue(actualEvent.containsKey("timestamp"));
+    Assertions.assertEquals("localhost", actualEvent.get("host"));
+    Assertions.assertEquals("testing", actualEvent.get("service"));
+    Assertions.assertEquals("query/segment/time", actualEvent.get("metric"));
+    Assertions.assertEquals(0L, actualEvent.get("value"));
+    Assertions.assertEquals(true, actualEvent.get("vectorized"));
   }
 }

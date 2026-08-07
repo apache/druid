@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -52,6 +53,18 @@ public interface ColumnPartSerde
    * Returns a Deserializer to read a column from a segment.
    */
   Deserializer getDeserializer();
+
+  /**
+   * Returns the {@link ColumnType} for this part serde, if known. This is used to determine the column type from
+   * metadata without deserializing the column data. Returns {@code null} by default; implementations that carry
+   * type information beyond what {@link org.apache.druid.segment.column.ColumnDescriptor#getValueType()} provides
+   * (such as complex type names or array element types) should override this.
+   */
+  @Nullable
+  default ColumnType getColumnType()
+  {
+    return null;
+  }
 
   interface Deserializer
   {

@@ -23,7 +23,7 @@ sidebar_label: "Tips for writing good queries"
   ~ under the License.
   -->
 
-This topic includes tips and examples that can help you investigate and improve query performance and accuracy using [Apache Druid SQL](./sql.md).
+This topic includes tips and examples that can help you investigate and improve query performance and accuracy using [Apache&circledR; Druid SQL](./sql.md).
 
 For an interactive tutorial on Druid SQL, see [Learn the basics of Druid SQL](https://github.com/implydata/learn-druid/tree/main/notebooks) within the [Learn Druid repo](https://github.com/implydata/learn-druid).
 

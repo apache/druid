@@ -21,8 +21,8 @@ package org.apache.druid.java.util.http.client;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.asynchttpclient.DefaultAsyncHttpClient;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -86,12 +86,12 @@ public class AsyncHttpClientTest
           .execute();
       System.out.println("created future in: " + (System.currentTimeMillis() - requestStart));
       future.get(3000, TimeUnit.MILLISECONDS);
-      Assert.fail("Expected timeout");
+      Assertions.fail("Expected timeout");
     }
     catch (ExecutionException | TimeoutException e) {
       long elapsed = System.currentTimeMillis() - requestStart;
       // Within 10% of timeout
-      Assert.assertTrue("elapsed: " + elapsed, elapsed < 2200);
+      Assertions.assertTrue(elapsed < 2200, "elapsed: " + elapsed);
     }
     finally {
       exec.shutdownNow();

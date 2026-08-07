@@ -19,8 +19,8 @@
 
 package org.apache.druid.collections.fastutil;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DruidIntListTest
 {
@@ -82,16 +82,16 @@ public class DruidIntListTest
 
     intList.fill(2, 4);
 
-    Assert.assertEquals(4, intList.size());
+    Assertions.assertEquals(4, intList.size());
     intList.resetToSize(4);
-    Assert.assertEquals(0, intList.size());
+    Assertions.assertEquals(0, intList.size());
   }
 
   private void expectEquals(DruidIntList intList, int[] expected)
   {
-    Assert.assertEquals(expected.length, intList.size());
+    Assertions.assertEquals(expected.length, intList.size());
     for (int i = 0; i < expected.length; ++i) {
-      Assert.assertEquals(String.valueOf(i), expected[i], intList.getInt(i));
+      Assertions.assertEquals(expected[i], intList.getInt(i), String.valueOf(i));
     }
   }
 }

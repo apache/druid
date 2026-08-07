@@ -34,6 +34,7 @@ import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
+import javax.annotation.Nullable;
 import java.util.Set;
 
 /**
@@ -155,18 +156,10 @@ public class DirectStatement extends AbstractStatement implements Cancelable
   public DirectStatement(
       final SqlToolbox lifecycleToolbox,
       final SqlQueryPlus queryPlus,
-      final String remoteAddress
+      @Nullable final String remoteAddress
   )
   {
     super(lifecycleToolbox, queryPlus, remoteAddress);
-  }
-
-  public DirectStatement(
-      final SqlToolbox lifecycleToolbox,
-      final SqlQueryPlus sqlRequest
-  )
-  {
-    super(lifecycleToolbox, sqlRequest, null);
   }
 
   /**

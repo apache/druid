@@ -21,8 +21,8 @@ package org.apache.druid.data.input.impl;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,7 +34,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   @Test
   public void testEmpty()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList(null),
         DelimitedBytes.split(new byte[0], TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
@@ -43,7 +43,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   @Test
   public void testNoDelimiter()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList("abc"),
         DelimitedBytes.split(StringUtils.toUtf8("abc"), TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
@@ -52,7 +52,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   @Test
   public void testOneDelimiter()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList("a", "bc"),
         DelimitedBytes.split(StringUtils.toUtf8("a\tbc"), TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
@@ -61,7 +61,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   @Test
   public void testDelimiterAtStart()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList(null, "abc"),
         DelimitedBytes.split(StringUtils.toUtf8("\tabc"), TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
@@ -70,7 +70,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   @Test
   public void testDelimiterAtEnd()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList("a", "bc", null),
         DelimitedBytes.split(StringUtils.toUtf8("a\tbc\t"), TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
@@ -79,7 +79,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   @Test
   public void testMoreFieldsThanHint()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList("a", "b", "c"),
         DelimitedBytes.split(StringUtils.toUtf8("a\tb\tc"), TSV, 1)
     );

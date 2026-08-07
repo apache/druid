@@ -25,10 +25,10 @@ import org.apache.druid.math.expr.vector.ExprEvalLongVector;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class ExpressionVectorValueSelectorTest
 {
@@ -37,7 +37,7 @@ public class ExpressionVectorValueSelectorTest
   private ExprVectorProcessor vectorProcessor;
   private ExpressionVectorValueSelector expressionVectorValueSelector;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     binding = EasyMock.createMock(Expr.VectorInputBinding.class);
@@ -48,7 +48,7 @@ public class ExpressionVectorValueSelectorTest
     EasyMock.reset(binding, vectorProcessor);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(binding, vectorProcessor);
@@ -69,8 +69,8 @@ public class ExpressionVectorValueSelectorTest
     long[] vector2 = expressionVectorValueSelector.getLongVector();
     boolean[] bools2 = expressionVectorValueSelector.getNullVector();
 
-    Assert.assertArrayEquals(vector1, vector2);
-    Assert.assertArrayEquals(bools1, bools2);
+    Assertions.assertArrayEquals(vector1, vector2);
+    Assertions.assertArrayEquals(bools1, bools2);
   }
 
   @Test
@@ -88,8 +88,8 @@ public class ExpressionVectorValueSelectorTest
     double[] vector2 = expressionVectorValueSelector.getDoubleVector();
     boolean[] bools2 = expressionVectorValueSelector.getNullVector();
 
-    Assert.assertArrayEquals(vector1, vector2, 0.0);
-    Assert.assertArrayEquals(bools1, bools2);
+    Assertions.assertArrayEquals(vector1, vector2, 0.0);
+    Assertions.assertArrayEquals(bools1, bools2);
   }
 
   @Test
@@ -109,8 +109,8 @@ public class ExpressionVectorValueSelectorTest
     boolean[] bools2 = expressionVectorValueSelector.getNullVector();
 
     for (int i = 0; i < vector1.length; i++) {
-      Assert.assertEquals(vector1[i], vector2[i], 0.0);
+      Assertions.assertEquals(vector1[i], vector2[i], 0.0);
     }
-    Assert.assertArrayEquals(bools1, bools2);
+    Assertions.assertArrayEquals(bools1, bools2);
   }
 }

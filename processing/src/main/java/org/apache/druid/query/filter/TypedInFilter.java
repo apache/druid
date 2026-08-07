@@ -258,6 +258,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     if (!Objects.equals(getColumn(), dimension)) {
       return null;
     }
+    // The RangeSet returned here is compared lexicographically against shard boundaries (see DimensionRangeShardSpec),
+    // so it is only OK to return one for STRING comparison.
+    if (!matchValueType.is(ValueType.STRING)) {
+      return null;
+    }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (Object value : sortedMatchValues.get()) {
       String valueEquivalent = Evals.asString(value);
@@ -616,12 +621,18 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
         }
       };
     }
-    // convert set to longs
-    LongOpenHashSet longs = new LongOpenHashSet();
+    // Convert set to longs, dropping any values which cannot be equal to a long.
+    final ExpressionType matchExpressionType = ExpressionType.fromColumnTypeStrict(matchValueType);
+    final LongOpenHashSet longs = new LongOpenHashSet(sortedValues.size());
     for (Object value : sortedValues) {
-      final Long longValue = DimensionHandlerUtils.convertObjectToLong(value);
-      if (longValue != null) {
-        longs.add(longValue.longValue());
+      if (value == null) {
+        // Nulls are handled by matchNulls.
+        continue;
+      }
+      final ExprEval<?> castForComparison =
+          ExprEval.castForEqualityComparison(ExprEval.ofType(matchExpressionType, value), ExpressionType.LONG);
+      if (castForComparison != null) {
+        longs.add(castForComparison.asLong());
       }
     }
     return new DruidLongPredicate()

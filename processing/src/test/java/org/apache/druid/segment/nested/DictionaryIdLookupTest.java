@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.AutoTypeColumnMerger;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -29,19 +30,19 @@ import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.nio.file.Path;
 
 public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder temp = new TemporaryFolder();
+  @TempDir
+  private Path tempDir;
 
   @Test
   public void testIdLookup() throws IOException
@@ -64,7 +65,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 
     // setup dictionary writers
     SegmentWriteOutMedium medium = TmpFileSegmentWriteOutMediumFactory.instance()
-                                                                      .makeSegmentWriteOutMedium(temp.newFolder());
+                                                                      .makeSegmentWriteOutMedium(FileUtils.createTempDirInLocation(tempDir, "medium"));
     DictionaryWriter<String> stringWriter = StringEncodingStrategies.getStringDictionaryWriter(
         new StringEncodingStrategy.FrontCoded(4, (byte) 1),
         medium,
@@ -90,7 +91,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
         4
     );
 
-    File dictTempDir = temp.newFolder();
+    File dictTempDir = FileUtils.createTempDirInLocation(tempDir, "dict");
 
     // make lookup with references to writers
     DictionaryIdLookup idLookup = new DictionaryIdLookup(
@@ -109,7 +110,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
     arrayWriter.open();
 
     File tempDir = dictTempDir;
-    Assert.assertEquals(0, tempDir.listFiles().length);
+    Assertions.assertEquals(0, tempDir.listFiles().length);
 
     for (String s : sortedValueDictionary.getSortedStrings()) {
       stringWriter.write(s);
@@ -126,36 +127,36 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
         idLookup
     );
 
-    Assert.assertEquals(0, tempDir.listFiles().length);
+    Assertions.assertEquals(0, tempDir.listFiles().length);
 
     // looking up some values pulls in string dictionary and long dictionary
-    Assert.assertEquals(0, idLookup.lookupString(null));
-    Assert.assertEquals(1, idLookup.lookupString("hello"));
-    Assert.assertEquals(2, idLookup.lookupString("world"));
-    Assert.assertEquals(3, idLookup.lookupLong(-123L));
+    Assertions.assertEquals(0, idLookup.lookupString(null));
+    Assertions.assertEquals(1, idLookup.lookupString("hello"));
+    Assertions.assertEquals(2, idLookup.lookupString("world"));
+    Assertions.assertEquals(3, idLookup.lookupLong(-123L));
 
-    Assert.assertEquals(2, tempDir.listFiles().length);
+    Assertions.assertEquals(2, tempDir.listFiles().length);
 
     // writing arrays needs to use the lookups for lower value dictionaries, so will create string, long, and double
     // temp dictionary files
     for (int[] arr : sortedArrays) {
       arrayWriter.write(arr);
     }
-    Assert.assertEquals(3, tempDir.listFiles().length);
+    Assertions.assertEquals(3, tempDir.listFiles().length);
 
-    Assert.assertEquals(8, idLookup.lookupDouble(-1.234));
-    Assert.assertEquals(11, idLookup.lookupDouble(1.234));
+    Assertions.assertEquals(8, idLookup.lookupDouble(-1.234));
+    Assertions.assertEquals(11, idLookup.lookupDouble(1.234));
 
-    Assert.assertEquals(3, tempDir.listFiles().length);
+    Assertions.assertEquals(3, tempDir.listFiles().length);
 
     // looking up arrays pulls in array file
-    Assert.assertEquals(12, idLookup.lookupArray(new int[]{1, 2}));
-    Assert.assertEquals(13, idLookup.lookupArray(new int[]{4, 5, 6}));
-    Assert.assertEquals(14, idLookup.lookupArray(new int[]{10, 8, 9, 11}));
-    Assert.assertEquals(4, tempDir.listFiles().length);
+    Assertions.assertEquals(12, idLookup.lookupArray(new int[]{1, 2}));
+    Assertions.assertEquals(13, idLookup.lookupArray(new int[]{4, 5, 6}));
+    Assertions.assertEquals(14, idLookup.lookupArray(new int[]{10, 8, 9, 11}));
+    Assertions.assertEquals(4, tempDir.listFiles().length);
 
     // close it removes all the temp files
     idLookup.close();
-    Assert.assertEquals(0, tempDir.listFiles().length);
+    Assertions.assertEquals(0, tempDir.listFiles().length);
   }
 }

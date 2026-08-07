@@ -33,12 +33,9 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -53,11 +50,8 @@ import java.util.concurrent.ExecutorService;
 public class ReadableInputStreamFrameChannelTest extends InitializedNullHandlingTest
 {
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  File temporaryFolder;
 
   final IncrementalIndexCursorFactory cursorFactory =
       new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
@@ -83,7 +77,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
             FrameReader.create(cursorFactory.getRowSignature())
         )
     );
-    Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
+    Assertions.assertTrue(readableInputStreamFrameChannel.isFinished());
     readableInputStreamFrameChannel.close();
 
   }
@@ -92,7 +86,10 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   @Test
   public void testEmptyFrameFile() throws IOException
   {
-    final File file = FrameTestUtil.writeFrameFile(Sequences.empty(), temporaryFolder.newFile());
+    final File file = FrameTestUtil.writeFrameFile(
+        Sequences.empty(),
+        File.createTempFile("tmp", null, temporaryFolder)
+    );
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
         "readEmptyFrameFile",
@@ -101,18 +98,21 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         null
     );
 
-    Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
-        readableInputStreamFrameChannel,
-        FrameReader.create(cursorFactory.getRowSignature())
-    ).toList().size(), 0);
-    Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
+    Assertions.assertEquals(
+        0,
+        FrameTestUtil.readRowsFromFrameChannel(
+            readableInputStreamFrameChannel,
+            FrameReader.create(cursorFactory.getRowSignature())
+        ).toList().size()
+    );
+    Assertions.assertTrue(readableInputStreamFrameChannel.isFinished());
     readableInputStreamFrameChannel.close();
   }
 
   @Test
   public void testZeroBytesFrameFile() throws IOException
   {
-    final File file = temporaryFolder.newFile();
+    final File file = File.createTempFile("tmp", null, temporaryFolder);
     FileOutputStream outputStream = new FileOutputStream(file);
     outputStream.write(new byte[0]);
     outputStream.close();
@@ -125,7 +125,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         null
     );
 
-    final IllegalStateException e = Assert.assertThrows(
+    final IllegalStateException e = Assertions.assertThrows(
         IllegalStateException.class,
         () ->
             FrameTestUtil.readRowsFromFrameChannel(
@@ -135,8 +135,8 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     );
 
     MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Incomplete or missing frame at end of stream"))
+        e.getMessage(),
+        CoreMatchers.startsWith("Incomplete or missing frame at end of stream")
     );
   }
 
@@ -154,7 +154,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
                             .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
                             .frameType(FrameType.latestRowBased())
                             .frames(),
-        temporaryFolder.newFile()
+        File.createTempFile("tmp", null, temporaryFolder)
     );
 
     final byte[] truncatedFile = new byte[truncatedSize];
@@ -172,21 +172,19 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         null
     );
 
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Incomplete or missing frame at end of stream");
-
-    Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
-        readableInputStreamFrameChannel,
-        FrameReader.create(cursorFactory.getRowSignature())
-    ).toList().size(), 0);
-    Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.close();
+    final ISE e = Assertions.assertThrows(ISE.class, () ->
+        FrameTestUtil.readRowsFromFrameChannel(
+            readableInputStreamFrameChannel,
+            FrameReader.create(cursorFactory.getRowSignature())
+        ).toList()
+    );
+    Assertions.assertTrue(e.getMessage().contains("Incomplete or missing frame at end of stream"));
   }
 
   @Test
   public void testIncorrectFrameFile() throws IOException
   {
-    final File file = temporaryFolder.newFile();
+    final File file = File.createTempFile("tmp", null, temporaryFolder);
     FileOutputStream outputStream = new FileOutputStream(file);
     outputStream.write(10);
     outputStream.close();
@@ -199,15 +197,13 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
         null
     );
 
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Incomplete or missing frame at end of stream");
-
-    Assert.assertEquals(FrameTestUtil.readRowsFromFrameChannel(
-        readableInputStreamFrameChannel,
-        FrameReader.create(cursorFactory.getRowSignature())
-    ).toList().size(), 0);
-    Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.close();
+    final ISE e = Assertions.assertThrows(ISE.class, () ->
+        FrameTestUtil.readRowsFromFrameChannel(
+            readableInputStreamFrameChannel,
+            FrameReader.create(cursorFactory.getRowSignature())
+        ).toList()
+    );
+    Assertions.assertTrue(e.getMessage().contains("Incomplete or missing frame at end of stream"));
 
   }
 
@@ -225,17 +221,16 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
     );
     inputStream.close();
 
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Found error while reading input stream");
-    FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
-        FrameTestUtil.readRowsFromFrameChannel(
-            readableInputStreamFrameChannel,
-            FrameReader.create(cursorFactory.getRowSignature())
+    final ISE e = Assertions.assertThrows(ISE.class, () ->
+        FrameTestUtil.assertRowsEqual(
+            FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+            FrameTestUtil.readRowsFromFrameChannel(
+                readableInputStreamFrameChannel,
+                FrameReader.create(cursorFactory.getRowSignature())
+            )
         )
     );
-    Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.close();
+    Assertions.assertTrue(e.getMessage().contains("Found error while reading input stream"));
   }
 
   @Test
@@ -252,15 +247,13 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
     inputStream.close();
 
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Found error while reading input stream");
-
-    while (!readableInputStreamFrameChannel.canRead()) {
-      Thread.sleep(10);
-    }
-    readableInputStreamFrameChannel.readFrame();
-    Assert.assertTrue(readableInputStreamFrameChannel.isFinished());
-    readableInputStreamFrameChannel.close();
+    final ISE e = Assertions.assertThrows(ISE.class, () -> {
+      while (!readableInputStreamFrameChannel.canRead()) {
+        Thread.sleep(10);
+      }
+      readableInputStreamFrameChannel.readFrame();
+    });
+    Assertions.assertTrue(e.getMessage().contains("Found error while reading input stream"));
   }
 
   private InputStream getInputStream()
@@ -271,7 +264,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
                               .maxRowsPerFrame(10)
                               .frameType(FrameType.latestRowBased())
                               .frames(),
-          temporaryFolder.newFile()
+          File.createTempFile("tmp", null, temporaryFolder)
       );
       return Files.newInputStream(file.toPath());
     }

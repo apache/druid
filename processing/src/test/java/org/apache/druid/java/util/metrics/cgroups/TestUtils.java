@@ -21,7 +21,7 @@ package org.apache.druid.java.util.metrics.cgroups;
 
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.File;
 import java.io.IOException;
@@ -78,15 +78,15 @@ public class TestUtils
   public static void copyResource(String resource, File out) throws IOException
   {
     Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath());
-    Assert.assertTrue(out.exists());
-    Assert.assertNotEquals(0, out.length());
+    Assertions.assertTrue(out.exists());
+    Assertions.assertNotEquals(0, out.length());
   }
 
   public static void copyOrReplaceResource(String resource, File out) throws IOException
   {
     Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
-    Assert.assertTrue(out.exists());
-    Assert.assertNotEquals(0, out.length());
+    Assertions.assertTrue(out.exists());
+    Assertions.assertNotEquals(0, out.length());
   }
 
   public static void writeCpuCgroupV2Files(File cgroupRoot) throws IOException

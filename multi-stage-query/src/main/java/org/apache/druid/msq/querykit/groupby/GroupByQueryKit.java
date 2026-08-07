@@ -29,6 +29,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
@@ -139,7 +140,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       shuffleSpecFactoryPreAggregation =
           intermediateClusterBy.isEmpty()
           ? ShuffleSpecFactories.singlePartition()
-          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(queryKitSpec.getNumPartitionsForShuffle());
+          : ShuffleSpecFactories.globalSortWithTargetPartitions();
 
       if (doLimitOrOffset) {
         shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);
@@ -164,7 +165,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .signature(intermediateSignature)
                        .shuffleSpec(shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true))
-                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount())
                        .processor(new GroupByPreShuffleStageProcessor(queryToRun))
     );
 
@@ -184,7 +185,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         StageDefinition.builder(firstStageNumber + 1)
                        .inputs(new StageInputSpec(firstStageNumber))
                        .signature(resultSignature)
-                       .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
+                       .maxWorkerCount(Limits.MAX_WORKERS)
                        .shuffleSpec(
                            shuffleSpecFactoryPostAggregation != null
                            ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)

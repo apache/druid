@@ -23,8 +23,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,7 +36,7 @@ public class FunctionalIterableTest
   @Test
   public void testTransform()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             FunctionalIterable.create(Arrays.asList("1", "2", "3"))
                               .transform(
@@ -57,7 +57,7 @@ public class FunctionalIterableTest
   @Test
   public void testTransformCat()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             FunctionalIterable.create(Arrays.asList("1,2", "3,4", "5,6"))
                               .transformCat(
@@ -78,7 +78,7 @@ public class FunctionalIterableTest
   @Test
   public void testKeep()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             FunctionalIterable.create(Arrays.asList("1", "2", "3"))
                               .keep(
@@ -102,7 +102,7 @@ public class FunctionalIterableTest
   @Test
   public void testFilter()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             FunctionalIterable.create(Arrays.asList("1", "2", "3"))
                               .filter(
@@ -123,7 +123,7 @@ public class FunctionalIterableTest
   @Test
   public void testDrop()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Lists.newArrayList(
             FunctionalIterable.create(Arrays.asList("1", "2", "3"))
                               .drop(2)

@@ -22,9 +22,9 @@ package org.apache.druid.query.scan;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ public class ScanResultValueTest
   private static ScanResultValue compactedListSRVIntegerTimestamp;
   private static ScanResultValue listSRVIntegerTimestamp;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup()
   {
     String segmentId = "some_segment_id";
@@ -98,7 +98,7 @@ public class ScanResultValueTest
 
     String serialized = JSON_MAPPER.writeValueAsString(compactedListSRVLongTimestamp);
     ScanResultValue deserialized = JSON_MAPPER.readValue(serialized, ScanResultValue.class);
-    Assert.assertEquals(compactedListSRVLongTimestamp, deserialized);
+    Assertions.assertEquals(compactedListSRVLongTimestamp, deserialized);
   }
 
   @Test
@@ -107,25 +107,25 @@ public class ScanResultValueTest
 
     String serialized = JSON_MAPPER.writeValueAsString(listSRVLongTimestamp);
     ScanResultValue deserialized = JSON_MAPPER.readValue(serialized, ScanResultValue.class);
-    Assert.assertEquals(listSRVLongTimestamp, deserialized);
+    Assertions.assertEquals(listSRVLongTimestamp, deserialized);
   }
 
   @Test
   public void testGetFirstEventTimestampCompactedList()
   {
     long timestamp = compactedListSRVLongTimestamp.getFirstEventTimestamp(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST);
-    Assert.assertEquals(TIME_1_LONG, timestamp);
+    Assertions.assertEquals(TIME_1_LONG, timestamp);
     long timestampInt = compactedListSRVIntegerTimestamp.getFirstEventTimestamp(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST);
-    Assert.assertEquals(TIME_3_INT, timestampInt);
+    Assertions.assertEquals(TIME_3_INT, timestampInt);
   }
 
   @Test
   public void testGetFirstEventTimestampNonCompactedList()
   {
     long timestamp = listSRVLongTimestamp.getFirstEventTimestamp(ScanQuery.ResultFormat.RESULT_FORMAT_LIST);
-    Assert.assertEquals(TIME_1_LONG, timestamp);
+    Assertions.assertEquals(TIME_1_LONG, timestamp);
     long timestampInt = listSRVIntegerTimestamp.getFirstEventTimestamp(ScanQuery.ResultFormat.RESULT_FORMAT_LIST);
-    Assert.assertEquals(TIME_3_INT, timestampInt);
+    Assertions.assertEquals(TIME_3_INT, timestampInt);
   }
 
   @Test
@@ -134,12 +134,12 @@ public class ScanResultValueTest
     List<ScanResultValue> compactedListScanResultValues = compactedListSRVLongTimestamp.toSingleEventScanResultValues();
     for (ScanResultValue srv : compactedListScanResultValues) {
       List<Object> events = (List<Object>) srv.getEvents();
-      Assert.assertEquals(1, events.size());
+      Assertions.assertEquals(1, events.size());
     }
     List<ScanResultValue> listScanResultValues = listSRVLongTimestamp.toSingleEventScanResultValues();
     for (ScanResultValue srv : listScanResultValues) {
       List<Object> events = (List<Object>) srv.getEvents();
-      Assert.assertEquals(1, events.size());
+      Assertions.assertEquals(1, events.size());
     }
   }
 }

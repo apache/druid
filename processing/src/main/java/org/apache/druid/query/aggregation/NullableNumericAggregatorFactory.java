@@ -24,11 +24,16 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
+
+import javax.annotation.Nullable;
 
 /**
  * Abstract superclass for null-aware numeric aggregators.
@@ -92,6 +97,29 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
     return new NullableNumericVectorAggregator(aggregator, selector);
   }
 
+  /**
+   * Factorizes a buffer aggregator for Pooled TopN. Unlike general aggregation engines, Pooled TopN creates aggregate
+   * state only after a dimension value is seen. If the input column is known to be numeric and non-null, the nullable
+   * wrapper cannot affect the result, so TopN may skip it to keep hot-loop specialization effective.
+   */
+  public final BufferAggregator factorizeBufferedForPooledTopN(ColumnSelectorFactory columnSelectorFactory)
+  {
+    T selector = selector(columnSelectorFactory);
+    BufferAggregator aggregator = factorizeBuffered(columnSelectorFactory, selector);
+    if (!useNullableNumericAggregatorsForPooledTopN(columnSelectorFactory)) {
+      return aggregator;
+    }
+    return new NullableNumericBufferAggregator(aggregator, makeNullSelector(selector, columnSelectorFactory));
+  }
+
+  public final int getMaxIntermediateSizeWithNullsForPooledTopN(ColumnInspector columnInspector)
+  {
+    if (!useNullableNumericAggregatorsForPooledTopN(columnInspector)) {
+      return getMaxIntermediateSize();
+    }
+    return getMaxIntermediateSizeWithNulls();
+  }
+
   @Override
   public final AggregateCombiner makeNullableAggregateCombiner()
   {
@@ -109,6 +137,27 @@ public abstract class NullableNumericAggregatorFactory<T extends BaseNullableCol
       return getMaxIntermediateSize();
     }
     return getMaxIntermediateSize() + Byte.BYTES;
+  }
+
+  private boolean useNullableNumericAggregatorsForPooledTopN(ColumnInspector columnInspector)
+  {
+    if (this.forceNotNullable()) {
+      return false;
+    }
+
+    final String inputColumn = getInputColumn();
+    if (inputColumn == null) {
+      return true;
+    }
+
+    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(inputColumn);
+    return !(Types.isNumeric(capabilities) && capabilities.hasNulls().isFalse());
+  }
+
+  @Nullable
+  protected String getInputColumn()
+  {
+    return null;
   }
 
   /**

@@ -21,8 +21,8 @@ package org.apache.druid.query;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.query.ordering.StringComparator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DimensionComparisonUtilsTest
 {
@@ -38,15 +38,15 @@ public class DimensionComparisonUtilsTest
           return b == null ? -1 : -a.compareTo(b);
         }
     );
-    Assert.assertEquals(1, longArrayComparator.compare(new Object[]{1L, 2L}, new Object[]{5L, 6L}));
-    Assert.assertEquals(-1, longArrayComparator.compare(null, new Object[]{1L}));
-    Assert.assertEquals(1, longArrayComparator.compare(new Object[]{1L}, null));
-    Assert.assertEquals(1, longArrayComparator.compare(new Object[]{null}, new Object[]{1L}));
+    Assertions.assertEquals(1, longArrayComparator.compare(new Object[]{1L, 2L}, new Object[]{5L, 6L}));
+    Assertions.assertEquals(-1, longArrayComparator.compare(null, new Object[]{1L}));
+    Assertions.assertEquals(1, longArrayComparator.compare(new Object[]{1L}, null));
+    Assertions.assertEquals(1, longArrayComparator.compare(new Object[]{null}, new Object[]{1L}));
     //noinspection EqualsWithItself
-    Assert.assertEquals(0, longArrayComparator.compare(null, null));
+    Assertions.assertEquals(0, longArrayComparator.compare(null, null));
     //noinspection EqualsWithItself
-    Assert.assertEquals(0, longArrayComparator.compare(new Object[]{1L, 2L, null, 3L}, new Object[]{1L, 2L, null, 3L}));
-    Assert.assertEquals(1, longArrayComparator.compare(new Object[]{null}, new Object[]{1L}));
+    Assertions.assertEquals(0, longArrayComparator.compare(new Object[]{1L, 2L, null, 3L}, new Object[]{1L, 2L, null, 3L}));
+    Assertions.assertEquals(1, longArrayComparator.compare(new Object[]{null}, new Object[]{1L}));
   }
 
   @Test
@@ -69,15 +69,15 @@ public class DimensionComparisonUtilsTest
           }
         });
     //noinspection EqualsWithItself
-    Assert.assertEquals(0, arrayComparator.compare(null, null));
+    Assertions.assertEquals(0, arrayComparator.compare(null, null));
     //noinspection EqualsWithItself
-    Assert.assertEquals(0, arrayComparator.compare(new Object[]{1L, 2L, null, 3L}, new Object[]{1L, 2L, null, 3L}));
+    Assertions.assertEquals(0, arrayComparator.compare(new Object[]{1L, 2L, null, 3L}, new Object[]{1L, 2L, null, 3L}));
     // All elements have same length when converted to string
-    Assert.assertEquals(0, arrayComparator.compare(new Object[]{1L, 2L}, new Object[]{5L, 6L}));
-    Assert.assertEquals(-1, arrayComparator.compare(null, new Object[]{1L}));
-    Assert.assertEquals(1, arrayComparator.compare(new Object[]{1L}, null));
+    Assertions.assertEquals(0, arrayComparator.compare(new Object[]{1L, 2L}, new Object[]{5L, 6L}));
+    Assertions.assertEquals(-1, arrayComparator.compare(null, new Object[]{1L}));
+    Assertions.assertEquals(1, arrayComparator.compare(new Object[]{1L}, null));
     // "null" > "1"
-    Assert.assertEquals(1, arrayComparator.compare(new Object[]{null}, new Object[]{1L}));
-    Assert.assertEquals(-1, arrayComparator.compare(new Object[]{1L}, new Object[]{1.1f}));
+    Assertions.assertEquals(1, arrayComparator.compare(new Object[]{null}, new Object[]{1L}));
+    Assertions.assertEquals(-1, arrayComparator.compare(new Object[]{1L}, new Object[]{1.1f}));
   }
 }

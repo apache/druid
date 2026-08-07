@@ -23,16 +23,19 @@ import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class JvmMonitorTest
 {
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testGcCounts() throws InterruptedException
   {
     GcTrackingEmitter emitter = new GcTrackingEmitter();
@@ -41,7 +44,7 @@ public class JvmMonitorTest
     serviceEmitter.start();
     final JvmMonitor jvmMonitor = new JvmMonitor();
     // skip tests if gc counters fail to initialize with this JDK
-    Assume.assumeNotNull(jvmMonitor.gcCollectors);
+    Assumptions.assumeTrue(jvmMonitor.gcCollectors != null);
 
     while (true) {
       // generate some garbage to see gc counters incremented
@@ -114,9 +117,9 @@ public class JvmMonitorTest
       if (oldGcCountSeen || oldGcCpuSeen) {
         System.out.println("old count: " + oldGcCount + ", cpu: " + oldGcCpu);
       }
-      Assert.assertFalse(
-          "expected to see old gc count and cpu both zero or non-existent or both positive",
-          oldGcCountSeen ^ oldGcCpuSeen
+      Assertions.assertFalse(
+          oldGcCountSeen ^ oldGcCpuSeen,
+          "expected to see old gc count and cpu both zero or non-existent or both positive"
       );
       return oldGcCountSeen;
     }
@@ -128,9 +131,9 @@ public class JvmMonitorTest
       if (youngGcCountSeen || youngGcCpuSeen) {
         System.out.println("young count: " + youngGcCount + ", cpu: " + youngGcCpu);
       }
-      Assert.assertFalse(
-          "expected to see young gc count and cpu both zero/non-existent or both positive",
-          youngGcCountSeen ^ youngGcCpuSeen
+      Assertions.assertFalse(
+          youngGcCountSeen ^ youngGcCpuSeen,
+          "expected to see young gc count and cpu both zero/non-existent or both positive"
       );
       return youngGcCountSeen;
     }

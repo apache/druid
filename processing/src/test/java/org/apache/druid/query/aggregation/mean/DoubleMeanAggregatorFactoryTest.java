@@ -23,8 +23,8 @@ import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DoubleMeanAggregatorFactoryTest
 {
@@ -32,8 +32,8 @@ public class DoubleMeanAggregatorFactoryTest
   public void testMaxIntermediateSize()
   {
     DoubleMeanAggregatorFactory factory = new DoubleMeanAggregatorFactory("name", "fieldName");
-    Assert.assertEquals(Double.BYTES + Long.BYTES, factory.getMaxIntermediateSize());
-    Assert.assertEquals(Double.BYTES + Long.BYTES, factory.getMaxIntermediateSizeWithNulls());
+    Assertions.assertEquals(Double.BYTES + Long.BYTES, factory.getMaxIntermediateSize());
+    Assertions.assertEquals(Double.BYTES + Long.BYTES, factory.getMaxIntermediateSizeWithNulls());
   }
 
   @Test
@@ -43,10 +43,10 @@ public class DoubleMeanAggregatorFactoryTest
     DoubleMeanHolder expectedHolder = new DoubleMeanHolder(50.0, 10L);
 
     DoubleMeanHolder actualHolder = (DoubleMeanHolder) factory.deserialize(expectedHolder);
-    Assert.assertEquals(expectedHolder, actualHolder);
+    Assertions.assertEquals(expectedHolder, actualHolder);
 
     actualHolder = (DoubleMeanHolder) factory.deserialize(expectedHolder.toBytes());
-    Assert.assertEquals(expectedHolder, actualHolder);
+    Assertions.assertEquals(expectedHolder, actualHolder);
   }
 
   @Test
@@ -59,12 +59,12 @@ public class DoubleMeanAggregatorFactoryTest
     DoubleMeanHolder holder = new DoubleMeanHolder(sum, count);
 
     double actualMean = (Double) factory.finalizeComputation(holder);
-    Assert.assertEquals("", expecterMean, actualMean, 1e-6);
+    Assertions.assertEquals(expecterMean, actualMean, 1e-6);
 
     actualMean = (Double) factory.finalizeComputation(holder.toBytes());
-    Assert.assertEquals("", expecterMean, actualMean, 1e-6);
+    Assertions.assertEquals(expecterMean, actualMean, 1e-6);
 
-    Assert.assertNull(factory.finalizeComputation(null));
+    Assertions.assertNull(factory.finalizeComputation(null));
   }
 
   @Test
@@ -77,7 +77,7 @@ public class DoubleMeanAggregatorFactoryTest
 
     DoubleMeanAggregatorFactory factory = new DoubleMeanAggregatorFactory("name", "fieldName");
     AggregatorAndSize aggregatorAndSize = factory.factorizeWithSize(colSelectorFactory);
-    Assert.assertEquals(DoubleMeanHolder.MAX_INTERMEDIATE_SIZE, aggregatorAndSize.getInitialSizeBytes());
-    Assert.assertTrue(aggregatorAndSize.getAggregator() instanceof DoubleMeanAggregator);
+    Assertions.assertEquals(DoubleMeanHolder.MAX_INTERMEDIATE_SIZE, aggregatorAndSize.getInitialSizeBytes());
+    Assertions.assertTrue(aggregatorAndSize.getAggregator() instanceof DoubleMeanAggregator);
   }
 }

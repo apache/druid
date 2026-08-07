@@ -28,8 +28,8 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -57,30 +57,30 @@ public class SingleDimensionShardSpecTest
     ShardSpec shard5 = makeSpec("dim2", "hello", "jk");
     ShardSpec shard6 = makeSpec("dim2", "jk", "na");
     ShardSpec shard7 = makeSpec("dim2", "na", null);
-    Assert.assertTrue(shard1.possibleInDomain(domain1));
-    Assert.assertFalse(shard2.possibleInDomain(domain1));
-    Assert.assertFalse(shard3.possibleInDomain(domain1));
-    Assert.assertTrue(shard4.possibleInDomain(domain1));
-    Assert.assertTrue(shard5.possibleInDomain(domain1));
-    Assert.assertTrue(shard6.possibleInDomain(domain1));
-    Assert.assertTrue(shard7.possibleInDomain(domain1));
-    Assert.assertFalse(shard1.possibleInDomain(domain2));
-    Assert.assertFalse(shard2.possibleInDomain(domain2));
-    Assert.assertTrue(shard3.possibleInDomain(domain2));
-    Assert.assertFalse(shard4.possibleInDomain(domain2));
-    Assert.assertFalse(shard5.possibleInDomain(domain2));
-    Assert.assertTrue(shard6.possibleInDomain(domain2));
-    Assert.assertTrue(shard7.possibleInDomain(domain2));
+    Assertions.assertTrue(shard1.possibleInDomain(domain1));
+    Assertions.assertFalse(shard2.possibleInDomain(domain1));
+    Assertions.assertFalse(shard3.possibleInDomain(domain1));
+    Assertions.assertTrue(shard4.possibleInDomain(domain1));
+    Assertions.assertTrue(shard5.possibleInDomain(domain1));
+    Assertions.assertTrue(shard6.possibleInDomain(domain1));
+    Assertions.assertTrue(shard7.possibleInDomain(domain1));
+    Assertions.assertFalse(shard1.possibleInDomain(domain2));
+    Assertions.assertFalse(shard2.possibleInDomain(domain2));
+    Assertions.assertTrue(shard3.possibleInDomain(domain2));
+    Assertions.assertFalse(shard4.possibleInDomain(domain2));
+    Assertions.assertFalse(shard5.possibleInDomain(domain2));
+    Assertions.assertTrue(shard6.possibleInDomain(domain2));
+    Assertions.assertTrue(shard7.possibleInDomain(domain2));
   }
 
   @Test
   public void testSharePartitionSpace()
   {
     final SingleDimensionShardSpec shardSpec = makeSpec("start", "end");
-    Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
-    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
-    Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
-    Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assertions.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 
   @Test
@@ -102,11 +102,11 @@ public class SingleDimensionShardSpecTest
                         + "\"partitionNum\": 5,"
                         + "\"numCorePartitions\": 10}";
     ShardSpec shardSpec = OBJECT_MAPPER.readValue(json, ShardSpec.class);
-    Assert.assertTrue(shardSpec instanceof SingleDimensionShardSpec);
-    Assert.assertEquals(ShardSpec.Type.SINGLE, shardSpec.getType());
+    Assertions.assertInstanceOf(SingleDimensionShardSpec.class, shardSpec);
+    Assertions.assertEquals(ShardSpec.Type.SINGLE, shardSpec.getType());
 
     SingleDimensionShardSpec singleDimShardSpec = (SingleDimensionShardSpec) shardSpec;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new SingleDimensionShardSpec("dim", "abc", "xyz", 5, 10),
         singleDimShardSpec
     );
@@ -122,7 +122,7 @@ public class SingleDimensionShardSpecTest
     );
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -134,7 +134,7 @@ public class SingleDimensionShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -146,7 +146,7 @@ public class SingleDimensionShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -158,7 +158,7 @@ public class SingleDimensionShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -170,7 +170,7 @@ public class SingleDimensionShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -187,7 +187,7 @@ public class SingleDimensionShardSpecTest
   {
     String json = OBJECT_MAPPER.writeValueAsString(shardSpec);
     SingleDimensionShardSpec deserializedSpec = OBJECT_MAPPER.readValue(json, SingleDimensionShardSpec.class);
-    Assert.assertEquals(shardSpec, deserializedSpec);
+    Assertions.assertEquals(shardSpec, deserializedSpec);
   }
 
   private static RangeSet<String> rangeSet(List<Range<String>> ranges)

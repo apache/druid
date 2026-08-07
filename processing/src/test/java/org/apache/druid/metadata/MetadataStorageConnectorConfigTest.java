@@ -21,8 +21,8 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Map;
@@ -77,8 +77,8 @@ public class MetadataStorageConnectorConfigTest
         "user",
         "\"nothing\""
     );
-    Assert.assertEquals(metadataStorageConnectorConfig, metadataStorageConnectorConfig2);
-    Assert.assertEquals(metadataStorageConnectorConfig.hashCode(), metadataStorageConnectorConfig2.hashCode());
+    Assertions.assertEquals(metadataStorageConnectorConfig, metadataStorageConnectorConfig2);
+    Assertions.assertEquals(metadataStorageConnectorConfig.hashCode(), metadataStorageConnectorConfig2.hashCode());
   }
 
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
@@ -133,12 +133,12 @@ public class MetadataStorageConnectorConfigTest
         MetadataStorageConnectorConfig.class
     );
 
-    Assert.assertEquals(host, config.getHost());
-    Assert.assertEquals(port, config.getPort());
-    Assert.assertEquals(connectURI, config.getConnectURI());
-    Assert.assertEquals(user, config.getUser());
-    Assert.assertEquals(pwd, config.getPassword());
-    Assert.assertNull(config.getDbcpProperties());
+    Assertions.assertEquals(host, config.getHost());
+    Assertions.assertEquals(port, config.getPort());
+    Assertions.assertEquals(connectURI, config.getConnectURI());
+    Assertions.assertEquals(user, config.getUser());
+    Assertions.assertEquals(pwd, config.getPassword());
+    Assertions.assertNull(config.getDbcpProperties());
   }
 
   @Test
@@ -180,14 +180,14 @@ public class MetadataStorageConnectorConfigTest
             MetadataStorageConnectorConfig.class
     );
 
-    Assert.assertEquals(host, config.getHost());
-    Assert.assertEquals(port, config.getPort());
-    Assert.assertEquals(connectURI, config.getConnectURI());
-    Assert.assertEquals(user, config.getUser());
-    Assert.assertEquals(pwd, config.getPassword());
+    Assertions.assertEquals(host, config.getHost());
+    Assertions.assertEquals(port, config.getPort());
+    Assertions.assertEquals(connectURI, config.getConnectURI());
+    Assertions.assertEquals(user, config.getUser());
+    Assertions.assertEquals(pwd, config.getPassword());
     Properties dbcpProperties = config.getDbcpProperties();
-    Assert.assertEquals(dbcpProperties.getProperty("maxConnLifetimeMillis"), "1200000");
-    Assert.assertEquals(dbcpProperties.getProperty("defaultQueryTimeout"), "30000");
+    Assertions.assertEquals(dbcpProperties.getProperty("maxConnLifetimeMillis"), "1200000");
+    Assertions.assertEquals(dbcpProperties.getProperty("defaultQueryTimeout"), "30000");
   }
 
   @Test
@@ -196,9 +196,9 @@ public class MetadataStorageConnectorConfigTest
     Map<String, String> props = ImmutableMap.of("key", "value");
     MetadataStorageConnectorConfig config =
         MetadataStorageConnectorConfig.create("connectURI", "user", "pwd", props);
-    Assert.assertEquals("connectURI", config.getConnectURI());
-    Assert.assertEquals("user", config.getUser());
-    Assert.assertEquals("pwd", config.getPassword());
-    Assert.assertEquals(1, config.getDbcpProperties().size());
+    Assertions.assertEquals("connectURI", config.getConnectURI());
+    Assertions.assertEquals("user", config.getUser());
+    Assertions.assertEquals("pwd", config.getPassword());
+    Assertions.assertEquals(1, config.getDbcpProperties().size());
   }
 }

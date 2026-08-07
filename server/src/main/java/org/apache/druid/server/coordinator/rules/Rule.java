@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.timeline.DataSegment;
@@ -33,6 +34,9 @@ import org.joda.time.Interval;
     @JsonSubTypes.Type(name = "loadByPeriod", value = PeriodLoadRule.class),
     @JsonSubTypes.Type(name = "loadByInterval", value = IntervalLoadRule.class),
     @JsonSubTypes.Type(name = "loadForever", value = ForeverLoadRule.class),
+    @JsonSubTypes.Type(name = PeriodPartialLoadRule.TYPE, value = PeriodPartialLoadRule.class),
+    @JsonSubTypes.Type(name = IntervalPartialLoadRule.TYPE, value = IntervalPartialLoadRule.class),
+    @JsonSubTypes.Type(name = ForeverPartialLoadRule.TYPE, value = ForeverPartialLoadRule.class),
     @JsonSubTypes.Type(name = "dropByPeriod", value = PeriodDropRule.class),
     @JsonSubTypes.Type(name = "dropBeforeByPeriod", value = PeriodDropBeforeRule.class),
     @JsonSubTypes.Type(name = "dropByInterval", value = IntervalDropRule.class),
@@ -48,6 +52,22 @@ public interface Rule
   boolean appliesTo(DataSegment segment, DateTime referenceTimestamp);
 
   boolean appliesTo(Interval interval, DateTime referenceTimestamp);
+
+  /**
+   * @return Whether {@link #appliesTo(DataSegment, DateTime)} is equivalent to {@link #appliesTo(Interval, DateTime)}
+   * for this rule, i.e. the rule's applicability decision depends only on the segment's interval and not on any other
+   * segment-specific information. Defaults to {@code true}; subclasses that consult the segment beyond its interval
+   * (such as {@link PartialLoadRule} which inspects the segment to decide what to load) override to return
+   * {@code false}.
+   * <p>
+   * Callers that only have an interval available can use this to safely use the cheaper interval-only path when every
+   * rule in the cascade is interval-based.
+   */
+  @JsonIgnore
+  default boolean isIntervalBased()
+  {
+    return true;
+  }
 
   void run(DataSegment segment, SegmentActionHandler segmentHandler);
 }

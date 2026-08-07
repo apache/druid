@@ -2,7 +2,7 @@
 id: tutorial-append-data
 title: Append data
 sidebar_label: Append data
-description: Learn how to append data to a datasource without changing the existing data in Apache Druid.
+description: Learn how to append data to a datasource without changing the existing data in Apache® Druid.
 ---
 
 <!--
@@ -24,7 +24,7 @@ description: Learn how to append data to a datasource without changing the exist
   ~ under the License.
   -->
 
-This tutorial shows you how to use the Apache Druid SQL [INSERT](../multi-stage-query/reference.md#insert) function to append data to a [datasource](../design/storage.md) without changing the existing data.
+This tutorial shows you how to use the Apache&circledR; Druid SQL [INSERT](../multi-stage-query/reference.md#insert) function to append data to a [datasource](../design/storage.md) without changing the existing data.
 The examples in the tutorial use the [multi-stage query (MSQ)](../multi-stage-query/index.md) task engine to executes SQL statements.
 
 ## Prerequisites

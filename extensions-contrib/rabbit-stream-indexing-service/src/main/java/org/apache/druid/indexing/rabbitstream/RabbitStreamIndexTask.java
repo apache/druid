@@ -145,10 +145,4 @@ public class RabbitStreamIndexTask extends SeekableStreamIndexTask<String, Long,
   {
     return TYPE;
   }
-
-  @Override
-  public boolean supportsQueries()
-  {
-    return true;
-  }
 }

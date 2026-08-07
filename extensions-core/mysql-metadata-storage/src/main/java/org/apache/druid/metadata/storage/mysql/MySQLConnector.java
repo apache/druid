@@ -192,6 +192,13 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
+  protected String getDropIndexStatement(String indexName, String tableName)
+  {
+    // MySQL requires the target table in a DROP INDEX statement.
+    return StringUtils.format("DROP INDEX %s ON %s", indexName, tableName);
+  }
+
+  @Override
   public boolean tableExists(Handle handle, String tableName)
   {
     String databaseCharset = handle

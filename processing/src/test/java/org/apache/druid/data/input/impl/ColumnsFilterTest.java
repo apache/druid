@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.ColumnsFilter;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,7 +36,7 @@ public class ColumnsFilterTest
   @Test
   public void testAll()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("a", "b", "c"),
         apply(ColumnsFilter.all(), COLUMNS)
     );
@@ -45,7 +45,7 @@ public class ColumnsFilterTest
   @Test
   public void testInclusionBased()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("b"),
         apply(ColumnsFilter.inclusionBased(ImmutableSet.of("b")), COLUMNS)
     );
@@ -54,7 +54,7 @@ public class ColumnsFilterTest
   @Test
   public void testInclusionBasedPlus()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ColumnsFilter.inclusionBased(ImmutableSet.of("a", "b", "c")),
         ColumnsFilter.inclusionBased(ImmutableSet.of("b", "c")).plus("a").plus("c")
     );
@@ -63,7 +63,7 @@ public class ColumnsFilterTest
   @Test
   public void testExclusionBased()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("a", "c"),
         apply(ColumnsFilter.exclusionBased(ImmutableSet.of("b")), COLUMNS)
     );
@@ -72,7 +72,7 @@ public class ColumnsFilterTest
   @Test
   public void testExclusionBasedPlus()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ColumnsFilter.exclusionBased(ImmutableSet.of("b")),
         ColumnsFilter.exclusionBased(ImmutableSet.of("b", "c")).plus("a").plus("c")
     );

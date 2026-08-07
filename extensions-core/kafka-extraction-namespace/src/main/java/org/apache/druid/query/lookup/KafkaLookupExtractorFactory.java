@@ -48,6 +48,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import java.nio.ByteBuffer;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
@@ -181,7 +182,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               if (executorService.isShutdown()) {
                 break;
               }
-              final ConsumerRecords<String, String> records = consumer.poll(1000);
+              final ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(1000));
               startingReads.countDown();
 
               for (final ConsumerRecord<String, String> record : records) {

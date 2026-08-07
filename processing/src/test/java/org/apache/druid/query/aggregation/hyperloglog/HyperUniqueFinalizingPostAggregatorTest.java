@@ -32,9 +32,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Random;
@@ -61,7 +60,7 @@ public class HyperUniqueFinalizingPostAggregatorTest
 
     double cardinality = (Double) postAggregator.compute(ImmutableMap.of("uniques", collector));
 
-    Assert.assertTrue(cardinality == 99.37233005831612);
+    Assertions.assertTrue(cardinality == 99.37233005831612);
   }
 
   @Test
@@ -91,8 +90,8 @@ public class HyperUniqueFinalizingPostAggregatorTest
 
     Object cardinality = postAggregator.compute(ImmutableMap.of("uniques", collector));
 
-    Assert.assertThat(cardinality, CoreMatchers.instanceOf(Long.class));
-    Assert.assertEquals(99L, cardinality);
+    Assertions.assertInstanceOf(Long.class, cardinality);
+    Assertions.assertEquals(99L, cardinality);
   }
 
   @Test
@@ -114,7 +113,7 @@ public class HyperUniqueFinalizingPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

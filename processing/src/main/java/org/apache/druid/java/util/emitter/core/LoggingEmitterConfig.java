@@ -39,8 +39,8 @@ public class LoggingEmitterConfig
   /**
    * When true, only metrics listed in the allowed metrics configuration are emitted.
    * If {@link #allowedMetricsPath} is null/empty, the bundled default allowlist
-   * (defaultMetrics.json on the classpath) is used. If a path is provided,
-   * it is loaded from that file instead.
+   * (loggingEmitterAllowedMetrics.json on the classpath) is used. If a path is
+   * provided, it is loaded from that file instead.
    * Defaults to false (emit all metrics, backward-compatible behavior).
    */
   @JsonProperty("shouldFilterMetrics")
@@ -49,8 +49,8 @@ public class LoggingEmitterConfig
   /**
    * Optional path to a JSON file containing an array of allowed metric names.
    * Only used when {@link #shouldFilterMetrics} is true.
-   * If null or empty, the bundled default resource (defaultMetrics.json) is loaded
-   * from the classpath, mirroring how the Prometheus emitter loads its defaultMetrics.json.
+   * If null or empty, the bundled default resource (loggingEmitterAllowedMetrics.json)
+   * is loaded from the classpath.
    */
   @JsonProperty
   @Nullable

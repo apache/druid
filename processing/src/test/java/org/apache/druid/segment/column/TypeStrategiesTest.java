@@ -20,7 +20,6 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.collect.Ordering;
-import com.google.common.primitives.Longs;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -675,9 +674,24 @@ public class TypeStrategiesTest
     }
 
     @Override
-    public int compareTo(NullableLongPair o)
+    public boolean equals(final Object o)
     {
-      return Comparators.<Long>naturalNullsFirst().thenComparing(Longs::compare).compare(this.lhs, o.lhs);
+      return super.equals(o);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return super.hashCode();
+    }
+
+    @Override
+    public int compareTo(final NullableLongPair o)
+    {
+      final int lhsComparison = Comparators.<Long>naturalNullsFirst().compare(lhs, o.lhs);
+      return lhsComparison != 0
+             ? lhsComparison
+             : Comparators.<Long>naturalNullsFirst().compare(rhs, o.rhs);
     }
   }
 

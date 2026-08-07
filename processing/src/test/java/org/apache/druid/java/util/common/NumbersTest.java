@@ -19,144 +19,134 @@
 
 package org.apache.druid.java.util.common;
 
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NumbersTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testParseLong()
   {
     final String strVal = "100";
-    Assert.assertEquals(100L, Numbers.parseLong(strVal));
+    Assertions.assertEquals(100L, Numbers.parseLong(strVal));
 
     final Long longVal = 100L;
-    Assert.assertEquals(100L, Numbers.parseLong(longVal));
+    Assertions.assertEquals(100L, Numbers.parseLong(longVal));
 
     final Double doubleVal = 100.;
-    Assert.assertEquals(100L, Numbers.parseLong(doubleVal));
+    Assertions.assertEquals(100L, Numbers.parseLong(doubleVal));
   }
 
   @Test
   public void testParseLongWithNull()
   {
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("Input is null");
-    Numbers.parseLong(null);
+    NullPointerException e = Assertions.assertThrows(NullPointerException.class, () -> Numbers.parseLong(null));
+    Assertions.assertTrue(e.getMessage().contains("Input is null"));
   }
 
   @Test
   public void testParseLongWithUnparseableString()
   {
-    expectedException.expect(NumberFormatException.class);
-    Numbers.parseLong("unparseable");
+    Assertions.assertThrows(NumberFormatException.class, () -> Numbers.parseLong("unparseable"));
   }
 
   @Test
   public void testParseLongWithUnparseableObject()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(CoreMatchers.startsWith("Unknown type"));
-    Numbers.parseLong(new Object());
+    ISE e = Assertions.assertThrows(ISE.class, () -> Numbers.parseLong(new Object()));
+    Assertions.assertTrue(e.getMessage().startsWith("Unknown type"));
   }
 
   @Test
   public void testParseInt()
   {
     final String strVal = "100";
-    Assert.assertEquals(100, Numbers.parseInt(strVal));
+    Assertions.assertEquals(100, Numbers.parseInt(strVal));
 
     final Integer longVal = 100;
-    Assert.assertEquals(100, Numbers.parseInt(longVal));
+    Assertions.assertEquals(100, Numbers.parseInt(longVal));
 
     final Float floatVal = 100.F;
-    Assert.assertEquals(100, Numbers.parseInt(floatVal));
+    Assertions.assertEquals(100, Numbers.parseInt(floatVal));
   }
 
   @Test
   public void testParseIntWithNull()
   {
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("Input is null");
-    Numbers.parseInt(null);
+    NullPointerException e = Assertions.assertThrows(NullPointerException.class, () -> Numbers.parseInt(null));
+    Assertions.assertTrue(e.getMessage().contains("Input is null"));
   }
 
   @Test
   public void testParseIntWithUnparseableString()
   {
-    expectedException.expect(NumberFormatException.class);
-    Numbers.parseInt("unparseable");
+    Assertions.assertThrows(NumberFormatException.class, () -> Numbers.parseInt("unparseable"));
   }
 
   @Test
   public void testParseIntWithUnparseableObject()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(CoreMatchers.startsWith("Unknown type"));
-    Numbers.parseInt(new Object());
+    ISE e = Assertions.assertThrows(ISE.class, () -> Numbers.parseInt(new Object()));
+    Assertions.assertTrue(e.getMessage().startsWith("Unknown type"));
   }
 
   @Test
   public void testParseBoolean()
   {
     final String strVal = "false";
-    Assert.assertEquals(false, Numbers.parseBoolean(strVal));
+    Assertions.assertFalse(Numbers.parseBoolean(strVal));
 
     final Boolean booleanVal = Boolean.FALSE;
-    Assert.assertEquals(false, Numbers.parseBoolean(booleanVal));
+    Assertions.assertFalse(Numbers.parseBoolean(booleanVal));
   }
 
   @Test
   public void testParseBooleanWithNull()
   {
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("Input is null");
-    Numbers.parseBoolean(null);
+    NullPointerException e = Assertions.assertThrows(NullPointerException.class, () -> Numbers.parseBoolean(null));
+    Assertions.assertTrue(e.getMessage().contains("Input is null"));
   }
 
   @Test
   public void testParseBooleanWithUnparseableObject()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(CoreMatchers.startsWith("Unknown type"));
-    Numbers.parseBoolean(new Object());
+    ISE e = Assertions.assertThrows(ISE.class, () -> Numbers.parseBoolean(new Object()));
+    Assertions.assertTrue(e.getMessage().startsWith("Unknown type"));
   }
 
   @Test
   public void testParseLongObject()
   {
-    Assert.assertEquals(null, Numbers.parseLongObject(null));
-    Assert.assertEquals((Long) 1L, Numbers.parseLongObject("1"));
-    Assert.assertEquals((Long) 32L, Numbers.parseLongObject("32.1243"));
+    Assertions.assertNull(Numbers.parseLongObject(null));
+    Assertions.assertEquals((Long) 1L, Numbers.parseLongObject("1"));
+    Assertions.assertEquals((Long) 32L, Numbers.parseLongObject("32.1243"));
   }
 
   @Test
   public void testParseLongObjectUnparseable()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot parse string to long");
-    Assert.assertEquals((Long) 1337L, Numbers.parseLongObject("'1'"));
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> Numbers.parseLongObject("'1'")
+    );
+    Assertions.assertTrue(e.getMessage().contains("Cannot parse string to long"));
   }
 
   @Test
   public void testParseDoubleObject()
   {
-    Assert.assertEquals(null, Numbers.parseLongObject(null));
-    Assert.assertEquals((Double) 1.0, Numbers.parseDoubleObject("1"));
-    Assert.assertEquals((Double) 32.1243, Numbers.parseDoubleObject("32.1243"));
+    Assertions.assertNull(Numbers.parseLongObject(null));
+    Assertions.assertEquals((Double) 1.0, Numbers.parseDoubleObject("1"));
+    Assertions.assertEquals((Double) 32.1243, Numbers.parseDoubleObject("32.1243"));
   }
 
   @Test
   public void testParseDoubleObjectUnparseable()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Cannot parse string to double");
-    Assert.assertEquals((Double) 300.0, Numbers.parseDoubleObject("'1.1'"));
+    IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> Numbers.parseDoubleObject("'1.1'")
+    );
+    Assertions.assertTrue(e.getMessage().contains("Cannot parse string to double"));
   }
 }

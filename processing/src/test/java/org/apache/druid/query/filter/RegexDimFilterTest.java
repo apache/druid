@@ -20,8 +20,8 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -33,11 +33,11 @@ public class RegexDimFilterTest
   {
     RegexDimFilter regexDimFilter = new RegexDimFilter("dim", "reg", null);
     RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg", null);
-    Assert.assertFalse(Arrays.equals(regexDimFilter.getCacheKey(), regexDimFilter2.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(regexDimFilter.getCacheKey(), regexDimFilter2.getCacheKey()));
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     RegexDimFilter regexDimFilter3 = new RegexDimFilter("dim", "reg", regexFn);
-    Assert.assertFalse(Arrays.equals(regexDimFilter.getCacheKey(), regexDimFilter3.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(regexDimFilter.getCacheKey(), regexDimFilter3.getCacheKey()));
 
   }
 
@@ -48,14 +48,14 @@ public class RegexDimFilterTest
     RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg", null);
     RegexDimFilter regexDimFilter3 = new RegexDimFilter("di", "mreg", null);
 
-    Assert.assertNotEquals(regexDimFilter, regexDimFilter2);
-    Assert.assertEquals(regexDimFilter2, regexDimFilter3);
+    Assertions.assertNotEquals(regexDimFilter, regexDimFilter2);
+    Assertions.assertEquals(regexDimFilter2, regexDimFilter3);
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     RegexDimFilter regexDimFilter4 = new RegexDimFilter("dim", "reg", regexFn);
     RegexDimFilter regexDimFilter5 = new RegexDimFilter("dim", "reg", regexFn);
-    Assert.assertNotEquals(regexDimFilter, regexDimFilter4);
-    Assert.assertEquals(regexDimFilter4, regexDimFilter5);
+    Assertions.assertNotEquals(regexDimFilter, regexDimFilter4);
+    Assertions.assertEquals(regexDimFilter4, regexDimFilter5);
 
   }
 
@@ -66,14 +66,14 @@ public class RegexDimFilterTest
     RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg", null);
     RegexDimFilter regexDimFilter3 = new RegexDimFilter("di", "mreg", null);
 
-    Assert.assertNotEquals(regexDimFilter.hashCode(), regexDimFilter2.hashCode());
-    Assert.assertEquals(regexDimFilter2.hashCode(), regexDimFilter3.hashCode());
+    Assertions.assertNotEquals(regexDimFilter.hashCode(), regexDimFilter2.hashCode());
+    Assertions.assertEquals(regexDimFilter2.hashCode(), regexDimFilter3.hashCode());
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
     RegexDimFilter regexDimFilter4 = new RegexDimFilter("dim", "reg", regexFn);
     RegexDimFilter regexDimFilter5 = new RegexDimFilter("dim", "reg", regexFn);
-    Assert.assertNotEquals(regexDimFilter.hashCode(), regexDimFilter4.hashCode());
-    Assert.assertEquals(regexDimFilter4.hashCode(), regexDimFilter5.hashCode());
+    Assertions.assertNotEquals(regexDimFilter.hashCode(), regexDimFilter4.hashCode());
+    Assertions.assertEquals(regexDimFilter4.hashCode(), regexDimFilter5.hashCode());
   }
 
 }

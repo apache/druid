@@ -31,7 +31,7 @@ public class JavaScriptUtil
 {
   public static <T> T compileSelectorFunction(Class<T> interfaceClass, String function)
   {
-    final ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
+    final ScriptEngine engine = new ScriptEngineManager().getEngineByName("javascript");
     Bindings bindings = engine.getBindings(ScriptContext.ENGINE_SCOPE);
     bindings.put("polyglot.js.nashorn-compat", true);
     try {

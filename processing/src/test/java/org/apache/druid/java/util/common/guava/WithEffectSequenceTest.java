@@ -20,8 +20,8 @@
 package org.apache.druid.java.util.common.guava;
 
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -48,8 +48,8 @@ public class WithEffectSequenceTest
         );
     // Run sequence via accumulate
     sequence.toList();
-    Assert.assertEquals(1, effect1.get());
-    Assert.assertEquals(2, effect2.get());
+    Assertions.assertEquals(1, effect1.get());
+    Assertions.assertEquals(2, effect2.get());
 
     // Ensure sequence runs via Yielder, because LimitedSequence extends YieldingSequenceBase which
     // implements accumulate() via yielder().
@@ -57,8 +57,8 @@ public class WithEffectSequenceTest
     // not executed.
     Sequence<Integer> yieldingSequence = sequence.limit(4);
     yieldingSequence.toList();
-    Assert.assertEquals(3, effect1.get());
-    Assert.assertEquals(4, effect2.get());
+    Assertions.assertEquals(3, effect1.get());
+    Assertions.assertEquals(4, effect2.get());
   }
 
   @Test
@@ -73,11 +73,11 @@ public class WithEffectSequenceTest
         throwingSeq.withEffect(() -> effectExecuted.set(true), Execs.directExecutor());
     try {
       seqWithEffect.toList();
-      Assert.fail("expected RuntimeException");
+      Assertions.fail("expected RuntimeException");
     }
     catch (RuntimeException e) {
       // expected
-      Assert.assertTrue(effectExecuted.get());
+      Assertions.assertTrue(effectExecuted.get());
     }
   }
 }

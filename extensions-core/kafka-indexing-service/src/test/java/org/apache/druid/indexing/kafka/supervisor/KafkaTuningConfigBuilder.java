@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.kafka.supervisor;
 
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
+import org.apache.druid.indexing.seekablestream.StreamingPartitionsSpec;
 import org.joda.time.Period;
 
 /**
@@ -35,6 +36,7 @@ public class KafkaTuningConfigBuilder extends TuningConfigBuilder<KafkaTuningCon
   private Period offsetFetchPeriod;
   private Period intermediateHandoffPeriod;
   private Boolean releaseLocksOnHandoff;
+  private StreamingPartitionsSpec streamingPartitionsSpec;
 
   public KafkaTuningConfigBuilder withIntermediatePersistPeriod(Period intermediatePersistPeriod)
   {
@@ -84,6 +86,12 @@ public class KafkaTuningConfigBuilder extends TuningConfigBuilder<KafkaTuningCon
     return this;
   }
 
+  public KafkaTuningConfigBuilder withStreamingPartitionsSpec(StreamingPartitionsSpec streamingPartitionsSpec)
+  {
+    this.streamingPartitionsSpec = streamingPartitionsSpec;
+    return this;
+  }
+
   @Override
   public KafkaSupervisorTuningConfig build()
   {
@@ -113,7 +121,8 @@ public class KafkaTuningConfigBuilder extends TuningConfigBuilder<KafkaTuningCon
         maxSavedParseExceptions,
         numPersistThreads,
         maxColumnsToMerge,
-        releaseLocksOnHandoff
+        releaseLocksOnHandoff,
+        streamingPartitionsSpec
     );
   }
 }

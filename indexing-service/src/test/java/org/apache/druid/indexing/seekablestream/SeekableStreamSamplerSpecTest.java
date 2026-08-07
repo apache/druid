@@ -42,6 +42,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.indexing.seekablestream.supervisor.SupervisorIOConfigBuilder;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
@@ -333,8 +334,15 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
           lateMessageRejectionStartDateTime,
           idleConfig,
           null,
+          null,
           null
       );
+    }
+
+    @Override
+    public SupervisorIOConfigBuilder<?, ?> toBuilder()
+    {
+      return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder().copyFromBase(this);
     }
   }
 }

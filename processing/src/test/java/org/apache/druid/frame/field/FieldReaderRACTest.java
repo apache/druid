@@ -35,8 +35,8 @@ import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -70,8 +70,8 @@ public class FieldReaderRACTest extends InitializedNullHandlingTest
             noArraysMatcher.assertThrowsAndMatches(() -> racCol.getObject(offset.getOffset()));
           } else {
             final Object racObj = racCol.getObject(offset.getOffset());
-            Assert.assertEquals(racCol.isNull(offset.getOffset()), racCol.getObject(offset.getOffset()) == null);
-            Assert.assertEquals(selector.getObject(), racObj);
+            Assertions.assertEquals(racCol.isNull(offset.getOffset()), racCol.getObject(offset.getOffset()) == null);
+            Assertions.assertEquals(selector.getObject(), racObj);
           }
           offset.increment();
         }
