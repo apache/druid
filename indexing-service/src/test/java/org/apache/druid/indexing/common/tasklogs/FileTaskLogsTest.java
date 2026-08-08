@@ -128,7 +128,9 @@ public class FileTaskLogsTest
       Assertions.assertTrue(exception.getMessage().contains("Cannot create directory"));
     }
     finally {
-      tmpDir.setWritable(true);
+      if (!tmpDir.setWritable(true)) {
+        throw new RuntimeException("failed to restore tmp dir write permissions");
+      }
     }
   }
 
