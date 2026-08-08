@@ -182,7 +182,7 @@ public class Pac4jFilterTest
   @Test
   public void testActionAdapterForForbidden()
   {
-    HttpAction httpAction = ForbiddenAction.INSTANCE;
+    HttpAction httpAction = new ForbiddenAction();
     Mockito.doReturn(httpAction.getCode()).when(response).getStatus();
     JEEHttpActionAdapter.INSTANCE.adapt(httpAction, context);
     Assert.assertEquals(response.getStatus(), HttpServletResponse.SC_FORBIDDEN);
@@ -196,4 +196,3 @@ public class Pac4jFilterTest
     Assert.assertNotNull(filter);
   }
 }
-

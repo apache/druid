@@ -109,6 +109,8 @@ public class JwtAuthenticator implements Authenticator
     oidcConfiguration.setClientId(config.getClientID());
     oidcConfiguration.setSecret(config.getClientSecret().getPassword());
     oidcConfiguration.setDiscoveryURI(config.getDiscoveryURI());
-    return new TokenValidator(oidcConfiguration);
+    oidcConfiguration.init("JwtAuthenticator");
+    oidcConfiguration.getOpMetadataResolver().load();
+    return oidcConfiguration.getOpMetadataResolver().getTokenValidator();
   }
 }
