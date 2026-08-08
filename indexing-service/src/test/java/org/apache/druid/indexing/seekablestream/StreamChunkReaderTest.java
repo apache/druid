@@ -50,6 +50,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -64,7 +65,8 @@ import java.util.Map;
 
 public class StreamChunkReaderTest
 {
-  private final File temporaryFolder = FileUtils.createTempDir();
+  @TempDir
+  private File temporaryFolder;
 
   private final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
   private final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
@@ -87,13 +89,8 @@ public class StreamChunkReaderTest
   @AfterEach
   public void tearDown() throws Exception
   {
-    try {
-      if (mocks != null) {
-        mocks.close();
-      }
-    }
-    finally {
-      FileUtils.deleteDirectory(temporaryFolder);
+    if (mocks != null) {
+      mocks.close();
     }
   }
 

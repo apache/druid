@@ -136,6 +136,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -160,7 +161,8 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
 {
   private static final Logger log = new Logger(SeekableStreamIndexTaskTestBase.class);
 
-  protected final File tempFolder = FileUtils.createTempDir();
+  @TempDir
+  protected File tempFolder;
 
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -230,7 +232,6 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   {
     emitter.close();
     derby.after();
-    FileUtils.deleteDirectory(tempFolder);
   }
 
   protected static ByteEntity jb(

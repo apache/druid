@@ -70,6 +70,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
@@ -102,7 +103,8 @@ public class SeekableStreamIndexTaskRunnerTest
 {
   private static final String DATA_SOURCE = "datasource";
 
-  private final File temporaryFolder = FileUtils.createTempDir();
+  @TempDir
+  private File temporaryFolder;
 
   @Mock
   private InputRow row;
@@ -123,13 +125,8 @@ public class SeekableStreamIndexTaskRunnerTest
   @AfterEach
   public void tearDown() throws Exception
   {
-    try {
-      if (mocks != null) {
-        mocks.close();
-      }
-    }
-    finally {
-      FileUtils.deleteDirectory(temporaryFolder);
+    if (mocks != null) {
+      mocks.close();
     }
   }
 

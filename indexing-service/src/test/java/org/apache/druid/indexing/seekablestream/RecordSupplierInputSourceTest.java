@@ -44,9 +44,9 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -70,13 +70,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";
 
-  private final File temporaryFolder = FileUtils.createTempDir();
-
-  @AfterEach
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(temporaryFolder);
-  }
+  @TempDir
+  private File temporaryFolder;
 
   @Test
   public void testRead() throws IOException
