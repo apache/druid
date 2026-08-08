@@ -40,7 +40,6 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -73,7 +72,7 @@ public class AbstractTaskTest
     return reportsFile;
   }
 
-  private File createTempDir() throws IOException
+  private File createTempDir()
   {
     return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "task");
   }

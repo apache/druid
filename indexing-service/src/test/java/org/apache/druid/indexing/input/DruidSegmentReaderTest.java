@@ -1039,7 +1039,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  private File createTempDir() throws IOException
+  private File createTempDir()
   {
     return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "segment");
   }
