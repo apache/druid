@@ -82,7 +82,8 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.BufferedReader;
@@ -100,6 +101,8 @@ import java.util.concurrent.ForkJoinPool;
 /**
  * Base class for implementing MovingAverageQuery tests
  */
+@ParameterizedClass(name = "{0}")
+@MethodSource("data")
 public class MovingAverageQueryTest extends InitializedNullHandlingTest
 {
   private static final QueryScheduler NOOP_SCHEDULER = new QueryScheduler(
@@ -109,15 +112,15 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
       new ServerConfig()
   );
 
-  private ObjectMapper jsonMapper;
-  private QueryRunnerFactoryConglomerate conglomerate;
-  private RetryQueryRunnerConfig retryConfig;
-  private ServerConfig serverConfig;
+  private final ObjectMapper jsonMapper;
+  private final QueryRunnerFactoryConglomerate conglomerate;
+  private final RetryQueryRunnerConfig retryConfig;
+  private final ServerConfig serverConfig;
 
   private final List<ResultRow> groupByResults = new ArrayList<>();
   private final List<Result<TimeseriesResultValue>> timeseriesResults = new ArrayList<>();
 
-  private TestConfig config;
+  private final TestConfig config;
 
   public static Iterable<String[]> data() throws IOException
   {
@@ -137,7 +140,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     return tests;
   }
 
-  public void initMovingAverageQueryTest(String yamlFile) throws IOException
+  public MovingAverageQueryTest(String yamlFile) throws IOException
   {
 
     List<Module> modules = getRequiredModules();
@@ -308,12 +311,10 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   /**
    * Validate that the specified query behaves correctly.
    */
-  @MethodSource("data")
   @SuppressWarnings({"unchecked", "rawtypes"})
-  @ParameterizedTest(name = "{0}")
-  public void testQuery(String yamlFile) throws IOException
+  @Test
+  public void testQuery() throws IOException
   {
-    initMovingAverageQueryTest(yamlFile);
     Query<?> query = jsonMapper.readValue(getQueryString(), Query.class);
     Assertions.assertInstanceOf(getExpectedQueryType(), query);
 
