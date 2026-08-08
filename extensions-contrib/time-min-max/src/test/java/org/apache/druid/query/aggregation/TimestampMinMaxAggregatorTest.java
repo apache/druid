@@ -32,7 +32,9 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
@@ -40,6 +42,8 @@ import java.nio.ByteBuffer;
 import java.sql.Timestamp;
 import java.util.List;
 
+@ParameterizedClass(name = "{index}: Test for {0}")
+@MethodSource("constructorFeeder")
 public class TimestampMinMaxAggregatorTest
 {
   Injector injector;
@@ -81,12 +85,17 @@ public class TimestampMinMaxAggregatorTest
     );
   }
 
-  private String aggType;
-  private Class<? extends TimestampAggregatorFactory> aggClass;
-  private Long initValue;
-  private Timestamp expected;
+  private final String aggType;
+  private final Class<? extends TimestampAggregatorFactory> aggClass;
+  private final Long initValue;
+  private final Timestamp expected;
 
-  public void initTimestampMinMaxAggregatorTest(String aggType, Class<? extends TimestampAggregatorFactory> aggClass, Long initValue, Timestamp expected)
+  public TimestampMinMaxAggregatorTest(
+      String aggType,
+      Class<? extends TimestampAggregatorFactory> aggClass,
+      Long initValue,
+      Timestamp expected
+  )
   {
     this.aggType = aggType;
     this.aggClass = aggClass;
@@ -94,7 +103,8 @@ public class TimestampMinMaxAggregatorTest
     this.initValue = initValue;
   }
 
-  private void setup() throws Exception
+  @BeforeEach
+  public void setup() throws Exception
   {
     injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
@@ -123,18 +133,9 @@ public class TimestampMinMaxAggregatorTest
     EasyMock.replay(selectorFactory);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{index}: Test for {0}")
-  public void testAggregator(
-      String aggType,
-      Class<? extends TimestampAggregatorFactory> aggClass,
-      Long initValue,
-      Timestamp expected
-  )
-      throws Exception
+  @Test
+  public void testAggregator() throws Exception
   {
-    initTimestampMinMaxAggregatorTest(aggType, aggClass, initValue, expected);
-    setup();
     TimestampAggregator aggregator = (TimestampAggregator) aggregatorFactory.factorize(selectorFactory);
 
     Assertions.assertEquals(initValue, aggregator.get());
@@ -146,18 +147,9 @@ public class TimestampMinMaxAggregatorTest
     Assertions.assertEquals(expected, new Timestamp(aggregator.getLong()));
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{index}: Test for {0}")
-  public void testBufferAggregator(
-      String aggType,
-      Class<? extends TimestampAggregatorFactory> aggClass,
-      Long initValue,
-      Timestamp expected
-  )
-      throws Exception
+  @Test
+  public void testBufferAggregator() throws Exception
   {
-    initTimestampMinMaxAggregatorTest(aggType, aggClass, initValue, expected);
-    setup();
     TimestampBufferAggregator aggregator = (TimestampBufferAggregator) aggregatorFactory.factorizeBuffered(selectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[Long.BYTES]);

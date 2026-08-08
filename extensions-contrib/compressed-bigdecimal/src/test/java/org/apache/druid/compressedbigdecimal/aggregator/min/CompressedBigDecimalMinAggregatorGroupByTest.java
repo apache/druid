@@ -24,7 +24,7 @@ import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggr
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
@@ -32,17 +32,16 @@ import java.util.Collection;
 import java.util.List;
 
 
+@ParameterizedClass(name = "{0}")
+@MethodSource("constructorFeeder")
 public class CompressedBigDecimalMinAggregatorGroupByTest extends CompressedBigDecimalAggregatorGroupByTestBase
 {
-  @Override
-  @ParameterizedTest
-  @MethodSource("constructorFeeder")
-  public void testIngestAndGroupByAllQuery(
+  public CompressedBigDecimalMinAggregatorGroupByTest(
       GroupByQueryConfig config,
       CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig
-  ) throws Exception
+  )
   {
-    super.testIngestAndGroupByAllQuery(config, cbdGroupByQueryConfig);
+    super(config, cbdGroupByQueryConfig);
   }
 
   /**
