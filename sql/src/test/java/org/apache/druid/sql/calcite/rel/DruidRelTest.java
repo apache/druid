@@ -68,9 +68,9 @@ import org.apache.druid.sql.calcite.rel.logical.DruidUnion;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DatasourceTable.PhysicalDatasourceMetadata;
 import org.apache.druid.sql.calcite.table.DruidTable;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -118,7 +118,7 @@ public class DruidRelTest
   private PlannerContext mockPlannerContext;
   private DruidQueryRel druidQueryRelNode;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     MockitoAnnotations.openMocks(this);
@@ -154,9 +154,9 @@ public class DruidRelTest
     DruidQuery query = druidQueryRelNode.toDruidQuery(true);
 
     // explain query should return a TableDataSource.
-    Assert.assertEquals(TABLE, queryForExplaining.getDataSource());
+    Assertions.assertEquals(TABLE, queryForExplaining.getDataSource());
     // query should return a RestrictedDataSource.
-    Assert.assertEquals(RESTRICTED, query.getDataSource());
+    Assertions.assertEquals(RESTRICTED, query.getDataSource());
   }
 
   @Test
@@ -180,10 +180,10 @@ public class DruidRelTest
     DruidQuery query = joinRel.toDruidQuery(false);
 
     // Assert
-    Assert.assertEquals(DruidJoinQueryRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
+    Assertions.assertEquals(DruidJoinQueryRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
     JoinDataSource dataSource = (JoinDataSource) query.getDataSource();
-    Assert.assertEquals(RESTRICTED, ((QueryDataSource) dataSource.getLeft()).getQuery().getDataSource());
-    Assert.assertEquals(RESTRICTED, ((QueryDataSource) dataSource.getRight()).getQuery().getDataSource());
+    Assertions.assertEquals(RESTRICTED, ((QueryDataSource) dataSource.getLeft()).getQuery().getDataSource());
+    Assertions.assertEquals(RESTRICTED, ((QueryDataSource) dataSource.getRight()).getQuery().getDataSource());
   }
 
   @Test
@@ -204,8 +204,8 @@ public class DruidRelTest
     DruidQuery query = rel.toDruidQuery(false);
 
     // Assert
-    Assert.assertEquals(DruidUnionDataSourceRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
-    Assert.assertEquals(new UnionDataSource(ImmutableList.of(RESTRICTED, RESTRICTED)), query.getDataSource());
+    Assertions.assertEquals(DruidUnionDataSourceRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
+    Assertions.assertEquals(new UnionDataSource(ImmutableList.of(RESTRICTED, RESTRICTED)), query.getDataSource());
   }
 
   @Test
@@ -225,8 +225,8 @@ public class DruidRelTest
     DruidQuery query = rel.toDruidQuery(false);
 
     // Assert
-    Assert.assertEquals(DruidOuterQueryRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
-    Assert.assertEquals(RESTRICTED, ((QueryDataSource) query.getDataSource()).getQuery().getDataSource());
+    Assertions.assertEquals(DruidOuterQueryRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
+    Assertions.assertEquals(RESTRICTED, ((QueryDataSource) query.getDataSource()).getQuery().getDataSource());
   }
 
   @Test
@@ -253,8 +253,8 @@ public class DruidRelTest
     DruidQuery query = rel.toDruidQuery(false);
 
     // Assert
-    Assert.assertEquals(DruidCorrelateUnnestRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
-    Assert.assertEquals(RESTRICTED, ((UnnestDataSource) query.getDataSource()).getBase());
+    Assertions.assertEquals(DruidCorrelateUnnestRel.DUMMY_DATA_SOURCE, queryForExplaining.getDataSource());
+    Assertions.assertEquals(RESTRICTED, ((UnnestDataSource) query.getDataSource()).getBase());
   }
 
   @Test
@@ -262,10 +262,10 @@ public class DruidRelTest
   {
     DruidUnnestRel rel = DruidUnnestRel.create(mockRelOptCluster, mockRelTraitSet, ALWAYS_TRUE, mockPlannerContext);
 
-    CannotBuildQueryException e1 = Assert.assertThrows(CannotBuildQueryException.class, rel::toDruidQueryForExplaining);
-    CannotBuildQueryException e2 = Assert.assertThrows(CannotBuildQueryException.class, () -> rel.toDruidQuery(false));
-    Assert.assertEquals("Cannot execute UNNEST directly", e1.getMessage());
-    Assert.assertEquals("Cannot execute UNNEST directly", e2.getMessage());
+    CannotBuildQueryException e1 = Assertions.assertThrows(CannotBuildQueryException.class, rel::toDruidQueryForExplaining);
+    CannotBuildQueryException e2 = Assertions.assertThrows(CannotBuildQueryException.class, () -> rel.toDruidQuery(false));
+    Assertions.assertEquals("Cannot execute UNNEST directly", e1.getMessage());
+    Assertions.assertEquals("Cannot execute UNNEST directly", e2.getMessage());
   }
 
   @Test
@@ -273,11 +273,11 @@ public class DruidRelTest
   {
     DruidUnionRel rel = DruidUnionRel.create(mockPlannerContext, REC_TYPE, ImmutableList.of(druidQueryRelNode), 1000);
 
-    UnsupportedOperationException e1 = Assert.assertThrows(
+    UnsupportedOperationException e1 = Assertions.assertThrows(
         UnsupportedOperationException.class,
         rel::toDruidQueryForExplaining
     );
-    UnsupportedOperationException e2 = Assert.assertThrows(
+    UnsupportedOperationException e2 = Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> rel.toDruidQuery(false)
     );
