@@ -105,6 +105,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-spectator-histogram|Support for efficient approximate percentile queries|[link](../development/extensions-contrib/spectator-histogram.md)|
 |druid-rabbit-indexing-service|Support for creating and managing [RabbitMQ](https://www.rabbitmq.com/) indexing tasks|[link](../development/extensions-contrib/rabbit-stream-ingestion.md)|
 |druid-ranger-security|Support for access control through Apache&circledR; Ranger.|[link](../development/extensions-contrib/druid-ranger-security.md)|
+|druid-opa-authorizer|Support for access control through Open Policy Agent (OPA).|[link](../development/extensions-contrib/druid-opa-authorizer.md)|
 
 ## Promoting community extensions to core extensions
 
