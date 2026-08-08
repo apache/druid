@@ -22,6 +22,7 @@ import type { Field } from '../../components';
 import { deepGet, deepSet, oneOfKnown } from '../../utils';
 
 export interface CompactionConfig {
+  type?: string;
   dataSource: string;
   skipOffsetFromLatest?: string;
   tuningConfig?: any;

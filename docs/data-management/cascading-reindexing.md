@@ -103,9 +103,17 @@ The template requires `defaultSegmentGranularity` and `defaultPartitionsSpec`. T
 1. **No partitioning rules defined at all.** If you only define deletion, index spec, or data schema rules, all intervals use the default granularity and partitions spec.
 2. **Non-partitioning rules have a more recent threshold than the newest partitioning rule.** For example, if your only partitioning rule is `olderThan: P90D` but you have a deletion rule with `olderThan: P30D`, intervals between 30 and 90 days old will use the defaults.
 
-## Supervisor spec reference
+## Submit a cascading reindexing supervisor
 
-To submit a cascading reindexing supervisor, wrap the template spec inside a compaction supervisor spec:
+You can submit a cascading reindexing supervisor through the web console or the API.
+
+### Web console
+
+In the web console, go to the **Datasources** view and click **Edit compaction config** for a datasource. If your cluster has compaction supervisors enabled, the dialog includes a **Template type** drop-down. Select **Cascading reindexing** to configure the template, including default partitioning, skip offsets, and reindexing rules.
+
+### API
+
+To submit a cascading reindexing supervisor via the API, wrap the template spec inside a compaction supervisor spec:
 
 ```json
 {

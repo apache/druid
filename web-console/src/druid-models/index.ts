@@ -20,6 +20,7 @@ export * from './array-ingest-mode/array-ingest-mode';
 export * from './async-query/async-query';
 export * from './broker-dynamic-config/broker-dynamic-config';
 export * from './compaction-config/compaction-config';
+export * from './compaction-config/reindex-cascade-config';
 export * from './compaction-dynamic-config/compaction-dynamic-config';
 export * from './compaction-status/compaction-status';
 export * from './console/console';
