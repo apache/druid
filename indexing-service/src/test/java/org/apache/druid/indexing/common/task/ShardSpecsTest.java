@@ -84,7 +84,7 @@ public class ShardSpecsTest extends IngestionTestBase
     ShardSpec spec4 = shardSpecs.getShardSpec(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), row2);
     ShardSpec spec5 = shardSpecs.getShardSpec(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), row3);
 
-    Assertions.assertSame(true, spec3 == spec4);
-    Assertions.assertSame(false, spec3 == spec5);
+    Assertions.assertSame(spec3, spec4);
+    Assertions.assertNotSame(spec3, spec5);
   }
 }

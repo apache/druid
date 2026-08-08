@@ -165,25 +165,25 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
 
-  protected final File temporaryFolder = FileUtils.createTempDir();
+  protected final File parallelTemporaryFolder = FileUtils.createTempDir();
 
   protected final File createTempDir()
   {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
+    return FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), null);
   }
 
   protected final File createTempDir(final String prefix)
   {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), prefix);
+    return FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), prefix);
   }
 
   protected final void deleteTempDir()
   {
     try {
-      FileUtils.deleteDirectory(temporaryFolder);
+      FileUtils.deleteDirectory(parallelTemporaryFolder);
     }
     catch (IOException e) {
-      throw new ISE(e, "Failed to delete temporary directory[%s]", temporaryFolder);
+      throw new ISE(e, "Failed to delete temporary directory[%s]", parallelTemporaryFolder);
     }
   }
 
@@ -234,7 +234,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   @BeforeEach
   public void setUpAbstractParallelIndexSupervisorTaskTest(TestInfo testInfo) throws IOException
   {
-    localDeepStorage = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "localStorage");
+    localDeepStorage = FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "localStorage");
     taskRunner = new SimpleThreadingTaskRunner(testInfo.getTestMethod().orElseThrow().getName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
@@ -242,7 +242,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .setShuffleDataLocations(
             ImmutableList.of(
                 new StorageLocationConfig(
-                    FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "shuffle"),
+                    FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "shuffle"),
                     null,
                     null
                 )
@@ -698,10 +698,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .dataSegmentKiller(new NoopDataSegmentKiller())
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .segmentCacheManager(
-            newSegmentLoader(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "segmentCache"))
+            newSegmentLoader(FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "segmentCache"))
         )
         .jsonMapper(objectMapper)
-        .taskWorkDir(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), task.getId()))
+        .taskWorkDir(FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), task.getId()))
         .indexIO(getIndexIO())
         .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)
