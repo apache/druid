@@ -27,12 +27,12 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
@@ -73,7 +73,7 @@ public class TimestampGroupByAggregationTest
     );
 
     for (final List<Object> partialConstructor : partialConstructors) {
-      for (GroupByQueryConfig config : testConfigs()) {
+      for (GroupByQueryConfig config : GroupByQueryRunnerTestHelper.testConfigs()) {
         final List<Object> constructor = Lists.newArrayList(partialConstructor);
         constructor.add(config);
         constructors.add(constructor.toArray());
@@ -81,50 +81,6 @@ public class TimestampGroupByAggregationTest
     }
 
     return constructors;
-  }
-
-  private static List<GroupByQueryConfig> testConfigs()
-  {
-    return List.of(
-        new GroupByQueryConfig()
-        {
-          @Override
-          public int getBufferGrouperInitialBuckets()
-          {
-            return 4;
-          }
-        },
-        new GroupByQueryConfig()
-        {
-          @Override
-          public int getBufferGrouperMaxSize()
-          {
-            return 2;
-          }
-
-          @Override
-          public HumanReadableBytes getMaxOnDiskStorage()
-          {
-            return HumanReadableBytes.valueOf(10L * 1024 * 1024);
-          }
-        },
-        new org.apache.druid.jackson.DefaultObjectMapper().convertValue(
-            java.util.Map.of(
-                "maxSelectorDictionarySize", 20,
-                "maxMergingDictionarySize", 400,
-                "maxOnDiskStorage", 10L * 1024 * 1024
-            ),
-            GroupByQueryConfig.class
-        ),
-        new GroupByQueryConfig()
-        {
-          @Override
-          public int getNumParallelCombineThreads()
-          {
-            return 2;
-          }
-        }
-    );
   }
 
   private String aggType;
