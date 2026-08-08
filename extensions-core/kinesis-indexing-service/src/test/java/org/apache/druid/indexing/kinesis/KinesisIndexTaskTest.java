@@ -97,7 +97,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.kinesis.retrieval.KinesisClientRecord;
@@ -129,9 +128,6 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
-  @TempDir
-  private File tempFolder;
-
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String STREAM = "stream";
   private static final String SHARD_ID1 = "1";
@@ -214,9 +210,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   public void setupTest() throws IOException, InterruptedException
   {
     ExpressionProcessing.initializeForTests();
-    super.tempFolder.create();
-    derby.before();
-    super.setupBase();
     handoffConditionTimeout = 0;
     reportParseExceptions = false;
     logParseExceptions = true;
@@ -246,9 +239,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     reportsFile.delete();
     destroyToolboxFactory();
-    super.tearDownBase();
-    derby.after();
-    super.tempFolder.delete();
   }
 
   @AfterAll
