@@ -64,11 +64,13 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.easymock.EasyMock;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import java.io.File;
 import java.io.IOException;
 
 @SuppressWarnings("DoNotMock")
@@ -76,6 +78,7 @@ public class TaskToolboxTest
 {
 
   private TaskToolboxFactory taskToolbox = null;
+  private final File baseDir = FileUtils.createTempDir();
   private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);
@@ -114,7 +117,7 @@ public class TaskToolboxTest
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
 
     TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(FileUtils.createTempDir().toString())
+        .setBaseDir(baseDir.toString())
         .build();
 
     taskToolbox = new TaskToolboxFactory(
@@ -162,6 +165,12 @@ public class TaskToolboxTest
         CentralizedDatasourceSchemaConfig.create(),
         JvmUtils.getRuntimeInfo()
     );
+  }
+
+  @AfterEach
+  public void tearDown() throws IOException
+  {
+    FileUtils.deleteDirectory(baseDir);
   }
 
   @Test

@@ -57,7 +57,7 @@ public class FileTaskLogsTest
       for (Map.Entry<Long, String> entry : expected.entrySet()) {
         final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get());
         final String string = StringUtils.fromUtf8(bytes);
-        Assertions.assertEquals(string, entry.getValue(), StringUtils.format("Read with offset %,d", entry.getKey()));
+        Assertions.assertEquals(entry.getValue(), string, StringUtils.format("Read with offset %,d", entry.getKey()));
       }
     }
     finally {
@@ -70,21 +70,26 @@ public class FileTaskLogsTest
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final File tmpDir = FileUtils.createTempDir();
-    final File logDir = new File(tmpDir, "druid/logs");
-    final File reportFile = new File(tmpDir, "report.json");
+    try {
+      final File logDir = new File(tmpDir, "druid/logs");
+      final File reportFile = new File(tmpDir, "report.json");
 
-    final String taskId = "myTask";
-    final TestTaskReport testReport = new TestTaskReport(taskId);
-    final String testReportString = mapper.writeValueAsString(TaskReport.buildTaskReports(testReport));
-    Files.asCharSink(reportFile, StandardCharsets.UTF_8).write(testReportString);
+      final String taskId = "myTask";
+      final TestTaskReport testReport = new TestTaskReport(taskId);
+      final String testReportString = mapper.writeValueAsString(TaskReport.buildTaskReports(testReport));
+      Files.asCharSink(reportFile, StandardCharsets.UTF_8).write(testReportString);
 
-    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
-    taskLogs.pushTaskReports("foo", reportFile);
+      final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+      taskLogs.pushTaskReports("foo", reportFile);
 
-    Assertions.assertEquals(
-        testReportString,
-        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskReports("foo").get()))
-    );
+      Assertions.assertEquals(
+          testReportString,
+          StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskReports("foo").get()))
+      );
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
   }
 
   @Test
@@ -92,72 +97,88 @@ public class FileTaskLogsTest
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final File tmpDir = FileUtils.createTempDir();
-    final File logDir = new File(tmpDir, "druid/myTask");
-    final File statusFile = new File(tmpDir, "status.json");
+    try {
+      final File logDir = new File(tmpDir, "druid/myTask");
+      final File statusFile = new File(tmpDir, "status.json");
 
-    final String taskId = "myTask";
-    final TaskStatus taskStatus = TaskStatus.success(taskId);
-    final String taskStatusString = mapper.writeValueAsString(taskStatus);
-    Files.asCharSink(statusFile, StandardCharsets.UTF_8).write(taskStatusString);
+      final String taskId = "myTask";
+      final TaskStatus taskStatus = TaskStatus.success(taskId);
+      final String taskStatusString = mapper.writeValueAsString(taskStatus);
+      Files.asCharSink(statusFile, StandardCharsets.UTF_8).write(taskStatusString);
 
-    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
-    taskLogs.pushTaskStatus(taskId, statusFile);
+      final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+      taskLogs.pushTaskStatus(taskId, statusFile);
 
-    Assertions.assertEquals(
-        taskStatusString,
-        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskStatus(taskId).get()))
-    );
+      Assertions.assertEquals(
+          taskStatusString,
+          StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskStatus(taskId).get()))
+      );
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
   }
 
   @Test
   public void testPushTaskLogDirCreationFails() throws Exception
   {
     final File tmpDir = FileUtils.createTempDir();
-    final File logDir = new File(tmpDir, "druid/logs");
-    final File logFile = new File(tmpDir, "log");
-    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
+    try {
+      final File logDir = new File(tmpDir, "druid/logs");
+      final File logFile = new File(tmpDir, "log");
+      Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
 
-    if (!tmpDir.setWritable(false)) {
-      throw new RuntimeException("failed to make tmp dir read-only");
+      if (!tmpDir.setWritable(false)) {
+        throw new RuntimeException("failed to make tmp dir read-only");
+      }
+
+      final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+
+      final IOException exception = Assertions.assertThrows(
+          IOException.class,
+          () -> taskLogs.pushTaskLog("foo", logFile)
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot create directory"));
     }
-
-    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
-
-    final IOException exception = Assertions.assertThrows(
-        IOException.class,
-        () -> taskLogs.pushTaskLog("foo", logFile)
-    );
-    Assertions.assertTrue(exception.getMessage().contains("Cannot create directory"));
+    finally {
+      tmpDir.setWritable(true);
+      FileUtils.deleteDirectory(tmpDir);
+    }
   }
 
   @Test
   public void testKill() throws Exception
   {
     final File tmpDir = FileUtils.createTempDir();
-    final File logDir = new File(tmpDir, "logs");
-    final File logFile = new File(tmpDir, "log");
-    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+    try {
+      final File logDir = new File(tmpDir, "logs");
+      final File logFile = new File(tmpDir, "log");
+      final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
 
-    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");
-    taskLogs.pushTaskLog("log1", logFile);
-    Assertions.assertEquals("log1content", readLog(taskLogs, "log1", 0));
+      Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");
+      taskLogs.pushTaskLog("log1", logFile);
+      Assertions.assertEquals("log1content", readLog(taskLogs, "log1", 0));
 
-    //File modification timestamp is only maintained to seconds resolution, so artificial delay
-    //is necessary to separate 2 file creations by a timestamp that would result in only one
-    //of them getting deleted
-    Thread.sleep(1500);
-    long time = (System.currentTimeMillis() / 1000) * 1000;
-    Assertions.assertTrue(new File(logDir, "log1.log").lastModified() < time);
+      //File modification timestamp is only maintained to seconds resolution, so artificial delay
+      //is necessary to separate 2 file creations by a timestamp that would result in only one
+      //of them getting deleted
+      Thread.sleep(1500);
+      final long time = (System.currentTimeMillis() / 1000) * 1000;
+      Assertions.assertTrue(new File(logDir, "log1.log").lastModified() < time);
 
-    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log2content");
-    taskLogs.pushTaskLog("log2", logFile);
-    Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
-    Assertions.assertTrue(new File(logDir, "log2.log").lastModified() >= time);
+      Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log2content");
+      taskLogs.pushTaskLog("log2", logFile);
+      Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+      Assertions.assertTrue(new File(logDir, "log2.log").lastModified() >= time);
 
-    taskLogs.killOlderThan(time);
+      taskLogs.killOlderThan(time);
 
-    Assertions.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
-    Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+      Assertions.assertFalse(taskLogs.streamTaskLog("log1", 0).isPresent());
+      Assertions.assertEquals("log2content", readLog(taskLogs, "log2", 0));
+    }
+    finally {
+      FileUtils.deleteDirectory(tmpDir);
+    }
 
   }
 

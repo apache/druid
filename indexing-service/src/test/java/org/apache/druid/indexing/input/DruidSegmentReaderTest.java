@@ -65,6 +65,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -90,6 +91,14 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
   private List<AggregatorFactory> metrics;
 
   private InputStats inputStats;
+
+  @AfterEach
+  public void tearDown() throws IOException
+  {
+    if (segmentDirectory != null) {
+      FileUtils.deleteDirectory(segmentDirectory);
+    }
+  }
 
   @BeforeEach
   public void setUp() throws IOException

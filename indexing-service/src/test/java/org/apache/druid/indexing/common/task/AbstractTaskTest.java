@@ -32,6 +32,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 
@@ -52,6 +54,7 @@ import static org.mockito.Mockito.when;
 
 public class AbstractTaskTest
 {
+  private final File tempReportDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
   private ObjectMapper objectMapper;
 
   @BeforeEach
@@ -60,11 +63,17 @@ public class AbstractTaskTest
     objectMapper = new TestUtils().getTestObjectMapper();
   }
 
-  private static File createTempReportFile() throws Exception
+  private File createTempReportFile() throws Exception
   {
-    final File reportsFile = new File(org.apache.druid.java.util.common.FileUtils.createTempDir(), "report.json");
+    final File reportsFile = new File(tempReportDir, "report.json");
     FileUtils.write(reportsFile, "", StandardCharsets.UTF_8);
     return reportsFile;
+  }
+
+  @AfterEach
+  public void tearDown() throws IOException
+  {
+    org.apache.druid.java.util.common.FileUtils.deleteDirectory(tempReportDir);
   }
 
   @Test

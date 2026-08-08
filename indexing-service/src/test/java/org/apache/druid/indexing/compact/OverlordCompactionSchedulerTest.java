@@ -313,7 +313,7 @@ public class OverlordCompactionSchedulerTest
     runScheduledJob();
     Assertions.assertFalse(scheduler.isRunning());
 
-    // Enable the schduler to trigger start
+    // Enable the scheduler to trigger start
     enableScheduler();
     Assertions.assertFalse(scheduler.isRunning());
 
