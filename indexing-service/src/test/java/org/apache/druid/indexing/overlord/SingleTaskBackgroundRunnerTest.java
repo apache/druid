@@ -36,7 +36,6 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -68,6 +67,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -81,7 +81,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SingleTaskBackgroundRunnerTest
 {
-  private final File temporaryFolder = FileUtils.createTempDir("single-task-background-runner-test");
+  @TempDir
+  private File temporaryFolder;
 
   private SingleTaskBackgroundRunner runner;
 
@@ -152,10 +153,8 @@ public class SingleTaskBackgroundRunnerTest
 
   @AfterEach
   public void teardown()
-      throws IOException
   {
     runner.stop();
-    FileUtils.deleteDirectory(temporaryFolder);
   }
 
   @Test

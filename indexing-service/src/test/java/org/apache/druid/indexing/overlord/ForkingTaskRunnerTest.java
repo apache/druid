@@ -53,9 +53,9 @@ import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.assertj.core.util.Lists;
 import org.joda.time.Period;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -77,13 +77,8 @@ public class ForkingTaskRunnerTest
 {
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  private final File temporaryFolder = FileUtils.createTempDir("forking-task-runner-test");
-
-  @AfterEach
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(temporaryFolder);
-  }
+  @TempDir
+  private File temporaryFolder;
 
   private File newTempFolder()
   {
