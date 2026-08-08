@@ -130,7 +130,7 @@
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
-        <httpclient.version>4.5.13</httpclient.version>
+        <httpclient.version>4.5.14</httpclient.version>
         <okhttp.version>5.4.0</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.6</zookeeper.version>
@@ -1422,6 +1422,11 @@
                 <groupId>com.google.j2objc</groupId>
                 <artifactId>j2objc-annotations</artifactId>
                 <version>2.8</version>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-context</artifactId>
+                <version>1.60.1</version>
             </dependency>
             <dependency>
                 <groupId>io.github.resilience4j</groupId>
