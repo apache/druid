@@ -24,6 +24,7 @@ import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggr
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -68,7 +69,7 @@ public class CompressedBigDecimalMaxAggregatorGroupByTest extends CompressedBigD
         "9999999999.000000000",
         "9999999999.000000000"
     );
-    for (GroupByQueryConfig config : testConfigs()) {
+    for (GroupByQueryConfig config : GroupByQueryRunnerTestHelper.testConfigs()) {
       constructors.add(new Object[]{config, cbdGroupByQueryConfig});
     }
     return constructors;

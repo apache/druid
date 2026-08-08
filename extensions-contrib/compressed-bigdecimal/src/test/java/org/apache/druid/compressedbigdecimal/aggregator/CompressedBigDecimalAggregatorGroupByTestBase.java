@@ -23,7 +23,6 @@ import org.apache.druid.compressedbigdecimal.ArrayCompressedBigDecimal;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalGroupByQueryConfig;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalModule;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
@@ -82,68 +81,6 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
   public static void setupClass()
   {
     System.setProperty("user.timezone", "UTC");
-  }
-
-  public static List<GroupByQueryConfig> testConfigs()
-  {
-    return List.of(
-        new GroupByQueryConfig()
-        {
-          @Override
-          public int getBufferGrouperInitialBuckets()
-          {
-            return 4;
-          }
-
-          @Override
-          public String toString()
-          {
-            return "v2";
-          }
-        },
-        new GroupByQueryConfig()
-        {
-          @Override
-          public int getBufferGrouperMaxSize()
-          {
-            return 2;
-          }
-
-          @Override
-          public HumanReadableBytes getMaxOnDiskStorage()
-          {
-            return HumanReadableBytes.valueOf(10L * 1024 * 1024);
-          }
-
-          @Override
-          public String toString()
-          {
-            return "v2SmallBuffer";
-          }
-        },
-        new org.apache.druid.jackson.DefaultObjectMapper().convertValue(
-            java.util.Map.of(
-                "maxSelectorDictionarySize", 20,
-                "maxMergingDictionarySize", 400,
-                "maxOnDiskStorage", 10L * 1024 * 1024
-            ),
-            GroupByQueryConfig.class
-        ),
-        new GroupByQueryConfig()
-        {
-          @Override
-          public int getNumParallelCombineThreads()
-          {
-            return 2;
-          }
-
-          @Override
-          public String toString()
-          {
-            return "v2ParallelCombine";
-          }
-        }
-    );
   }
 
   /**
