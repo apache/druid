@@ -63,7 +63,7 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestQueryStack;
+import org.apache.druid.sql.calcite.util.QueryStackTestHelper;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterAll;
@@ -108,7 +108,7 @@ public class SqlStatementTest
   public static void setUpClass()
   {
     resourceCloser = Closer.create();
-    conglomerate = SqlTestQueryStack.createQueryRunnerFactoryConglomerate(resourceCloser);
+    conglomerate = QueryStackTestHelper.createQueryRunnerFactoryConglomerate(resourceCloser);
 
     final QueryScheduler scheduler = new QueryScheduler(
         5,

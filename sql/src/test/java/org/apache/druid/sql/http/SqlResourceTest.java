@@ -104,7 +104,7 @@ import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestQueryStack;
+import org.apache.druid.sql.calcite.util.QueryStackTestHelper;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -196,7 +196,7 @@ public class SqlResourceTest extends CalciteTestBase
   @BeforeAll
   public static void setupClass(@TempDir File tempDir)
   {
-    conglomerate = SqlTestQueryStack.createQueryRunnerFactoryConglomerate(staticCloser);
+    conglomerate = QueryStackTestHelper.createQueryRunnerFactoryConglomerate(staticCloser);
     scheduler = new QueryScheduler(
         5,
         ManualQueryPrioritizationStrategy.INSTANCE,

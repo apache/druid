@@ -138,7 +138,7 @@ public class QueryFrameworkUtils
         plannerFactory,
         NoopServiceEmitter.instance(),
         NoopRequestLogger.instance(),
-        SqlTestQueryStack.DEFAULT_NOOP_SCHEDULER,
+        QueryStackTestHelper.DEFAULT_NOOP_SCHEDULER,
         new SqlLifecycleManager()
     );
   }
@@ -313,7 +313,7 @@ public class QueryFrameworkUtils
 
   public static JoinableFactory createDefaultJoinableFactory(Injector injector)
   {
-    return SqlTestQueryStack.makeJoinableFactoryFromDefault(
+    return QueryStackTestHelper.makeJoinableFactoryFromDefault(
         injector.getInstance(LookupExtractorFactoryContainerProvider.class),
         ImmutableSet.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE),
         ImmutableMap.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)
