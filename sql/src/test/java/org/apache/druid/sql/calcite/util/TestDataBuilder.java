@@ -661,7 +661,7 @@ public class TestDataBuilder
         injector,
         conglomerate,
         tmpDir,
-        SqlTestQueryStack.DEFAULT_NOOP_SCHEDULER,
+        QueryStackTestHelper.DEFAULT_NOOP_SCHEDULER,
         QueryFrameworkUtils.createDefaultJoinableFactory(injector)
     );
   }
@@ -692,7 +692,7 @@ public class TestDataBuilder
   {
     final JoinableFactory joinableFactoryToUse;
     if (joinableFactory == null) {
-      joinableFactoryToUse = SqlTestQueryStack.makeJoinableFactoryForLookup(
+      joinableFactoryToUse = QueryStackTestHelper.makeJoinableFactoryForLookup(
           injector.getInstance(LookupExtractorFactoryContainerProvider.class)
       );
     } else {

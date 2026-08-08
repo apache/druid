@@ -99,7 +99,16 @@ import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Set;
 
-public class SqlTestQueryStack
+/**
+ * JUnit 4-free query-stack utilities for SQL tests.
+ *
+ * <p>This class is derived from the reusable query-stack setup in
+ * {@link org.apache.druid.server.QueryStackTests}. It is kept separately because
+ * {@code QueryStackTests} still exposes JUnit 4-only fixtures for legacy tests.
+ * Migrated JUnit 5 SQL tests use this helper until the common query-stack setup
+ * can be extracted into a shared JUnit 4-free test fixture.</p>
+ */
+public class QueryStackTestHelper
 {
   private static final int COMPUTE_BUFFER_SIZE = 10 * 1024 * 1024;
 
@@ -112,7 +121,7 @@ public class SqlTestQueryStack
       new ServerConfig()
   );
 
-  private SqlTestQueryStack()
+  private QueryStackTestHelper()
   {
   }
 

@@ -620,7 +620,7 @@ public class SqlTestFramework
     public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
     {
       return new JoinableFactoryWrapper(
-          SqlTestQueryStack.makeJoinableFactoryFromDefault(
+          QueryStackTestHelper.makeJoinableFactoryFromDefault(
               lookupProvider,
               ImmutableSet.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE),
               ImmutableMap.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)
@@ -985,21 +985,21 @@ public class SqlTestFramework
     @LazySingleton
     public DruidProcessingConfig makeProcessingConfig(Builder builder)
     {
-      return SqlTestQueryStack.getProcessingConfig(builder.mergeBufferCount);
+      return QueryStackTestHelper.getProcessingConfig(builder.mergeBufferCount);
     }
 
     @Provides
     @LazySingleton
     public TestBufferPool makeTestBufferPool(Builder builder)
     {
-      return SqlTestQueryStack.makeTestBufferPool(builder.resourceCloser);
+      return QueryStackTestHelper.makeTestBufferPool(builder.resourceCloser);
     }
 
     @Provides
     @LazySingleton
     public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig, Builder builder)
     {
-      return SqlTestQueryStack.makeGroupByBuffers(builder.resourceCloser, processingConfig);
+      return QueryStackTestHelper.makeGroupByBuffers(builder.resourceCloser, processingConfig);
     }
 
     @Provides
