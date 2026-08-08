@@ -77,8 +77,10 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
@@ -90,6 +92,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@ParameterizedClass(name = "{0}")
+@MethodSource("constructorFeeder")
 public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTest
 {
   private static final InputRowSchema INPUT_ROW_SCHEMA = new InputRowSchema(
@@ -124,10 +128,17 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     EXPECTED_HISTOGRAMS.put("C", histogram);
   }
 
+  private final GroupByQueryConfig config;
   private AggregationTestHelper helper;
   private AggregationTestHelper timeSeriesHelper;
 
-  public void initSpectatorHistogramAggregatorTest(final GroupByQueryConfig config)
+  public SpectatorHistogramAggregatorTest(final GroupByQueryConfig config)
+  {
+    this.config = config;
+  }
+
+  @BeforeEach
+  public void initSpectatorHistogramAggregatorTest()
   {
     SpectatorHistogramModule.registerSerde();
     SpectatorHistogramModule module = new SpectatorHistogramModule();
@@ -193,11 +204,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   }
 
   // this is to test Json properties and equals
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void serializeDeserializeFactoryWithFieldName(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void serializeDeserializeFactoryWithFieldName() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new SpectatorHistogramModule().getJacksonModules().forEach(objectMapper::registerModule);
     SpectatorHistogramAggregatorFactory factory = new SpectatorHistogramAggregatorFactory(
@@ -213,11 +222,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(factory, other);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testBuildingHistogramQueryTime(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testBuildingHistogramQueryTime() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -240,11 +247,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     assertResultsMatch(results, 2, "C");
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testBuildingAndMergingHistograms(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testBuildingAndMergingHistograms() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -272,11 +277,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(expected, results.get(0).get(0));
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testBuildingAndMergingHistogramsTimeseriesQuery(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testBuildingAndMergingHistogramsTimeseriesQuery() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     TimeseriesQuery tsQuery = Druids.newTimeseriesQueryBuilder()
         .dataSource("test_datasource")
         .granularity(Granularities.ALL)
@@ -306,11 +309,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(expected, value);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testBuildingAndMergingGroupbyHistograms(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testBuildingAndMergingGroupbyHistograms() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -351,11 +352,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertNull(results.get(5).get(1));
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testBuildingAndCountingHistograms(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testBuildingAndCountingHistograms() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -383,11 +382,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(9.0, (Double) results.get(0).get(1), 0.001);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testBuildingAndCountingHistogramsWithNullFilter(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testBuildingAndCountingHistogramsWithNullFilter() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -419,11 +416,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(9.0, (Double) results.get(0).get(1), 0.001);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testIngestAsHistogramDistribution(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testIngestAsHistogramDistribution() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -451,11 +446,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(expected, results.get(0).get(0));
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testIngestHistogramsTimer(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testIngestHistogramsTimer() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -483,11 +476,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(expected, results.get(0).get(0));
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testIngestingPreaggregatedHistograms(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testIngestingPreaggregatedHistograms() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     TimeseriesQuery preAggTsQuery = Druids.newTimeseriesQueryBuilder()
         .dataSource("test_datasource")
         .granularity(Granularities.ALL)
@@ -517,11 +508,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(expected, value);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testMetadataQueryTimer(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testMetadataQueryTimer() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     File segmentDir = newFolder(tempFolder, "junit");
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
@@ -565,11 +554,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals("spectatorHistogramTimer", columns.get("histogram").getType());
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testMetadataQueryDistribution(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testMetadataQueryDistribution() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     File segmentDir = newFolder(tempFolder, "junit");
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
@@ -613,11 +600,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals("spectatorHistogramDistribution", columns.get("histogram").getType());
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testPercentilePostAggregator(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testPercentilePostAggregator() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -669,11 +654,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     }
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testBuildingAndCountingHistogramsIncrementalIndex(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testBuildingAndCountingHistogramsIncrementalIndex() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     List<String> dimensions = Collections.singletonList("d");
     int n = 10;
     DateTime startOfDay = DateTimes.of("2000-01-01");
@@ -729,11 +712,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(n * segments.size(), (Double) results.get(0).get(1), 0.001);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testPercentilePostAggregatorWithNullSketch(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testPercentilePostAggregatorWithNullSketch() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -772,11 +753,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertNull(results.get(5).get(2), "Row [5] should have null percentile when histogram is null");
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testPercentilesPostAggregatorWithNullSketch(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testPercentilesPostAggregatorWithNullSketch() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -818,11 +797,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertNull(results.get(5).get(2), "Row [5] should have null percentiles when histogram is null");
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testCountPostAggregator(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testCountPostAggregator() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -851,11 +828,9 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     Assertions.assertEquals(9L, results.get(0).get(1));
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testCountPostAggregatorWithNullSketch(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testCountPostAggregatorWithNullSketch() throws Exception
   {
-    initSpectatorHistogramAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,

@@ -33,6 +33,8 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
@@ -44,8 +46,33 @@ import java.util.TimeZone;
 
 public abstract class CompressedBigDecimalAggregatorGroupByTestBase
 {
+  private final GroupByQueryConfig config;
+  private final CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig;
+  private AggregationTestHelper helper;
+
   @TempDir
   public File tempFolder;
+
+  protected CompressedBigDecimalAggregatorGroupByTestBase(
+      GroupByQueryConfig config,
+      CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig
+  )
+  {
+    this.config = config;
+    this.cbdGroupByQueryConfig = cbdGroupByQueryConfig;
+  }
+
+  @BeforeEach
+  public void setup()
+  {
+    final CompressedBigDecimalModule module = new CompressedBigDecimalModule();
+    CompressedBigDecimalModule.registerSerde();
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+        module.getJacksonModules(),
+        config,
+        tempFolder
+    );
+  }
 
 
   /**
@@ -125,16 +152,9 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
    * @throws IOException IOException
    * @throws Exception   Exception
    */
-  protected void testIngestAndGroupByAllQuery(
-      GroupByQueryConfig config,
-      CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig
-  ) throws Exception
+  @Test
+  public void testIngestAndGroupByAllQuery() throws Exception
   {
-    final CompressedBigDecimalModule module = new CompressedBigDecimalModule();
-    CompressedBigDecimalModule.registerSerde();
-    final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
-        module.getJacksonModules(), config, tempFolder
-    );
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
         CompressedBigDecimalAggregatorTimeseriesTestBase.SCHEMA,

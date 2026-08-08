@@ -39,8 +39,10 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
@@ -49,14 +51,23 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+@ParameterizedClass(name = "{0}")
+@MethodSource("constructorFeeder")
 public class DDSketchAggregatorTest extends InitializedNullHandlingTest
 {
+  private final GroupByQueryConfig config;
   private AggregationTestHelper helper;
 
   @TempDir
   public File tempFolder;
 
-  public void initDDSketchAggregatorTest(final GroupByQueryConfig config)
+  public DDSketchAggregatorTest(final GroupByQueryConfig config)
+  {
+    this.config = config;
+  }
+
+  @BeforeEach
+  public void initDDSketchAggregatorTest()
   {
     DDSketchModule module = new DDSketchModule();
     DDSketchModule.registerSerde();
@@ -118,11 +129,9 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   // this is to test Json properties and equals
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void serializeDeserializeFactoryWithFieldName(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void serializeDeserializeFactoryWithFieldName() throws Exception
   {
-    initDDSketchAggregatorTest(config);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new DDSketchModule().getJacksonModules().forEach(objectMapper::registerModule);
     DDSketchAggregatorFactory factory = new DDSketchAggregatorFactory("name", "fieldName", 0.01, 1000);
@@ -135,11 +144,9 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
     Assertions.assertEquals(factory, other);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void buildingSketchesAtIngestionTime(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void buildingSketchesAtIngestionTime() throws Exception
   {
-    initDDSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -186,11 +193,9 @@ public class DDSketchAggregatorTest extends InitializedNullHandlingTest
     Assertions.assertEquals(1, quantiles[2], 0.05); // max value
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void buildingSketchesAtQueryTime(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void buildingSketchesAtQueryTime() throws Exception
   {
-    initDDSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(

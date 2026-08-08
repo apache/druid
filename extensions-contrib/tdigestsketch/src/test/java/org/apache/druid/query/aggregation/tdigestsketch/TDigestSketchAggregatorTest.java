@@ -40,8 +40,10 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
@@ -50,14 +52,23 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+@ParameterizedClass(name = "{0}")
+@MethodSource("constructorFeeder")
 public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
 {
+  private final GroupByQueryConfig config;
   private AggregationTestHelper helper;
 
   @TempDir
   public File tempFolder;
 
-  public void initTDigestSketchAggregatorTest(final GroupByQueryConfig config)
+  public TDigestSketchAggregatorTest(final GroupByQueryConfig config)
+  {
+    this.config = config;
+  }
+
+  @BeforeEach
+  public void initTDigestSketchAggregatorTest()
   {
     TDigestSketchModule.registerSerde();
     TDigestSketchModule module = new TDigestSketchModule();
@@ -123,11 +134,9 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
   }
 
   // this is to test Json properties and equals
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void serializeDeserializeFactoryWithFieldName(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void serializeDeserializeFactoryWithFieldName() throws Exception
   {
-    initTDigestSketchAggregatorTest(config);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -144,11 +153,9 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     Assertions.assertEquals(factory, other);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void deserializedFactoryCompressionCappedAtMaxCompression(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void deserializedFactoryCompressionCappedAtMaxCompression() throws Exception
   {
-    initTDigestSketchAggregatorTest(config);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -165,11 +172,9 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     Assertions.assertEquals(150, deserialized.getCompression());
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void deserializedFactoryCompressionBelowMaxCompressionUnchanged(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void deserializedFactoryCompressionBelowMaxCompressionUnchanged() throws Exception
   {
-    initTDigestSketchAggregatorTest(config);
     ObjectMapper objectMapper = new DefaultObjectMapper();
     objectMapper.setInjectableValues(
         new InjectableValues.Std()
@@ -186,11 +191,9 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     Assertions.assertEquals(100, deserialized.getCompression());
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void buildingSketchesAtIngestionTime(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void buildingSketchesAtIngestionTime() throws Exception
   {
-    initTDigestSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -236,11 +239,9 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     Assertions.assertEquals(1, quantiles[2], 0.05); // max value
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void buildingSketchesAtQueryTime(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void buildingSketchesAtQueryTime() throws Exception
   {
-    initTDigestSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -284,11 +285,9 @@ public class TDigestSketchAggregatorTest extends InitializedNullHandlingTest
     Assertions.assertEquals(1, quantiles[2], 0.05); // max value
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void testIngestingSketches(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void testIngestingSketches() throws Exception
   {
-    initTDigestSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_sketch_data.tsv").getFile()),
         new InputRowSchema(

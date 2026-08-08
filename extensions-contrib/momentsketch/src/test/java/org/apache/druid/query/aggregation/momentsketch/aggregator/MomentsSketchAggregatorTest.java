@@ -42,8 +42,10 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
@@ -52,14 +54,23 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+@ParameterizedClass(name = "{0}")
+@MethodSource("constructorFeeder")
 public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
 {
+  private final GroupByQueryConfig config;
   private AggregationTestHelper helper;
 
   @TempDir
   public File tempFolder;
 
-  public void initMomentsSketchAggregatorTest(final GroupByQueryConfig config)
+  public MomentsSketchAggregatorTest(final GroupByQueryConfig config)
+  {
+    this.config = config;
+  }
+
+  @BeforeEach
+  public void initMomentsSketchAggregatorTest()
   {
     MomentSketchModule.registerSerde();
     DruidModule module = new MomentSketchModule();
@@ -120,11 +131,9 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void buildingSketchesAtIngestionTime(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void buildingSketchesAtIngestionTime() throws Exception
   {
-    initMomentsSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(
@@ -229,11 +238,9 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
 
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "{0}")
-  public void buildingSketchesAtQueryTime(final GroupByQueryConfig config) throws Exception
+  @Test
+  public void buildingSketchesAtQueryTime() throws Exception
   {
-    initMomentsSketchAggregatorTest(config);
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("doubles_build_data.tsv").getFile()),
         new InputRowSchema(
