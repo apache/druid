@@ -33,9 +33,9 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
@@ -62,7 +62,7 @@ public class SupervisorResourceFilterTest
 
   private List<Object> mocksToVerify;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     supervisorManager = EasyMock.createMock(SupervisorManager.class);
@@ -78,7 +78,7 @@ public class SupervisorResourceFilterTest
   {
     setExpectations("/druid/indexer/v1/supervisor/datasource1", "GET", "datasource1", Action.READ, true);
     ContainerRequest filteredRequest = resourceFilter.filter(containerRequest);
-    Assert.assertNotNull(filteredRequest);
+    Assertions.assertNotNull(filteredRequest);
     verifyMocks();
   }
 
@@ -94,7 +94,7 @@ public class SupervisorResourceFilterTest
     catch (ForbiddenException e) {
       expected = e;
     }
-    Assert.assertNotNull(expected);
+    Assertions.assertNotNull(expected);
     verifyMocks();
   }
 
@@ -103,7 +103,7 @@ public class SupervisorResourceFilterTest
   {
     setExpectations("/druid/indexer/v1/supervisor/datasource1", "POST", "datasource1", Action.WRITE, true);
     ContainerRequest filteredRequest = resourceFilter.filter(containerRequest);
-    Assert.assertNotNull(filteredRequest);
+    Assertions.assertNotNull(filteredRequest);
     verifyMocks();
   }
 
@@ -119,7 +119,7 @@ public class SupervisorResourceFilterTest
     catch (ForbiddenException e) {
       expected = e;
     }
-    Assert.assertNotNull(expected);
+    Assertions.assertNotNull(expected);
     verifyMocks();
   }
 
@@ -150,8 +150,8 @@ public class SupervisorResourceFilterTest
       expected = e;
     }
 
-    Assert.assertNotNull(expected);
-    Assert.assertEquals(expected.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+    Assertions.assertNotNull(expected);
+    Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), expected.getResponse().getStatus());
     EasyMock.verify(containerRequest);
     EasyMock.verify(supervisorManager);
   }
