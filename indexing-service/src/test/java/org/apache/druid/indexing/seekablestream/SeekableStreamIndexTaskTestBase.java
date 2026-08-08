@@ -226,10 +226,11 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   }
 
   @AfterEach
-  public void tearDownBase()
+  public void tearDownBase() throws IOException
   {
     emitter.close();
     derby.after();
+    FileUtils.deleteDirectory(tempFolder);
   }
 
   protected static ByteEntity jb(

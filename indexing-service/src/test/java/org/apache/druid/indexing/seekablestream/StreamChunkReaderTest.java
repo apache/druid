@@ -46,6 +46,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.transform.TransformSpec;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -75,11 +76,25 @@ public class StreamChunkReaderTest
 
   @Mock
   private SettableByteEntityReader mockedByteEntityReader;
+  private AutoCloseable mocks;
 
   @BeforeEach
   public void setup()
   {
-    MockitoAnnotations.openMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception
+  {
+    try {
+      if (mocks != null) {
+        mocks.close();
+      }
+    }
+    finally {
+      FileUtils.deleteDirectory(temporaryFolder);
+    }
   }
 
   @Test

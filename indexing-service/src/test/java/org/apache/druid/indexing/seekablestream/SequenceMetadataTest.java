@@ -34,6 +34,7 @@ import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,11 +63,20 @@ public class SequenceMetadataTest
 
   @Mock
   private TaskToolbox mockTaskToolbox;
+  private AutoCloseable mocks;
 
   @BeforeEach
   public void setup()
   {
-    MockitoAnnotations.openMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception
+  {
+    if (mocks != null) {
+      mocks.close();
+    }
   }
 
   @Test

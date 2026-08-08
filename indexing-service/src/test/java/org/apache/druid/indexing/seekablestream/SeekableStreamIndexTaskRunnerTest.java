@@ -66,6 +66,7 @@ import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -108,14 +109,28 @@ public class SeekableStreamIndexTaskRunnerTest
 
   @Mock
   private SeekableStreamIndexTask task;
+  private AutoCloseable mocks;
 
   private StubServiceEmitter emitter;
 
   @BeforeEach
   public void setup()
   {
-    MockitoAnnotations.openMocks(this);
+    mocks = MockitoAnnotations.openMocks(this);
     emitter = new StubServiceEmitter();
+  }
+
+  @AfterEach
+  public void tearDown() throws Exception
+  {
+    try {
+      if (mocks != null) {
+        mocks.close();
+      }
+    }
+    finally {
+      FileUtils.deleteDirectory(temporaryFolder);
+    }
   }
 
   @Test

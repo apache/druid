@@ -368,14 +368,14 @@ public class SeekableStreamSupervisorStateManagerTest
   public void testExceptionEventSerde() throws IOException
   {
     SupervisorStateManager.ExceptionEvent event =
-        new SupervisorStateManager.ExceptionEvent(new NullPointerException("msg"), true);
+        new SeekableStreamExceptionEvent(new StreamException(new NullPointerException("msg")), true);
 
     String serialized = defaultMapper.writeValueAsString(event);
 
     Map<String, String> deserialized = defaultMapper.readValue(serialized, new TypeReference<>() {});
     Assertions.assertNotNull(deserialized.get("timestamp"));
     Assertions.assertEquals("java.lang.NullPointerException", deserialized.get("exceptionClass"));
-    Assertions.assertFalse(Boolean.getBoolean(deserialized.get("streamException")));
+    Assertions.assertTrue(Boolean.parseBoolean(deserialized.get("streamException")));
     Assertions.assertNotNull(deserialized.get("message"));
   }
 }
