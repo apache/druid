@@ -25,8 +25,9 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
-import org.pac4j.core.exception.http.HttpAction;
-import org.pac4j.jee.context.JEEContext;
+import org.pac4j.core.engine.SecurityGrantedAccessAdapter;
+import org.pac4j.jee.context.JEEContextFactory;
+import org.pac4j.jee.context.JEEFrameworkParameters;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
 import javax.servlet.Filter;
@@ -62,6 +63,9 @@ public class Pac4jFilter implements Filter
     this.name = name;
     this.authorizerName = authorizerName;
     this.sessionStore = new Pac4jSessionStore(cookiePassphrase);
+    this.pac4jConfig.setWebContextFactory(JEEContextFactory.INSTANCE);
+    this.pac4jConfig.setSessionStoreFactory(parameters -> this.sessionStore);
+    this.pac4jConfig.setHttpActionAdapter(JEEHttpActionAdapter.INSTANCE);
   }
 
   @Override
@@ -82,59 +86,51 @@ public class Pac4jFilter implements Filter
 
     HttpServletRequest request = (HttpServletRequest) servletRequest;
     HttpServletResponse response = (HttpServletResponse) servletResponse;
-    JEEContext context = new JEEContext(request, response);
+    JEEFrameworkParameters parameters = new JEEFrameworkParameters(request, response);
 
     if (request.getRequestURI().equals(callbackPath)) {
-      DefaultCallbackLogic callbackLogic = new DefaultCallbackLogic();
       String originalUrl = (String) request.getSession().getAttribute("pac4j.originalUrl");
       String redirectUrl = originalUrl != null ? originalUrl : "/";
 
-      callbackLogic.perform(
-              context,
-              sessionStore,
-              pac4jConfig,
-              JEEHttpActionAdapter.INSTANCE,
-              redirectUrl,                      // Redirect to original URL or root
-              null,
-              null
-      );
+      DefaultCallbackLogic.INSTANCE.perform(pac4jConfig, redirectUrl, null, null, parameters);
     } else {
-      DefaultSecurityLogic securityLogic = new DefaultSecurityLogic();
-      try {
-        securityLogic.perform(
-            context,
-            sessionStore,
-            pac4jConfig,
-            (ctx, session, profiles, parameters) -> {
-              try {
-                // Extract user ID from pac4j profiles and create AuthenticationResult
-                if (profiles != null && !profiles.isEmpty()) {
-                  String uid = profiles.iterator().next().getId();
-                  if (uid != null) {
-                    AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
-                    servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
-                    filterChain.doFilter(servletRequest, servletResponse);
-                  }
-                } else {
-                  LOGGER.warn("No profiles found after OIDC auth.");
-                  // Don't continue the filter chain - let pac4j handle the authentication failure
-                }
-              }
-              catch (IOException | ServletException e) {
-                throw new RuntimeException(e);
-              }
-              return null;
-            },
-            JEEHttpActionAdapter.INSTANCE,
-            null,
-            "none",  // Use "none" instead of authorizerName to avoid CSRF issues
-            null
-        );
-      }
-      catch (HttpAction e) {
-        JEEHttpActionAdapter.INSTANCE.adapt(e, context);
-      }
+      DefaultSecurityLogic.INSTANCE.perform(
+          pac4jConfig,
+          getSecurityGrantedAccessAdapter(servletRequest, servletResponse, filterChain),
+          null,
+          "none",  // Use "none" instead of authorizerName to avoid CSRF issues
+          null,
+          parameters
+      );
     }
+  }
+
+  SecurityGrantedAccessAdapter getSecurityGrantedAccessAdapter(
+      ServletRequest servletRequest,
+      ServletResponse servletResponse,
+      FilterChain filterChain
+  )
+  {
+    return (ctx, session, profiles) -> {
+      try {
+        // Extract user ID from pac4j profiles and create AuthenticationResult
+        if (profiles != null && !profiles.isEmpty()) {
+          String uid = profiles.iterator().next().getId();
+          if (uid != null) {
+            AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+            servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
+            filterChain.doFilter(servletRequest, servletResponse);
+          }
+        } else {
+          LOGGER.warn("No profiles found after OIDC auth.");
+          // Don't continue the filter chain - let pac4j handle the authentication failure
+        }
+      }
+      catch (IOException | ServletException e) {
+        throw new RuntimeException(e);
+      }
+      return null;
+    };
   }
 
   @Override
