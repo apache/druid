@@ -137,14 +137,13 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -166,7 +165,6 @@ import java.util.stream.IntStream;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class CachingClusteredClientTest
 {
   private static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.of(
@@ -251,10 +249,10 @@ public class CachingClusteredClientTest
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
 
-  @ClassRule
-  public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
+  @RegisterExtension
+  public static QueryStackTests.ConglomerateExtension conglomerateRule = new QueryStackTests.ConglomerateExtension();
 
-  private final Random random;
+  private Random random;
 
   private CachingClusteredClient client;
   private Runnable queryCompletedCallback;
@@ -263,12 +261,12 @@ public class CachingClusteredClientTest
   private Cache cache;
   private DruidServer[] servers;
 
-  public CachingClusteredClientTest(int randomSeed)
+  public void initCachingClusteredClientTest(int randomSeed)
   {
     this.random = new Random(randomSeed);
+    setUp();
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Lists.transform(
@@ -284,7 +282,6 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Before
   public void setUp()
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.natural());
@@ -301,9 +298,11 @@ public class CachingClusteredClientTest
     };
   }
 
-  @Test
-  public void testOutOfOrderBackgroundCachePopulation()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testOutOfOrderBackgroundCachePopulation(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     // This test is a bit whacky, but I couldn't find a better way to do it in the current framework.
 
     // The purpose of this special executor is to randomize execution of tasks on purpose.
@@ -450,10 +449,12 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void testTimeseriesCaching()
+  public void testTimeseriesCaching(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -518,10 +519,12 @@ public class CachingClusteredClientTest
   }
 
 
-  @Test
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void testCachingOverBulkLimitEnforcesLimit()
+  public void testCachingOverBulkLimitEnforcesLimit(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final int limit = 10;
     final Interval interval = Intervals.of("2011-01-01/2011-01-02");
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
@@ -557,8 +560,8 @@ public class CachingClusteredClientTest
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
 
-    Assert.assertTrue("Capture cache keys", cacheKeyCapture.hasCaptured());
-    Assert.assertTrue("Cache key below limit", ImmutableList.copyOf(cacheKeyCapture.getValue()).size() <= limit);
+    Assertions.assertTrue(cacheKeyCapture.hasCaptured(), "Capture cache keys");
+    Assertions.assertTrue(ImmutableList.copyOf(cacheKeyCapture.getValue()).size() <= limit, "Cache key below limit");
 
     EasyMock.verify(cache);
 
@@ -572,13 +575,15 @@ public class CachingClusteredClientTest
     getDefaultQueryRunner().run(QueryPlus.wrap(query), context);
     EasyMock.verify(cache);
     EasyMock.verify(dataSegment);
-    Assert.assertTrue("Capture cache keys", cacheKeyCapture.hasCaptured());
-    Assert.assertTrue("Cache Keys empty", ImmutableList.copyOf(cacheKeyCapture.getValue()).isEmpty());
+    Assertions.assertTrue(cacheKeyCapture.hasCaptured(), "Capture cache keys");
+    Assertions.assertTrue(ImmutableList.copyOf(cacheKeyCapture.getValue()).isEmpty(), "Cache Keys empty");
   }
 
-  @Test
-  public void testTimeseriesMergingOutOfOrderPartitions()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTimeseriesMergingOutOfOrderPartitions(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -634,10 +639,12 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void testTimeseriesCachingTimeZone()
+  public void testTimeseriesCachingTimeZone(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -677,9 +684,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
-  public void testDisableUseCache()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testDisableUseCache(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
                                                         .dataSource(DATA_SOURCE)
                                                         .intervals(SEG_SPEC)
@@ -704,9 +713,9 @@ public class CachingClusteredClientTest
         Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
     );
 
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
     cache.close(SegmentId.dummy("0_0").toString());
 
@@ -723,9 +732,9 @@ public class CachingClusteredClientTest
         Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
     );
 
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
     testQueryCaching(
         getDefaultQueryRunner(),
@@ -740,15 +749,17 @@ public class CachingClusteredClientTest
         Intervals.of("2011-01-01/2011-01-02"), makeTimeResults(DateTimes.of("2011-01-01"), 50, 5000)
     );
 
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
   }
 
-  @Test
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void testTopNCaching()
+  public void testTopNCaching(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .dimension(TOP_DIM)
@@ -816,10 +827,12 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void testTopNCachingTimeZone()
+  public void testTopNCachingTimeZone(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .dimension(TOP_DIM)
@@ -863,9 +876,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
-  public void testOutOfOrderSequenceMerging()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testOutOfOrderSequenceMerging(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     List<Sequence<Result<TopNResultValue>>> sequences =
         ImmutableList.of(
             Sequences.simple(
@@ -916,10 +931,12 @@ public class CachingClusteredClientTest
   }
 
 
-  @Test
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
   @SuppressWarnings("unchecked")
-  public void testTopNCachingEmptyResults()
+  public void testTopNCachingEmptyResults(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .dimension(TOP_DIM)
@@ -986,9 +1003,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
-  public void testTopNOnPostAggMetricCaching()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTopNOnPostAggMetricCaching(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource(DATA_SOURCE)
         .dimension(TOP_DIM)
@@ -1065,9 +1084,11 @@ public class CachingClusteredClientTest
         .applyPostMergeDecoration();
   }
 
-  @Test
-  public void testSearchCaching()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSearchCaching(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
                                                     .dataSource(DATA_SOURCE)
                                                     .filters(DIM_FILTER)
@@ -1133,9 +1154,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
-  public void testSearchCachingRenamedOutput()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSearchCachingRenamedOutput(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Druids.SearchQueryBuilder builder = Druids.newSearchQueryBuilder()
                                                     .dataSource(DATA_SOURCE)
                                                     .filters(DIM_FILTER)
@@ -1225,9 +1248,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
-  public void testTimeBoundaryCaching()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTimeBoundaryCaching(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     testQueryCaching(
         getDefaultQueryRunner(),
         Druids.newTimeBoundaryQueryBuilder()
@@ -1291,9 +1316,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
-  public void testTimeSeriesWithFilter()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTimeSeriesWithFilter(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     DimFilter filter = new AndDimFilter(
         new OrDimFilter(
             new SelectorDimFilter("dim0", "1", null),
@@ -1353,9 +1380,11 @@ public class CachingClusteredClientTest
 
   }
 
-  @Test
-  public void testSingleDimensionPruning()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSingleDimensionPruning(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     DimFilter filter = new AndDimFilter(
         new OrDimFilter(
             new SelectorDimFilter("dim1", "a", null),
@@ -1423,12 +1452,14 @@ public class CachingClusteredClientTest
 
     runner.run(QueryPlus.wrap(query)).toList();
 
-    Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
+    Assertions.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
   }
 
-  @Test
-  public void testHashBasedPruningQueryContextEnabledWithPartitionFunctionAndPartitionDimensionsDoSegmentPruning()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testHashBasedPruningQueryContextEnabledWithPartitionFunctionAndPartitionDimensionsDoSegmentPruning(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     DimFilter filter = new AndDimFilter(
         new SelectorDimFilter("dim1", "a", null),
         new BoundDimFilter("dim2", "e", "zzz", true, true, false, null, StringComparators.LEXICOGRAPHIC),
@@ -1598,24 +1629,30 @@ public class CachingClusteredClientTest
     MultipleSpecificSegmentSpec expected = new MultipleSpecificSegmentSpec(expcetedDescriptors);
 
     runner.run(QueryPlus.wrap(query)).toList();
-    Assert.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
+    Assertions.assertEquals(expected, ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec());
   }
 
-  @Test
-  public void testHashBasedPruningQueryContextDisabledNoSegmentPruning()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testHashBasedPruningQueryContextDisabledNoSegmentPruning(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     testNoSegmentPruningForHashPartitionedSegments(false, HashPartitionFunction.MURMUR3_32_ABS, false);
   }
 
-  @Test
-  public void testHashBasedPruningWithoutPartitionFunctionNoSegmentPruning()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testHashBasedPruningWithoutPartitionFunctionNoSegmentPruning(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     testNoSegmentPruningForHashPartitionedSegments(true, null, false);
   }
 
-  @Test
-  public void testHashBasedPruningWithEmptyPartitionDimensionsNoSegmentPruning()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testHashBasedPruningWithEmptyPartitionDimensionsNoSegmentPruning(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     testNoSegmentPruningForHashPartitionedSegments(true, HashPartitionFunction.MURMUR3_32_ABS, true);
   }
 
@@ -1717,11 +1754,11 @@ public class CachingClusteredClientTest
 
     runner.run(QueryPlus.wrap(query)).toList();
     QuerySegmentSpec querySegmentSpec = ((TimeseriesQuery) capture.getValue().getQuery()).getQuerySegmentSpec();
-    Assert.assertSame(MultipleSpecificSegmentSpec.class, querySegmentSpec.getClass());
+    Assertions.assertSame(MultipleSpecificSegmentSpec.class, querySegmentSpec.getClass());
     final Set<SegmentDescriptor> actualDescriptors = new HashSet<>(
         ((MultipleSpecificSegmentSpec) querySegmentSpec).getDescriptors()
     );
-    Assert.assertEquals(expcetedDescriptors, actualDescriptors);
+    Assertions.assertEquals(expcetedDescriptors, actualDescriptors);
   }
 
   private ServerSelector makeMockHashBasedSelector(
@@ -2163,9 +2200,9 @@ public class CachingClusteredClientTest
         Query capturedQuery = capturedQueryPlus.getQuery();
         final QueryContext queryContext = capturedQuery.context();
         if (expectBySegment) {
-          Assert.assertEquals(true, queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY));
+          Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY));
         } else {
-          Assert.assertTrue(
+          Assertions.assertTrue(
               queryContext.get(QueryContexts.BY_SEGMENT_KEY) == null ||
               !queryContext.getBoolean(QueryContexts.BY_SEGMENT_KEY)
           );
@@ -2947,9 +2984,11 @@ public class CachingClusteredClientTest
     }
   }
 
-  @Test
-  public void testTimeBoundaryCachingWhenTimeIsInteger()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTimeBoundaryCachingWhenTimeIsInteger(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     testQueryCaching(
         getDefaultQueryRunner(),
         Druids.newTimeBoundaryQueryBuilder()
@@ -3013,9 +3052,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  @Test
-  public void testIfNoneMatch()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testIfNoneMatch(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     Interval interval = Intervals.of("2016/2017");
     final DataSegment dataSegment = new DataSegment(
         "dataSource",
@@ -3050,12 +3091,14 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
-    Assert.assertEquals("RsQmZHYstvXNeGf86z3pgpk+Wsg=", responseContext.getEntityTag());
+    Assertions.assertEquals("RsQmZHYstvXNeGf86z3pgpk+Wsg=", responseContext.getEntityTag());
   }
 
-  @Test
-  public void testEtagforDifferentQueryInterval()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testEtagforDifferentQueryInterval(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
     final Interval queryInterval2 = Intervals.of("2016-01-01T18:00:00/2016-01-02T18:00:00");
@@ -3102,12 +3145,14 @@ public class CachingClusteredClientTest
     final String etag1 = responseContext.getEntityTag();
     getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
     final String etag2 = responseContext.getEntityTag();
-    Assert.assertNotEquals(etag1, etag2);
+    Assertions.assertNotEquals(etag1, etag2);
   }
 
-  @Test
-  public void testRealtimeSegmentsQueryContext()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testRealtimeSegmentsQueryContext(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
     final DataSegment dataSegment = new DataSegment(
@@ -3163,14 +3208,16 @@ public class CachingClusteredClientTest
     getDefaultQueryRunner().run(QueryPlus.wrap(queryLegacyTrue), responseContext);
 
     final Map<String, Integer> remainingResponseMap = (Map<String, Integer>) responseContext.get(ResponseContext.Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
-    Assert.assertEquals(1, remainingResponseMap.get(queryInclude.getId()).intValue());
-    Assert.assertEquals(0, remainingResponseMap.get(queryExclusive.getId()).intValue());
-    Assert.assertEquals(0, remainingResponseMap.get(queryLegacyTrue.getId()).intValue());
+    Assertions.assertEquals(1, remainingResponseMap.get(queryInclude.getId()).intValue());
+    Assertions.assertEquals(0, remainingResponseMap.get(queryExclusive.getId()).intValue());
+    Assertions.assertEquals(0, remainingResponseMap.get(queryLegacyTrue.getId()).intValue());
   }
 
-  @Test
-  public void testRealtimeSegmentsModeExclude()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testRealtimeSegmentsModeExclude(int randomSeed)
   {
+    initCachingClusteredClientTest(randomSeed);
     final Interval interval = Intervals.of("2016-01-01/2016-01-02");
     final Interval queryInterval = Intervals.of("2016-01-01T14:00:00/2016-01-02T14:00:00");
     final DataSegment dataSegment = new DataSegment(
@@ -3218,8 +3265,8 @@ public class CachingClusteredClientTest
     getDefaultQueryRunner().run(QueryPlus.wrap(queryInclude), responseContext);
 
     final Map<String, Integer> remainingResponseMap = (Map<String, Integer>) responseContext.get(ResponseContext.Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS);
-    Assert.assertEquals(0, remainingResponseMap.get(queryExclude.getId()).intValue());
-    Assert.assertEquals(1, remainingResponseMap.get(queryInclude.getId()).intValue());
+    Assertions.assertEquals(0, remainingResponseMap.get(queryExclude.getId()).intValue());
+    Assertions.assertEquals(1, remainingResponseMap.get(queryInclude.getId()).intValue());
   }
 
   @SuppressWarnings("unchecked")

@@ -987,21 +987,21 @@ public class SqlTestFramework
     @LazySingleton
     public DruidProcessingConfig makeProcessingConfig(Builder builder)
     {
-      return SqlTestQueryStack.getProcessingConfig(builder.mergeBufferCount);
+      return QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
     }
 
     @Provides
     @LazySingleton
     public TestBufferPool makeTestBufferPool(Builder builder)
     {
-      return SqlTestQueryStack.makeTestBufferPool(builder.resourceCloser);
+      return QueryStackTests.makeTestBufferPool(builder.resourceCloser);
     }
 
     @Provides
     @LazySingleton
     public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig, Builder builder)
     {
-      return SqlTestQueryStack.makeGroupByBuffers(builder.resourceCloser, processingConfig);
+      return QueryStackTests.makeGroupByBuffers(builder.resourceCloser, processingConfig);
     }
 
     @Provides

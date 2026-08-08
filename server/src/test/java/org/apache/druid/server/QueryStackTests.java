@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -32,6 +33,7 @@ import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
@@ -50,10 +52,14 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -104,10 +110,13 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assert;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -118,20 +127,20 @@ import java.util.Set;
  */
 public class QueryStackTests
 {
-  public static class Junit4ConglomerateRule extends ExternalResource
+  public static class ConglomerateExtension implements BeforeAllCallback, AfterAllCallback
   {
     private Closer closer;
     private QueryRunnerFactoryConglomerate conglomerate;
 
     @Override
-    protected void before()
+    public void beforeAll(ExtensionContext context)
     {
       closer = Closer.create();
       conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
     }
 
     @Override
-    protected void after()
+    public void afterAll(ExtensionContext context)
     {
       try {
         closer.close();
@@ -312,7 +321,7 @@ public class QueryStackTests
     final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
     closer.register(() -> {
       // Verify that all objects have been returned to the pool.
-      Assert.assertEquals(0, testBufferPool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, testBufferPool.getOutstandingObjectCount());
     });
     return testBufferPool;
   }
@@ -400,7 +409,7 @@ public class QueryStackTests
       final TestBufferPool testBufferPool,
       final TestGroupByBuffers groupByBuffers)
   {
-    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = makeGroupByQueryRunnerFactory(
         jsonMapper,
         new GroupByQueryConfig()
         {
@@ -460,6 +469,51 @@ public class QueryStackTests
             )
         )
         .build();
+  }
+
+  private static GroupByQueryRunnerFactory makeGroupByQueryRunnerFactory(
+      final ObjectMapper mapper,
+      final GroupByQueryConfig config,
+      final TestGroupByBuffers bufferPools,
+      final DruidProcessingConfig processingConfig
+  )
+  {
+    if (bufferPools.getBufferSize() != processingConfig.intermediateComputeSizeBytes()) {
+      throw new ISE(
+          "Provided buffer size [%,d] does not match configured size [%,d]",
+          bufferPools.getBufferSize(),
+          processingConfig.intermediateComputeSizeBytes()
+      );
+    }
+    if (bufferPools.getNumMergeBuffers() != processingConfig.getNumMergeBuffers()) {
+      throw new ISE(
+          "Provided merge buffer count [%,d] does not match configured count [%,d]",
+          bufferPools.getNumMergeBuffers(),
+          processingConfig.getNumMergeBuffers()
+      );
+    }
+
+    final GroupByStatsProvider statsProvider = new GroupByStatsProvider();
+    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        processingConfig,
+        configSupplier,
+        groupByResourcesReservationPool,
+        mapper,
+        mapper,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        statsProvider
+    );
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
+        groupingEngine,
+        configSupplier,
+        DefaultGroupByQueryMetricsFactory.instance(),
+        groupByResourcesReservationPool,
+        statsProvider
+    );
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
 
   public static JoinableFactory makeJoinableFactoryForLookup(

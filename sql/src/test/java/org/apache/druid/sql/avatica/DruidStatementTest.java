@@ -31,6 +31,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AllowAllAuthenticator;
 import org.apache.druid.server.security.AuthConfig;
@@ -47,7 +48,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
-import org.apache.druid.sql.calcite.util.SqlTestQueryStack;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -81,7 +81,7 @@ public class DruidStatementTest extends CalciteTestBase
   public static void setUpClass(@TempDir File tempDir)
   {
     resourceCloser = Closer.create();
-    conglomerate = SqlTestQueryStack.createQueryRunnerFactoryConglomerate(resourceCloser);
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
     walker = CalciteTests.createMockWalker(conglomerate, tempDir);
     resourceCloser.register(walker);
   }

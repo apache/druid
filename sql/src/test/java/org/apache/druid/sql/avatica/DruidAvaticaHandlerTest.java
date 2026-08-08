@@ -65,6 +65,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -92,7 +93,6 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
-import org.apache.druid.sql.calcite.util.SqlTestQueryStack;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -173,7 +173,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public static void setUpClass(@TempDir File tempDir)
   {
     resourceCloser = Closer.create();
-    conglomerate = SqlTestQueryStack.createQueryRunnerFactoryConglomerate(resourceCloser);
+    conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
     walker = CalciteTests.createMockWalker(conglomerate, tempDir);
     resourceCloser.register(walker);
   }
