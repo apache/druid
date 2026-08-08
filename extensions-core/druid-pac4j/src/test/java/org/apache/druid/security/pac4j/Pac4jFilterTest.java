@@ -19,18 +19,22 @@
 
 package org.apache.druid.security.pac4j;
 
+import org.apache.druid.server.security.AuthenticationResult;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 import org.pac4j.core.config.Config;
+import org.pac4j.core.engine.SecurityGrantedAccessAdapter;
 import org.pac4j.core.exception.http.ForbiddenAction;
 import org.pac4j.core.exception.http.FoundAction;
 import org.pac4j.core.exception.http.HttpAction;
 import org.pac4j.core.exception.http.WithLocationAction;
+import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.jee.context.JEEContext;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
@@ -41,6 +45,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -194,5 +199,50 @@ public class Pac4jFilterTest
     // Test that filter can be created without exceptions
     Pac4jFilter filter = new Pac4jFilter("testName", "testAuthorizer", pac4jConfig, "/test-callback", "testPassphrase");
     Assert.assertNotNull(filter);
+  }
+
+  @Test
+  public void testSecurityGrantedAccessAdapterWithProfile() throws Exception
+  {
+    SecurityGrantedAccessAdapter adapter = pac4jFilter.getSecurityGrantedAccessAdapter(request, response, filterChain);
+    CommonProfile profile = new CommonProfile();
+    profile.setId("user");
+
+    Assert.assertNull(adapter.adapt(null, null, Collections.singletonList(profile)));
+
+    ArgumentCaptor<AuthenticationResult> resultCaptor = ArgumentCaptor.forClass(AuthenticationResult.class);
+    Mockito.verify(request).setAttribute(Mockito.eq(DRUID_AUTHENTICATION_RESULT), resultCaptor.capture());
+    Mockito.verify(filterChain).doFilter(request, response);
+    Assert.assertNotNull(resultCaptor.getValue());
+  }
+
+  @Test
+  public void testSecurityGrantedAccessAdapterWithNoProfile() throws Exception
+  {
+    SecurityGrantedAccessAdapter adapter = pac4jFilter.getSecurityGrantedAccessAdapter(request, response, filterChain);
+
+    adapter.adapt(null, null, null);
+    adapter.adapt(null, null, Collections.emptyList());
+
+    CommonProfile profile = new CommonProfile();
+    adapter.adapt(null, null, Collections.singletonList(profile));
+    Mockito.verifyNoInteractions(request, filterChain);
+  }
+
+  @Test
+  public void testSecurityGrantedAccessAdapterWrapsServletException() throws Exception
+  {
+    Mockito.doThrow(new ServletException()).when(filterChain).doFilter(request, response);
+    SecurityGrantedAccessAdapter adapter = pac4jFilter.getSecurityGrantedAccessAdapter(request, response, filterChain);
+    CommonProfile profile = new CommonProfile();
+    profile.setId("user");
+
+    try {
+      adapter.adapt(null, null, Collections.singletonList(profile));
+      Assert.fail("Expected a RuntimeException");
+    }
+    catch (RuntimeException e) {
+      Assert.assertTrue(e.getCause() instanceof ServletException);
+    }
   }
 }

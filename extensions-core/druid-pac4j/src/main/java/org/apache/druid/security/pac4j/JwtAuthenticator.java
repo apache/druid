@@ -28,6 +28,7 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
 import org.pac4j.oidc.config.OidcConfiguration;
+import org.pac4j.oidc.metadata.OidcOpMetadataResolver;
 import org.pac4j.oidc.profile.creator.TokenValidator;
 
 import javax.annotation.Nullable;
@@ -109,8 +110,8 @@ public class JwtAuthenticator implements Authenticator
     oidcConfiguration.setClientId(config.getClientID());
     oidcConfiguration.setSecret(config.getClientSecret().getPassword());
     oidcConfiguration.setDiscoveryURI(config.getDiscoveryURI());
-    oidcConfiguration.init("JwtAuthenticator");
-    oidcConfiguration.getOpMetadataResolver().load();
-    return oidcConfiguration.getOpMetadataResolver().getTokenValidator();
+    OidcOpMetadataResolver opMetadataResolver = new OidcOpMetadataResolver(oidcConfiguration);
+    opMetadataResolver.init();
+    return opMetadataResolver.getTokenValidator();
   }
 }

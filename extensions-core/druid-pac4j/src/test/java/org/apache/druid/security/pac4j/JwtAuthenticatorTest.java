@@ -26,6 +26,8 @@ import com.nimbusds.oauth2.sdk.id.Audience;
 import com.nimbusds.oauth2.sdk.id.Issuer;
 import com.nimbusds.oauth2.sdk.id.Subject;
 import com.nimbusds.openid.connect.sdk.claims.IDTokenClaimsSet;
+import com.sun.net.httpserver.HttpServer;
+import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
@@ -38,6 +40,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Date;
 
@@ -184,5 +189,51 @@ public class JwtAuthenticatorTest
     Assert.assertEquals(jwtAuthenticator.getFilterClass(), JwtAuthFilter.class);
     Assert.assertNull(jwtAuthenticator.getInitParameters());
     Assert.assertNull(jwtAuthenticator.authenticateJDBCContext(ImmutableMap.of()));
+  }
+
+  @Test
+  public void testGetFilterInitializesTokenValidator() throws Exception
+  {
+    HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+    int port = server.getAddress().getPort();
+    String issuer = "http://localhost:" + port;
+    server.createContext(
+        "/.well-known/openid-configuration",
+        exchange -> {
+          byte[] metadata = ("{"
+                             + "\"issuer\":\"" + issuer + "\","
+                             + "\"authorization_endpoint\":\"" + issuer + "/authorize\","
+                             + "\"token_endpoint\":\"" + issuer + "/token\","
+                             + "\"userinfo_endpoint\":\"" + issuer + "/userinfo\","
+                             + "\"jwks_uri\":\"" + issuer + "/jwks\","
+                             + "\"response_types_supported\":[\"code\"],"
+                             + "\"subject_types_supported\":[\"public\"],"
+                             + "\"id_token_signing_alg_values_supported\":[\"HS256\"],"
+                             + "\"scopes_supported\":[\"openid\"]"
+                             + "}").getBytes(StandardCharsets.UTF_8);
+          exchange.sendResponseHeaders(200, metadata.length);
+          try (OutputStream output = exchange.getResponseBody()) {
+            output.write(metadata);
+          }
+        }
+    );
+    server.start();
+
+    try {
+      OIDCConfig config = new OIDCConfig(
+          "client",
+          new DefaultPasswordProvider("secret"),
+          issuer + "/.well-known/openid-configuration",
+          null,
+          null,
+          null
+      );
+      JwtAuthenticator jwtAuthenticator = new JwtAuthenticator("jwt", "allowAll", config);
+
+      Assert.assertTrue(jwtAuthenticator.getFilter() instanceof JwtAuthFilter);
+    }
+    finally {
+      server.stop(0);
+    }
   }
 }
