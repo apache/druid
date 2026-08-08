@@ -103,42 +103,10 @@ public class DruidProcessingConfig implements ColumnConfig
     initializeBufferSize(runtimeInfo);
   }
 
-  /**
-   * Backwards-compatible constructor without {@code numThreadPools} (defaults it to null → a single pool). Retained so
-   * existing positional callers keep compiling; Jackson uses the {@link JsonCreator}-annotated constructor above.
-   */
-  public DruidProcessingConfig(
-      @Nullable String formatString,
-      @Nullable Integer numThreads,
-      @Nullable Integer numTimeoutThreads,
-      @Nullable Integer numMergeBuffers,
-      @Nullable Boolean fifo,
-      @Nullable String tmpDir,
-      DruidProcessingBufferConfig buffer,
-      DruidProcessingIndexesConfig indexes,
-      @Nullable Boolean parallelPoolInit,
-      RuntimeInfo runtimeInfo
-  )
-  {
-    this(
-        formatString,
-        numThreads,
-        null,
-        numTimeoutThreads,
-        numMergeBuffers,
-        fifo,
-        tmpDir,
-        buffer,
-        indexes,
-        parallelPoolInit,
-        runtimeInfo
-    );
-  }
-
   @VisibleForTesting
   public DruidProcessingConfig()
   {
-    this(null, null, null, null, null, null, null, null, null, JvmUtils.getRuntimeInfo());
+    this(null, null, null, null, null, null, null, null, null, null, JvmUtils.getRuntimeInfo());
   }
 
   private void initializeBufferSize(RuntimeInfo runtimeInfo)
