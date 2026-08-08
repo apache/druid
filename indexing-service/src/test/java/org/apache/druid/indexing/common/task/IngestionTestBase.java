@@ -111,6 +111,9 @@ import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
+  @org.junit.Rule
+  public final org.junit.rules.TemporaryFolder junit4TemporaryFolder = new org.junit.rules.TemporaryFolder();
+
   @TempDir
   public File temporaryFolder;
 
@@ -149,6 +152,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   @BeforeEach
   public void setUpIngestionTestBase() throws IOException
   {
+    if (temporaryFolder == null) {
+      temporaryFolder = junit4TemporaryFolder.getRoot();
+    }
     derbyConnectorRule.before();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     baseDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "base");
