@@ -64,6 +64,11 @@
         <type>pom</type>
         <scope>compile</scope>
       </dependency>
+      <dependency>
+        <groupId>io.grpc</groupId>
+        <artifactId>grpc-context</artifactId>
+        <version>${shade.grpc.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
   <dependencies>
