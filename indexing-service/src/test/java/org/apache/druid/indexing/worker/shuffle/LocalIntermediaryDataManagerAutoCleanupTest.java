@@ -40,11 +40,10 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,17 +55,17 @@ import java.util.Set;
 
 public class LocalIntermediaryDataManagerAutoCleanupTest
 {
-  @Rule
-  public TemporaryFolder tempDir = new TemporaryFolder();
+  @TempDir
+  private File tempDir;
 
   private TaskConfig taskConfig;
   private OverlordClient overlordClient;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     this.taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
+        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(newTempDir("shuffle"), null, null)))
         .build();
     this.overlordClient = new NoopOverlordClient()
     {
@@ -86,7 +85,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Test
   public void testCompletedExpiredSupervisor() throws IOException, InterruptedException
   {
-    Assert.assertTrue(
+    Assertions.assertTrue(
         isCleanedUpAfter3s("supervisor_1", new Period("PT1S"))
     );
   }
@@ -94,7 +93,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Test
   public void testCompletedNotExpiredSupervisor() throws IOException, InterruptedException
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         isCleanedUpAfter3s("supervisor_2", new Period("PT10S"))
     );
   }
@@ -102,7 +101,7 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   @Test
   public void testRunningSupervisor() throws IOException, InterruptedException
   {
-    Assert.assertFalse(
+    Assertions.assertFalse(
         isCleanedUpAfter3s("running_supervisor_1", new Period("PT1S"))
     );
   }
@@ -148,10 +147,17 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   private File generateSegmentDir(String fileName) throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = tempDir.newFolder();
+    final File segmentDir = newTempDir("segment");
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
+  }
+
+  private File newTempDir(String name) throws IOException
+  {
+    final File directory = new File(tempDir, name);
+    org.apache.druid.java.util.common.FileUtils.mkdirp(directory);
+    return directory;
   }
 
   private DataSegment newSegment(Interval interval)
