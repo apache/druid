@@ -52,8 +52,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -62,7 +61,6 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -382,7 +380,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
             .run()
     );
-    assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(Access.DEFAULT_ERROR_MESSAGE)));
+    Assertions.assertEquals(Access.DEFAULT_ERROR_MESSAGE, e.getMessage());
   }
 
   @Test
@@ -520,14 +518,10 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "     EXTEND (x VARCHAR, z TYPE('complex<json'))\n" +
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
-                ThrowableMessageMatcher.hasMessage(
-                    CoreMatchers.containsString("Column [z] has an unsupported type")
-                )
-            )
-        )
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(DruidException.class, e);
+          Assertions.assertTrue(e.getMessage().contains("Column [z] has an unsupported type"));
+        })
         .verify();
   }
 

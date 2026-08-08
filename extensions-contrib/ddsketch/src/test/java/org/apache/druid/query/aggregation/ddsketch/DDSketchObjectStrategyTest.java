@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.aggregation.ddsketch;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DDSketchObjectStrategyTest
 {
@@ -28,6 +28,6 @@ public class DDSketchObjectStrategyTest
   public void testReadRetainsBufferReference()
   {
     DDSketchObjectStrategy strategy = new DDSketchObjectStrategy();
-    Assert.assertFalse(strategy.readRetainsBufferReference());
+    Assertions.assertFalse(strategy.readRetainsBufferReference());
   }
 }

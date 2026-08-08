@@ -66,7 +66,6 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.security.AllowAllAuthenticator;
@@ -199,7 +198,7 @@ public class CalciteTests
       null
   );
 
-  public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
+  public static final Injector INJECTOR = QueryStackTestHelper.defaultInjectorBuilder()
                                                          .addModule(new LookylooModule())
                                                          .addModule(new SqlAggregationModule())
                                                          .addModule(new CalciteTestOperatorModule())
