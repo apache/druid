@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 public class ShardedPrioritizedExecutorServiceTest
 {
@@ -194,6 +195,47 @@ public class ShardedPrioritizedExecutorServiceTest
       }
       Assert.assertEquals(50, completed.get());
       Assert.assertEquals(0, sharded.getQueueSize());
+    }
+    finally {
+      sharded.shutdownNow();
+    }
+  }
+
+  /**
+   * numThreads must be split across the shards as evenly as possible, with the remainder handed to the first shards,
+   * and the per-shard counts must sum back to numThreads.
+   */
+  @Test
+  public void testThreadsSplitEvenlyAcrossShards()
+  {
+    final ShardedPrioritizedExecutorService sharded = ShardedPrioritizedExecutorService.create(
+        new Lifecycle(),
+        new DruidProcessingConfig()
+        {
+          @Override
+          public String getFormatString()
+          {
+            return "split-test";
+          }
+
+          @Override
+          public int getNumThreads()
+          {
+            return 10;
+          }
+
+          @Override
+          public int getNumThreadPools()
+          {
+            return 4;
+          }
+        }
+    );
+
+    try {
+      // 10 threads over 4 shards -> base 2 each, remainder 2 handed to the first two shards.
+      Assert.assertArrayEquals(new int[]{3, 3, 2, 2}, sharded.shardThreadCounts());
+      Assert.assertEquals(10, IntStream.of(sharded.shardThreadCounts()).sum());
     }
     finally {
       sharded.shutdownNow();

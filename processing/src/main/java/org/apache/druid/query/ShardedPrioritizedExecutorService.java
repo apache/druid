@@ -19,6 +19,7 @@
 
 package org.apache.druid.query;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -258,5 +259,19 @@ public class ShardedPrioritizedExecutorService implements ListeningExecutorServi
       total += shard.getActiveTasks();
     }
     return total;
+  }
+
+  /**
+   * The configured thread count of each shard, in shard order. Used only by tests to assert that
+   * {@code numThreads} is split across the shards as evenly as possible.
+   */
+  @VisibleForTesting
+  int[] shardThreadCounts()
+  {
+    final int[] counts = new int[shards.length];
+    for (int i = 0; i < shards.length; i++) {
+      counts[i] = shards[i].threadPoolExecutor.getMaximumPoolSize();
+    }
+    return counts;
   }
 }
