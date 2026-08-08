@@ -120,24 +120,12 @@ public class ExecutorLifecycle
             );
 
             log.info("Attempting to lock file[%s].", taskLockFile);
-            final long startLocking = System.currentTimeMillis();
-            final long timeout = DateTimes.utc(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
-            while (taskLockFileLock == null && System.currentTimeMillis() < timeout) {
-              taskLockFileLock = taskLockChannel.tryLock();
-              if (taskLockFileLock == null) {
-                Thread.sleep(100);
-              }
-            }
-
-            if (taskLockFileLock == null) {
-              throw new ISE("Could not acquire lock file[%s] within %,dms.", taskLockFile, timeout - startLocking);
-            } else {
-              log.info("Acquired lock file[%s] in %,dms.", taskLockFile, System.currentTimeMillis() - startLocking);
-            }
           } else {
             throw new ISE("Already started!");
           }
         }
+
+        acquireTaskFileLock(taskLockChannel, taskLockFile);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -202,6 +190,33 @@ public class ExecutorLifecycle
         },
         MoreExecutors.directExecutor()
     );
+  }
+
+  FileLock acquireTaskFileLock(FileChannel lockChannel, File taskLockFile)
+      throws IOException, InterruptedException
+  {
+    final long startLocking = System.currentTimeMillis();
+    final long timeout = DateTimes.utc(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
+    FileLock acquiredLock = null;
+    while (acquiredLock == null && System.currentTimeMillis() < timeout) {
+      synchronized (this) {
+        acquiredLock = lockChannel.tryLock();
+        if (acquiredLock != null) {
+          taskLockFileLock = acquiredLock;
+        }
+      }
+
+      if (acquiredLock == null) {
+        Thread.sleep(100);
+      }
+    }
+
+    if (acquiredLock == null) {
+      throw new ISE("Could not acquire lock file[%s] within %,dms.", taskLockFile, timeout - startLocking);
+    } else {
+      log.info("Acquired lock file[%s] in %,dms.", taskLockFile, System.currentTimeMillis() - startLocking);
+      return acquiredLock;
+    }
   }
 
   public void join()
