@@ -22,8 +22,8 @@ package org.apache.druid.emitter.statsd;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DimensionConverterTest
 {
@@ -52,10 +52,10 @@ public class DimensionConverterTest
         event.getUserDims(),
         actual
     );
-    Assert.assertEquals("correct StatsDMetric.Type", StatsDMetric.Type.timer, statsDMetric.type);
+    Assertions.assertEquals(StatsDMetric.Type.timer, statsDMetric.type, "correct StatsDMetric.Type");
     ImmutableMap.Builder<String, String> expected = new ImmutableMap.Builder<>();
     expected.put("dataSource", "data-source");
     expected.put("type", "groupBy");
-    Assert.assertEquals("correct Dimensions", expected.build(), actual.build());
+    Assertions.assertEquals(expected.build(), actual.build(), "correct Dimensions");
   }
 }
