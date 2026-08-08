@@ -126,6 +126,7 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 
@@ -188,7 +189,8 @@ public abstract class CompactionTaskRunBase
   );
   protected static final int TOTAL_TEST_ROWS = 10;
 
-  protected final File temporaryFolder = FileUtils.createTempDir("compaction-task-run-test");
+  @TempDir
+  protected static File temporaryFolder;
 
   @RegisterExtension
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
@@ -288,7 +290,6 @@ public abstract class CompactionTaskRunBase
   public void teardown() throws IOException
   {
     exec.shutdownNow();
-    FileUtils.deleteDirectory(temporaryFolder);
   }
 
   protected File newTempFolder()
