@@ -80,7 +80,7 @@ public class ShuffleDataSegmentPusherTest
   }
 
   @Parameter(0)
-  private String intermediateDataStore;
+  public String intermediateDataStore;
 
   private final File tempDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
 
@@ -178,7 +178,10 @@ public class ShuffleDataSegmentPusherTest
     unzippedFiles.sort(Comparator.comparing(File::getName));
     final File dataFile = unzippedFiles.get(0);
     Assertions.assertEquals("test", dataFile.getName());
-    Assertions.assertEquals("test data.", Files.readFirstLine(dataFile, StandardCharsets.UTF_8));
+    Assertions.assertEquals(
+        "test data.",
+        Files.asCharSource(dataFile, StandardCharsets.UTF_8).readFirstLine()
+    );
     final File versionFile = unzippedFiles.get(1);
     Assertions.assertEquals("version.bin", versionFile.getName());
     Assertions.assertArrayEquals(Ints.toByteArray(0x9), Files.toByteArray(versionFile));

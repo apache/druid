@@ -96,7 +96,7 @@ public class WorkerTaskManagerTest
   private final IndexIO indexIO;
 
   @Parameter(0)
-  private boolean restoreTasksOnRestart;
+  public boolean restoreTasksOnRestart;
 
   private WorkerTaskManager workerTaskManager;
   private OverlordClient overlordClient;
