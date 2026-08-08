@@ -53,6 +53,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -82,7 +83,8 @@ public class ShuffleDataSegmentPusherTest
   @Parameter(0)
   public String intermediateDataStore;
 
-  private final File tempDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
+  @TempDir
+  private File tempDir;
 
   private IntermediaryDataManager intermediaryDataManager;
   private ShuffleDataSegmentPusher segmentPusher;
@@ -135,7 +137,6 @@ public class ShuffleDataSegmentPusherTest
   public void teardown() throws IOException
   {
     intermediaryDataManager.stop();
-    org.apache.druid.java.util.common.FileUtils.deleteDirectory(tempDir);
   }
 
   @Test

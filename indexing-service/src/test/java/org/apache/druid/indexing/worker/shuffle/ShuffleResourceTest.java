@@ -39,10 +39,10 @@ import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 import javax.ws.rs.core.Response;
@@ -59,7 +59,8 @@ public class ShuffleResourceTest
 {
   private static final String DATASOURCE = "datasource";
 
-  private final File tempDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
+  @TempDir
+  private File tempDir;
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private ShuffleMetrics shuffleMetrics;
@@ -107,12 +108,6 @@ public class ShuffleResourceTest
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     shuffleMetrics = new ShuffleMetrics();
     shuffleResource = new ShuffleResource(intermediaryDataManager, Optional.of(shuffleMetrics));
-  }
-
-  @AfterEach
-  public void teardown() throws IOException
-  {
-    org.apache.druid.java.util.common.FileUtils.deleteDirectory(tempDir);
   }
 
   @Test

@@ -40,10 +40,10 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,7 +55,8 @@ import java.util.Set;
 
 public class LocalIntermediaryDataManagerAutoCleanupTest
 {
-  private final File tempDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
+  @TempDir
+  private File tempDir;
 
   private TaskConfig taskConfig;
   private OverlordClient overlordClient;
@@ -79,12 +80,6 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
         return Futures.immediateFuture(result);
       }
     };
-  }
-
-  @AfterEach
-  public void teardown() throws IOException
-  {
-    org.apache.druid.java.util.common.FileUtils.deleteDirectory(tempDir);
   }
 
   @Test

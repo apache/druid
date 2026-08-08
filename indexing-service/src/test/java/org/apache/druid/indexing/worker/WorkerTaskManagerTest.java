@@ -68,6 +68,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.Parameter;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -95,6 +96,9 @@ public class WorkerTaskManagerTest
   private final IndexMergerV9Factory indexMergerV9Factory;
   private final IndexIO indexIO;
 
+  @TempDir
+  private File tempDir;
+
   @Parameter(0)
   public boolean restoreTasksOnRestart;
 
@@ -119,7 +123,7 @@ public class WorkerTaskManagerTest
 
   private WorkerTaskManager createWorkerTaskManager()
   {
-    return createWorkerTaskManager(FileUtils.createTempDir(), new WorkerConfig());
+    return createWorkerTaskManager(tempDir, new WorkerConfig());
   }
 
   private WorkerTaskManager createWorkerTaskManager(File baseDir)
@@ -569,7 +573,7 @@ public class WorkerTaskManagerTest
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
     EasyMock.replay(overlordClient);
 
-    final File baseTaskDir = FileUtils.createTempDir();
+    final File baseTaskDir = tempDir;
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
@@ -594,7 +598,7 @@ public class WorkerTaskManagerTest
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
     EasyMock.replay(overlordClient);
 
-    final File baseTaskDir = FileUtils.createTempDir();
+    final File baseTaskDir = tempDir;
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
@@ -639,7 +643,7 @@ public class WorkerTaskManagerTest
     EasyMock.expect(overlordClient.withRetryPolicy(EasyMock.anyObject())).andReturn(overlordClient).anyTimes();
     EasyMock.replay(overlordClient);
 
-    final File baseTaskDir = FileUtils.createTempDir();
+    final File baseTaskDir = tempDir;
 
     workerTaskManager = createWorkerTaskManager(baseTaskDir);
     workerTaskManager.start();
@@ -666,7 +670,7 @@ public class WorkerTaskManagerTest
     final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
         .setStartAlwaysEnabled(true)
         .build();
-    workerTaskManager = createWorkerTaskManager(FileUtils.createTempDir(), workerConfig);
+    workerTaskManager = createWorkerTaskManager(tempDir, workerConfig);
     workerTaskManager.start();
     Assertions.assertTrue(workerTaskManager.isWorkerEnabled());
     Assertions.assertFalse(workerTaskManager.getStateFile().exists());
@@ -681,7 +685,7 @@ public class WorkerTaskManagerTest
     final WorkerConfig workerConfig = new WorkerConfig().cloneBuilder()
         .setStartAlwaysEnabled(true)
         .build();
-    workerTaskManager = createWorkerTaskManager(FileUtils.createTempDir(), workerConfig);
+    workerTaskManager = createWorkerTaskManager(tempDir, workerConfig);
     workerTaskManager.start();
     workerTaskManager.workerDisabled();
     Assertions.assertFalse(workerTaskManager.isWorkerEnabled());

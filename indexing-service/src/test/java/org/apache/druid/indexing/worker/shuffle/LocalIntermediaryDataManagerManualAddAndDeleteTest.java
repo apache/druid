@@ -42,6 +42,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +52,8 @@ import java.util.Optional;
 
 public class LocalIntermediaryDataManagerManualAddAndDeleteTest
 {
-  private final File tempDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
+  @TempDir
+  private File tempDir;
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File intermediarySegmentsLocation;
@@ -75,7 +77,6 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
   public void teardown() throws IOException
   {
     intermediaryDataManager.stop();
-    org.apache.druid.java.util.common.FileUtils.deleteDirectory(tempDir);
   }
 
   @Test
