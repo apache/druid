@@ -27,7 +27,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,12 +70,6 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     }
 
     getObjectMapper().registerSubtypes(new NamedType(ReportingNoopTask.class, "reporting_noop"));
-  }
-
-  @AfterEach
-  public void tearDown()
-  {
-    deleteTempDir();
   }
 
   @Test

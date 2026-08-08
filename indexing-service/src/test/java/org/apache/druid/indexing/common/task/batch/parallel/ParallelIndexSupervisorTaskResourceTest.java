@@ -56,7 +56,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -116,12 +115,6 @@ public class ParallelIndexSupervisorTaskResourceTest extends AbstractParallelInd
   {
     // We don't need to emulate transient failures for this test.
     super(0.0, 0.0);
-  }
-
-  @AfterEach
-  public void teardown()
-  {
-    deleteTempDir();
   }
 
   @Test

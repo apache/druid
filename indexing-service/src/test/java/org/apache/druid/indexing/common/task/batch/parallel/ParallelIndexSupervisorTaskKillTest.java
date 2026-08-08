@@ -40,7 +40,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -61,12 +60,6 @@ public class ParallelIndexSupervisorTaskKillTest extends AbstractParallelIndexSu
   {
     // We don't need to emulate transient failures for this test.
     super(0.0, 0.0);
-  }
-
-  @AfterEach
-  public void teardown()
-  {
-    deleteTempDir();
   }
 
   @Test

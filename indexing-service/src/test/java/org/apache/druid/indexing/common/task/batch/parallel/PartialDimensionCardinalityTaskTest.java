@@ -42,7 +42,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestHelper;
@@ -61,6 +60,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -148,7 +148,8 @@ public class PartialDimensionCardinalityTaskTest
 
   public static class RunTaskTest
   {
-    private final File temporaryFolder = FileUtils.createTempDir();
+    @TempDir
+    private File temporaryFolder;
     private final LoggerCaptureRule logger = new LoggerCaptureRule(ParseExceptionHandler.class);
 
     private Capture<SubTaskReport> reportCapture;
@@ -175,7 +176,6 @@ public class PartialDimensionCardinalityTaskTest
     public void tearDown() throws IOException
     {
       logger.after();
-      FileUtils.deleteDirectory(temporaryFolder);
     }
 
     @Test

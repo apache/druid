@@ -62,7 +62,6 @@ import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -150,12 +149,6 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
     }
 
     getObjectMapper().registerSubtypes(SettableSplittableLocalInputSource.class);
-  }
-
-  @AfterEach
-  public void teardown()
-  {
-    deleteTempDir();
   }
 
   @Test

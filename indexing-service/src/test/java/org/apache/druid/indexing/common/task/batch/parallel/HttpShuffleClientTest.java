@@ -30,10 +30,10 @@ import org.apache.druid.java.util.http.client.response.InputStreamResponseHandle
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,7 +58,8 @@ public class HttpShuffleClientTest
   private static final int PORT = 1080;
   private static final int PARTITION_ID = 0;
 
-  private final File temporaryFolder = FileUtils.createTempDir();
+  @TempDir
+  private File temporaryFolder;
 
   private File segmentFile;
 
@@ -73,12 +74,6 @@ public class HttpShuffleClientTest
     }
     segmentFile = new File(temp.getAbsolutePath() + ".zip");
     CompressionUtils.zip(segmentFile.getParentFile(), segmentFile);
-  }
-
-  @AfterEach
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(temporaryFolder);
   }
 
   @Test

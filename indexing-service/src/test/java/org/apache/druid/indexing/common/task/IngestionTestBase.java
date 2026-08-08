@@ -95,6 +95,7 @@ import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -110,7 +111,8 @@ import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
-  public final File temporaryFolder = FileUtils.createTempDir();
+  @TempDir
+  public File temporaryFolder;
 
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
@@ -202,12 +204,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   {
     segmentMetadataCache.stopBeingLeader();
     segmentMetadataCache.stop();
-    try {
-      FileUtils.deleteDirectory(temporaryFolder);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Failed to delete temporary directory[%s]", temporaryFolder);
-    }
     derbyConnectorRule.after();
   }
 

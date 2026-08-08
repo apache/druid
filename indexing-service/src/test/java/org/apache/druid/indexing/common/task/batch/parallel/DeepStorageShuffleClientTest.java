@@ -35,10 +35,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.utils.CompressionUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,7 +53,8 @@ public class DeepStorageShuffleClientTest
   private File segmentFile;
   private String segmentFileName;
 
-  private final File temporaryFolder = FileUtils.createTempDir();
+  @TempDir
+  private File temporaryFolder;
 
 
   @BeforeEach
@@ -84,12 +85,6 @@ public class DeepStorageShuffleClientTest
     }
     segmentFile = new File(temp.getAbsolutePath() + ".zip");
     CompressionUtils.zip(segmentFile.getParentFile(), segmentFile);
-  }
-
-  @AfterEach
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(temporaryFolder);
   }
 
   @Test

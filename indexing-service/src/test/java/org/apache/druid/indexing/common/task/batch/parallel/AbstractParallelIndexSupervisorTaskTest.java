@@ -113,6 +113,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -165,7 +166,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
 
-  protected final File parallelTemporaryFolder = FileUtils.createTempDir();
+  @TempDir
+  protected File parallelTemporaryFolder;
 
   protected final File createTempDir()
   {
@@ -175,16 +177,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected final File createTempDir(final String prefix)
   {
     return FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), prefix);
-  }
-
-  protected final void deleteTempDir()
-  {
-    try {
-      FileUtils.deleteDirectory(parallelTemporaryFolder);
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Failed to delete temporary directory[%s]", parallelTemporaryFolder);
-    }
   }
 
   /**
@@ -260,7 +252,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   {
     remoteApiExecutor.shutdownNow();
     taskRunner.shutdown();
-    deleteTempDir();
   }
 
   protected ParallelIndexTuningConfig newTuningConfig(
