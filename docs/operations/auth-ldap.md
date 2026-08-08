@@ -64,7 +64,7 @@ memberOf: cn=mygroup,ou=groups,dc=example,dc=com
 You use this information to map the LDAP group to Druid roles in a later step. 
 
 :::info
- Druid uses the `memberOf` attribute to determine a group's membership using LDAP. If your LDAP server implementation doesn't include this attribute, you must complete some additional steps when you [map LDAP groups to Druid roles](#map-ldap-groups-to-druid-roles).
+ Druid uses the `memberOf` attribute to determine group membership. If your LDAP server does not return this attribute, you can either [map LDAP groups to Druid roles](#map-ldap-groups-to-druid-roles) manually or configure a [reverse group lookup](#group-search-reverse-lookup-configuration) to resolve groups automatically.
 :::
 
 ## Configure Druid for LDAP authentication
@@ -295,6 +295,27 @@ Complete the following steps to set up LDAPS for Druid. See [Configuration refer
 
 5. Restart Druid.
 
+
+## Group search reverse lookup configuration
+
+By default, Druid reads the `memberOf` attribute from the LDAP user entry to determine group membership. Some LDAP servers do not return `memberOf` because the feature is not enabled, it is stored as an operational attribute that Java JNDI cannot retrieve, or groups only store membership on the group entry itself. In these cases, group-based authorization denies all requests because no groups are found.
+
+To resolve this, configure a reverse group lookup so that Druid searches group entries to find which groups contain the user. Add the following properties to your `common.runtime.properties`:
+
+```
+druid.auth.authenticator.ldap.credentialsValidator.groupBaseDn=ou=Groups,dc=example,dc=com
+druid.auth.authenticator.ldap.credentialsValidator.groupSearch=(uniqueMember=%s)
+```
+
+Where:
+- `groupBaseDn`: The base DN under which your LDAP groups are stored.
+- `groupSearch`: The LDAP filter to find groups containing a user. The `%s` placeholder is replaced with the user's full DN (for example, `uid=myuser,ou=People,dc=example,dc=com`). Use `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`.
+
+When these properties are set and the user search does not return a `memberOf` attribute, Druid automatically performs the reverse group lookup and populates `memberOf` in the authentication result. The authorizer processes these groups as usual, requiring no additional configuration.
+
+:::info
+ If your LDAP server does return `memberOf` directly, the reverse lookup is skipped.
+:::
 
 ## Troubleshooting tips
 
