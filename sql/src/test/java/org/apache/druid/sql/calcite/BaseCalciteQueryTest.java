@@ -1142,6 +1142,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final DruidExceptionMatcher exceptionMatcher
   )
   {
+    // DruidExceptionMatcher is a Hamcrest matcher, so this delegates to Hamcrest's MatcherAssert.assertThat.
+    // Remove this bridge in the final cleanup after all DruidExceptionMatcher callers are migrated.
     assertThat(exception, exceptionMatcher);
   }
 
