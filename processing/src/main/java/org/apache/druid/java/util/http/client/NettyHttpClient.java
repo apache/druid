@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Multimap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -173,8 +174,25 @@ public class NettyHttpClient extends AbstractHttpClient
 
     // Pipeline can hand us chunks even after exceptionCaught is called. This has the potential to confuse
     // HttpResponseHandler implementations, which expect exceptionCaught to be the final method called. So, we
-    // use this boolean to ensure that handlers do not see any chunks after exceptionCaught fires.
+    // use this boolean to ensure that handlers do not see any chunks after exceptionCaught fires. Cancellation is
+    // tracked by retVal.isCancelled() below for the same reason.
     final AtomicBoolean didEncounterException = new AtomicBoolean();
+    final AtomicBoolean resourceReturned = new AtomicBoolean();
+    final Runnable returnResource = () -> {
+      if (resourceReturned.compareAndSet(false, true)) {
+        channelResourceContainer.returnResource();
+      }
+    };
+
+    retVal.addListener(
+        () -> {
+          if (retVal.isCancelled()) {
+            log.debug("[%s] Request cancelled, closing channel.", requestDesc);
+            channel.close().addListener(future -> returnResource.run());
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
 
     if (readTimeout > 0) {
       channel.getPipeline().addLast(
@@ -209,8 +227,8 @@ public class NettyHttpClient extends AbstractHttpClient
               Object msg = e.getMessage();
 
               if (msg instanceof HttpResponse) {
-                if (didEncounterException.get()) {
-                  // Don't process HttpResponse after encountering an exception.
+                if (didEncounterException.get() || retVal.isCancelled()) {
+                  // Don't process HttpResponse after encountering an exception or request cancellation.
                   return;
                 }
 
@@ -259,8 +277,8 @@ public class NettyHttpClient extends AbstractHttpClient
                   finishRequest();
                 }
               } else if (msg instanceof HttpChunk) {
-                if (didEncounterException.get()) {
-                  // Don't process HttpChunk after encountering an exception.
+                if (didEncounterException.get() || retVal.isCancelled()) {
+                  // Don't process HttpChunk after encountering an exception or request cancellation.
                   return;
                 }
 
@@ -294,7 +312,7 @@ public class NettyHttpClient extends AbstractHttpClient
                 retVal.set(null);
               }
               channel.close();
-              channelResourceContainer.returnResource();
+              returnResource.run();
 
               throw ex;
             }
@@ -332,7 +350,7 @@ public class NettyHttpClient extends AbstractHttpClient
             }
             removeHandlers();
             channel.setReadable(true);
-            channelResourceContainer.returnResource();
+            returnResource.run();
           }
 
           @Override
@@ -392,7 +410,7 @@ public class NettyHttpClient extends AbstractHttpClient
               log.warn(e, "[%s] Error while closing channel", requestDesc);
             }
             finally {
-              channelResourceContainer.returnResource();
+              returnResource.run();
             }
           }
 
@@ -414,7 +432,7 @@ public class NettyHttpClient extends AbstractHttpClient
           {
             if (!future.isSuccess()) {
               channel.close();
-              channelResourceContainer.returnResource();
+              returnResource.run();
               if (!retVal.isDone()) {
                 retVal.setException(
                     new ChannelException(
