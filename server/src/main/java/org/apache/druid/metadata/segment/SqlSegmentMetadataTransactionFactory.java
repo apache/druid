@@ -28,9 +28,12 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.query.DruidMetrics;
+
+import java.util.function.Function;
 
 /**
  * Factory for {@link SegmentMetadataTransaction}s. If the
@@ -137,6 +140,16 @@ public class SqlSegmentMetadataTransactionFactory extends SqlSegmentMetadataRead
             return executeWriteAndClose(sqlTransaction, callback);
           }
         },
+        getQuietRetries(),
+        getMaxRetries()
+    );
+  }
+
+  @Override
+  public <T> T inReadWriteNoCacheTransaction(Function<SqlSegmentsMetadataQuery, T> sqlUpdate)
+  {
+    return connector.retryReadOnlyTransaction(
+        (handle, status) -> sqlUpdate.apply(createSqlQueryForTransaction(handle)),
         getQuietRetries(),
         getMaxRetries()
     );

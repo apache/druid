@@ -36,6 +36,7 @@ import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
+import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -571,6 +572,13 @@ public class TaskLockbox
         throw new ISE("Unable to grant LockPosse to inactive Task [%s]", task.getId());
       }
 
+      if (request.getType() == TaskLockType.KILL && !KillUnusedSegmentsTask.TYPE.equals(task.getType())) {
+        throw new ISE(
+            "Task [%s] of type [%s] is not allowed to acquire a KILL lock. Only tasks of type [%s] may use KILL locks.",
+            task.getId(), task.getType(), KillUnusedSegmentsTask.TYPE
+        );
+      }
+
       final TaskLockPosse posseToUse;
       final List<TaskLockPosse> foundPosses = findLockPossesOverlapsInterval(
           request.getInterval()
@@ -835,8 +843,9 @@ public class TaskLockbox
         throw new ISE("Cannot revoke lock for inactive task[%s]", taskId);
       }
 
+      // Embedded kill tasks can hold locks but are not persisted in TaskStorage
       final Task task = taskStorage.getTask(taskId).orNull();
-      if (task == null) {
+      if (task == null && lock.getType() != TaskLockType.KILL) {
         throw new ISE("Cannot revoke lock for unknown task[%s]", taskId);
       }
 
@@ -1422,6 +1431,8 @@ public class TaskLockbox
         return canSharedLockCoexist(conflictPosses);
       case EXCLUSIVE:
         return canExclusiveLockCoexist(conflictPosses);
+      case KILL:
+        return canKillLockCoexist(conflictPosses);
       default:
         throw new UOE("Unsupported lock type: " + request.getType());
     }
@@ -1523,6 +1534,24 @@ public class TaskLockbox
     return true;
   }
 
+  /**
+   * Check if a KILL lock can coexist with a given set of conflicting posses.
+   * A KILL lock can coexist with any other lock type but not with another KILL lock.
+   * @param conflictPosses conflicting lock posses
+   * @return true iff the kill lock can coexist with all its conflicting locks
+   */
+  private boolean canKillLockCoexist(List<TaskLockPosse> conflictPosses)
+  {
+    for (TaskLockPosse posse : conflictPosses) {
+      if (posse.getTaskLock().isRevoked()) {
+        continue;
+      }
+      if (posse.getTaskLock().getType().equals(TaskLockType.KILL)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   /**
    * Verify if every incompatible active lock is revokable. If yes, revoke all of them.
@@ -1576,6 +1605,15 @@ public class TaskLockbox
           if (!(posse.getTaskLock().getType().equals(TaskLockType.APPEND)
                 || (posse.getTaskLock().getType().equals(TaskLockType.REPLACE)
                     && posse.getTaskLock().getInterval().contains(request.getInterval())))) {
+            if (posse.getTaskLock().getNonNullPriority() >= priority) {
+              return false;
+            }
+            possesToRevoke.add(posse);
+          }
+          break;
+        case KILL:
+          // KILL locks are incompatible only with other KILL locks
+          if (posse.getTaskLock().getType().equals(TaskLockType.KILL)) {
             if (posse.getTaskLock().getNonNullPriority() >= priority) {
               return false;
             }
@@ -1686,6 +1724,7 @@ public class TaskLockbox
           case REPLACE:
           case APPEND:
           case SHARED:
+          case KILL:
             if (request instanceof TimeChunkLockRequest) {
               return taskLock.getInterval().contains(request.getInterval())
                      && taskLock.getGroupId().equals(request.getGroupId());

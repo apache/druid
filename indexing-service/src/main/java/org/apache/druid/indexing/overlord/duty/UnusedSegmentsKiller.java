@@ -28,6 +28,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.TaskMetrics;
@@ -474,7 +475,10 @@ public class UnusedSegmentsKiller implements OverlordDuty
           candidate.dataSource(),
           candidate.interval(),
           null,
-          Map.of(Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY),
+          Map.of(
+              Tasks.PRIORITY_KEY, Tasks.DEFAULT_EMBEDDED_KILL_TASK_PRIORITY,
+              Tasks.TASK_LOCK_TYPE, TaskLockType.KILL.name()
+          ),
           MAX_SEGMENTS_TO_KILL_IN_BATCH,
           candidate.numSegmentsToKill(),
           maxUpdatedTimeOfEligibleSegment

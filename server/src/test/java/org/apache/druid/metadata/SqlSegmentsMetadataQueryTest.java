@@ -308,7 +308,13 @@ public class SqlSegmentsMetadataQueryTest
     final MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     return connector.inReadOnlyTransaction(
         (handle, status) -> function.apply(
-            SqlSegmentsMetadataQuery.forHandle(handle, connector, tablesConfig, TestHelper.JSON_MAPPER)
+            SqlSegmentsMetadataQuery.forHandle(
+                handle,
+                connector,
+                tablesConfig,
+                new SegmentsMetadataManagerConfig(null, null, null),
+                TestHelper.JSON_MAPPER
+            )
         )
     );
   }
@@ -324,7 +330,13 @@ public class SqlSegmentsMetadataQueryTest
 
     return connector.inReadOnlyTransaction((handle, status) -> {
       final SqlSegmentsMetadataQuery query =
-          SqlSegmentsMetadataQuery.forHandle(handle, connector, tablesConfig, TestHelper.JSON_MAPPER);
+          SqlSegmentsMetadataQuery.forHandle(
+              handle,
+              connector,
+              tablesConfig,
+              new SegmentsMetadataManagerConfig(null, null, null),
+              TestHelper.JSON_MAPPER
+          );
 
       try (CloseableIterator<T> iterator = iterableReader.apply(query)) {
         return ImmutableSet.copyOf(iterator);
@@ -341,7 +353,13 @@ public class SqlSegmentsMetadataQueryTest
     final MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
     return connector.retryWithHandle(
         handle -> function.apply(
-            SqlSegmentsMetadataQuery.forHandle(handle, connector, tablesConfig, TestHelper.JSON_MAPPER)
+            SqlSegmentsMetadataQuery.forHandle(
+                handle,
+                connector,
+                tablesConfig,
+                new SegmentsMetadataManagerConfig(null, null, null),
+                TestHelper.JSON_MAPPER
+            )
         )
     );
   }
