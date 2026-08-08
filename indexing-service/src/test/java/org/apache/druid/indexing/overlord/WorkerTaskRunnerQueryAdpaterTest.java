@@ -116,12 +116,10 @@ public class WorkerTaskRunnerQueryAdpaterTest
 
     EasyMock.replay(workerTaskRunner, taskMaster, httpClient);
 
-    try {
-      workerTaskRunnerQueryAdapter.disableWorker("worker-host1");
-      Assertions.fail("Should raise RE exception!");
-    }
-    catch (RE re) {
-    }
+    Assertions.assertThrows(
+        RE.class,
+        () -> workerTaskRunnerQueryAdapter.disableWorker("worker-host1")
+    );
 
     Assertions.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assertions.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
@@ -161,12 +159,10 @@ public class WorkerTaskRunnerQueryAdpaterTest
 
     EasyMock.replay(workerTaskRunner, taskMaster, httpClient);
 
-    try {
-      workerTaskRunnerQueryAdapter.enableWorker("worker-host2");
-      Assertions.fail("Should raise RE exception!");
-    }
-    catch (RE re) {
-    }
+    Assertions.assertThrows(
+        RE.class,
+        () -> workerTaskRunnerQueryAdapter.enableWorker("worker-host2")
+    );
 
     Assertions.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
     Assertions.assertEquals(workerUrl, capturedRequest.getValue().getUrl());

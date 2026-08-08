@@ -84,7 +84,7 @@ public class ThreadingTaskRunnerTest
       }
     });
 
-    TaskStatus status = statusFuture.get();
+    final TaskStatus status = statusFuture.get();
     Assertions.assertEquals(TaskState.FAILED, status.getStatusCode());
     Assertions.assertEquals(
         "Failed with exception [Task failure test]. See indexer logs for details.",

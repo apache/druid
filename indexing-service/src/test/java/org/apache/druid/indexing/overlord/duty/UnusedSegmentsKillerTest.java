@@ -62,7 +62,7 @@ import java.util.stream.Collectors;
 
 public class UnusedSegmentsKillerTest
 {
-  public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
+  private final TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private static final List<DataSegment> WIKI_SEGMENTS_1X10D =
       CreateDataSegments.ofDatasource(TestDataSource.WIKI)

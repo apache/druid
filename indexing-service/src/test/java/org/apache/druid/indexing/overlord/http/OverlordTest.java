@@ -274,7 +274,7 @@ public class OverlordTest
     while (!overlord.isLeader()) {
       Thread.sleep(10);
     }
-    Assertions.assertEquals(overlord.getCurrentLeader(), druidNode.getHostAndPort());
+    Assertions.assertEquals(druidNode.getHostAndPort(), overlord.getCurrentLeader());
     Assertions.assertEquals(Optional.absent(), overlord.getRedirectLocation());
 
     final TaskQueryTool taskQueryTool

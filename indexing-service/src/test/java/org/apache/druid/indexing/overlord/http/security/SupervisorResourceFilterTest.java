@@ -151,7 +151,7 @@ public class SupervisorResourceFilterTest
     }
 
     Assertions.assertNotNull(expected);
-    Assertions.assertEquals(expected.getResponse().getStatus(), Response.Status.NOT_FOUND.getStatusCode());
+    Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), expected.getResponse().getStatus());
     EasyMock.verify(containerRequest);
     EasyMock.verify(supervisorManager);
   }
