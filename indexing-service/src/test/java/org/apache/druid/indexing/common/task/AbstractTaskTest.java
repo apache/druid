@@ -32,16 +32,17 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -54,7 +55,9 @@ import static org.mockito.Mockito.when;
 
 public class AbstractTaskTest
 {
-  private final File tempReportDir = org.apache.druid.java.util.common.FileUtils.createTempDir();
+  @TempDir
+  private File temporaryFolder;
+
   private ObjectMapper objectMapper;
 
   @BeforeEach
@@ -65,15 +68,14 @@ public class AbstractTaskTest
 
   private File createTempReportFile() throws Exception
   {
-    final File reportsFile = new File(tempReportDir, "report.json");
+    final File reportsFile = Files.createTempFile(temporaryFolder.toPath(), "report", ".json").toFile();
     FileUtils.write(reportsFile, "", StandardCharsets.UTF_8);
     return reportsFile;
   }
 
-  @AfterEach
-  public void tearDown() throws IOException
+  private File createTempDir() throws IOException
   {
-    org.apache.druid.java.util.common.FileUtils.deleteDirectory(tempReportDir);
+    return Files.createTempDirectory(temporaryFolder.toPath(), "task").toFile();
   }
 
   @Test
@@ -94,7 +96,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = org.apache.druid.java.util.common.FileUtils.createTempDir();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -147,7 +149,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(false);
-    File folder = org.apache.druid.java.util.common.FileUtils.createTempDir();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -192,7 +194,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = org.apache.druid.java.util.common.FileUtils.createTempDir();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -239,7 +241,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = org.apache.druid.java.util.common.FileUtils.createTempDir();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);
@@ -276,7 +278,7 @@ public class AbstractTaskTest
 
     TaskConfig config = mock(TaskConfig.class);
     when(config.isEncapsulatedTask()).thenReturn(true);
-    File folder = org.apache.druid.java.util.common.FileUtils.createTempDir();
+    final File folder = createTempDir();
     when(config.getTaskDir(eq("myID"))).thenReturn(folder);
     when(toolbox.getConfig()).thenReturn(config);
     when(toolbox.getJsonMapper()).thenReturn(objectMapper);

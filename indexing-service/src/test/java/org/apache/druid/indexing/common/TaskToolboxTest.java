@@ -34,7 +34,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -64,10 +63,10 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.easymock.EasyMock;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -78,7 +77,8 @@ public class TaskToolboxTest
 {
 
   private TaskToolboxFactory taskToolbox = null;
-  private final File baseDir = FileUtils.createTempDir();
+  @TempDir
+  private File baseDir;
   private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);
@@ -165,12 +165,6 @@ public class TaskToolboxTest
         CentralizedDatasourceSchemaConfig.create(),
         JvmUtils.getRuntimeInfo()
     );
-  }
-
-  @AfterEach
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(baseDir);
   }
 
   @Test

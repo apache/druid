@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,10 +38,13 @@ import java.util.stream.Collectors;
 
 public class TaskStorageDirTrackerTest
 {
+  @TempDir
+  private File temporaryFolder;
+
   @Test
   public void testGetOrSelectTaskDir() throws IOException
   {
-    File tmpFolder = FileUtils.createTempDir();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(
         new File(tmpFolder, "A"),
         new File(tmpFolder, "B"),
@@ -112,7 +116,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testFallBackToTaskConfig() throws IOException
   {
-    final File baseDir = new File(FileUtils.createTempDir(), "A");
+    final File baseDir = new File(temporaryFolder, "A");
     final TaskStorageDirTracker tracker = TaskStorageDirTracker.fromConfigs(
         new WorkerConfig()
         {
@@ -151,7 +155,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testMoreDirectoriesThanSlots() throws IOException
   {
-    File tmpFolder = FileUtils.createTempDir();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(
         new File(tmpFolder, "A"),
         new File(tmpFolder, "B"),
@@ -181,7 +185,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testMigration() throws IOException
   {
-    File tmpFolder = FileUtils.createTempDir();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(new File(tmpFolder, "A"), new File(tmpFolder, "B"));
 
     TaskStorageDirTracker tracker = TaskStorageDirTracker.fromBaseDirs(files, 4, 100_000_000L);
@@ -237,7 +241,7 @@ public class TaskStorageDirTrackerTest
   @Test
   public void testGetNumUsedSlots() throws IOException
   {
-    File tmpFolder = FileUtils.createTempDir();
+    final File tmpFolder = temporaryFolder;
     List<File> files = ImmutableList.of(
         new File(tmpFolder, "A"),
         new File(tmpFolder, "B"),
@@ -268,7 +272,6 @@ public class TaskStorageDirTrackerTest
 
     Assertions.assertEquals(6, tracker.getNumUsedSlots());
 
-    FileUtils.deleteDirectory(tmpFolder);
   }
 
   public static class StorageSlotVerifier

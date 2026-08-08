@@ -24,10 +24,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,11 +38,14 @@ public class SingleFileTaskReportFileWriterTest
 {
   private static final String TASK_ID = "mytask";
 
+  @TempDir
+  private File temporaryFolder;
+
   @Test
   public void testReport() throws IOException
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File file = new File(FileUtils.createTempDir(), "report.json");
+    final File file = new File(temporaryFolder, "report.json");
     final SingleFileTaskReportFileWriter writer = new SingleFileTaskReportFileWriter(file);
     writer.setObjectMapper(mapper);
     final TaskReport.ReportMap reportsMap = TaskReport.buildTaskReports(

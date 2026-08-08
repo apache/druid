@@ -65,13 +65,14 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,6 +84,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DruidSegmentReaderTest extends InitializedNullHandlingTest
 {
+  @TempDir
+  private File temporaryFolder;
+
   private File segmentDirectory;
   private long segmentSize;
 
@@ -91,14 +95,6 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
   private List<AggregatorFactory> metrics;
 
   private InputStats inputStats;
-
-  @AfterEach
-  public void tearDown() throws IOException
-  {
-    if (segmentDirectory != null) {
-      FileUtils.deleteDirectory(segmentDirectory);
-    }
-  }
 
   @BeforeEach
   public void setUp() throws IOException
@@ -152,7 +148,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -248,7 +244,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             new NotDimFilter(new SelectorDimFilter("a", "foo1", null)),
             new NotDimFilter(new SelectorDimFilter("b", "bar1", null))
         ),
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(Arrays.asList(rows.get(2), rows.get(1)), readRows(reader));
@@ -301,7 +297,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -344,7 +340,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of("__time", "strCol", "cnt", "met_s")).build(),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -392,7 +388,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.inclusionBased(ImmutableSet.of("__time", "strCol", "dblCol")),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -436,7 +432,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.inclusionBased(ImmutableSet.of("strCol", "dblCol")),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -478,7 +474,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         new SelectorDimFilter("dblCol", "1.23", null),
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -515,7 +511,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -563,7 +559,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -611,7 +607,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     Assertions.assertEquals(
@@ -739,7 +735,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
                     .rows(rows)
                     .buildIncrementalIndex();
 
-    File segmentDirectory = FileUtils.createTempDir();
+    File segmentDirectory = createTempDir();
     long segmentSize;
     try {
       TestHelper.getTestIndexMergerV9(
@@ -777,7 +773,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     List<InputRow> readRows = readRows(reader);
@@ -851,7 +847,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
                     .rows(rows)
                     .buildIncrementalIndex();
 
-    File segmentDirectory = FileUtils.createTempDir();
+    File segmentDirectory = createTempDir();
     long segmentSize;
     try {
       TestHelper.getTestIndexMergerV9(
@@ -889,7 +885,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        FileUtils.createTempDir()
+        createTempDir()
     );
 
     List<InputRow> readRows = readRows(reader);
@@ -1026,7 +1022,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
                     .rows(rows)
                     .buildIncrementalIndex();
 
-    segmentDirectory = FileUtils.createTempDir();
+    segmentDirectory = createTempDir();
 
     try {
       TestHelper.getTestIndexMergerV9(
@@ -1042,6 +1038,11 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
     finally {
       incrementalIndex.close();
     }
+  }
+
+  private File createTempDir() throws IOException
+  {
+    return Files.createTempDirectory(temporaryFolder.toPath(), "segment").toFile();
   }
 
 }
