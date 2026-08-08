@@ -19,31 +19,21 @@
 
 package org.apache.druid.query.aggregation.distinctcount;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
-import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
-import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -67,33 +57,6 @@ import java.util.List;
 
 public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
 {
-  private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
-  {
-    @Override
-    public String getFormatString()
-    {
-      return null;
-    }
-
-    @Override
-    public int intermediateComputeSizeBytes()
-    {
-      return 10 * 1024 * 1024;
-    }
-
-    @Override
-    public int getNumMergeBuffers()
-    {
-      return 4;
-    }
-
-    @Override
-    public int getNumThreads()
-    {
-      return 2;
-    }
-  };
-
   private GroupByQueryRunnerFactory factory;
   private Closer resourceCloser;
 
@@ -102,45 +65,12 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
   {
     final GroupByQueryConfig config = new GroupByQueryConfig();
     this.resourceCloser = Closer.create();
-    final TestGroupByBuffers buffers = this.resourceCloser.register(
-        new TestGroupByBuffers(PROCESSING_CONFIG.intermediateComputeSizeBytes(), PROCESSING_CONFIG.getNumMergeBuffers())
+    final TestGroupByBuffers buffers = this.resourceCloser.register(TestGroupByBuffers.createDefault());
+    this.factory = GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
+        TestHelper.makeJsonMapper(),
+        config,
+        buffers
     );
-    this.factory = makeQueryRunnerFactory(TestHelper.makeJsonMapper(), config, buffers);
-  }
-
-  private static GroupByQueryRunnerFactory makeQueryRunnerFactory(
-      final ObjectMapper mapper,
-      final GroupByQueryConfig config,
-      final TestGroupByBuffers bufferPools
-  )
-  {
-    if (bufferPools.getBufferSize() != PROCESSING_CONFIG.intermediateComputeSizeBytes()) {
-      throw new ISE("Provided buffer size does not match configured size");
-    }
-    if (bufferPools.getNumMergeBuffers() != PROCESSING_CONFIG.getNumMergeBuffers()) {
-      throw new ISE("Provided merge buffer count does not match configured count");
-    }
-    final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByResourcesReservationPool reservationPool =
-        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
-    final GroupByStatsProvider statsProvider = new GroupByStatsProvider();
-    final GroupingEngine groupingEngine = new GroupingEngine(
-        PROCESSING_CONFIG,
-        configSupplier,
-        reservationPool,
-        mapper,
-        mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        statsProvider
-    );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
-        groupingEngine,
-        () -> config,
-        DefaultGroupByQueryMetricsFactory.instance(),
-        reservationPool,
-        statsProvider
-    );
-    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
 
   @AfterEach
