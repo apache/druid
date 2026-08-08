@@ -1424,11 +1424,6 @@
                 <version>2.8</version>
             </dependency>
             <dependency>
-                <groupId>io.grpc</groupId>
-                <artifactId>grpc-context</artifactId>
-                <version>1.75.0</version>
-            </dependency>
-            <dependency>
                 <groupId>io.github.resilience4j</groupId>
                 <artifactId>resilience4j-bulkhead</artifactId>
                 <version>${resilience4j.version}</version>

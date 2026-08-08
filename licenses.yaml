@@ -4423,7 +4423,17 @@ name: grpc-context
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.75.0
+version: 1.60.1
+libraries:
+  - io.grpc: grpc-context
+
+---
+
+name: grpc-context-query
+license_category: binary
+module: extensions/grpc-query
+license_name: Apache License version 2.0
+version: 1.83.0
 libraries:
   - io.grpc: grpc-context
 
