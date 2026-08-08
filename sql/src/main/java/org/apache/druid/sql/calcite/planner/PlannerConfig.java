@@ -83,6 +83,9 @@ public class PlannerConfig
   @JsonProperty
   private boolean enableSysQueriesTable = false;
 
+  @JsonProperty
+  private boolean enableCatalogDdl = false;
+
   public int getMaxNumericInFilters()
   {
     return maxNumericInFilters;
@@ -160,6 +163,16 @@ public class PlannerConfig
     return enableSysQueriesTable;
   }
 
+  /**
+   * Whether catalog DDL statements (CREATE TABLE, ALTER TABLE) may be executed. Off by default: the Broker's SQL
+   * endpoint is typically reachable by far more people than the Coordinator's catalog API, so enabling this widens
+   * what an existing datasource WRITE permission allows. Deliberately not overridable from the query context.
+   */
+  public boolean isEnableCatalogDdl()
+  {
+    return enableCatalogDdl;
+  }
+
   public PlannerConfig withOverrides(final Map<String, Object> queryContext)
   {
     if (queryContext.isEmpty()) {
@@ -189,6 +202,7 @@ public class PlannerConfig
            && forceExpressionVirtualColumns == that.forceExpressionVirtualColumns
            && maxNumericInFilters == that.maxNumericInFilters
            && enableSysQueriesTable == that.enableSysQueriesTable
+           && enableCatalogDdl == that.enableCatalogDdl
            && Objects.equals(sqlTimeZone, that.sqlTimeZone)
            && Objects.equals(nativeQuerySqlPlanningMode, that.nativeQuerySqlPlanningMode);
   }
@@ -210,7 +224,8 @@ public class PlannerConfig
         forceExpressionVirtualColumns,
         maxNumericInFilters,
         nativeQuerySqlPlanningMode,
-        enableSysQueriesTable
+        enableSysQueriesTable,
+        enableCatalogDdl
     );
   }
 
@@ -227,6 +242,7 @@ public class PlannerConfig
            ", useNativeQueryExplain=" + useNativeQueryExplain +
            ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
            ", enableSysQueriesTable=" + enableSysQueriesTable +
+           ", enableCatalogDdl=" + enableCatalogDdl +
            '}';
   }
 
@@ -262,6 +278,7 @@ public class PlannerConfig
     private int maxNumericInFilters;
     private String nativeQuerySqlPlanningMode;
     private boolean enableSysQueriesTable;
+    private boolean enableCatalogDdl;
 
     public Builder(PlannerConfig base)
     {
@@ -282,6 +299,7 @@ public class PlannerConfig
       maxNumericInFilters = base.getMaxNumericInFilters();
       nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
       enableSysQueriesTable = base.isEnableSysQueriesTable();
+      enableCatalogDdl = base.isEnableCatalogDdl();
     }
 
     public Builder requireTimeCondition(boolean option)
@@ -359,6 +377,12 @@ public class PlannerConfig
     public Builder enableSysQueriesTable(boolean option)
     {
       this.enableSysQueriesTable = option;
+      return this;
+    }
+
+    public Builder enableCatalogDdl(boolean option)
+    {
+      this.enableCatalogDdl = option;
       return this;
     }
 
@@ -459,6 +483,7 @@ public class PlannerConfig
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
       config.enableSysQueriesTable = enableSysQueriesTable;
+      config.enableCatalogDdl = enableCatalogDdl;
       return config;
     }
   }

@@ -25,6 +25,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
@@ -76,12 +77,25 @@ public class Columns
   {
   }
 
+  /**
+   * The Druid type of a column, which for {@code __time} is always {@link ColumnType#LONG} whatever was declared.
+   * Use {@link #druidTypeFromString} to resolve a declared type on its own terms.
+   */
   public static ColumnType druidType(ColumnSpec spec)
   {
     if (isTimeColumn(spec.name())) {
       return ColumnType.LONG;
     }
-    String dataType = spec.dataType();
+    return druidTypeFromString(spec.dataType());
+  }
+
+  /**
+   * Resolve a declared type string to its Druid type: a SQL type name such as {@code BIGINT} or {@code VARCHAR ARRAY},
+   * or a native type string such as {@code COMPLEX<json>}. Returns null if the string is null or does not name a type.
+   */
+  @Nullable
+  public static ColumnType druidTypeFromString(@Nullable String dataType)
+  {
     if (dataType == null) {
       return null;
     }

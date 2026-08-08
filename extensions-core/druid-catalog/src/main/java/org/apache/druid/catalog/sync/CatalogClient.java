@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.catalog.http.CatalogResource;
+import org.apache.druid.catalog.http.TableEditRequest;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableId;
@@ -59,6 +60,7 @@ public class CatalogClient implements CatalogSource
   public static final String SCHEMA_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.SCHEMA_SYNC;
   public static final String TABLE_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.TABLE_SYNC;
   private static final String TABLE_CREATE_PATH = CatalogResource.ROOT_PATH + "/schemas/{schema}/tables/{name}";
+  private static final String TABLE_EDIT_PATH = TABLE_CREATE_PATH + "/edit";
 
   private final ServiceClient serviceClient;
   private final ObjectMapper jsonMapper;
@@ -105,12 +107,38 @@ public class CatalogClient implements CatalogSource
   /**
    * Creates a table for the given {@link TableId} and {@link TableSpec}.
    * If a table already exists for this id, it is overwritten.
-   * <p>
-   * This method is currently used only in tests.
    */
   public void createTable(TableId tableId, TableSpec tableSpec)
   {
-    getResult(postCreateTable(tableId, tableSpec));
+    getResult(postCreateTable(tableId, tableSpec, false, true));
+  }
+
+  /**
+   * Creates a table for the given {@link TableId} and {@link TableSpec}.
+   *
+   * @param ifNotExists leave an existing table alone rather than failing
+   * @param overwrite   replace the spec of an existing table
+   */
+  public void createTable(TableId tableId, TableSpec tableSpec, boolean ifNotExists, boolean overwrite)
+  {
+    FutureUtils.getUnchecked(postCreateTable(tableId, tableSpec, ifNotExists, overwrite), true);
+  }
+
+  /**
+   * Applies an edit to an existing table's catalog entry.
+   * <p>
+   * API: {@code POST /druid/coordinator/v1/catalog/schemas/{schema}/tables/{name}/edit}
+   */
+  public void editTable(TableId tableId, TableEditRequest editRequest)
+  {
+    String path = tablePath(TABLE_EDIT_PATH, tableId);
+    FutureUtils.getUnchecked(
+        serviceClient.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path).jsonContent(jsonMapper, editRequest),
+            IgnoreHttpResponseHandler.INSTANCE
+        ),
+        true
+    );
   }
 
   /**
@@ -118,16 +146,31 @@ public class CatalogClient implements CatalogSource
    * <p>
    * API: {@code POST /druid/coordinator/v1/catalog/schemas/{schema}/tables/{name}}
    */
-  private ListenableFuture<Void> postCreateTable(TableId tableId, TableSpec tableSpec)
+  private ListenableFuture<Void> postCreateTable(
+      TableId tableId,
+      TableSpec tableSpec,
+      boolean ifNotExists,
+      boolean overwrite
+  )
   {
-    String path = StringUtils.replace(TABLE_CREATE_PATH, "{schema}", StringUtils.urlEncode(tableId.schema()));
-    path = StringUtils.replace(path, "{name}", StringUtils.urlEncode(tableId.name()));
+    final String path = StringUtils.format(
+        "%s?overwrite=%s&ifNotExists=%s",
+        tablePath(TABLE_CREATE_PATH, tableId),
+        overwrite,
+        ifNotExists
+    );
 
     return serviceClient.asyncRequest(
         new RequestBuilder(HttpMethod.POST, path)
             .jsonContent(jsonMapper, tableSpec),
         IgnoreHttpResponseHandler.INSTANCE
     );
+  }
+
+  private static String tablePath(String template, TableId tableId)
+  {
+    String path = StringUtils.replace(template, "{schema}", StringUtils.urlEncode(tableId.schema()));
+    return StringUtils.replace(path, "{name}", StringUtils.urlEncode(tableId.name()));
   }
 
   /**

@@ -333,7 +333,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final String SELECT_PROPERTIES_STMT =
-      "SELECT tableType, properties\n" +
+      "SELECT tableType, properties, columns\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
@@ -373,7 +373,7 @@ public class SQLCatalogManager implements CatalogManager
                               jsonMapper,
                               r.getString(1),
                               r.getBytes(2),
-                              null
+                              r.getBytes(3)
                           )
                        )
                       .iterator();
@@ -424,8 +424,11 @@ public class SQLCatalogManager implements CatalogManager
     }
   }
 
+  /**
+   * Loads the whole spec, not just the columns this transaction writes back. See {@link #SELECT_PROPERTIES_STMT}.
+   */
   private static final String SELECT_COLUMNS_STMT =
-      "SELECT tableType, columns\n" +
+      "SELECT tableType, properties, columns\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
@@ -464,8 +467,8 @@ public class SQLCatalogManager implements CatalogManager
                           tableSpecFromBytes(
                               jsonMapper,
                               r.getString(1),
-                              null,
-                              r.getBytes(2)
+                              r.getBytes(2),
+                              r.getBytes(3)
                           )
                        )
                       .iterator();

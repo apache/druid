@@ -25,9 +25,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 
@@ -50,7 +50,11 @@ import java.util.Map;
     @Type(name = "dropColumns", value = TableEditRequest.DropColumns.class),
     @Type(name = "updateProperties", value = TableEditRequest.UpdateProperties.class),
     @Type(name = "updateColumns", value = TableEditRequest.UpdateColumns.class),
+    @Type(name = "addColumns", value = TableEditRequest.AddColumns.class),
+    @Type(name = "alterColumns", value = TableEditRequest.AlterColumns.class),
     @Type(name = "moveColumn", value = TableEditRequest.MoveColumn.class),
+    @Type(name = "addProjection", value = TableEditRequest.AddProjection.class),
+    @Type(name = "dropProjection", value = TableEditRequest.DropProjection.class),
 })
 public class TableEditRequest
 {
@@ -137,6 +141,40 @@ public class TableEditRequest
   }
 
   /**
+   * Add columns that the table does not yet declare. Unlike {@link UpdateColumns}, which merges by name and so would
+   * quietly change an existing column, a column that already exists is an error. The check runs inside the update
+   * transaction, so two concurrent requests adding the same column cannot both succeed.
+   */
+  public static class AddColumns extends TableEditRequest
+  {
+    @JsonProperty("columns")
+    public final List<ColumnSpec> columns;
+
+    @JsonCreator
+    public AddColumns(@JsonProperty("columns") List<ColumnSpec> columns)
+    {
+      this.columns = columns;
+    }
+  }
+
+  /**
+   * Change columns the table already declares. Unlike {@link UpdateColumns}, which appends a name it does not find and
+   * so would quietly create a column, a column that does not exist is an error. Checked inside the update transaction,
+   * as for {@link AddColumns}.
+   */
+  public static class AlterColumns extends TableEditRequest
+  {
+    @JsonProperty("columns")
+    public final List<ColumnSpec> columns;
+
+    @JsonCreator
+    public AlterColumns(@JsonProperty("columns") List<ColumnSpec> columns)
+    {
+      this.columns = columns;
+    }
+  }
+
+  /**
    * Move a column within the list of columns for a TableSpec.
    */
   public static class MoveColumn extends TableEditRequest
@@ -169,4 +207,49 @@ public class TableEditRequest
       this.anchor = anchor;
     }
   }
+
+  /**
+   * Append a projection to the list of projections. Fails if a projection of the same name already exists, unless
+   * {@code ifNotExists} is set, in which case the existing projection is left alone.
+   */
+  public static class AddProjection extends TableEditRequest
+  {
+    @JsonProperty("projection")
+    public final DatasourceProjectionMetadata projection;
+    @JsonProperty("ifNotExists")
+    public final boolean ifNotExists;
+
+    @JsonCreator
+    public AddProjection(
+        @JsonProperty("projection") DatasourceProjectionMetadata projection,
+        @JsonProperty("ifNotExists") boolean ifNotExists
+    )
+    {
+      this.projection = projection;
+      this.ifNotExists = ifNotExists;
+    }
+  }
+
+  /**
+   * Remove the named projection from the list of projections. Fails if no such projection exists, unless
+   * {@code ifExists} is set. Segments already built keep whatever projections they were built with.
+   */
+  public static class DropProjection extends TableEditRequest
+  {
+    @JsonProperty("projection")
+    public final String projection;
+    @JsonProperty("ifExists")
+    public final boolean ifExists;
+
+    @JsonCreator
+    public DropProjection(
+        @JsonProperty("projection") String projection,
+        @JsonProperty("ifExists") boolean ifExists
+    )
+    {
+      this.projection = projection;
+      this.ifExists = ifExists;
+    }
+  }
+
 }

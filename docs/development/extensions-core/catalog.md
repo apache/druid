@@ -43,6 +43,177 @@ allowing queries to be more concise, and simpler to write. This also allows the 
 written into a defined column of the table is consistent with that columns definition, minimizing errors where unexpected
 data is written into a particular column of the table.
 
+### SQL DDL
+
+Tables can be defined with SQL instead of by posting a table specification. `CREATE TABLE` and `ALTER TABLE` are
+submitted to the Broker like any other SQL statement, and write the same catalog metadata the REST API does. They
+return no rows.
+
+These statements change catalog metadata only. They never create, modify, or delete segments: defining a table does
+not ingest anything, and altering a column does not rewrite existing data. Column changes take effect for subsequent
+ingestion.
+
+These statements are disabled by default. Set `druid.sql.planner.enableCatalogDdl` to `true` on the Broker to enable
+them. They require `WRITE` permission on the datasource, the same permission the catalog API requires, so enabling
+them lets anyone who can ingest into a datasource also change its catalog definition; leave them disabled if you
+manage catalog entries with your own tooling. The setting cannot be overridden per query.
+
+The `druid-catalog` extension must be loaded on both the Broker and the Coordinator; without it, these statements
+report that the extension is not available.
+
+```sql
+CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
+  [ ( { <column> <type> | PROJECTION <name> AS ( <select> ) } [, ...] ) ]
+  [ PARTITIONED BY <granularity> ]
+  [ CLUSTERED BY <column> [, ...] ]
+  [ SEALED ]
+```
+
+`OR REPLACE` replaces the specification of an existing table; `IF NOT EXISTS` leaves an existing table unchanged.
+The two cannot be combined. `PARTITIONED BY` sets [`segmentGranularity`](#table-properties) and `CLUSTERED BY` sets
+`clusterKeys`, both of which a later `INSERT` or `REPLACE` inherits unless it states its own. `SEALED` sets
+[`sealed`](#table-properties), which requires every ingested column to be declared.
+
+Note that the table-level `CLUSTERED BY` is a sort order applied to each ingestion, which is a different thing from
+the `CLUSTERED BY` inside a [`__base` projection](#the-base-table), which defines how segments physically group rows.
+
+Column types are written as SQL types, such as `VARCHAR`, `BIGINT`, `DOUBLE`, or `VARCHAR ARRAY`. The `__time` column
+is written as `TIMESTAMP`. Types that have no SQL spelling, such as complex types, use `TYPE('...')` with the Druid
+native type string:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  __time TIMESTAMP,
+  user_id VARCHAR,
+  pages_visited BIGINT,
+  sketch TYPE('COMPLEX<thetaSketch>')
+)
+PARTITIONED BY DAY
+CLUSTERED BY user_id
+```
+
+`ALTER TABLE` supports one change per statement, so that each statement is a single atomic catalog operation:
+
+```sql
+ALTER TABLE <table> ADD COLUMN <column> <type>
+ALTER TABLE <table> DROP COLUMN <column>
+ALTER TABLE <table> ALTER COLUMN <column> SET DATA TYPE <type>
+ALTER TABLE <table> ADD [IF NOT EXISTS] PROJECTION <name> AS ( <select> )
+ALTER TABLE <table> DROP PROJECTION [IF EXISTS] <name>
+ALTER TABLE <table> SET PROPERTIES ( <property> = <value> [, ...] )
+```
+
+`ADD COLUMN` fails if the column already exists, and `ALTER COLUMN` fails if it does not, so a misspelled column name
+is reported rather than quietly creating or replacing a column. Each statement is also checked against the rest of the
+table definition, not only the part it changes: adding a column, changing a type, or setting a property is rejected if
+the resulting table would be invalid, such as a segment granularity coarser than a projection the table declares.
+
+#### Projections
+
+A table may declare [projections](../../querying/projections.md), which are pre-aggregated views stored inside each
+segment. A projection is written as a `SELECT` over the table's own columns, with no `FROM` clause:
+
+```sql
+CREATE TABLE "druid"."visits" (
+  __time TIMESTAMP,
+  user_id VARCHAR,
+  user_agent VARCHAR,
+  pages_visited BIGINT,
+  PROJECTION daily_by_agent AS (
+    SELECT TIME_FLOOR(__time, 'P1D'), user_agent, SUM(pages_visited) AS total_pages
+    WHERE user_agent IS NOT NULL
+    GROUP BY 1, 2
+  )
+)
+PARTITIONED BY DAY
+```
+
+The body is planned exactly as the equivalent query would be, so a projection matches the queries it was written to
+serve. Every aggregate needs an alias, which becomes the name of the stored column. Time granularity is expressed
+with `TIME_FLOOR`, as it would be in a query.
+
+Because the body is planned like a query, it is planned under the statement's own query context, including any `SET`
+clauses. Only context parameters that affect planning can change the stored definition; parameters that only affect
+query execution have no effect, since the body is planned and stored rather than run. The context itself is not part
+of the definition: what the catalog stores is the projection the body planned to, so nothing from the statement's
+context is carried over to queries that later use it. Note also that a projection is matched to a query by its shape,
+so a definition planned under a context that changes that shape only matches queries run under the same context.
+
+A projection body accepts a select list, an optional `WHERE` and an optional `GROUP BY`. It cannot use `ORDER BY`,
+`LIMIT` or `HAVING`: a projection's ordering follows its grouping columns and is not something you choose. It also
+cannot use joins, subqueries, or expressions computed over aggregates. Store the aggregates instead: `SUM(x)` and
+`COUNT(x)` rather than `AVG(x)`.
+
+Projections may also be added to and removed from an existing table:
+
+```sql
+ALTER TABLE "druid"."visits" ADD [IF NOT EXISTS] PROJECTION by_agent AS (
+  SELECT user_agent, SUM(pages_visited) AS total_pages GROUP BY user_agent
+)
+ALTER TABLE "druid"."visits" DROP PROJECTION [IF EXISTS] by_agent
+```
+
+Both take effect for subsequent ingestion. Segments already built keep whatever projections they were built with, so
+dropping a projection does not rewrite data.
+
+#### The base table
+
+The reserved projection name `__base` describes the table's own physical layout rather than an additional
+pre-aggregation. Defining it makes the table a 'clustered' table: rows of segments are stored grouped by the clustering
+columns.
+
+Its body lists the columns in the order segments store them, so it must name every declared column, in declared
+order. An item written as `<expr> AS <name>` makes that column computed at ingest time, from the columns it reads:
+
+```sql
+CREATE TABLE "druid"."events" (
+  tenant VARCHAR,
+  bucket BIGINT,
+  __time TIMESTAMP,
+  user_id BIGINT,
+  payload TYPE('COMPLEX<json>'),
+  PROJECTION __base AS (
+    SELECT tenant, ABS(user_id) % 128 AS bucket, __time, user_id, payload
+    CLUSTERED BY tenant, bucket
+  )
+)
+PARTITIONED BY DAY
+SEALED
+```
+
+The clustering columns must be the leading columns of the table, because the declared order is the physical order.
+`SEALED` is required: the declared columns define the physical segment schema, so a column that is not declared
+cannot be stored.
+
+A computed column is written by the expression, not by the ingestion query, so an `INSERT` must supply the
+expression's inputs and leave the computed column out. Above, that means supplying `user_id` and letting `bucket`
+be derived.
+
+Unlike an aggregate projection, a `__base` body cannot filter or group: the base table stores every ingested row.
+It is the only projection that chooses a clustering.
+
+`ALTER TABLE ... ADD PROJECTION __base AS ( ... )` gives an existing table a layout, and
+`ALTER TABLE ... DROP PROJECTION __base` removes it. Both affect future segments only.
+
+Every other name beginning with `__` remains reserved.
+
+#### Setting table properties
+
+`SET PROPERTIES` merges the given [table properties](#table-properties) into the table. A value of `NULL` removes a
+property. Values must be literals:
+
+```sql
+ALTER TABLE "druid"."visits" SET PROPERTIES (targetSegmentRows = 3000000, sealed = TRUE)
+ALTER TABLE "druid"."visits" SET PROPERTIES (sealed = NULL)
+```
+
+Both statements require the `WRITE` permission on the datasource, the same permission the REST API checks. Table
+names may be unqualified or qualified with the `druid` schema; other schemas are rejected. Names are case-sensitive.
+
+There is no `DROP TABLE`. Deleting a table's catalog entry without deleting its data would be a surprising meaning
+for the statement, so removing a specification is left to the [delete API](#delete-a-table) until the semantics are
+settled.
+
 ### API Objects
 
 #### TableSpec
@@ -90,10 +261,11 @@ The endpoint supports a set of optional query parameters to enforce optimistic l
 is meant to update a table rather than create a new one. In the default case, with no query parameters set, this request
 will return an error if a table of the same name already exists in the schema specified.
 
-| Parameter   | Type    | Description                                                                                                                   |
-|-------------|---------|-------------------------------------------------------------------------------------------------------------------------------|
-| `version`   | Long    | the expected version of an existing table. The version must match. If not (or if the table does not exist), returns an error. |
-| `overwrite` | boolean | if true, then overwrites any existing table. Otherwise, the operation fails if the table already exists.                      |
+| Parameter     | Type    | Description                                                                                                                   |
+|---------------|---------|-------------------------------------------------------------------------------------------------------------------------------|
+| `version`     | Long    | the expected version of an existing table. The version must match. If not (or if the table does not exist), returns an error. |
+| `overwrite`   | boolean | if true, then overwrites any existing table. Otherwise, the operation fails if the table already exists.                      |
+| `ifNotExists` | boolean | if true, then leaves an existing table unchanged and reports a version of 0. Otherwise, the operation fails if the table already exists. |
 
 ##### Responses
 
