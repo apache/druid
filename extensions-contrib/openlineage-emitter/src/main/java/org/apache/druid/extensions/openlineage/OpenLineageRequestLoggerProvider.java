@@ -82,6 +82,11 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
       "timeBoundary"
   );
 
+  // When false, only table-level (datasource) lineage is emitted; the per-column schema and
+  // druid_columnUsage facets are omitted. Lets operators trade column detail for smaller events.
+  @JsonProperty
+  private boolean columnLineageEnabled = true;
+
   @JsonProperty
   private int emitQueueCapacity = OpenLineageRequestLogger.DEFAULT_EMIT_QUEUE_CAPACITY;
 
@@ -115,6 +120,7 @@ public class OpenLineageRequestLoggerProvider implements RequestLoggerProvider
         transportType,
         transportUrl,
         excludedNativeQueryTypes,
+        columnLineageEnabled,
         emitQueueCapacity,
         emitThreadCount,
         httpClient

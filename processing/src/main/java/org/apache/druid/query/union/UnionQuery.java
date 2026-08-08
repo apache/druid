@@ -20,6 +20,7 @@
 package org.apache.druid.query.union;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -85,6 +86,17 @@ public class UnionQuery implements Query<Object>
       dataSources.add(query.getDataSource());
     }
     return dataSources;
+  }
+
+  /**
+   * The branch queries unioned together. Unlike {@link #getDataSources()} (which returns each branch's
+   * datasource), this exposes the full branch queries, so callers that need the branches' column-bearing
+   * parts (dimensions, aggregators, filters) can inspect them.
+   */
+  @JsonIgnore
+  public List<Query<?>> getQueries()
+  {
+    return Collections.unmodifiableList(queries);
   }
 
   @Override
