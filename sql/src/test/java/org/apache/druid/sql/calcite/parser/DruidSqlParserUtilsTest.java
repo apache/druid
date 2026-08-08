@@ -51,12 +51,10 @@ import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
-import java.util.stream.Stream;
 
 public class DruidSqlParserUtilsTest
 {
@@ -64,6 +62,8 @@ public class DruidSqlParserUtilsTest
    * Sanity checking that the formats of TIME_FLOOR(__time, Period) work as expected
    */
   @Nested
+  @ParameterizedClass(name = "{1}")
+  @MethodSource("constructorFeeder")
   public class TimeFloorToGranularityConversionTest
   {
     public static Iterable<Object[]> constructorFeeder()
@@ -73,9 +73,17 @@ public class DruidSqlParserUtilsTest
       );
     }
 
-    @ParameterizedTest(name = "{1}")
-    @MethodSource("constructorFeeder")
-    public void testGranularityFromTimeFloor(String periodString, Granularity expectedGranularity)
+    private final String periodString;
+    private final Granularity expectedGranularity;
+
+    public TimeFloorToGranularityConversionTest(String periodString, Granularity expectedGranularity)
+    {
+      this.periodString = periodString;
+      this.expectedGranularity = expectedGranularity;
+    }
+
+    @Test
+    public void testGranularityFromTimeFloor()
     {
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
       args.add(new SqlIdentifier("__time", SqlParserPos.ZERO));
@@ -91,39 +99,37 @@ public class DruidSqlParserUtilsTest
    * Sanity checking that FLOOR(__time TO TimeUnit()) works as intended with the supported granularities
    */
   @Nested
+  @ParameterizedClass(name = "{1}")
+  @MethodSource("constructorFeeder")
   public class FloorToGranularityConversionTest
   {
-    public static Stream<Arguments> timeUnitGranularityFeeder()
+    public static Iterable<Object[]> constructorFeeder()
     {
-      return Stream.of(
-          Arguments.of(TimeUnit.SECOND, Granularities.SECOND),
-          Arguments.of(TimeUnit.MINUTE, Granularities.MINUTE),
-          Arguments.of(TimeUnit.HOUR, Granularities.HOUR),
-          Arguments.of(TimeUnit.DAY, Granularities.DAY),
-          Arguments.of(TimeUnit.WEEK, Granularities.WEEK),
-          Arguments.of(TimeUnit.MONTH, Granularities.MONTH),
-          Arguments.of(TimeUnit.QUARTER, Granularities.QUARTER),
-          Arguments.of(TimeUnit.YEAR, Granularities.YEAR)
+      return ImmutableList.of(
+          new Object[]{TimeUnit.SECOND, TimeUnits.toPeriod(TimeUnitRange.SECOND), Granularities.SECOND},
+          new Object[]{TimeUnit.MINUTE, TimeUnits.toPeriod(TimeUnitRange.MINUTE), Granularities.MINUTE},
+          new Object[]{TimeUnit.HOUR, TimeUnits.toPeriod(TimeUnitRange.HOUR), Granularities.HOUR},
+          new Object[]{TimeUnit.DAY, TimeUnits.toPeriod(TimeUnitRange.DAY), Granularities.DAY},
+          new Object[]{TimeUnit.WEEK, TimeUnits.toPeriod(TimeUnitRange.WEEK), Granularities.WEEK},
+          new Object[]{TimeUnit.MONTH, TimeUnits.toPeriod(TimeUnitRange.MONTH), Granularities.MONTH},
+          new Object[]{TimeUnit.QUARTER, TimeUnits.toPeriod(TimeUnitRange.QUARTER), Granularities.QUARTER},
+          new Object[]{TimeUnit.YEAR, TimeUnits.toPeriod(TimeUnitRange.YEAR), Granularities.YEAR}
       );
     }
 
-    public static Stream<Arguments> periodGranularityFeeder()
+    private final TimeUnit timeUnit;
+    private final Period period;
+    private final Granularity expectedGranularity;
+
+    public FloorToGranularityConversionTest(TimeUnit timeUnit, Period period, Granularity expectedGranularity)
     {
-      return Stream.of(
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.SECOND), Granularities.SECOND),
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.MINUTE), Granularities.MINUTE),
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.HOUR), Granularities.HOUR),
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.DAY), Granularities.DAY),
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.WEEK), Granularities.WEEK),
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.MONTH), Granularities.MONTH),
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.QUARTER), Granularities.QUARTER),
-          Arguments.of(TimeUnits.toPeriod(TimeUnitRange.YEAR), Granularities.YEAR)
-      );
+      this.timeUnit = timeUnit;
+      this.period = period;
+      this.expectedGranularity = expectedGranularity;
     }
 
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("timeUnitGranularityFeeder")
-    public void testGetGranularityFromFloor(TimeUnit timeUnit, Granularity expectedGranularity)
+    @Test
+    public void testGetGranularityFromFloor()
     {
       // parserPos doesn't matter
       final SqlNodeList args = new SqlNodeList(SqlParserPos.ZERO);
@@ -137,12 +143,8 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY 'day'"
      */
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("timeUnitGranularityFeeder")
-    public void testConvertSqlNodeToGranularityAsLiteral(
-        TimeUnit timeUnit,
-        Granularity expectedGranularity
-    )
+    @Test
+    public void testConvertSqlNodeToGranularityAsLiteral()
     {
       SqlNode sqlNode = SqlLiteral.createCharString(timeUnit.name(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
@@ -152,12 +154,8 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY PT1D"
      */
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("periodGranularityFeeder")
-    public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier(
-        Period period,
-        Granularity expectedGranularity
-    )
+    @Test
+    public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier()
     {
       SqlNode sqlNode = new SqlIdentifier(period.toString(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
@@ -167,12 +165,8 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY 'PT1D'"
      */
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("periodGranularityFeeder")
-    public void testConvertSqlNodeToPeriodFormGranularityAsLiteral(
-        Period period,
-        Granularity expectedGranularity
-    )
+    @Test
+    public void testConvertSqlNodeToPeriodFormGranularityAsLiteral()
     {
       SqlNode sqlNode = SqlLiteral.createCharString(period.toString(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);

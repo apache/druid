@@ -41,7 +41,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
@@ -52,6 +52,8 @@ public class DruidLogicalValuesRuleTest
   private static final PlannerContext DEFAULT_CONTEXT = Mockito.mock(PlannerContext.class);
 
   @Nested
+  @ParameterizedClass(name = "{1}, {2}")
+  @MethodSource("constructorFeeder")
   public class GetValueFromLiteralSimpleTypesTest extends InitializedNullHandlingTest
   {
     public static Iterable<Object[]> constructorFeeder()
@@ -69,9 +71,19 @@ public class DruidLogicalValuesRuleTest
       );
     }
 
-    @ParameterizedTest(name = "{1}, {2}")
-    @MethodSource("constructorFeeder")
-    public void testGetValueFromLiteral(Comparable<?> val, SqlTypeName sqlTypeName, Class<?> javaType)
+    private final Comparable<?> val;
+    private final SqlTypeName sqlTypeName;
+    private final Class<?> javaType;
+
+    public GetValueFromLiteralSimpleTypesTest(Comparable<?> val, SqlTypeName sqlTypeName, Class<?> javaType)
+    {
+      this.val = val;
+      this.sqlTypeName = sqlTypeName;
+      this.javaType = javaType;
+    }
+
+    @Test
+    public void testGetValueFromLiteral()
     {
       final RexLiteral literal = Mockito.spy(makeLiteral(val, sqlTypeName, javaType));
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);
