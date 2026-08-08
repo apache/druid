@@ -75,7 +75,7 @@ public class AbstractTaskTest
 
   private File createTempDir() throws IOException
   {
-    return Files.createTempDirectory(temporaryFolder.toPath(), "task").toFile();
+    return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "task");
   }
 
   @Test
