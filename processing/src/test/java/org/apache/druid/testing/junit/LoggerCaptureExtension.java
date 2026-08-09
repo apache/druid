@@ -28,6 +28,7 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
+import org.apache.logging.log4j.core.config.Property;
 import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -91,7 +92,7 @@ public class LoggerCaptureExtension implements BeforeEachCallback, AfterEachCall
 
     InMemoryAppender(final Class<?> targetClass)
     {
-      super(NAME, null, null);
+      super(NAME, null, null, true, Property.EMPTY_ARRAY);
       targetLoggerName = targetClass.getName();
     }
 
