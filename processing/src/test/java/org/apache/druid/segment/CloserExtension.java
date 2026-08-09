@@ -53,7 +53,9 @@ public class CloserExtension implements BeforeEachCallback, AfterEachCallback, T
   @Override
   public void beforeEach(final ExtensionContext context)
   {
-    closer = Closer.create();
+    if (closer == null) {
+      closer = Closer.create();
+    }
   }
 
   @Override
