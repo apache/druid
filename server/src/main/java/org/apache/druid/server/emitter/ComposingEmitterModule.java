@@ -54,9 +54,6 @@ public class ComposingEmitterModule implements DruidModule
   {
     log.info("Creating Composing Emitter with %s", config.getEmitters());
 
-    // Resolve child emitters eagerly, once, into a materialized list. A lazy view (e.g. Lists.transform) would
-    // re-resolve each child from the injector on every ComposingEmitter.emit(event) call, and each resolution takes a
-    // synchronized monitor in LifecycleScope#get(), causing severe lock contention on the metrics emit path.
     List<Emitter> emitters = config.getEmitters()
                                    .stream()
                                    .map(s -> injector.getInstance(Key.get(Emitter.class, Names.named(s))))
