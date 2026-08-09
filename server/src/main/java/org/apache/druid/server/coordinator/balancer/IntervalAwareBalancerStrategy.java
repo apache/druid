@@ -146,10 +146,19 @@ public class IntervalAwareBalancerStrategy implements BalancerStrategy
         }
       }
 
-      // Only move if it strictly reduces the maximum per-interval count, i.e. the
-      // destination (after gaining the segment) would hold fewer segments for this
-      // interval than the source currently does. This avoids pointless moves and
-      // oscillation between two servers that differ by a single segment.
+      // A decommissioning source must be fully evacuated regardless of interval
+      // balance, so the anti-oscillation guard below is skipped for it. The source
+      // is never itself a candidate here (the caller excludes a decommissioning
+      // source from the destination list), so any chosen destination strictly
+      // makes progress towards draining the server.
+      if (bestDestination != null && sourceServer.isDecommissioning()) {
+        return bestDestination;
+      }
+
+      // Otherwise, only move if it strictly reduces the maximum per-interval count,
+      // i.e. the destination (after gaining the segment) would hold fewer segments
+      // for this interval than the source currently does. This avoids pointless
+      // moves and oscillation between two servers that differ by a single segment.
       if (bestDestination != null && bestCount + 1 < sourceCount) {
         return bestDestination;
       }

@@ -184,6 +184,102 @@ public class IntervalAwareBalancerStrategyTest
   }
 
   @Test
+  public void testNodeLossReplicatesToLeastLoadedServerForInterval()
+  {
+    // Simulates a historical being deleted (e.g. pod delete): its replicas are
+    // gone from the cluster view, so the segment is under-replicated and must be
+    // re-loaded onto one of the surviving servers via the load path. The strategy
+    // must pick the survivor holding the fewest segments for this interval.
+    final List<DataSegment> intervalSegments = minuteSegments(DS_WIKI, 5);
+
+    // The lost node held intervalSegments 0..2; these are no longer on any server.
+    final DataSegment lostReplica = intervalSegments.get(0);
+
+    // Surviving servers with differing load for the interval.
+    final ServerHolder survivorHeavy = createServerWith(intervalSegments.subList(3, 5)); // count = 2
+    final ServerHolder survivorLight = createServerWith(intervalSegments.subList(3, 4)); // count = 1
+    final ServerHolder survivorEmpty = createServerWith(new ArrayList<>());              // count = 0
+
+    final Iterator<ServerHolder> ordered = strategy.findServersToLoadSegment(
+        lostReplica,
+        Arrays.asList(survivorHeavy, survivorLight, survivorEmpty)
+    );
+
+    // Re-replication targets the emptiest survivor for the interval first.
+    Assert.assertSame(survivorEmpty, ordered.next());
+    Assert.assertSame(survivorLight, ordered.next());
+    Assert.assertSame(survivorHeavy, ordered.next());
+    Assert.assertFalse(ordered.hasNext());
+  }
+
+  @Test
+  public void testDecommissioningSourceIsEvacuatedEvenWhenGuardWouldBlock()
+  {
+    // Simulates a historical being drained (e.g. pod drain / marked
+    // decommissioning): every segment must be moved off it regardless of interval
+    // balance. Here the source holds a single replica for the interval
+    // (sourceCount = 1) and the only destination already holds one segment for the
+    // same interval, so the anti-oscillation guard (bestCount + 1 < sourceCount)
+    // would otherwise block the move and strand the segment on the draining node.
+    final List<DataSegment> intervalSegments = minuteSegments(DS_WIKI, 3);
+
+    final ServerHolder decommissioningSource = createDecommissioningServerWith(intervalSegments.subList(0, 1));
+    final ServerHolder activeDest = createServerWith(intervalSegments.subList(1, 2));
+
+    final DataSegment toMove = intervalSegments.get(0);
+    // The caller excludes a decommissioning source from the destination list.
+    final ServerHolder chosen = strategy.findDestinationServerToMoveSegment(
+        toMove,
+        decommissioningSource,
+        Arrays.asList(activeDest)
+    );
+
+    Assert.assertSame(activeDest, chosen);
+  }
+
+  @Test
+  public void testDecommissioningSourceEvacuatesToLeastLoadedDestination()
+  {
+    // When draining, the segment must still go to the emptiest destination for the
+    // interval among the active servers.
+    final List<DataSegment> intervalSegments = minuteSegments(DS_WIKI, 5);
+
+    final ServerHolder decommissioningSource = createDecommissioningServerWith(intervalSegments.subList(0, 1));
+    final ServerHolder destHeavy = createServerWith(intervalSegments.subList(1, 4)); // count = 3
+    final ServerHolder destLight = createServerWith(intervalSegments.subList(4, 5)); // count = 1
+
+    final DataSegment toMove = intervalSegments.get(0);
+    final ServerHolder chosen = strategy.findDestinationServerToMoveSegment(
+        toMove,
+        decommissioningSource,
+        Arrays.asList(destHeavy, destLight)
+    );
+
+    Assert.assertSame(destLight, chosen);
+  }
+
+  @Test
+  public void testActiveSourceStillHonoursOscillationGuard()
+  {
+    // The evacuation fast-path must not affect a normal (non-decommissioning)
+    // source: a move that does not strictly reduce the max per-interval count is
+    // still skipped. Source has 1 for the interval, destination also has 1, so no
+    // move should happen.
+    final List<DataSegment> intervalSegments = minuteSegments(DS_WIKI, 3);
+
+    final ServerHolder activeSource = createServerWith(intervalSegments.subList(0, 1));
+    final ServerHolder activeDest = createServerWith(intervalSegments.subList(1, 2));
+
+    final ServerHolder chosen = strategy.findDestinationServerToMoveSegment(
+        intervalSegments.get(0),
+        activeSource,
+        Arrays.asList(activeDest)
+    );
+
+    Assert.assertNull(chosen);
+  }
+
+  @Test
   public void testDropPrefersMostLoadedServerForInterval()
   {
     final List<DataSegment> intervalSegments = minuteSegments(DS_WIKI, 5);
@@ -262,12 +358,26 @@ public class IntervalAwareBalancerStrategyTest
 
   private ServerHolder createServerWith(List<DataSegment> segments, long maxSizeBytes)
   {
+    return new ServerHolder(buildServer(segments, maxSizeBytes).toImmutableDruidServer(), new TestLoadQueuePeon());
+  }
+
+  private ServerHolder createDecommissioningServerWith(List<DataSegment> segments)
+  {
+    return new ServerHolder(
+        buildServer(segments, 10L << 30).toImmutableDruidServer(),
+        new TestLoadQueuePeon(),
+        true
+    );
+  }
+
+  private DruidServer buildServer(List<DataSegment> segments, long maxSizeBytes)
+  {
     final String name = "hist_" + uniqueServerId++;
     final DruidServer server =
         new DruidServer(name, name, null, maxSizeBytes, null, ServerType.HISTORICAL, "hot", 1);
     for (DataSegment segment : segments) {
       server.addDataSegment(segment);
     }
-    return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon());
+    return server;
   }
 }
