@@ -22,6 +22,7 @@ package org.apache.druid.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -391,6 +392,149 @@ public class SqlSegmentsMetadataQueryTest
   private static Set<SegmentId> getIds(Set<DataSegment> segments)
   {
     return segments.stream().map(DataSegment::getId).collect(Collectors.toSet());
+  }
+
+  // ==================== Kill Buffer Period Tests ====================
+
+  @Test
+  public void test_markSegmentAsUsed_throwsIfExpiredAndKillEnabled()
+  {
+    final Period bufferPeriod = Period.days(30);
+    final DataSegment segment = WIKI_SEGMENTS_2X5D.get(0);
+
+    // Mark segment as unused with an old update time (outside buffer period)
+    final DateTime oldUpdateTime = DateTimes.nowUtc().minus(bufferPeriod).minusMinutes(1);
+    updateUsedStatusLastUpdated(segment.getId(), oldUpdateTime);
+    update(sql -> sql.markSegmentsAsUnused(Set.of(segment.getId()), oldUpdateTime));
+
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> updateWithKillConfig(
+            bufferPeriod,
+            sql -> sql.markSegmentAsUsed(segment.getId(), DateTimes.nowUtc())
+        )
+    );
+    Assert.assertEquals(DruidException.Category.CONFLICT, exception.getCategory());
+    Assert.assertTrue(exception.getMessage().contains(segment.getId().toString()));
+  }
+
+  @Test
+  public void test_markSegmentAsUsed_succeedsIfRecentAndKillEnabled()
+  {
+    final Period bufferPeriod = Period.days(30);
+    final DataSegment segment = WIKI_SEGMENTS_2X5D.get(0);
+
+    // Mark segment as unused with a recent update time (within buffer period)
+    final DateTime recentUpdateTime = DateTimes.nowUtc().minus(bufferPeriod).plusMinutes(1);
+    update(sql -> sql.markSegmentsAsUnused(Set.of(segment.getId()), recentUpdateTime));
+    updateUsedStatusLastUpdated(segment.getId(), recentUpdateTime);
+
+    final boolean updated = updateWithKillConfig(
+        bufferPeriod,
+        sql -> sql.markSegmentAsUsed(segment.getId(), DateTimes.nowUtc())
+    );
+    Assert.assertTrue(updated);
+    Assert.assertTrue(retrieveAllUsedSegments().contains(segment));
+  }
+
+  @Test
+  public void test_markSegmentAsUsed_succeedsIfExpiredButKillDisabled()
+  {
+    final Period bufferPeriod = Period.days(30);
+    final DataSegment segment = WIKI_SEGMENTS_2X5D.get(0);
+
+    // Mark segment as unused with an old update time (outside buffer period)
+    final DateTime oldUpdateTime = DateTimes.nowUtc().minus(bufferPeriod).minusMinutes(1);
+    update(sql -> sql.markSegmentsAsUnused(Set.of(segment.getId()), oldUpdateTime));
+    updateUsedStatusLastUpdated(segment.getId(), oldUpdateTime);
+
+    // Kill is disabled by default in the standard update() helper, so no exception should be thrown
+    final boolean updated = update(sql -> sql.markSegmentAsUsed(segment.getId(), DateTimes.nowUtc()));
+    Assert.assertTrue(updated);
+    Assert.assertTrue(retrieveAllUsedSegments().contains(segment));
+  }
+
+  @Test
+  public void test_markNonOvershadowedSegmentsAsUsed_throwsIfExpiredAndKillEnabled()
+  {
+    final Period bufferPeriod = Period.days(30);
+    final Set<DataSegment> segmentsToUpdate = Set.of(WIKI_SEGMENTS_2X5D.get(0), WIKI_SEGMENTS_2X5D.get(1));
+
+    // Mark segments as unused with an old update time
+    final DateTime oldUpdateTime = DateTimes.nowUtc().minus(bufferPeriod).minusMinutes(1);
+    update(sql -> sql.markSegmentsAsUnused(getIds(segmentsToUpdate), oldUpdateTime));
+    segmentsToUpdate.forEach(s -> updateUsedStatusLastUpdated(s.getId(), oldUpdateTime));
+
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> updateWithKillConfig(
+            bufferPeriod,
+            sql -> sql.markNonOvershadowedSegmentsAsUsed(
+                TestDataSource.WIKI, getIds(segmentsToUpdate), DateTimes.nowUtc()
+            )
+        )
+    );
+    Assert.assertEquals(DruidException.Category.CONFLICT, exception.getCategory());
+  }
+
+  @Test
+  public void test_markAllNonOvershadowedSegmentsAsUsed_throwsIfExpiredAndKillEnabled()
+  {
+    final Period bufferPeriod = Period.days(30);
+    final DataSegment segment = WIKI_SEGMENTS_2X5D.get(0);
+
+    // Mark one segment as unused with an old update time
+    final DateTime oldUpdateTime = DateTimes.nowUtc().minus(bufferPeriod).minusMinutes(1);
+    update(sql -> sql.markSegmentsAsUnused(Set.of(segment.getId()), oldUpdateTime));
+    updateUsedStatusLastUpdated(segment.getId(), oldUpdateTime);
+
+    final DruidException exception = Assert.assertThrows(
+        DruidException.class,
+        () -> updateWithKillConfig(
+            bufferPeriod,
+            sql -> sql.markAllNonOvershadowedSegmentsAsUsed(TestDataSource.WIKI, DateTimes.nowUtc())
+        )
+    );
+    Assert.assertEquals(DruidException.Category.CONFLICT, exception.getCategory());
+  }
+
+  /**
+   * Executes an update using a {@link SqlSegmentsMetadataQuery} configured with
+   * the embedded kill duty enabled and the given buffer period.
+   */
+  private <T> T updateWithKillConfig(Period bufferPeriod, Function<SqlSegmentsMetadataQuery, T> function)
+  {
+    final DerbyConnector connector = derbyConnectorRule.getConnector();
+    final MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(
+        null,
+        null,
+        new UnusedSegmentKillerConfig(true, bufferPeriod, null, null)
+    );
+    return connector.retryWithHandle(
+        handle -> function.apply(
+            SqlSegmentsMetadataQuery.forHandle(handle, connector, tablesConfig, config, TestHelper.JSON_MAPPER)
+        )
+    );
+  }
+
+  /**
+   * Directly updates the used_status_last_updated column for the given segment.
+   */
+  private void updateUsedStatusLastUpdated(SegmentId segmentId, DateTime updateTime)
+  {
+    final DerbyConnector connector = derbyConnectorRule.getConnector();
+    final MetadataStorageTablesConfig tablesConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    connector.retryWithHandle(handle -> {
+      handle.createStatement(
+                "UPDATE " + tablesConfig.getSegmentsTable()
+                + " SET used_status_last_updated = :updateTime WHERE id = :id"
+            )
+            .bind("updateTime", updateTime.toString())
+            .bind("id", segmentId.toString())
+            .execute();
+      return null;
+    });
   }
 
   // ==================== Indexing State Tests ====================
