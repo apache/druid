@@ -101,6 +101,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         derbyConnector,
         new TestDruidLeaderSelector(),
         NoopSegmentMetadataCache.instance(),
+        new SegmentsMetadataManagerConfig(null, null, null),
         NoopServiceEmitter.instance()
     );
     coordinator = new IndexerSQLMetadataStorageCoordinator(

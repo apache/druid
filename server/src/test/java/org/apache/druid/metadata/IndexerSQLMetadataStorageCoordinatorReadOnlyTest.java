@@ -172,6 +172,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
           derbyConnector,
           leaderSelector,
           segmentMetadataCache,
+          new SegmentsMetadataManagerConfig(null, cacheMode, null),
           emitter
       );
     }

@@ -206,6 +206,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnector,
         leaderSelector,
         segmentMetadataCache,
+        new SegmentsMetadataManagerConfig(null, cacheMode, null),
         emitter
     )
     {

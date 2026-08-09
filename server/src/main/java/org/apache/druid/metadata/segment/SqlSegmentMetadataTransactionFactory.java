@@ -28,6 +28,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.metadata.segment.cache.Metric;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
@@ -68,10 +69,11 @@ public class SqlSegmentMetadataTransactionFactory extends SqlSegmentMetadataRead
       SQLMetadataConnector connector,
       @IndexingService DruidLeaderSelector leaderSelector,
       SegmentMetadataCache segmentMetadataCache,
+      SegmentsMetadataManagerConfig managerConfig,
       ServiceEmitter emitter
   )
   {
-    super(jsonMapper, tablesConfig, connector);
+    super(jsonMapper, tablesConfig, managerConfig, connector);
     this.connector = connector;
     this.leaderSelector = leaderSelector;
     this.segmentMetadataCache = segmentMetadataCache;
