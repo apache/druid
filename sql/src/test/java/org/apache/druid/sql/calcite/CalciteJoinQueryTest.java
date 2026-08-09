@@ -5177,7 +5177,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Assertions.assertTrue(
         e.getMessage().contains(
             "Restricted data source [GlobalTableDataSource{name='restrictedBroadcastDatasource_m1_is_6'}] with policy [RowFilterPolicy{rowFilter=m1 = 6 (LONG)}] is not supported"
-        )
+        ),
+        e.getMessage()
     );
   }
 
