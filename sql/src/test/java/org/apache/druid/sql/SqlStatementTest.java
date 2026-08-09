@@ -104,7 +104,7 @@ public class SqlStatementTest
   private SqlStatementFactory sqlStatementFactory;
 
   @BeforeAll
-  public static void setUpClass()
+  public static void setUpClass() throws Exception
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);

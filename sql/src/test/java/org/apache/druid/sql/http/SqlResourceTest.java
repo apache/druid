@@ -105,6 +105,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -143,8 +144,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 @SuppressWarnings("ALL")
 public class SqlResourceTest extends CalciteTestBase
@@ -1779,7 +1778,7 @@ public class SqlResourceTest extends CalciteTestBase
         Status.BAD_REQUEST.getStatusCode()
     );
 
-    assertThat(
+    MatcherAssert.assertThat(
         exception.getUnderlyingException(),
         DruidExceptionMatcher
             .invalidSqlInput()

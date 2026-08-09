@@ -81,10 +81,9 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -97,9 +96,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 /**
  * Calcite tests which involve subqueries and materializing the intermediate results on {@link org.apache.druid.server.ClientQuerySegmentWalker}
@@ -752,8 +750,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
             + "WHERE cnt > 0",
         modifiedQueryContext,
         ResourceLimitExceededException.class,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
+        e -> Assertions.assertTrue(
+            e.getMessage().contains(
                 "Cannot issue the query, subqueries generated results beyond maximum[1] rows. Try setting the "
                     + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
                     + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "

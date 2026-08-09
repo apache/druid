@@ -82,9 +82,6 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -95,8 +92,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 @SqlTestFrameworkConfig.ComponentSupplier(NestedComponentSupplier.class)
 public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
@@ -5574,8 +5569,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         + "SUM(JSON_VALUE(nest, '$.z' RETURNING BIGINT ERROR ON EMPTY ERROR ON ERROR)) "
         + "FROM druid.nested",
         IllegalArgumentException.class,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
+        e -> Assertions.assertTrue(
+            e.getMessage().contains(
                 "Unsupported JSON_VALUE parameter 'ON EMPTY' defined - please re-issue this query without this argument"
             )
         )
@@ -5783,9 +5778,8 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
           .run();
     });
 
-    assertThat(
-        e.getMessage(),
-        CoreMatchers.containsString("Cannot join when the join condition has column of type [COMPLEX<json>]")
+    Assertions.assertTrue(
+        e.getMessage().contains("Cannot join when the join condition has column of type [COMPLEX<json>]")
     );
   }
 
@@ -7426,7 +7420,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
   {
-    DruidException druidException = Assert.assertThrows(
+    DruidException druidException = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             "SELECT APPROX_COUNT_DISTINCT(nester) FROM druid.nested",
@@ -7434,7 +7428,7 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    Assert.assertTrue(druidException.getMessage().contains(
+    Assertions.assertTrue(druidException.getMessage().contains(
         "Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(<COMPLEX<JSON>>)'"
     ));
   }
