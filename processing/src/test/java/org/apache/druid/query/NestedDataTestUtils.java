@@ -50,7 +50,7 @@ import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
-import org.apache.druid.testing.TempDirExtension;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.rules.TemporaryFolder;
 
@@ -144,6 +144,12 @@ public class NestedDataTestUtils
     JSON_MAPPER.registerModules(BuiltInTypesModule.getJacksonModulesList());
   }
 
+  /**
+   * Temporary compatibility bridge for the JUnit 4 {@link TemporaryFolder} and JUnit 5
+   * {@link TemporaryFolderExtension} APIs. The segment builders use this common surface while
+   * both test styles remain in use; remove it with the {@code TemporaryFolder} overloads once
+   * all callers have migrated to {@link TemporaryFolderExtension}.
+   */
   private interface TempFolderOperations
   {
     File newFolder() throws IOException;
@@ -185,7 +191,7 @@ public class NestedDataTestUtils
     };
   }
 
-  private static TempFolderOperations tempFolderOperations(final TempDirExtension tempFolder)
+  private static TempFolderOperations tempFolderOperations(final TemporaryFolderExtension tempFolder)
   {
     return new TempFolderOperations()
     {
@@ -237,7 +243,7 @@ public class NestedDataTestUtils
   }
 
   public static List<Segment> createSegmentsWithConcatenatedJsonInput(
-      TempDirExtension tempFolder,
+      TemporaryFolderExtension tempFolder,
       Closer closer,
       String inputFile,
       Granularity granularity,
@@ -309,7 +315,7 @@ public class NestedDataTestUtils
       this(tempFolderOperations(tempFolder), closer);
     }
 
-    public ResourceFileSegmentBuilder(TempDirExtension tempFolder, Closer closer)
+    public ResourceFileSegmentBuilder(TemporaryFolderExtension tempFolder, Closer closer)
     {
       this(tempFolderOperations(tempFolder), closer);
     }
@@ -454,7 +460,7 @@ public class NestedDataTestUtils
    */
   @Deprecated
   public static List<Segment> createSegments(
-      TempDirExtension tempFolder,
+      TemporaryFolderExtension tempFolder,
       Closer closer,
       String input,
       InputFormat inputFormat,
@@ -512,7 +518,7 @@ public class NestedDataTestUtils
   }
 
   public static List<Segment> createSegments(
-      TempDirExtension tempFolder,
+      TemporaryFolderExtension tempFolder,
       Closer closer,
       List<InputSource> inputs,
       InputFormat inputFormat,
@@ -598,7 +604,7 @@ public class NestedDataTestUtils
   }
 
   public static File selfConcatenateResourceFile(
-      TempDirExtension tempFolder,
+      TemporaryFolderExtension tempFolder,
       String inputFileName,
       int numCopies
   ) throws IOException
@@ -749,16 +755,16 @@ public class NestedDataTestUtils
   {
     return DEFAULT_SEGMENTS_NAME.equals(name) || FRONT_CODED_SEGMENTS_NAME.equals(name);
   }
-  public static List<BiFunction<TempDirExtension, Closer, List<Segment>>> getSegmentGeneratorsWithTempDir(
+  public static List<BiFunction<TemporaryFolderExtension, Closer, List<Segment>>> getSegmentGeneratorsWithTempDir(
       String jsonInputFile
   )
   {
-    final List<BiFunction<TempDirExtension, Closer, List<Segment>>> segmentsGenerators =
+    final List<BiFunction<TemporaryFolderExtension, Closer, List<Segment>>> segmentsGenerators =
         new ArrayList<>();
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TempDirExtension tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return ImmutableList.<Segment>builder()
@@ -780,7 +786,7 @@ public class NestedDataTestUtils
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TempDirExtension tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return ImmutableList.of(
@@ -802,7 +808,7 @@ public class NestedDataTestUtils
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TempDirExtension tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return ImmutableList.<Segment>builder()
@@ -824,7 +830,7 @@ public class NestedDataTestUtils
     segmentsGenerators.add(new BiFunction<>()
     {
       @Override
-      public List<Segment> apply(TempDirExtension tempFolder, Closer closer)
+      public List<Segment> apply(TemporaryFolderExtension tempFolder, Closer closer)
       {
         try {
           return Stream.of(

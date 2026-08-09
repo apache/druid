@@ -24,16 +24,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.testing.JupiterAssertions;
-import org.apache.druid.testing.ThrowableExpectation;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.net.ssl.SSLContext;
 
@@ -57,9 +55,6 @@ public class JankyServersTest
   static ServerSocket silentServerSocket;
   static ServerSocket echoServerSocket;
   static ServerSocket closingServerSocket;
-
-  @RegisterExtension
-  public ThrowableExpectation expectedException = ThrowableExpectation.none();
 
   @BeforeAll
   public static void setUp() throws Exception
@@ -171,7 +166,7 @@ public class JankyServersTest
         e = e1.getCause();
       }
 
-      JupiterAssertions.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
+      Assertions.assertTrue(e instanceof ReadTimeoutException, "ReadTimeoutException thrown by 'get'");
     }
     finally {
       lifecycle.stop();
@@ -200,7 +195,7 @@ public class JankyServersTest
         e = e1.getCause();
       }
 
-      JupiterAssertions.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
+      Assertions.assertTrue(e instanceof ReadTimeoutException, "ReadTimeoutException thrown by 'get'");
     }
     finally {
       lifecycle.stop();
@@ -232,7 +227,7 @@ public class JankyServersTest
         e = e1.getCause();
       }
 
-      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
+      Assertions.assertTrue(e instanceof ChannelException, "ChannelException thrown by 'get'");
     }
     finally {
       lifecycle.stop();
@@ -260,7 +255,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      Assertions.assertTrue(isChannelClosedException(e), "ChannelException thrown by 'get'");
     }
     finally {
       lifecycle.stop();
@@ -290,7 +285,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      Assertions.assertTrue(isChannelClosedException(e), "ChannelException thrown by 'get'");
     }
     finally {
       lifecycle.stop();
@@ -326,7 +321,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      Assertions.assertTrue(isChannelClosedException(e), "ChannelException thrown by 'get'");
     }
     finally {
       lifecycle.stop();
@@ -362,7 +357,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      Assertions.assertTrue(isChannelClosedException(e), "ChannelException thrown by 'get'");
     }
     finally {
       lifecycle.stop();
@@ -389,10 +384,10 @@ public class JankyServersTest
               StatusResponseHandler.getInstance()
           );
 
-      expectedException.expect(ExecutionException.class);
-      expectedException.expectMessage("java.lang.IllegalArgumentException: invalid version format: GET");
-
-      response.get();
+      final ExecutionException exception = Assertions.assertThrows(ExecutionException.class, response::get);
+      Assertions.assertTrue(
+          exception.getMessage().contains("java.lang.IllegalArgumentException: invalid version format: GET")
+      );
     }
     finally {
       lifecycle.stop();
@@ -413,10 +408,10 @@ public class JankyServersTest
               StatusResponseHandler.getInstance()
           );
 
-      expectedException.expect(ExecutionException.class);
-      expectedException.expectMessage("org.jboss.netty.channel.ChannelException: Faulty channel in resource pool");
-
-      response.get();
+      final ExecutionException exception = Assertions.assertThrows(ExecutionException.class, response::get);
+      Assertions.assertTrue(
+          exception.getMessage().contains("org.jboss.netty.channel.ChannelException: Faulty channel in resource pool")
+      );
     }
     finally {
       lifecycle.stop();

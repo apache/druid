@@ -31,6 +31,10 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 
+/**
+ * Verifies that a test method throws the declared exception type.
+ * Use it directly on a test method, for example {@code @ExpectThrows(IOException.class)}.
+ */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @ExtendWith(ExpectThrows.Extension.class)

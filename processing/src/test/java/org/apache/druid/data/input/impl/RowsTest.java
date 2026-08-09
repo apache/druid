@@ -28,10 +28,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -107,23 +107,24 @@ public class RowsTest extends InitializedNullHandlingTest
   public void test_objectToNumber_typeUnknown_noThrow()
   {
     for (final Map.Entry<Object, Number> entry : validCases.entrySet()) {
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
+          entry.getValue(),
+          Rows.objectToNumber(FIELD_NAME, entry.getKey(), null, false),
           StringUtils.format(
               "%s (%s)",
               entry.getKey(),
               entry.getKey() == null ? null : entry.getKey().getClass().getSimpleName()
-          ),
-          entry.getValue(), Rows.objectToNumber(FIELD_NAME, entry.getKey(), null, false)
+          )
       );
     }
 
     for (final Object o : invalidCases) {
-      JupiterAssertions.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, null, false));
+      Assertions.assertNull(Rows.objectToNumber(FIELD_NAME, o, null, false), o + " (nothrow)");
 
-      final ParseException e = JupiterAssertions.assertThrows(
-          o + " (throw)",
+      final ParseException e = Assertions.assertThrows(
           ParseException.class,
-          () -> Rows.objectToNumber(FIELD_NAME, o, null, true)
+          () -> Rows.objectToNumber(FIELD_NAME, o, null, true),
+          o + " (throw)"
       );
 
       MatcherAssert.assertThat(
@@ -137,24 +138,24 @@ public class RowsTest extends InitializedNullHandlingTest
   public void test_objectToNumber_typeLong_noThrow()
   {
     for (final Map.Entry<Object, Number> entry : validCases.entrySet()) {
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
+          entry.getValue() != null ? entry.getValue().longValue() : null,
+          Rows.objectToNumber(FIELD_NAME, entry.getKey(), ValueType.LONG, false),
           StringUtils.format(
               "%s (%s)",
               entry.getKey(),
               entry.getKey() == null ? null : entry.getKey().getClass().getSimpleName()
-          ),
-          entry.getValue() != null ? entry.getValue().longValue() : null,
-          Rows.objectToNumber(FIELD_NAME, entry.getKey(), ValueType.LONG, false)
+          )
       );
     }
 
     for (final Object o : invalidCases) {
-      JupiterAssertions.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, ValueType.LONG, false));
+      Assertions.assertNull(Rows.objectToNumber(FIELD_NAME, o, ValueType.LONG, false), o + " (nothrow)");
 
-      final ParseException e = JupiterAssertions.assertThrows(
-          o + " (throw)",
+      final ParseException e = Assertions.assertThrows(
           ParseException.class,
-          () -> Rows.objectToNumber(FIELD_NAME, o, ValueType.LONG, true)
+          () -> Rows.objectToNumber(FIELD_NAME, o, ValueType.LONG, true),
+          o + " (throw)"
       );
 
       MatcherAssert.assertThat(
@@ -168,24 +169,24 @@ public class RowsTest extends InitializedNullHandlingTest
   public void test_objectToNumber_typeFloat_noThrow()
   {
     for (final Map.Entry<Object, Number> entry : validCases.entrySet()) {
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
+          entry.getValue() != null ? entry.getValue().floatValue() : null,
+          Rows.objectToNumber(FIELD_NAME, entry.getKey(), ValueType.FLOAT, false),
           StringUtils.format(
               "%s (%s)",
               entry.getKey(),
               entry.getKey() == null ? null : entry.getKey().getClass().getSimpleName()
-          ),
-          entry.getValue() != null ? entry.getValue().floatValue() : null,
-          Rows.objectToNumber(FIELD_NAME, entry.getKey(), ValueType.FLOAT, false)
+          )
       );
     }
 
     for (final Object o : invalidCases) {
-      JupiterAssertions.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, ValueType.FLOAT, false));
+      Assertions.assertNull(Rows.objectToNumber(FIELD_NAME, o, ValueType.FLOAT, false), o + " (nothrow)");
 
-      final ParseException e = JupiterAssertions.assertThrows(
-          o + " (throw)",
+      final ParseException e = Assertions.assertThrows(
           ParseException.class,
-          () -> Rows.objectToNumber(FIELD_NAME, o, ValueType.FLOAT, true)
+          () -> Rows.objectToNumber(FIELD_NAME, o, ValueType.FLOAT, true),
+          o + " (throw)"
       );
 
       MatcherAssert.assertThat(
@@ -199,24 +200,24 @@ public class RowsTest extends InitializedNullHandlingTest
   public void test_objectToNumber_typeDouble_noThrow()
   {
     for (final Map.Entry<Object, Number> entry : validCases.entrySet()) {
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
+          entry.getValue() != null ? entry.getValue().doubleValue() : null,
+          Rows.objectToNumber(FIELD_NAME, entry.getKey(), ValueType.DOUBLE, false),
           StringUtils.format(
               "%s (%s)",
               entry.getKey(),
               entry.getKey() == null ? null : entry.getKey().getClass().getSimpleName()
-          ),
-          entry.getValue() != null ? entry.getValue().doubleValue() : null,
-          Rows.objectToNumber(FIELD_NAME, entry.getKey(), ValueType.DOUBLE, false)
+          )
       );
     }
 
     for (final Object o : invalidCases) {
-      JupiterAssertions.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, ValueType.DOUBLE, false));
+      Assertions.assertNull(Rows.objectToNumber(FIELD_NAME, o, ValueType.DOUBLE, false), o + " (nothrow)");
 
-      final ParseException e = JupiterAssertions.assertThrows(
-          o + " (throw)",
+      final ParseException e = Assertions.assertThrows(
           ParseException.class,
-          () -> Rows.objectToNumber(FIELD_NAME, o, ValueType.DOUBLE, true)
+          () -> Rows.objectToNumber(FIELD_NAME, o, ValueType.DOUBLE, true),
+          o + " (throw)"
       );
 
       MatcherAssert.assertThat(
@@ -230,19 +231,19 @@ public class RowsTest extends InitializedNullHandlingTest
   public void test_objectToStrings_nullInput()
   {
     // Null input should return empty list
-    JupiterAssertions.assertEquals(Collections.emptyList(), Rows.objectToStrings(null));
+    Assertions.assertEquals(Collections.emptyList(), Rows.objectToStrings(null));
   }
 
   @Test
   public void test_objectToStrings_singleString()
   {
-    JupiterAssertions.assertEquals(Collections.singletonList("foo"), Rows.objectToStrings("foo"));
+    Assertions.assertEquals(Collections.singletonList("foo"), Rows.objectToStrings("foo"));
   }
 
   @Test
   public void test_objectToStrings_listWithStrings()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         Arrays.asList("a", "b", "c"),
         Rows.objectToStrings(Arrays.asList("a", "b", "c"))
     );
@@ -253,30 +254,30 @@ public class RowsTest extends InitializedNullHandlingTest
   {
     // After the fix, null values in lists are preserved as actual null, not converted to "null" string
     List<String> result = Rows.objectToStrings(Arrays.asList("a", null, "b"));
-    JupiterAssertions.assertEquals(3, result.size());
-    JupiterAssertions.assertEquals("a", result.get(0));
-    JupiterAssertions.assertNull(result.get(1));
-    JupiterAssertions.assertEquals("b", result.get(2));
+    Assertions.assertEquals(3, result.size());
+    Assertions.assertEquals("a", result.get(0));
+    Assertions.assertNull(result.get(1));
+    Assertions.assertEquals("b", result.get(2));
   }
 
   @Test
   public void test_objectToStrings_listWithOnlyNull()
   {
     List<String> result = Rows.objectToStrings(Collections.singletonList(null));
-    JupiterAssertions.assertEquals(1, result.size());
-    JupiterAssertions.assertNull(result.get(0));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertNull(result.get(0));
   }
 
   @Test
   public void test_objectToStrings_listWithMultipleNulls()
   {
     List<String> result = Rows.objectToStrings(Arrays.asList(null, "a", null, "b", null));
-    JupiterAssertions.assertEquals(5, result.size());
-    JupiterAssertions.assertNull(result.get(0));
-    JupiterAssertions.assertEquals("a", result.get(1));
-    JupiterAssertions.assertNull(result.get(2));
-    JupiterAssertions.assertEquals("b", result.get(3));
-    JupiterAssertions.assertNull(result.get(4));
+    Assertions.assertEquals(5, result.size());
+    Assertions.assertNull(result.get(0));
+    Assertions.assertEquals("a", result.get(1));
+    Assertions.assertNull(result.get(2));
+    Assertions.assertEquals("b", result.get(3));
+    Assertions.assertNull(result.get(4));
   }
 
   @Test
@@ -284,17 +285,17 @@ public class RowsTest extends InitializedNullHandlingTest
   {
     // Arrays should also preserve null values
     List<String> result = Rows.objectToStrings(new Object[]{"a", null, "b"});
-    JupiterAssertions.assertEquals(3, result.size());
-    JupiterAssertions.assertEquals("a", result.get(0));
-    JupiterAssertions.assertNull(result.get(1));
-    JupiterAssertions.assertEquals("b", result.get(2));
+    Assertions.assertEquals(3, result.size());
+    Assertions.assertEquals("a", result.get(0));
+    Assertions.assertNull(result.get(1));
+    Assertions.assertEquals("b", result.get(2));
   }
 
   @Test
   public void test_objectToStrings_numberConversion()
   {
-    JupiterAssertions.assertEquals(Collections.singletonList("123"), Rows.objectToStrings(123));
-    JupiterAssertions.assertEquals(Collections.singletonList("123.45"), Rows.objectToStrings(123.45));
+    Assertions.assertEquals(Collections.singletonList("123"), Rows.objectToStrings(123));
+    Assertions.assertEquals(Collections.singletonList("123.45"), Rows.objectToStrings(123.45));
   }
 
   @Test
@@ -302,8 +303,8 @@ public class RowsTest extends InitializedNullHandlingTest
   {
     byte[] bytes = new byte[]{1, 2, 3};
     List<String> result = Rows.objectToStrings(bytes);
-    JupiterAssertions.assertEquals(1, result.size());
-    JupiterAssertions.assertEquals(StringUtils.encodeBase64String(bytes), result.get(0));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals(StringUtils.encodeBase64String(bytes), result.get(0));
   }
 
   @Test
@@ -321,12 +322,12 @@ public class RowsTest extends InitializedNullHandlingTest
     );
 
     List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
-    JupiterAssertions.assertEquals(2, groupKey.size());
-    JupiterAssertions.assertEquals(timestamp, groupKey.get(0));
+    Assertions.assertEquals(2, groupKey.size());
+    Assertions.assertEquals(timestamp, groupKey.get(0));
 
     @SuppressWarnings("unchecked")
     Map<String, Set<String>> dimensions = (Map<String, Set<String>>) groupKey.get(1);
-    JupiterAssertions.assertNotNull(dimensions);
+    Assertions.assertNotNull(dimensions);
   }
 
   @Test
@@ -345,18 +346,18 @@ public class RowsTest extends InitializedNullHandlingTest
 
     // This should not throw NPE after the fix
     List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
-    JupiterAssertions.assertEquals(2, groupKey.size());
-    JupiterAssertions.assertEquals(timestamp, groupKey.get(0));
+    Assertions.assertEquals(2, groupKey.size());
+    Assertions.assertEquals(timestamp, groupKey.get(0));
 
     @SuppressWarnings("unchecked")
     Map<String, Set<String>> dimensions = (Map<String, Set<String>>) groupKey.get(1);
     Set<String> dim1Values = dimensions.get("dim1");
 
     // The set should contain null, "a", "b" (with null sorted first due to naturalNullsFirst comparator)
-    JupiterAssertions.assertEquals(3, dim1Values.size());
-    JupiterAssertions.assertTrue(dim1Values.contains(null));
-    JupiterAssertions.assertTrue(dim1Values.contains("a"));
-    JupiterAssertions.assertTrue(dim1Values.contains("b"));
+    Assertions.assertEquals(3, dim1Values.size());
+    Assertions.assertTrue(dim1Values.contains(null));
+    Assertions.assertTrue(dim1Values.contains("a"));
+    Assertions.assertTrue(dim1Values.contains("b"));
   }
 
   @Test
@@ -373,14 +374,14 @@ public class RowsTest extends InitializedNullHandlingTest
     );
 
     List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
-    JupiterAssertions.assertEquals(2, groupKey.size());
+    Assertions.assertEquals(2, groupKey.size());
 
     @SuppressWarnings("unchecked")
     Map<String, Set<String>> dimensions = (Map<String, Set<String>>) groupKey.get(1);
     Set<String> dim1Values = dimensions.get("dim1");
 
-    JupiterAssertions.assertEquals(1, dim1Values.size());
-    JupiterAssertions.assertTrue(dim1Values.contains(null));
+    Assertions.assertEquals(1, dim1Values.size());
+    Assertions.assertTrue(dim1Values.contains(null));
   }
 
   @Test
@@ -405,11 +406,11 @@ public class RowsTest extends InitializedNullHandlingTest
 
     // Convert to list to check ordering
     List<String> valuesList = new ArrayList<>(dim1Values);
-    JupiterAssertions.assertEquals(4, valuesList.size());
+    Assertions.assertEquals(4, valuesList.size());
     // Null should be first due to naturalNullsFirst comparator
-    JupiterAssertions.assertNull(valuesList.get(0));
-    JupiterAssertions.assertEquals("a", valuesList.get(1));
-    JupiterAssertions.assertEquals("b", valuesList.get(2));
-    JupiterAssertions.assertEquals("c", valuesList.get(3));
+    Assertions.assertNull(valuesList.get(0));
+    Assertions.assertEquals("a", valuesList.get(1));
+    Assertions.assertEquals("b", valuesList.get(2));
+    Assertions.assertEquals("c", valuesList.get(3));
   }
 }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.collections.bitmap;
 
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -67,28 +67,28 @@ public class WrappedRoaringBitmapTest
   public void testGet()
   {
     for (int i = 0; i < DATA.length; i++) {
-      JupiterAssertions.assertEquals(String.valueOf(i), i < cardinality, bitmap.get(DATA[i]));
+      Assertions.assertEquals(i < cardinality, bitmap.get(DATA[i]), String.valueOf(i));
     }
 
-    JupiterAssertions.assertFalse(bitmap.get(-1));
-    JupiterAssertions.assertFalse(bitmap.get(Integer.MAX_VALUE));
+    Assertions.assertFalse(bitmap.get(-1));
+    Assertions.assertFalse(bitmap.get(Integer.MAX_VALUE));
   }
 
   @Test
   public void testSize()
   {
-    JupiterAssertions.assertEquals(cardinality, bitmap.size());
+    Assertions.assertEquals(cardinality, bitmap.size());
   }
 
   @Test
   public void testRemove()
   {
     bitmap.remove(Integer.MAX_VALUE);
-    JupiterAssertions.assertEquals(cardinality, bitmap.size());
+    Assertions.assertEquals(cardinality, bitmap.size());
 
     if (cardinality > 0) {
       bitmap.remove(DATA[0]);
-      JupiterAssertions.assertEquals(cardinality - 1, bitmap.size());
+      Assertions.assertEquals(cardinality - 1, bitmap.size());
     }
   }
 
@@ -96,7 +96,7 @@ public class WrappedRoaringBitmapTest
   public void testClear()
   {
     bitmap.clear();
-    JupiterAssertions.assertEquals(0, bitmap.size());
+    Assertions.assertEquals(0, bitmap.size());
   }
 
   @Test
@@ -107,10 +107,10 @@ public class WrappedRoaringBitmapTest
     int i = 0;
     while (iterator.hasNext()) {
       final int n = iterator.next();
-      JupiterAssertions.assertEquals(String.valueOf(i), DATA[i], n);
+      Assertions.assertEquals(DATA[i], n, String.valueOf(i));
       i++;
     }
-    JupiterAssertions.assertEquals("number of elements", i, cardinality);
+    Assertions.assertEquals(i, cardinality, "number of elements");
   }
 
   @Test
@@ -121,13 +121,13 @@ public class WrappedRoaringBitmapTest
     bitmap.serialize(byteBuffer);
     byteBuffer.flip();
     ImmutableBitmap immutableBitmap = new RoaringBitmapFactory().mapImmutableBitmap(byteBuffer);
-    JupiterAssertions.assertEquals(cardinality, immutableBitmap.size());
+    Assertions.assertEquals(cardinality, immutableBitmap.size());
   }
 
   @Test
   public void testToByteArray()
   {
     ImmutableBitmap immutableBitmap = new RoaringBitmapFactory().mapImmutableBitmap(ByteBuffer.wrap(bitmap.toBytes()));
-    JupiterAssertions.assertEquals(cardinality, immutableBitmap.size());
+    Assertions.assertEquals(cardinality, immutableBitmap.size());
   }
 }

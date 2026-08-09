@@ -40,7 +40,7 @@ import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumn
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
 import org.apache.druid.query.rowsandcols.semantic.WireTransferable;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
@@ -71,8 +71,8 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"test\": \"this is an injection test\", \"\": \"nice try\" }";
       final ClassWithJacksonInject object = mapper.readValue(json, ClassWithJacksonInject.class);
-      JupiterAssertions.assertEquals("this is an injection test", object.test);
-      JupiterAssertions.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.test);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -85,8 +85,8 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"test\": \"this is an injection test\" }";
       final ClassWithJacksonInject object = mapper.readValue(json, ClassWithJacksonInject.class);
-      JupiterAssertions.assertEquals("this is an injection test", object.test);
-      JupiterAssertions.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.test);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -99,8 +99,8 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"test\": \"this is an injection test\", \"\": \"nice try\" }";
       final ClassWithEmptyProperty object = mapper.readValue(json, ClassWithEmptyProperty.class);
-      JupiterAssertions.assertEquals("this is an injection test", object.test);
-      JupiterAssertions.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.test);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -130,10 +130,10 @@ public class DruidSecondaryModuleTest
           "", new ClassWithJacksonInject("value2", injector.getInstance(InjectedParameter.class)))
       );
       final String jsonWritten = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
-      JupiterAssertions.assertEquals(json, jsonWritten);
+      Assertions.assertEquals(json, jsonWritten);
       final ClassWithMapAndJacksonInject objectRead = mapper.readValue(json, ClassWithMapAndJacksonInject.class);
-      JupiterAssertions.assertEquals(object, objectRead);
-      JupiterAssertions.assertEquals("empty", objectRead.getStringStringMap().get(""));
+      Assertions.assertEquals(object, objectRead);
+      Assertions.assertEquals("empty", objectRead.getStringStringMap().get(""));
     }
 
     @Test
@@ -180,10 +180,10 @@ public class DruidSecondaryModuleTest
                           "", new ClassWithJacksonInject("value2", injector.getInstance(InjectedParameter.class)))
       );
       final String jsonWritten = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
-      JupiterAssertions.assertEquals(expectedSerializedJson, jsonWritten);
+      Assertions.assertEquals(expectedSerializedJson, jsonWritten);
       final ClassWithMapAndJacksonInject objectRead = mapper.readValue(json, ClassWithMapAndJacksonInject.class);
-      JupiterAssertions.assertEquals(object, objectRead);
-      JupiterAssertions.assertEquals("empty", objectRead.getStringStringMap().get(""));
+      Assertions.assertEquals(object, objectRead);
+      Assertions.assertEquals("empty", objectRead.getStringStringMap().get(""));
     }
 
     private static class ClassWithJacksonInject
@@ -313,7 +313,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[\"this is\", \"an injection test\"]";
       final ClassWithConstructorOfEmptyName object = mapper.readValue(json, ClassWithConstructorOfEmptyName.class);
-      JupiterAssertions.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
+      Assertions.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
     }
 
     @Test
@@ -325,7 +325,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[]";
       final ClassWithConstructorOfEmptyName object = mapper.readValue(json, ClassWithConstructorOfEmptyName.class);
-      JupiterAssertions.assertEquals(ImmutableList.of(), object.getTest());
+      Assertions.assertEquals(ImmutableList.of(), object.getTest());
     }
 
     @Test
@@ -337,7 +337,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[\"this is\", \"an injection test\"]";
       final ClassWithFactoryMethodOfEmptyName object = mapper.readValue(json, ClassWithFactoryMethodOfEmptyName.class);
-      JupiterAssertions.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
+      Assertions.assertEquals(ImmutableList.of("this is", "an injection test"), object.getTest());
     }
 
     @Test
@@ -349,7 +349,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "[]";
       final ClassWithFactoryMethodOfEmptyName object = mapper.readValue(json, ClassWithFactoryMethodOfEmptyName.class);
-      JupiterAssertions.assertEquals(ImmutableList.of(), object.getTest());
+      Assertions.assertEquals(ImmutableList.of(), object.getTest());
     }
 
     @Test
@@ -362,7 +362,7 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{}";
       final ClassOfEmptyConstructor object = mapper.readValue(json, ClassOfEmptyConstructor.class);
-      JupiterAssertions.assertEquals("empty constructor", object.val);
+      Assertions.assertEquals("empty constructor", object.val);
     }
 
     private static class ClassWithConstructorOfEmptyName
@@ -428,10 +428,10 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "{\"val\": \"this is an injection test\", \"valLen\": 5, \"\": \"nice try\" }";
       final ClassOfMultipleJsonCreators object = mapper.readValue(json, ClassOfMultipleJsonCreators.class);
-      JupiterAssertions.assertEquals("this is an injection test", object.val);
-      JupiterAssertions.assertEquals(5, object.valLen);
-      JupiterAssertions.assertNotNull(object.injected);
-      JupiterAssertions.assertEquals(PROPERTY_VALUE, object.injected.val);
+      Assertions.assertEquals("this is an injection test", object.val);
+      Assertions.assertEquals(5, object.valLen);
+      Assertions.assertNotNull(object.injected);
+      Assertions.assertEquals(PROPERTY_VALUE, object.injected.val);
     }
 
     @Test
@@ -444,9 +444,9 @@ public class DruidSecondaryModuleTest
       final ObjectMapper mapper = makeObjectMapper(injector);
       final String json = "\"this is an injection test\"";
       final ClassOfMultipleJsonCreators object = mapper.readValue(json, ClassOfMultipleJsonCreators.class);
-      JupiterAssertions.assertEquals("this is an injection test", object.val);
-      JupiterAssertions.assertEquals(object.val.length(), object.valLen);
-      JupiterAssertions.assertNull(object.injected);
+      Assertions.assertEquals("this is an injection test", object.val);
+      Assertions.assertEquals(object.val.length(), object.valLen);
+      Assertions.assertNull(object.injected);
     }
 
     private static class ClassOfMultipleJsonCreators
@@ -548,7 +548,7 @@ public class DruidSecondaryModuleTest
       final byte[] bytes = om.writeValueAsBytes(frc);
 
       final ColumnBasedFrameRowsAndColumns frc2 = (ColumnBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
-      JupiterAssertions.assertEquals(frc, frc2);
+      Assertions.assertEquals(frc, frc2);
     }
 
     @Test
@@ -567,7 +567,7 @@ public class DruidSecondaryModuleTest
       final byte[] bytes = om.writeValueAsBytes(frc);
 
       final RowBasedFrameRowsAndColumns frc2 = (RowBasedFrameRowsAndColumns) om.readValue(bytes, RowsAndColumns.class);
-      JupiterAssertions.assertEquals(frc, frc2);
+      Assertions.assertEquals(frc, frc2);
     }
 
     @Test
@@ -605,7 +605,7 @@ public class DruidSecondaryModuleTest
           bytes,
           RowsAndColumns.class
       );
-      JupiterAssertions.assertEquals(frc, frc2);
+      Assertions.assertEquals(frc, frc2);
     }
 
     @Test
@@ -643,7 +643,7 @@ public class DruidSecondaryModuleTest
           bytes,
           RowsAndColumns.class
       );
-      JupiterAssertions.assertEquals(frc, frc2);
+      Assertions.assertEquals(frc, frc2);
     }
   }
 }

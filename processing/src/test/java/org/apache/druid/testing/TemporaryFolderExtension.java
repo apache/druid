@@ -29,17 +29,26 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import java.io.File;
 import java.io.IOException;
 
-public class TempDirExtension implements BeforeAllCallback, BeforeEachCallback, AfterAllCallback, AfterEachCallback
+/**
+ * JUnit 5 extension that creates a temporary folder for each test and removes it afterward.
+ * Register it as follows:
+ *
+ * <pre>{@code
+ * @RegisterExtension
+ * public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+ * }</pre>
+ */
+public class TemporaryFolderExtension implements BeforeAllCallback, BeforeEachCallback, AfterAllCallback, AfterEachCallback
 {
   private final File parentDirectory;
   private File root;
 
-  public TempDirExtension()
+  public TemporaryFolderExtension()
   {
     this(null);
   }
 
-  public TempDirExtension(final File parentDirectory)
+  public TemporaryFolderExtension(final File parentDirectory)
   {
     this.parentDirectory = parentDirectory;
   }

@@ -34,8 +34,8 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.testing.JupiterAssertions;
 import org.easymock.EasyMock;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
@@ -68,7 +68,7 @@ public class CombiningInputSourceTest
     ));
     final byte[] json = mapper.writeValueAsBytes(combiningInputSource);
     final CombiningInputSource fromJson = (CombiningInputSource) mapper.readValue(json, InputSource.class);
-    JupiterAssertions.assertEquals(combiningInputSource, fromJson);
+    Assertions.assertEquals(combiningInputSource, fromJson);
   }
 
   @Test
@@ -86,7 +86,7 @@ public class CombiningInputSourceTest
     Set<String> expectedTypes = new HashSet<>();
     expectedTypes.addAll(fileSource.getTypes());
     expectedTypes.addAll(uriInputSource.getTypes());
-    JupiterAssertions.assertEquals(expectedTypes, combiningInputSource.getTypes());
+    Assertions.assertEquals(expectedTypes, combiningInputSource.getTypes());
   }
 
   @Test
@@ -107,7 +107,7 @@ public class CombiningInputSourceTest
         fileSource,
         uriInputSource
     ));
-    JupiterAssertions.assertEquals(combiningInputSource.estimateNumSplits(
+    Assertions.assertEquals(combiningInputSource.estimateNumSplits(
         new NoopInputFormat(),
         new MaxSizeSplitHintSpec(
             new HumanReadableBytes(5L),
@@ -142,18 +142,18 @@ public class CombiningInputSourceTest
             null
         )
     ).collect(Collectors.toList());
-    JupiterAssertions.assertEquals(6, combinedInputSplits.size());
+    Assertions.assertEquals(6, combinedInputSplits.size());
     for (int i = 0; i < 3; i++) {
       Pair<SplittableInputSource, InputSplit> splitPair = (Pair) combinedInputSplits.get(i).get();
       InputSplit<File> fileSplits = splitPair.rhs;
-      JupiterAssertions.assertTrue(splitPair.lhs instanceof TestFileInputSource);
-      JupiterAssertions.assertEquals(5, fileSplits.get().length());
+      Assertions.assertTrue(splitPair.lhs instanceof TestFileInputSource);
+      Assertions.assertEquals(5, fileSplits.get().length());
     }
     for (int i = 3; i < combinedInputSplits.size(); i++) {
       Pair<SplittableInputSource, InputSplit> splitPair = (Pair) combinedInputSplits.get(i).get();
       InputSplit<URI> fileSplits = splitPair.rhs;
-      JupiterAssertions.assertTrue(splitPair.lhs instanceof TestUriInputSource);
-      JupiterAssertions.assertEquals(URI.create("http://test.com/http-test" + i), fileSplits.get());
+      Assertions.assertTrue(splitPair.lhs instanceof TestUriInputSource);
+      Assertions.assertEquals(URI.create("http://test.com/http-test" + i), fileSplits.get());
     }
   }
 
@@ -171,7 +171,7 @@ public class CombiningInputSourceTest
     TestUriInputSource urlInputSourceWithSplit = (TestUriInputSource) combiningInputSource.withSplit(new InputSplit(Pair.of(
         uriInputSource,
         testUriSplit)));
-    JupiterAssertions.assertEquals(uriInputSource, urlInputSourceWithSplit);
+    Assertions.assertEquals(uriInputSource, urlInputSourceWithSplit);
 
   }
 
@@ -189,7 +189,7 @@ public class CombiningInputSourceTest
         uriInputSource,
         fileSource
     ));
-    JupiterAssertions.assertTrue(combiningInputSource.needsFormat());
+    Assertions.assertTrue(combiningInputSource.needsFormat());
 
   }
 

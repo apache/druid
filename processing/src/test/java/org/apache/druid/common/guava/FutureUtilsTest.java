@@ -27,12 +27,12 @@ import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.testing.JupiterAssertions;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -71,13 +71,13 @@ public class FutureUtilsTest
   public void test_get_ok() throws Exception
   {
     final String s = FutureUtils.get(Futures.immediateFuture("x"), true);
-    JupiterAssertions.assertEquals("x", s);
+    Assertions.assertEquals("x", s);
   }
 
   @Test
   public void test_get_failed()
   {
-    final ExecutionException e = JupiterAssertions.assertThrows(
+    final ExecutionException e = Assertions.assertThrows(
         ExecutionException.class,
         () -> FutureUtils.get(Futures.immediateFailedFuture(new ISE("oh no")), true)
     );
@@ -105,13 +105,13 @@ public class FutureUtilsTest
     });
 
     runningLatch.await();
-    JupiterAssertions.assertTrue(execResult.cancel(true));
+    Assertions.assertTrue(execResult.cancel(true));
     exec.shutdown();
 
-    JupiterAssertions.assertTrue(exec.awaitTermination(1, TimeUnit.MINUTES));
+    Assertions.assertTrue(exec.awaitTermination(1, TimeUnit.MINUTES));
     exec = null;
 
-    JupiterAssertions.assertTrue(neverGoingToResolve.isCancelled());
+    Assertions.assertTrue(neverGoingToResolve.isCancelled());
 
     final Throwable e = exceptionFromOtherThread.get();
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
@@ -137,14 +137,14 @@ public class FutureUtilsTest
     });
 
     runningLatch.await();
-    JupiterAssertions.assertTrue(execResult.cancel(true));
+    Assertions.assertTrue(execResult.cancel(true));
     exec.shutdown();
 
-    JupiterAssertions.assertTrue(exec.awaitTermination(1, TimeUnit.MINUTES));
+    Assertions.assertTrue(exec.awaitTermination(1, TimeUnit.MINUTES));
     exec = null;
 
-    JupiterAssertions.assertFalse(neverGoingToResolve.isCancelled());
-    JupiterAssertions.assertFalse(neverGoingToResolve.isDone());
+    Assertions.assertFalse(neverGoingToResolve.isCancelled());
+    Assertions.assertFalse(neverGoingToResolve.isDone());
 
     final Throwable e = exceptionFromOtherThread.get();
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
@@ -155,13 +155,13 @@ public class FutureUtilsTest
   public void test_getUnchecked_ok()
   {
     final String s = FutureUtils.getUnchecked(Futures.immediateFuture("x"), true);
-    JupiterAssertions.assertEquals("x", s);
+    Assertions.assertEquals("x", s);
   }
 
   @Test
   public void test_getUnchecked_failed()
   {
-    final RuntimeException e = JupiterAssertions.assertThrows(
+    final RuntimeException e = Assertions.assertThrows(
         RuntimeException.class,
         () -> FutureUtils.getUnchecked(Futures.immediateFailedFuture(new ISE("oh no")), true)
     );
@@ -174,13 +174,13 @@ public class FutureUtilsTest
   public void test_getUncheckedImmediately_ok()
   {
     final String s = FutureUtils.getUncheckedImmediately(Futures.immediateFuture("x"));
-    JupiterAssertions.assertEquals("x", s);
+    Assertions.assertEquals("x", s);
   }
 
   @Test
   public void test_getUncheckedImmediately_failed()
   {
-    final RuntimeException e = JupiterAssertions.assertThrows(
+    final RuntimeException e = Assertions.assertThrows(
         RuntimeException.class,
         () -> FutureUtils.getUncheckedImmediately(Futures.immediateFailedFuture(new ISE("oh no")))
     );
@@ -192,7 +192,7 @@ public class FutureUtilsTest
   @Test
   public void test_getUncheckedImmediately_notResolved()
   {
-    JupiterAssertions.assertThrows(
+    Assertions.assertThrows(
         IllegalStateException.class,
         () -> FutureUtils.getUncheckedImmediately(SettableFuture.create())
     );
@@ -201,7 +201,7 @@ public class FutureUtilsTest
   @Test
   public void test_transform() throws Exception
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         "xy",
         FutureUtils.transform(Futures.immediateFuture("x"), s -> s + "y").get()
     );
@@ -217,8 +217,8 @@ public class FutureUtilsTest
         }
     );
 
-    JupiterAssertions.assertTrue(future.isDone());
-    final ExecutionException e = JupiterAssertions.assertThrows(
+    Assertions.assertTrue(future.isDone());
+    final ExecutionException e = Assertions.assertThrows(
         ExecutionException.class,
         future::get
     );
@@ -237,7 +237,7 @@ public class FutureUtilsTest
   @Test
   public void test_transformAsync() throws Exception
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         "xy",
         FutureUtils.transformAsync(Futures.immediateFuture("x"), s -> Futures.immediateFuture(s + "y")).get()
     );
@@ -253,7 +253,7 @@ public class FutureUtilsTest
         }
     );
 
-    final ExecutionException e = JupiterAssertions.assertThrows(
+    final ExecutionException e = Assertions.assertThrows(
         ExecutionException.class,
         f::get
     );
@@ -278,7 +278,7 @@ public class FutureUtilsTest
     futures.add(Futures.immediateFuture("bar"));
     futures.add(Futures.immediateFuture(null));
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(Either.value("foo"), Either.value("bar"), Either.value(null)),
         FutureUtils.coalesce(futures).get()
     );
@@ -294,7 +294,7 @@ public class FutureUtilsTest
     futures.add(Futures.immediateFailedFuture(e));
     futures.add(Futures.immediateFuture(null));
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(Either.value("foo"), Either.error(e), Either.value(null)),
         FutureUtils.coalesce(futures).get()
     );
@@ -310,10 +310,10 @@ public class FutureUtilsTest
     futures.add(Futures.immediateFuture(null));
 
     final List<Either<Throwable, String>> results = FutureUtils.coalesce(futures).get();
-    JupiterAssertions.assertEquals(3, results.size());
-    JupiterAssertions.assertEquals(Either.value("foo"), results.get(0));
-    JupiterAssertions.assertTrue(results.get(1).isError());
-    JupiterAssertions.assertEquals(Either.value(null), results.get(2));
+    Assertions.assertEquals(3, results.size());
+    Assertions.assertEquals(Either.value("foo"), results.get(0));
+    Assertions.assertTrue(results.get(1).isError());
+    Assertions.assertEquals(Either.value(null), results.get(2));
 
     MatcherAssert.assertThat(
         results.get(1).error(),
@@ -333,7 +333,7 @@ public class FutureUtilsTest
 
     final ListenableFuture<List<Either<Throwable, String>>> coalesced = FutureUtils.coalesce(futures);
 
-    JupiterAssertions.assertThrows(
+    Assertions.assertThrows(
         TimeoutException.class,
         () -> coalesced.get(10, TimeUnit.MILLISECONDS)
     );
@@ -352,10 +352,10 @@ public class FutureUtilsTest
     final ListenableFuture<List<Either<Throwable, String>>> coalesced = FutureUtils.coalesce(futures);
     coalesced.cancel(true);
 
-    JupiterAssertions.assertTrue(coalesced.isCancelled());
+    Assertions.assertTrue(coalesced.isCancelled());
 
     // All input futures are canceled too.
-    JupiterAssertions.assertTrue(unresolvedFuture.isCancelled());
+    Assertions.assertTrue(unresolvedFuture.isCancelled());
   }
 
   @Test
@@ -368,8 +368,8 @@ public class FutureUtilsTest
         baggageHandled::incrementAndGet
     );
     future.set(3L);
-    JupiterAssertions.assertEquals(3L, (long) futureWithBaggage.get());
-    JupiterAssertions.assertEquals(1, baggageHandled.get());
+    Assertions.assertEquals(3L, (long) futureWithBaggage.get());
+    Assertions.assertEquals(1, baggageHandled.get());
   }
 
   @Test
@@ -383,9 +383,9 @@ public class FutureUtilsTest
     );
     future.setException(new ISE("error!"));
 
-    final ExecutionException e = JupiterAssertions.assertThrows(ExecutionException.class, futureWithBaggage::get);
+    final ExecutionException e = Assertions.assertThrows(ExecutionException.class, futureWithBaggage::get);
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(IllegalStateException.class));
     MatcherAssert.assertThat(e.getCause(), ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("error!")));
-    JupiterAssertions.assertEquals(1, baggageHandled.get());
+    Assertions.assertEquals(1, baggageHandled.get());
   }
 }

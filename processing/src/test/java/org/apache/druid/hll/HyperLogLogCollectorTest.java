@@ -26,7 +26,7 @@ import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -85,12 +85,12 @@ public class HyperLogLogCollectorTest
       HyperLogLogCollector folded = HyperLogLogCollector.makeLatestCollector();
 
       folded.fold(oneHalf);
-      JupiterAssertions.assertEquals(oneHalf, folded);
-      JupiterAssertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(oneHalf, folded);
+      Assertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
 
       folded.fold(otherHalf);
-      JupiterAssertions.assertEquals(allCombined, folded);
-      JupiterAssertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(allCombined, folded);
+      Assertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
     }
   }
 
@@ -137,8 +137,8 @@ public class HyperLogLogCollectorTest
     log.info("Simple  buffer cardinality " + simple.estimateCardinality());
     log.info("Rolling cardinality estimate off by %4.1f%%", 100 * (1 - rolling.estimateCardinality() / n));
 
-    JupiterAssertions.assertEquals(n, simple.estimateCardinality(), n * 0.05);
-    JupiterAssertions.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
+    Assertions.assertEquals(n, simple.estimateCardinality(), n * 0.05);
+    Assertions.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
   }
 
   @Disabled
@@ -162,7 +162,7 @@ public class HyperLogLogCollectorTest
     log.info("Rolling buffer cardinality " + rolling.estimateCardinality());
     log.info("Rolling cardinality estimate off by %4.1f%%", 100 * (1 - rolling.estimateCardinality() / n));
 
-    JupiterAssertions.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
+    Assertions.assertEquals(n, rolling.estimateCardinality(), n * 0.05);
   }
 
   @Test
@@ -189,12 +189,12 @@ public class HyperLogLogCollectorTest
       HyperLogLogCollector folded = HyperLogLogCollector.makeLatestCollector();
 
       folded.fold(oneHalf.toByteBuffer());
-      JupiterAssertions.assertEquals(oneHalf, folded);
-      JupiterAssertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(oneHalf, folded);
+      Assertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
 
       folded.fold(otherHalf.toByteBuffer());
-      JupiterAssertions.assertEquals(allCombined, folded);
-      JupiterAssertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(allCombined, folded);
+      Assertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
     }
   }
 
@@ -225,12 +225,12 @@ public class HyperLogLogCollectorTest
       );
 
       folded.fold(oneHalf.toByteBuffer());
-      JupiterAssertions.assertEquals(oneHalf, folded);
-      JupiterAssertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(oneHalf, folded);
+      Assertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
 
       folded.fold(otherHalf.toByteBuffer());
-      JupiterAssertions.assertEquals(allCombined, folded);
-      JupiterAssertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(allCombined, folded);
+      Assertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
     }
   }
 
@@ -264,12 +264,12 @@ public class HyperLogLogCollectorTest
       );
 
       folded.fold(oneHalf.toByteBuffer());
-      JupiterAssertions.assertEquals(oneHalf, folded);
-      JupiterAssertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(oneHalf, folded);
+      Assertions.assertEquals(oneHalf.estimateCardinality(), folded.estimateCardinality(), 0.0d);
 
       folded.fold(otherHalf.toByteBuffer());
-      JupiterAssertions.assertEquals(allCombined, folded);
-      JupiterAssertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
+      Assertions.assertEquals(allCombined, folded);
+      Assertions.assertEquals(allCombined.estimateCardinality(), folded.estimateCardinality(), 0.0d);
     }
   }
 
@@ -285,14 +285,14 @@ public class HyperLogLogCollectorTest
 
     ByteBuffer outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 1);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 2047);
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 1);
+    Assertions.assertEquals(outBuffer.getShort(), 2047);
     outBuffer.get();
     outBuffer.getShort();
-    JupiterAssertions.assertEquals(outBuffer.get(), 0x10);
+    Assertions.assertEquals(outBuffer.get(), 0x10);
     while (outBuffer.hasRemaining()) {
-      JupiterAssertions.assertEquals(outBuffer.get(), 0x11);
+      Assertions.assertEquals(outBuffer.get(), 0x11);
     }
 
     collector = HyperLogLogCollector.makeLatestCollector();
@@ -301,14 +301,14 @@ public class HyperLogLogCollectorTest
 
     outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 1);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 2047);
-    JupiterAssertions.assertEquals(outBuffer.get(), 0);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
-    JupiterAssertions.assertEquals(outBuffer.get(), 0x10);
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 1);
+    Assertions.assertEquals(outBuffer.getShort(), 2047);
+    Assertions.assertEquals(outBuffer.get(), 0);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertEquals(outBuffer.get(), 0x10);
     while (outBuffer.hasRemaining()) {
-      JupiterAssertions.assertEquals(outBuffer.get(), 0x11);
+      Assertions.assertEquals(outBuffer.get(), 0x11);
     }
   }
 
@@ -323,11 +323,11 @@ public class HyperLogLogCollectorTest
 
     // make sure the original buffer gets modified
     collector.fold(biggerOffset);
-    JupiterAssertions.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
+    Assertions.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
 
     // make sure the original buffer gets modified
     collector.fold(smallerOffset);
-    JupiterAssertions.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
+    Assertions.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
   }
 
   @Test
@@ -342,14 +342,14 @@ public class HyperLogLogCollectorTest
 
     ByteBuffer outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 1);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 2047);
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 1);
+    Assertions.assertEquals(outBuffer.getShort(), 2047);
     outBuffer.get();
     outBuffer.getShort();
-    JupiterAssertions.assertEquals(outBuffer.get(), 0x10);
+    Assertions.assertEquals(outBuffer.get(), 0x10);
     while (outBuffer.hasRemaining()) {
-      JupiterAssertions.assertEquals(outBuffer.get(), 0x11);
+      Assertions.assertEquals(outBuffer.get(), 0x11);
     }
 
     collector = HyperLogLogCollector.makeLatestCollector();
@@ -358,14 +358,14 @@ public class HyperLogLogCollectorTest
 
     outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 1);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 2047);
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 1);
+    Assertions.assertEquals(outBuffer.getShort(), 2047);
     outBuffer.get();
     outBuffer.getShort();
-    JupiterAssertions.assertEquals(outBuffer.get(), 0x10);
+    Assertions.assertEquals(outBuffer.get(), 0x10);
     while (outBuffer.hasRemaining()) {
-      JupiterAssertions.assertEquals(outBuffer.get(), 0x11);
+      Assertions.assertEquals(outBuffer.get(), 0x11);
     }
   }
 
@@ -390,12 +390,12 @@ public class HyperLogLogCollectorTest
 
     ByteBuffer outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 2);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 2);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
     outBuffer.get();
     outBuffer.getShort();
-    JupiterAssertions.assertFalse(outBuffer.hasRemaining());
+    Assertions.assertFalse(outBuffer.hasRemaining());
 
     collector = HyperLogLogCollector.makeLatestCollector();
     collector.fold(smallerOffset);
@@ -403,12 +403,12 @@ public class HyperLogLogCollectorTest
 
     outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 2);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 2);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
     outBuffer.get();
     outBuffer.getShort();
-    JupiterAssertions.assertFalse(outBuffer.hasRemaining());
+    Assertions.assertFalse(outBuffer.hasRemaining());
   }
 
   @Test
@@ -434,12 +434,12 @@ public class HyperLogLogCollectorTest
 
     ByteBuffer outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), VersionOneHyperLogLogCollector.VERSION);
-    JupiterAssertions.assertEquals(outBuffer.get(), 1);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertEquals(outBuffer.get(), VersionOneHyperLogLogCollector.VERSION);
+    Assertions.assertEquals(outBuffer.get(), 1);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
     outBuffer.get();
     outBuffer.getShort();
-    JupiterAssertions.assertFalse(outBuffer.hasRemaining());
+    Assertions.assertFalse(outBuffer.hasRemaining());
   }
 
   @Test
@@ -455,12 +455,12 @@ public class HyperLogLogCollectorTest
 
     ByteBuffer outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 2);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
-    JupiterAssertions.assertEquals(outBuffer.get(), 0);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
-    JupiterAssertions.assertFalse(outBuffer.hasRemaining());
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 2);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertEquals(outBuffer.get(), 0);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertFalse(outBuffer.hasRemaining());
 
     collector = HyperLogLogCollector.makeLatestCollector();
     collector.fold(sparse);
@@ -468,12 +468,12 @@ public class HyperLogLogCollectorTest
 
     outBuffer = collector.toByteBuffer();
 
-    JupiterAssertions.assertEquals(outBuffer.get(), collector.getVersion());
-    JupiterAssertions.assertEquals(outBuffer.get(), 2);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
-    JupiterAssertions.assertEquals(outBuffer.get(), 0);
-    JupiterAssertions.assertEquals(outBuffer.getShort(), 0);
-    JupiterAssertions.assertFalse(outBuffer.hasRemaining());
+    Assertions.assertEquals(outBuffer.get(), collector.getVersion());
+    Assertions.assertEquals(outBuffer.get(), 2);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertEquals(outBuffer.get(), 0);
+    Assertions.assertEquals(outBuffer.getShort(), 0);
+    Assertions.assertFalse(outBuffer.hasRemaining());
   }
 
   private ByteBuffer makeCollectorBuffer(int offset, byte initialBytes, int remainingBytes)
@@ -544,8 +544,8 @@ public class HyperLogLogCollectorTest
       folded.fold(smallVals);
       folded.fold(bigVals);
       final double expected = all.estimateCardinality();
-      JupiterAssertions.assertEquals(expected, folded.estimateCardinality(), expected * 0.025);
-      JupiterAssertions.assertEquals(numThings, folded.estimateCardinality(), numThings * 0.05);
+      Assertions.assertEquals(expected, folded.estimateCardinality(), expected * 0.025);
+      Assertions.assertEquals(numThings, folded.estimateCardinality(), numThings * 0.05);
     }
   }
 
@@ -578,8 +578,8 @@ public class HyperLogLogCollectorTest
       folded.fold(evenVals);
       folded.fold(oddVals);
       final double expected = all.estimateCardinality();
-      JupiterAssertions.assertEquals(expected, folded.estimateCardinality(), expected * 0.025);
-      JupiterAssertions.assertEquals(numThings, folded.estimateCardinality(), numThings * 0.05);
+      Assertions.assertEquals(expected, folded.estimateCardinality(), expected * 0.025);
+      Assertions.assertEquals(numThings, folded.estimateCardinality(), numThings * 0.05);
     }
   }
 
@@ -601,12 +601,12 @@ public class HyperLogLogCollectorTest
     for (int i = 0; i < valsToCheck[valsToCheck.length - 1]; ++i) {
       collector.add(fn.hashLong(random.nextLong()).asBytes());
       if (i == valsToCheck[valsToCheckIndex]) {
-        JupiterAssertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
+        Assertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
         ++valsToCheckIndex;
       }
     }
-    JupiterAssertions.assertEquals(expectedVals.length, valsToCheckIndex + 1);
-    JupiterAssertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
+    Assertions.assertEquals(expectedVals.length, valsToCheckIndex + 1);
+    Assertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
   }
 
   @Test
@@ -631,12 +631,12 @@ public class HyperLogLogCollectorTest
     for (int i = 0; i < valsToCheck[valsToCheck.length - 1]; ++i) {
       collector.add(fn.hashLong(random.nextLong()).asBytes());
       if (i == valsToCheck[valsToCheckIndex]) {
-        JupiterAssertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
+        Assertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
         ++valsToCheckIndex;
       }
     }
-    JupiterAssertions.assertEquals(expectedVals.length, valsToCheckIndex + 1);
-    JupiterAssertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
+    Assertions.assertEquals(expectedVals.length, valsToCheckIndex + 1);
+    Assertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
   }
 
   @Test
@@ -661,12 +661,12 @@ public class HyperLogLogCollectorTest
     for (int i = 0; i < valsToCheck[valsToCheck.length - 1]; ++i) {
       collector.add(fn.hashLong(random.nextLong()).asBytes());
       if (i == valsToCheck[valsToCheckIndex]) {
-        JupiterAssertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
+        Assertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
         ++valsToCheckIndex;
       }
     }
-    JupiterAssertions.assertEquals(expectedVals.length, valsToCheckIndex + 1);
-    JupiterAssertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
+    Assertions.assertEquals(expectedVals.length, valsToCheckIndex + 1);
+    Assertions.assertEquals(expectedVals[valsToCheckIndex], collector.estimateCardinality(), 0.0d);
   }
 
   @Test
@@ -679,7 +679,7 @@ public class HyperLogLogCollectorTest
       collector.add(fn.hashLong(random.nextLong()).asBytes());
     }
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         collector.estimateCardinality(), HyperLogLogCollector.estimateByteBuffer(collector.toByteBuffer()), 0.0d
     );
   }
@@ -694,13 +694,13 @@ public class HyperLogLogCollectorTest
 
     // highest possible bit position is 64
     collector.add(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-    JupiterAssertions.assertEquals(8.5089685793441677E17, collector.estimateCardinality(), 1000);
+    Assertions.assertEquals(8.5089685793441677E17, collector.estimateCardinality(), 1000);
 
     // this might happen once in a million years if you hash a billion values a second
     fillBuckets(collector, (byte) 0, (byte) 63);
     collector.add(new byte[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
 
-    JupiterAssertions.assertEquals(Double.POSITIVE_INFINITY, collector.estimateCardinality(), 1000);
+    Assertions.assertEquals(Double.POSITIVE_INFINITY, collector.estimateCardinality(), 1000);
   }
 
   @Test
@@ -708,20 +708,20 @@ public class HyperLogLogCollectorTest
   {
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add((short) 23, (byte) 16);
-    JupiterAssertions.assertEquals(23, collector.getMaxOverflowRegister());
-    JupiterAssertions.assertEquals(16, collector.getMaxOverflowValue());
-    JupiterAssertions.assertEquals(0, collector.getRegisterOffset());
-    JupiterAssertions.assertEquals(0, collector.getNumNonZeroRegisters());
+    Assertions.assertEquals(23, collector.getMaxOverflowRegister());
+    Assertions.assertEquals(16, collector.getMaxOverflowValue());
+    Assertions.assertEquals(0, collector.getRegisterOffset());
+    Assertions.assertEquals(0, collector.getNumNonZeroRegisters());
 
     collector.add((short) 56, (byte) 17);
-    JupiterAssertions.assertEquals(56, collector.getMaxOverflowRegister());
-    JupiterAssertions.assertEquals(17, collector.getMaxOverflowValue());
+    Assertions.assertEquals(56, collector.getMaxOverflowRegister());
+    Assertions.assertEquals(17, collector.getMaxOverflowValue());
 
     collector.add((short) 43, (byte) 16);
-    JupiterAssertions.assertEquals(56, collector.getMaxOverflowRegister());
-    JupiterAssertions.assertEquals(17, collector.getMaxOverflowValue());
-    JupiterAssertions.assertEquals(0, collector.getRegisterOffset());
-    JupiterAssertions.assertEquals(0, collector.getNumNonZeroRegisters());
+    Assertions.assertEquals(56, collector.getMaxOverflowRegister());
+    Assertions.assertEquals(17, collector.getMaxOverflowValue());
+    Assertions.assertEquals(0, collector.getRegisterOffset());
+    Assertions.assertEquals(0, collector.getNumNonZeroRegisters());
   }
 
   @Test
@@ -731,10 +731,10 @@ public class HyperLogLogCollectorTest
     // Skip the first bucket
     for (int i = 1; i < HyperLogLogCollector.NUM_BUCKETS; i++) {
       collector.add((short) i, (byte) 1);
-      JupiterAssertions.assertEquals(i, collector.getNumNonZeroRegisters());
-      JupiterAssertions.assertEquals(0, collector.getRegisterOffset());
+      Assertions.assertEquals(i, collector.getNumNonZeroRegisters());
+      Assertions.assertEquals(0, collector.getRegisterOffset());
     }
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         15615.219683654448D,
         HyperLogLogCollector.makeCollector(collector.toByteBuffer().asReadOnlyBuffer())
                             .estimateCardinality(),
@@ -744,28 +744,28 @@ public class HyperLogLogCollectorTest
     final byte[] hash = new byte[10];
     hash[0] = 1; // Bucket 0, 1 offset of 0
     collector.add(hash);
-    JupiterAssertions.assertEquals(0, collector.getNumNonZeroRegisters());
-    JupiterAssertions.assertEquals(1, collector.getRegisterOffset());
+    Assertions.assertEquals(0, collector.getNumNonZeroRegisters());
+    Assertions.assertEquals(1, collector.getRegisterOffset());
 
     // We have a REALLY bad distribution, Sketch as 0 is fine.
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         0.0D,
         HyperLogLogCollector.makeCollector(collector.toByteBuffer().asReadOnlyBuffer())
                             .estimateCardinality(),
         1e-5D
     );
     final ByteBuffer buffer = collector.toByteBuffer();
-    JupiterAssertions.assertEquals(collector.getNumHeaderBytes(), buffer.remaining());
+    Assertions.assertEquals(collector.getNumHeaderBytes(), buffer.remaining());
 
     final HyperLogLogCollector denseCollector = HyperLogLogCollector.makeLatestCollector();
     for (int i = 0; i < HyperLogLogCollector.NUM_BUCKETS - 1; i++) {
       denseCollector.add((short) i, (byte) 1);
     }
 
-    JupiterAssertions.assertEquals(HyperLogLogCollector.NUM_BUCKETS - 1, denseCollector.getNumNonZeroRegisters());
+    Assertions.assertEquals(HyperLogLogCollector.NUM_BUCKETS - 1, denseCollector.getNumNonZeroRegisters());
     final HyperLogLogCollector folded = denseCollector.fold(HyperLogLogCollector.makeCollector(buffer));
-    JupiterAssertions.assertNotNull(folded.toByteBuffer());
-    JupiterAssertions.assertEquals(folded.getStorageBuffer().remaining(), denseCollector.getNumBytesForDenseStorage());
+    Assertions.assertNotNull(folded.toByteBuffer());
+    Assertions.assertEquals(folded.getStorageBuffer().remaining(), denseCollector.getNumBytesForDenseStorage());
   }
 
   // Example of a terrible sampling filter. Don't use this method
@@ -795,8 +795,8 @@ public class HyperLogLogCollectorTest
       hasher.putInt(rnd);
       hyperLogLogCollector.add(hasher.hash().asBytes());
     } while (hyperLogLogCollector.getNumNonZeroRegisters() > 0 && ++loops < loopLimit);
-    JupiterAssertions.assertNotEquals(loopLimit, loops);
-    JupiterAssertions.assertEquals(hyperLogLogCollector.getNumHeaderBytes(), hyperLogLogCollector.toByteBuffer().remaining());
+    Assertions.assertNotEquals(loopLimit, loops);
+    Assertions.assertEquals(hyperLogLogCollector.getNumHeaderBytes(), hyperLogLogCollector.toByteBuffer().remaining());
   }
 
   @Test
@@ -810,8 +810,8 @@ public class HyperLogLogCollectorTest
     collector.add((short) 56, (byte) 17);
 
     collector.fold(other);
-    JupiterAssertions.assertEquals(56, collector.getMaxOverflowRegister());
-    JupiterAssertions.assertEquals(17, collector.getMaxOverflowValue());
+    Assertions.assertEquals(56, collector.getMaxOverflowRegister());
+    Assertions.assertEquals(17, collector.getMaxOverflowValue());
 
     // different offsets
     // fill up all the buckets so we reach a registerOffset of 49
@@ -824,8 +824,8 @@ public class HyperLogLogCollectorTest
     other.add((short) 47, (byte) 67);
 
     collector.fold(other);
-    JupiterAssertions.assertEquals(47, collector.getMaxOverflowRegister());
-    JupiterAssertions.assertEquals(67, collector.getMaxOverflowValue());
+    Assertions.assertEquals(47, collector.getMaxOverflowRegister());
+    Assertions.assertEquals(67, collector.getMaxOverflowValue());
   }
 
   @Test
@@ -851,9 +851,9 @@ public class HyperLogLogCollectorTest
       for (HyperLogLogCollector foldee : permutation) {
         collector.fold(foldee);
       }
-      JupiterAssertions.assertEquals(29, collector.getMaxOverflowValue());
-      JupiterAssertions.assertEquals(366, collector.getMaxOverflowRegister());
-      JupiterAssertions.assertEquals(1.0429189446653817E7, collector.estimateCardinality(), 1);
+      Assertions.assertEquals(29, collector.getMaxOverflowValue());
+      Assertions.assertEquals(366, collector.getMaxOverflowRegister());
+      Assertions.assertEquals(1.0429189446653817E7, collector.estimateCardinality(), 1);
     }
   }
 
@@ -863,11 +863,11 @@ public class HyperLogLogCollectorTest
   {
     final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add(HyperLogLogHash.getDefault().hash(""));
-    JupiterAssertions.assertEquals(1, collector.estimateCardinality(), 0.01);
+    Assertions.assertEquals(1, collector.estimateCardinality(), 0.01);
 
     final byte[] collectorByteArray = collector.toByteArray();
     final HyperLogLogCollector collector2 = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(collectorByteArray));
-    JupiterAssertions.assertEquals(1, collector2.estimateCardinality(), 0.01);
+    Assertions.assertEquals(1, collector2.estimateCardinality(), 0.01);
   }
 
   @Test
@@ -877,11 +877,11 @@ public class HyperLogLogCollectorTest
     final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add(HyperLogLogHash.getDefault().hash("abc"));
     collector.add(HyperLogLogHash.getDefault().hash(""));
-    JupiterAssertions.assertEquals(2, collector.estimateCardinality(), 0.01);
+    Assertions.assertEquals(2, collector.estimateCardinality(), 0.01);
 
     final byte[] collectorByteArray = collector.toByteArray();
     final HyperLogLogCollector collector2 = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(collectorByteArray));
-    JupiterAssertions.assertEquals(2, collector2.estimateCardinality(), 0.01);
+    Assertions.assertEquals(2, collector2.estimateCardinality(), 0.01);
   }
 
   // Provides a nice printout of error rates as a function of cardinality

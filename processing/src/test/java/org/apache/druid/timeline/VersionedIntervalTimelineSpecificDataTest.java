@@ -23,13 +23,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.testing.JupiterAssertions;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.OvershadowableInteger;
 import org.joda.time.DateTime;
 import org.joda.time.Days;
 import org.joda.time.Hours;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -102,7 +102,7 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   @Test
   public void testApril2()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("2", 1),
         timeline.remove(Intervals.of("2011-04-01/2011-04-09"), "2", makeSingle("2", 1))
     );
@@ -120,11 +120,11 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   @Test
   public void testApril3()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("2", 1),
         timeline.remove(Intervals.of("2011-04-01/2011-04-09"), "2", makeSingle("2", 1))
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("1", 2),
         timeline.remove(Intervals.of("2011-04-01/2011-04-03"), "1", makeSingle("1", 2))
     );
@@ -141,7 +141,7 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   @Test
   public void testApril4()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("2", 1),
         timeline.remove(Intervals.of("2011-04-01/2011-04-09"), "2", makeSingle("2", 1))
     );
@@ -177,7 +177,7 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   @Test
   public void testMay2()
   {
-    JupiterAssertions.assertNotNull(timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle("4", 9)));
+    Assertions.assertNotNull(timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle("4", 9)));
     assertValues(
         Arrays.asList(
             createExpected("2011-05-01/2011-05-03", "2", 7),
@@ -191,11 +191,11 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   @Test
   public void testMay3()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("4", 9),
         timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle("4", 9))
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("2", 7),
         timeline.remove(Intervals.of("2011-05-01/2011-05-05"), "2", makeSingle("2", 7))
     );
@@ -213,9 +213,9 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   {
     DateTime overallStart = DateTimes.nowUtc().minus(Hours.TWO);
 
-    JupiterAssertions.assertTrue(
-        "These timestamps have to be at the end AND include now for this test to work.",
-        overallStart.isAfter(timeline.incompletePartitionsTimeline.lastEntry().getKey().getEnd())
+    Assertions.assertTrue(
+        overallStart.isAfter(timeline.incompletePartitionsTimeline.lastEntry().getKey().getEnd()),
+        "These timestamps have to be at the end AND include now for this test to work."
     );
 
     final Interval oneHourInterval1 = new Interval(overallStart.plus(Hours.THREE), overallStart.plus(Hours.FOUR));
@@ -277,25 +277,25 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
         "3",
         1
     );
-    JupiterAssertions.assertEquals(expected, actual);
-    JupiterAssertions.assertEquals(expected.getObject(), actual.getObject());
+    Assertions.assertEquals(expected, actual);
+    Assertions.assertEquals(expected.getObject(), actual.getObject());
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         null,
         timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-01T17"), "1", 1)
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         null,
         timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-01T17"), "2", 0)
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         null,
         timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-02T17"), "1", 0)
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         null,
         timeline.findChunk(Intervals.of("2011-10-01T04/2011-10-02T17"), "1", 0)
     );
@@ -333,14 +333,14 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
         ImmutableList.of(createExpected("2011-10-05/2011-10-06", "5", 5)),
         timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
-    JupiterAssertions.assertTrue("Expected no overshadowed entries", timeline.findFullyOvershadowed().isEmpty());
+    Assertions.assertTrue(timeline.findFullyOvershadowed().isEmpty(), "Expected no overshadowed entries");
 
     add("2011-10-06/2011-10-07", "6", IntegerPartitionChunk.make(10, 20, 1, new OvershadowableInteger("6", 1, 61)));
     assertValues(
         ImmutableList.of(createExpected("2011-10-05/2011-10-06", "5", 5)),
         timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
-    JupiterAssertions.assertTrue("Expected no overshadowed entries", timeline.findFullyOvershadowed().isEmpty());
+    Assertions.assertTrue(timeline.findFullyOvershadowed().isEmpty(), "Expected no overshadowed entries");
 
     add("2011-10-06/2011-10-07", "6", IntegerPartitionChunk.make(20, null, 2, new OvershadowableInteger("6", 2, 62)));
     assertValues(
@@ -358,7 +358,7 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
         ),
         timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
-    JupiterAssertions.assertTrue("Expected no overshadowed entries", timeline.findFullyOvershadowed().isEmpty());
+    Assertions.assertTrue(timeline.findFullyOvershadowed().isEmpty(), "Expected no overshadowed entries");
   }
 
   @Test
@@ -367,10 +367,10 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
     testRemove();
 
     add("2011-10-05/2011-10-07", "6", IntegerPartitionChunk.make(null, 10, 0, new OvershadowableInteger("6", 0, 60)));
-    JupiterAssertions.assertTrue("Expected no overshadowed entries", timeline.findFullyOvershadowed().isEmpty());
+    Assertions.assertTrue(timeline.findFullyOvershadowed().isEmpty(), "Expected no overshadowed entries");
 
     add("2011-10-05/2011-10-07", "6", IntegerPartitionChunk.make(10, 20, 1, new OvershadowableInteger("6", 1, 61)));
-    JupiterAssertions.assertTrue("Expected no overshadowed entries", timeline.findFullyOvershadowed().isEmpty());
+    Assertions.assertTrue(timeline.findFullyOvershadowed().isEmpty(), "Expected no overshadowed entries");
 
     add("2011-10-05/2011-10-07", "6", IntegerPartitionChunk.make(20, null, 2, new OvershadowableInteger("6", 2, 62)));
     assertValues(
@@ -392,12 +392,12 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
         0,
         new OvershadowableInteger("6", 0, 60)
     );
-    JupiterAssertions.assertEquals(chunk, timeline.remove(Intervals.of("2011-10-05/2011-10-07"), "6", chunk));
+    Assertions.assertEquals(chunk, timeline.remove(Intervals.of("2011-10-05/2011-10-07"), "6", chunk));
     assertValues(
         ImmutableList.of(createExpected("2011-10-05/2011-10-06", "5", 5)),
         timeline.lookup(Intervals.of("2011-10-05/2011-10-07"))
     );
-    JupiterAssertions.assertTrue("Expected no overshadowed entries", timeline.findFullyOvershadowed().isEmpty());
+    Assertions.assertTrue(timeline.findFullyOvershadowed().isEmpty(), "Expected no overshadowed entries");
   }
 
   @Test
@@ -411,7 +411,7 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
         timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("5", 10),
         timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "5", makeSingle("5", 10))
     );
@@ -430,7 +430,7 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
         timeline.lookup(Intervals.of("2011-05-01/2011-05-09"))
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         makeSingle("4", 9),
         timeline.remove(Intervals.of("2011-05-01/2011-05-10"), "4", makeSingle("4", 9))
     );
@@ -445,17 +445,17 @@ public class VersionedIntervalTimelineSpecificDataTest extends VersionedInterval
   @Test
   public void testRemoveSomethingDontHave()
   {
-    JupiterAssertions.assertNull(
-        "Don't have it, should be null",
-        timeline.remove(Intervals.of("1970-01-01/2025-04-20"), "1", makeSingle("1", 1))
+    Assertions.assertNull(
+        timeline.remove(Intervals.of("1970-01-01/2025-04-20"), "1", makeSingle("1", 1)),
+        "Don't have it, should be null"
     );
-    JupiterAssertions.assertNull(
-        "Don't have it, should be null",
+    Assertions.assertNull(
         timeline.remove(
             Intervals.of("2011-04-01/2011-04-09"),
             "version does not exist",
             makeSingle("version does not exist", 1)
-        )
+        ),
+        "Don't have it, should be null"
     );
   }
 }

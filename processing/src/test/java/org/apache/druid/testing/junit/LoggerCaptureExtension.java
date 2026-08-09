@@ -35,6 +35,10 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * JUnit 5 extension that captures Log4j events emitted by a target class.
+ * Register it with {@code new LoggerCaptureExtension(TargetClass.class)} and inspect {@link #getLogEvents()}.
+ */
 public class LoggerCaptureExtension implements BeforeEachCallback, AfterEachCallback
 {
   private final Class<?> targetClass;

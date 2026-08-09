@@ -20,11 +20,11 @@
 package org.apache.druid.utils;
 
 import com.google.common.base.Throwables;
-import org.apache.druid.testing.JupiterAssertions;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
@@ -80,7 +80,7 @@ public class CloseableUtilsTest
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
 
     // Second exception
-    JupiterAssertions.assertEquals(1, e.getSuppressed().length);
+    Assertions.assertEquals(1, e.getSuppressed().length);
     MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
   }
 
@@ -109,7 +109,7 @@ public class CloseableUtilsTest
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
 
     // Second exception
-    JupiterAssertions.assertEquals(1, e.getSuppressed().length);
+    Assertions.assertEquals(1, e.getSuppressed().length);
     MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
   }
 
@@ -176,7 +176,7 @@ public class CloseableUtilsTest
   public void test_closeAndSuppressExceptions_null()
   {
     CloseableUtils.closeAndSuppressExceptions(null, chomper);
-    JupiterAssertions.assertEquals(0, chomped.get());
+    Assertions.assertEquals(0, chomped.get());
   }
 
   @Test
@@ -184,7 +184,7 @@ public class CloseableUtilsTest
   {
     CloseableUtils.closeAndSuppressExceptions(quietCloseable, chomper);
     assertClosed(quietCloseable);
-    JupiterAssertions.assertEquals(0, chomped.get());
+    Assertions.assertEquals(0, chomped.get());
   }
 
   @Test
@@ -192,7 +192,7 @@ public class CloseableUtilsTest
   {
     CloseableUtils.closeAndSuppressExceptions(ioExceptionCloseable, chomper);
     assertClosed(ioExceptionCloseable);
-    JupiterAssertions.assertEquals(1, chomped.get());
+    Assertions.assertEquals(1, chomped.get());
   }
 
   @Test
@@ -200,7 +200,7 @@ public class CloseableUtilsTest
   {
     CloseableUtils.closeAndSuppressExceptions(runtimeExceptionCloseable, chomper);
     assertClosed(runtimeExceptionCloseable);
-    JupiterAssertions.assertEquals(1, chomped.get());
+    Assertions.assertEquals(1, chomped.get());
   }
 
   @Test
@@ -208,7 +208,7 @@ public class CloseableUtilsTest
   {
     CloseableUtils.closeAndSuppressExceptions(assertionErrorCloseable, chomper);
     assertClosed(assertionErrorCloseable);
-    JupiterAssertions.assertEquals(1, chomped.get());
+    Assertions.assertEquals(1, chomped.get());
   }
 
   @Test
@@ -223,7 +223,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(quietCloseable.isClosed());
+    Assertions.assertTrue(quietCloseable.isClosed());
 
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IllegalStateException.class));
     MatcherAssert.assertThat(
@@ -244,7 +244,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(quietCloseable.isClosed());
+    Assertions.assertTrue(quietCloseable.isClosed());
 
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
     MatcherAssert.assertThat(
@@ -265,7 +265,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(ioExceptionCloseable.isClosed());
+    Assertions.assertTrue(ioExceptionCloseable.isClosed());
 
     // First exception
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
@@ -275,7 +275,7 @@ public class CloseableUtilsTest
     );
 
     // Second exception
-    JupiterAssertions.assertEquals(1, e.getSuppressed().length);
+    Assertions.assertEquals(1, e.getSuppressed().length);
     MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IOException.class));
   }
 
@@ -291,7 +291,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(runtimeExceptionCloseable.isClosed());
+    Assertions.assertTrue(runtimeExceptionCloseable.isClosed());
 
     // First exception
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
@@ -301,7 +301,7 @@ public class CloseableUtilsTest
     );
 
     // Second exception
-    JupiterAssertions.assertEquals(1, e.getSuppressed().length);
+    Assertions.assertEquals(1, e.getSuppressed().length);
     MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
   }
 
@@ -317,7 +317,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(quietCloseable.isClosed());
+    Assertions.assertTrue(quietCloseable.isClosed());
 
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IllegalStateException.class));
     MatcherAssert.assertThat(
@@ -338,7 +338,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(quietCloseable.isClosed());
+    Assertions.assertTrue(quietCloseable.isClosed());
 
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
     MatcherAssert.assertThat(
@@ -359,7 +359,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(ioExceptionCloseable.isClosed());
+    Assertions.assertTrue(ioExceptionCloseable.isClosed());
 
     // First exception
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
@@ -376,7 +376,7 @@ public class CloseableUtilsTest
     );
 
     // Second exception
-    JupiterAssertions.assertEquals(1, e.getCause().getSuppressed().length);
+    Assertions.assertEquals(1, e.getCause().getSuppressed().length);
     MatcherAssert.assertThat(e.getCause().getSuppressed()[0], CoreMatchers.instanceOf(IOException.class));
   }
 
@@ -392,7 +392,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(runtimeExceptionCloseable.isClosed());
+    Assertions.assertTrue(runtimeExceptionCloseable.isClosed());
 
     // First exception
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
@@ -402,7 +402,7 @@ public class CloseableUtilsTest
     );
 
     // Second exception
-    JupiterAssertions.assertEquals(1, e.getSuppressed().length);
+    Assertions.assertEquals(1, e.getSuppressed().length);
     MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
   }
 
@@ -418,7 +418,7 @@ public class CloseableUtilsTest
       e = e1;
     }
 
-    JupiterAssertions.assertTrue(assertionErrorCloseable.isClosed());
+    Assertions.assertTrue(assertionErrorCloseable.isClosed());
 
     // First exception
     MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
@@ -428,7 +428,7 @@ public class CloseableUtilsTest
     );
 
     // Second exception
-    JupiterAssertions.assertEquals(1, e.getSuppressed().length);
+    Assertions.assertEquals(1, e.getSuppressed().length);
     MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(AssertionError.class));
   }
 
@@ -442,7 +442,7 @@ public class CloseableUtilsTest
   private static void assertClosed(final TestCloseable... closeables)
   {
     for (TestCloseable closeable : closeables) {
-      JupiterAssertions.assertTrue(closeable.isClosed());
+      Assertions.assertTrue(closeable.isClosed());
     }
   }
 

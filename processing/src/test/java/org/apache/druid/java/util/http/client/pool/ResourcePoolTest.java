@@ -20,9 +20,9 @@
 package org.apache.druid.java.util.http.client.pool;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.testing.JupiterAssertions;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -79,7 +79,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billyString = pool.take("billy");
-    JupiterAssertions.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     billyString.returnResource();
   }
@@ -97,12 +97,12 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billyString = pool.take("billy");
-    JupiterAssertions.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     billyString.returnResource();
 
     billyString = pool.take("billy");
-    JupiterAssertions.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     billyString.returnResource();
   }
@@ -244,8 +244,8 @@ public class ResourcePoolTest
 
     ResourceContainer<String> billyString = pool.take("billy");
     ResourceContainer<String> sallyString = pool.take("sally");
-    JupiterAssertions.assertEquals("billy0", billyString.get());
-    JupiterAssertions.assertEquals("sally0", sallyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("sally0", sallyString.get());
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -266,7 +266,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    JupiterAssertions.assertEquals("billy2", billy.get());
+    Assertions.assertEquals("billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -297,8 +297,8 @@ public class ResourcePoolTest
     catch (IllegalStateException e) {
       e1 = e;
     }
-    JupiterAssertions.assertNotNull("exception", e1);
-    JupiterAssertions.assertEquals("where's billy?", e1.getMessage());
+    Assertions.assertNotNull(e1, "exception");
+    Assertions.assertEquals("where's billy?", e1.getMessage());
 
     IllegalStateException e2 = null;
     try {
@@ -307,11 +307,11 @@ public class ResourcePoolTest
     catch (IllegalStateException e) {
       e2 = e;
     }
-    JupiterAssertions.assertNotNull("exception", e2);
-    JupiterAssertions.assertEquals("where's billy?", e2.getMessage());
+    Assertions.assertNotNull(e2, "exception");
+    Assertions.assertEquals("where's billy?", e2.getMessage());
 
     ResourceContainer<String> billy = pool.take("billy");
-    JupiterAssertions.assertEquals("billy2", billy.get());
+    Assertions.assertEquals("billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -354,9 +354,9 @@ public class ResourcePoolTest
     latch1.countDown();
     latch3.countDown();
 
-    JupiterAssertions.assertEquals("billy1", billy1Thread.getValue());
-    JupiterAssertions.assertEquals("billy0", billy0Thread.getValue());
-    JupiterAssertions.assertEquals("billy0", blockedThread.getValue());
+    Assertions.assertEquals("billy1", billy1Thread.getValue());
+    Assertions.assertEquals("billy0", billy0Thread.getValue());
+    Assertions.assertEquals("billy0", blockedThread.getValue());
   }
 
   @Test
@@ -406,11 +406,11 @@ public class ResourcePoolTest
     latch1.countDown();
     latch3.countDown();
 
-    JupiterAssertions.assertEquals("billy1", billy1Thread.getValue());
-    JupiterAssertions.assertEquals("billy0", billy0Thread.getValue());
+    Assertions.assertEquals("billy1", billy1Thread.getValue());
+    Assertions.assertEquals("billy0", billy0Thread.getValue());
     blockedThread.join();
     // pool returns null after close
-    JupiterAssertions.assertEquals(null, blockedThread.getValue());
+    Assertions.assertEquals(null, blockedThread.getValue());
   }
 
   @Test
@@ -429,7 +429,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billyString = pool.take("billy");
-    JupiterAssertions.assertEquals("billy0", billyString.get());
+    Assertions.assertEquals("billy0", billyString.get());
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -444,7 +444,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    JupiterAssertions.assertEquals("billy1", billy.get());
+    Assertions.assertEquals("billy1", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);

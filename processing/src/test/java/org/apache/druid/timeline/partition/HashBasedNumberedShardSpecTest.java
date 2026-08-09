@@ -32,8 +32,8 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.testing.JupiterAssertions;
 import org.joda.time.DateTime;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -74,12 +74,12 @@ public class HashBasedNumberedShardSpecTest
         ),
         ShardSpec.class
     );
-    JupiterAssertions.assertEquals(1, spec.getPartitionNum());
-    JupiterAssertions.assertEquals(2, spec.getNumCorePartitions());
-    JupiterAssertions.assertEquals(1, ((HashBasedNumberedShardSpec) spec).getBucketId());
-    JupiterAssertions.assertEquals(3, ((HashBasedNumberedShardSpec) spec).getNumBuckets());
-    JupiterAssertions.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) spec).getPartitionDimensions());
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(1, spec.getPartitionNum());
+    Assertions.assertEquals(2, spec.getNumCorePartitions());
+    Assertions.assertEquals(1, ((HashBasedNumberedShardSpec) spec).getBucketId());
+    Assertions.assertEquals(3, ((HashBasedNumberedShardSpec) spec).getNumBuckets());
+    Assertions.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) spec).getPartitionDimensions());
+    Assertions.assertEquals(
         HashPartitionFunction.MURMUR3_32_ABS,
         ((HashBasedNumberedShardSpec) spec).getPartitionFunction()
     );
@@ -92,22 +92,22 @@ public class HashBasedNumberedShardSpecTest
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1}",
         ShardSpec.class
     );
-    JupiterAssertions.assertEquals(1, spec.getPartitionNum());
-    JupiterAssertions.assertEquals(2, spec.getNumCorePartitions());
+    Assertions.assertEquals(1, spec.getPartitionNum());
+    Assertions.assertEquals(2, spec.getNumCorePartitions());
 
     final ShardSpec specWithPartitionDimensions = objectMapper.readValue(
         "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
         ShardSpec.class
     );
-    JupiterAssertions.assertEquals(ShardSpec.Type.HASHED, specWithPartitionDimensions.getType());
-    JupiterAssertions.assertEquals(1, specWithPartitionDimensions.getPartitionNum());
-    JupiterAssertions.assertEquals(2, specWithPartitionDimensions.getNumCorePartitions());
-    JupiterAssertions.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumBuckets());
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(ShardSpec.Type.HASHED, specWithPartitionDimensions.getType());
+    Assertions.assertEquals(1, specWithPartitionDimensions.getPartitionNum());
+    Assertions.assertEquals(2, specWithPartitionDimensions.getNumCorePartitions());
+    Assertions.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getNumBuckets());
+    Assertions.assertEquals(
         ImmutableList.of("visitor_id"),
         ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionDimensions()
     );
-    JupiterAssertions.assertNull(((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionFunction());
+    Assertions.assertNull(((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionFunction());
   }
 
   @Test
@@ -131,28 +131,28 @@ public class HashBasedNumberedShardSpecTest
         }
     );
 
-    JupiterAssertions.assertEquals(0, chunks.get(0).getChunkNumber());
-    JupiterAssertions.assertEquals(1, chunks.get(1).getChunkNumber());
-    JupiterAssertions.assertEquals(2, chunks.get(2).getChunkNumber());
+    Assertions.assertEquals(0, chunks.get(0).getChunkNumber());
+    Assertions.assertEquals(1, chunks.get(1).getChunkNumber());
+    Assertions.assertEquals(2, chunks.get(2).getChunkNumber());
 
-    JupiterAssertions.assertTrue(chunks.get(0).isStart());
-    JupiterAssertions.assertFalse(chunks.get(1).isStart());
-    JupiterAssertions.assertFalse(chunks.get(2).isStart());
+    Assertions.assertTrue(chunks.get(0).isStart());
+    Assertions.assertFalse(chunks.get(1).isStart());
+    Assertions.assertFalse(chunks.get(2).isStart());
 
-    JupiterAssertions.assertFalse(chunks.get(0).isEnd());
-    JupiterAssertions.assertFalse(chunks.get(1).isEnd());
-    JupiterAssertions.assertTrue(chunks.get(2).isEnd());
+    Assertions.assertFalse(chunks.get(0).isEnd());
+    Assertions.assertFalse(chunks.get(1).isEnd());
+    Assertions.assertTrue(chunks.get(2).isEnd());
 
-    JupiterAssertions.assertTrue(chunks.get(0).abuts(chunks.get(1)));
-    JupiterAssertions.assertTrue(chunks.get(1).abuts(chunks.get(2)));
+    Assertions.assertTrue(chunks.get(0).abuts(chunks.get(1)));
+    Assertions.assertTrue(chunks.get(1).abuts(chunks.get(2)));
 
-    JupiterAssertions.assertFalse(chunks.get(0).abuts(chunks.get(0)));
-    JupiterAssertions.assertFalse(chunks.get(0).abuts(chunks.get(2)));
-    JupiterAssertions.assertFalse(chunks.get(1).abuts(chunks.get(0)));
-    JupiterAssertions.assertFalse(chunks.get(1).abuts(chunks.get(1)));
-    JupiterAssertions.assertFalse(chunks.get(2).abuts(chunks.get(0)));
-    JupiterAssertions.assertFalse(chunks.get(2).abuts(chunks.get(1)));
-    JupiterAssertions.assertFalse(chunks.get(2).abuts(chunks.get(2)));
+    Assertions.assertFalse(chunks.get(0).abuts(chunks.get(0)));
+    Assertions.assertFalse(chunks.get(0).abuts(chunks.get(2)));
+    Assertions.assertFalse(chunks.get(1).abuts(chunks.get(0)));
+    Assertions.assertFalse(chunks.get(1).abuts(chunks.get(1)));
+    Assertions.assertFalse(chunks.get(2).abuts(chunks.get(0)));
+    Assertions.assertFalse(chunks.get(2).abuts(chunks.get(1)));
+    Assertions.assertFalse(chunks.get(2).abuts(chunks.get(2)));
   }
 
   private HashPartitioner createHashPartitionerForHashInputRow(int numBuckets)
@@ -181,11 +181,11 @@ public class HashBasedNumberedShardSpecTest
     }
     final HashPartitioner hashPartitioner = createHashPartitionerForHashInputRow(3);
 
-    JupiterAssertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(Integer.MIN_VALUE)));
-    JupiterAssertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(Integer.MAX_VALUE)));
-    JupiterAssertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(0)));
-    JupiterAssertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(1000)));
-    JupiterAssertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(-1000)));
+    Assertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(Integer.MIN_VALUE)));
+    Assertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(Integer.MAX_VALUE)));
+    Assertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(0)));
+    Assertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(1000)));
+    Assertions.assertTrue(existsInOneSpec(specs, hashPartitioner, new HashInputRow(-1000)));
   }
 
   @Test
@@ -199,7 +199,7 @@ public class HashBasedNumberedShardSpecTest
 
     for (int i = 0; i < 10; i++) {
       final InputRow row = new HashInputRow(numBuckets * 10000 + i);
-      JupiterAssertions.assertTrue(isInChunk(specs.get(i), hashPartitioner, row.getTimestampFromEpoch(), row));
+      Assertions.assertTrue(isInChunk(specs.get(i), hashPartitioner, row.getTimestampFromEpoch(), row));
     }
   }
 
@@ -213,7 +213,7 @@ public class HashBasedNumberedShardSpecTest
         ImmutableList.of("visitor_id", "cnt"),
         ImmutableMap.of("visitor_id", "v1", "cnt", 10)
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(Collections.singletonList("v1")),
         new HashPartitioner(
             objectMapper,
@@ -223,7 +223,7 @@ public class HashBasedNumberedShardSpecTest
         ).extractKeys(time.getMillis(), inputRow)
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             time.getMillis(),
             ImmutableMap.of("cnt", Collections.singletonList(10), "visitor_id", Collections.singletonList("v1"))
@@ -250,10 +250,10 @@ public class HashBasedNumberedShardSpecTest
         null,
         objectMapper
     );
-    JupiterAssertions.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
-    JupiterAssertions.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
-    JupiterAssertions.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
-    JupiterAssertions.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assertions.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 
   @Test
@@ -278,7 +278,7 @@ public class HashBasedNumberedShardSpecTest
           )
       );
     }
-    JupiterAssertions.assertEquals(numBuckets, shardSpecs.stream().filter(s -> s.possibleInDomain(domain)).count());
+    Assertions.assertEquals(numBuckets, shardSpecs.stream().filter(s -> s.possibleInDomain(domain)).count());
   }
 
   @Test
@@ -303,7 +303,7 @@ public class HashBasedNumberedShardSpecTest
           )
       );
     }
-    JupiterAssertions.assertEquals(numBuckets, shardSpecs.stream().filter(s -> s.possibleInDomain(domain)).count());
+    Assertions.assertEquals(numBuckets, shardSpecs.stream().filter(s -> s.possibleInDomain(domain)).count());
   }
 
   @Test
@@ -328,7 +328,7 @@ public class HashBasedNumberedShardSpecTest
           )
       );
     }
-    JupiterAssertions.assertEquals(1, shardSpecs.stream().filter(s -> s.possibleInDomain(domain)).count());
+    Assertions.assertEquals(1, shardSpecs.stream().filter(s -> s.possibleInDomain(domain)).count());
   }
 
   @Test
@@ -352,7 +352,7 @@ public class HashBasedNumberedShardSpecTest
           )
       );
     }
-    JupiterAssertions.assertEquals(shardSpecs.size(), shardSpecs.stream().filter(s -> s.possibleInDomain(domain1)).count());
+    Assertions.assertEquals(shardSpecs.size(), shardSpecs.stream().filter(s -> s.possibleInDomain(domain1)).count());
   }
 
   public boolean existsInOneSpec(

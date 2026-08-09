@@ -30,9 +30,9 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.RowMeters;
-import org.apache.druid.testing.JupiterAssertions;
-import org.apache.druid.testing.TempDirExtension;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CollectionUtils;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -50,7 +50,7 @@ public class TaskReportSerdeTest
   private final ObjectMapper jsonMapper;
 
   @RegisterExtension
-  public final TempDirExtension temporaryFolder = new TempDirExtension();
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   public TaskReportSerdeTest()
   {
@@ -65,10 +65,10 @@ public class TaskReportSerdeTest
     String reportJson = jsonMapper.writeValueAsString(originalReport);
     TaskReport deserialized = jsonMapper.readValue(reportJson, TaskReport.class);
 
-    JupiterAssertions.assertTrue(deserialized instanceof IngestionStatsAndErrorsTaskReport);
+    Assertions.assertTrue(deserialized instanceof IngestionStatsAndErrorsTaskReport);
 
     IngestionStatsAndErrorsTaskReport deserializedReport = (IngestionStatsAndErrorsTaskReport) deserialized;
-    JupiterAssertions.assertEquals(originalReport, deserializedReport);
+    Assertions.assertEquals(originalReport, deserializedReport);
   }
 
   @Test
@@ -78,11 +78,11 @@ public class TaskReportSerdeTest
     String reportJson = jsonMapper.writeValueAsString(originalReport);
     TaskReport deserialized = jsonMapper.readValue(reportJson, TaskReport.class);
 
-    JupiterAssertions.assertTrue(deserialized instanceof KillTaskReport);
+    Assertions.assertTrue(deserialized instanceof KillTaskReport);
 
     KillTaskReport deserializedReport = (KillTaskReport) deserialized;
-    JupiterAssertions.assertEquals(originalReport, deserializedReport);
-    JupiterAssertions.assertEquals(originalReport.hashCode(), deserializedReport.hashCode());
+    Assertions.assertEquals(originalReport, deserializedReport);
+    Assertions.assertEquals(originalReport.hashCode(), deserializedReport.hashCode());
   }
 
   @Test
@@ -95,10 +95,10 @@ public class TaskReportSerdeTest
     String reportJson = jsonMapper.writeValueAsString(originalReport);
     TaskReport deserialized = jsonMapper.readValue(reportJson, TaskReport.class);
 
-    JupiterAssertions.assertTrue(deserialized instanceof TaskContextReport);
+    Assertions.assertTrue(deserialized instanceof TaskContextReport);
 
     TaskContextReport deserializedReport = (TaskContextReport) deserialized;
-    JupiterAssertions.assertEquals(originalReport, deserializedReport);
+    Assertions.assertEquals(originalReport, deserializedReport);
   }
 
   @Test
@@ -112,7 +112,7 @@ public class TaskReportSerdeTest
     writer.write("testID", reportMap1);
 
     TaskReport.ReportMap reportMap2 = jsonMapper.readValue(reportFile, TaskReport.ReportMap.class);
-    JupiterAssertions.assertEquals(reportMap1, reportMap2);
+    Assertions.assertEquals(reportMap1, reportMap2);
   }
 
   @Test
@@ -123,7 +123,7 @@ public class TaskReportSerdeTest
     String json = jsonMapper.writeValueAsString(reportMap);
 
     TaskReport.ReportMap deserializedReportMap = jsonMapper.readValue(json, TaskReport.ReportMap.class);
-    JupiterAssertions.assertEquals(reportMap, deserializedReportMap);
+    Assertions.assertEquals(reportMap, deserializedReportMap);
   }
 
   @Test
@@ -186,22 +186,22 @@ public class TaskReportSerdeTest
     final TaskReport.ReportMap deserializedReportMap = jsonMapper.readValue(plainMapJson, TaskReport.ReportMap.class);
     Optional<IngestionStatsAndErrorsTaskReport> ingestStatsReport = deserializedReportMap.findReport(
         "ingestionStatsAndErrors");
-    JupiterAssertions.assertTrue(ingestStatsReport.isPresent());
+    Assertions.assertTrue(ingestStatsReport.isPresent());
 
-    JupiterAssertions.assertEquals("ingestionStatsAndErrors", ingestStatsReport.get().getReportKey());
-    JupiterAssertions.assertEquals("abc", ingestStatsReport.get().getTaskId());
+    Assertions.assertEquals("ingestionStatsAndErrors", ingestStatsReport.get().getReportKey());
+    Assertions.assertEquals("abc", ingestStatsReport.get().getTaskId());
 
     // Verify basic fields in the payload
     final IngestionStatsAndErrors observedPayload = ingestStatsReport.get().getPayload();
-    JupiterAssertions.assertEquals(expectedPayload.get("ingestionState"), observedPayload.getIngestionState());
-    JupiterAssertions.assertNull(observedPayload.getSegmentsRead());
-    JupiterAssertions.assertNull(observedPayload.getSegmentsPublished());
-    JupiterAssertions.assertNull(observedPayload.getErrorMsg());
-    JupiterAssertions.assertNull(observedPayload.getRecordsProcessed());
+    Assertions.assertEquals(expectedPayload.get("ingestionState"), observedPayload.getIngestionState());
+    Assertions.assertNull(observedPayload.getSegmentsRead());
+    Assertions.assertNull(observedPayload.getSegmentsPublished());
+    Assertions.assertNull(observedPayload.getErrorMsg());
+    Assertions.assertNull(observedPayload.getRecordsProcessed());
 
     // Verify stats and unparseable events
     final Map<String, Object> observedRowStats = observedPayload.getRowStats();
-    JupiterAssertions.assertEquals(expectedAverages, observedRowStats.get("movingAverages"));
+    Assertions.assertEquals(expectedAverages, observedRowStats.get("movingAverages"));
 
     final Map<String, Object> observedTotals = (Map<String, Object>) observedRowStats.get("totals");
     verifyTotalRowStats(observedTotals, determinePartitionTotalStats, buildSegmentTotalStats);
@@ -220,15 +220,15 @@ public class TaskReportSerdeTest
 
     // Verify basic fields in the payload
     final Map<String, Object> observedPayload2 = (Map<String, Object>) ingestStatsReport2.get("payload");
-    JupiterAssertions.assertEquals(expectedPayload.get("ingestionState").toString(), observedPayload2.get("ingestionState"));
-    JupiterAssertions.assertNull(observedPayload2.get("segmentsRead"));
-    JupiterAssertions.assertNull(observedPayload2.get("segmentsPublished"));
-    JupiterAssertions.assertNull(observedPayload2.get("errorMsg"));
-    JupiterAssertions.assertNull(observedPayload2.get("recordsProcessed"));
+    Assertions.assertEquals(expectedPayload.get("ingestionState").toString(), observedPayload2.get("ingestionState"));
+    Assertions.assertNull(observedPayload2.get("segmentsRead"));
+    Assertions.assertNull(observedPayload2.get("segmentsPublished"));
+    Assertions.assertNull(observedPayload2.get("errorMsg"));
+    Assertions.assertNull(observedPayload2.get("recordsProcessed"));
 
     // Verify stats and unparseable events
     final Map<String, Object> observedRowStats2 = (Map<String, Object>) observedPayload2.get("rowStats");
-    JupiterAssertions.assertEquals(expectedAverages, observedRowStats2.get("movingAverages"));
+    Assertions.assertEquals(expectedAverages, observedRowStats2.get("movingAverages"));
 
     final Map<String, Object> observedTotals2 = (Map<String, Object>) observedRowStats2.get("totals");
     verifyTotalRowStats(observedTotals2, determinePartitionTotalStats, buildSegmentTotalStats);
@@ -278,8 +278,8 @@ public class TaskReportSerdeTest
     );
 
     TaskReport deserialized = jsonMapper.readValue(json, TaskReport.class);
-    JupiterAssertions.assertEquals(expected.getTaskId(), deserialized.getTaskId());
-    JupiterAssertions.assertEquals(expected, deserialized);
+    Assertions.assertEquals(expected.getTaskId(), deserialized.getTaskId());
+    Assertions.assertEquals(expected, deserialized);
   }
 
   @Test
@@ -292,7 +292,7 @@ public class TaskReportSerdeTest
 
     // Read the file, ensure it's incomplete and not valid JSON. This allows callers to determine the report was
     // not complete when written.
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         "{\"report\":{\"type\":\"exceptional\"",
         Files.asCharSource(reportFile, StandardCharsets.UTF_8).read()
     );
@@ -321,16 +321,16 @@ public class TaskReportSerdeTest
       List<ParseExceptionReport> buildSegmentUnparseableEvents
   )
   {
-    JupiterAssertions.assertEquals(Collections.emptyList(), observed.get("determinePartitions"));
+    Assertions.assertEquals(Collections.emptyList(), observed.get("determinePartitions"));
 
     final List<Object> observedBuildSegmentUnparseableEvents
         = (List<Object>) observed.get("buildSegments");
-    JupiterAssertions.assertEquals(2, observedBuildSegmentUnparseableEvents.size());
+    Assertions.assertEquals(2, observedBuildSegmentUnparseableEvents.size());
 
     for (int i = 0; i < buildSegmentUnparseableEvents.size(); ++i) {
       final ParseExceptionReport expectedEvent = buildSegmentUnparseableEvents.get(i);
       final Object observedEvent = observedBuildSegmentUnparseableEvents.get(i);
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.of(
               "input", expectedEvent.getInput(),
               "errorType", expectedEvent.getErrorType(),
@@ -348,7 +348,7 @@ public class TaskReportSerdeTest
       RowIngestionMetersTotals buildSegmentTotalStats
   )
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             "processed", (int) determinePartitionTotalStats.getProcessed(),
             "processedBytes", (int) determinePartitionTotalStats.getProcessedBytes(),
@@ -359,7 +359,7 @@ public class TaskReportSerdeTest
         ),
         observedTotals.get("determinePartitions")
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             "processed", (int) buildSegmentTotalStats.getProcessed(),
             "processedBytes", (int) buildSegmentTotalStats.getProcessedBytes(),

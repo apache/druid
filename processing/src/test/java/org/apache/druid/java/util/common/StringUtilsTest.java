@@ -21,10 +21,8 @@ package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.testing.JupiterAssertions;
-import org.apache.druid.testing.ThrowableExpectation;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.UnsupportedEncodingException;
 import java.nio.BufferUnderflowException;
@@ -54,17 +52,14 @@ public class StringUtilsTest
       "fox"
   );
 
-  @RegisterExtension
-  public ThrowableExpectation expectedException = ThrowableExpectation.none();
-
   @Test
   public void fromUtf8ConversionTest() throws UnsupportedEncodingException
   {
     byte[] bytes = new byte[]{'a', 'b', 'c', 'd'};
-    JupiterAssertions.assertEquals("abcd", StringUtils.fromUtf8(bytes));
+    Assertions.assertEquals("abcd", StringUtils.fromUtf8(bytes));
 
     String abcd = "abcd";
-    JupiterAssertions.assertEquals(abcd, StringUtils.fromUtf8(abcd.getBytes(StringUtils.UTF8_STRING)));
+    Assertions.assertEquals(abcd, StringUtils.fromUtf8(abcd.getBytes(StringUtils.UTF8_STRING)));
   }
 
   @Test
@@ -73,7 +68,7 @@ public class StringUtilsTest
     byte[] bytes = new byte[]{'a', 'b', 'c', 'd'};
     byte[] strBytes = StringUtils.toUtf8("abcd");
     for (int i = 0; i < bytes.length; ++i) {
-      JupiterAssertions.assertEquals(bytes[i], strBytes[i]);
+      Assertions.assertEquals(bytes[i], strBytes[i]);
     }
   }
 
@@ -85,31 +80,31 @@ public class StringUtilsTest
     final ByteBuffer bigBuffer = ByteBuffer.allocate(8);
 
     final int smallBufferResult = StringUtils.toUtf8WithLimit("🚀🌔", smallBuffer);
-    JupiterAssertions.assertEquals(4, smallBufferResult);
+    Assertions.assertEquals(4, smallBufferResult);
     final byte[] smallBufferByteArray = new byte[smallBufferResult];
     smallBuffer.get(smallBufferByteArray);
-    JupiterAssertions.assertEquals("🚀", StringUtils.fromUtf8(smallBufferByteArray));
+    Assertions.assertEquals("🚀", StringUtils.fromUtf8(smallBufferByteArray));
 
     final int mediumBufferResult = StringUtils.toUtf8WithLimit("🚀🌔", mediumBuffer);
-    JupiterAssertions.assertEquals(4, mediumBufferResult);
+    Assertions.assertEquals(4, mediumBufferResult);
     final byte[] mediumBufferByteArray = new byte[mediumBufferResult];
     mediumBuffer.get(mediumBufferByteArray);
-    JupiterAssertions.assertEquals("🚀", StringUtils.fromUtf8(mediumBufferByteArray));
+    Assertions.assertEquals("🚀", StringUtils.fromUtf8(mediumBufferByteArray));
 
     final int bigBufferResult = StringUtils.toUtf8WithLimit("🚀🌔", bigBuffer);
-    JupiterAssertions.assertEquals(8, bigBufferResult);
+    Assertions.assertEquals(8, bigBufferResult);
     final byte[] bigBufferByteArray = new byte[bigBufferResult];
     bigBuffer.get(bigBufferByteArray);
-    JupiterAssertions.assertEquals("🚀🌔", StringUtils.fromUtf8(bigBufferByteArray));
+    Assertions.assertEquals("🚀🌔", StringUtils.fromUtf8(bigBufferByteArray));
   }
 
   @Test
   public void fromUtf8ByteBufferHeap()
   {
     ByteBuffer bytes = ByteBuffer.wrap(new byte[]{'a', 'b', 'c', 'd'});
-    JupiterAssertions.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
+    Assertions.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
     bytes.rewind();
-    JupiterAssertions.assertEquals("abcd", StringUtils.fromUtf8(bytes));
+    Assertions.assertEquals("abcd", StringUtils.fromUtf8(bytes));
   }
 
   @Test
@@ -117,9 +112,9 @@ public class StringUtilsTest
   {
     ByteBuffer bytes = ByteBuffer.wrap(new byte[]{'a', 'b', 'c', 'd'});
     bytes.position(1).limit(3);
-    JupiterAssertions.assertEquals("bc", StringUtils.fromUtf8(bytes, 2));
+    Assertions.assertEquals("bc", StringUtils.fromUtf8(bytes, 2));
     bytes.position(1);
-    JupiterAssertions.assertEquals("bc", StringUtils.fromUtf8(bytes));
+    Assertions.assertEquals("bc", StringUtils.fromUtf8(bytes));
   }
 
 
@@ -153,9 +148,9 @@ public class StringUtilsTest
       final ByteBuffer bytes = bufferHolder.get();
       bytes.put(new byte[]{'a', 'b', 'c', 'd'});
       bytes.rewind();
-      JupiterAssertions.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
+      Assertions.assertEquals("abcd", StringUtils.fromUtf8(bytes, 4));
       bytes.rewind();
-      JupiterAssertions.assertEquals("abcd", StringUtils.fromUtf8(bytes));
+      Assertions.assertEquals("abcd", StringUtils.fromUtf8(bytes));
     }
   }
 
@@ -163,155 +158,157 @@ public class StringUtilsTest
   @Test
   public void testNonStrictFormat()
   {
-    JupiterAssertions.assertEquals("test%d; format", StringUtils.nonStrictFormat("test%d", "format"));
-    JupiterAssertions.assertEquals("test%s%s; format", StringUtils.nonStrictFormat("test%s%s", "format"));
+    Assertions.assertEquals("test%d; format", StringUtils.nonStrictFormat("test%d", "format"));
+    Assertions.assertEquals("test%s%s; format", StringUtils.nonStrictFormat("test%s%s", "format"));
   }
 
   @Test
   public void testRemoveChar()
   {
-    JupiterAssertions.assertEquals("123", StringUtils.removeChar("123", ','));
-    JupiterAssertions.assertEquals("123", StringUtils.removeChar("123,", ','));
-    JupiterAssertions.assertEquals("123", StringUtils.removeChar(",1,,2,3,", ','));
-    JupiterAssertions.assertEquals("", StringUtils.removeChar(",,", ','));
+    Assertions.assertEquals("123", StringUtils.removeChar("123", ','));
+    Assertions.assertEquals("123", StringUtils.removeChar("123,", ','));
+    Assertions.assertEquals("123", StringUtils.removeChar(",1,,2,3,", ','));
+    Assertions.assertEquals("", StringUtils.removeChar(",,", ','));
   }
 
   @Test
   public void testReplaceChar()
   {
-    JupiterAssertions.assertEquals("123", StringUtils.replaceChar("123", ',', "x"));
-    JupiterAssertions.assertEquals("12345", StringUtils.replaceChar("123,", ',', "45"));
-    JupiterAssertions.assertEquals("", StringUtils.replaceChar("", 'a', "bb"));
-    JupiterAssertions.assertEquals("bb", StringUtils.replaceChar("a", 'a', "bb"));
-    JupiterAssertions.assertEquals("bbbb", StringUtils.replaceChar("aa", 'a', "bb"));
+    Assertions.assertEquals("123", StringUtils.replaceChar("123", ',', "x"));
+    Assertions.assertEquals("12345", StringUtils.replaceChar("123,", ',', "45"));
+    Assertions.assertEquals("", StringUtils.replaceChar("", 'a', "bb"));
+    Assertions.assertEquals("bb", StringUtils.replaceChar("a", 'a', "bb"));
+    Assertions.assertEquals("bbbb", StringUtils.replaceChar("aa", 'a', "bb"));
   }
 
   @Test
   public void testReplace()
   {
-    JupiterAssertions.assertEquals("x1x2x3x", StringUtils.replace("123", "", "x"));
-    JupiterAssertions.assertEquals("12345", StringUtils.replace("123,", ",", "45"));
-    JupiterAssertions.assertEquals("", StringUtils.replace("", "a", "bb"));
-    JupiterAssertions.assertEquals("bb", StringUtils.replace("a", "a", "bb"));
-    JupiterAssertions.assertEquals("bba", StringUtils.replace("aaa", "aa", "bb"));
-    JupiterAssertions.assertEquals("bcb", StringUtils.replace("aacaa", "aa", "b"));
-    JupiterAssertions.assertEquals("bb", StringUtils.replace("aaaa", "aa", "b"));
-    JupiterAssertions.assertEquals("", StringUtils.replace("aaaa", "aa", ""));
+    Assertions.assertEquals("x1x2x3x", StringUtils.replace("123", "", "x"));
+    Assertions.assertEquals("12345", StringUtils.replace("123,", ",", "45"));
+    Assertions.assertEquals("", StringUtils.replace("", "a", "bb"));
+    Assertions.assertEquals("bb", StringUtils.replace("a", "a", "bb"));
+    Assertions.assertEquals("bba", StringUtils.replace("aaa", "aa", "bb"));
+    Assertions.assertEquals("bcb", StringUtils.replace("aacaa", "aa", "b"));
+    Assertions.assertEquals("bb", StringUtils.replace("aaaa", "aa", "b"));
+    Assertions.assertEquals("", StringUtils.replace("aaaa", "aa", ""));
   }
 
   @Test
   public void testEncodeForFormat()
   {
-    JupiterAssertions.assertEquals("x %% a %%s", StringUtils.encodeForFormat("x % a %s"));
-    JupiterAssertions.assertEquals("", StringUtils.encodeForFormat(""));
-    JupiterAssertions.assertNull(StringUtils.encodeForFormat(null));
+    Assertions.assertEquals("x %% a %%s", StringUtils.encodeForFormat("x % a %s"));
+    Assertions.assertEquals("", StringUtils.encodeForFormat(""));
+    Assertions.assertNull(StringUtils.encodeForFormat(null));
   }
 
   @Test
   public void testURLEncodeSpace()
   {
     String s1 = StringUtils.urlEncode("aaa bbb");
-    JupiterAssertions.assertEquals(s1, "aaa%20bbb");
-    JupiterAssertions.assertEquals("aaa bbb", StringUtils.urlDecode(s1));
+    Assertions.assertEquals(s1, "aaa%20bbb");
+    Assertions.assertEquals("aaa bbb", StringUtils.urlDecode(s1));
 
     String s2 = StringUtils.urlEncode("fff+ggg");
-    JupiterAssertions.assertEquals(s2, "fff%2Bggg");
-    JupiterAssertions.assertEquals("fff+ggg", StringUtils.urlDecode(s2));
+    Assertions.assertEquals(s2, "fff%2Bggg");
+    Assertions.assertEquals("fff+ggg", StringUtils.urlDecode(s2));
   }
 
   @Test
   public void testRepeat()
   {
-    JupiterAssertions.assertEquals("", StringUtils.repeat("foo", 0));
-    JupiterAssertions.assertEquals("foo", StringUtils.repeat("foo", 1));
-    JupiterAssertions.assertEquals("foofoofoo", StringUtils.repeat("foo", 3));
+    Assertions.assertEquals("", StringUtils.repeat("foo", 0));
+    Assertions.assertEquals("foo", StringUtils.repeat("foo", 1));
+    Assertions.assertEquals("foofoofoo", StringUtils.repeat("foo", 3));
 
-    JupiterAssertions.assertEquals("", StringUtils.repeat("", 0));
-    JupiterAssertions.assertEquals("", StringUtils.repeat("", 1));
-    JupiterAssertions.assertEquals("", StringUtils.repeat("", 3));
+    Assertions.assertEquals("", StringUtils.repeat("", 0));
+    Assertions.assertEquals("", StringUtils.repeat("", 1));
+    Assertions.assertEquals("", StringUtils.repeat("", 3));
 
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("count is negative, -1");
-    JupiterAssertions.assertEquals("", StringUtils.repeat("foo", -1));
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> StringUtils.repeat("foo", -1)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("count is negative, -1"));
   }
 
   @Test
   public void testLpad()
   {
     String lpad = StringUtils.lpad("abc", 7, "de");
-    JupiterAssertions.assertEquals("dedeabc", lpad);
+    Assertions.assertEquals("dedeabc", lpad);
 
     lpad = StringUtils.lpad("abc", 6, "de");
-    JupiterAssertions.assertEquals("dedabc", lpad);
+    Assertions.assertEquals("dedabc", lpad);
 
     lpad = StringUtils.lpad("abc", 2, "de");
-    JupiterAssertions.assertEquals("ab", lpad);
+    Assertions.assertEquals("ab", lpad);
 
     lpad = StringUtils.lpad("abc", 0, "de");
-    JupiterAssertions.assertEquals("", lpad);
+    Assertions.assertEquals("", lpad);
 
     lpad = StringUtils.lpad("abc", -1, "de");
-    JupiterAssertions.assertEquals("", lpad);
+    Assertions.assertEquals("", lpad);
 
     lpad = StringUtils.lpad("abc", 10, "");
-    JupiterAssertions.assertEquals("abc", lpad);
+    Assertions.assertEquals("abc", lpad);
 
     lpad = StringUtils.lpad("abc", 1, "");
-    JupiterAssertions.assertEquals("a", lpad);
+    Assertions.assertEquals("a", lpad);
   }
 
   @Test
   public void testRpad()
   {
     String rpad = StringUtils.rpad("abc", 7, "de");
-    JupiterAssertions.assertEquals("abcdede", rpad);
+    Assertions.assertEquals("abcdede", rpad);
 
     rpad = StringUtils.rpad("abc", 6, "de");
-    JupiterAssertions.assertEquals("abcded", rpad);
+    Assertions.assertEquals("abcded", rpad);
 
     rpad = StringUtils.rpad("abc", 2, "de");
-    JupiterAssertions.assertEquals("ab", rpad);
+    Assertions.assertEquals("ab", rpad);
 
     rpad = StringUtils.rpad("abc", 0, "de");
-    JupiterAssertions.assertEquals("", rpad);
+    Assertions.assertEquals("", rpad);
 
     rpad = StringUtils.rpad("abc", -1, "de");
-    JupiterAssertions.assertEquals("", rpad);
+    Assertions.assertEquals("", rpad);
 
     rpad = StringUtils.rpad("abc", 10, "");
-    JupiterAssertions.assertEquals("abc", rpad);
+    Assertions.assertEquals("abc", rpad);
 
     rpad = StringUtils.rpad("abc", 1, "");
-    JupiterAssertions.assertEquals("a", rpad);
+    Assertions.assertEquals("a", rpad);
   }
 
   @Test
   public void testChop()
   {
-    JupiterAssertions.assertEquals("foo", StringUtils.chop("foo", 5));
-    JupiterAssertions.assertEquals("fo", StringUtils.chop("foo", 2));
-    JupiterAssertions.assertEquals("", StringUtils.chop("foo", 0));
-    JupiterAssertions.assertEquals("smile 🙂 for", StringUtils.chop("smile 🙂 for the camera", 14));
-    JupiterAssertions.assertEquals("smile 🙂", StringUtils.chop("smile 🙂 for the camera", 10));
-    JupiterAssertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 9));
-    JupiterAssertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 8));
-    JupiterAssertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 7));
-    JupiterAssertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 6));
-    JupiterAssertions.assertEquals("smile", StringUtils.chop("smile 🙂 for the camera", 5));
+    Assertions.assertEquals("foo", StringUtils.chop("foo", 5));
+    Assertions.assertEquals("fo", StringUtils.chop("foo", 2));
+    Assertions.assertEquals("", StringUtils.chop("foo", 0));
+    Assertions.assertEquals("smile 🙂 for", StringUtils.chop("smile 🙂 for the camera", 14));
+    Assertions.assertEquals("smile 🙂", StringUtils.chop("smile 🙂 for the camera", 10));
+    Assertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 9));
+    Assertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 8));
+    Assertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 7));
+    Assertions.assertEquals("smile ", StringUtils.chop("smile 🙂 for the camera", 6));
+    Assertions.assertEquals("smile", StringUtils.chop("smile 🙂 for the camera", 5));
   }
 
   @Test
   public void testFastLooseChop()
   {
-    JupiterAssertions.assertEquals("foo", StringUtils.fastLooseChop("foo", 5));
-    JupiterAssertions.assertEquals("fo", StringUtils.fastLooseChop("foo", 2));
-    JupiterAssertions.assertEquals("", StringUtils.fastLooseChop("foo", 0));
-    JupiterAssertions.assertEquals("smile 🙂 for", StringUtils.fastLooseChop("smile 🙂 for the camera", 12));
-    JupiterAssertions.assertEquals("smile 🙂 ", StringUtils.fastLooseChop("smile 🙂 for the camera", 9));
-    JupiterAssertions.assertEquals("smile 🙂", StringUtils.fastLooseChop("smile 🙂 for the camera", 8));
-    JupiterAssertions.assertEquals("smile \uD83D", StringUtils.fastLooseChop("smile 🙂 for the camera", 7));
-    JupiterAssertions.assertEquals("smile ", StringUtils.fastLooseChop("smile 🙂 for the camera", 6));
-    JupiterAssertions.assertEquals("smile", StringUtils.fastLooseChop("smile 🙂 for the camera", 5));
+    Assertions.assertEquals("foo", StringUtils.fastLooseChop("foo", 5));
+    Assertions.assertEquals("fo", StringUtils.fastLooseChop("foo", 2));
+    Assertions.assertEquals("", StringUtils.fastLooseChop("foo", 0));
+    Assertions.assertEquals("smile 🙂 for", StringUtils.fastLooseChop("smile 🙂 for the camera", 12));
+    Assertions.assertEquals("smile 🙂 ", StringUtils.fastLooseChop("smile 🙂 for the camera", 9));
+    Assertions.assertEquals("smile 🙂", StringUtils.fastLooseChop("smile 🙂 for the camera", 8));
+    Assertions.assertEquals("smile \uD83D", StringUtils.fastLooseChop("smile 🙂 for the camera", 7));
+    Assertions.assertEquals("smile ", StringUtils.fastLooseChop("smile 🙂 for the camera", 6));
+    Assertions.assertEquals("smile", StringUtils.fastLooseChop("smile 🙂 for the camera", 5));
   }
 
   @Test
@@ -325,14 +322,14 @@ public class StringUtilsTest
             StringUtils.toUtf8(string2)
         );
 
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
+            (int) Math.signum(compareUtf8),
+            (int) Math.signum(compareUnicode),
             StringUtils.format(
                 "compareUnicode (actual) matches compareUtf8 (expected) for [%s] vs [%s]",
                 string1,
                 string2
-            ),
-            (int) Math.signum(compareUtf8),
-            (int) Math.signum(compareUnicode)
+            )
         );
       }
     }
@@ -365,26 +362,26 @@ public class StringUtilsTest
             utf8Bytes2.length
         );
 
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
+            (int) Math.signum(compareJavaString),
+            (int) Math.signum(compareByteArrayUtf8UsingJavaStringOrdering),
             StringUtils.format(
                 "compareUtf8UsingJavaStringOrdering(byte[]) (actual) "
                 + "matches compareJavaString (expected) for [%s] vs [%s]",
                 string1,
                 string2
-            ),
-            (int) Math.signum(compareJavaString),
-            (int) Math.signum(compareByteArrayUtf8UsingJavaStringOrdering)
+            )
         );
 
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
+            (int) Math.signum(compareJavaString),
+            (int) Math.signum(compareByteBufferUtf8UsingJavaStringOrdering),
             StringUtils.format(
                 "compareByteBufferUtf8UsingJavaStringOrdering(ByteBuffer) (actual) "
                 + "matches compareJavaString (expected) for [%s] vs [%s]",
                 string1,
                 string2
-            ),
-            (int) Math.signum(compareJavaString),
-            (int) Math.signum(compareByteBufferUtf8UsingJavaStringOrdering)
+            )
         );
       }
     }
@@ -393,13 +390,13 @@ public class StringUtilsTest
   @Test()
   public void testNonStrictFormatWithNullMessage()
   {
-    JupiterAssertions.assertThrows(NullPointerException.class, () -> StringUtils.nonStrictFormat(null, 1, 2));
+    Assertions.assertThrows(NullPointerException.class, () -> StringUtils.nonStrictFormat(null, 1, 2));
   }
 
   @Test
   public void testNonStrictFormatWithStringContainingPercent()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         "some string containing % %s %d %f",
         StringUtils.nonStrictFormat("%s", "some string containing % %s %d %f")
     );

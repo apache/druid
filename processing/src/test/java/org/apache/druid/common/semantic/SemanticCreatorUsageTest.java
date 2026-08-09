@@ -33,8 +33,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-import static org.apache.druid.testing.JupiterAssertions.assertEquals;
-import static org.apache.druid.testing.JupiterAssertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Ensures that the usage of the {@link SemanticCreator} annotations follows some basic rules.
@@ -73,7 +73,7 @@ public class SemanticCreatorUsageTest
   public void testPublic()
   {
     int modifiers = method.getModifiers();
-    assertTrue(StringUtils.format("method [%s] is not public", method), Modifier.isPublic(modifiers));
+    assertTrue(Modifier.isPublic(modifiers), StringUtils.format("method [%s] is not public", method));
   }
 
   /**
@@ -86,8 +86,8 @@ public class SemanticCreatorUsageTest
   {
     Class<?> returnType = method.getReturnType();
     assertTrue(
-        returnType + " is not an interface; this method must return with an interface; ",
-        returnType.isInterface()
+        returnType.isInterface(),
+        returnType + " is not an interface; this method must return with an interface; "
     );
   }
 
@@ -102,7 +102,7 @@ public class SemanticCreatorUsageTest
     Class<?> returnType = method.getReturnType();
 
     String desiredMethodName = "to" + returnType.getSimpleName();
-    assertEquals("should be named as " + desiredMethodName, desiredMethodName, method.getName());
+    assertEquals(desiredMethodName, method.getName(), "should be named as " + desiredMethodName);
 
   }
 }

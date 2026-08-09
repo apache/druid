@@ -23,7 +23,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -98,7 +98,7 @@ public class TopNSequenceTest
 
       Sequence<String> result = new TopNSequence<>(Sequences.simple(inputs), ordering, limit);
 
-      JupiterAssertions.assertEquals(expected, result.toList());
+      Assertions.assertEquals(expected, result.toList());
     }
   }
 
@@ -137,10 +137,10 @@ public class TopNSequenceTest
       // Verify that the output of the sequence is stable relative to the input.
       for (int limit = 0; limit < expected.length() + 1; limit++) {
         final TopNSequence<String> sequence = new TopNSequence<>(Sequences.simple(rawInput), EVENODD, limit);
-        JupiterAssertions.assertEquals(
-            "limit = " + limit,
+        Assertions.assertEquals(
             expected.substring(0, Math.min(limit, expected.length())),
-            Joiner.on("").join(sequence.toList())
+            Joiner.on("").join(sequence.toList()),
+            "limit = " + limit
         );
       }
     }

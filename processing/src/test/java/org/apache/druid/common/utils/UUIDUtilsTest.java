@@ -25,7 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -103,7 +103,7 @@ public class UUIDUtilsTest
     strings.add(uuidString.substring(16, 20));
     strings.add(uuidString.substring(20, 32));
     UUID uuid = UUID.fromString(Joiner.on('-').join(strings));
-    JupiterAssertions.assertEquals(StringUtils.removeChar(uuid.toString(), '-'), uuidString);
+    Assertions.assertEquals(StringUtils.removeChar(uuid.toString(), '-'), uuidString);
   }
 
   @Test

@@ -25,8 +25,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.testing.JupiterAssertions;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -116,11 +116,11 @@ public class JsonConfiguratorTest
   @Test
   public void testTest()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new MappableObject("p1", ImmutableList.of("p2"), "p2"),
         new MappableObject("p1", ImmutableList.of("p2"), "p2")
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new MappableObject("p1", null, null),
         new MappableObject("p1", ImmutableList.of(), null)
     );
@@ -133,8 +133,8 @@ public class JsonConfiguratorTest
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");
     properties.setProperty(PROP_PREFIX + "prop1List", "[\"prop2\"]");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertEquals("prop1", obj.prop1);
-    JupiterAssertions.assertEquals(ImmutableList.of("prop2"), obj.prop1List);
+    Assertions.assertEquals("prop1", obj.prop1);
+    Assertions.assertEquals(ImmutableList.of("prop2"), obj.prop1List);
   }
 
   @Test
@@ -143,8 +143,8 @@ public class JsonConfiguratorTest
     final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertEquals("prop1", obj.prop1);
-    JupiterAssertions.assertEquals(ImmutableList.of(), obj.prop1List);
+    Assertions.assertEquals("prop1", obj.prop1);
+    Assertions.assertEquals(ImmutableList.of(), obj.prop1List);
   }
 
   @Test
@@ -153,8 +153,8 @@ public class JsonConfiguratorTest
     final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1List", "[\"prop2\"]");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertNull(obj.prop1);
-    JupiterAssertions.assertEquals(ImmutableList.of("prop2"), obj.prop1List);
+    Assertions.assertNull(obj.prop1);
+    Assertions.assertEquals(ImmutableList.of("prop2"), obj.prop1List);
   }
 
   @Test
@@ -163,8 +163,8 @@ public class JsonConfiguratorTest
     final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "testing \"prop1\"");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertEquals("testing \"prop1\"", obj.prop1);
-    JupiterAssertions.assertEquals(ImmutableList.of(), obj.prop1List);
+    Assertions.assertEquals("testing \"prop1\"", obj.prop1);
+    Assertions.assertEquals(ImmutableList.of(), obj.prop1List);
   }
 
   @Test
@@ -174,9 +174,9 @@ public class JsonConfiguratorTest
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "testing");
     properties.setProperty(PROP_PREFIX + "prop1", "prop1");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertEquals("testing", obj.prop2);
-    JupiterAssertions.assertEquals(ImmutableList.of(), obj.prop1List);
-    JupiterAssertions.assertEquals("prop1", obj.prop1);
+    Assertions.assertEquals("testing", obj.prop2);
+    Assertions.assertEquals(ImmutableList.of(), obj.prop1List);
+    Assertions.assertEquals("prop1", obj.prop1);
 
   }
 
@@ -191,9 +191,9 @@ public class JsonConfiguratorTest
     properties.setProperty(PROP_PREFIX + "prop1List", "${file:UTF-8:src/test/resources/list.json}");
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${env:PATH}");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertEquals(System.getProperty("my.property"), obj.prop1);
-    JupiterAssertions.assertEquals(list, obj.prop1List);
-    JupiterAssertions.assertEquals(System.getenv("PATH"), obj.prop2);
+    Assertions.assertEquals(System.getProperty("my.property"), obj.prop1);
+    Assertions.assertEquals(list, obj.prop1List);
+    Assertions.assertEquals(System.getenv("PATH"), obj.prop2);
   }
 
   @Test
@@ -211,9 +211,9 @@ public class JsonConfiguratorTest
     properties.setProperty(PROP_PREFIX + "prop1List", "${file:UTF-8:${sys:json.path}}");
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${env:${sys:env.var.name}}");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertEquals(System.getProperty("my.property"), obj.prop1);
-    JupiterAssertions.assertEquals(list, obj.prop1List);
-    JupiterAssertions.assertEquals(System.getenv("PATH"), obj.prop2);
+    Assertions.assertEquals(System.getProperty("my.property"), obj.prop1);
+    Assertions.assertEquals(list, obj.prop1List);
+    Assertions.assertEquals(System.getenv("PATH"), obj.prop2);
   }
 
   @Test
@@ -226,9 +226,9 @@ public class JsonConfiguratorTest
     properties.setProperty(PROP_PREFIX + "prop1List", "${unknown:-[\"list\", \"of\", \"strings\"]}");
     properties.setProperty(PROP_PREFIX + "prop2.prop.2", "${MY_VAR:-value2}");
     final MappableObject obj = configurator.configurate(properties, PROP_PREFIX, MappableObject.class);
-    JupiterAssertions.assertEquals("value1", obj.prop1);
-    JupiterAssertions.assertEquals(list, obj.prop1List);
-    JupiterAssertions.assertEquals("value2", obj.prop2);
+    Assertions.assertEquals("value1", obj.prop1);
+    Assertions.assertEquals(list, obj.prop1List);
+    Assertions.assertEquals("value2", obj.prop2);
   }
 
   @Test
@@ -237,7 +237,7 @@ public class JsonConfiguratorTest
     final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, validator);
     properties.setProperty(PROP_PREFIX + "prop1", "${sys:my.property}");
 
-    JupiterAssertions.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> configurator.configurate(properties, PROP_PREFIX, MappableObject.class)
     );

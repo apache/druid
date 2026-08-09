@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -163,21 +163,21 @@ public class DelimitedReaderTest
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             DateTimes.of(StringUtils.format("2019-01-01T00:00:%02dZ", (numResults + 1) * 10)),
             row.getTimestamp()
         );
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             ImmutableList.of(Integer.toString((numResults + 1) * 5), Integer.toString(numResults + 1)),
             row.getDimension("score")
         );
         numResults++;
       }
-      JupiterAssertions.assertEquals(3, numResults);
+      Assertions.assertEquals(3, numResults);
     }
   }
 
@@ -292,8 +292,8 @@ public class DelimitedReaderTest
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       final Iterator<InputRow> expectedRowIterator = expectedResults.iterator();
       while (iterator.hasNext()) {
-        JupiterAssertions.assertTrue(expectedRowIterator.hasNext());
-        JupiterAssertions.assertEquals(expectedRowIterator.next(), iterator.next());
+        Assertions.assertTrue(expectedRowIterator.hasNext());
+        Assertions.assertEquals(expectedRowIterator.next(), iterator.next());
       }
     }
   }
@@ -315,21 +315,21 @@ public class DelimitedReaderTest
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             DateTimes.of(StringUtils.format("2019-01-01T00:00:%02dZ", (numResults + 1) * 10)),
             row.getTimestamp()
         );
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             ImmutableList.of(Integer.toString((numResults + 1) * 5), Integer.toString(numResults + 1)),
             row.getDimension("score")
         );
         numResults++;
       }
-      JupiterAssertions.assertEquals(3, numResults);
+      Assertions.assertEquals(3, numResults);
     }
   }
 
@@ -352,15 +352,15 @@ public class DelimitedReaderTest
     );
     final InputEntityReader reader = format.createReader(INPUT_ROW_SCHEMA, source, null);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
-      JupiterAssertions.assertTrue(iterator.hasNext());
+      Assertions.assertTrue(iterator.hasNext());
       final InputRow row = iterator.next();
-      JupiterAssertions.assertEquals(DateTimes.of("2019-01-01T00:00:10Z"), row.getTimestamp());
-      JupiterAssertions.assertEquals("name_1", Iterables.getOnlyElement(row.getDimension("name")));
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(DateTimes.of("2019-01-01T00:00:10Z"), row.getTimestamp());
+      Assertions.assertEquals("name_1", Iterables.getOnlyElement(row.getDimension("name")));
+      Assertions.assertEquals(
           "Как говорится: \\\"всё течет всё изменяется\\\". Украина как всегда обвиняет Россию в собственных проблемах. #ПровокацияКиева",
           Iterables.getOnlyElement(row.getDimension("Comment"))
       );
-      JupiterAssertions.assertFalse(iterator.hasNext());
+      Assertions.assertFalse(iterator.hasNext());
     }
   }
 
@@ -385,32 +385,32 @@ public class DelimitedReaderTest
     try (CloseableIterator<InputRow> iterator = reader.read()) {
       while (iterator.hasNext()) {
         final InputRow row = iterator.next();
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             DateTimes.of(StringUtils.format("2019-01-01T00:00:%02dZ", (numResults + 1) * 10)),
             row.getTimestamp()
         );
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             StringUtils.format("name_%d", numResults + 1),
             Iterables.getOnlyElement(row.getDimension("name"))
         );
         if (format.shouldTryParseNumbers()) {
-          JupiterAssertions.assertEquals(((numResults + 1) * 5L), row.getRaw("score"));
+          Assertions.assertEquals(((numResults + 1) * 5L), row.getRaw("score"));
           if (format.getColumns().contains("rating_dbl")) {
-            JupiterAssertions.assertEquals(numResults * 1.0, row.getRaw("rating_dbl"));
+            Assertions.assertEquals(numResults * 1.0, row.getRaw("rating_dbl"));
           }
         } else {
-          JupiterAssertions.assertEquals(Integer.toString((numResults + 1) * 5), row.getRaw("score"));
+          Assertions.assertEquals(Integer.toString((numResults + 1) * 5), row.getRaw("score"));
           if (format.getColumns().contains("rating_dbl")) {
-            JupiterAssertions.assertEquals(Double.toString(numResults * 1.0), row.getRaw("rating_dbl"));
+            Assertions.assertEquals(Double.toString(numResults * 1.0), row.getRaw("rating_dbl"));
           }
         }
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(
             Integer.toString((numResults + 1) * 5),
             Iterables.getOnlyElement(row.getDimension("score"))
         );
         numResults++;
       }
-      JupiterAssertions.assertEquals(3, numResults);
+      Assertions.assertEquals(3, numResults);
     }
   }
 }

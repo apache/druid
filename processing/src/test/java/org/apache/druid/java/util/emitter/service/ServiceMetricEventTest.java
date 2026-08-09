@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -54,7 +54,7 @@ public class ServiceMetricEventTest
         .setMetric("test-metric", 1234)
         .build("test", "localhost");
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
                     .put("timestamp", builderEvent.getCreatedTime().toString())
@@ -76,8 +76,8 @@ public class ServiceMetricEventTest
         builderEvent.toMap()
     );
 
-    JupiterAssertions.assertEquals("test", builderEvent.getServiceDims().get("service"));
-    JupiterAssertions.assertEquals("localhost", builderEvent.getServiceDims().get("host"));
+    Assertions.assertEquals("test", builderEvent.getServiceDims().get("service"));
+    Assertions.assertEquals("localhost", builderEvent.getServiceDims().get("host"));
 
     ServiceMetricEvent constructorEvent = ServiceMetricEvent
         .builder()
@@ -94,7 +94,7 @@ public class ServiceMetricEventTest
         .setMetric("test-metric", 1234)
         .build("test", "localhost");
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
                     .put("timestamp", constructorEvent.getCreatedTime().toString())
@@ -130,7 +130,7 @@ public class ServiceMetricEventTest
         .setMetric("test-metric", 1234)
         .build("test", "localhost");
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
                     .put("timestamp", arrayConstructorEvent.getCreatedTime().toString())
@@ -151,7 +151,7 @@ public class ServiceMetricEventTest
                     .build(), arrayConstructorEvent.toMap()
     );
 
-    JupiterAssertions.assertNotNull(
+    Assertions.assertNotNull(
         new ServiceMetricEvent.Builder()
             .setDimension("user1", "a")
             .setDimension("user2", "b")
@@ -168,7 +168,7 @@ public class ServiceMetricEventTest
             .getCreatedTime()
     );
 
-    JupiterAssertions.assertNotNull(
+    Assertions.assertNotNull(
         ServiceMetricEvent.builder()
                           .setDimension("user1", new String[]{"a"})
                           .setDimension("user2", new String[]{"b"})
@@ -185,7 +185,7 @@ public class ServiceMetricEventTest
                           .getCreatedTime()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
                     .put("timestamp", DateTimes.utc(42).toString())
@@ -221,7 +221,7 @@ public class ServiceMetricEventTest
             .toMap()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
                     .put("timestamp", DateTimes.utc(42).toString())
@@ -257,7 +257,7 @@ public class ServiceMetricEventTest
                           .toMap()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>builder()
                     .put("feed", "metrics")
                     .put("timestamp", DateTimes.utc(42).toString())
@@ -315,7 +315,7 @@ public class ServiceMetricEventTest
                                                   .setDimensionIfNotNull("userDimMap", userDimMap)
                                                   .setMetric("foo", 1)
                                                   .build("service", "host");
-    JupiterAssertions.assertEquals(userDimMap, target.getUserDims().get("userDimMap"));
+    Assertions.assertEquals(userDimMap, target.getUserDims().get("userDimMap"));
   }
 
   @Test
@@ -325,8 +325,8 @@ public class ServiceMetricEventTest
                                                   .setDimensionIfNotNull("userDimMap", null)
                                                   .setMetric("foo", 1)
                                                   .build("service", "host");
-    JupiterAssertions.assertTrue(target.getUserDims().isEmpty());
-    JupiterAssertions.assertNull(target.getUserDims().get("userDimMap"));
+    Assertions.assertTrue(target.getUserDims().isEmpty());
+    Assertions.assertNull(target.getUserDims().get("userDimMap"));
   }
 
   @Test
@@ -339,9 +339,9 @@ public class ServiceMetricEventTest
 
     final ServiceMetricEvent event1 = eventBuilder.build("coordinator", "localhost");
 
-    JupiterAssertions.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
-    JupiterAssertions.assertEquals("coordinator", event1.getServiceDims().get("service"));
-    JupiterAssertions.assertEquals("localhost", event1.getServiceDims().get("host"));
+    Assertions.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
+    Assertions.assertEquals("coordinator", event1.getServiceDims().get("service"));
+    Assertions.assertEquals("localhost", event1.getServiceDims().get("host"));
 
     final ServiceMetricEvent event2 = eventBuilder
         .setDimension("dim2", "v2")
@@ -349,10 +349,10 @@ public class ServiceMetricEventTest
         .build("coordinator", "localhost");
 
     // Verify that the original event gets changed dimensions
-    JupiterAssertions.assertEquals(Map.of("dim1", "v1", "dim2", "v2"), event2.getUserDims());
-    JupiterAssertions.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
-    JupiterAssertions.assertEquals("coordinator", event2.getServiceDims().get("service"));
-    JupiterAssertions.assertEquals("localhost", event2.getServiceDims().get("host"));
+    Assertions.assertEquals(Map.of("dim1", "v1", "dim2", "v2"), event2.getUserDims());
+    Assertions.assertEquals(Map.of("dim1", "v1"), event1.getUserDims());
+    Assertions.assertEquals("coordinator", event2.getServiceDims().get("service"));
+    Assertions.assertEquals("localhost", event2.getServiceDims().get("host"));
   }
 
   @Test
@@ -360,15 +360,15 @@ public class ServiceMetricEventTest
   {
     final ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent.builder();
 
-    JupiterAssertions.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> eventBuilder.setDimension("dim1", (Object) null)
     );
-    JupiterAssertions.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> eventBuilder.setDimension(null, null)
     );
-    JupiterAssertions.assertThrows(
+    Assertions.assertThrows(
         IAE.class,
         () -> eventBuilder.setDimension(null, new String[]{"a"})
     );
@@ -386,7 +386,7 @@ public class ServiceMetricEventTest
                                                        .build("broker", "hostA");
 
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         "{\"feed\":\"test_feed\",\"timestamp\":\"2026-01-01T00:00:00.000Z\",\"metric\":\"m1\",\"value\":42,\"service\":\"broker\",\"host\":\"hostA\",\"dim1\":\"xyz\",\"dim2\":\"xyz\"}",
         new DefaultObjectMapper().writeValueAsString(event.toMap())
     );
@@ -400,6 +400,6 @@ public class ServiceMetricEventTest
                                                        .setDimension("userDim", "value")
                                                        .build(ImmutableMap.of("serviceDim1", "dim1", "serviceDim2", "dim2"));
 
-    JupiterAssertions.assertEquals(ImmutableMap.of("serviceDim1", "dim1", "serviceDim2", "dim2"), event.getServiceDims());
+    Assertions.assertEquals(ImmutableMap.of("serviceDim1", "dim1", "serviceDim2", "dim2"), event.getServiceDims());
   }
 }
