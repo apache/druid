@@ -88,6 +88,7 @@ import org.apache.druid.segment.join.table.RowBasedIndexedTable;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
@@ -661,7 +662,7 @@ public class TestDataBuilder
         injector,
         conglomerate,
         tmpDir,
-        QueryStackTestHelper.DEFAULT_NOOP_SCHEDULER,
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
         QueryFrameworkUtils.createDefaultJoinableFactory(injector)
     );
   }
@@ -692,7 +693,7 @@ public class TestDataBuilder
   {
     final JoinableFactory joinableFactoryToUse;
     if (joinableFactory == null) {
-      joinableFactoryToUse = QueryStackTestHelper.makeJoinableFactoryForLookup(
+      joinableFactoryToUse = QueryStackTests.makeJoinableFactoryForLookup(
           injector.getInstance(LookupExtractorFactoryContainerProvider.class)
       );
     } else {

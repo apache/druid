@@ -71,9 +71,19 @@ public class DruidLogicalValuesRuleTest
       );
     }
 
-    @ParameterizedTest(name = "{1}, {2}")
-    @MethodSource("constructorFeeder")
-    public void testGetValueFromLiteral(Comparable<?> val, SqlTypeName sqlTypeName, Class<?> javaType)
+    private final Comparable<?> val;
+    private final SqlTypeName sqlTypeName;
+    private final Class<?> javaType;
+
+    public GetValueFromLiteralSimpleTypesTest(Comparable<?> val, SqlTypeName sqlTypeName, Class<?> javaType)
+    {
+      this.val = val;
+      this.sqlTypeName = sqlTypeName;
+      this.javaType = javaType;
+    }
+
+    @Test
+    public void testGetValueFromLiteral()
     {
       final RexLiteral literal = Mockito.spy(makeLiteral(val, sqlTypeName, javaType));
       final Object fromLiteral = DruidLogicalValuesRule.getValueFromLiteral(literal, DEFAULT_CONTEXT);

@@ -86,6 +86,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.LocalQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.TestClusterQuerySegmentWalker;
@@ -621,7 +622,7 @@ public class SqlTestFramework
     public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
     {
       return new JoinableFactoryWrapper(
-          QueryStackTestHelper.makeJoinableFactoryFromDefault(
+          QueryStackTests.makeJoinableFactoryFromDefault(
               lookupProvider,
               ImmutableSet.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE),
               ImmutableMap.of(TestDataBuilder.CUSTOM_ROW_TABLE_JOINABLE.getClass(), GlobalTableDataSource.class)
@@ -986,21 +987,21 @@ public class SqlTestFramework
     @LazySingleton
     public DruidProcessingConfig makeProcessingConfig(Builder builder)
     {
-      return QueryStackTestHelper.getProcessingConfig(builder.mergeBufferCount);
+      return QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
     }
 
     @Provides
     @LazySingleton
     public TestBufferPool makeTestBufferPool(Builder builder)
     {
-      return QueryStackTestHelper.makeTestBufferPool(builder.resourceCloser);
+      return QueryStackTests.makeTestBufferPool(builder.resourceCloser);
     }
 
     @Provides
     @LazySingleton
     public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig, Builder builder)
     {
-      return QueryStackTestHelper.makeGroupByBuffers(builder.resourceCloser, processingConfig);
+      return QueryStackTests.makeGroupByBuffers(builder.resourceCloser, processingConfig);
     }
 
     @Provides

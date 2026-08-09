@@ -143,13 +143,8 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY 'day'"
      */
-    @ParameterizedTest(name = "{1}")
-    @MethodSource("constructorFeeder")
-    public void testConvertSqlNodeToGranularityAsLiteral(
-        TimeUnit timeUnit,
-        Period period,
-        Granularity expectedGranularity
-    )
+    @Test
+    public void testConvertSqlNodeToGranularityAsLiteral()
     {
       SqlNode sqlNode = SqlLiteral.createCharString(timeUnit.name(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
@@ -159,12 +154,8 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY PT1D"
      */
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("periodConstructorFeeder")
-    public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier(
-        Period period,
-        Granularity expectedGranularity
-    )
+    @Test
+    public void testConvertSqlNodeToPeriodFormGranularityAsIdentifier()
     {
       SqlNode sqlNode = new SqlIdentifier(period.toString(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
@@ -174,12 +165,8 @@ public class DruidSqlParserUtilsTest
     /**
      * Tests clause like "PARTITIONED BY 'PT1D'"
      */
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("periodConstructorFeeder")
-    public void testConvertSqlNodeToPeriodFormGranularityAsLiteral(
-        Period period,
-        Granularity expectedGranularity
-    )
+    @Test
+    public void testConvertSqlNodeToPeriodFormGranularityAsLiteral()
     {
       SqlNode sqlNode = SqlLiteral.createCharString(period.toString(), SqlParserPos.ZERO);
       Granularity actualGranularity = DruidSqlParserUtils.convertSqlNodeToGranularity(sqlNode);
