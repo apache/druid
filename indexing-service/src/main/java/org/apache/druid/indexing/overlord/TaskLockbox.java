@@ -574,7 +574,7 @@ public class TaskLockbox
 
       if (request.getType() == TaskLockType.KILL && !KillUnusedSegmentsTask.TYPE.equals(task.getType())) {
         throw new ISE(
-            "Task [%s] of type [%s] is not allowed to acquire a KILL lock. Only tasks of type [%s] may use KILL locks.",
+            "Task[%s] of type[%s] cannot acquire a KILL lock. Only tasks of type[%s] may use KILL locks.",
             task.getId(), task.getType(), KillUnusedSegmentsTask.TYPE
         );
       }
@@ -1500,7 +1500,8 @@ public class TaskLockbox
 
   /**
    * Check if a SHARED lock can coexist with a given set of conflicting posses.
-   * A SHARED lock can coexist with any number of other active SHARED locks
+   * A SHARED lock can coexist with any number of other active SHARED locks or
+   * a KILL lock.
    * @param conflictPosses conflicting lock posses
    * @return true iff shared lock can coexist with all its conflicting locks
    */
@@ -1521,7 +1522,8 @@ public class TaskLockbox
 
   /**
    * Check if an EXCLUSIVE lock can coexist with a given set of conflicting posses.
-   * An EXCLUSIVE lock cannot coexist with any other overlapping active locks
+   * An EXCLUSIVE lock cannot coexist with any other overlapping active locks,
+   * except a KILL lock.
    * @param conflictPosses conflicting lock posses
    * @return true iff the exclusive lock can coexist with all its conflicting locks
    */

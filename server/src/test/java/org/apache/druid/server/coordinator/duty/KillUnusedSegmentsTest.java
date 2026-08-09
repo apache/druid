@@ -39,8 +39,11 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManagerTestBase;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataReadOnlyTransactionFactory;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -112,8 +115,14 @@ public class KillUnusedSegmentsTest
   public void setup()
   {
     connector = derbyConnectorRule.getConnector();
+    final SegmentMetadataTransactionFactory transactionFactory = new SqlSegmentMetadataReadOnlyTransactionFactory(
+        TestHelper.JSON_MAPPER,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        new SegmentsMetadataManagerConfig(null, null, null),
+        connector
+    );
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
-        null,
+        transactionFactory,
         TestHelper.JSON_MAPPER,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         connector,
