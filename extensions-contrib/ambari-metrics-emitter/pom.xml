@@ -61,6 +61,11 @@
           <artifactId>jackson-mapper-asl</artifactId>
         </exclusion>
         <exclusion>
+          <!-- ambari-metrics-common shades Jackson 1.9.13 and uses the relocated copy at runtime -->
+          <groupId>org.codehaus.jackson</groupId>
+          <artifactId>jackson-xc</artifactId>
+        </exclusion>
+        <exclusion>
           <!-- ambari depends on hadoop-annotations, which in turn depends on
           ${java.home}/../lib/tools.jar, which was removed in Java 9+ -->
           <groupId>jdk.tools</groupId>

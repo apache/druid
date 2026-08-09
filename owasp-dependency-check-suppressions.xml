@@ -398,7 +398,13 @@
   </suppress>
 
   <suppress>
-     <!-- (ranger, ambari, and aliyun-oss) these vulnerabilities are legit, but their latest releases still use the vulnerable jackson version -->
+     <!--
+       These vulnerabilities are legitimate, but the latest releases of ranger, ambari, and aliyun-oss still use
+       the vulnerable Jackson version. ambari-metrics-common:2.7.0.0.0 is the latest published release and shades
+       Jackson 1.9.13 into org.apache.ambari.metrics.sink.relocated.jackson, which is used by the timeline sink at
+       runtime. ambari-metrics-emitter excludes the unrelocated jackson-xc artifact; retain these explicit entries
+       until ambari-metrics-common can be replaced with a compatible dependency.
+     -->
      <notes><![CDATA[
      file name: jackson-xc-1.9.x.jar or jackson-jaxrs-1.9.x.jar
      ]]></notes>
