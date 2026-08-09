@@ -159,20 +159,6 @@ public class GlobalTaskLockboxTest
     validator = new TaskLockboxValidator(lockbox, taskStorage);
   }
 
-  private static Task newKillTask(int priority)
-  {
-    return new KillUnusedSegmentsTask(
-        null,
-        "none",
-        Intervals.of("2000/3000"),
-        null,
-        Map.of(Tasks.PRIORITY_KEY, priority),
-        100,
-        null,
-        null
-    );
-  }
-
   private LockResult acquireTimeChunkLock(TaskLockType lockType, Task task, Interval interval, long timeoutMs)
       throws InterruptedException
   {
@@ -1881,24 +1867,29 @@ public class GlobalTaskLockboxTest
         Intervals.of("2017-05-01/2017-06-01"),
         MEDIUM_PRIORITY
     );
+    validator.expectActiveLocks(theLock, exclusiveLock);
+    validator.expectRevokedLocks();
+
     final TaskLock sharedLock = validator.expectLockCreated(
         TaskLockType.SHARED,
         Intervals.of("2017-05-01/2017-06-01"),
-        MEDIUM_PRIORITY
+        MEDIUM_PRIORITY + 1
     );
+    validator.expectActiveLocks(theLock, sharedLock);
+    validator.expectRevokedLocks(exclusiveLock);
+
     final TaskLock replaceLock = validator.expectLockCreated(
         TaskLockType.REPLACE,
         Intervals.of("2017-03-01/2017-09-01"),
-        MEDIUM_PRIORITY
+        MEDIUM_PRIORITY + 2
     );
     final TaskLock appendLock = validator.expectLockCreated(
         TaskLockType.APPEND,
         Intervals.of("2017-05-01/2017-06-01"),
-        MEDIUM_PRIORITY
+        MEDIUM_PRIORITY + 3
     );
-
-    validator.expectActiveLocks(theLock, exclusiveLock, sharedLock, replaceLock, appendLock);
-    validator.expectRevokedLocks();
+    validator.expectActiveLocks(theLock, replaceLock, appendLock);
+    validator.expectRevokedLocks(exclusiveLock, sharedLock);
   }
 
   @Test
@@ -2024,7 +2015,7 @@ public class GlobalTaskLockboxTest
         new TimeChunkLockRequest(TaskLockType.KILL, lowPriorityKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
     );
     Assert.assertTrue(lowResult.isOk());
-    final TaskLock lowPriorityLock = lowResult.getTaskLock();
+    Assert.assertFalse(lowResult.getTaskLock().isRevoked());
 
     // High-priority kill task not in storage revokes the low-priority KILL lock
     final Task highPriorityKillTask = newKillTask(HIGH_PRIORITY);
@@ -2041,7 +2032,7 @@ public class GlobalTaskLockboxTest
         lowPriorityKillTask,
         new TimeChunkLockRequest(TaskLockType.KILL, lowPriorityKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
     );
-    Assert.assertTrue(revokedResult.isOk());
+    Assert.assertFalse(revokedResult.isOk());
     Assert.assertTrue(revokedResult.getTaskLock().isRevoked());
 
     lockbox.remove(lowPriorityKillTask);
@@ -2304,6 +2295,20 @@ public class GlobalTaskLockboxTest
     );
   }
 
+  private static Task newKillTask(int priority)
+  {
+    return new KillUnusedSegmentsTask(
+        null,
+        "none",
+        Intervals.of("2000/3000"),
+        null,
+        Map.of(Tasks.PRIORITY_KEY, priority),
+        100,
+        null,
+        null
+    );
+  }
+
   private class TaskLockboxValidator
   {
 
@@ -2357,7 +2362,7 @@ public class GlobalTaskLockboxTest
     {
       final Set<TaskLock> allLocks = getAllLocks();
       final Set<TaskLock> activeLocks = getAllActiveLocks();
-      Assert.assertEquals(allLocks.size() - activeLocks.size(), locks.length);
+      Assert.assertEquals(locks.length, allLocks.size() - activeLocks.size());
       for (TaskLock lock : locks) {
         Assert.assertTrue(allLocks.contains(lock.revokedCopy()));
         Assert.assertFalse(activeLocks.contains(lock));
@@ -2368,7 +2373,7 @@ public class GlobalTaskLockboxTest
     {
       final Set<TaskLock> allLocks = getAllLocks();
       final Set<TaskLock> activeLocks = getAllActiveLocks();
-      Assert.assertEquals(activeLocks.size(), locks.length);
+      Assert.assertEquals(locks.length, activeLocks.size());
       for (TaskLock lock : locks) {
         Assert.assertTrue(allLocks.contains(lock));
         Assert.assertTrue(activeLocks.contains(lock));

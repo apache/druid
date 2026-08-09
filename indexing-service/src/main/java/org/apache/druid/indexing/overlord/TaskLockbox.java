@@ -595,7 +595,7 @@ public class TaskLockbox
         final List<TaskLockPosse> reusablePosses = foundPosses
             .stream()
             .filter(posse -> posse.reusableFor(request))
-            .collect(Collectors.toList());
+            .toList();
 
         if (reusablePosses.isEmpty()) {
           // case 1) this task doesn't have any lock, but others do
@@ -1372,7 +1372,7 @@ public class TaskLockbox
       final List<TaskLockPosse> filteredPosses = findLockPossesContainingInterval(interval)
           .stream()
           .filter(lockPosse -> lockPosse.containsTask(task))
-          .collect(Collectors.toList());
+          .toList();
 
       if (filteredPosses.isEmpty()) {
         throw new ISE("Cannot find any lock for task[%s] and interval[%s]", task.getId(), interval);
@@ -1441,7 +1441,7 @@ public class TaskLockbox
   /**
    * Check if an APPEND lock can coexist with a given set of conflicting posses.
    * An APPEND lock can coexist with any number of other APPEND locks
-   *    OR with at most one REPLACE lock over an interval which encloes this request.
+   *    OR with at most one REPLACE lock over an interval which encloses this request.
    * @param conflictPosses conflicting lock posses
    * @param appendRequest append lock request
    * @return true iff append lock can coexist with all its conflicting locks
@@ -1488,6 +1488,8 @@ public class TaskLockbox
           || posse.getTaskLock().getType().equals(TaskLockType.REPLACE)) {
         return false;
       }
+      // REPLACE lock can coexist with an APPEND lock only if the append interval
+      // is fully contained within the replace interval
       if (posse.getTaskLock().getType().equals(TaskLockType.APPEND)
           && !replaceLock.getInterval().contains(posse.getTaskLock().getInterval())) {
         return false;
@@ -1529,7 +1531,9 @@ public class TaskLockbox
       if (posse.getTaskLock().isRevoked()) {
         continue;
       }
-      return false;
+      if (!isLockTypeKill(posse)) {
+        return false;
+      }
     }
     return true;
   }
@@ -1546,11 +1550,16 @@ public class TaskLockbox
       if (posse.getTaskLock().isRevoked()) {
         continue;
       }
-      if (posse.getTaskLock().getType().equals(TaskLockType.KILL)) {
+      if (isLockTypeKill(posse)) {
         return false;
       }
     }
     return true;
+  }
+
+  private boolean isLockTypeKill(TaskLockPosse posse)
+  {
+    return posse.getTaskLock().getType().equals(TaskLockType.KILL);
   }
 
   /**
@@ -1574,7 +1583,9 @@ public class TaskLockbox
     final List<TaskLockPosse> possesToRevoke = new ArrayList<>();
 
     for (TaskLockPosse posse : conflictPosses) {
-      if (posse.getTaskLock().isRevoked()) {
+      // No need to revoke an already revoked lock or a KILL lock (unless the new LockRequest is also a KILL)
+      if (posse.getTaskLock().isRevoked()
+          || (isLockTypeKill(posse) && type != TaskLockType.KILL)) {
         continue;
       }
       switch (type) {

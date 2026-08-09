@@ -1023,6 +1023,11 @@ public class SqlSegmentsMetadataQuery
    */
   private void validateSegmentsForMarkingAsUsed(Collection<DataSegmentPlus> segments)
   {
+    if (!managerConfig.getKillUnused().isEnabled()) {
+      // Do not verify the buffer period if embedded kill tasks are not enabled
+      return;
+    }
+
     final Period bufferPeriod = managerConfig.getKillUnused().getBufferPeriod();
     final DateTime minAllowedUpdateTime = DateTimes.nowUtc().minus(
         managerConfig.getKillUnused().getBufferPeriod()
