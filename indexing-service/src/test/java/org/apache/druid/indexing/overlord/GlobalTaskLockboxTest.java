@@ -1940,6 +1940,149 @@ public class GlobalTaskLockboxTest
   }
 
   @Test
+  public void testKillLockAcquireAndReleaseWithoutTaskInStorage()
+  {
+    final Task killTask = newKillTask(MEDIUM_PRIORITY);
+
+    // Add task to lockbox only — do NOT insert into taskStorage (mirrors EmbeddedKillTask behaviour)
+    lockbox.add(killTask);
+
+    final LockResult result = lockbox.tryLock(
+        killTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, killTask, Intervals.of("2017/2018"), null)
+    );
+    Assert.assertTrue(result.isOk());
+    final TaskLock killLock = result.getTaskLock();
+    Assert.assertNotNull(killLock);
+    Assert.assertEquals(TaskLockType.KILL, killLock.getType());
+    Assert.assertFalse(killLock.isRevoked());
+
+    // Verify the lock blocks another KILL on an overlapping interval
+    final Task otherKillTask = newKillTask(MEDIUM_PRIORITY);
+    lockbox.add(otherKillTask);
+    final LockResult blockedResult = lockbox.tryLock(
+        otherKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, otherKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
+    );
+    Assert.assertFalse(blockedResult.isOk());
+
+    // Releasing the task removes the lock; the blocked task can now acquire
+    lockbox.remove(killTask);
+
+    final LockResult afterRelease = lockbox.tryLock(
+        otherKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, otherKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
+    );
+    Assert.assertTrue(afterRelease.isOk());
+
+    lockbox.remove(otherKillTask);
+  }
+
+  @Test
+  public void testKillLockNotRestoredAfterSyncFromStorage()
+  {
+    // Acquire a KILL lock for a task that was never inserted into taskStorage
+    final Task killTask = newKillTask(MEDIUM_PRIORITY);
+    lockbox.add(killTask);
+    final LockResult result = lockbox.tryLock(
+        killTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, killTask, Intervals.of("2017/2018"), null)
+    );
+    Assert.assertTrue(result.isOk());
+
+    // Sync from storage — the kill task was not persisted, so the lock must disappear
+    final GlobalTaskLockbox newBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
+    newBox.syncFromStorage();
+
+    // No locks should be present after sync
+    final Set<TaskLock> locksAfterSync = taskStorage.getActiveTasks()
+                                                    .stream()
+                                                    .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
+                                                    .collect(Collectors.toSet());
+    Assert.assertTrue(locksAfterSync.isEmpty());
+
+    // A new KILL lock on the same interval should now be grantable
+    final Task newKillTask = newKillTask(MEDIUM_PRIORITY);
+    newBox.add(newKillTask);
+    final LockResult newResult = newBox.tryLock(
+        newKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, newKillTask, Intervals.of("2017/2018"), null)
+    );
+    Assert.assertTrue(newResult.isOk());
+
+    newBox.remove(newKillTask);
+  }
+
+  @Test
+  public void testKillLockRevocationByHigherPriorityKillTaskNotInStorage()
+  {
+    // Low-priority kill task not in storage acquires a KILL lock
+    final Task lowPriorityKillTask = newKillTask(LOW_PRIORITY);
+    lockbox.add(lowPriorityKillTask);
+    final LockResult lowResult = lockbox.tryLock(
+        lowPriorityKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, lowPriorityKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
+    );
+    Assert.assertTrue(lowResult.isOk());
+    final TaskLock lowPriorityLock = lowResult.getTaskLock();
+
+    // High-priority kill task not in storage revokes the low-priority KILL lock
+    final Task highPriorityKillTask = newKillTask(HIGH_PRIORITY);
+    lockbox.add(highPriorityKillTask);
+    final LockResult highResult = lockbox.tryLock(
+        highPriorityKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, highPriorityKillTask, Intervals.of("2017/2018"), null)
+    );
+    Assert.assertTrue(highResult.isOk());
+    Assert.assertFalse(highResult.getTaskLock().isRevoked());
+
+    // Re-acquiring the low-priority lock returns the revoked copy
+    final LockResult revokedResult = lockbox.tryLock(
+        lowPriorityKillTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, lowPriorityKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
+    );
+    Assert.assertTrue(revokedResult.isOk());
+    Assert.assertTrue(revokedResult.getTaskLock().isRevoked());
+
+    lockbox.remove(lowPriorityKillTask);
+    lockbox.remove(highPriorityKillTask);
+  }
+
+  @Test
+  public void testKillLockCoexistsWithOtherLocksNotInStorage()
+  {
+    // Acquire an EXCLUSIVE lock for a persisted task
+    final Task exclusiveTask = NoopTask.ofPriority(MEDIUM_PRIORITY);
+    lockbox.add(exclusiveTask);
+    taskStorage.insert(exclusiveTask, TaskStatus.running(exclusiveTask.getId()));
+    final LockResult exclusiveResult = lockbox.tryLock(
+        exclusiveTask,
+        new TimeChunkLockRequest(TaskLockType.EXCLUSIVE, exclusiveTask, Intervals.of("2017-05-01/2017-06-01"), null)
+    );
+    Assert.assertTrue(exclusiveResult.isOk());
+
+    // A KILL task (not in storage) should be able to acquire a KILL lock on an overlapping interval
+    final Task killTask = newKillTask(MEDIUM_PRIORITY);
+    lockbox.add(killTask);
+    final LockResult killResult = lockbox.tryLock(
+        killTask,
+        new TimeChunkLockRequest(TaskLockType.KILL, killTask, Intervals.of("2017/2018"), null)
+    );
+    Assert.assertTrue(killResult.isOk());
+    Assert.assertFalse(killResult.getTaskLock().isRevoked());
+
+    // Release the kill task (not persisted)
+    lockbox.remove(killTask);
+
+    // The exclusive lock should still be active
+    final List<TaskLock> exclusiveLocks = taskStorage.getLocks(exclusiveTask.getId());
+    Assert.assertEquals(1, exclusiveLocks.size());
+    Assert.assertFalse(exclusiveLocks.get(0).isRevoked());
+
+    lockbox.remove(exclusiveTask);
+  }
+
+  @Test
   public void testTimechunkLockTypeTransitionForSameTaskGroup()
   {
     Task task = NoopTask.create();
