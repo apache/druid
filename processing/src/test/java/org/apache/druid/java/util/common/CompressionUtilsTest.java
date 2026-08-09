@@ -644,7 +644,7 @@ public class CompressionUtilsTest
           )
       );
     }
-    Assertions.assertEquals(GZ_BYTES.length * 3, testFile.length());
+    Assertions.assertEquals((long) GZ_BYTES.length * 3, testFile.length());
     try (InputStream inputStream = new ZeroRemainingInputStream(new FileInputStream(testFile))) {
       for (int i = 0; i < 3; ++i) {
         final byte[] bytes = new byte[GZ_BYTES.length];

@@ -156,6 +156,7 @@ public class StringUtilsTest
   public void testNonStrictFormat()
   {
     Assertions.assertEquals("test%d; format", StringUtils.nonStrictFormat("test%d", "format"));
+    // codeql[java/missing-format-argument]
     Assertions.assertEquals("test%s%s; format", StringUtils.nonStrictFormat("test%s%s", "format"));
   }
 

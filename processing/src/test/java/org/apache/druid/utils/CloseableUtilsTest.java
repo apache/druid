@@ -66,13 +66,16 @@ public class CloseableUtilsTest
   @Test
   public void test_closeAll_array_loud()
   {
-    Exception e = null;
-    try {
-      CloseableUtils.closeAll(quietCloseable, null, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
-    }
-    catch (Exception e2) {
-      e = e2;
-    }
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> CloseableUtils.closeAll(
+            quietCloseable,
+            null,
+            ioExceptionCloseable,
+            quietCloseable2,
+            runtimeExceptionCloseable
+        )
+    );
 
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
 
@@ -87,21 +90,18 @@ public class CloseableUtilsTest
   @Test
   public void test_closeAll_list_loud()
   {
-    Exception e = null;
-    try {
-      CloseableUtils.closeAll(
-          Arrays.asList(
-              quietCloseable,
-              null,
-              ioExceptionCloseable,
-              quietCloseable2,
-              runtimeExceptionCloseable
-          )
-      );
-    }
-    catch (Exception e2) {
-      e = e2;
-    }
+    final Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> CloseableUtils.closeAll(
+            Arrays.asList(
+                quietCloseable,
+                null,
+                ioExceptionCloseable,
+                quietCloseable2,
+                runtimeExceptionCloseable
+            )
+        )
+    );
 
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
 
