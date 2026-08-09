@@ -176,6 +176,7 @@ Joda
 JsonProperty
 Jupyter
 JupyterLab
+JUnit
 KMS
 Kerberized
 Kerberos
@@ -220,8 +221,10 @@ OpenTSDB
 OutputStream
 ParAccel
 PathChildrenCache
+prefetches
 Protobuf
 protobuf
+prunable
 pull-deps
 RDBMS
 RDDs

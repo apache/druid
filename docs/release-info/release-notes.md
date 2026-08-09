@@ -71,9 +71,9 @@ You can now use the `historicalTierAliases` Coordinator dynamic configuration to
 
 [#19204](https://github.com/apache/druid/pull/19204) [#19667](https://github.com/apache/druid/pull/19667)
 
-#### New load rule types (WIP)
+#### New load rule types
 
-Adds a new family of retention rules, `loadPartialByPeriod`, `loadPartialByInterval`, `loadPartialForever`, laying the groundwork for partial loading of v10 segment projections on Historicals. 
+Adds a new family of retention rules, `loadPartialByPeriod`, `loadPartialByInterval`, `loadPartialForever`, laying the groundwork for partial loading of version 10 segment projections on Historicals. 
 
 [#19374](https://github.com/apache/druid/pull/19374)
 
@@ -393,7 +393,7 @@ You can now enable TLS support for Redis connections.
 
 #### `pac4j` OIDC authentication
 
-Users of the `druid-pac4j` OIDC authentication extension can now explicitly configure their preferred client authentication method using the new optional `clientAuthenticationMethod` parameter. This resolves compatibility issues introduced with `pac4j` `5.7.3` where OIDC providers advertising `private_key_jwt` (such as Keycloak) would cause authentication failures when the asymmetric JWT method was not configured.
+Users of the `druid-pac4j` OIDC authentication extension can now explicitly configure their preferred client authentication method using the new optional `clientAuthenticationMethod` parameter. This resolves compatibility issues introduced with `pac4j` `5.7.3` where OIDC providers advertising `private_key_jwt` would cause authentication failures when the asymmetric JWT method was not configured.
 
 Supported values include: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, and `none`. If not specified, `pac4j` will continue to use its auto-detection behavior.
 
@@ -489,7 +489,7 @@ Support for Java 17 has been dropped. [#19304](https://github.com/apache/druid/p
 * Changed the shard spec collector to an interface to make extensibility easier [#19744](https://github.com/apache/druid/pull/19744)
 * Changed `iceberg.core.version` in root pom and aligned embedded tests to use `1.10.0`
 * Updated tests in `druid-processing` to use JUnit 5 [#19601](https://github.com/apache/druid/pull/19601)
-* Updated the `apache/druid` and `apache/druid-website-src` repos to use Docusaurus 3.10 when building the website [#19522](https://github.com/apache/druid/pull/19522)
+* Updated the `apache/druid` and `apache/druid-website-src` repositories to use Docusaurus 3.10 when building the website [#19522](https://github.com/apache/druid/pull/19522)
 * Updated IntelliJ settings to match Druid's supported Java versions [#19661](https://github.com/apache/druid/pull/19661)
 
 #### Dependency updates

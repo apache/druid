@@ -60,7 +60,7 @@ ZooKeeper is still used for Coordinator/Overlord leader election and service (no
 
 The ZooKeeper-based segment announcement and inventory view, which have been deprecated and off by default for several releases, have been removed. The HTTP-based path (the default for `druid.serverview.type=http`) is now the only supported option.
 
-If your configuration sets druid.serverview.type to anything other than `http`, startup now fails with a clear error message. Remove the property (or set it to `http`, which is the default) to proceed.
+If your configuration sets `druid.serverview.type` to anything other than `http`, startup now fails with a clear error message. Remove the property (or set it to `http`, which is the default) to proceed.
 
 The following configuration properties are no longer recognized and should be removed from `common.runtime.properties`:
 
