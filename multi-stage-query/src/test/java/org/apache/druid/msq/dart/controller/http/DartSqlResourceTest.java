@@ -79,7 +79,7 @@ import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -186,7 +186,7 @@ public class DartSqlResourceTest extends MSQTestBase
   {
     mockCloser = MockitoAnnotations.openMocks(this);
 
-    final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+    final DruidSchemaCatalogProvider schemaProvider = QueryFrameworkUtils.createMockRootSchemaProvider(
         CalciteTests.INJECTOR,
         queryFramework().conglomerate(),
         queryFramework().walker(),
@@ -198,7 +198,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         queryFramework().operatorTable(),
         queryFramework().macroTable(),
         PLANNER_CONFIG_DEFAULT,

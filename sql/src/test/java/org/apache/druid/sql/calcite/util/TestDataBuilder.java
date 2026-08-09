@@ -851,6 +851,15 @@ public class TestDataBuilder
        index1
    ).add(
         DataSegment.builder()
+                   .dataSource(CalciteTests.READ_ONLY_DATASOURCE)
+                   .interval(index1.getDataInterval())
+                   .version("1")
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        index1
+    ).add(
+        DataSegment.builder()
                    .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
                    .interval(forbiddenIndex.getDataInterval())
                    .version("1")

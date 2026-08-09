@@ -199,7 +199,7 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
@@ -612,7 +612,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
     CatalogResolver catalogResolver = createMockCatalogResolver();
     final InProcessViewManager viewManager = new InProcessViewManager(SqlTestFramework.DRUID_VIEW_MACRO_FACTORY);
-    DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+    DruidSchemaCatalogProvider schemaProvider = QueryFrameworkUtils.createMockRootSchemaProvider(
         CalciteTests.INJECTOR,
         qf.conglomerate(),
         qf.walker(),
@@ -654,7 +654,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       }
     };
     PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         qf.operatorTable(),
         qf.macroTable(),
         PLANNER_CONFIG_DEFAULT,

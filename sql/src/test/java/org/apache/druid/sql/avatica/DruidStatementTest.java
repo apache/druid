@@ -44,7 +44,7 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -100,11 +100,15 @@ public class DruidStatementTest extends CalciteTestBase
     final PlannerConfig plannerConfig = new PlannerConfig();
     final DruidOperatorTable operatorTable = CalciteTests.createOperatorTable();
     final ExprMacroTable macroTable = CalciteTests.createExprMacroTable();
-    DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final DruidSchemaCatalogProvider rootSchemaProvider = CalciteTests.createMockRootSchemaProvider(
+        conglomerate,
+        walker,
+        plannerConfig,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER
+    );
     final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        rootSchemaProvider,
         operatorTable,
         macroTable,
         plannerConfig,
