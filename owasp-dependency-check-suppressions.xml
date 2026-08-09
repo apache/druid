@@ -308,6 +308,8 @@
     <cve>CVE-2026-50560</cve>
     <cve>CVE-2026-56816</cve>
     <cve>CVE-2026-56820</cve>
+    <cve>CVE-2026-56821</cve> <!-- Netty 3.x not affected; OCSP response freshness issue only in Netty 4.x -->
+    <cve>CVE-2026-56822</cve> <!-- Netty 3.x not affected; OCSP validation race only in Netty 4.x -->
     <cve>CVE-2026-59898</cve> <!-- Netty 3.x not affected; WebSocket issue only in Netty 4.x -->
     <cve>CVE-2026-59899</cve> <!-- Netty 3.x not affected; HTTP content encoder issue only in Netty 4.x -->
     <cve>CVE-2026-59900</cve> <!-- Netty 3.x not affected; HTTP/2 issue only in Netty 4.x -->
