@@ -57,7 +57,8 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
@@ -67,6 +68,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@ParameterizedClass(name = "query = {0}")
+@MethodSource("constructorFeeder")
 public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(SqlVectorizedExpressionResultConsistencyTest.class);
@@ -170,9 +173,15 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
     return QUERIES.stream().map(x -> new Object[]{x}).collect(Collectors.toList());
   }
 
-  @ParameterizedTest(name = "query = {0}")
-  @MethodSource("constructorFeeder")
-  public void testQuery(String query)
+  private final String query;
+
+  public SqlVectorizedExpressionResultConsistencyTest(String query)
+  {
+    this.query = query;
+  }
+
+  @Test
+  public void testQuery()
   {
     testQuery(ENGINE, PLANNER_FACTORY, query);
   }
