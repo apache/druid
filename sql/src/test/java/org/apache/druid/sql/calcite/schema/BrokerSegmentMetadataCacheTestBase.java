@@ -111,6 +111,7 @@ public class BrokerSegmentMetadataCacheTestBase extends SegmentMetadataCacheTest
     druidServers = serverView.getDruidServers();
   }
 
+  @Override
   public void tearDown() throws Exception
   {
     super.tearDown();
