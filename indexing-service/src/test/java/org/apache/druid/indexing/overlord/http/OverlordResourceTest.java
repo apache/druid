@@ -1034,7 +1034,6 @@ public class OverlordResourceTest
         TestHelper.makeJsonMapper().writeValueAsString(response1.getEntity()),
         TaskStatusResponse.class
     );
-    final TaskStatusPlus tsp = taskStatusResponse1.getStatus();
     Assertions.assertEquals(
         new TaskStatusResponse(
             taskId,
