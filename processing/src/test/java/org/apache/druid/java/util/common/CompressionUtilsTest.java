@@ -138,18 +138,16 @@ public class CompressionUtilsTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IAE.class)
   public void testBadGzName()
   {
-    CompressionUtils.getGzBaseName("foo");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName("foo"));
   }
 
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IAE.class)
   public void testBadShortGzName()
   {
-    CompressionUtils.getGzBaseName(".gz");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName(".gz"));
   }
 
   @Test
@@ -764,24 +762,21 @@ public class CompressionUtilsTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IAE.class)
   public void testBadShortName()
   {
-    CompressionUtils.getGzBaseName(".gz");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName(".gz"));
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IAE.class)
   public void testBadName()
   {
-    CompressionUtils.getGzBaseName("BANANAS");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName("BANANAS"));
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IAE.class)
   public void testBadNameWithPath()
   {
-    CompressionUtils.getGzBaseName("/foo/big/.gz");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName("/foo/big/.gz"));
   }
 
   @Test
@@ -832,71 +827,79 @@ public class CompressionUtilsTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IOException.class)
   public void testStreamErrorGzip() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
-    final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assertions.assertFalse(gzFile.exists());
-    final AtomicLong flushes = new AtomicLong(0L);
-    try (
-        final InputStream inputStream = new FileInputStream(testFile);
-        final OutputStream outputStream = new FileOutputStream(gzFile)
-        {
-          @Override
-          public void flush() throws IOException
-          {
-            if (flushes.getAndIncrement() > 0) {
-              super.flush();
-            } else {
-              throw new IOException("Test exception");
-            }
+    Assertions.assertThrows(
+        IOException.class,
+        () -> {
+          final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
+          final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
+          Assertions.assertFalse(gzFile.exists());
+          final AtomicLong flushes = new AtomicLong(0L);
+          try (
+              final InputStream inputStream = new FileInputStream(testFile);
+              final OutputStream outputStream = new FileOutputStream(gzFile)
+              {
+                @Override
+                public void flush() throws IOException
+                {
+                  if (flushes.getAndIncrement() > 0) {
+                    super.flush();
+                  } else {
+                    throw new IOException("Test exception");
+                  }
+                }
+              }
+          ) {
+            CompressionUtils.gzip(inputStream, outputStream);
           }
         }
-    ) {
-      CompressionUtils.gzip(inputStream, outputStream);
-    }
+    );
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IOException.class)
   public void testStreamErrorGunzip() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
-    final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assertions.assertFalse(gzFile.exists());
-    CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.alwaysTrue());
-    Assertions.assertTrue(gzFile.exists());
-    try (
-        final InputStream fileInputStream = new FileInputStream(gzFile);
-        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, "file.gz")
-    ) {
-      assertGoodDataStream(inputStream);
-    }
-    if (testFile.exists() && !testFile.delete()) {
-      throw new RE("Unable to delete file [%s]", testFile.getAbsolutePath());
-    }
-    Assertions.assertFalse(testFile.exists());
-    final AtomicLong flushes = new AtomicLong(0L);
-    try (
-        final InputStream inputStream = new FileInputStream(gzFile);
-        final OutputStream outputStream = new FilterOutputStream(
-            new FileOutputStream(testFile)
-            {
-              @Override
-              public void flush() throws IOException
-              {
-                if (flushes.getAndIncrement() > 0) {
-                  super.flush();
-                } else {
-                  throw new IOException("Test exception");
-                }
-              }
-            }
-        )
-    ) {
-      CompressionUtils.gunzip(inputStream, outputStream);
-    }
+    Assertions.assertThrows(
+        IOException.class,
+        () -> {
+          final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
+          final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
+          Assertions.assertFalse(gzFile.exists());
+          CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.alwaysTrue());
+          Assertions.assertTrue(gzFile.exists());
+          try (
+              final InputStream fileInputStream = new FileInputStream(gzFile);
+              final InputStream inputStream = CompressionUtils.decompress(fileInputStream, "file.gz")
+          ) {
+            assertGoodDataStream(inputStream);
+          }
+          if (testFile.exists() && !testFile.delete()) {
+            throw new RE("Unable to delete file [%s]", testFile.getAbsolutePath());
+          }
+          Assertions.assertFalse(testFile.exists());
+          final AtomicLong flushes = new AtomicLong(0L);
+          try (
+              final InputStream inputStream = new FileInputStream(gzFile);
+              final OutputStream outputStream = new FilterOutputStream(
+                  new FileOutputStream(testFile)
+                  {
+                    @Override
+                    public void flush() throws IOException
+                    {
+                      if (flushes.getAndIncrement() > 0) {
+                        super.flush();
+                      } else {
+                        throw new IOException("Test exception");
+                      }
+                    }
+                  }
+              )
+          ) {
+            CompressionUtils.gunzip(inputStream, outputStream);
+          }
+        }
+    );
   }
 
   private void verifyUnzip(

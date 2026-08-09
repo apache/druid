@@ -205,6 +205,11 @@
       <artifactId>junit-jupiter-params</artifactId>
       <scope>test</scope>
     </dependency>
+    <!--
+      Required by test-jar helpers consumed by benchmark tests. Those helpers still reference
+      Hamcrest types even though the benchmark sources do not import Hamcrest directly. Remove
+      this dependency after all consumed test-jar helpers have migrated away from Hamcrest.
+    -->
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest</artifactId>

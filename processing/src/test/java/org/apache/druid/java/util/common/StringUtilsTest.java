@@ -119,26 +119,23 @@ public class StringUtilsTest
 
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(BufferUnderflowException.class)
   public void testOutOfBounds()
   {
     ByteBuffer bytes = ByteBuffer.wrap(new byte[]{'a', 'b', 'c', 'd'});
     bytes.position(1).limit(3);
-    StringUtils.fromUtf8(bytes, 3);
+    Assertions.assertThrows(BufferUnderflowException.class, () -> StringUtils.fromUtf8(bytes, 3));
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(NullPointerException.class)
   public void testNullPointerByteBuffer()
   {
-    StringUtils.fromUtf8((ByteBuffer) null);
+    Assertions.assertThrows(NullPointerException.class, () -> StringUtils.fromUtf8((ByteBuffer) null));
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(NullPointerException.class)
   public void testNullPointerByteArray()
   {
-    StringUtils.fromUtf8((byte[]) null);
+    Assertions.assertThrows(NullPointerException.class, () -> StringUtils.fromUtf8((byte[]) null));
   }
 
   @Test

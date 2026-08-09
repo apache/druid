@@ -164,7 +164,6 @@ public class ExtensionsLoaderTest
 
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(ISE.class)
   public void testGetExtensionFilesToLoad_wrong_type_extensions_dir() throws IOException
   {
     final File extensionsDir = temporaryFolder.newFile();
@@ -177,7 +176,7 @@ public class ExtensionsLoaderTest
       }
     };
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config, objectMapper);
-    extnLoader.getExtensionFilesToLoad();
+    Assertions.assertThrows(ISE.class, extnLoader::getExtensionFilesToLoad);
   }
 
   @Test
@@ -269,7 +268,6 @@ public class ExtensionsLoaderTest
    * Initialization.getExtensionFilesToLoad is supposed to throw ISE.
    */
   @Test
-  @org.apache.druid.testing.ExpectThrows(ISE.class)
   public void testGetExtensionFilesToLoad_with_non_exist_item_in_load_list() throws IOException
   {
     final File extensionsDir = temporaryFolder.newFolder();
@@ -290,7 +288,7 @@ public class ExtensionsLoaderTest
     final File random_extension = new File(extensionsDir, "random-extensions");
     random_extension.mkdir();
     final ExtensionsLoader extnLoader = new ExtensionsLoader(config, objectMapper);
-    extnLoader.getExtensionFilesToLoad();
+    Assertions.assertThrows(ISE.class, extnLoader::getExtensionFilesToLoad);
   }
 
   @Test

@@ -101,11 +101,15 @@ public class VersionedIntervalTimelineTest extends VersionedIntervalTimelineTest
   //   1|----|
   //      1|----|
   @Test
-  @org.apache.druid.testing.ExpectThrows(UnsupportedOperationException.class)
   public void testOverlapSameVersionThrowException()
   {
-    add("2011-01-01/2011-01-10", "1", 1);
-    add("2011-01-05/2011-01-15", "1", 3);
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> {
+          add("2011-01-01/2011-01-10", "1", 1);
+          add("2011-01-05/2011-01-15", "1", 3);
+        }
+    );
   }
 
   //   2|----|

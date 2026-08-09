@@ -58,8 +58,6 @@ When adding or migrating tests, reuse these existing test-scope helpers:
 
 - `LoggerCaptureExtension` (`org.apache.druid.testing.junit`) for capturing Log4j events. Register it with the target class and use `getLogEvents()`, `clearLogEvents()`, or `awaitLogEvents()` as needed.
 
-- `ExpectThrows` (`org.apache.druid.testing`) is available for existing annotation-style tests using `@ExpectThrows(ExceptionType.class)`. For new tests, prefer JUnit Jupiter's `Assertions.assertThrows(...)` directly.
-
 ## Pull Requests
 
 - Before opening a PR, self-review the complete diff against the target branch. Verify that every change is intentional and in scope, check for correctness and regressions, and run the relevant tests or checks.

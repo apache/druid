@@ -279,32 +279,40 @@ public class ServiceMetricEventTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void testInfinite()
   {
-    ServiceMetricEvent.builder().setMetric("foo", 1 / 0d);
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> ServiceMetricEvent.builder().setMetric("foo", 1 / 0d)
+    );
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void testInfinite2()
   {
-    ServiceMetricEvent.builder().setMetric("foo", 1 / 0f);
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> ServiceMetricEvent.builder().setMetric("foo", 1 / 0f)
+    );
   }
 
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void testNaN()
   {
-    ServiceMetricEvent.builder().setMetric("foo", 0 / 0d);
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> ServiceMetricEvent.builder().setMetric("foo", 0 / 0d)
+    );
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void testNaN2()
   {
-    ServiceMetricEvent.builder().setMetric("foo", 0 / 0f);
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> ServiceMetricEvent.builder().setMetric("foo", 0 / 0f)
+    );
   }
 
   @Test
