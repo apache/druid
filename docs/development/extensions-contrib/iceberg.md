@@ -39,6 +39,11 @@ Iceberg refers to these metastores as catalogs. The Iceberg extension lets you c
 
 For a given catalog, Iceberg input source reads the table name from the catalog, applies the filters, and extracts all the underlying live data files up to the latest snapshot.
 The data files can be in Parquet, ORC, or Avro formats. The data files typically reside in a warehouse location, which can be in HDFS, S3, or the local filesystem.
+
+:::note
+For Iceberg v1 tables (no delete files), all three formats are supported via the configured `warehouseSource`. For Iceberg v2 tables with delete files, only **Parquet** is currently supported for both data files and delete files. Attempting to ingest an ORC or Avro v2 table results in an `UnsupportedOperationException`. See [#19472](https://github.com/apache/druid/issues/19472) for planned ORC and Avro support.
+:::
+
 The `druid-iceberg-extensions` extension relies on the existing input source connectors in Druid to read the data files from the warehouse. Therefore, the Iceberg input source can be considered as an intermediate input source, which provides the file paths for other input source implementations.
 
 ## Hive metastore catalog
@@ -193,6 +198,66 @@ Example:
 ```
 
 When `residualFilterMode` is set to `fail` and a residual filter is detected, the job will fail with an error message indicating which filter expression produced the residual. This helps ensure data quality by preventing unintended rows from being ingested.
+
+## Iceberg v2 delete file support
+
+Iceberg v2 tables support row-level deletes through two types of delete files:
+
+| File type | Content | Purpose |
+|-----------|---------|---------|
+| Positional delete file | `(file_path, row_position)` pairs | Deletes the row at a specific position in a data file |
+| Equality delete file | Column value sets | Deletes any row where the specified column values match |
+
+The Iceberg extension automatically detects v2 delete files during table scan. No configuration changes are required to existing ingestion specs.
+
+### How it works
+
+When `IcebergInputSource` scans the Iceberg table, it inspects each `FileScanTask` for associated delete files:
+
+- **No delete files (v1 path)**: Data file paths are extracted and delegated to `warehouseSource` for reading. This is the existing behavior and remains unchanged.
+- **Delete files detected (v2 path)**: Each task is wrapped in an `IcebergFileTaskInputSource` that carries the data file path, delete file metadata (paths, types, equality field IDs, and format), and the serialized table schema. The `IcebergNativeRecordReader` then applies deletes at read time:
+  1. Reads positional delete files and builds a set of deleted row positions for the current data file.
+  2. Reads equality delete files and builds sets of deleted key tuples.
+  3. Streams the data file and skips any row that is position-deleted or equality-deleted.
+
+:::note
+The v2 delete path currently supports only **Parquet** format for both data files and delete files. Each delete file's format is validated independently. An `UnsupportedOperationException` is thrown if a non-Parquet data file or delete file is encountered. See [#19472](https://github.com/apache/druid/issues/19472).
+:::
+  4. Converts surviving Iceberg records to Druid `InputRow` objects.
+
+### Example
+
+Given an Iceberg v2 table with the following snapshots:
+
+```
+Snapshot 1 (append):  data-001.parquet -> rows: order_id=1, order_id=2, order_id=3
+Snapshot 2 (delete):  eq-delete-001.parquet -> "delete where order_id = 2"
+```
+
+Druid ingests only `order_id=1` and `order_id=3`. The deleted row (`order_id=2`) is excluded automatically.
+
+The ingestion spec is identical to a v1 table -- no additional fields are needed:
+
+```json
+{
+  "type": "iceberg",
+  "tableName": "orders",
+  "namespace": "analytics",
+  "icebergCatalog": {
+    "type": "rest",
+    "catalogUri": "http://localhost:8181"
+  },
+  "warehouseSource": {
+    "type": "s3"
+  }
+}
+```
+
+### Performance considerations
+
+- Positional delete files are read into an in-memory `Set<Long>` per data file. Memory usage is proportional to the number of deleted positions, not the data file size.
+- Equality delete files are read into an in-memory `Set` of key tuples. For tables with very large equality delete files, this may increase memory usage on the ingestion worker.
+- A v2-format table that has never had any rows deleted (no delete files) automatically goes through the v1 path with no overhead.
 
 ## Known limitations
 
