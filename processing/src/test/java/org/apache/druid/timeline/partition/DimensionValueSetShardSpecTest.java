@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -78,64 +78,64 @@ public class DimensionValueSetShardSpecTest
   public void testNoFilters_alwaysTrue()
   {
     final DimensionValueSetShardSpec s = spec(Collections.emptyMap());
-    Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
-    Assert.assertTrue(s.possibleInDomain(Collections.emptyMap()));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(Collections.emptyMap()));
   }
 
   @Test
   public void testSingleFilter_matchingValue_returnsTrue()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
-    Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
   }
 
   @Test
   public void testSingleFilter_nonMatchingValue_returnsFalse()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
   }
 
   @Test
   public void testSingleFilter_domainHasMultipleValues_matchIncluded_returnsTrue()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
-    Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a", "tenant_b")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a", "tenant_b")));
   }
 
   @Test
   public void testSingleFilter_domainHasMultipleValues_noMatch_returnsFalse()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b", "tenant_c")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b", "tenant_c")));
   }
 
   @Test
   public void testMultipleAllowedValues_matchOne_returnsTrue()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a", "tenant_b")));
-    Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_b")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_b")));
   }
 
   @Test
   public void testMultipleAllowedValues_noMatch_returnsFalse()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a", "tenant_b")));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_c")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_c")));
   }
 
   @Test
   public void testDeclaredDimension_notInQueryDomain_returnsTrue()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
-    Assert.assertTrue(s.possibleInDomain(Collections.emptyMap()));
+    JupiterAssertions.assertTrue(s.possibleInDomain(Collections.emptyMap()));
   }
 
   @Test
   public void testDeclaredDimension_queryFiltersOnOtherDim_returnsTrue()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
-    Assert.assertTrue(s.possibleInDomain(domain("region", "us-west")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain("region", "us-west")));
   }
 
   @Test
@@ -143,7 +143,7 @@ public class DimensionValueSetShardSpecTest
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
     // A range predicate (e.g. TENANT BETWEEN 'a' AND 'z') cannot be pruned against declared point values.
-    Assert.assertTrue(s.possibleInDomain(rangeFilter(TENANT, "a", "z")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(rangeFilter(TENANT, "a", "z")));
   }
 
   @Test
@@ -153,7 +153,7 @@ public class DimensionValueSetShardSpecTest
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
-    Assert.assertTrue(s.possibleInDomain(ImmutableMap.of(
+    JupiterAssertions.assertTrue(s.possibleInDomain(ImmutableMap.of(
         TENANT, points("tenant_a"),
         "region", points("us-west")
     )));
@@ -166,7 +166,7 @@ public class DimensionValueSetShardSpecTest
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
-    Assert.assertFalse(s.possibleInDomain(ImmutableMap.of(
+    JupiterAssertions.assertFalse(s.possibleInDomain(ImmutableMap.of(
         TENANT, points("tenant_a"),
         "region", points("eu-east")
     )));
@@ -179,8 +179,8 @@ public class DimensionValueSetShardSpecTest
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
-    Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
   }
 
   @Test
@@ -190,21 +190,21 @@ public class DimensionValueSetShardSpecTest
         TENANT, List.of("tenant_a"),
         "region", List.of("us-west")
     ));
-    Assert.assertTrue(s.getDomainDimensions().contains(TENANT));
-    Assert.assertTrue(s.getDomainDimensions().contains("region"));
-    Assert.assertEquals(2, s.getDomainDimensions().size());
+    JupiterAssertions.assertTrue(s.getDomainDimensions().contains(TENANT));
+    JupiterAssertions.assertTrue(s.getDomainDimensions().contains("region"));
+    JupiterAssertions.assertEquals(2, s.getDomainDimensions().size());
   }
 
   @Test
   public void testGetDomainDimensions_emptyFilters_returnsEmpty()
   {
-    Assert.assertTrue(spec(Collections.emptyMap()).getDomainDimensions().isEmpty());
+    JupiterAssertions.assertTrue(spec(Collections.emptyMap()).getDomainDimensions().isEmpty());
   }
 
   @Test
   public void testGetType()
   {
-    Assert.assertEquals(ShardSpec.Type.DIM_VALUE_SET, spec(Collections.emptyMap()).getType());
+    JupiterAssertions.assertEquals(ShardSpec.Type.DIM_VALUE_SET, spec(Collections.emptyMap()).getType());
   }
 
   private static ObjectMapper newMapper()
@@ -225,8 +225,8 @@ public class DimensionValueSetShardSpecTest
     final DimensionValueSetShardSpec deserialized =
         mapper.readValue(mapper.writeValueAsString(original), DimensionValueSetShardSpec.class);
 
-    Assert.assertEquals(original, deserialized);
-    Assert.assertEquals(original.getPartitionDimensionValues(), deserialized.getPartitionDimensionValues());
+    JupiterAssertions.assertEquals(original, deserialized);
+    JupiterAssertions.assertEquals(original.getPartitionDimensionValues(), deserialized.getPartitionDimensionValues());
   }
 
   @Test
@@ -235,8 +235,8 @@ public class DimensionValueSetShardSpecTest
     final ObjectMapper mapper = newMapper();
     final DimensionValueSetShardSpec spec = new DimensionValueSetShardSpec(0, 1, ImmutableMap.of(TENANT, List.of("tenant_a")));
     final String json = mapper.writeValueAsString(spec);
-    Assert.assertTrue(json.contains("\"type\":\"dim_value_set\""));
-    Assert.assertTrue(json.contains("\"partitionDimensionValues\""));
+    JupiterAssertions.assertTrue(json.contains("\"type\":\"dim_value_set\""));
+    JupiterAssertions.assertTrue(json.contains("\"partitionDimensionValues\""));
   }
 
   @Test
@@ -248,18 +248,18 @@ public class DimensionValueSetShardSpecTest
     final DimensionValueSetShardSpec deserialized =
         mapper.readValue(mapper.writeValueAsString(original), DimensionValueSetShardSpec.class);
 
-    Assert.assertEquals(original, deserialized);
-    Assert.assertTrue(deserialized.getPartitionDimensionValues().isEmpty());
+    JupiterAssertions.assertEquals(original, deserialized);
+    JupiterAssertions.assertTrue(deserialized.getPartitionDimensionValues().isEmpty());
   }
 
   @Test
   public void testEmptyStringValue_isDistinctFromNull()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("")));
-    Assert.assertTrue(s.possibleInDomain(domain(TENANT, "")));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain(TENANT, "")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
     // An IS NULL query (domain = (-inf, "")) must NOT match a segment that only declares the empty string.
-    Assert.assertFalse(s.possibleInDomain(nullDomain(TENANT)));
+    JupiterAssertions.assertFalse(s.possibleInDomain(nullDomain(TENANT)));
   }
 
   @Test
@@ -267,25 +267,25 @@ public class DimensionValueSetShardSpecTest
   {
     // A null/missing value is declared as a null list element.
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, Collections.singletonList(null)));
-    Assert.assertTrue(s.possibleInDomain(nullDomain(TENANT)));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(nullDomain(TENANT)));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "")));
   }
 
   @Test
   public void testConcreteValueOnly_isPrunedForIsNullQuery()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of("tenant_a")));
-    Assert.assertFalse(s.possibleInDomain(nullDomain(TENANT)));
+    JupiterAssertions.assertFalse(s.possibleInDomain(nullDomain(TENANT)));
   }
 
   @Test
   public void testNullAndConcreteValues_matchBoth()
   {
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, Arrays.asList("tenant_a", null)));
-    Assert.assertTrue(s.possibleInDomain(nullDomain(TENANT)));
-    Assert.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
+    JupiterAssertions.assertTrue(s.possibleInDomain(nullDomain(TENANT)));
+    JupiterAssertions.assertTrue(s.possibleInDomain(domain(TENANT, "tenant_a")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_b")));
   }
 
   @Test
@@ -298,9 +298,9 @@ public class DimensionValueSetShardSpecTest
     final DimensionValueSetShardSpec deserialized =
         mapper.readValue(mapper.writeValueAsString(original), DimensionValueSetShardSpec.class);
 
-    Assert.assertEquals(original, deserialized);
-    Assert.assertTrue(deserialized.getPartitionDimensionValues().get(TENANT).contains(null));
-    Assert.assertTrue(deserialized.possibleInDomain(nullDomain(TENANT)));
+    JupiterAssertions.assertEquals(original, deserialized);
+    JupiterAssertions.assertTrue(deserialized.getPartitionDimensionValues().get(TENANT).contains(null));
+    JupiterAssertions.assertTrue(deserialized.possibleInDomain(nullDomain(TENANT)));
   }
 
   @Test
@@ -308,6 +308,6 @@ public class DimensionValueSetShardSpecTest
   {
     // An empty allowed list means no values were observed for the dimension, so any constraining query is pruned.
     final DimensionValueSetShardSpec s = spec(ImmutableMap.of(TENANT, List.of()));
-    Assert.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
+    JupiterAssertions.assertFalse(s.possibleInDomain(domain(TENANT, "tenant_a")));
   }
 }

@@ -25,19 +25,20 @@ import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.testing.JupiterAssertions;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class PartitionHolderCompletenessTest
 {
-  @Parameterized.Parameters(name = "{1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
@@ -165,12 +166,12 @@ public class PartitionHolderCompletenessTest
         shardSpecs.get(0).createChunk(new OvershadowableInteger("version", shardSpecs.get(0).getPartitionNum(), 0))
     );
     for (int i = 0; i < shardSpecs.size() - 1; i++) {
-      Assert.assertFalse(holder.isComplete());
+      JupiterAssertions.assertFalse(holder.isComplete());
       final ShardSpec shardSpec = shardSpecs.get(i + 1);
       holder.add(shardSpec.createChunk(new OvershadowableInteger("version", shardSpec.getPartitionNum(), 0)));
     }
-    Assert.assertTrue(holder.isComplete());
-    Assert.assertTrue(holder.hasData());
+    JupiterAssertions.assertTrue(holder.isComplete());
+    JupiterAssertions.assertTrue(holder.hasData());
   }
 
   @Test
@@ -185,6 +186,6 @@ public class PartitionHolderCompletenessTest
                                              .build();
     final PartitionChunk<DataSegment> partitionChunk = new TombstonePartitionedChunk<>(tombstone);
     final PartitionHolder<DataSegment> partitionHolder = new PartitionHolder<>(partitionChunk);
-    Assert.assertFalse(partitionHolder.hasData());
+    JupiterAssertions.assertFalse(partitionHolder.hasData());
   }
 }

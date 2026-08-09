@@ -24,11 +24,11 @@ import org.apache.druid.common.guava.CombiningSequence;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryTimeoutException;
+import org.apache.druid.testing.JupiterAssertions;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -62,7 +62,7 @@ public class ParallelMergeCombiningSequenceTest
 
   private ForkJoinPool pool;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     pool = new ForkJoinPool(
@@ -73,7 +73,7 @@ public class ParallelMergeCombiningSequenceTest
     );
   }
 
-  @After
+  @AfterEach
   public void teardown()
   {
     pool.shutdown();
@@ -94,8 +94,8 @@ public class ParallelMergeCombiningSequenceTest
 
     IntPair prev = null;
     while (!rawYielder.isDone() && !cursor.isDone()) {
-      Assert.assertEquals(rawYielder.get(), cursor.get());
-      Assert.assertNotEquals(cursor.get(), prev);
+      JupiterAssertions.assertEquals(rawYielder.get(), cursor.get());
+      JupiterAssertions.assertNotEquals(cursor.get(), prev);
       prev = cursor.get();
       rawYielder = rawYielder.next(rawYielder.get());
       cursor.advance();
@@ -127,8 +127,8 @@ public class ParallelMergeCombiningSequenceTest
         new ParallelMergeCombiningSequence.ResultBatch<>(batchSize);
     int batchCounter = 0;
     while (!rawYielder.isDone() && !cursor.isDone()) {
-      Assert.assertEquals(rawYielder.get(), cursor.get());
-      Assert.assertNotEquals(cursor.get(), prev);
+      JupiterAssertions.assertEquals(rawYielder.get(), cursor.get());
+      JupiterAssertions.assertNotEquals(cursor.get(), prev);
       prev = cursor.get();
       currentBatch.add(prev);
       batchCounter++;
@@ -160,8 +160,8 @@ public class ParallelMergeCombiningSequenceTest
     Yielder<IntPair> queueYielder = Yielders.each(queueAsSequence);
 
     while (!rawYielder.isDone() && !queueYielder.isDone()) {
-      Assert.assertEquals(rawYielder.get(), queueYielder.get());
-      Assert.assertNotEquals(queueYielder.get(), prev);
+      JupiterAssertions.assertEquals(rawYielder.get(), queueYielder.get());
+      JupiterAssertions.assertNotEquals(queueYielder.get(), prev);
       prev = queueYielder.get();
       rawYielder = rawYielder.next(rawYielder.get());
       queueYielder = queueYielder.next(queueYielder.get());
@@ -195,8 +195,8 @@ public class ParallelMergeCombiningSequenceTest
         new ParallelMergeCombiningSequence.ResultBatch<>(batchSize);
     int batchCounter = 0;
     while (!rawYielder.isDone() && !cursor.isDone()) {
-      Assert.assertEquals(rawYielder.get(), cursor.get());
-      Assert.assertNotEquals(cursor.get(), prev);
+      JupiterAssertions.assertEquals(rawYielder.get(), cursor.get());
+      JupiterAssertions.assertNotEquals(cursor.get(), prev);
       prev = cursor.get();
       currentBatch.add(prev);
       batchCounter++;
@@ -230,8 +230,8 @@ public class ParallelMergeCombiningSequenceTest
     queueCursor.initialize();
     prev = null;
     while (!rawYielder.isDone() && !queueCursor.isDone()) {
-      Assert.assertEquals(rawYielder.get(), queueCursor.get());
-      Assert.assertNotEquals(queueCursor.get(), prev);
+      JupiterAssertions.assertEquals(rawYielder.get(), queueCursor.get());
+      JupiterAssertions.assertNotEquals(queueCursor.get(), prev);
       prev = queueCursor.get();
       rawYielder = rawYielder.next(rawYielder.get());
       queueCursor.advance();
@@ -298,11 +298,11 @@ public class ParallelMergeCombiningSequenceTest
         (t, e) -> LOG.error(e, "Unhandled exception in thread [%s]", t),
         true
     );
-    Throwable t = Assert.assertThrows(
+    Throwable t = JupiterAssertions.assertThrows(
         QueryTimeoutException.class,
         () -> assertResultWithCustomPool(input, 10, 20, reportMetrics -> {}, customBadPool)
     );
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.",
         t.getMessage()
     );
@@ -317,12 +317,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(6));
     assertResult(input, 10, 20, reportMetrics -> {
-      Assert.assertEquals(1, reportMetrics.getParallelism());
-      Assert.assertEquals(2, reportMetrics.getInputSequences());
-      Assert.assertEquals(11, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(1, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(2, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(11, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
-      Assert.assertEquals(6, reportMetrics.getOutputRows(), 5);
-      Assert.assertEquals(4, reportMetrics.getTaskCount());
+      JupiterAssertions.assertEquals(6, reportMetrics.getOutputRows(), 5);
+      JupiterAssertions.assertEquals(4, reportMetrics.getTaskCount());
     });
 
     input.clear();
@@ -335,12 +335,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(4));
     input.add(nonBlockingSequence(6));
     assertResult(input, 10, 20, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
-      Assert.assertEquals(6, reportMetrics.getInputSequences());
-      Assert.assertEquals(34, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(2, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(6, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(34, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
-      Assert.assertEquals(16, reportMetrics.getOutputRows(), 15);
-      Assert.assertEquals(10, reportMetrics.getTaskCount(), 2);
+      JupiterAssertions.assertEquals(16, reportMetrics.getOutputRows(), 15);
+      JupiterAssertions.assertEquals(10, reportMetrics.getTaskCount(), 2);
     });
   }
 
@@ -352,12 +352,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(5));
     input.add(nonBlockingSequence(6));
     assertResult(input, 4, 20, reportMetrics -> {
-      Assert.assertEquals(1, reportMetrics.getParallelism());
-      Assert.assertEquals(2, reportMetrics.getInputSequences());
-      Assert.assertEquals(11, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(1, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(2, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(11, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
-      Assert.assertEquals(6, reportMetrics.getOutputRows(), 5);
-      Assert.assertEquals(4, reportMetrics.getTaskCount());
+      JupiterAssertions.assertEquals(6, reportMetrics.getOutputRows(), 5);
+      JupiterAssertions.assertEquals(4, reportMetrics.getTaskCount());
     });
 
     input.clear();
@@ -370,12 +370,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(4));
     input.add(nonBlockingSequence(6));
     assertResult(input, 4, 20, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
-      Assert.assertEquals(6, reportMetrics.getInputSequences());
-      Assert.assertEquals(34, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(2, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(6, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(34, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
-      Assert.assertEquals(16, reportMetrics.getOutputRows(), 15);
-      Assert.assertEquals(10, reportMetrics.getTaskCount(), 2);
+      JupiterAssertions.assertEquals(16, reportMetrics.getOutputRows(), 15);
+      JupiterAssertions.assertEquals(10, reportMetrics.getTaskCount(), 2);
     });
   }
 
@@ -389,12 +389,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(26));
 
     assertResult(input, 5, 10, reportMetrics -> {
-      Assert.assertEquals(1, reportMetrics.getParallelism());
-      Assert.assertEquals(2, reportMetrics.getInputSequences());
-      Assert.assertEquals(41, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(1, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(2, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(41, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
-      Assert.assertEquals(21, reportMetrics.getOutputRows(), 20);
-      Assert.assertEquals(4, reportMetrics.getTaskCount(), 2);
+      JupiterAssertions.assertEquals(21, reportMetrics.getOutputRows(), 20);
+      JupiterAssertions.assertEquals(4, reportMetrics.getTaskCount(), 2);
     });
 
     // above min sequence count threshold, so will merge in parallel (if enough cores)
@@ -404,12 +404,12 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(14));
 
     assertResult(input, 5, 10, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
-      Assert.assertEquals(6, reportMetrics.getInputSequences());
-      Assert.assertEquals(120, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(2, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(6, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(120, reportMetrics.getInputRows());
       // deltas because it depends how much result combining is happening, which is random
-      Assert.assertEquals(60, reportMetrics.getOutputRows(), 59);
-      Assert.assertEquals(10, reportMetrics.getTaskCount(), 5);
+      JupiterAssertions.assertEquals(60, reportMetrics.getOutputRows(), 59);
+      JupiterAssertions.assertEquals(10, reportMetrics.getTaskCount(), 5);
     });
   }
 
@@ -440,9 +440,9 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(9_001));
 
     assertResult(input, 128, 1024, reportMetrics -> {
-      Assert.assertEquals(1, reportMetrics.getParallelism());
-      Assert.assertEquals(2, reportMetrics.getInputSequences());
-      Assert.assertEquals(19_001, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(1, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(2, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(19_001, reportMetrics.getInputRows());
     });
 
     input.add(nonBlockingSequence(7_777));
@@ -451,9 +451,9 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(8_888));
 
     assertResult(input, 128, 1024, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
-      Assert.assertEquals(6, reportMetrics.getInputSequences());
-      Assert.assertEquals(49166, reportMetrics.getInputRows());
+      JupiterAssertions.assertEquals(2, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(6, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(49166, reportMetrics.getInputRows());
     });
   }
 
@@ -465,10 +465,10 @@ public class ParallelMergeCombiningSequenceTest
     input.add(explodingSequence(15));
     input.add(nonBlockingSequence(25));
 
-    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
-    Assert.assertEquals("exploded", t.getMessage());
-    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    Throwable t = JupiterAssertions.assertThrows(RuntimeException.class, () -> assertException(input));
+    JupiterAssertions.assertEquals("exploded", t.getMessage());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -480,10 +480,10 @@ public class ParallelMergeCombiningSequenceTest
     input.add(explodingSequence(11));
     input.add(nonBlockingSequence(12));
 
-    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
-    Assert.assertEquals("exploded", t.getMessage());
-    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    Throwable t = JupiterAssertions.assertThrows(RuntimeException.class, () -> assertException(input));
+    JupiterAssertions.assertEquals("exploded", t.getMessage());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -495,10 +495,10 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(2));
     input.add(nonBlockingSequence(2));
 
-    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
-    Assert.assertEquals("exploded", t.getMessage());
-    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    Throwable t = JupiterAssertions.assertThrows(RuntimeException.class, () -> assertException(input));
+    JupiterAssertions.assertEquals("exploded", t.getMessage());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -512,10 +512,10 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(2));
     input.add(nonBlockingSequence(2));
 
-    Throwable t = Assert.assertThrows(RuntimeException.class, () -> assertException(input));
-    Assert.assertEquals("exploded", t.getMessage());
-    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    Throwable t = JupiterAssertions.assertThrows(RuntimeException.class, () -> assertException(input));
+    JupiterAssertions.assertEquals("exploded", t.getMessage());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -528,7 +528,7 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize));
     input.add(blockingSequence(someSize, 400, 500, 1, 500, true));
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = JupiterAssertions.assertThrows(
         QueryTimeoutException.class,
         () -> assertException(
             input,
@@ -538,7 +538,7 @@ public class ParallelMergeCombiningSequenceTest
             0
         )
     );
-    Assert.assertEquals("Query did not complete within configured timeout period. " +
+    JupiterAssertions.assertEquals("Query did not complete within configured timeout period. " +
                         "You can increase query timeout or tune the performance of query.", t.getMessage());
 
 
@@ -550,9 +550,9 @@ public class ParallelMergeCombiningSequenceTest
     //           isQuiescent() correctly returns false until the blocked worker wakes up and exits —
     //           the assertion would time out for long-sleeping sequences.
     if (JvmUtils.majorVersion() >= 20 && JvmUtils.majorVersion() < 25) {
-      Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
+      JupiterAssertions.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
       // good result, we want the pool to always be idle if an exception occurred during processing
-      Assert.assertTrue(pool.isQuiescent());
+      JupiterAssertions.assertTrue(pool.isQuiescent());
     }
   }
 
@@ -566,11 +566,11 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(someSize, true));
     input.add(nonBlockingSequence(someSize, true));
 
-    Throwable t = Assert.assertThrows(QueryTimeoutException.class, () -> assertException(input, 8, 64, 1000, 1500));
-    Assert.assertEquals("Query did not complete within configured timeout period. " +
+    Throwable t = JupiterAssertions.assertThrows(QueryTimeoutException.class, () -> assertException(input, 8, 64, 1000, 1500));
+    JupiterAssertions.assertEquals("Query did not complete within configured timeout period. " +
                         "You can increase query timeout or tune the performance of query.", t.getMessage());
-    Assert.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(1, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -605,22 +605,22 @@ public class ParallelMergeCombiningSequenceTest
       reporter.future = parallelMergeCombineSequence.getCancellationFuture();
       reporter.yielder = parallelMergeCombineYielder;
       reporter.yielder = parallelMergeCombineYielder.next(null);
-      Assert.assertFalse(parallelMergeCombineYielder.isDone());
+      JupiterAssertions.assertFalse(parallelMergeCombineYielder.isDone());
       reporters.add(reporter);
     }
 
     // sleep until timeout
     Thread.sleep(timeout);
-    Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
-    Assert.assertFalse(pool.hasQueuedSubmissions());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
+    JupiterAssertions.assertFalse(pool.hasQueuedSubmissions());
     for (TestingReporter reporter : reporters) {
-      Assert.assertThrows(QueryTimeoutException.class, () -> reporter.yielder.next(null));
-      Assert.assertTrue(reporter.future.isCancelled());
-      Assert.assertTrue(reporter.future.getCancellationGizmo().isCanceled());
+      JupiterAssertions.assertThrows(QueryTimeoutException.class, () -> reporter.yielder.next(null));
+      JupiterAssertions.assertTrue(reporter.future.isCancelled());
+      JupiterAssertions.assertTrue(reporter.future.getCancellationGizmo().isCanceled());
     }
-    Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
   }
 
   @Test
@@ -654,7 +654,7 @@ public class ParallelMergeCombiningSequenceTest
       reporter.future = parallelMergeCombineSequence.getCancellationFuture();
       reporter.yielder = parallelMergeCombineYielder;
       parallelMergeCombineYielder.next(null);
-      Assert.assertFalse(parallelMergeCombineYielder.isDone());
+      JupiterAssertions.assertFalse(parallelMergeCombineYielder.isDone());
       reporters.add(reporter);
     }
 
@@ -663,18 +663,18 @@ public class ParallelMergeCombiningSequenceTest
       while (!parallelMergeCombineYielder.isDone()) {
         parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
       }
-      Assert.assertTrue(parallelMergeCombineYielder.isDone());
+      JupiterAssertions.assertTrue(parallelMergeCombineYielder.isDone());
       parallelMergeCombineYielder.close();
-      Assert.assertTrue(testingReporter.future.isDone());
+      JupiterAssertions.assertTrue(testingReporter.future.isDone());
     }
 
-    Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
-    Assert.assertEquals(0, pool.getRunningThreadCount());
-    Assert.assertFalse(pool.hasQueuedSubmissions());
-    Assert.assertEquals(0, pool.getActiveThreadCount());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
+    JupiterAssertions.assertEquals(0, pool.getRunningThreadCount());
+    JupiterAssertions.assertFalse(pool.hasQueuedSubmissions());
+    JupiterAssertions.assertEquals(0, pool.getActiveThreadCount());
     for (TestingReporter reporter : reporters) {
-      Assert.assertTrue(reporter.done);
+      JupiterAssertions.assertTrue(reporter.done);
     }
   }
 
@@ -691,15 +691,15 @@ public class ParallelMergeCombiningSequenceTest
     input.add(nonBlockingSequence(8_888));
 
     assertResultWithEarlyClose(input, 128, 1024, 256, reportMetrics -> {
-      Assert.assertEquals(2, reportMetrics.getParallelism());
-      Assert.assertEquals(6, reportMetrics.getInputSequences());
+      JupiterAssertions.assertEquals(2, reportMetrics.getParallelism());
+      JupiterAssertions.assertEquals(6, reportMetrics.getInputSequences());
       // 49166 is total set of results if yielder were fully processed, expect somewhere more than 0 but less than that
       // this isn't super indicative of anything really, since closing the yielder would have triggered the baggage
       // to run, which runs this metrics reporter function, while the actual processing could still be occuring on the
       // pool in the background and the yielder still operates as intended if cancellation isn't in fact happening.
       // other tests ensure that this is true though (yielder.next throwing an exception for example)
-      Assert.assertTrue(49166 > reportMetrics.getInputRows());
-      Assert.assertTrue(0 < reportMetrics.getInputRows());
+      JupiterAssertions.assertTrue(49166 > reportMetrics.getInputRows());
+      JupiterAssertions.assertTrue(0 < reportMetrics.getInputRows());
     });
   }
 
@@ -760,26 +760,26 @@ public class ParallelMergeCombiningSequenceTest
     IntPair prev = null;
 
     while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
-      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-      Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+      JupiterAssertions.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+      JupiterAssertions.assertNotEquals(parallelMergeCombineYielder.get(), prev);
       prev = parallelMergeCombineYielder.get();
       combiningYielder = combiningYielder.next(combiningYielder.get());
       parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
     }
 
-    Assert.assertTrue(combiningYielder.isDone());
-    Assert.assertTrue(parallelMergeCombineYielder.isDone());
+    JupiterAssertions.assertTrue(combiningYielder.isDone());
+    JupiterAssertions.assertTrue(parallelMergeCombineYielder.isDone());
     while (pool.getRunningThreadCount() > 0) {
       Thread.sleep(100);
     }
-    Assert.assertEquals(0, pool.getRunningThreadCount());
+    JupiterAssertions.assertEquals(0, pool.getRunningThreadCount());
     combiningYielder.close();
     parallelMergeCombineYielder.close();
     // cancellation trigger should not be set if sequence was fully yielded and close is called
     // (though shouldn't actually matter even if it was...)
-    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
-    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isDone());
-    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCanceled());
+    JupiterAssertions.assertFalse(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
+    JupiterAssertions.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isDone());
+    JupiterAssertions.assertFalse(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCanceled());
   }
 
   private void assertResult(
@@ -817,24 +817,24 @@ public class ParallelMergeCombiningSequenceTest
     IntPair prev = null;
 
     while (!combiningYielder.isDone() && !parallelMergeCombineYielder.isDone()) {
-      Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-      Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+      JupiterAssertions.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+      JupiterAssertions.assertNotEquals(parallelMergeCombineYielder.get(), prev);
       prev = parallelMergeCombineYielder.get();
       combiningYielder = combiningYielder.next(combiningYielder.get());
       parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
     }
 
-    Assert.assertTrue(combiningYielder.isDone());
-    Assert.assertTrue(parallelMergeCombineYielder.isDone());
-    Assert.assertTrue(pool.awaitQuiescence(5, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    JupiterAssertions.assertTrue(combiningYielder.isDone());
+    JupiterAssertions.assertTrue(parallelMergeCombineYielder.isDone());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(5, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
     combiningYielder.close();
     parallelMergeCombineYielder.close();
     // cancellation trigger should not be set if sequence was fully yielded and close is called
     // (though shouldn't actually matter even if it was...)
-    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
-    Assert.assertFalse(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCanceled());
-    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isDone());
+    JupiterAssertions.assertFalse(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
+    JupiterAssertions.assertFalse(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCanceled());
+    JupiterAssertions.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isDone());
   }
 
   private void assertResultWithEarlyClose(
@@ -880,8 +880,8 @@ public class ParallelMergeCombiningSequenceTest
         break;
       } else {
         yields++;
-        Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
-        Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+        JupiterAssertions.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+        JupiterAssertions.assertNotEquals(parallelMergeCombineYielder.get(), prev);
         prev = parallelMergeCombineYielder.get();
         combiningYielder = combiningYielder.next(combiningYielder.get());
         parallelMergeCombineYielder = parallelMergeCombineYielder.next(parallelMergeCombineYielder.get());
@@ -889,24 +889,24 @@ public class ParallelMergeCombiningSequenceTest
     }
     // trying to next the yielder creates sadness for you
     final String expectedExceptionMsg = "Sequence canceled";
-    Assert.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
+    JupiterAssertions.assertEquals(combiningYielder.get(), parallelMergeCombineYielder.get());
     final Yielder<IntPair> finalYielder = parallelMergeCombineYielder;
-    Throwable t = Assert.assertThrows(RuntimeException.class, () -> finalYielder.next(finalYielder.get()));
-    Assert.assertEquals(expectedExceptionMsg, t.getMessage());
+    Throwable t = JupiterAssertions.assertThrows(RuntimeException.class, () -> finalYielder.next(finalYielder.get()));
+    JupiterAssertions.assertEquals(expectedExceptionMsg, t.getMessage());
 
     // cancellation gizmo of sequence should be cancelled, and also should contain our expected message
-    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCanceled());
-    Assert.assertEquals(
+    JupiterAssertions.assertTrue(parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().isCanceled());
+    JupiterAssertions.assertEquals(
         expectedExceptionMsg,
         parallelMergeCombineSequence.getCancellationFuture().getCancellationGizmo().getRuntimeException().getMessage()
     );
-    Assert.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
+    JupiterAssertions.assertTrue(parallelMergeCombineSequence.getCancellationFuture().isCancelled());
 
-    Assert.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
-    Assert.assertTrue(pool.isQuiescent());
+    JupiterAssertions.assertTrue(pool.awaitQuiescence(10, TimeUnit.SECONDS));
+    JupiterAssertions.assertTrue(pool.isQuiescent());
 
-    Assert.assertFalse(combiningYielder.isDone());
-    Assert.assertFalse(parallelMergeCombineYielder.isDone());
+    JupiterAssertions.assertFalse(combiningYielder.isDone());
+    JupiterAssertions.assertFalse(parallelMergeCombineYielder.isDone());
   }
 
   private void assertException(List<Sequence<IntPair>> sequences) throws Throwable
@@ -929,7 +929,7 @@ public class ParallelMergeCombiningSequenceTest
   )
       throws Throwable
   {
-    Throwable t = Assert.assertThrows(Exception.class, () -> {
+    Throwable t = JupiterAssertions.assertThrows(Exception.class, () -> {
       final ParallelMergeCombiningSequence<IntPair> parallelMergeCombineSequence = new ParallelMergeCombiningSequence<>(
           pool,
           sequences,
@@ -950,7 +950,7 @@ public class ParallelMergeCombiningSequenceTest
       IntPair prev = null;
 
       while (!parallelMergeCombineYielder.isDone()) {
-        Assert.assertNotEquals(parallelMergeCombineYielder.get(), prev);
+        JupiterAssertions.assertNotEquals(parallelMergeCombineYielder.get(), prev);
         prev = parallelMergeCombineYielder.get();
         if (readDelayMillis > 0 && ThreadLocalRandom.current().nextBoolean()) {
           Thread.sleep(readDelayMillis);
@@ -963,7 +963,7 @@ public class ParallelMergeCombiningSequenceTest
     sequences.forEach(sequence -> {
       if (sequence instanceof ExplodingSequence) {
         ExplodingSequence exploder = (ExplodingSequence) sequence;
-        Assert.assertEquals(1, exploder.getCloseCount());
+        JupiterAssertions.assertEquals(1, exploder.getCloseCount());
       }
     });
     LOG.warn(t, "exception:");

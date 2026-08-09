@@ -24,14 +24,14 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.testing.JupiterAssertions;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.IllegalFieldValueException;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -699,7 +699,7 @@ public class GranularityTest
     for (PathDate pd : checks) {
       if (pd.exception == null) {
         // check if path returns expected date
-        Assert.assertEquals(
+        JupiterAssertions.assertEquals(
             StringUtils.format(
                 "[%s,%s] Expected path %s to return date %s",
                 granularity,
@@ -712,7 +712,7 @@ public class GranularityTest
         );
 
         if (formatter.equals(Granularity.Formatter.DEFAULT)) {
-          Assert.assertEquals(
+          JupiterAssertions.assertEquals(
               StringUtils.format(
                   "[%s] Expected toDate(%s) to return the same as toDate(%s, DEFAULT)",
                   granularity,
@@ -725,7 +725,7 @@ public class GranularityTest
 
         if (pd.date != null) {
           // check if formatter is readable by toDate
-          Assert.assertEquals(
+          JupiterAssertions.assertEquals(
               StringUtils.format(
                   "[%s,%s] Expected date %s to return date %s",
                   granularity,
@@ -748,7 +748,7 @@ public class GranularityTest
           }
         }
 
-        Assert.assertTrue(
+        JupiterAssertions.assertTrue(
             StringUtils.format(
                 "[%s,%s] Expected exception %s for path: %s",
                 granularity,
@@ -767,78 +767,78 @@ public class GranularityTest
   {
     DateTime dt = DateTimes.of("2011-02-03T04:05:06.100");
 
-    Assert.assertEquals(Intervals.ETERNITY, ALL.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-01-01/2012-01-01"), YEAR.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-02-01/2011-03-01"), MONTH.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-01-31/2011-02-07"), WEEK.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-02-03/2011-02-04"), DAY.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-02-03T04/2011-02-03T05"), HOUR.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-02-03T04:05:00/2011-02-03T04:06:00"), MINUTE.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-02-03T04:05:06/2011-02-03T04:05:07"), SECOND.bucket(dt));
-    Assert.assertEquals(Intervals.of("2011-02-03T04:05:06.100/2011-02-03T04:05:06.101"), NONE.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.ETERNITY, ALL.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-01/2012-01-01"), YEAR.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-02-01/2011-03-01"), MONTH.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-31/2011-02-07"), WEEK.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-02-03/2011-02-04"), DAY.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-02-03T04/2011-02-03T05"), HOUR.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-02-03T04:05:00/2011-02-03T04:06:00"), MINUTE.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-02-03T04:05:06/2011-02-03T04:05:07"), SECOND.bucket(dt));
+    JupiterAssertions.assertEquals(Intervals.of("2011-02-03T04:05:06.100/2011-02-03T04:05:06.101"), NONE.bucket(dt));
 
     // Test with aligned DateTime
-    Assert.assertEquals(Intervals.of("2011-01-01/2011-01-02"), DAY.bucket(DateTimes.of("2011-01-01")));
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-01/2011-01-02"), DAY.bucket(DateTimes.of("2011-01-01")));
   }
 
   @Test
   public void testBucketStart()
   {
     DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
-    Assert.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-01-01T00:00:00.000"), YEAR.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-03-01T00:00:00.000"), MONTH.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-03-14T00:00:00.000"), WEEK.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T00:00:00.000"), DAY.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:00:00.000"), HOUR.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:00.000"), MINUTE.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.000"), SECOND.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.898"), NONE.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-01-01T00:00:00.000"), YEAR.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-01T00:00:00.000"), MONTH.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-14T00:00:00.000"), WEEK.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T00:00:00.000"), DAY.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:00:00.000"), HOUR.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:00.000"), MINUTE.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:23.000"), SECOND.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:23.898"), NONE.bucketStart(date));
   }
 
   @Test
   public void testBucketStartOnMillis()
   {
     DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
-    Assert.assertEquals(DateTimes.MIN.getMillis(), ALL.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-01-01T00:00:00.000").getMillis(), YEAR.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-01T00:00:00.000").getMillis(), MONTH.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-14T00:00:00.000").getMillis(), WEEK.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T00:00:00.000").getMillis(), DAY.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:00:00.000").getMillis(), HOUR.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:00.000").getMillis(), MINUTE.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.000").getMillis(), SECOND.bucketStart(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.898").getMillis(), NONE.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.MIN.getMillis(), ALL.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-01-01T00:00:00.000").getMillis(), YEAR.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-01T00:00:00.000").getMillis(), MONTH.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-14T00:00:00.000").getMillis(), WEEK.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T00:00:00.000").getMillis(), DAY.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:00:00.000").getMillis(), HOUR.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:00.000").getMillis(), MINUTE.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:23.000").getMillis(), SECOND.bucketStart(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:23.898").getMillis(), NONE.bucketStart(date.getMillis()));
   }
 
   @Test
   public void testIncrement()
   {
     DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
-    Assert.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2012-03-15T22:42:23.898"), YEAR.increment(date));
-    Assert.assertEquals(DateTimes.of("2011-04-15T22:42:23.898"), MONTH.increment(date));
-    Assert.assertEquals(DateTimes.of("2011-03-22T22:42:23.898"), WEEK.increment(date));
-    Assert.assertEquals(DateTimes.of("2011-03-16T22:42:23.898"), DAY.increment(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T23:42:23.898"), HOUR.increment(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:43:23.898"), MINUTE.increment(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:24.898"), SECOND.increment(date));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.899"), NONE.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2012-03-15T22:42:23.898"), YEAR.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-04-15T22:42:23.898"), MONTH.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-22T22:42:23.898"), WEEK.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-16T22:42:23.898"), DAY.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T23:42:23.898"), HOUR.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:43:23.898"), MINUTE.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:24.898"), SECOND.increment(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:23.899"), NONE.increment(date));
   }
 
   @Test
   public void testIncrementOnMillis()
   {
     DateTime date = DateTimes.of("2011-03-15T22:42:23.898");
-    Assert.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
-    Assert.assertEquals(DateTimes.of("2012-03-15T22:42:23.898").getMillis(), YEAR.increment(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-04-15T22:42:23.898").getMillis(), MONTH.increment(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-22T22:42:23.898").getMillis(), WEEK.increment(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-16T22:42:23.898").getMillis(), DAY.increment(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T23:42:23.898").getMillis(), HOUR.increment(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:43:23.898").getMillis(), MINUTE.increment(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:24.898").getMillis(), SECOND.increment(date.getMillis()));
-    Assert.assertEquals(DateTimes.of("2011-03-15T22:42:23.899").getMillis(), NONE.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.MIN, ALL.bucketStart(date));
+    JupiterAssertions.assertEquals(DateTimes.of("2012-03-15T22:42:23.898").getMillis(), YEAR.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-04-15T22:42:23.898").getMillis(), MONTH.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-22T22:42:23.898").getMillis(), WEEK.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-16T22:42:23.898").getMillis(), DAY.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T23:42:23.898").getMillis(), HOUR.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:43:23.898").getMillis(), MINUTE.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:24.898").getMillis(), SECOND.increment(date.getMillis()));
+    JupiterAssertions.assertEquals(DateTimes.of("2011-03-15T22:42:23.899").getMillis(), NONE.increment(date.getMillis()));
   }
 
   @Test
@@ -849,25 +849,25 @@ public class GranularityTest
 
     Iterator<Interval> intervals = DAY.getIterable(new Interval(start, end)).iterator();
 
-    Assert.assertEquals(Intervals.of("2011-01-01/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-02/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-03/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-04/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-05/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-06/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-07/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-08/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-09/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-10/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-11/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-12/P1d"), intervals.next());
-    Assert.assertEquals(Intervals.of("2011-01-13/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-01/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-02/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-03/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-04/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-05/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-06/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-07/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-08/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-09/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-10/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-11/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-12/P1d"), intervals.next());
+    JupiterAssertions.assertEquals(Intervals.of("2011-01-13/P1d"), intervals.next());
 
     try {
       intervals.next();
     }
     catch (NoSuchElementException e) {
-      Assert.assertTrue(true);
+      JupiterAssertions.assertTrue(true);
     }
   }
 
@@ -904,7 +904,7 @@ public class GranularityTest
     try {
       Period p = Period.years(6).withMonths(3).withSeconds(23);
       GranularityType.fromPeriod(p);
-      Assert.fail("Complicated period creation should fail b/c of unsupported granularity type.");
+      JupiterAssertions.fail("Complicated period creation should fail b/c of unsupported granularity type.");
     }
     catch (IAE e) {
       // pass
@@ -933,7 +933,7 @@ public class GranularityTest
 
     // Similar to what query engines do: call granularity.bucketStart on the datetimes returned by their cursors.
     // (And the cursors, in turn, use getIterable like above.)
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableList.of(
             new DateTime("2017-10-14", saoPaulo),
             new DateTime("2017-10-15T01", saoPaulo),
@@ -948,27 +948,27 @@ public class GranularityTest
   @Test
   public void testIsFinerComparator()
   {
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, SECOND) < 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(SECOND, NONE) > 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, MINUTE) < 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(MINUTE, NONE) > 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, MONTH) < 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.YEAR, ALL) < 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.ALL, YEAR) > 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, SECOND) < 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(SECOND, NONE) > 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, MINUTE) < 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(MINUTE, NONE) > 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, MONTH) < 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.YEAR, ALL) < 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(Granularities.ALL, YEAR) > 0);
     // Distinct references are needed to avoid intelli-j complain about compare being called on itself
     // thus the variables
     Granularity day = DAY;
     Granularity none = NONE;
     Granularity all = ALL;
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, day) == 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, none) == 0);
-    Assert.assertTrue(Granularity.IS_FINER_THAN.compare(ALL, all) == 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(DAY, day) == 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(NONE, none) == 0);
+    JupiterAssertions.assertTrue(Granularity.IS_FINER_THAN.compare(ALL, all) == 0);
   }
 
   @Test
   public void testGranularitiesFinerThanDay()
   {
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableList.of(
             Granularities.DAY,
             Granularities.EIGHT_HOUR,
@@ -988,7 +988,7 @@ public class GranularityTest
   @Test
   public void testGranularitiesFinerThanHour()
   {
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableList.of(
             Granularities.HOUR,
             Granularities.THIRTY_MINUTE,
@@ -1005,7 +1005,7 @@ public class GranularityTest
   @Test
   public void testGranularitiesFinerThanWeek()
   {
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableList.of(
             Granularities.WEEK,
             Granularities.DAY,
@@ -1026,7 +1026,7 @@ public class GranularityTest
   @Test
   public void testGranularitiesFinerThanAll()
   {
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableList.of(
             Granularities.ALL,
             Granularities.YEAR,
@@ -1050,7 +1050,7 @@ public class GranularityTest
   @Test
   public void testGranularitiesFinerThanNone()
   {
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableList.of(),
         Granularity.granularitiesFinerThan(Granularities.NONE)
     );

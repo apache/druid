@@ -24,9 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import oshi.SystemInfo;
 import oshi.hardware.CentralProcessor;
@@ -52,7 +52,7 @@ public class OshiSysMonitorTest
   private HardwareAbstractionLayer hal;
   private OperatingSystem os;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     si = Mockito.mock(SystemInfo.class);
@@ -71,7 +71,7 @@ public class OshiSysMonitorTest
     serviceEmitter.start();
     sysMonitorOshi.monitor(serviceEmitter);
 
-    Assert.assertTrue(sysMonitorOshi.doMonitor(serviceEmitter));
+    JupiterAssertions.assertTrue(sysMonitorOshi.doMonitor(serviceEmitter));
 
   }
 
@@ -102,7 +102,7 @@ public class OshiSysMonitorTest
     m.start();
     m.monitorMemStats(emitter);
     m.stop();
-    Assert.assertEquals(3, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(3, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/mem/max", 1);
     emitter.verifyEmitted("sys/mem/used", 1);
     emitter.verifyEmitted("sys/mem/free", 1);
@@ -124,7 +124,7 @@ public class OshiSysMonitorTest
     m.start();
     m.doMonitor(emitter);
     m.stop();
-    Assert.assertEquals(3, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(3, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/mem/max", 1);
     emitter.verifyEmitted("sys/mem/used", 1);
     emitter.verifyEmitted("sys/mem/free", 1);
@@ -165,7 +165,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorSwapStats(emitter);
-    Assert.assertEquals(4, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(4, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/swap/pageIn", 1);
     emitter.verifyEmitted("sys/swap/pageOut", 1);
     emitter.verifyEmitted("sys/swap/max", 1);
@@ -213,7 +213,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorFsStats(emitter);
-    Assert.assertEquals(8, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(8, emitter.getNumEmittedEvents());
     emitter.verifyEmitted("sys/fs/max", 2);
     emitter.verifyEmitted("sys/fs/used", 2);
     emitter.verifyEmitted("sys/fs/files/count", 2);
@@ -225,17 +225,17 @@ public class OshiSysMonitorTest
         "/System/Volumes/boot1"
     );
     List<Number> metricValues1 = emitter.getMetricValues("sys/fs/max", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(300L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(300L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/fs/used", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(100L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(100L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/fs/files/count", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(1000L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(1000L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/fs/files/free", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(700L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(700L, metricValues1.get(0));
 
     Map<String, Object> userDims2 = ImmutableMap.of(
         "fsDevName",
@@ -244,17 +244,17 @@ public class OshiSysMonitorTest
         "/System/Volumes/boot2"
     );
     List<Number> metricValues2 = emitter.getMetricValues("sys/fs/max", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(400L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(400L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/fs/used", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(80L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(80L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/fs/files/count", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(800L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(800L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/fs/files/free", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(600L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(600L, metricValues2.get(0));
     m.stop();
   }
 
@@ -284,7 +284,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorDiskStats(emitter);
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(0, emitter.getNumEmittedEvents());
 
     Mockito.when(disk1.getReadBytes()).thenReturn(400L);
     Mockito.when(disk1.getReads()).thenReturn(220L);
@@ -300,53 +300,53 @@ public class OshiSysMonitorTest
     Mockito.when(disk2.getTransferTime()).thenReturn(1100L);
 
     m.monitorDiskStats(emitter);
-    Assert.assertEquals(12, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(12, emitter.getNumEmittedEvents());
 
     Map<String, Object> userDims1 = ImmutableMap.of(
         "diskName",
         "disk1"
     );
     List<Number> metricValues1 = emitter.getMetricValues("sys/disk/read/size", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(100L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(100L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/disk/read/count", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(20L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(20L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/disk/write/size", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(200L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(200L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/disk/write/count", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(80L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(80L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/disk/queue", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(200L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(200L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/disk/transferTime", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(100L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(100L, metricValues1.get(0));
 
     Map<String, Object> userDims2 = ImmutableMap.of(
         "diskName",
         "disk2"
     );
     List<Number> metricValues2 = emitter.getMetricValues("sys/disk/read/size", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(2500L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(2500L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/disk/read/count", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(500L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(500L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/disk/write/size", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(1300L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(1300L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/disk/write/count", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(1000L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(1000L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/disk/queue", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(150L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(150L, metricValues2.get(0));
     metricValues2 = emitter.getMetricValues("sys/disk/transferTime", userDims2);
-    Assert.assertEquals(1, metricValues2.size());
-    Assert.assertEquals(300L, metricValues2.get(0));
+    JupiterAssertions.assertEquals(1, metricValues2.size());
+    JupiterAssertions.assertEquals(300L, metricValues2.get(0));
 
     m.stop();
   }
@@ -374,7 +374,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorNetStats(emitter);
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(0, emitter.getNumEmittedEvents());
 
     Mockito.when(net1.getBytesRecv()).thenReturn(400L);
     Mockito.when(net1.getPacketsRecv()).thenReturn(220L);
@@ -387,7 +387,7 @@ public class OshiSysMonitorTest
 
 
     m.monitorNetStats(emitter);
-    Assert.assertEquals(16, emitter.getNumEmittedEvents()); // 8 * 2 whitelisted ips
+    JupiterAssertions.assertEquals(16, emitter.getNumEmittedEvents()); // 8 * 2 whitelisted ips
 
     Map<String, Object> userDims1 = ImmutableMap.of(
         "netName",
@@ -406,54 +406,54 @@ public class OshiSysMonitorTest
         "ha:rd:wa:re:add"
     );
     List<Number> metricValues1 = emitter.getMetricValues("sys/net/read/size", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(100L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(100L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/read/packets", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(20L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(20L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/read/errors", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(200L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(200L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/read/dropped", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(80L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(80L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/size", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(200L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(200L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/packets", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(100L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(100L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/errors", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(130L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(130L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/collisions", userDims1);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(220L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(220L, metricValues1.get(0));
 
     metricValues1 = emitter.getMetricValues("sys/net/read/size", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(100L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(100L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/read/packets", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(20L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(20L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/read/errors", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(200L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(200L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/read/dropped", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(80L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(80L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/size", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(200L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(200L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/packets", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(100L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(100L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/errors", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(130L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(130L, metricValues1.get(0));
     metricValues1 = emitter.getMetricValues("sys/net/write/collisions", userDims2);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(220L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(220L, metricValues1.get(0));
     m.stop();
   }
 
@@ -472,7 +472,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorCpuStats(emitter);
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(0, emitter.getNumEmittedEvents());
 
     long[][] procTicks2 = new long[][]{
         {4L, 5L, 6L, 8L, 9L, 7L, 10L, 12L},     // Δtick1 {3,3,3,4,4,1,3,4} _total = 25, emitted percentage
@@ -482,76 +482,76 @@ public class OshiSysMonitorTest
 
     m.monitorCpuStats(emitter);
     m.stop();
-    Assert.assertEquals(16, emitter.getNumEmittedEvents()); // 8 ticktype * 2 processors
+    JupiterAssertions.assertEquals(16, emitter.getNumEmittedEvents()); // 8 ticktype * 2 processors
 
     Map<String, Object> userDims = new HashMap<>();
     userDims.put("cpuName", "0");
     userDims.put("cpuTime", "user");
     List<Number> metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(12L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(12L, metricValues1.get(0));
     userDims.replace("cpuTime", "nice");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(12L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(12L, metricValues1.get(0));
     userDims.replace("cpuTime", "sys");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(12L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(12L, metricValues1.get(0));
     userDims.replace("cpuTime", "idle");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(16L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(16L, metricValues1.get(0));
     userDims.replace("cpuTime", "wait");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(16L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(16L, metricValues1.get(0));
     userDims.replace("cpuTime", "irq");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(4L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(4L, metricValues1.get(0));
     userDims.replace("cpuTime", "softIrq");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(12L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(12L, metricValues1.get(0));
     userDims.replace("cpuTime", "stolen");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(16L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(16L, metricValues1.get(0));
 
     userDims.replace("cpuName", "1");
     userDims.replace("cpuTime", "user");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(10L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(10L, metricValues1.get(0));
     userDims.replace("cpuTime", "nice");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(14L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(14L, metricValues1.get(0));
     userDims.replace("cpuTime", "sys");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(7L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(7L, metricValues1.get(0));
     userDims.replace("cpuTime", "idle");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(7L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(7L, metricValues1.get(0));
     userDims.replace("cpuTime", "wait");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(17L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(17L, metricValues1.get(0));
     userDims.replace("cpuTime", "irq");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(7L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(7L, metricValues1.get(0));
     userDims.replace("cpuTime", "softIrq");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(14L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(14L, metricValues1.get(0));
     userDims.replace("cpuTime", "stolen");
     metricValues1 = emitter.getMetricValues("sys/cpu", userDims);
-    Assert.assertEquals(1, metricValues1.size());
-    Assert.assertEquals(21L, metricValues1.get(0));
+    JupiterAssertions.assertEquals(1, metricValues1.size());
+    JupiterAssertions.assertEquals(21L, metricValues1.get(0));
 
   }
 
@@ -569,7 +569,7 @@ public class OshiSysMonitorTest
     OshiSysMonitor m = createMonitor(si);
     m.start();
     m.monitorSysStats(emitter);
-    Assert.assertEquals(4, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(4, emitter.getNumEmittedEvents());
     m.stop();
     emitter.verifyEmitted("sys/uptime", 1);
     emitter.verifyEmitted("sys/la/1", 1);
@@ -604,7 +604,7 @@ public class OshiSysMonitorTest
     m.start();
     m.monitorTcpStats(emitter);
 
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(0, emitter.getNumEmittedEvents());
     Mockito.when(tcpv4.getConnectionsActive()).thenReturn(20L);
     Mockito.when(tcpv4.getConnectionsPassive()).thenReturn(25L);
     Mockito.when(tcpv4.getConnectionFailures()).thenReturn(8L);
@@ -616,7 +616,7 @@ public class OshiSysMonitorTest
     Mockito.when(tcpv4.getSegmentsRetransmitted()).thenReturn(8L);
     m.monitorTcpStats(emitter);
     m.stop();
-    Assert.assertEquals(9, emitter.getNumEmittedEvents());
+    JupiterAssertions.assertEquals(9, emitter.getNumEmittedEvents());
     emitter.verifyValue("sys/tcpv4/activeOpens", 10L);
     emitter.verifyValue("sys/tcpv4/passiveOpens", 5L);
     emitter.verifyValue("sys/tcpv4/attemptFails", 3L);
@@ -631,11 +631,11 @@ public class OshiSysMonitorTest
 
   private void checkEvents(List<Event> events, String expectedFeed)
   {
-    Assert.assertFalse("no events emitted", events.isEmpty());
+    JupiterAssertions.assertFalse("no events emitted", events.isEmpty());
     for (Event e : events) {
       if (!expectedFeed.equals(e.getFeed())) {
         String message = StringUtils.format("\"feed\" in event: %s", e.toMap().toString());
-        Assert.assertEquals(message, expectedFeed, e.getFeed());
+        JupiterAssertions.assertEquals(message, expectedFeed, e.getFeed());
       }
     }
   }

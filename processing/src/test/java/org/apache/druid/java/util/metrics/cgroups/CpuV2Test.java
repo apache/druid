@@ -19,11 +19,11 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.JupiterAssertions;
+import org.apache.druid.testing.TempDirExtension;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,14 +33,14 @@ import java.nio.file.Paths;
 
 public class CpuV2Test
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public TempDirExtension temporaryFolder = new TempDirExtension();
 
   private File cgroupDir;
   private File procDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     cgroupDir = temporaryFolder.newFolder();
@@ -75,14 +75,14 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Verify the conversion from v2 to v1 format
-    Assert.assertEquals("Weight should be converted to shares", 2048L, metrics.getShares());
-    Assert.assertEquals("Quota should be preserved", 150000L, metrics.getQuotaUs());
-    Assert.assertEquals("Period should be preserved", 100000L, metrics.getPeriodUs());
+    JupiterAssertions.assertEquals("Weight should be converted to shares", 2048L, metrics.getShares());
+    JupiterAssertions.assertEquals("Quota should be preserved", 150000L, metrics.getQuotaUs());
+    JupiterAssertions.assertEquals("Period should be preserved", 100000L, metrics.getPeriodUs());
 
     // V2 should not provide jiffies, only microseconds
-    Assert.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
-    Assert.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
-    Assert.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());
   }
 
   @Test
@@ -106,11 +106,11 @@ public class CpuV2Test
 
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
-    Assert.assertEquals("Default weight should convert to default shares", 1024L, metrics.getShares());
-    Assert.assertEquals("Max quota should be -1", -1L, metrics.getQuotaUs());
-    Assert.assertEquals("Max period should be -1", -1L, metrics.getPeriodUs());
-    Assert.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
-    Assert.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
+    JupiterAssertions.assertEquals("Default weight should convert to default shares", 1024L, metrics.getShares());
+    JupiterAssertions.assertEquals("Max quota should be -1", -1L, metrics.getQuotaUs());
+    JupiterAssertions.assertEquals("Max period should be -1", -1L, metrics.getPeriodUs());
+    JupiterAssertions.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
   }
 
   @Test
@@ -121,12 +121,12 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Should return default/error values when files are missing
-    Assert.assertEquals("Missing weight should return default shares", -1L, metrics.getShares());
-    Assert.assertEquals("Missing quota should be -1", -1L, metrics.getQuotaUs());
-    Assert.assertEquals("Missing period should be -1", -1L, metrics.getPeriodUs());
-    Assert.assertEquals("Missing user time should be -1", -1L, metrics.getUserJiffies());
-    Assert.assertEquals("Missing system time should be -1", -1L, metrics.getSystemJiffies());
-    Assert.assertEquals("Missing total should be -1", -1L, metrics.getTotalJiffies());
+    JupiterAssertions.assertEquals("Missing weight should return default shares", -1L, metrics.getShares());
+    JupiterAssertions.assertEquals("Missing quota should be -1", -1L, metrics.getQuotaUs());
+    JupiterAssertions.assertEquals("Missing period should be -1", -1L, metrics.getPeriodUs());
+    JupiterAssertions.assertEquals("Missing user time should be -1", -1L, metrics.getUserJiffies());
+    JupiterAssertions.assertEquals("Missing system time should be -1", -1L, metrics.getSystemJiffies());
+    JupiterAssertions.assertEquals("Missing total should be -1", -1L, metrics.getTotalJiffies());
   }
 
   @Test
@@ -150,11 +150,11 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Should handle invalid data gracefully
-    Assert.assertEquals("Invalid weight should return default", -1L, metrics.getShares());
-    Assert.assertEquals("Invalid quota should be -1", -1L, metrics.getQuotaUs());
-    Assert.assertEquals("Invalid period should be -1", -1L, metrics.getPeriodUs());
-    Assert.assertEquals("Invalid user time should be -1", -1L, metrics.getUserJiffies());
-    Assert.assertEquals("Invalid system time should be -1", -1L, metrics.getSystemJiffies());
+    JupiterAssertions.assertEquals("Invalid weight should return default", -1L, metrics.getShares());
+    JupiterAssertions.assertEquals("Invalid quota should be -1", -1L, metrics.getQuotaUs());
+    JupiterAssertions.assertEquals("Invalid period should be -1", -1L, metrics.getPeriodUs());
+    JupiterAssertions.assertEquals("Invalid user time should be -1", -1L, metrics.getUserJiffies());
+    JupiterAssertions.assertEquals("Invalid system time should be -1", -1L, metrics.getSystemJiffies());
   }
 
   @Test
@@ -171,7 +171,7 @@ public class CpuV2Test
       testWeightConversion(cgroupDir, 10000, 102400); // Maximum weight -> maximum shares
     }
     catch (IOException e) {
-      Assert.fail("IOException during weight conversion test: " + e.getMessage());
+      JupiterAssertions.fail("IOException during weight conversion test: " + e.getMessage());
     }
   }
 
@@ -193,7 +193,7 @@ public class CpuV2Test
     CpuV2 cpuV2 = new CpuV2(discoverer);
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "Weight " + weight + " should convert to shares " + expectedShares,
         expectedShares, metrics.getShares()
     );
@@ -221,9 +221,9 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // V2 should not provide jiffies, only microseconds
-    Assert.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
-    Assert.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
-    Assert.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());
   }
 
   @Test
@@ -255,7 +255,7 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Should parse weight correctly and ignore extra cpu.stat fields
-    Assert.assertEquals("Weight should be converted", 1536L, metrics.getShares()); // 150 * 1024 / 100
+    JupiterAssertions.assertEquals("Weight should be converted", 1536L, metrics.getShares()); // 150 * 1024 / 100
   }
 
   @Test
@@ -283,8 +283,8 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Should handle malformed cpu.max gracefully
-    Assert.assertEquals("Invalid cpu.max should result in -1 quota", -1L, metrics.getQuotaUs());
-    Assert.assertEquals("Invalid cpu.max should result in -1 period", -1L, metrics.getPeriodUs());
+    JupiterAssertions.assertEquals("Invalid cpu.max should result in -1 quota", -1L, metrics.getQuotaUs());
+    JupiterAssertions.assertEquals("Invalid cpu.max should result in -1 period", -1L, metrics.getPeriodUs());
   }
 
   @Test
@@ -308,12 +308,12 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // V2 should not provide jiffies, only microseconds  
-    Assert.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
-    Assert.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
-    Assert.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());
-    Assert.assertEquals(0, metrics.getUserUs());
-    Assert.assertEquals(0, metrics.getSystemUs());
-    Assert.assertEquals(-1, metrics.getTotalUs());
+    JupiterAssertions.assertEquals("V2 should not provide user jiffies", -1L, metrics.getUserJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide system jiffies", -1L, metrics.getSystemJiffies());
+    JupiterAssertions.assertEquals("V2 should not provide total jiffies", -1L, metrics.getTotalJiffies());
+    JupiterAssertions.assertEquals(0, metrics.getUserUs());
+    JupiterAssertions.assertEquals(0, metrics.getSystemUs());
+    JupiterAssertions.assertEquals(-1, metrics.getTotalUs());
   }
 
   @Test
@@ -339,8 +339,8 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Should handle whitespace correctly
-    Assert.assertEquals("Should parse quota with whitespace", 200000L, metrics.getQuotaUs());
-    Assert.assertEquals("Should parse period with whitespace", 100000L, metrics.getPeriodUs());
+    JupiterAssertions.assertEquals("Should parse quota with whitespace", 200000L, metrics.getQuotaUs());
+    JupiterAssertions.assertEquals("Should parse period with whitespace", 100000L, metrics.getPeriodUs());
   }
 
   @Test
@@ -364,7 +364,7 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Negative weight should result in -1 shares (no limit)
-    Assert.assertEquals("Negative weight should result in -1 shares", -1L, metrics.getShares());
+    JupiterAssertions.assertEquals("Negative weight should result in -1 shares", -1L, metrics.getShares());
   }
 
   @Test
@@ -390,7 +390,7 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Zero weight should result in -1 shares (no limit)
-    Assert.assertEquals("Zero weight should result in -1 shares", -1L, metrics.getShares());
+    JupiterAssertions.assertEquals("Zero weight should result in -1 shares", -1L, metrics.getShares());
   }
 
   @Test
@@ -418,6 +418,6 @@ public class CpuV2Test
     Cpu.CpuMetrics metrics = cpuV2.snapshot();
 
     // Should parse valid weight and handle malformed cpu.stat lines gracefully
-    Assert.assertEquals("Should parse valid weight", 1024L, metrics.getShares());
+    JupiterAssertions.assertEquals("Should parse valid weight", 1024L, metrics.getShares());
   }
 }

@@ -25,10 +25,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,10 +38,10 @@ import java.util.UUID;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class UUIDUtilsTest
 {
-  @Parameterized.Parameters
   public static Collection<Object[]> constructorFeeder()
   {
     final ArrayList<String[]> args = new ArrayList<>();
@@ -103,7 +103,7 @@ public class UUIDUtilsTest
     strings.add(uuidString.substring(16, 20));
     strings.add(uuidString.substring(20, 32));
     UUID uuid = UUID.fromString(Joiner.on('-').join(strings));
-    Assert.assertEquals(StringUtils.removeChar(uuid.toString(), '-'), uuidString);
+    JupiterAssertions.assertEquals(StringUtils.removeChar(uuid.toString(), '-'), uuidString);
   }
 
   @Test

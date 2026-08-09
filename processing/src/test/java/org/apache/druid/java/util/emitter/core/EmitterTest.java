@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.testing.JupiterAssertions;
 import org.apache.druid.utils.CompressionUtils;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
@@ -38,10 +39,9 @@ import org.asynchttpclient.Response;
 import org.asynchttpclient.netty.EagerResponseBodyPart;
 import org.asynchttpclient.netty.NettyResponseStatus;
 import org.asynchttpclient.uri.Uri;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -98,13 +98,13 @@ public class EmitterTest
     return OK_RESPONSE;
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     httpClient = new MockHttpClient();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     if (emitter != null) {
@@ -158,7 +158,7 @@ public class EmitterTest
 
     Lifecycle lifecycle = new Lifecycle();
     Emitter emitter = Emitters.create(props, httpClient, JSON_MAPPER, lifecycle);
-    Assert.assertTrue(StringUtils.format(
+    JupiterAssertions.assertTrue(StringUtils.format(
         "HttpPostEmitter emitter should be created, but found %s",
         emitter.getClass().getName()
     ), emitter instanceof HttpPostEmitter);
@@ -234,12 +234,12 @@ public class EmitterTest
           @Override
           protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
           {
-            Assert.assertEquals(TARGET_URL, request.getUrl());
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(TARGET_URL, request.getUrl());
+            JupiterAssertions.assertEquals(
                 "application/json",
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
@@ -260,7 +260,7 @@ public class EmitterTest
     }
     waitForEmission(emitter, 1);
     closeNoFlush(emitter);
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -278,12 +278,12 @@ public class EmitterTest
           @Override
           protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
           {
-            Assert.assertEquals(TARGET_URL, request.getUrl());
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(TARGET_URL, request.getUrl());
+            JupiterAssertions.assertEquals(
                 "application/json",
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
@@ -304,7 +304,7 @@ public class EmitterTest
     }
     waitForEmission(emitter, 1);
     closeNoFlush(emitter);
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -325,7 +325,7 @@ public class EmitterTest
     emitter.emit(new UnitEvent("test", 5));
 
     closeAndExpectFlush(emitter);
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -353,7 +353,7 @@ public class EmitterTest
 
     latch.await();
     long timeWaited = System.currentTimeMillis() - emitTime;
-    Assert.assertTrue(
+    JupiterAssertions.assertTrue(
         StringUtils.format("timeWaited[%s] !< %s", timeWaited, timeBetweenEmissions * 2),
         timeWaited < timeBetweenEmissions * 2
     );
@@ -378,25 +378,26 @@ public class EmitterTest
 
     thisLatch.await();
     timeWaited = System.currentTimeMillis() - emitTime;
-    Assert.assertTrue(
+    JupiterAssertions.assertTrue(
         StringUtils.format("timeWaited[%s] !< %s", timeWaited, timeBetweenEmissions * 2),
         timeWaited < timeBetweenEmissions * 2
     );
 
     waitForEmission(emitter, 2);
     closeNoFlush(emitter);
-    Assert.assertTrue("httpClient.succeeded()", httpClient.succeeded());
+    JupiterAssertions.assertTrue("httpClient.succeeded()", httpClient.succeeded());
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @org.junit.jupiter.api.Timeout(value = 60_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
   public void testFailedEmission() throws Exception
   {
     final UnitEvent event1 = new UnitEvent("test", 1);
     final UnitEvent event2 = new UnitEvent("test", 2);
     emitter = sizeBasedEmitter(1);
-    Assert.assertEquals(0, emitter.getTotalEmittedEvents());
-    Assert.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount());
-    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
+    JupiterAssertions.assertEquals(0, emitter.getTotalEmittedEvents());
+    JupiterAssertions.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount());
+    JupiterAssertions.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
 
     httpClient.setGoHandler(
         new GoHandler()
@@ -412,12 +413,12 @@ public class EmitterTest
     emitter.emit(event1);
     emitter.flush();
     waitForEmission(emitter, 1);
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
 
     // Failed to emit the first event.
-    Assert.assertEquals(0, emitter.getTotalEmittedEvents());
-    Assert.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount());
-    Assert.assertTrue(emitter.getFailedSendingTimeCounter().getTimeSumAndCount() > 0);
+    JupiterAssertions.assertEquals(0, emitter.getTotalEmittedEvents());
+    JupiterAssertions.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount());
+    JupiterAssertions.assertTrue(emitter.getFailedSendingTimeCounter().getTimeSumAndCount() > 0);
 
     httpClient.setGoHandler(
         new GoHandler()
@@ -439,11 +440,11 @@ public class EmitterTest
     emitter.joinEmitterThread();
 
     // Succeed to emit both events.
-    Assert.assertEquals(2, emitter.getTotalEmittedEvents());
-    Assert.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount() > 0);
-    Assert.assertTrue(emitter.getFailedSendingTimeCounter().getTimeSumAndCount() > 0);
+    JupiterAssertions.assertEquals(2, emitter.getTotalEmittedEvents());
+    JupiterAssertions.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount() > 0);
+    JupiterAssertions.assertTrue(emitter.getFailedSendingTimeCounter().getTimeSumAndCount() > 0);
 
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -461,16 +462,16 @@ public class EmitterTest
           @Override
           protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
           {
-            Assert.assertEquals(TARGET_URL, request.getUrl());
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(TARGET_URL, request.getUrl());
+            JupiterAssertions.assertEquals(
                 "application/json",
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 "Basic " + StringUtils.encodeBase64String(StringUtils.toUtf8("foo:bar")),
                 request.getHeaders().get(HttpHeaders.Names.AUTHORIZATION)
             );
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 JSON_MAPPER.readTree(StringUtils.format(
                     "%s\n%s\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
@@ -492,7 +493,7 @@ public class EmitterTest
     emitter.flush();
     waitForEmission(emitter, 1);
     closeNoFlush(emitter);
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -511,9 +512,9 @@ public class EmitterTest
     );
     final AtomicInteger counter = new AtomicInteger();
     emitter = manualFlushEmitterWithBatchSize(1024 * 1024);
-    Assert.assertEquals(0, emitter.getTotalEmittedEvents());
-    Assert.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount());
-    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
+    JupiterAssertions.assertEquals(0, emitter.getTotalEmittedEvents());
+    JupiterAssertions.assertEquals(0, emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount());
+    JupiterAssertions.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
 
     httpClient.setGoHandler(
         new GoHandler()
@@ -521,12 +522,12 @@ public class EmitterTest
           @Override
           protected ListenableFuture<Response> go(Request request) throws JsonProcessingException
           {
-            Assert.assertEquals(TARGET_URL, request.getUrl());
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(TARGET_URL, request.getUrl());
+            JupiterAssertions.assertEquals(
                 "application/json",
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(counter.getAndIncrement())),
@@ -546,17 +547,17 @@ public class EmitterTest
       emitter.emit(event);
     }
     waitForEmission(emitter, 1);
-    Assert.assertEquals(2, emitter.getTotalEmittedEvents());
-    Assert.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount() > 0);
-    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
+    JupiterAssertions.assertEquals(2, emitter.getTotalEmittedEvents());
+    JupiterAssertions.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount() > 0);
+    JupiterAssertions.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
 
     emitter.flush();
     waitForEmission(emitter, 2);
-    Assert.assertEquals(4, emitter.getTotalEmittedEvents());
-    Assert.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount() > 0);
-    Assert.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
+    JupiterAssertions.assertEquals(4, emitter.getTotalEmittedEvents());
+    JupiterAssertions.assertTrue(emitter.getSuccessfulSendingTimeCounter().getTimeSumAndCount() > 0);
+    JupiterAssertions.assertEquals(0, emitter.getFailedSendingTimeCounter().getTimeSumAndCount());
     closeNoFlush(emitter);
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
   }
 
   @Test
@@ -575,12 +576,12 @@ public class EmitterTest
           @Override
           protected ListenableFuture<Response> go(Request request) throws IOException
           {
-            Assert.assertEquals(TARGET_URL, request.getUrl());
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(TARGET_URL, request.getUrl());
+            JupiterAssertions.assertEquals(
                 "application/json",
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 HttpHeaders.Values.GZIP,
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_ENCODING)
             );
@@ -591,7 +592,7 @@ public class EmitterTest
             data.get(dataArray);
             CompressionUtils.gunzip(new ByteArrayInputStream(dataArray), baos);
 
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
@@ -612,7 +613,7 @@ public class EmitterTest
     }
     waitForEmission(emitter, 1);
     closeNoFlush(emitter);
-    Assert.assertTrue(httpClient.succeeded());
+    JupiterAssertions.assertTrue(httpClient.succeeded());
   }
 
   private void closeAndExpectFlush(Emitter emitter) throws IOException

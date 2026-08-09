@@ -24,18 +24,19 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
+import org.apache.druid.testing.JupiterAssertions;
+import org.apache.druid.testing.ThrowableExpectation;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
 import org.joda.time.Duration;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.net.ssl.SSLContext;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -57,10 +58,10 @@ public class JankyServersTest
   static ServerSocket echoServerSocket;
   static ServerSocket closingServerSocket;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public ThrowableExpectation expectedException = ThrowableExpectation.none();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception
   {
     exec = Executors.newCachedThreadPool();
@@ -140,7 +141,7 @@ public class JankyServersTest
     );
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     exec.shutdownNow();
@@ -170,7 +171,7 @@ public class JankyServersTest
         e = e1.getCause();
       }
 
-      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
+      JupiterAssertions.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
     }
     finally {
       lifecycle.stop();
@@ -199,7 +200,7 @@ public class JankyServersTest
         e = e1.getCause();
       }
 
-      Assert.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
+      JupiterAssertions.assertTrue("ReadTimeoutException thrown by 'get'", e instanceof ReadTimeoutException);
     }
     finally {
       lifecycle.stop();
@@ -231,7 +232,7 @@ public class JankyServersTest
         e = e1.getCause();
       }
 
-      Assert.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
+      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", e instanceof ChannelException);
     }
     finally {
       lifecycle.stop();
@@ -259,7 +260,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
     }
     finally {
       lifecycle.stop();
@@ -289,7 +290,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
     }
     finally {
       lifecycle.stop();
@@ -325,7 +326,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
     }
     finally {
       lifecycle.stop();
@@ -361,7 +362,7 @@ public class JankyServersTest
         e1.printStackTrace();
       }
 
-      Assert.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
+      JupiterAssertions.assertTrue("ChannelException thrown by 'get'", isChannelClosedException(e));
     }
     finally {
       lifecycle.stop();

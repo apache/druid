@@ -23,10 +23,10 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,7 +43,8 @@ public class TopNSequenceTest
   private static final List<String> RAW_ASC = Lists.newArrayList(Splitter.fixedLength(1).split("abcdefghijk"));
   private static final List<String> RAW_DESC = Lists.newArrayList(Splitter.fixedLength(1).split("kjihgfedcba"));
 
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("makeTestData")
   public static class TopNSequenceAscDescTest
   {
     private static final Ordering<String> ASC = Ordering.natural();
@@ -53,7 +54,6 @@ public class TopNSequenceTest
     private List<String> rawInput;
     private int limit;
 
-    @Parameterized.Parameters(name = "comparator={0}, rawInput={1}, limit={2}")
     public static Collection<Object[]> makeTestData()
     {
       Object[][] data = new Object[][]{
@@ -98,14 +98,15 @@ public class TopNSequenceTest
 
       Sequence<String> result = new TopNSequence<>(Sequences.simple(inputs), ordering, limit);
 
-      Assert.assertEquals(expected, result.toList());
+      JupiterAssertions.assertEquals(expected, result.toList());
     }
   }
 
   /**
    * This class has test cases using a comparator that sometimes returns zero for unequal things.
    */
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("makeTestData")
   public static class TopNSequenceEvenOddTest
   {
     // 'a', 'c', 'e', ... all come before 'b', 'd', 'f', ...
@@ -114,7 +115,6 @@ public class TopNSequenceTest
     private String expected;
     private List<String> rawInput;
 
-    @Parameterized.Parameters(name = "rawInput={1}")
     public static Collection<Object[]> makeTestData()
     {
       Object[][] data = new Object[][]{
@@ -137,7 +137,7 @@ public class TopNSequenceTest
       // Verify that the output of the sequence is stable relative to the input.
       for (int limit = 0; limit < expected.length() + 1; limit++) {
         final TopNSequence<String> sequence = new TopNSequence<>(Sequences.simple(rawInput), EVENODD, limit);
-        Assert.assertEquals(
+        JupiterAssertions.assertEquals(
             "limit = " + limit,
             expected.substring(0, Math.min(limit, expected.length())),
             Joiner.on("").join(sequence.toList())

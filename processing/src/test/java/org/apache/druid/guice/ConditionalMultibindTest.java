@@ -29,9 +29,9 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -50,7 +50,7 @@ public class ConditionalMultibindTest
 
   private Properties props;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     props = new Properties();
@@ -74,8 +74,8 @@ public class ConditionalMultibindTest
 
     Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>() {}));
 
-    Assert.assertEquals(1, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat()));
+    JupiterAssertions.assertEquals(1, animalSet.size());
+    JupiterAssertions.assertEquals(animalSet, ImmutableSet.<Animal>of(new Cat()));
   }
 
   @Test
@@ -96,8 +96,8 @@ public class ConditionalMultibindTest
 
     Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>() {}));
 
-    Assert.assertEquals(2, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
+    JupiterAssertions.assertEquals(2, animalSet.size());
+    JupiterAssertions.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
   }
 
   @Test
@@ -121,8 +121,8 @@ public class ConditionalMultibindTest
 
     Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>() {}));
 
-    Assert.assertEquals(2, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
+    JupiterAssertions.assertEquals(2, animalSet.size());
+    JupiterAssertions.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog()));
   }
 
   @Test
@@ -155,8 +155,8 @@ public class ConditionalMultibindTest
 
     Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>() {}));
 
-    Assert.assertEquals(3, animalSet.size());
-    Assert.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog(), new Fish()));
+    JupiterAssertions.assertEquals(3, animalSet.size());
+    JupiterAssertions.assertEquals(animalSet, ImmutableSet.of(new Cat(), new Dog(), new Fish()));
   }
 
   @Test
@@ -191,12 +191,12 @@ public class ConditionalMultibindTest
     );
 
     Set<Animal> animalSet_1 = injector.getInstance(Key.get(new TypeLiteral<>() {}, SanDiego.class));
-    Assert.assertEquals(4, animalSet_1.size());
-    Assert.assertEquals(animalSet_1, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Tiger()));
+    JupiterAssertions.assertEquals(4, animalSet_1.size());
+    JupiterAssertions.assertEquals(animalSet_1, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Tiger()));
 
     Set<Animal> animalSet_2 = injector.getInstance(Key.get(new TypeLiteral<>() {}, SanJose.class));
-    Assert.assertEquals(1, animalSet_2.size());
-    Assert.assertEquals(animalSet_2, ImmutableSet.<Animal>of(new Fish()));
+    JupiterAssertions.assertEquals(1, animalSet_2.size());
+    JupiterAssertions.assertEquals(animalSet_2, ImmutableSet.<Animal>of(new Fish()));
   }
 
   @Test
@@ -231,8 +231,8 @@ public class ConditionalMultibindTest
     PetShotAvails shop = new PetShotAvails();
     injector.injectMembers(shop);
 
-    Assert.assertEquals(4, shop.animals.size());
-    Assert.assertEquals(shop.animals, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Fish()));
+    JupiterAssertions.assertEquals(4, shop.animals.size());
+    JupiterAssertions.assertEquals(shop.animals, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Fish()));
   }
 
   @Test
@@ -288,16 +288,16 @@ public class ConditionalMultibindTest
     );
 
     Set<Set<Animal>> actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<>() {}));
-    Assert.assertEquals(3, actualAnimalSet.size());
-    Assert.assertEquals(ImmutableSet.of(set1, set2, set3), actualAnimalSet);
+    JupiterAssertions.assertEquals(3, actualAnimalSet.size());
+    JupiterAssertions.assertEquals(ImmutableSet.of(set1, set2, set3), actualAnimalSet);
 
     actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<>() {}, SanDiego.class));
-    Assert.assertEquals(1, actualAnimalSet.size());
-    Assert.assertEquals(ImmutableSet.of(union), actualAnimalSet);
+    JupiterAssertions.assertEquals(1, actualAnimalSet.size());
+    JupiterAssertions.assertEquals(ImmutableSet.of(union), actualAnimalSet);
 
     final Set<Zoo<Animal>> actualZooSet = injector.getInstance(Key.get(new TypeLiteral<>() {}));
-    Assert.assertEquals(2, actualZooSet.size());
-    Assert.assertEquals(ImmutableSet.of(zoo1, zoo2), actualZooSet);
+    JupiterAssertions.assertEquals(2, actualZooSet.size());
+    JupiterAssertions.assertEquals(ImmutableSet.of(zoo1, zoo2), actualZooSet);
   }
 
   abstract static class Animal

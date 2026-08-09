@@ -28,8 +28,8 @@ import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.VirtualColumns;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,8 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.apache.druid.testing.JupiterAssertions.assertFalse;
+import static org.apache.druid.testing.JupiterAssertions.assertTrue;
 
 public class DimensionRangeShardSpecTest
 {
@@ -79,7 +79,7 @@ public class DimensionRangeShardSpecTest
     final ShardSpecLookup lookup = shardSpecs.get(0).getLookup(shardSpecs);
     final long currentTime = DateTimes.nowUtc().getMillis();
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -87,7 +87,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -95,7 +95,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(0),
         lookup.getShardSpec(
             currentTime,
@@ -103,7 +103,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -111,7 +111,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -119,7 +119,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(1),
         lookup.getShardSpec(
             currentTime,
@@ -127,7 +127,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -135,7 +135,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -143,7 +143,7 @@ public class DimensionRangeShardSpecTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         shardSpecs.get(2),
         lookup.getShardSpec(
             currentTime,
@@ -195,20 +195,20 @@ public class DimensionRangeShardSpecTest
     final ShardSpecLookup lookup = shard0.getLookup(Arrays.asList(shard0, shard1, shard2, shard3));
     final long timestamp = System.currentTimeMillis();
 
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Delhi")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Kolkata")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Japan", "Tokyo")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", "Barcelona")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Bengaluru")));
-    Assert.assertEquals(shard2, lookup.getShardSpec(timestamp, createRow("Spain", "Valencia")));
-    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", "London")));
+    JupiterAssertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Delhi")));
+    JupiterAssertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Kolkata")));
+    JupiterAssertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Japan", "Tokyo")));
+    JupiterAssertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", "Barcelona")));
+    JupiterAssertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", "Bengaluru")));
+    JupiterAssertions.assertEquals(shard2, lookup.getShardSpec(timestamp, createRow("Spain", "Valencia")));
+    JupiterAssertions.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", "London")));
 
-    Assert.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, null)));
-    Assert.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, "Lyon")));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", null)));
-    Assert.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", null)));
-    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("Tokyo", null)));
-    Assert.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", null)));
+    JupiterAssertions.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, null)));
+    JupiterAssertions.assertEquals(shard0, lookup.getShardSpec(timestamp, createRow(null, "Lyon")));
+    JupiterAssertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("India", null)));
+    JupiterAssertions.assertEquals(shard1, lookup.getShardSpec(timestamp, createRow("Spain", null)));
+    JupiterAssertions.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("Tokyo", null)));
+    JupiterAssertions.assertEquals(shard3, lookup.getShardSpec(timestamp, createRow("United Kingdom", null)));
   }
 
   @Test

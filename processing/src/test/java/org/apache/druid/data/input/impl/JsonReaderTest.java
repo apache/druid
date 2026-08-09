@@ -33,10 +33,10 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.common.parsers.ParseException;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.apache.druid.testing.JupiterAssertions;
+import org.apache.druid.testing.ThrowableExpectation;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -44,8 +44,8 @@ import java.util.Collections;
 
 public class JsonReaderTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public ThrowableExpectation expectedException = ThrowableExpectation.none();
 
   @Test
   public void testParseMultipleRows() throws IOException
@@ -97,23 +97,23 @@ public class JsonReaderTest
         final InputRow row = iterator.next();
 
         final String msgId = String.valueOf(++numActualIterations);
-        Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
-        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("tree_omg")));
+        JupiterAssertions.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
+        JupiterAssertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
+        JupiterAssertions.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
+        JupiterAssertions.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        JupiterAssertions.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("tree_omg")));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("tree_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("tree_omg2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("tree_baz2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("tree_omg2").isEmpty());
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      JupiterAssertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -172,25 +172,25 @@ public class JsonReaderTest
 
         final InputRow row = iterator.next();
 
-        Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
-        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
-        Assert.assertEquals("1", Iterables.getOnlyElement(row.getDimension("tree_omg")));
+        JupiterAssertions.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
+        JupiterAssertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+        JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
+        JupiterAssertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("path_omg")));
+        JupiterAssertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("jq_omg")));
+        JupiterAssertions.assertEquals("1", Iterables.getOnlyElement(row.getDimension("tree_omg")));
 
-        Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("tree_baz2").isEmpty());
-        Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-        Assert.assertTrue(row.getDimension("tree_omg2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("tree_baz2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+        JupiterAssertions.assertTrue(row.getDimension("tree_omg2").isEmpty());
 
         numActualIterations++;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      JupiterAssertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -250,7 +250,7 @@ public class JsonReaderTest
         ++numActualIterations;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      JupiterAssertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -303,31 +303,31 @@ public class JsonReaderTest
         final InputRowListPlusRawValues rawValues = iterator.next();
 
         // 3 rows returned together
-        Assert.assertEquals(3, rawValues.getInputRows().size());
+        JupiterAssertions.assertEquals(3, rawValues.getInputRows().size());
 
         for (int i = 0; i < 3; i++) {
           InputRow row = rawValues.getInputRows().get(i);
 
           final String msgId = String.valueOf(++acturalRowCount);
-          Assert.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
-          Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
-          Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
-          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
-          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
-          Assert.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("tree_omg")));
+          JupiterAssertions.assertEquals(DateTimes.of("2019-01-01"), row.getTimestamp());
+          JupiterAssertions.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+          JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+          JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("root_baz")));
+          JupiterAssertions.assertEquals("4", Iterables.getOnlyElement(row.getDimension("tree_baz")));
+          JupiterAssertions.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("path_omg")));
+          JupiterAssertions.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("jq_omg")));
+          JupiterAssertions.assertEquals(msgId, Iterables.getOnlyElement(row.getDimension("tree_omg")));
 
-          Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
-          Assert.assertTrue(row.getDimension("tree_baz2").isEmpty());
-          Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
-          Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
-          Assert.assertTrue(row.getDimension("tree_omg2").isEmpty());
+          JupiterAssertions.assertTrue(row.getDimension("root_baz2").isEmpty());
+          JupiterAssertions.assertTrue(row.getDimension("tree_baz2").isEmpty());
+          JupiterAssertions.assertTrue(row.getDimension("path_omg2").isEmpty());
+          JupiterAssertions.assertTrue(row.getDimension("jq_omg2").isEmpty());
+          JupiterAssertions.assertTrue(row.getDimension("tree_omg2").isEmpty());
         }
       }
     }
 
-    Assert.assertEquals(3, acturalRowCount);
+    JupiterAssertions.assertEquals(3, acturalRowCount);
   }
 
   @Test
@@ -385,10 +385,10 @@ public class JsonReaderTest
 
         final InputRowListPlusRawValues rawValues = iterator.next();
 
-        Assert.assertNotNull(rawValues.getParseException());
+        JupiterAssertions.assertNotNull(rawValues.getParseException());
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      JupiterAssertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -448,7 +448,7 @@ public class JsonReaderTest
         ++numActualIterations;
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      JupiterAssertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 
@@ -505,10 +505,10 @@ public class JsonReaderTest
 
         final InputRowListPlusRawValues rawValues = iterator.next();
 
-        Assert.assertNotNull(rawValues.getParseException());
+        JupiterAssertions.assertNotNull(rawValues.getParseException());
       }
 
-      Assert.assertEquals(numExpectedIterations, numActualIterations);
+      JupiterAssertions.assertEquals(numExpectedIterations, numActualIterations);
     }
   }
 }

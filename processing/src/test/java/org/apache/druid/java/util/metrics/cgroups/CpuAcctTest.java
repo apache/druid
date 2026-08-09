@@ -20,12 +20,12 @@
 package org.apache.druid.java.util.metrics.cgroups;
 
 import org.apache.druid.java.util.common.FileUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.JupiterAssertions;
+import org.apache.druid.testing.TempDirExtension;
+import org.apache.druid.testing.ThrowableExpectation;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -36,15 +36,15 @@ import java.util.stream.LongStream;
 
 public class CpuAcctTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public ThrowableExpectation expectedException = ThrowableExpectation.none();
+  @RegisterExtension
+  public TempDirExtension temporaryFolder = new TempDirExtension();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     cgroupDir = temporaryFolder.newFolder();
@@ -65,9 +65,9 @@ public class CpuAcctTest
   {
     final CpuAcct cpuAcct = new CpuAcct(TestUtils.exceptionThrowingDiscoverer());
     final CpuAcct.CpuAcctMetric metric = cpuAcct.snapshot();
-    Assert.assertEquals(0L, metric.cpuCount());
-    Assert.assertEquals(0L, metric.usrTime());
-    Assert.assertEquals(0L, metric.sysTime());
+    JupiterAssertions.assertEquals(0L, metric.cpuCount());
+    JupiterAssertions.assertEquals(0L, metric.usrTime());
+    JupiterAssertions.assertEquals(0L, metric.sysTime());
   }
 
   @Test
@@ -75,8 +75,8 @@ public class CpuAcctTest
   {
     final CpuAcct cpuAcct = new CpuAcct(discoverer);
     final CpuAcct.CpuAcctMetric snapshot = cpuAcct.snapshot();
-    Assert.assertEquals(128, snapshot.cpuCount());
-    Assert.assertArrayEquals(new long[]{
+    JupiterAssertions.assertEquals(128, snapshot.cpuCount());
+    JupiterAssertions.assertArrayEquals(new long[]{
         7344294132655L,
         28183572804378L,
         29552215219002L,
@@ -206,7 +206,7 @@ public class CpuAcctTest
         38554167083817L,
         38870461161179L
     }, snapshot.usrTimes());
-    Assert.assertArrayEquals(new long[]{
+    JupiterAssertions.assertArrayEquals(new long[]{
         4583688852335L,
         385888457233L,
         370465239852L,
@@ -336,9 +336,9 @@ public class CpuAcctTest
         53593212339L,
         52866253864L
     }, snapshot.sysTimes());
-    Assert.assertEquals(LongStream.of(snapshot.sysTimes()).sum(), snapshot.sysTime());
-    Assert.assertEquals(LongStream.of(snapshot.usrTimes()).sum(), snapshot.usrTime());
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(LongStream.of(snapshot.sysTimes()).sum(), snapshot.sysTime());
+    JupiterAssertions.assertEquals(LongStream.of(snapshot.usrTimes()).sum(), snapshot.usrTime());
+    JupiterAssertions.assertEquals(
         LongStream.of(snapshot.sysTimes()).sum() + LongStream.of(snapshot.usrTimes()).sum(),
         snapshot.time()
     );
@@ -350,15 +350,15 @@ public class CpuAcctTest
     final long[] usrTime = new long[]{1, 2, 3};
     final long[] sysTime = new long[]{4, 5, 6};
     final CpuAcct.CpuAcctMetric metric = new CpuAcct.CpuAcctMetric(usrTime, sysTime);
-    Assert.assertEquals(6, metric.usrTime());
-    Assert.assertEquals(15, metric.sysTime());
-    Assert.assertArrayEquals(usrTime, metric.usrTimes());
-    Assert.assertArrayEquals(sysTime, metric.sysTimes());
+    JupiterAssertions.assertEquals(6, metric.usrTime());
+    JupiterAssertions.assertEquals(15, metric.sysTime());
+    JupiterAssertions.assertArrayEquals(usrTime, metric.usrTimes());
+    JupiterAssertions.assertArrayEquals(sysTime, metric.sysTimes());
     for (int i = 0; i < usrTime.length; ++i) {
-      Assert.assertEquals(usrTime[i], metric.usrTime(i));
+      JupiterAssertions.assertEquals(usrTime[i], metric.usrTime(i));
     }
     for (int i = 0; i < sysTime.length; ++i) {
-      Assert.assertEquals(sysTime[i], metric.sysTime(i));
+      JupiterAssertions.assertEquals(sysTime[i], metric.sysTime(i));
     }
   }
 
@@ -380,11 +380,11 @@ public class CpuAcctTest
     final CpuAcct.CpuAcctMetric metric0 = new CpuAcct.CpuAcctMetric(zeroes, zeroes);
     final CpuAcct.CpuAcctMetric metric1 = new CpuAcct.CpuAcctMetric(usr, sys);
     final CpuAcct.CpuAcctMetric diff = metric1.cumulativeSince(metric0);
-    Assert.assertEquals(total, diff.usrTime());
-    Assert.assertEquals(total << 1, diff.sysTime());
-    Assert.assertNotEquals(0, total);
+    JupiterAssertions.assertEquals(total, diff.usrTime());
+    JupiterAssertions.assertEquals(total << 1, diff.sysTime());
+    JupiterAssertions.assertNotEquals(0, total);
     final CpuAcct.CpuAcctMetric zeroDiff = metric1.cumulativeSince(metric1);
-    Assert.assertEquals(0, zeroDiff.usrTime());
-    Assert.assertEquals(0, zeroDiff.sysTime());
+    JupiterAssertions.assertEquals(0, zeroDiff.usrTime());
+    JupiterAssertions.assertEquals(0, zeroDiff.sysTime());
   }
 }
