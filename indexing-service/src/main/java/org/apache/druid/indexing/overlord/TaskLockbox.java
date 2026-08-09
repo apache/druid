@@ -1626,7 +1626,7 @@ public class TaskLockbox
           break;
         case KILL:
           // KILL locks are incompatible only with other KILL locks
-          if (posse.getTaskLock().getType().equals(TaskLockType.KILL)) {
+          if (isLockTypeKill(posse)) {
             if (posse.getTaskLock().getNonNullPriority() >= priority) {
               return false;
             }

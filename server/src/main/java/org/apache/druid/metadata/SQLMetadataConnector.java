@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -171,7 +170,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      throwIfUnchecked(e);
+      Throwables.propagateIfPossible(e);
       throw new RuntimeException(e);
     }
   }
@@ -194,7 +193,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      throwIfUnchecked(e);
+      Throwables.propagateIfPossible(e);
       throw new RuntimeException(e);
     }
   }
@@ -975,7 +974,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       );
     }
     catch (Exception e) {
-      throwIfUnchecked(e);
+      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
   }
@@ -1388,15 +1387,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     } else {
       // do nothing
     }
-  }
-
-  private static void throwIfUnchecked(Throwable t)
-  {
-    Throwable rootCause = Throwables.getRootCause(t);
-    if (rootCause instanceof DruidException) {
-      throw (DruidException) rootCause;
-    }
-    Throwables.throwIfUnchecked(t);
   }
 
   public static boolean isStatementException(Throwable e)

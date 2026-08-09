@@ -35,7 +35,6 @@ import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -126,7 +125,6 @@ public class UnusedSegmentsKiller implements OverlordDuty
   @Inject
   public UnusedSegmentsKiller(
       SegmentsMetadataManagerConfig config,
-      DefaultTaskConfig defaultTaskConfig,
       TaskActionClientFactory taskActionClientFactory,
       IndexerMetadataStorageCoordinator storageCoordinator,
       @IndexingService DruidLeaderSelector leaderSelector,
@@ -261,7 +259,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
       // Identify intervals with unused segments which are eligible for kill
       final Map<DatasourceInterval, Integer> eligibleIntervals =
           storageCoordinator.retrieveSomeUnusedSegmentIntervals(
-              DateTimes.nowUtc().minus(killConfig.getBufferPeriod()),
+              killConfig.getMaxUpdatedTimeOfKillableSegment(),
               MAX_INTERVALS_TO_KILL,
               killConfig.getMaxSegmentsToKill()
           );
@@ -373,7 +371,7 @@ public class UnusedSegmentsKiller implements OverlordDuty
     final EmbeddedKillTask killTask = new EmbeddedKillTask(
         taskId,
         candidate,
-        DateTimes.nowUtc().minus(killConfig.getBufferPeriod())
+        killConfig.getMaxUpdatedTimeOfKillableSegment()
     );
 
     final TaskActionClient taskActionClient = taskActionClientFactory.create(killTask);

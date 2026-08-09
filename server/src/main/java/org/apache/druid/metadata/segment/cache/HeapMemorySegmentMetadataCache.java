@@ -181,10 +181,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   )
   {
     this.jsonMapper = jsonMapper;
-    this.cacheMode = config.get().getCacheUsageMode();
-    this.pollDuration = config.get().getPollDuration().toStandardDuration();
-    this.tablesConfig = tablesConfig.get();
     this.managerConfig = config.get();
+    this.cacheMode = managerConfig.getCacheUsageMode();
+    this.pollDuration = managerConfig.getPollDuration().toStandardDuration();
+    this.tablesConfig = tablesConfig.get();
     this.useSchemaCache = segmentSchemaCache.isEnabled();
     this.segmentSchemaCache = segmentSchemaCache;
     this.useIndexingStateCache = indexingStateCache.isEnabled();
