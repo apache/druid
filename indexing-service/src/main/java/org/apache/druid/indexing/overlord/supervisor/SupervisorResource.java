@@ -36,9 +36,12 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.compact.CompactionScheduler;
+import org.apache.druid.indexing.compact.ReindexingTimelineView;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -52,6 +55,7 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -100,6 +104,7 @@ public class SupervisorResource
   private final ObjectMapper objectMapper;
   private final AuditManager auditManager;
   private final AuthConfig authConfig;
+  private final CompactionScheduler compactionScheduler;
 
   @Inject
   public SupervisorResource(
@@ -107,7 +112,8 @@ public class SupervisorResource
       AuthorizerMapper authorizerMapper,
       ObjectMapper objectMapper,
       AuthConfig authConfig,
-      AuditManager auditManager
+      AuditManager auditManager,
+      CompactionScheduler compactionScheduler
   )
   {
     this.taskMaster = taskMaster;
@@ -115,6 +121,7 @@ public class SupervisorResource
     this.objectMapper = objectMapper;
     this.authConfig = authConfig;
     this.auditManager = auditManager;
+    this.compactionScheduler = compactionScheduler;
   }
 
   @POST
@@ -371,6 +378,68 @@ public class SupervisorResource
           return Response.ok(stats.get()).build();
         }
     );
+  }
+
+  @GET
+  @Path("/{id}/reindexingTimeline")
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response getReindexingTimeline(
+      @PathParam("id") final String id,
+      @QueryParam("referenceTime") @Nullable final String referenceTimeStr
+  )
+  {
+    final DateTime referenceTime;
+    try {
+      referenceTime = referenceTimeStr == null ? DateTimes.nowUtc() : DateTimes.of(referenceTimeStr);
+    }
+    catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.of(
+                         "error",
+                         StringUtils.format(
+                             "Reference time[%s] is in invalid format. Use ISO 8601 standard format.",
+                             referenceTimeStr
+                         )
+                     ))
+                     .build();
+    }
+
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          final Optional<SupervisorSpec> specOptional = manager.getSupervisorSpec(id);
+          if (!specOptional.isPresent()) {
+            return Response.status(Response.Status.NOT_FOUND)
+                           .entity(ImmutableMap.of("error", StringUtils.format("Supervisor[%s] does not exist", id)))
+                           .build();
+          }
+          try {
+            final ReindexingTimelineView view = compactionScheduler.previewReindexingTimeline(
+                specOptional.get(),
+                referenceTime
+            );
+            return Response.ok(view).build();
+          }
+          catch (DruidException e) {
+            return Response.status(httpStatusFor(e))
+                           .entity(ImmutableMap.of("error", e.getMessage()))
+                           .build();
+          }
+        }
+    );
+  }
+
+  private static Response.Status httpStatusFor(DruidException e)
+  {
+    switch (e.getCategory()) {
+      case NOT_FOUND:
+        return Response.Status.NOT_FOUND;
+      case INVALID_INPUT:
+      case UNSUPPORTED:
+        return Response.Status.BAD_REQUEST;
+      default:
+        return Response.Status.INTERNAL_SERVER_ERROR;
+    }
   }
 
   @GET

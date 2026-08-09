@@ -19,6 +19,7 @@
 
 package org.apache.druid.testing.embedded.compact;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.catalog.guice.CatalogClientModule;
 import org.apache.druid.catalog.guice.CatalogCoordinatorModule;
 import org.apache.druid.common.utils.IdUtils;
@@ -41,6 +42,7 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngesti
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.compact.CascadingReindexingTemplate;
 import org.apache.druid.indexing.compact.CompactionSupervisorSpec;
+import org.apache.druid.indexing.compact.ReindexingTimelineView;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -56,6 +58,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.VirtualColumns;
@@ -102,6 +105,7 @@ import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -441,6 +445,98 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(5, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertEquals(4, getNumSegmentsWith(Granularities.DAY));
     verifyEventCountOlderThan(Period.days(7), "item", "hat", 0);
+  }
+
+  @Test
+  public void test_getReindexingTimeline_returnsTimelineForCascadingSupervisor()
+  {
+    final ReindexingPartitioningRule partitioningRule = new ReindexingPartitioningRule(
+        "dayRule",
+        "Compact to DAY granularity for data older than 7 days",
+        Period.days(7),
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null
+    );
+
+    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder()
+                                    .partitioningRules(List.of(partitioningRule))
+                                    .build(),
+        null,
+        null,
+        null,
+        Granularities.HOUR,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+    runCompactionWithSpec(template);
+
+    final String supervisorId = CompactionSupervisorSpec.getSupervisorIdForDatasource(dataSource);
+    final DateTime referenceTime = DateTimes.nowUtc();
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/supervisor/%s/reindexingTimeline?referenceTime=%s",
+        StringUtils.urlEncode(supervisorId),
+        StringUtils.urlEncode(referenceTime.toString())
+    );
+
+    final ReindexingTimelineView timeline = cluster.callApi().serviceClient().onLeaderOverlord(
+        mapper -> new RequestBuilder(HttpMethod.GET, url),
+        new TypeReference<>() {}
+    );
+
+    Assertions.assertNotNull(timeline);
+    Assertions.assertEquals(dataSource, timeline.getDataSource());
+    Assertions.assertEquals(referenceTime, timeline.getReferenceTime());
+    Assertions.assertNull(timeline.getValidationError(), "Timeline should have no validation errors");
+  }
+
+  @Test
+  public void test_getReindexingTimeline_returns400ForNonCascadingSupervisor()
+  {
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(
+            new ClusterCompactionConfig(1.0, 100, null, true, CompactionEngine.MSQ, true)
+        )
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+
+    final InlineSchemaDataSourceCompactionConfig inlineConfig =
+        InlineSchemaDataSourceCompactionConfig
+            .builder()
+            .forDataSource(dataSource)
+            .withSkipOffsetFromLatest(Period.seconds(0))
+            .withGranularitySpec(
+                new UserCompactionTaskGranularityConfig(Granularities.MONTH, null, null)
+            )
+            .withTuningConfig(
+                UserCompactionTaskQueryTuningConfig.builder().partitionsSpec(new DynamicPartitionsSpec(null, null)).build()
+            )
+            .build();
+
+    runCompactionWithSpec(inlineConfig);
+
+    final String supervisorId = CompactionSupervisorSpec.getSupervisorIdForDatasource(dataSource);
+    final String url = StringUtils.format(
+        "/druid/indexer/v1/supervisor/%s/reindexingTimeline",
+        StringUtils.urlEncode(supervisorId)
+    );
+
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> cluster.callApi().serviceClient().onLeaderOverlord(
+            mapper -> new RequestBuilder(HttpMethod.GET, url),
+            new TypeReference<ReindexingTimelineView>() {}
+        )
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains("400 Bad Request"),
+        "Expected 400 Bad Request in error message but got: " + exception.getMessage()
+    );
   }
 
   @Test

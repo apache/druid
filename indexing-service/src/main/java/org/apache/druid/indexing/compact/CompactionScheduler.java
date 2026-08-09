@@ -19,12 +19,14 @@
 
 package org.apache.druid.indexing.compact;
 
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
+import org.joda.time.DateTime;
 
 import java.util.Map;
 
@@ -86,4 +88,16 @@ public interface CompactionScheduler
    */
   CompactionSimulateResult simulateRunWithConfigUpdate(ClusterCompactionConfig updateRequest);
 
+  /**
+   * Builds a preview of the reindexing timeline for a compaction supervisor whose template is a
+   * {@link CascadingReindexingTemplate}. The preview reflects exactly what the next scheduler run
+   * would compact: it resolves rules against the live segment timeline and applies any configured
+   * skip offset. Returns an empty intervals list when no segments exist for the datasource yet.
+   *
+   * @param spec          supervisor spec; must be a {@code CompactionSupervisorSpec} carrying a
+   *                      {@code CascadingReindexingTemplate}, otherwise a {@code DruidException} of
+   *                      category {@code INVALID_INPUT} is thrown
+   * @param referenceTime time to evaluate rule periods against
+   */
+  ReindexingTimelineView previewReindexingTimeline(SupervisorSpec spec, DateTime referenceTime);
 }

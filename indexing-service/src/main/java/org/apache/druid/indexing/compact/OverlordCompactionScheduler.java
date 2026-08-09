@@ -34,6 +34,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -59,6 +60,8 @@ import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.timeline.SegmentTimeline;
+import org.joda.time.DateTime;
 
 import java.util.Collections;
 import java.util.List;
@@ -497,6 +500,42 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     } else {
       return new CompactionSimulateResult(Collections.emptyMap());
     }
+  }
+
+  @Override
+  public ReindexingTimelineView previewReindexingTimeline(SupervisorSpec spec, DateTime referenceTime)
+  {
+    if (!(spec instanceof CompactionSupervisorSpec)) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "Supervisor[%s] is not a compaction supervisor",
+                              spec.getId()
+                          );
+    }
+    final CompactionSupervisorSpec compactionSpec = (CompactionSupervisorSpec) spec;
+    final CompactionJobTemplate template = compactionSpec.getTemplate();
+    if (!(template instanceof CascadingReindexingTemplate)) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build(
+                              "Reindexing timeline is not available for supervisor[%s] as it does not use a cascading reindexing template",
+                              spec.getId()
+                          );
+    }
+    final CascadingReindexingTemplate cascadingTemplate = (CascadingReindexingTemplate) template;
+    final String dataSource = cascadingTemplate.getDataSource();
+    final SegmentTimeline timeline = getDatasourceSnapshot()
+        .getUsedSegmentsTimelinesPerDataSource()
+        .get(dataSource);
+
+    // No data yet for this datasource — returning configured intervals would be misleading
+    // since there's nothing the rules would actually be applied against.
+    if (timeline == null || timeline.isEmpty()) {
+      return new ReindexingTimelineView(dataSource, referenceTime, null, Collections.emptyList(), null);
+    }
+
+    return cascadingTemplate.buildTimelineView(referenceTime, timeline);
   }
 
   private void emitStat(CoordinatorStat stat, RowKey rowKey, long value)

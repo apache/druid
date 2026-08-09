@@ -1961,7 +1961,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     }
 
     ReindexingRuleProvider mockProvider = EasyMock.createMock(ReindexingRuleProvider.class);
-    EasyMock.expect(mockProvider.isReady()).andReturn(true);
+    EasyMock.expect(mockProvider.isReady()).andReturn(true).anyTimes();
     EasyMock.expect(mockProvider.getPartitioningRules()).andReturn(partitioningRules).anyTimes();
     // Return a fresh stream on each call to avoid "stream has already been operated upon or closed" errors
     EasyMock.expect(mockProvider.streamAllRules()).andAnswer(() -> partitioningRules.stream().map(r -> (ReindexingRule) r)).anyTimes();
