@@ -68,7 +68,6 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 
@@ -85,6 +84,8 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 @SqlTestFrameworkConfig.ComponentSupplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
@@ -334,7 +335,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     {
       return expectValidationError(e -> {
         Assertions.assertInstanceOf(DruidException.class, e);
-        MatcherAssert.assertThat((DruidException) e, exceptionMatcher);
+        assertThat((DruidException) e, exceptionMatcher);
       });
     }
 

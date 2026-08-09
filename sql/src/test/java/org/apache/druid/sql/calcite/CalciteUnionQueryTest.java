@@ -30,9 +30,10 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteUnionQueryTest extends BaseCalciteQueryTest
 {
@@ -136,7 +137,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
+      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
     }
   }
 
@@ -463,7 +464,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -483,7 +484,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -503,7 +504,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
+      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
     }
   }
 

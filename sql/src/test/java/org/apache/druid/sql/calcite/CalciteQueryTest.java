@@ -133,7 +133,6 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -150,6 +149,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -368,7 +368,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         e,
         invalidSqlIs("INSERT operations are not supported by requested SQL engine [native], consider using MSQ.")
     );
@@ -387,7 +387,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         e,
         invalidSqlIs("REPLACE operations are not supported by the requested SQL engine [native].  Consider using MSQ.")
     );
@@ -6593,7 +6593,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testBuilder().sql(sql).run();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs("Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]")
       );
@@ -12053,7 +12053,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               "Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments (line [1], column [8])"
@@ -14504,7 +14504,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT ANY_VALUE(dim3, 1000, 'true') FROM foo")
         .queryContext(ImmutableMap.of())
         .run());
-    MatcherAssert.assertThat(e, invalidSqlIs(
+    assertThat(e, invalidSqlIs(
         "Cannot apply 'ANY_VALUE' to arguments of type 'ANY_VALUE(<VARCHAR>, <INTEGER>, <CHAR(4)>)'. Supported form(s): 'ANY_VALUE(<expr>, [<maxBytesPerStringInt>, [<aggregateMultipleValuesBoolean>]])' (line [1], column [8])"));
     DruidException e1 = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT ANY_VALUE(dim3, 1000, null) FROM foo")
@@ -15502,7 +15502,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .run()
     );
 
-    MatcherAssert.assertThat(e, invalidSqlContains("Aggregation [SUM] with DISTINCT is not supported"));
+    assertThat(e, invalidSqlContains("Aggregation [SUM] with DISTINCT is not supported"));
   }
 
   @Test
@@ -15512,7 +15512,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 DESC NULLS FIRST) from druid.foo")
         .run());
 
-    MatcherAssert.assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
+    assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
   }
 
   @Test
@@ -15521,7 +15521,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 NULLS LAST) from druid.foo")
         .run());
-    MatcherAssert.assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
+    assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
   }
 
   @Test
@@ -15532,7 +15532,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) from druid.foo")
         .run());
-    MatcherAssert.assertThat(e, invalidSqlIs("Order By with RANGE clause currently supports only UNBOUNDED or CURRENT ROW. Use ROWS clause instead. (line [1], column [31])"));
+    assertThat(e, invalidSqlIs("Order By with RANGE clause currently supports only UNBOUNDED or CURRENT ROW. Use ROWS clause instead. (line [1], column [31])"));
   }
 
   @Test
@@ -15543,7 +15543,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN dim1 PRECEDING AND dim1 FOLLOWING) from druid.foo")
         .run());
-    MatcherAssert.assertThat(e, invalidSqlIs("Window frames with expression based lower/upper bounds are not supported. (line [1], column [31])"));
+    assertThat(e, invalidSqlIs("Window frames with expression based lower/upper bounds are not supported. (line [1], column [31])"));
   }
 
   @Test
@@ -15558,7 +15558,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .run()
     );
 
-    MatcherAssert.assertThat(e, invalidSqlContains("Framing of NTILE is not supported"));
+    assertThat(e, invalidSqlContains("Framing of NTILE is not supported"));
   }
 
   @Test
@@ -15573,7 +15573,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .run()
     );
 
-    MatcherAssert.assertThat(e, invalidSqlContains("DISTINCT is not supported for window functions"));
+    assertThat(e, invalidSqlContains("DISTINCT is not supported for window functions"));
   }
 
   @Test
@@ -15589,7 +15589,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1, ROW_NUMBER() OVER W from druid.foo WINDOW W as (ORDER BY max(length(dim1)))")
         .run());
 
-    MatcherAssert.assertThat(e, invalidSqlContains("not supported with syntax WINDOW W AS <DEF>"));
+    assertThat(e, invalidSqlContains("not supported with syntax WINDOW W AS <DEF>"));
   }
 
   @Test

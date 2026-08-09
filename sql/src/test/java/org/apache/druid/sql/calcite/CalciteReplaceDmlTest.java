@@ -46,7 +46,6 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParserUtils;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -62,6 +61,7 @@ import static org.apache.druid.segment.column.ColumnType.FLOAT;
 import static org.apache.druid.segment.column.ColumnType.LONG;
 import static org.apache.druid.segment.column.ColumnType.STRING;
 import static org.apache.druid.segment.column.ColumnType.ofComplex;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
 {
@@ -671,7 +671,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
       Assertions.fail("Exception should be thrown");
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      assertThat(
           e,
           invalidSqlIs(
               "Invalid granularity['invalid_granularity'] specified after PARTITIONED BY clause."

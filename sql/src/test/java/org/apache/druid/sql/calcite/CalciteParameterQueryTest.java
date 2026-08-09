@@ -40,12 +40,12 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -585,7 +585,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    MatcherAssert.assertThat(
+    assertThat(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
@@ -605,7 +605,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(new SqlParameter(SqlType.BIGINT, 3L))
         )
     );
-    MatcherAssert.assertThat(
+    assertThat(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [2])")
     );
@@ -627,7 +627,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    MatcherAssert.assertThat(
+    assertThat(
         exception,
         DruidExceptionMatcher.invalidSqlInput().expectMessageIs("No value bound for parameter (position [1])")
     );
