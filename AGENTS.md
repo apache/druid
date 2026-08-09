@@ -45,7 +45,7 @@ Real-time analytics database. Java, Maven, multi-module project.
 
 ### JUnit 5 test helpers
 
-When adding or migrating tests in `processing`, reuse these existing test-scope helpers:
+When adding or migrating tests, reuse these existing test-scope helpers:
 
 - `TemporaryFolderExtension` (`org.apache.druid.testing`) for tests that need a Druid-managed `File` temporary directory:
 
@@ -54,13 +54,11 @@ When adding or migrating tests in `processing`, reuse these existing test-scope 
   public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
   ```
 
-  Use `getRoot()`, `newFolder(...)`, or `newFile(...)`. Prefer JUnit 5 `@TempDir` for simple cases. Do not add new JUnit 4 `TemporaryFolder` or `TempFolderOperations` usages; existing compatibility code is only for tests that have not yet migrated.
+  Use `getRoot()`, `newFolder(...)`, or `newFile(...)`. Prefer `TemporaryFolderExtension` over JUnit 5 `@TempDir` or JUnit 4 `TemporaryFolder`. Do not add new `TempFolderOperations` usages; the existing compatibility bridge is only for tests that have not yet migrated.
 
 - `LoggerCaptureExtension` (`org.apache.druid.testing.junit`) for capturing Log4j events. Register it with the target class and use `getLogEvents()`, `clearLogEvents()`, or `awaitLogEvents()` as needed.
 
 - `ExpectThrows` (`org.apache.druid.testing`) is available for existing annotation-style tests using `@ExpectThrows(ExceptionType.class)`. For new tests, prefer JUnit Jupiter's `Assertions.assertThrows(...)` directly.
-
-Do not introduce assertion-wrapper helpers such as `JupiterAssertions` or `ThrowableExpectation`; use JUnit Jupiter assertions directly.
 
 ## Pull Requests
 
