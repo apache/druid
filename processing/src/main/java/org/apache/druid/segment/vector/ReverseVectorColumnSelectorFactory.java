@@ -19,7 +19,10 @@
 
 package org.apache.druid.segment.vector;
 
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -334,6 +337,16 @@ public class ReverseVectorColumnSelectorFactory implements VectorColumnSelectorF
       }
       return currentNulls;
     }
+  }
+
+  @Override
+  public GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      final String column,
+      final DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    // groupBy does not use descending cursors, so this method is not needed.
+    throw NotYetImplemented.ex(null, "makeGroupByVectorColumnSelector is not needed for descending cursors");
   }
 
   private static class ReverseVectorObjectSelector extends ReverseVectorSelector implements VectorObjectSelector
