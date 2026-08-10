@@ -168,8 +168,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       ).get();
 
       if (HttpServletResponse.SC_NOT_FOUND == responseHandler.getStatus()) {
-        int batchSize = config.getBatchSize() == null ? 1 : config.getBatchSize();
-        SegmentLoadingCapabilities defaultCapabilities = new SegmentLoadingCapabilities(batchSize, batchSize);
+        SegmentLoadingCapabilities defaultCapabilities = getDefaultLoadingCapabilities();
         log.warn(
             "Historical capabilities endpoint not found at URL[%s]. Using default values[%s].",
             segmentLoadingCapabilitiesURL,
@@ -177,8 +176,20 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         );
         return defaultCapabilities;
       } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
-        log.makeAlert("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
-        throw new RE("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
+        // A single unhealthy server (e.g. one returning 503) must not prevent this peon from being
+        // created. Peon construction happens inside LoadQueueTaskMaster.resetPeonsForNewServers, which
+        // is the first thing PrepareBalancerAndLoadQueues (the first duty in HistoricalManagementDuties)
+        // does; throwing here would abort the entire duty group for every server in the cluster and
+        // stall all segment loading/balancing. Instead, alert and fall back to default capabilities so
+        // this server is still managed and the rest of the run proceeds.
+        SegmentLoadingCapabilities defaultCapabilities = getDefaultLoadingCapabilities();
+        log.makeAlert(
+            "Received status[%s] when fetching loading capabilities from server[%s]. Using default values[%s].",
+            responseHandler.getStatus(),
+            serverId,
+            defaultCapabilities
+        ).emit();
+        return defaultCapabilities;
       }
 
       return jsonMapper.readValue(
@@ -187,8 +198,21 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       );
     }
     catch (Throwable th) {
-      throw new RE(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
+      SegmentLoadingCapabilities defaultCapabilities = getDefaultLoadingCapabilities();
+      log.makeAlert(
+          th,
+          "Received error while fetching historical capabilities from Server[%s]. Using default values[%s].",
+          serverId,
+          defaultCapabilities
+      ).emit();
+      return defaultCapabilities;
     }
+  }
+
+  private SegmentLoadingCapabilities getDefaultLoadingCapabilities()
+  {
+    int batchSize = config.getBatchSize() == null ? 1 : config.getBatchSize();
+    return new SegmentLoadingCapabilities(batchSize, batchSize);
   }
 
   private void doSegmentManagement()

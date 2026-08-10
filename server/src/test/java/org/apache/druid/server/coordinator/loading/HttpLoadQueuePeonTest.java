@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -39,6 +40,7 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -78,6 +80,7 @@ public class HttpLoadQueuePeonTest
   @Before
   public void setUp()
   {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
     segmentLoadingCapabilities = new SegmentLoadingCapabilities(1, 3);
     httpClient = new TestHttpClient();
     httpLoadQueuePeon = new HttpLoadQueuePeon(
@@ -319,6 +322,54 @@ public class HttpLoadQueuePeonTest
         observedRateKbps > expectedRateKbps / 2
         && observedRateKbps <= expectedRateKbps
     );
+  }
+
+  @Test
+  public void testPeonIsCreatedWhenServerErrorsOnLoadCapabilities()
+  {
+    // A server returning a non-OK, non-404 status (e.g. 503) on loadCapabilities must not
+    // fail peon construction. The peon falls back to default capabilities so the server is
+    // still managed, rather than throwing and aborting segment management for the cluster.
+    final HttpClient failingClient = new HttpClient()
+    {
+      @Override
+      public <Intermediate, Final> ListenableFuture<Final> go(
+          Request request,
+          HttpResponseHandler<Intermediate, Final> handler
+      )
+      {
+        return go(request, handler, null);
+      }
+
+      @Override
+      @SuppressWarnings("unchecked")
+      public <Intermediate, Final> ListenableFuture<Final> go(
+          Request request,
+          HttpResponseHandler<Intermediate, Final> handler,
+          Duration duration
+      )
+      {
+        final HttpResponse response =
+            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE);
+        response.setContent(ChannelBuffers.buffer(0));
+        handler.handleResponse(response, null);
+        return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
+      }
+    };
+
+    final HttpLoadQueuePeon peon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        failingClient,
+        new HttpLoadQueuePeonConfig(null, null, 10),
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService("HttpLoadQueuePeonTest-%s", httpClient.processingExecutor, true),
+        httpClient.callbackExecutor
+    );
+
+    // Construction succeeded and the peon fell back to default capabilities derived from the batch
+    // size: turbo loading threads default to the batch size (10) rather than a fetched value.
+    Assert.assertEquals(10, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
   }
 
   @Test
