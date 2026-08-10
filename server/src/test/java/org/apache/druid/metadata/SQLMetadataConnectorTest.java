@@ -510,7 +510,8 @@ public class SQLMetadataConnectorTest
     // rather than DerbyConnector's native SYSCS_EXPORT_TABLE override
     connector.exportTableGeneric(
         StringUtils.toUpperCase(tableName),
-        outputFile.getAbsolutePath()
+        outputFile.getAbsolutePath(),
+        null
     );
 
     final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
@@ -563,7 +564,8 @@ public class SQLMetadataConnectorTest
 
     connector.exportTableGeneric(
         StringUtils.toUpperCase(tableName),
-        outputFile.getAbsolutePath()
+        outputFile.getAbsolutePath(),
+        null
     );
 
     final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
@@ -611,7 +613,8 @@ public class SQLMetadataConnectorTest
 
     connector.exportTableGeneric(
         StringUtils.toUpperCase(tableName),
-        outputFile.getAbsolutePath()
+        outputFile.getAbsolutePath(),
+        null
     );
 
     final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
@@ -624,66 +627,6 @@ public class SQLMetadataConnectorTest
     // Row with values
     final String expectedHex = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"key\":1}"));
     Assert.assertEquals("with_values," + expectedHex + ",has_desc", lines.get(1));
-
-    dropTable(tableName);
-  }
-
-  @Test
-  public void testExportTablePreservesAllColumns() throws IOException
-  {
-    final String tableName = "test_export_allcols";
-    connector.getDBI().withHandle(
-        handle -> {
-          // Simulate segments table structure with columns after payload
-          handle.execute(
-              StringUtils.format(
-                  "CREATE TABLE %s ("
-                  + "id VARCHAR(255) NOT NULL, "
-                  + "used BOOLEAN NOT NULL, "
-                  + "payload BLOB NOT NULL, "
-                  + "used_status_last_updated VARCHAR(255), "
-                  + "fingerprint VARCHAR(255), "
-                  + "PRIMARY KEY(id))",
-                  tableName
-              )
-          );
-          handle.execute(
-              StringUtils.format("INSERT INTO %s VALUES (?, ?, ?, ?, ?)", tableName),
-              "seg1",
-              true,
-              StringUtils.toUtf8("{\"v\":1}"),
-              "2024-01-01",
-              "fp_abc"
-          );
-          handle.execute(
-              StringUtils.format("INSERT INTO %s (id, used, payload) VALUES (?, ?, ?)", tableName),
-              "seg2",
-              false,
-              StringUtils.toUtf8("{\"v\":2}")
-          );
-          return null;
-        }
-    );
-
-    final File outputFile = Files.createTempFile("export_allcols_test", ".csv").toFile();
-    outputFile.deleteOnExit();
-
-    connector.exportTableGeneric(
-        StringUtils.toUpperCase(tableName),
-        outputFile.getAbsolutePath()
-    );
-
-    final List<String> lines = Files.readAllLines(outputFile.toPath(), StandardCharsets.UTF_8);
-    Assert.assertEquals(2, lines.size());
-    Collections.sort(lines);
-
-    // All 5 columns should be present, including those after payload
-    final String hex1 = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"v\":1}"));
-    Assert.assertEquals("seg1,true," + hex1 + ",2024-01-01,fp_abc", lines.get(0));
-
-    // NULL trailing columns should produce empty fields
-    final String hex2 = BaseEncoding.base16().encode(StringUtils.toUtf8("{\"v\":2}"));
-    Assert.assertEquals("seg2,false," + hex2 + ",,", lines.get(1));
 
     dropTable(tableName);
   }

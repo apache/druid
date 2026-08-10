@@ -1090,8 +1090,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    * Returns an empty list if the table does not exist or the metadata cannot be read.
    *
    * The lookup is scoped to the schema returned by {@link #getMetadataTableSchema(Connection)}, which is the schema
-   * an unqualified table name resolves to. The table name is folded to the case in which the database stores unquoted
-   * identifiers, since {@link DatabaseMetaData#getColumns} patterns are case-sensitive.
+   * an unqualified table name resolves to. Rather than passing the table name as a search pattern, in which '_' is a
+   * wildcard and which is case-sensitive while the database folds unquoted identifiers, the returned table names are
+   * compared to the given one ignoring case.
    */
   public List<String> getTableColumns(final String tableName)
   {
@@ -1100,12 +1101,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       try {
         if (tableExists(handle, tableName)) {
           final Connection conn = handle.getConnection();
-          final DatabaseMetaData dbMetaData = conn.getMetaData();
-          final String storedName = foldIdentifierCase(dbMetaData, tableName);
-          try (ResultSet rs = dbMetaData.getColumns(null, getMetadataTableSchema(conn), storedName, null)) {
+          try (ResultSet rs = conn.getMetaData().getColumns(null, getMetadataTableSchema(conn), null, null)) {
             while (rs.next()) {
-              // '_' is a wildcard in the table name pattern, so match the returned table name exactly
-              if (storedName.equals(rs.getString("TABLE_NAME"))) {
+              if (tableName.equalsIgnoreCase(rs.getString("TABLE_NAME"))) {
                 columns.add(rs.getString("COLUMN_NAME"));
               }
             }
@@ -1131,26 +1129,6 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected String getMetadataTableSchema(final Connection connection) throws SQLException
   {
     return connection.getSchema();
-  }
-
-  /**
-   * Folds the given identifier to the case in which the database stores unquoted identifiers.
-   * {@link DatabaseMetaData} lookup patterns are case-sensitive, while an unquoted identifier
-   * in a SQL statement is folded by the database (to lowercase in PostgreSQL, to uppercase in
-   * Derby), so the folded form must be used to match the table a SQL reference resolves to.
-   */
-  private static String foldIdentifierCase(
-      final DatabaseMetaData dbMetaData,
-      final String identifier
-  ) throws SQLException
-  {
-    if (dbMetaData.storesLowerCaseIdentifiers()) {
-      return StringUtils.toLowerCase(identifier);
-    }
-    if (dbMetaData.storesUpperCaseIdentifiers()) {
-      return StringUtils.toUpperCase(identifier);
-    }
-    return identifier;
   }
 
   /**
@@ -1189,12 +1167,19 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         (TransactionCallback<Void>) (handle, status) -> {
           final Connection conn = handle.getConnection();
           final String selectList = columns == null || columns.isEmpty() ? "*" : makeExportSelectList(conn, columns);
+          // Qualify the table with the schema that Druid's tables live in, which is not necessarily the schema an
+          // unqualified name resolves to for this connection. The identifiers are left unquoted so that they are
+          // folded by the database in the same way as in every other Druid statement.
+          final String schema = getMetadataTableSchema(conn);
+          final String qualifiedTableName = schema == null ? tableName : schema + "." + tableName;
           try (Statement stmt = conn.createStatement()) {
             final int fetchSize = getStreamingFetchSize();
             if (fetchSize > 0) {
               stmt.setFetchSize(fetchSize);
             }
-            try (ResultSet rs = stmt.executeQuery(StringUtils.format("SELECT %s FROM %s", selectList, tableName));
+            try (ResultSet rs = stmt.executeQuery(
+                StringUtils.format("SELECT %s FROM %s", selectList, qualifiedTableName)
+            );
                  OutputStreamWriter writer =
                      new OutputStreamWriter(new FileOutputStream(outputPath), StandardCharsets.UTF_8)) {
               final int columnCount = rs.getMetaData().getColumnCount();

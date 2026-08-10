@@ -54,86 +54,35 @@ public class ExportMetadataTest
       new TestDerbyConnector.DerbyConnectorRule();
 
   @Test
-  public void testOrderSegmentsColumns_reordersToCanonicalOrder()
+  public void testOrderSegmentsColumns()
   {
     // Columns as reported by a table where the newer columns were added by ALTER TABLE in arbitrary order
-    final List<String> actual = ImmutableList.of(
-        "id",
-        "dataSource",
-        "created_date",
-        "start",
-        "end",
-        "partitioned",
-        "version",
-        "used",
-        "payload",
-        "upgraded_from_segment_id",
-        "num_rows",
-        "used_status_last_updated",
-        "schema_fingerprint",
-        "indexing_state_fingerprint"
-    );
-
     Assert.assertEquals(
         ImmutableList.of(
-            "id",
-            "dataSource",
-            "created_date",
-            "start",
-            "end",
-            "partitioned",
-            "version",
-            "used",
-            "payload",
-            "used_status_last_updated",
-            "indexing_state_fingerprint",
-            "upgraded_from_segment_id",
-            "schema_fingerprint",
-            "num_rows"
+            "id", "dataSource", "created_date", "start", "end", "partitioned", "version", "used", "payload",
+            "used_status_last_updated", "indexing_state_fingerprint", "upgraded_from_segment_id",
+            "schema_fingerprint", "num_rows"
         ),
-        ExportMetadata.orderSegmentsColumns(actual)
-    );
-  }
-
-  @Test
-  public void testOrderSegmentsColumns_ignoresCaseAndSkipsMissingColumns()
-  {
-    final List<String> actual = ImmutableList.of(
-        "PAYLOAD",
-        "USED",
-        "ID",
-        "DATASOURCE",
-        "CREATED_DATE",
-        "START",
-        "END",
-        "PARTITIONED",
-        "VERSION"
+        ExportMetadata.orderSegmentsColumns(ImmutableList.of(
+            "id", "dataSource", "created_date", "start", "end", "partitioned", "version", "used", "payload",
+            "upgraded_from_segment_id", "num_rows", "used_status_last_updated", "schema_fingerprint",
+            "indexing_state_fingerprint"
+        ))
     );
 
+    // Ordering ignores case, and columns missing from the source table are skipped
     Assert.assertEquals(
-        ImmutableList.of(
-            "ID",
-            "DATASOURCE",
-            "CREATED_DATE",
-            "START",
-            "END",
-            "PARTITIONED",
-            "VERSION",
-            "USED",
-            "PAYLOAD"
-        ),
-        ExportMetadata.orderSegmentsColumns(actual)
+        ImmutableList.of("ID", "DATASOURCE", "CREATED_DATE", "START", "END", "PARTITIONED", "VERSION", "USED",
+                        "PAYLOAD"),
+        ExportMetadata.orderSegmentsColumns(ImmutableList.of(
+            "PAYLOAD", "USED", "ID", "DATASOURCE", "CREATED_DATE", "START", "END", "PARTITIONED", "VERSION"
+        ))
     );
-  }
 
-  @Test
-  public void testOrderSegmentsColumns_appendsUnknownColumnsAtEnd()
-  {
-    final List<String> actual = ImmutableList.of("custom_col", "id", "payload", "another_col");
-
+    // Unknown columns are appended at the end, in the order reported by the database
     Assert.assertEquals(
         ImmutableList.of("id", "payload", "custom_col", "another_col"),
-        ExportMetadata.orderSegmentsColumns(actual)
+        ExportMetadata.orderSegmentsColumns(ImmutableList.of("custom_col", "id", "payload", "another_col"))
     );
   }
 

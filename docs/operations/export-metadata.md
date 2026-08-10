@@ -172,9 +172,15 @@ Example import commands for Derby, MySQL, and PostgreSQL are shown below.
 
 These example import commands expect `/tmp/csv` and its contents to be accessible from the server. For other options, such as importing from the client filesystem, please refer to the database's documentation.
 
-The segments table is exported in a fixed column order, independent of the physical column order of the source table: `id`, `dataSource`, `created_date`, `start`, `end`, `partitioned`, `version`, `used`, `payload`, followed by whichever of the optional columns `used_status_last_updated`, `indexing_state_fingerprint`, `upgraded_from_segment_id`, `schema_fingerprint`, and `num_rows` exist in the source table, in that order. Adjust the segments column list in the import commands below to contain exactly the columns of the source table: omit any optional column the source table does not have (segments tables from older Druid versions may have only the first nine columns), and add `schema_fingerprint,num_rows` at the end if the source table has them. Apply the same adjustment to the columns declared with `FORCE_NULL` in the PostgreSQL command.
+The segments table is exported in a fixed column order, independent of the physical column order of the source table: `id`, `dataSource`, `created_date`, `start`, `end`, `partitioned`, `version`, `used`, `payload`, followed by whichever of the optional columns `used_status_last_updated`, `indexing_state_fingerprint`, `upgraded_from_segment_id`, `schema_fingerprint`, and `num_rows` exist in the source table, in that order. Adjust the segments column list in the import commands below to contain exactly the columns of the source table: omit any optional column the source table does not have (segments tables from older Druid versions may have only the first nine columns), and add `schema_fingerprint,num_rows` at the end if the source table has them. Apply the same adjustment to the columns declared with `FORCE_NULL` in the PostgreSQL command and to the user variables of the MySQL command.
 
-NULL values are written as empty fields. An empty field is imported as an empty string rather than NULL, which fails for non-string columns such as `num_rows`, so the PostgreSQL command below declares the nullable columns with `FORCE_NULL`.
+NULL values are written as empty fields, and each database needs to be told how to import them:
+
+- Derby imports an empty field as NULL, so no extra handling is needed.
+- PostgreSQL `COPY` imports an empty field as an empty string, which fails for non-string columns such as `num_rows`, so the command below declares the nullable columns with `FORCE_NULL`.
+- MySQL `LOAD DATA` imports an empty field as an empty string, and coerces it to `0` for numeric columns such as `num_rows`, so the command below reads the nullable columns into user variables and converts empty values to NULL with `NULLIF`.
+
+The exported CSV follows RFC 4180, in which a backslash is an ordinary character. MySQL `LOAD DATA` treats backslashes as escape characters by default, which would corrupt payloads and segment ids containing them, so the commands below disable this with `ESCAPED BY ''`.
 
 ### Derby
 
@@ -193,15 +199,15 @@ CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_SUPERVISORS','id,spec_id,created_
 ### MySQL
 
 ```sql
-LOAD DATA INFILE '/tmp/csv/druid_segments.csv' INTO TABLE druid_segments FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,dataSource,created_date,start,end,partitioned,version,used,payload,used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_segments.csv' INTO TABLE druid_segments FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (id,dataSource,created_date,start,end,partitioned,version,used,payload,@used_status_last_updated,@indexing_state_fingerprint,@upgraded_from_segment_id) SET used_status_last_updated=NULLIF(@used_status_last_updated,''), indexing_state_fingerprint=NULLIF(@indexing_state_fingerprint,''), upgraded_from_segment_id=NULLIF(@upgraded_from_segment_id,''); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_rules.csv' INTO TABLE druid_rules FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,dataSource,version,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_rules.csv' INTO TABLE druid_rules FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (id,dataSource,version,payload); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_config.csv' INTO TABLE druid_config FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (name,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_config.csv' INTO TABLE druid_config FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (name,payload); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_dataSource.csv' INTO TABLE druid_dataSource FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (dataSource,created_date,commit_metadata_payload,commit_metadata_sha1); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_dataSource.csv' INTO TABLE druid_dataSource FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (dataSource,created_date,commit_metadata_payload,commit_metadata_sha1); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_supervisors.csv' INTO TABLE druid_supervisors FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,spec_id,created_date,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_supervisors.csv' INTO TABLE druid_supervisors FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (id,spec_id,created_date,payload); SHOW WARNINGS;
 ```
 
 ### PostgreSQL

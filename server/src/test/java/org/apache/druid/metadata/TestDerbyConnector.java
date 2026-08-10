@@ -131,11 +131,6 @@ public class TestDerbyConnector extends DerbyConnector
    * bypassing Derby's native SYSCS_EXPORT_TABLE override.
    * This exercises the same code path used by PostgreSQL and other connectors.
    */
-  public void exportTableGeneric(final String tableName, final String outputPath)
-  {
-    exportTableGeneric(tableName, outputPath, null);
-  }
-
   public void exportTableGeneric(
       final String tableName,
       final String outputPath,
