@@ -38,6 +38,7 @@ import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ExactProjectionPartialLoadMatcher;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.PartialLoadRule;
+import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -673,10 +674,11 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
-  public void testForeverPartialLoadRuleEndToEndFullLoadFallback()
+  public void testForeverPartialLoadRuleEndToEndLoadOnDemandFallback()
   {
-    // Matcher does not apply (segment has no overlap); FULL_LOAD onCannotMatch (default) → run() routes through
-    // replicateSegment instead, so the peon must not see a profile and the stat is the regular ASSIGNED.
+    // Matcher does not apply; LOAD_ON_DEMAND onCannotMatch (the default) → run() routes through replicateSegment, so
+    // the peon must not see a profile and the stat is the regular ASSIGNED. A cluster-group matcher supplies the
+    // non-match: projection matchers always apply, falling back to a base-table load.
     final ServerHolder server = createServer(TIER1);
     final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, server).build();
 
@@ -684,8 +686,8 @@ public class StrategicSegmentAssignerPartialTest
     final PartialLoadRule rule = new ForeverPartialLoadRule(
         ImmutableMap.of(TIER1, 1),
         null,
-        new ExactProjectionPartialLoadMatcher(List.of("nonexistent")),
-        CannotMatchBehavior.FULL_LOAD
+        new WildcardClusterGroupPartialLoadMatcher(List.of(ImmutableMap.of("tenant", "acme")), null),
+        CannotMatchBehavior.LOAD_ON_DEMAND
     );
 
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
