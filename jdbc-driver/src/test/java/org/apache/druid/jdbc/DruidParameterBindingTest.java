@@ -28,6 +28,7 @@ import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -97,7 +98,6 @@ public class DruidParameterBindingTest
   @ParameterizedTest(name = "{0}")
   @MethodSource("bindings")
   public void testBinding(
-      @SuppressWarnings("unused") final String name,
       final Binder binder,
       final String expectedType,
       final Object expectedValue
@@ -247,7 +247,7 @@ public class DruidParameterBindingTest
       final Object expectedValue
   )
   {
-    return Arguments.of(name, binder, expectedType, expectedValue);
+    return Arguments.of(Named.of(name, binder), expectedType, expectedValue);
   }
 
   private static URL exampleUrl()

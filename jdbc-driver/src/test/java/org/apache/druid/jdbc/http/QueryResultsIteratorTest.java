@@ -24,6 +24,7 @@ import org.apache.druid.jdbc.StringUtils;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -235,11 +236,7 @@ public class QueryResultsIteratorTest
 
   @ParameterizedTest(name = "cut off {0}")
   @MethodSource("truncatedResponses")
-  public void testTruncatedResponseThrows(
-      final String cutOffWhere,
-      final String responseJson,
-      final long expectedRowsRead
-  )
+  public void testTruncatedResponseThrows(final String responseJson, final long expectedRowsRead)
   {
     assertIsTruncatedException(
         Assertions.assertThrows(SQLException.class, () -> readAll(responseJson)),
@@ -250,20 +247,8 @@ public class QueryResultsIteratorTest
   @Test
   public void testDroppedConnectionThrows() throws Exception
   {
-    final InputStream stream = new FilterInputStream(streamOf(OPEN_HEADERS + ", [\"Alice\", 25],"))
-    {
-      @Override
-      public int read(final byte[] buf, final int offset, final int length) throws IOException
-      {
-        final int bytesRead = super.read(buf, offset, length);
-        if (bytesRead < 0) {
-          throw new IOException("closed", new EOFException("EOF reached while reading"));
-        }
-        return bytesRead;
-      }
-    };
-
-    try (final QueryResultsIterator iterator = new QueryResultsIteratorImpl(stream, OBJECT_MAPPER, SQL_QUERY_ID)) {
+    try (final InputStream stream = droppedConnectionStreamOf(OPEN_HEADERS + ", [\"Alice\", 25],");
+         final QueryResultsIterator iterator = new QueryResultsIteratorImpl(stream, OBJECT_MAPPER, SQL_QUERY_ID)) {
       Assertions.assertEquals("Alice", iterator.next()[0]);
       assertIsTruncatedException(Assertions.assertThrows(SQLException.class, iterator::hasNext), 1);
     }
@@ -463,17 +448,37 @@ public class QueryResultsIteratorTest
   private static Stream<Arguments> truncatedResponses()
   {
     return Stream.of(
-        Arguments.of("before anything", "", 0L),
-        Arguments.of("inside a header row", "[[\"name\", \"age\"], [\"STR", 0L),
-        Arguments.of("after the headers", OPEN_HEADERS, 0L),
-        Arguments.of("between rows", OPEN_HEADERS + ", [\"Alice\", 25]", 1L),
-        Arguments.of("inside a row", OPEN_HEADERS + ", [\"Alice\", 25], [\"Bo", 1L)
+        Arguments.of(Named.of("before anything", ""), 0L),
+        Arguments.of(Named.of("inside a header row", "[[\"name\", \"age\"], [\"STR"), 0L),
+        Arguments.of(Named.of("after the headers", OPEN_HEADERS), 0L),
+        Arguments.of(Named.of("between rows", OPEN_HEADERS + ", [\"Alice\", 25]"), 1L),
+        Arguments.of(Named.of("inside a row", OPEN_HEADERS + ", [\"Alice\", 25], [\"Bo"), 1L)
     );
   }
 
   private static InputStream streamOf(final String jsonResponse)
   {
     return new ByteArrayInputStream(jsonResponse.getBytes(StandardCharsets.UTF_8));
+  }
+
+  /**
+   * Like {@link #streamOf}, but reports a dropped connection rather than EOF once the response is exhausted, the
+   * way a server that goes away mid-response does.
+   */
+  private static InputStream droppedConnectionStreamOf(final String jsonResponse)
+  {
+    return new FilterInputStream(streamOf(jsonResponse))
+    {
+      @Override
+      public int read(final byte[] buf, final int offset, final int length) throws IOException
+      {
+        final int bytesRead = super.read(buf, offset, length);
+        if (bytesRead < 0) {
+          throw new IOException("closed", new EOFException("EOF reached while reading"));
+        }
+        return bytesRead;
+      }
+    };
   }
 
   private static void assertIsTruncatedException(final SQLException e, final long expectedRowsRead)

@@ -26,6 +26,7 @@ import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.function.Executable;
@@ -395,7 +396,6 @@ public class DruidDatabaseMetaDataTest
   @ParameterizedTest(name = "{0}")
   @MethodSource("generatedSqlCases")
   public void testGeneratedSql(
-      @SuppressWarnings("unused") final String name,
       final MetadataQuery call,
       final List<String> expectedFragments,
       final List<String> expectedParameters
@@ -462,7 +462,7 @@ public class DruidDatabaseMetaDataTest
       final List<String> expectedParameters
   )
   {
-    return Arguments.of(name, call, expectedFragments, expectedParameters);
+    return Arguments.of(Named.of(name, call), expectedFragments, expectedParameters);
   }
 
   @Test

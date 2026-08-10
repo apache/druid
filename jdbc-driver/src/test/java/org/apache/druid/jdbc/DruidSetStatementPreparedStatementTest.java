@@ -72,7 +72,9 @@ public class DruidSetStatementPreparedStatementTest
   {
     final PreparedStatement preparedStatement = connection.prepareStatement(sql);
     preparedStatement.setObject(1, parameter);
-    preparedStatement.executeQuery();
+
+    // The rows are irrelevant here: what matters is the request that executing produced.
+    preparedStatement.executeQuery().close();
 
     final ArgumentCaptor<SqlRequest> requestCaptor = ArgumentCaptor.forClass(SqlRequest.class);
     verify(mockHttpClient).runQuery(requestCaptor.capture());
@@ -119,7 +121,7 @@ public class DruidSetStatementPreparedStatementTest
     // A later SET is picked up by the statement that was prepared before it ran.
     statement.execute("SET engine = 'msq'");
     preparedStatement.setInt(1, 1);
-    preparedStatement.executeQuery();
+    preparedStatement.executeQuery().close();
 
     final ArgumentCaptor<SqlRequest> requestCaptor = ArgumentCaptor.forClass(SqlRequest.class);
     verify(mockHttpClient).runQuery(requestCaptor.capture());

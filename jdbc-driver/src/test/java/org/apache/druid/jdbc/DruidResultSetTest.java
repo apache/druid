@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jdbc.http.ColumnMetadata;
 import org.apache.druid.jdbc.http.DruidHttpClient;
 import org.apache.druid.jdbc.http.TestQueryResultsIterator;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -55,6 +56,7 @@ public class DruidResultSetTest
 {
   private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
+  private DruidConnection connection;
   private DruidStatement statement;
   private List<ColumnMetadata> columns;
   private List<Object[]> rows;
@@ -62,7 +64,7 @@ public class DruidResultSetTest
   @BeforeEach
   public void setUp() throws SQLException
   {
-    final DruidConnection connection = new DruidConnection(
+    connection = new DruidConnection(
         DruidConnectionUrl.parse("jdbc:druid:http://localhost:8888/druid/v2/sql/", null),
         mock(DruidHttpClient.class),
         JSON_MAPPER
@@ -81,6 +83,15 @@ public class DruidResultSetTest
         new Object[]{2L, "Bob", 87.2, false},
         new Object[]{3L, null, null, null}
     );
+  }
+
+  @AfterEach
+  public void tearDown() throws SQLException
+  {
+    // The statement is constructed directly rather than through createStatement(), so the connection does not
+    // know about it and cannot close it for us.
+    statement.close();
+    connection.close();
   }
 
   private DruidResultSet resultSet(final List<ColumnMetadata> columns, final List<Object[]> rows)

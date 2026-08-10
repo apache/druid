@@ -226,10 +226,11 @@ public class DruidConnectionTest
     final DruidConnection connection = newConnection();
 
     final Statement statement = connection.createStatement();
-    statement.executeQuery("SELECT 1");
+    final ResultSet resultSet = statement.executeQuery("SELECT 1");
 
     statement.close();
     Assertions.assertTrue(statement.isClosed());
+    Assertions.assertTrue(resultSet.isClosed());
 
     connection.close();
     Assertions.assertTrue(connection.isClosed());
