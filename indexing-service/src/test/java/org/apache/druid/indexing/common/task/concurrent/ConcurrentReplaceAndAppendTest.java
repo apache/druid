@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexing.common.MultipleFileTaskReportFileWriter;
@@ -660,9 +661,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assert.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assert.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     verifyIntervalHasUsedSegments(YEAR_23, segmentV01);
@@ -685,9 +686,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assert.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assert.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     final DataSegment segmentV01 = asSegment(pendingSegment);
@@ -713,9 +714,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assert.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assert.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     final DataSegment segmentV01 = asSegment(pendingSegment);
@@ -747,9 +748,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assert.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assert.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     verifyIntervalHasUsedSegments(YEAR_23, segmentV01);

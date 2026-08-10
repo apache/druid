@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.common.task.concurrent;
 
+import com.google.common.base.Throwables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -137,7 +139,12 @@ public class CommandQueueTask extends AbstractTask implements PendingSegmentAllo
       return command.value.get(10, TimeUnit.SECONDS);
     }
     catch (Exception e) {
-      throw new ISE(e, "Error waiting for command on task[%s] to finish", getId());
+      final Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof DruidException druidException) {
+        throw druidException;
+      } else {
+        throw new ISE(e, "Error waiting for command on task[%s] to finish", getId());
+      }
     }
   }
 
