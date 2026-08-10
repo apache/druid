@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
@@ -99,7 +100,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(value = 1)
+@Fork(
+    value = 1,
+    jvmArgsAppend = {
+        "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
+        "--add-opens=java.base/java.nio=ALL-UNNAMED",
+        "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang=ALL-UNNAMED",
+        "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+        "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED"
+    }
+)
 @Warmup(iterations = 5)
 @Measurement(iterations = 15)
 public class TimeseriesBenchmark
@@ -112,6 +123,9 @@ public class TimeseriesBenchmark
 
   @Param({"true", "false"})
   private boolean descending;
+
+  @Param({"false", "true"})
+  private String vectorize;
 
   @Param({"all", "hour"})
   private String queryGranularity;
@@ -164,6 +178,7 @@ public class TimeseriesBenchmark
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
+                .context(Map.of("vectorize", vectorize))
                 .build();
 
       basicQueries.put("A", queryA);
@@ -184,6 +199,7 @@ public class TimeseriesBenchmark
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
+                .context(Map.of("vectorize", vectorize))
                 .build();
 
       basicQueries.put("timeFilterNumeric", timeFilterQuery);
@@ -204,6 +220,7 @@ public class TimeseriesBenchmark
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
+                .context(Map.of("vectorize", vectorize))
                 .build();
 
       basicQueries.put("timeFilterAlphanumeric", timeFilterQuery);
@@ -221,6 +238,7 @@ public class TimeseriesBenchmark
                 .intervals(intervalSpec)
                 .aggregators(queryAggs)
                 .descending(descending)
+                .context(Map.of("vectorize", vectorize))
                 .build();
 
       basicQueries.put("timeFilterByInterval", timeFilterQuery);
@@ -238,6 +256,7 @@ public class TimeseriesBenchmark
   {
     log.info("SETUP CALLED AT " + System.currentTimeMillis());
 
+    ExpressionProcessing.initializeForTests();
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
 
     setupQueries();

@@ -107,9 +107,9 @@ query page.
 
 ## Vectorization parameters
 
-The GroupBy and Timeseries query types can run in _vectorized_ mode, which speeds up query execution by processing
-batches of rows at a time. Not all queries can be vectorized. In particular, vectorization currently has the following
-requirements:
+The GroupBy, Timeseries, TimeBoundary, and Scan (in MSQ only) query types can run in _vectorized_ mode, which speeds up
+query execution by processing batches of rows at a time. Not all queries can be vectorized. In particular, vectorization
+currently has the following requirements:
 
 - All query-level filters must either be able to run on bitmap indexes or must offer vectorized row-matchers. These
 include `selector`, `bound`, `in`, `like`, `regex`, `search`, `and`, `or`, and `not`.
@@ -120,16 +120,15 @@ include `selector`, `bound`, `in`, `like`, `regex`, `search`, `and`, `or`, and `
 - All virtual columns must offer vectorized implementations. Currently for expression virtual columns, support for vectorization is decided on a per expression basis, depending on the type of input and the functions used by the expression. See the currently supported list in the [expression documentation](math-expr.md#vectorization-support).
 - For GroupBy: All dimension specs must be "default" (no extraction functions or filtered dimension specs).
 - For GroupBy: No multi-value dimensions.
-- For Timeseries: No "descending" order.
 - Only immutable segments (not real-time).
 - Only [table datasources](datasource.md#table) (not joins, subqueries, lookups, or inline datasources).
 
-Other query types (like TopN, Scan, Select, and Search) ignore the `vectorize` parameter, and will execute without
+Other query types (like TopN, Search, and native Scan) ignore the `vectorize` parameter, and will execute without
 vectorization. These query types will ignore the `vectorize` parameter even if it is set to `"force"`.
 
 |Parameter|Default| Description|
 |---------|-------|------------|
-|`vectorize`|`true`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.default.context.vectorize` if it's set.|
+|`vectorize`|`true`|Enables or disables vectorized query execution. Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and query types that support vectorization will fail if they cannot be vectorized). The `"force"` setting is meant to aid in testing, and is not generally useful in production (since real-time segments can never be processed with vectorized execution, any queries on real-time data will fail). This will override `druid.query.default.context.vectorize` if it's set.|
 |`vectorSize`|`512`|Sets the row batching size for a particular query. This will override `druid.query.default.context.vectorSize` if it's set.|
 |`vectorizeVirtualColumns`|`true`|Enables or disables vectorized query processing of queries with virtual columns, layered on top of `vectorize` (`vectorize` must also be set to true for a query to utilize vectorization). Possible values are `false` (disabled), `true` (enabled if possible, disabled otherwise, on a per-segment basis), and `force` (enabled, and groupBy or timeseries queries with virtual columns that cannot be vectorized will fail). The `"force"` setting is meant to aid in testing, and is not generally useful in production. This will override `druid.query.default.context.vectorizeVirtualColumns` if it's set.|
 

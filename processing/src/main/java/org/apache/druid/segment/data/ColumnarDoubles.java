@@ -202,10 +202,11 @@ public interface ColumnarDoubles extends Closeable
           ColumnarDoubles.this.get(doubleVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
-          if (offsets[offsets.length - 1] < offsetMark) {
+          final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
+          if (maxOffset < offsetMark) {
             nullIterator = nullValueBitmap.peekableIterator();
           }
-          offsetMark = offsets[offsets.length - 1];
+          offsetMark = maxOffset;
           ColumnarDoubles.this.get(doubleVector, offsets, offset.getCurrentVectorSize());
         }
 
