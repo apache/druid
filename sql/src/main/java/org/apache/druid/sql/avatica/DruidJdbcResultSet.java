@@ -130,7 +130,7 @@ public class DruidJdbcResultSet implements Closeable
         rowCount++;
       }
 
-      final Meta.Frame result = new Meta.Frame(offset, yielder.isDone(), rows);
+      final Meta.Frame result = new Meta.Frame(offset, yielder.isDone() || offset >= limit, rows);
       offset += rowCount;
       return result;
     }
