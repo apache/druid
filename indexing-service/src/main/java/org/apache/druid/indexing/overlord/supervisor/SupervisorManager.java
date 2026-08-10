@@ -768,7 +768,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     } else if (supervisorType.isInstance(supervisor.lhs) && supervisorSpecType.isInstance(supervisor.rhs)) {
       return (Pair<S, T>) supervisor;
     } else {
-      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+      throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
                           .build(
                               "Operation[%s] is not supported by supervisor[%s] of type[%s].",
