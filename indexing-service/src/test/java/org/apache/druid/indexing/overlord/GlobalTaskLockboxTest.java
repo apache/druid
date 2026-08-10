@@ -1312,6 +1312,31 @@ public class GlobalTaskLockboxTest
     Assert.assertTrue(conflictingIntervals.isEmpty());
   }
 
+  @Test
+  public void test_getLockedIntervals_withOngoingKill_returnsEmpty()
+  {
+    final Interval killInterval = Intervals.of("2017/2018");
+    final Task task = new KillUnusedSegmentsTask("t1", "d1", killInterval, null, null, null, null, null);
+    lockbox.add(task);
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
+    tryTimeChunkLock(
+        TaskLockType.KILL,
+        task,
+        killInterval
+    );
+
+    LockFilterPolicy requestForExclusiveLowerPriorityLock = new LockFilterPolicy(
+        task.getDataSource(),
+        25,
+        null,
+        null
+    );
+
+    Map<String, List<Interval>> conflictingIntervals =
+        lockbox.getLockedIntervals(ImmutableList.of(requestForExclusiveLowerPriorityLock));
+    Assert.assertTrue(conflictingIntervals.isEmpty());
+  }
+
 
   @Test
   public void testGetActiveLocks()

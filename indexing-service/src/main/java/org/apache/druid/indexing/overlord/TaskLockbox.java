@@ -972,25 +972,28 @@ public class TaskLockbox
             }
 
             final int priority = lockFilter.getPriority();
-            final boolean isReplaceLock = TaskLockType.REPLACE.name().equals(
-                lockFilter.getContext().getOrDefault(
-                    Tasks.TASK_LOCK_TYPE,
-                    Tasks.DEFAULT_TASK_LOCK_TYPE
-                )
+            final TaskLockType lockType = QueryContexts.getAsEnum(
+                Tasks.TASK_LOCK_TYPE,
+                lockFilter.getContext().get(Tasks.TASK_LOCK_TYPE),
+                TaskLockType.class,
+                Tasks.DEFAULT_TASK_LOCK_TYPE
             );
-            final boolean isUsingConcurrentLocks = Boolean.TRUE.equals(
-                lockFilter.getContext().getOrDefault(
-                    Tasks.USE_CONCURRENT_LOCKS,
-                    Tasks.DEFAULT_USE_CONCURRENT_LOCKS
-                )
+            final boolean isReplaceLock = TaskLockType.REPLACE == lockType;
+            final boolean isUsingConcurrentLocks = QueryContexts.getAsBoolean(
+                Tasks.USE_CONCURRENT_LOCKS,
+                lockFilter.getContext().get(Tasks.USE_CONCURRENT_LOCKS),
+                Tasks.DEFAULT_USE_CONCURRENT_LOCKS
             );
             final boolean ignoreAppendLocks = isUsingConcurrentLocks || isReplaceLock;
+            final boolean ignoreKillLocks = lockType != TaskLockType.KILL;
 
             running.forEach(
                 (startTime, startTimeLocks) -> startTimeLocks.forEach(
                     (interval, taskLockPosses) -> taskLockPosses.forEach(
                         taskLockPosse -> {
                           if (taskLockPosse.getTaskLock().isRevoked()) {
+                            // do nothing
+                          } else if (ignoreKillLocks && TaskLockType.KILL.equals(taskLockPosse.getTaskLock().getType())) {
                             // do nothing
                           } else if (ignoreAppendLocks
                                      && TaskLockType.APPEND.equals(taskLockPosse.getTaskLock().getType())) {

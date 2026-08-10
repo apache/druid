@@ -600,9 +600,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       replacingSegments.add(segment);
     }
 
-    Assert.assertFalse(
-        coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null)
-                   .isSuccess()
+    Assert.assertThrows(
+        DruidException.class,
+        () -> coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null)
     );
   }
 
