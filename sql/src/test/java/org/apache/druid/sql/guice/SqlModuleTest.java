@@ -33,6 +33,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.CatalogCoreModule;
+import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
@@ -195,6 +196,7 @@ public class SqlModuleTest
             new AuthenticatorMapperModule(),
             new CatalogCoreModule(),
             binder -> {
+              DruidBinders.dataSourceQueryHandlerBinder(binder);
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
               binder.bind(Properties.class).toInstance(props);

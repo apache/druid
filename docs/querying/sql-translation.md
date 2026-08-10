@@ -817,14 +817,20 @@ This query context  parameter is a temporary solution to avoid the known issue. 
 
 Druid does not support all SQL features. In particular, the following features are not supported.
 
-- JOIN between native datasources (table, lookup, subquery) and [system tables](sql-metadata-tables.md).
+- JOIN between native datasources (table, lookup, subquery) and [system tables](sql-metadata-tables.md) that use the
+  traditional SQL-layer execution path. System tables that support native execution can participate in these joins
+  when `useNativeQueryForSystemTables` is enabled.
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
 - JOIN conditions containing a constant value inside the condition.
 - JOIN conditions on a column which contains a multi-value dimension.
-- ORDER BY for a non-aggregating query, except for `ORDER BY __time` or `ORDER BY __time DESC`, which are supported.
-  This restriction only applies to non-aggregating queries; you can ORDER BY any column in an aggregating query.
+- ORDER BY for a non-aggregating query, except for `ORDER BY __time` or `ORDER BY __time DESC`, and native-enabled
+  system-table queries that use the native window-query path. This restriction only applies to non-aggregating queries;
+  you can ORDER BY any column in an aggregating query.
 - DDL and DML.
-- Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on [system tables](sql-metadata-tables.md).
+- Using Druid-specific functions like `TIME_PARSE` and `APPROX_QUANTILE_DS` on system tables that use the traditional
+  SQL-layer execution path. [System tables with native query support](sql-metadata-tables.md#native-query-execution) can
+  use expressions and aggregations that the native SQL engine can translate when `useNativeQueryForSystemTables` is
+  enabled.
 
 Additionally, some Druid native query features are not supported by the SQL language. Some unsupported Druid features
 include:
@@ -834,5 +840,3 @@ include:
 - [Multi-value dimensions](sql-data-types.md#multi-value-strings) are only partially implemented in Druid SQL. There are known
 inconsistencies between their behavior in SQL queries and in native queries due to how they are currently treated by
 the SQL planner.
-
-

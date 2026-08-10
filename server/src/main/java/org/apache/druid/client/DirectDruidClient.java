@@ -520,7 +520,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
              .setHeader(
                  HttpHeaders.Names.CONTENT_TYPE,
                  isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
-             ),
+             )
+             .setHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE, QueryResource.NATIVE_QUERY_ROUTE_LOCAL),
             responseHandler,
             Duration.millis(timeLeft)
         );
@@ -603,8 +604,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       try {
         Future<StatusResponseHolder> responseFuture = httpClient.go(
             new Request(HttpMethod.DELETE, new URL(cancelUrl))
-            .setContent(objectMapper.writeValueAsBytes(query))
-            .setHeader(HttpHeaders.Names.CONTENT_TYPE, isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON),
+                .setContent(objectMapper.writeValueAsBytes(query))
+                .setHeader(
+                    HttpHeaders.Names.CONTENT_TYPE,
+                    isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON
+                )
+                .setHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE, QueryResource.NATIVE_QUERY_ROUTE_LOCAL),
             StatusResponseHandler.getInstance(),
             Duration.standardSeconds(1));
 

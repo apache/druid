@@ -26,6 +26,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import org.apache.calcite.avatica.remote.ProtobufTranslation;
 import org.apache.calcite.avatica.remote.ProtobufTranslationImpl;
 import org.apache.calcite.avatica.remote.Service;
@@ -46,6 +47,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.HttpException;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
@@ -71,12 +73,18 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 
 import javax.annotation.Nullable;
+import javax.servlet.ReadListener;
 import javax.servlet.ServletException;
+import javax.servlet.ServletInputStream;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -102,6 +110,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private static final String AVATICA_QUERY_ATTRIBUTE = "org.apache.druid.proxy.avaticaQuery";
   private static final String SQL_QUERY_ATTRIBUTE = "org.apache.druid.proxy.sqlQuery";
   private static final String OBJECTMAPPER_ATTRIBUTE = "org.apache.druid.proxy.objectMapper";
+  private static final String NODE_LOCAL_ATTRIBUTE = "org.apache.druid.proxy.nodeLocalSystemQuery";
 
   private static final String PROPERTY_SQL_ENABLE = "druid.router.sql.enable";
   private static final String PROPERTY_SQL_ENABLE_DEFAULT = "false";
@@ -144,6 +153,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
   private final ProtobufTranslation protobufTranslation;
   private final ServerConfig serverConfig;
 
+  private GuiceContainer localQueryContainer;
+
   private final boolean routeSqlByStrategy;
 
   private HttpClient broadcastClient;
@@ -179,6 +190,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         properties.getProperty(PROPERTY_SQL_ENABLE, PROPERTY_SQL_ENABLE_DEFAULT)
     );
     this.serverConfig = serverConfig;
+  }
+
+  @Inject(optional = true)
+  public void setLocalQueryContainer(final GuiceContainer localQueryContainer)
+  {
+    this.localQueryContainer = localQueryContainer;
   }
 
   @Override
@@ -223,7 +240,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
 
     // The Router does not have the ability to look inside SQL queries and route them intelligently, so just treat
     // them as a generic request.
-    final boolean isNativeQueryEndpoint = requestURI.startsWith("/druid/v2") && !requestURI.startsWith("/druid/v2/sql");
+    final boolean isNativeQueryEndpoint = requestURI.startsWith("/druid/v2")
+                                          && !requestURI.startsWith("/druid/v2/sql");
     final boolean isSqlQueryEndpoint = requestURI.startsWith("/druid/v2/sql");
 
     final boolean isAvaticaJson = requestURI.startsWith("/druid/v2/sql/avatica");
@@ -246,6 +264,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       byte[] requestBytes = objectMapper.writeValueAsBytes(requestMap);
       request.setAttribute(AVATICA_QUERY_ATTRIBUTE, requestBytes);
       LOG.debug("Forwarding JDBC connection [%s] to broker [%s]", connectionId, targetServer.getHost());
+    } else if (HttpMethod.DELETE.is(method) && isNativeQueryEndpoint && isLocalNativeQueryRoute(request)) {
+      dispatchNodeLocalCancellation(request, response);
+      return;
     } else if (HttpMethod.DELETE.is(method)) {
       // query cancellation request
       targetServer = hostFinder.pickDefaultServer();
@@ -256,6 +277,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       try {
         Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);
         if (inputQuery != null) {
+          if (isLocalSystemTableQuery(request, inputQuery)) {
+            dispatchNodeLocalQuery(request, response, inputQuery, objectMapper);
+            return;
+          }
           targetServer = hostFinder.pickServer(inputQuery);
           if (inputQuery.getId() == null) {
             inputQuery = inputQuery.withId(UUID.randomUUID().toString());
@@ -304,6 +329,45 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     request.setAttribute(SCHEME_ATTRIBUTE, targetServer.getScheme());
 
     doService(request, response);
+  }
+
+  private void dispatchNodeLocalQuery(
+      final HttpServletRequest request,
+      final HttpServletResponse response,
+      final Query<?> query,
+      final ObjectMapper objectMapper
+  ) throws ServletException, IOException
+  {
+    request.setAttribute(NODE_LOCAL_ATTRIBUTE, true);
+    if (localQueryContainer == null) {
+      throw new IAE("Router local query container is not available");
+    }
+    localQueryContainer.service(new CachedBodyRequest(request, objectMapper.writeValueAsBytes(query)), response);
+  }
+
+  private void dispatchNodeLocalCancellation(
+      final HttpServletRequest request,
+      final HttpServletResponse response
+  ) throws ServletException, IOException
+  {
+    request.setAttribute(NODE_LOCAL_ATTRIBUTE, true);
+    if (localQueryContainer == null) {
+      throw new IAE("Router local query container is not available");
+    }
+    localQueryContainer.service(new NodeLocalRequest(request), response);
+  }
+
+  private static boolean isLocalSystemTableQuery(final HttpServletRequest request, final Query<?> query)
+  {
+    return query.getDataSource() instanceof SystemTableDataSource
+           && isLocalNativeQueryRoute(request);
+  }
+
+  private static boolean isLocalNativeQueryRoute(final HttpServletRequest request)
+  {
+    return QueryResource.NATIVE_QUERY_ROUTE_LOCAL.equals(
+        request.getHeader(QueryResource.HEADER_NATIVE_QUERY_ROUTE)
+    );
   }
 
   /**
@@ -456,8 +520,114 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       HttpServletResponse response
   ) throws ServletException, IOException
   {
+    if (Boolean.TRUE.equals(request.getAttribute(NODE_LOCAL_ATTRIBUTE))) {
+      throw new IAE("Node-local system table queries must not be proxied");
+    }
     // Just call the superclass service method. Overridden in tests.
     super.service(request, response);
+  }
+
+  private static class NodeLocalRequest extends HttpServletRequestWrapper
+  {
+    NodeLocalRequest(final HttpServletRequest request)
+    {
+      super(request);
+    }
+
+    @Override
+    public String getServletPath()
+    {
+      return "";
+    }
+
+    @Override
+    public String getPathInfo()
+    {
+      return getRequestURI();
+    }
+  }
+
+  private static class CachedBodyRequest extends NodeLocalRequest
+  {
+    private final byte[] body;
+
+    CachedBodyRequest(final HttpServletRequest request, final byte[] body)
+    {
+      super(request);
+      this.body = body;
+    }
+
+    @Override
+    public int getContentLength()
+    {
+      return body.length;
+    }
+
+    @Override
+    public long getContentLengthLong()
+    {
+      return body.length;
+    }
+
+    @Override
+    public String getHeader(final String name)
+    {
+      if (HttpHeader.CONTENT_LENGTH.asString().equalsIgnoreCase(name)) {
+        return String.valueOf(body.length);
+      }
+      return super.getHeader(name);
+    }
+
+    @Override
+    public Enumeration<String> getHeaders(final String name)
+    {
+      if (HttpHeader.CONTENT_LENGTH.asString().equalsIgnoreCase(name)) {
+        return Collections.enumeration(Collections.singleton(String.valueOf(body.length)));
+      }
+      return super.getHeaders(name);
+    }
+
+    @Override
+    public int getIntHeader(final String name)
+    {
+      if (HttpHeader.CONTENT_LENGTH.asString().equalsIgnoreCase(name)) {
+        return body.length;
+      }
+      return super.getIntHeader(name);
+    }
+
+    @Override
+    public ServletInputStream getInputStream()
+    {
+      final ByteArrayInputStream input = new ByteArrayInputStream(body);
+      return new ServletInputStream()
+      {
+        @Override
+        public boolean isFinished()
+        {
+          return input.available() == 0;
+        }
+
+        @Override
+        public boolean isReady()
+        {
+          return true;
+        }
+
+        @Override
+        public void setReadListener(final ReadListener readListener)
+        {
+          // Synchronous in-memory request body.
+        }
+
+        @Override
+        public int read()
+        {
+          return input.read();
+        }
+      };
+    }
+
   }
 
   @Override

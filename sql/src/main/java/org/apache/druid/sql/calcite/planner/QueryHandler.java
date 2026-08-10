@@ -61,8 +61,10 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
@@ -77,6 +79,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.utils.Throwables;
@@ -184,7 +187,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
   public PlannerResult plan()
   {
     prepare();
-    final Set<RelOptTable> bindableTables = getBindableTables(rootQueryRel.rel);
+    final Set<RelOptTable> bindableTables = getBindableTables(rootQueryRel.rel, handlerContext.plannerContext());
 
     // the planner's type factory is not available until after parsing
     rexBuilder = new RexBuilder(handlerContext.planner().getTypeFactory());
@@ -259,7 +262,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     );
   }
 
-  private static Set<RelOptTable> getBindableTables(final RelNode relNode)
+  private static Set<RelOptTable> getBindableTables(
+      final RelNode relNode,
+      final PlannerContext plannerContext
+  )
   {
     class HasBindableVisitor extends RelVisitor
     {
@@ -270,8 +276,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       {
         if (node instanceof TableScan) {
           RelOptTable table = node.getTable();
+          // This is the routing point that decides whether a system table uses Bindable or native planning.
           if ((table.unwrap(ScannableTable.class) != null || table.unwrap(ProjectableFilterableTable.class) != null)
-              && table.unwrap(DruidTable.class) == null) {
+              && table.unwrap(DruidTable.class) == null
+              && !SystemSchema.canUseNativeSystemTable(table, plannerContext)) {
             found.add(table);
             return;
           }
@@ -605,18 +613,38 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                           .stream()
                           .filter(action -> action.getAction() == Action.READ)
                           .collect(Collectors.toSet());
+        final Set<String> authorizationTrackedDataSourceNames = new HashSet<>(druidRel.getDataSourceNames());
+        if (plannerContext.useNativeQueryForSystemTables()
+            && !plannerContext.getPlannerConfig().isAuthorizeSystemTablesDirectly()) {
+          // Native system tables preserve the traditional row-level authorization model. They therefore have no
+          // SQL resource action unless direct system-table authorization is enabled, and must not make this
+          // datasource-resource sanity check fail.
+          removeSystemTableNames(
+              // The explain form of an outer query uses a dummy datasource and hides its inner system table.
+              druidRel.toDruidQuery(false).getQuery().getDataSource(),
+              authorizationTrackedDataSourceNames
+          );
+        }
         Preconditions.checkState(
-            readResourceActions.isEmpty() == druidRel.getDataSourceNames().isEmpty()
+            readResourceActions.isEmpty() == authorizationTrackedDataSourceNames.isEmpty()
             // The resources found in the plannerContext can be less than the datasources in
             // the query plan, because the query planner can eliminate empty tables by replacing
             // them with InlineDataSource of empty rows.
-            || readResourceActions.size() >= druidRel.getDataSourceNames().size(),
+            || readResourceActions.size() >= authorizationTrackedDataSourceNames.size(),
             "Authorization sanity check failed"
         );
 
         return new PlannerResult(druidRel::runQuery, rowType);
       }
     }
+  }
+
+  private static void removeSystemTableNames(final DataSource dataSource, final Set<String> dataSourceNames)
+  {
+    if (dataSource instanceof SystemTableDataSource) {
+      dataSourceNames.removeAll(dataSource.getTableNames());
+    }
+    dataSource.getChildren().forEach(child -> removeSystemTableNames(child, dataSourceNames));
   }
 
   /**

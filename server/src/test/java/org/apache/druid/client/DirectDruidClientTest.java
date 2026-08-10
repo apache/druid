@@ -35,6 +35,7 @@ import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
@@ -42,12 +43,15 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
@@ -136,6 +140,10 @@ public class DirectDruidClientTest
     Assertions.assertFalse(requests.isEmpty());
     Assertions.assertEquals(url, requests.get(0).getUrl());
     Assertions.assertEquals(HttpMethod.POST, requests.get(0).getMethod());
+    Assertions.assertEquals(
+        QueryResource.NATIVE_QUERY_ROUTE_LOCAL,
+        requests.get(0).getHeaders().get(QueryResource.HEADER_NATIVE_QUERY_ROUTE).iterator().next()
+    );
     Assertions.assertEquals(1, client1.getNumOpenConnections());
 
     // simulate read timeout on second request
@@ -164,6 +172,29 @@ public class DirectDruidClientTest
     client2.run(queryPlus, responseContext);
     client2.run(queryPlus, responseContext);
     Assertions.assertEquals(2, client2.getNumOpenConnections());
+  }
+
+  /** A system-table node request uses {@code X-Druid-Native-Query-Route: local}. */
+  @Test
+  public void testSystemTableQueryUsesLocalNativeQueryRoute()
+  {
+    final QueuedTestHttpClient httpClient = new QueuedTestHttpClient();
+    httpClient.enqueue(SettableFuture.create());
+    final DirectDruidClient client = makeDirectDruidClient(httpClient);
+    final Query<ScanResultValue> query = Druids.newScanQueryBuilder()
+                                               .dataSource(new SystemTableDataSource("tasks"))
+                                               .eternityInterval()
+                                               .context(Map.of(DirectDruidClient.QUERY_FAIL_TIME, Long.MAX_VALUE))
+                                               .build()
+                                               .withId("system-table-query");
+
+    client.run(QueryPlus.wrap(query), responseContext);
+
+    final Request request = httpClient.getRequests().get(0);
+    Assertions.assertEquals(
+        QueryResource.NATIVE_QUERY_ROUTE_LOCAL,
+        request.getHeaders().get(QueryResource.HEADER_NATIVE_QUERY_ROUTE).iterator().next()
+    );
   }
 
   @Test

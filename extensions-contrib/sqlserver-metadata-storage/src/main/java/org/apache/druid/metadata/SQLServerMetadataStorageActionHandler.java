@@ -38,4 +38,10 @@ public class SQLServerMetadataStorageActionHandler extends SQLMetadataStorageAct
   {
     return "SELECT TOP (:n)" + sql.substring("SELECT".length());
   }
+
+  @Override
+  protected SqlDialect getSqlDialect()
+  {
+    return SqlDialect.SQL_SERVER;
+  }
 }

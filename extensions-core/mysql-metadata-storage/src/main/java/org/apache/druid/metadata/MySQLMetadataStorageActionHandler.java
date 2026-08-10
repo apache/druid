@@ -38,4 +38,10 @@ public class MySQLMetadataStorageActionHandler extends SQLMetadataStorageActionH
   {
     return sql + " LIMIT :n";
   }
+
+  @Override
+  protected SqlDialect getSqlDialect()
+  {
+    return SqlDialect.MYSQL;
+  }
 }
