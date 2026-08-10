@@ -1138,12 +1138,22 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   protected String makeExportSelectList(final Connection conn, final List<String> columns) throws SQLException
   {
     final String quote = conn.getMetaData().getIdentifierQuoteString();
-    if (quote == null || " ".equals(quote)) {
-      return String.join(",", columns);
-    }
     return columns.stream()
-                  .map(column -> quote + StringUtils.replace(column, quote, quote + quote) + quote)
+                  .map(column -> quoteIdentifier(quote, column))
                   .collect(Collectors.joining(","));
+  }
+
+  /**
+   * Quotes an identifier with the given identifier quote string of the database, doubling any occurrence of the quote
+   * string inside the identifier. Returns the identifier unchanged if the database does not support quoting, which
+   * {@link DatabaseMetaData#getIdentifierQuoteString()} reports as a space.
+   */
+  private static String quoteIdentifier(@Nullable final String quote, final String identifier)
+  {
+    if (quote == null || " ".equals(quote)) {
+      return identifier;
+    }
+    return quote + StringUtils.replace(identifier, quote, quote + quote) + quote;
   }
 
   /**
@@ -1168,15 +1178,18 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           final Connection conn = handle.getConnection();
           final String selectList = columns == null || columns.isEmpty() ? "*" : makeExportSelectList(conn, columns);
           // Qualify the table with the schema that Druid's tables live in, which is not necessarily the schema an
-          // unqualified name resolves to for this connection. The identifiers are left unquoted so that they are
-          // folded by the database in the same way as in every other Druid statement.
+          // unqualified name resolves to for this connection. The schema is quoted, since it is the name as stored in
+          // the database, while the table name is left unquoted so that it is folded by the database in the same way
+          // as in every other Druid statement.
           final String schema = getMetadataTableSchema(conn);
-          final String qualifiedTableName = schema == null ? tableName : schema + "." + tableName;
+          final String qualifiedTableName =
+              schema == null
+              ? tableName
+              : quoteIdentifier(conn.getMetaData().getIdentifierQuoteString(), schema) + "." + tableName;
           try (Statement stmt = conn.createStatement()) {
-            final int fetchSize = getStreamingFetchSize();
-            if (fetchSize > 0) {
-              stmt.setFetchSize(fetchSize);
-            }
+            // Set the fetch size unconditionally: some drivers use a sentinel value to request streaming, such as
+            // Integer.MIN_VALUE in MySQL, which would be discarded by a positive-value check.
+            stmt.setFetchSize(getStreamingFetchSize());
             try (ResultSet rs = stmt.executeQuery(
                 StringUtils.format("SELECT %s FROM %s", selectList, qualifiedTableName)
             );

@@ -174,6 +174,17 @@ These example import commands expect `/tmp/csv` and its contents to be accessibl
 
 The segments table is exported in a fixed column order, independent of the physical column order of the source table: `id`, `dataSource`, `created_date`, `start`, `end`, `partitioned`, `version`, `used`, `payload`, followed by whichever of the optional columns `used_status_last_updated`, `indexing_state_fingerprint`, `upgraded_from_segment_id`, `schema_fingerprint`, and `num_rows` exist in the source table, in that order. Adjust the segments column list in the import commands below to contain exactly the columns of the source table: omit any optional column the source table does not have (segments tables from older Druid versions may have only the first nine columns), and add `schema_fingerprint,num_rows` at the end if the source table has them. Apply the same adjustment to the columns declared with `FORCE_NULL` in the PostgreSQL command and to the user variables of the MySQL command.
 
+If the source table does not have `used_status_last_updated` but the target table does, the import fails, because Druid creates that column as `NOT NULL` without a default. Make the column nullable before importing, and give the imported rows a value afterwards:
+
+```sql
+ALTER TABLE druid_segments ALTER COLUMN used_status_last_updated NULL;
+-- run the import command for your database, omitting used_status_last_updated from the column list
+UPDATE druid_segments SET used_status_last_updated = created_date WHERE used_status_last_updated IS NULL;
+ALTER TABLE druid_segments ALTER COLUMN used_status_last_updated NOT NULL;
+```
+
+The `ALTER TABLE` syntax above is for Derby. On PostgreSQL, use `ALTER COLUMN used_status_last_updated DROP NOT NULL` and `SET NOT NULL`; on MySQL, use `MODIFY used_status_last_updated VARCHAR(255) NULL` and `MODIFY used_status_last_updated VARCHAR(255) NOT NULL`.
+
 NULL values are written as empty fields, and each database needs to be told how to import them:
 
 - Derby imports an empty field as NULL, so no extra handling is needed.
