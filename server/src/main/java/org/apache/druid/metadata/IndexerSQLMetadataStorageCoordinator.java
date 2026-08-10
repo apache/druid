@@ -553,7 +553,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       return result;
     }
-    catch (CallbackFailedException e) {
+    catch (CallbackFailedException|DruidException e) {
       return SegmentPublishResult.fail(e.getMessage());
     }
   }
