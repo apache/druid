@@ -162,7 +162,7 @@ public class DruidOverlord
                 {
                   taskMaster.becomeFullLeader();
                   compactionScheduler.becomeLeader();
-                  scheduledBatchTaskManager.start();
+                  scheduledBatchTaskManager.becomeLeader();
 
                   // Mark ready only after all the services have been initialized
                   initialized = true;
@@ -171,7 +171,7 @@ public class DruidOverlord
                 @Override
                 public void stop()
                 {
-                  scheduledBatchTaskManager.stop();
+                  scheduledBatchTaskManager.stopBeingLeader();
                   compactionScheduler.stopBeingLeader();
                   taskMaster.downgradeToHalfLeader();
                 }
