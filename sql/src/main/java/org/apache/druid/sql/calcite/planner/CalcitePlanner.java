@@ -24,7 +24,6 @@ import org.apache.calcite.adapter.java.JavaTypeFactory;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteSystemProperty;
 import org.apache.calcite.jdbc.CalciteSchema;
-import org.apache.calcite.jdbc.JavaTypeFactoryImpl;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.RelOptCluster;
@@ -35,6 +34,7 @@ import org.apache.calcite.plan.RelTraitDef;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.prepare.CalciteCatalogReader;
+import org.apache.calcite.prepare.PlannerImpl;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
@@ -54,6 +54,7 @@ import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.RelDecorrelator;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
+import org.apache.calcite.sql2rel.TopDownGeneralDecorrelator;
 import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Planner;
 import org.apache.calcite.tools.Program;
@@ -69,17 +70,28 @@ import java.util.Objects;
 import java.util.Properties;
 
 /**
- * Calcite planner. Clone of Calcite's
- * {@link  org.apache.calcite.prepare.PlannerImpl}, as of version 1.35,
- * but with the validator made accessible, and with the minimum of formatting
- * changes needed to pass Druid's static checks. Note that the resulting code
- * is more Calcite-like than Druid-like. There seemed no value in restructuring
- * the code just to be more Druid-like.
+ * Calcite planner. Clone of Calcite's {@link PlannerImpl}, as of version 1.42, with the following adjustments:
  *
- * Changes in 1.35:
- *
- * Allowing user-defined config and appending default values to the config
- * frameworkConfig is now replaced by costFactory
+ * <ul>
+ * <li>The validator is retained in a field and exposed through {@link #getValidator()}.</li>
+ * <li>{@link #skipParse()} exists so that {@link DruidSqlParser} can parse ahead of the planner.</li>
+ * <li>{@link #connConfig(Context)} takes no {@link SqlParser.Config}, and therefore does not derive
+ *     any connection-config defaults from the parser config the way upstream does.</li>
+ * <li>{@link #ready()} does not call {@code RelOptUtil#registerDefaultRules}; Druid registers its
+ *     own rules through {@link CalciteRulesManager}. It also creates a {@link DruidTypeFactory}
+ *     rather than a plain {@code JavaTypeFactoryImpl}.</li>
+ * <li>{@link #parse(Reader)} calls {@code parseStmtList} rather than {@code parseStmt}.</li>
+ * <li>{@link #validate(SqlNode)} additionally runs {@link Hook#PARSE_TREE}.</li>
+ * <li>{@link #createSqlValidator(CalciteCatalogReader)} builds a {@link DruidSqlValidator} with
+ *     {@link DruidTypeCoercion}. It starts from {@link SqlValidator.Config#DEFAULT} rather than
+ *     {@link FrameworkConfig#getSqlValidatorConfig()}, and does not apply
+ *     {@code withDefaultNullCollation}. Both are inert today, since Druid never sets a validator
+ *     config and both defaults are {@code NullCollation.HIGH}, but a validator config set on the
+ *     {@link FrameworkConfig} would be silently ignored.</li>
+ * <li>{@link #rel(SqlNode)} builds a {@link DruidSqlToRelConverter} and registers
+ *     {@link DruidHint#HINT_STRATEGY_TABLE}. It also converts its {@code sql} argument, whereas
+ *     upstream converts the stored {@link #validatedSqlNode}.</li>
+ * </ul>
  */
 public class CalcitePlanner implements Planner, ViewExpander
 {
@@ -106,10 +118,10 @@ public class CalcitePlanner implements Planner, ViewExpander
   private boolean open;
 
   // set in STATE_2_READY
-  private @Nullable SchemaPlus defaultSchema;
+  private final @Nullable SchemaPlus defaultSchema;
   private @Nullable JavaTypeFactory typeFactory;
   private @Nullable RelOptPlanner planner;
-  private @Nullable RexExecutor executor;
+  private final @Nullable RexExecutor executor;
 
   // set in STATE_4_VALIDATE
   private @Nullable SqlValidator validator;
@@ -195,7 +207,7 @@ public class CalcitePlanner implements Planner, ViewExpander
     }
     ensure(CalcitePlanner.State.STATE_1_RESET);
 
-    typeFactory = new JavaTypeFactoryImpl(typeSystem);
+    typeFactory = new DruidTypeFactory(typeSystem);
     RelOptPlanner planner = this.planner = new VolcanoPlanner(costFactory, context);
     planner.setExecutor(executor);
 
@@ -316,7 +328,9 @@ public class CalcitePlanner implements Planner, ViewExpander
     );
     final SqlToRelConverter.Config config =
         sqlToRelConverterConfig.withTrimUnusedFields(false)
-                               .withHintStrategyTable(DruidHint.HINT_STRATEGY_TABLE);
+                               .withHintStrategyTable(DruidHint.HINT_STRATEGY_TABLE)
+                               .withTopDownGeneralDecorrelationEnabled(
+                                   connectionConfig.topDownGeneralDecorrelationEnabled());
     final SqlToRelConverter sqlToRelConverter =
         new DruidSqlToRelConverter(this, validator,
                                    createCatalogReader(), cluster, convertletTable, config
@@ -326,8 +340,9 @@ public class CalcitePlanner implements Planner, ViewExpander
     root = root.withRel(sqlToRelConverter.flattenTypes(root.rel, true));
     final RelBuilder relBuilder =
         config.getRelBuilderFactory().create(cluster, null);
-    root = root.withRel(
-        RelDecorrelator.decorrelateQuery(root.rel, relBuilder));
+    root = config.isTopDownGeneralDecorrelationEnabled()
+           ? root.withRel(TopDownGeneralDecorrelator.decorrelateQuery(root.rel, relBuilder))
+           : root.withRel(RelDecorrelator.decorrelateQuery(root.rel, relBuilder));
     state = CalcitePlanner.State.STATE_5_CONVERTED;
     return root;
   }
@@ -388,20 +403,22 @@ public class CalcitePlanner implements Planner, ViewExpander
     final RexBuilder rexBuilder = createRexBuilder();
     final RelOptCluster cluster = RelOptCluster.create(planner, rexBuilder);
     final SqlToRelConverter.Config config =
-        sqlToRelConverterConfig.withTrimUnusedFields(false);
+        sqlToRelConverterConfig.withTrimUnusedFields(false)
+                               .withTopDownGeneralDecorrelationEnabled(
+                                   connectionConfig.topDownGeneralDecorrelationEnabled());
     final SqlToRelConverter sqlToRelConverter =
         new SqlToRelConverter(this, validator,
                               catalogReader, cluster, convertletTable, config
         );
 
-    final RelRoot root =
+    RelRoot root =
         sqlToRelConverter.convertQuery(sqlNode, true, false);
-    final RelRoot root2 =
-        root.withRel(sqlToRelConverter.flattenTypes(root.rel, true));
+    root = root.withRel(sqlToRelConverter.flattenTypes(root.rel, true));
     final RelBuilder relBuilder =
         config.getRelBuilderFactory().create(cluster, null);
-    return root2.withRel(
-        RelDecorrelator.decorrelateQuery(root.rel, relBuilder));
+    return config.isTopDownGeneralDecorrelationEnabled()
+           ? root.withRel(TopDownGeneralDecorrelator.decorrelateQuery(root.rel, relBuilder))
+           : root.withRel(RelDecorrelator.decorrelateQuery(root.rel, relBuilder));
   }
 
   // CalciteCatalogReader is stateless; no need to store one

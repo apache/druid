@@ -35,7 +35,7 @@ CALCITE_NEW=$2
 set -e
 set -x
 
-BRANCH=`git name-rev --name-only HEAD`
+BRANCH=`git rev-parse --abbrev-ref HEAD`
 
 REPO=.git/calcite-upgrade
 rm -rf "$REPO"
@@ -52,7 +52,7 @@ git revert --no-edit HEAD
 
 git branch base-changes curr-changes^
 git checkout base-changes
-git show|patch -p0 -R # undo temproarily to ensure maven runs
+git show|patch -p1 -R # undo temporarily to ensure maven runs
 
 mvn -q generate-sources -pl sql -Dcalcite.version=$CALCITE_NEW -Pskip-static-checks
 cp -r sql/target/calcite-base-parser/codegen/./  sql/src/main/codegen/./

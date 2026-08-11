@@ -23,7 +23,7 @@ GROUP BY 1;
 
 !ok
 LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
-  LogicalFilter(condition=[OR(=($3, 0), AND(IS NULL($6), >=($4, $3)))])
+  LogicalFilter(condition=[OR(AND(IS NULL($6), >=($4, $3)), =($3, 0))])
     LogicalJoin(condition=[=($0, $5)], joinType=[left])
       LogicalJoin(condition=[true], joinType=[inner])
         LogicalJoin(condition=[=($0, $2)], joinType=[inner])
@@ -41,7 +41,7 @@ LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
 
 !logicalPlan
 DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
-  DruidFilter(condition=[OR(=($3, 0), AND(IS NULL($6), >=($4, $3)))])
+  DruidFilter(condition=[OR(AND(IS NULL($6), >=($4, $3)), =($3, 0))])
     DruidJoin(condition=[=($0, $5)], joinType=[left])
       DruidJoin(condition=[true], joinType=[inner])
         DruidJoin(condition=[=($0, $2)], joinType=[inner])
@@ -211,11 +211,6 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
   "filter" : {
     "type" : "or",
     "fields" : [ {
-      "type" : "equals",
-      "column" : "_j0._a0",
-      "matchValueType" : "LONG",
-      "matchValue" : 0
-    }, {
       "type" : "and",
       "fields" : [ {
         "type" : "null",
@@ -224,6 +219,11 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
         "type" : "expression",
         "expression" : "(\"_j0._a1\" >= \"_j0._a0\")"
       } ]
+    }, {
+      "type" : "equals",
+      "column" : "_j0._a0",
+      "matchValueType" : "LONG",
+      "matchValue" : 0
     } ]
   },
   "granularity" : {

@@ -327,6 +327,28 @@ public class DruidSqlParserUtilsTest
     }
 
     /**
+     * Tests clause "CLUSTERED BY DIM1, DIM2 AS ALIAS2"
+     */
+    @Test
+    public void testClusteredByColumnsWithAliasThrowsException()
+    {
+      final SqlNodeList clusteredByArgs = new SqlNodeList(SqlParserPos.ZERO);
+      clusteredByArgs.add(new SqlIdentifier("DIM1", SqlParserPos.ZERO));
+      clusteredByArgs.add(
+          SqlStdOperatorTable.AS.createCall(
+              SqlParserPos.ZERO,
+              new SqlIdentifier("DIM2", SqlParserPos.ZERO),
+              new SqlIdentifier("ALIAS2", SqlParserPos.ZERO)
+          )
+      );
+
+      DruidExceptionMatcher
+          .invalidSqlInput()
+          .expectMessageIs("Invalid CLUSTERED BY clause [`DIM2` AS `ALIAS2`]: cannot use an alias.")
+          .assertThrowsAndMatches(() -> DruidSqlParserUtils.validateClusteredByColumns(clusteredByArgs));
+    }
+
+    /**
      * Tests clause "CLUSTERED BY DIM1, DIM2, 3, -10"
      */
     @Test
