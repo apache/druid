@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.iceberg.FileScanTask;
+import org.apache.iceberg.Table;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.catalog.Namespace;
@@ -37,6 +38,7 @@ import org.apache.iceberg.expressions.Expressions;
 import org.apache.iceberg.io.CloseableIterable;
 import org.joda.time.DateTime;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,6 +59,39 @@ public abstract class IcebergCatalog
   public boolean isCaseSensitive()
   {
     return true;
+  }
+
+  /**
+   * Load and return the Iceberg Table object for direct use by readers that go beyond file-path delegation.
+   */
+  public Table retrieveTable(String tableNamespace, String tableName)
+  {
+    final Catalog catalog = retrieveCatalog();
+    final Namespace namespace = Namespace.of(tableNamespace);
+    final String tableIdentifier = tableNamespace + "." + tableName;
+
+    final ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      final TableIdentifier icebergTableIdentifier = catalog.listTables(namespace).stream()
+                                                            .filter(id -> id.toString().equals(tableIdentifier))
+                                                            .findFirst()
+                                                            .orElseThrow(() -> new IAE(
+                                                                "Couldn't retrieve table identifier for '%s'."
+                                                                + " Please verify that the table exists in the given catalog",
+                                                                tableIdentifier
+                                                            ));
+      return catalog.loadTable(icebergTableIdentifier);
+    }
+    catch (IAE e) {
+      throw e;
+    }
+    catch (Exception e) {
+      throw new RE(e, "Failed to load iceberg table with identifier [%s]", tableIdentifier);
+    }
+    finally {
+      Thread.currentThread().setContextClassLoader(currCtxClassloader);
+    }
   }
 
   /**
@@ -106,37 +141,11 @@ public abstract class IcebergCatalog
       }
 
       tableScan = tableScan.caseSensitive(isCaseSensitive());
-      CloseableIterable<FileScanTask> tasks = tableScan.planFiles();
-
-      Expression detectedResidual = null;
-      for (FileScanTask task : tasks) {
-        dataFilePaths.add(task.file().location());
-
-        // Check for residual filters
-        if (detectedResidual == null) {
-          Expression residual = task.residual();
-          if (residual != null && !residual.equals(Expressions.alwaysTrue())) {
-            detectedResidual = residual;
-          }
+      enforceResidualMode(tableScan, residualFilterMode);
+      try (CloseableIterable<FileScanTask> tasks = tableScan.planFiles()) {
+        for (FileScanTask task : tasks) {
+          dataFilePaths.add(task.file().location());
         }
-      }
-
-      // Handle residual filter based on mode
-      if (detectedResidual != null) {
-        String message = StringUtils.format(
-            "Iceberg filter produced residual expression that requires row-level filtering. "
-            + "This typically means the filter is on a non-partition column. "
-            + "Residual rows may be ingested unless filtered by transformSpec. "
-            + "Residual filter: [%s]",
-            detectedResidual
-        );
-
-        if (residualFilterMode == ResidualFilterMode.FAIL) {
-          throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                              .build(message);
-        }
-        log.warn(message);
       }
 
       long duration = System.currentTimeMillis() - start;
@@ -152,5 +161,44 @@ public abstract class IcebergCatalog
       Thread.currentThread().setContextClassLoader(currCtxClassloader);
     }
     return dataFilePaths;
+  }
+
+  /**
+   * Detects whether the planned scan carries a non-trivial residual expression (a filter that
+   * could not be fully resolved by partition pruning) and applies {@link ResidualFilterMode}:
+   * {@code FAIL} throws a {@link DruidException}, {@code IGNORE} logs a warning. Shared by the
+   * path-based and Arrow reader paths.
+   */
+  public void enforceResidualMode(TableScan tableScan, ResidualFilterMode residualFilterMode)
+  {
+    Expression detectedResidual = null;
+    try (CloseableIterable<FileScanTask> tasks = tableScan.planFiles()) {
+      for (FileScanTask task : tasks) {
+        final Expression residual = task.residual();
+        if (residual != null && !residual.equals(Expressions.alwaysTrue())) {
+          detectedResidual = residual;
+          break;
+        }
+      }
+    }
+    catch (IOException e) {
+      throw new RE(e, "Failed to plan Iceberg scan for residual detection");
+    }
+    if (detectedResidual == null) {
+      return;
+    }
+    final String message = StringUtils.format(
+        "Iceberg filter produced residual expression that requires row-level filtering. "
+        + "This typically means the filter is on a non-partition column. "
+        + "Residual rows may be ingested unless filtered by transformSpec. "
+        + "Residual filter: [%s]",
+        detectedResidual
+    );
+    if (residualFilterMode == ResidualFilterMode.FAIL) {
+      throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(message);
+    }
+    log.warn(message);
   }
 }
