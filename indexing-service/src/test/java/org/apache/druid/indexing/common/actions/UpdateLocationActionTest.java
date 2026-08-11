@@ -27,8 +27,8 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -81,13 +81,13 @@ public class UpdateLocationActionTest
     );
     final String json = TestHelper.JSON_MAPPER.writeValueAsString(original);
     final TaskAction<?> deserialized = TestHelper.JSON_MAPPER.readValue(json, TaskAction.class);
-    Assert.assertEquals(original, deserialized);
+    Assertions.assertEquals(original, deserialized);
   }
 
   @Test
   public void test_actionWithNullLocation_throwsException()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> new UpdateLocationAction(null)
     );
