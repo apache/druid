@@ -65,18 +65,18 @@ public class CloseableUtilsTest
   @Test
   public void test_closeAll_array_loud()
   {
-    Exception e = null;
-    try {
-      CloseableUtils.closeAll(quietCloseable, null, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
-    }
-    catch (Exception e2) {
-      e = e2;
-    }
+    final IOException e = Assert.assertThrows(
+        IOException.class,
+        () -> CloseableUtils.closeAll(
+            quietCloseable,
+            null,
+            ioExceptionCloseable,
+            quietCloseable2,
+            runtimeExceptionCloseable
+        )
+    );
 
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
-
-    // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
 
     // Second exception
     Assert.assertEquals(1, e.getSuppressed().length);
@@ -86,26 +86,20 @@ public class CloseableUtilsTest
   @Test
   public void test_closeAll_list_loud()
   {
-    Exception e = null;
-    try {
-      CloseableUtils.closeAll(
-          Arrays.asList(
-              quietCloseable,
-              null,
-              ioExceptionCloseable,
-              quietCloseable2,
-              runtimeExceptionCloseable
-          )
-      );
-    }
-    catch (Exception e2) {
-      e = e2;
-    }
+    final IOException e = Assert.assertThrows(
+        IOException.class,
+        () -> CloseableUtils.closeAll(
+            Arrays.asList(
+                quietCloseable,
+                null,
+                ioExceptionCloseable,
+                quietCloseable2,
+                runtimeExceptionCloseable
+            )
+        )
+    );
 
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
-
-    // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
 
     // Second exception
     Assert.assertEquals(1, e.getSuppressed().length);
