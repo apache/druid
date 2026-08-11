@@ -176,12 +176,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         );
         return defaultCapabilities;
       } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
-        // A single unhealthy server (e.g. one returning 503) must not prevent this peon from being
-        // created. Peon construction happens inside LoadQueueTaskMaster.resetPeonsForNewServers, which
-        // is the first thing PrepareBalancerAndLoadQueues (the first duty in HistoricalManagementDuties)
-        // does; throwing here would abort the entire duty group for every server in the cluster and
-        // stall all segment loading/balancing. Instead, alert and fall back to default capabilities so
-        // this server is still managed and the rest of the run proceeds.
+        // Do not stall further processing due to a single unhealthy server
+        // Raise an alert and use default capabilities
         SegmentLoadingCapabilities defaultCapabilities = getDefaultLoadingCapabilities();
         log.makeAlert(
             "Received status[%s] when fetching loading capabilities from server[%s]. Using default values[%s].",
