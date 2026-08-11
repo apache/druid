@@ -22,6 +22,7 @@ package org.apache.druid.catalog.model.table;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
@@ -38,12 +39,15 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.DataSchema;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DatasourceDefn extends TableDefn
@@ -136,10 +140,11 @@ public class DatasourceDefn extends TableDefn
   }
 
   /**
-   * Cross-validate the declared projections. Names must be unique, and a projection must not be coarser than the
-   * segments it lives in. For a sealed table the declared columns are the whole schema, so a projection that reads a
-   * column the table does not declare can never be built and is rejected; for a non-sealed table ingestion may add
-   * columns the catalog has not seen, so only the projections' internal consistency is checked.
+   * Cross-validate the declared projections. Names must be unique, a projection must not be coarser than the segments
+   * it lives in, and the types it groups by must agree with the types the table declares. For a sealed table the
+   * declared columns are the whole schema, so a projection that reads a column the table does not declare can never be
+   * built and is rejected; for a non-sealed table ingestion may add columns the catalog has not seen, so only the
+   * projections' internal consistency is checked.
    */
   private void validateProjections(ResolvedTable table)
   {
@@ -162,6 +167,8 @@ public class DatasourceDefn extends TableDefn
         granularity == null ? null : CatalogUtils.asDruidGranularity(granularity)
     );
 
+    validateProjectionGroupingTypes(table, specs);
+
     if (!table.booleanProperty(SEALED_PROPERTY) || table.spec().columns() == null) {
       return;
     }
@@ -179,6 +186,43 @@ public class DatasourceDefn extends TableDefn
               spec.getName(),
               required,
               table.spec().type()
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Reconcile the types a projection groups by against the types the table declares. Grouping columns are the only
+   * part of a projection that shares column components with the base table, such as dictionaries, so they are the only
+   * part whose types have to agree with it. A grouping column that disagrees was built against a definition the table
+   * no longer has.
+   */
+  private static void validateProjectionGroupingTypes(ResolvedTable table, List<AggregateProjectionSpec> specs)
+  {
+    final List<ColumnSpec> columns = table.spec().columns();
+    if (columns == null) {
+      return;
+    }
+    final Map<String, ColumnType> declaredTypes = new HashMap<>();
+    for (ColumnSpec column : columns) {
+      final ColumnType type = Columns.druidType(column);
+      if (type != null) {
+        declaredTypes.put(column.name(), type);
+      }
+    }
+    for (AggregateProjectionSpec spec : specs) {
+      for (DimensionSchema grouping : spec.getGroupingColumns()) {
+        final ColumnType declared = declaredTypes.get(grouping.getName());
+        if (declared != null && !declared.equals(grouping.getColumnType())) {
+          throw InvalidInput.exception(
+              "Projection [%s] groups on column [%s] as type [%s], but the table declares it as type [%s]. A"
+              + " projection is built from the table's columns, so changing the type of a column requires redefining"
+              + " the projections that group on it",
+              spec.getName(),
+              grouping.getName(),
+              grouping.getColumnType(),
+              declared
           );
         }
       }

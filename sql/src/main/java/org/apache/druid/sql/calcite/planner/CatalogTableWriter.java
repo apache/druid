@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -89,6 +90,18 @@ public interface CatalogTableWriter
   void dropProjection(TableId tableId, String projectionName, boolean ifExists);
 
   /**
+   * Set the table's base table layout, which is a property rather than one of the projections. Fails if the table
+   * already declares one, unless {@code ifNotExists}. Decided inside the Coordinator's update transaction, as for
+   * {@link #addProjection}.
+   */
+  void setBaseTable(TableId tableId, DatasourceBaseTableMetadata baseTable, boolean ifNotExists);
+
+  /**
+   * Remove the table's base table layout, failing if it has none unless {@code ifExists}. See {@link #setBaseTable}.
+   */
+  void dropBaseTable(TableId tableId, boolean ifExists);
+
+  /**
    * Read a table's current metadata directly from the Coordinator, bypassing any local cache, or null if the table
    * has no catalog entry. Used for pre-checks that must not race against a stale cache.
    */
@@ -139,6 +152,18 @@ public interface CatalogTableWriter
 
     @Override
     public void dropProjection(TableId tableId, String projectionName, boolean ifExists)
+    {
+      throw notAvailable();
+    }
+
+    @Override
+    public void setBaseTable(TableId tableId, DatasourceBaseTableMetadata baseTable, boolean ifNotExists)
+    {
+      throw notAvailable();
+    }
+
+    @Override
+    public void dropBaseTable(TableId tableId, boolean ifExists)
     {
       throw notAvailable();
     }

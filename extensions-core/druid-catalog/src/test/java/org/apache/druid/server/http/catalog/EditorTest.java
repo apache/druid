@@ -668,6 +668,88 @@ public class EditorTest
   }
 
   /**
+   * The base table layout lives in a property rather than in the projections list, but it follows the same rules as
+   * {@code AddProjection} / {@code DropProjection}, decided inside the update transaction rather than by the caller.
+   */
+  @Test
+  public void testSetAndDropBaseTable() throws CatalogException
+  {
+    final String tableName = "baseTable";
+    final TableMetadata table = TableBuilder.datasource(tableName, "P1D")
+        .column("tenant", "VARCHAR")
+        .timeColumn()
+        .sealed(true)
+        .build();
+    catalog.tables().create(table);
+
+    final ClusteredValueGroupsBaseTableMetadata layout =
+        new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("tenant"), null, null);
+
+    assertTrue(new TableEditor(catalog, table.id(), new TableEditRequest.SetBaseTable(layout, false)).go() > 0);
+    assertEquals(
+        layout,
+        catalog.tableRegistry()
+               .resolve(catalog.tables().read(table.id()).spec())
+               .decodeProperty(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+
+    // Defining a second layout is an error unless the caller said to leave the existing one alone.
+    final CatalogException e = assertThrows(
+        CatalogException.class,
+        () -> doEdit(tableName, new TableEditRequest.SetBaseTable(layout, false))
+    );
+    assertTrue(e.getMessage().contains("already has a base table layout"), e.getMessage());
+    assertEquals(0, new TableEditor(catalog, table.id(), new TableEditRequest.SetBaseTable(layout, true)).go());
+
+    assertTrue(new TableEditor(catalog, table.id(), new TableEditRequest.DropBaseTable(false)).go() > 0);
+    assertNull(
+        catalog.tables().read(table.id()).spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+
+    // Dropping one that is not there is likewise an error unless tolerated.
+    assertThrows(
+        CatalogException.class,
+        () -> doEdit(tableName, new TableEditRequest.DropBaseTable(false))
+    );
+    assertEquals(0, new TableEditor(catalog, table.id(), new TableEditRequest.DropBaseTable(true)).go());
+  }
+
+  /**
+   * A projection records the type of each column it groups by, so retyping such a column would leave a projection the
+   * table can no longer build. The whole-spec validation catches it before the edit is committed.
+   */
+  @Test
+  public void testAlterColumnsValidatedAgainstProjections() throws CatalogException
+  {
+    final String tableName = "retype";
+    final TableMetadata table = TableBuilder.datasource(tableName, "P1D")
+        .timeColumn()
+        .column("dim", "VARCHAR")
+        .column("met", "BIGINT")
+        .build();
+    catalog.tables().create(table);
+
+    final DatasourceProjectionMetadata byDim = new DatasourceProjectionMetadata(
+        AggregateProjectionSpec.builder("by_dim")
+                               .groupingColumns(new StringDimensionSchema("dim"))
+                               .aggregators(new LongSumAggregatorFactory("sum_met", "met"))
+                               .build()
+    );
+    assertTrue(new TableEditor(catalog, table.id(), new AddProjection(byDim, false)).go() > 0);
+
+    final CatalogException e = assertThrows(
+        CatalogException.class,
+        () -> doEdit(
+            tableName,
+            new TableEditRequest.AlterColumns(Collections.singletonList(new ColumnSpec("dim", "BIGINT", null)))
+        )
+    );
+    assertTrue(e.getMessage().contains("groups on column [dim]"), e.getMessage());
+    // The rejected edit left the column as it was.
+    assertEquals("VARCHAR", columnType(tableName, "dim"));
+  }
+
+  /**
    * The mirror case: a column edit is validated against the properties it does not touch. A base table layout names
    * the columns it clusters on, so dropping one leaves a layout that can no longer be derived.
    */

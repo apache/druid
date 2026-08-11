@@ -24,16 +24,19 @@ import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.http.TableEditRequest.AddColumns;
 import org.apache.druid.catalog.http.TableEditRequest.AddProjection;
 import org.apache.druid.catalog.http.TableEditRequest.AlterColumns;
+import org.apache.druid.catalog.http.TableEditRequest.DropBaseTable;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.DropProjection;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn;
 import org.apache.druid.catalog.http.TableEditRequest.MoveColumn.Position;
+import org.apache.druid.catalog.http.TableEditRequest.SetBaseTable;
 import org.apache.druid.catalog.http.TableEditRequest.UnhideColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateColumns;
 import org.apache.druid.catalog.http.TableEditRequest.UpdateProperties;
 import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
@@ -115,6 +118,11 @@ public class TableEditor
     } else if (editRequest instanceof DropProjection) {
       final DropProjection dropProjection = (DropProjection) editRequest;
       return dropProjection(dropProjection.projection, dropProjection.ifExists);
+    } else if (editRequest instanceof SetBaseTable) {
+      final SetBaseTable setBaseTable = (SetBaseTable) editRequest;
+      return setBaseTable(setBaseTable.baseTable, setBaseTable.ifNotExists);
+    } else if (editRequest instanceof DropBaseTable) {
+      return dropBaseTable(((DropBaseTable) editRequest).ifExists);
     } else if (editRequest instanceof MoveColumn) {
       return moveColumn(((MoveColumn) editRequest));
     } else {
@@ -507,6 +515,58 @@ public class TableEditor
       }
       return validated(withProjections(table, revised));
     });
+  }
+
+  /**
+   * Sets the base table layout, which lives in a table property rather than in the projections list. Mirrors
+   * {@link #addProjection}: the layout must not already be defined, and that is decided here, inside the update
+   * transaction, so two callers cannot both find it absent and have the later write overwrite the earlier.
+   */
+  private long setBaseTable(DatasourceBaseTableMetadata baseTable, boolean ifNotExists) throws CatalogException
+  {
+    if (baseTable == null) {
+      throw CatalogException.badRequest("A base table layout is required");
+    }
+    return catalog.tables().updateProperties(id, table -> {
+      if (table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) != null) {
+        if (ifNotExists) {
+          return null;
+        }
+        throw CatalogException.badRequest(
+            "Table %s already has a base table layout; drop it before defining another",
+            id.sqlName()
+        );
+      }
+      return validated(withBaseTable(table, baseTable));
+    });
+  }
+
+  /**
+   * Removes the base table layout. The mirror of {@link #setBaseTable}, checked in the same transaction.
+   */
+  private long dropBaseTable(boolean ifExists) throws CatalogException
+  {
+    return catalog.tables().updateProperties(id, table -> {
+      if (table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) == null) {
+        if (ifExists) {
+          return null;
+        }
+        throw CatalogException.badRequest("Table %s does not have a base table layout", id.sqlName());
+      }
+      return validated(withBaseTable(table, null));
+    });
+  }
+
+  private TableSpec withBaseTable(TableMetadata table, @Nullable DatasourceBaseTableMetadata baseTable)
+  {
+    final TableSpec existingSpec = table.spec();
+    final Map<String, Object> revised = new HashMap<>(existingSpec.properties());
+    if (baseTable == null) {
+      revised.remove(DatasourceDefn.BASE_TABLE_PROPERTY);
+    } else {
+      revised.put(DatasourceDefn.BASE_TABLE_PROPERTY, baseTable);
+    }
+    return existingSpec.withProperties(revised);
   }
 
   private List<DatasourceProjectionMetadata> projectionsOf(TableMetadata table)

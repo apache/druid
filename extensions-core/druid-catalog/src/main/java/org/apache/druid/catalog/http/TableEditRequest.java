@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 
 import javax.annotation.Nullable;
@@ -55,6 +56,8 @@ import java.util.Map;
     @Type(name = "moveColumn", value = TableEditRequest.MoveColumn.class),
     @Type(name = "addProjection", value = TableEditRequest.AddProjection.class),
     @Type(name = "dropProjection", value = TableEditRequest.DropProjection.class),
+    @Type(name = "setBaseTable", value = TableEditRequest.SetBaseTable.class),
+    @Type(name = "dropBaseTable", value = TableEditRequest.DropBaseTable.class),
 })
 public class TableEditRequest
 {
@@ -248,6 +251,45 @@ public class TableEditRequest
     )
     {
       this.projection = projection;
+      this.ifExists = ifExists;
+    }
+  }
+
+  /**
+   * Set the table's base table layout, which is a property rather than one of the projections. Like
+   * {@link AddProjection}, the layout must not already be defined; the check runs inside the update transaction so
+   * that two callers cannot both find it absent and have the later one overwrite the earlier.
+   */
+  public static class SetBaseTable extends TableEditRequest
+  {
+    @JsonProperty("baseTable")
+    public final DatasourceBaseTableMetadata baseTable;
+    @JsonProperty("ifNotExists")
+    public final boolean ifNotExists;
+
+    @JsonCreator
+    public SetBaseTable(
+        @JsonProperty("baseTable") DatasourceBaseTableMetadata baseTable,
+        @JsonProperty("ifNotExists") boolean ifNotExists
+    )
+    {
+      this.baseTable = baseTable;
+      this.ifNotExists = ifNotExists;
+    }
+  }
+
+  /**
+   * Remove the table's base table layout. The mirror of {@link SetBaseTable}: the layout must already be defined, and
+   * that is likewise decided inside the update transaction.
+   */
+  public static class DropBaseTable extends TableEditRequest
+  {
+    @JsonProperty("ifExists")
+    public final boolean ifExists;
+
+    @JsonCreator
+    public DropBaseTable(@JsonProperty("ifExists") boolean ifExists)
+    {
       this.ifExists = ifExists;
     }
   }

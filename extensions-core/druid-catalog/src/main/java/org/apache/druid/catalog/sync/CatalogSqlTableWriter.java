@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.http.TableEditRequest;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -104,6 +105,18 @@ public class CatalogSqlTableWriter implements CatalogTableWriter
   public void dropProjection(TableId tableId, String projectionName, boolean ifExists)
   {
     execute(tableId, () -> client.editTable(tableId, new TableEditRequest.DropProjection(projectionName, ifExists)));
+  }
+
+  @Override
+  public void setBaseTable(TableId tableId, DatasourceBaseTableMetadata baseTable, boolean ifNotExists)
+  {
+    execute(tableId, () -> client.editTable(tableId, new TableEditRequest.SetBaseTable(baseTable, ifNotExists)));
+  }
+
+  @Override
+  public void dropBaseTable(TableId tableId, boolean ifExists)
+  {
+    execute(tableId, () -> client.editTable(tableId, new TableEditRequest.DropBaseTable(ifExists)));
   }
 
   @Nullable

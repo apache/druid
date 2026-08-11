@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
+import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
@@ -767,8 +768,14 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     );
     execute("ALTER TABLE tbl ADD PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant)");
 
-    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("updateProperties");
-    assertNotNull(call.properties.get(DatasourceDefn.BASE_TABLE_PROPERTY));
+    // Whether a layout already exists is the Coordinator's call, inside its update transaction, so the statement only
+    // hands over the translated layout and the IF NOT EXISTS flag. EditorTest covers the rule itself.
+    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("setBaseTable");
+    assertNotNull(call.baseTable);
+    assertFalse(call.ifNotExists);
+
+    execute("ALTER TABLE tbl ADD IF NOT EXISTS PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant)");
+    assertTrue(WRITER.lastCall("setBaseTable").ifNotExists);
   }
 
   @Test
@@ -786,15 +793,11 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         )
     );
     execute("ALTER TABLE tbl DROP PROJECTION __base");
+    assertFalse(WRITER.lastCall("dropBaseTable").ifExists);
 
-    final RecordingCatalogTableWriter.Call call = WRITER.lastCall("updateProperties");
-    assertTrue(call.properties.containsKey(DatasourceDefn.BASE_TABLE_PROPERTY));
-    assertNull(call.properties.get(DatasourceDefn.BASE_TABLE_PROPERTY));
-
-    // Dropping one that is not there is an error unless tolerated.
-    WRITER.reset();
-    assertThrows(DruidException.class, () -> execute("ALTER TABLE tbl DROP PROJECTION __base"));
+    // Whether there is one to drop is likewise the Coordinator's call; the statement only carries IF EXISTS.
     execute("ALTER TABLE tbl DROP PROJECTION IF EXISTS __base");
+    assertTrue(WRITER.lastCall("dropBaseTable").ifExists);
   }
 
   private ClusteredValueGroupsBaseTableMetadata baseTable()
@@ -847,6 +850,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
       DatasourceProjectionMetadata projection;
       String projectionName;
       boolean ifExists;
+      DatasourceBaseTableMetadata baseTable;
     }
 
     final List<Call> calls = new ArrayList<>();
@@ -915,6 +919,20 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
       final Call call = record("dropProjection", tableId);
       call.projectionName = projectionName;
       call.ifExists = ifExists;
+    }
+
+    @Override
+    public void setBaseTable(TableId tableId, DatasourceBaseTableMetadata baseTable, boolean ifNotExists)
+    {
+      final Call call = record("setBaseTable", tableId);
+      call.baseTable = baseTable;
+      call.ifNotExists = ifNotExists;
+    }
+
+    @Override
+    public void dropBaseTable(TableId tableId, boolean ifExists)
+    {
+      record("dropBaseTable", tableId).ifExists = ifExists;
     }
 
     @Nullable

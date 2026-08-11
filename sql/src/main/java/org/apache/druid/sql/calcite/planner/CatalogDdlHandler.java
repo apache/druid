@@ -577,23 +577,17 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
 
       if (BASE_PROJECTION_NAME.equals(projectionName)) {
         // The base table is a property of the table, not one of its projections, so it is set rather than appended.
-        if (existing.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) != null) {
-          if (alterTable.isIfNotExists()) {
-            return;
-          }
-          throw InvalidSqlInput.exception(
-              "Table [%s] already has a [%s] projection; drop it before defining another",
-              tableId.name(),
-              BASE_PROJECTION_NAME
-          );
-        }
+        // Whether one is already defined is decided by the Coordinator inside its update transaction; checking it
+        // from the read above would let two concurrent statements both find it absent.
+        //
+        // This read is still needed for the layout itself, which is derived from the declared columns. A concurrent
+        // column change would make it stale, but the Coordinator validates the resulting spec against the columns it
+        // commits against, so a stale layout is rejected rather than stored.
         requireSealed(Boolean.TRUE.equals(existing.spec().properties().get(DatasourceDefn.SEALED_PROPERTY)));
-        writer.updateProperties(
+        writer.setBaseTable(
             tableId,
-            Collections.singletonMap(
-                DatasourceDefn.BASE_TABLE_PROPERTY,
-                translateBaseTable(handlerContext, tableId.name(), columns, alterTable.getProjection())
-            )
+            translateBaseTable(handlerContext, tableId.name(), columns, alterTable.getProjection()),
+            alterTable.isIfNotExists()
         );
         return;
       }
@@ -640,24 +634,9 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
     protected void execute(CatalogTableWriter writer)
     {
       if (BASE_PROJECTION_NAME.equals(projectionName)) {
-        // Removing the layout leaves the declared columns alone; only future segments are affected.
-        final TableMetadata existing = writer.readTable(tableId);
-        final boolean present = existing != null
-                                && existing.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY) != null;
-        if (!present) {
-          if (alterTable.isIfExists()) {
-            return;
-          }
-          throw InvalidSqlInput.exception(
-              "Table [%s] does not have a [%s] projection",
-              tableId.name(),
-              BASE_PROJECTION_NAME
-          );
-        }
-        writer.updateProperties(
-            tableId,
-            Collections.singletonMap(DatasourceDefn.BASE_TABLE_PROPERTY, null)
-        );
+        // Removing the layout leaves the declared columns alone; only future segments are affected. Whether there is
+        // one to remove is decided inside the Coordinator's update transaction, as for adding it.
+        writer.dropBaseTable(tableId, alterTable.isIfExists());
         return;
       }
       writer.dropProjection(tableId, projectionName, alterTable.isIfExists());

@@ -553,6 +553,25 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
                )
                .buildSpec()
     ).validate();
+
+    // A projection groups by the type the column had when it was defined, so a table that now declares a different
+    // type for that column carries a projection it can no longer build. Not limited to sealed tables: an undeclared
+    // column has no type to disagree with, but a declared one does.
+    final TableSpec retypedGroupingColumn =
+        TableBuilder.datasource("foo", "P1D")
+                    .timeColumn()
+                    .column("dim", Columns.SQL_BIGINT)
+                    .column("met", Columns.SQL_BIGINT)
+                    .property(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, List.of(new DatasourceProjectionMetadata(good)))
+                    .buildSpec();
+    final DruidException retyped = assertThrows(
+        DruidException.class,
+        () -> projectionRegistry.resolve(retypedGroupingColumn).validate()
+    );
+    assertTrue(
+        retyped.getMessage(),
+        retyped.getMessage().contains("groups on column [dim] as type [STRING], but the table declares it as type [LONG]")
+    );
   }
 
   @Test
