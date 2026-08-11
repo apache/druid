@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Result;
@@ -41,10 +42,10 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -53,10 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.collection.IsMapContaining.hasEntry;
-import static org.hamcrest.collection.IsMapWithSize.aMapWithSize;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends InitializedNullHandlingTest
 {
@@ -90,27 +88,25 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
       null
   );
 
-  private final AggregationTestHelper helper;
+  private AggregationTestHelper helper;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder(new File("target"));
+  @TempDir
+  public File tempFolder;
 
-  /**
-   * Constructor.
-   * *
-   */
-  public CompressedBigDecimalAggregatorTimeseriesTestBase()
+  @BeforeEach
+  public void setUp()
   {
-    CompressedBigDecimalModule module = new CompressedBigDecimalModule();
+    final CompressedBigDecimalModule module = new CompressedBigDecimalModule();
     CompressedBigDecimalModule.registerSerde();
-    helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
-        module.getJacksonModules(), tempFolder);
+    helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
+        module.getJacksonModules(), tempFolder
+    );
   }
 
   /**
    * Default setup of UTC timezone.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     System.setProperty("user.timezone", "UTC");
@@ -143,10 +139,10 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
         new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
         ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getTimestamp()
     );
-    assertThat(event, aMapWithSize(1));
-    assertThat(
-        event,
-        hasEntry("cbdStringRevenue", new ArrayCompressedBigDecimal(new BigDecimal(expected)))
+    assertEquals(1, event.size());
+    assertEquals(
+        new ArrayCompressedBigDecimal(new BigDecimal(expected)),
+        event.get("cbdStringRevenue")
     );
   }
 
@@ -164,7 +160,8 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
       String expected
   ) throws Exception
   {
-    File segmentDir1 = tempFolder.newFolder();
+    final File segmentDir1 = new File(tempFolder, "segment1");
+    FileUtils.mkdirp(segmentDir1);
     helper.createIndex(
         new File(this.getClass().getResource("/" + "bd_test_data.csv").getFile()),
         SCHEMA,
@@ -175,7 +172,8 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
         Granularities.NONE,
         5
     );
-    File segmentDir2 = tempFolder.newFolder();
+    final File segmentDir2 = new File(tempFolder, "segment2");
+    FileUtils.mkdirp(segmentDir2);
     helper.createIndex(
         new File(this.getClass().getResource("/" + "bd_test_zero_data.csv").getFile()),
         SCHEMA,
@@ -198,11 +196,10 @@ public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends I
         new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
         ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getTimestamp()
     );
-    assertThat(event, aMapWithSize(1));
-    assertThat(
-        event,
-        hasEntry("cbdStringRevenue", new ArrayCompressedBigDecimal(new BigDecimal(expected)))
+    assertEquals(1, event.size());
+    assertEquals(
+        new ArrayCompressedBigDecimal(new BigDecimal(expected)),
+        event.get("cbdStringRevenue")
     );
-
   }
 }

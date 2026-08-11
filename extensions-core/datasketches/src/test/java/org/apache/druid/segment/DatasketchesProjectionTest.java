@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.datasketches.common.Family;
 import org.apache.datasketches.hll.HllSketch;
@@ -97,6 +98,10 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
   private static final Closer CLOSER = Closer.create();
   private static final Logger LOG = new Logger(DatasketchesProjectionTest.class);
 
+  // Not TestHelper.JSON_MAPPER: Jackson caches the AggregatorFactory subtype resolver when it first builds a
+  // deserializer, so the sketch modules must be registered before anything else uses this mapper.
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+
   private static final List<AggregateProjectionSpec> PROJECTIONS = Collections.singletonList(
       AggregateProjectionSpec.builder("a_projection")
                              .virtualColumns(
@@ -139,15 +144,15 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
   public static Collection<?> constructorFeeder()
   {
     HllSketchModule.registerSerde();
-    TestHelper.JSON_MAPPER.registerModules(new HllSketchModule().getJacksonModules());
+    JSON_MAPPER.registerModules(new HllSketchModule().getJacksonModules());
     SketchModule.registerSerde();
-    TestHelper.JSON_MAPPER.registerModules(new SketchModule().getJacksonModules());
+    JSON_MAPPER.registerModules(new SketchModule().getJacksonModules());
     KllSketchModule.registerSerde();
-    TestHelper.JSON_MAPPER.registerModules(new KllSketchModule().getJacksonModules());
+    JSON_MAPPER.registerModules(new KllSketchModule().getJacksonModules());
     DoublesSketchModule.registerSerde();
-    TestHelper.JSON_MAPPER.registerModules(new DoublesSketchModule().getJacksonModules());
+    JSON_MAPPER.registerModules(new DoublesSketchModule().getJacksonModules());
     ArrayOfDoublesSketchModule.registerSerde();
-    TestHelper.JSON_MAPPER.registerModules(new ArrayOfDoublesSketchModule().getJacksonModules());
+    JSON_MAPPER.registerModules(new ArrayOfDoublesSketchModule().getJacksonModules());
 
     final List<Object[]> constructors = new ArrayList<>();
     final DimensionsSpec.Builder dimensionsBuilder =
@@ -221,7 +226,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
   {
     File tmp = FileUtils.createTempDir();
     CLOSER.register(tmp::delete);
-    return IndexBuilder.create()
+    return IndexBuilder.create(JSON_MAPPER)
                        .tmpDir(tmp)
                        .schema(
                            IncrementalIndexSchema.builder()

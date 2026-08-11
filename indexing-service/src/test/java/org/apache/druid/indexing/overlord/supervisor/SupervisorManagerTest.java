@@ -1266,11 +1266,14 @@ public class SupervisorManagerTest extends EasyMockSupport
       {
       }
     };
+    EasyMock.expect(streamSpec.getType()).andReturn("stream").anyTimes();
+    EasyMock.replay(streamSpec);
     supervisorsMap.put("id1", Pair.of(nonStreamSupervisor, streamSpec));
     Assertions.assertThrows(
-        IllegalArgumentException.class,
+        DruidException.class,
         () -> manager.resetToLatestAndBackfill("id1", null)
     );
+    EasyMock.reset(streamSpec);
 
     // useEarliestSequenceNumber=true → IAE
     supervisorsMap.put("id1", Pair.of(streamSupervisor, streamSpec));

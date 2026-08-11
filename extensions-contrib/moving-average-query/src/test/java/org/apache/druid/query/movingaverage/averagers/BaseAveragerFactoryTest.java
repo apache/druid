@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.movingaverage.averagers;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.List;
@@ -30,7 +30,7 @@ public class BaseAveragerFactoryTest
 {
   private AveragerFactory<Long, Long> fac;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     fac = new BaseAveragerFactory<>("test", 5, "field", 1)
@@ -53,14 +53,14 @@ public class BaseAveragerFactoryTest
   public void testGetDependentFields()
   {
     List<String> dependentFields = fac.getDependentFields();
-    Assert.assertEquals(1, dependentFields.size());
-    Assert.assertEquals("field", dependentFields.get(0));
+    Assertions.assertEquals(1, dependentFields.size());
+    Assertions.assertEquals("field", dependentFields.get(0));
   }
 
   @Test
   public void testFinalization()
   {
     Long input = 5L;
-    Assert.assertEquals(input, fac.finalizeComputation(input));
+    Assertions.assertEquals(input, fac.finalizeComputation(input));
   }
 }

@@ -104,10 +104,13 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assert;
-import org.junit.rules.ExternalResource;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
@@ -118,20 +121,20 @@ import java.util.Set;
  */
 public class QueryStackTests
 {
-  public static class Junit4ConglomerateRule extends ExternalResource
+  public static class ConglomerateExtension implements BeforeAllCallback, AfterAllCallback
   {
     private Closer closer;
     private QueryRunnerFactoryConglomerate conglomerate;
 
     @Override
-    protected void before()
+    public void beforeAll(ExtensionContext context)
     {
       closer = Closer.create();
       conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
     }
 
     @Override
-    protected void after()
+    public void afterAll(ExtensionContext context)
     {
       try {
         closer.close();
@@ -312,7 +315,7 @@ public class QueryStackTests
     final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
     closer.register(() -> {
       // Verify that all objects have been returned to the pool.
-      Assert.assertEquals(0, testBufferPool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, testBufferPool.getOutstandingObjectCount());
     });
     return testBufferPool;
   }

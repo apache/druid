@@ -24,9 +24,9 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class RangerAuthorizerTest
 {
@@ -39,7 +39,7 @@ public class RangerAuthorizerTest
   private static final Resource aliceConfig = new Resource("config", ResourceType.CONFIG);
   private static final Resource aliceState = new Resource("state", ResourceType.STATE);
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass()
   {
     rangerAuthorizer = new RangerAuthorizer(null, null, false, new Configuration());
@@ -48,13 +48,13 @@ public class RangerAuthorizerTest
   @Test
   public void testOperations()
   {
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.WRITE).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.READ).isAllowed());
-    Assert.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.WRITE).isAllowed());
+    Assertions.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ).isAllowed());
+    Assertions.assertTrue(rangerAuthorizer.authorize(alice, aliceDatasource, Action.READ).isAllowed());
+    Assertions.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.READ).isAllowed());
+    Assertions.assertTrue(rangerAuthorizer.authorize(alice, aliceConfig, Action.WRITE).isAllowed());
+    Assertions.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.READ).isAllowed());
+    Assertions.assertTrue(rangerAuthorizer.authorize(alice, aliceState, Action.WRITE).isAllowed());
 
-    Assert.assertFalse(rangerAuthorizer.authorize(bob, aliceDatasource, Action.READ).isAllowed());
+    Assertions.assertFalse(rangerAuthorizer.authorize(bob, aliceDatasource, Action.READ).isAllowed());
   }
 }

@@ -19,15 +19,14 @@
 
 package org.apache.druid.emitter.graphite;
 
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.annotations.UsedByJUnitParamsRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,24 +34,25 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 
-@RunWith(JUnitParamsRunner.class)
 public class WhiteListBasedConverterTest
 {
-  private final String prefix = "druid";
+  private static final String PREFIX = "druid";
+  private static final String HOSTNAME = "testHost.yahoo.com:8080";
+  private static final String SERVICE_NAME = "historical";
+  private static final String DEFAULT_NAMESPACE =
+      PREFIX + "." + SERVICE_NAME + "." + GraphiteEmitter.sanitize(HOSTNAME);
+
   private final WhiteListBasedConverter defaultWhiteListBasedConverter = new WhiteListBasedConverter(
-      prefix,
+      PREFIX,
       false,
       false,
       false,
       null,
       new DefaultObjectMapper()
   );
-  private final String hostname = "testHost.yahoo.com:8080";
-  private final String serviceName = "historical";
-  private final String defaultNamespace = prefix + "." + serviceName + "." + GraphiteEmitter.sanitize(hostname);
 
-  @Test
-  @Parameters({
+  @ParameterizedTest
+  @CsvSource({
       "query/time, true",
       "query/node/ttfb, true",
       "query/segmentAndCache/time, true",
@@ -64,7 +64,7 @@ public class WhiteListBasedConverterTest
       "segment/cost/raw, false",
       "coordinator/TIER_1 /cost/raw, false",
       "segment/Kost/raw, false",
-      ", false",
+      "'', false",
       "word, false",
       "coordinator, false",
       "server/, false",
@@ -77,14 +77,14 @@ public class WhiteListBasedConverterTest
     ServiceMetricEvent event = ServiceMetricEvent
         .builder()
         .setMetric(key, 10)
-        .build(serviceName, hostname);
+        .build(SERVICE_NAME, HOSTNAME);
 
     boolean isIn = defaultWhiteListBasedConverter.druidEventToGraphite(event) != null;
-    Assert.assertEquals(expectedValue, isIn);
+    Assertions.assertEquals(expectedValue, isIn);
   }
 
-  @Test
-  @Parameters
+  @ParameterizedTest
+  @MethodSource("parametersForTestGetPath")
   public void testGetPath(ServiceMetricEvent serviceMetricEvent, String expectedPath)
   {
     GraphiteEvent graphiteEvent = defaultWhiteListBasedConverter.druidEventToGraphite(serviceMetricEvent);
@@ -92,7 +92,7 @@ public class WhiteListBasedConverterTest
     if (graphiteEvent != null) {
       path = graphiteEvent.getEventPath();
     }
-    Assert.assertEquals(expectedPath, path);
+    Assertions.assertEquals(expectedPath, path);
   }
 
   @Test
@@ -109,7 +109,7 @@ public class WhiteListBasedConverterTest
     }
 
     WhiteListBasedConverter converter = new WhiteListBasedConverter(
-        prefix,
+        PREFIX,
         false,
         false,
         false,
@@ -120,63 +120,62 @@ public class WhiteListBasedConverterTest
     ServiceMetricEvent event = new ServiceMetricEvent.Builder()
         .setDimension("gcName", new String[]{"g1"})
         .setMetric("jvm/gc/cpu", 10)
-        .build(serviceName, hostname);
+        .build(SERVICE_NAME, HOSTNAME);
 
     GraphiteEvent graphiteEvent = converter.druidEventToGraphite(event);
 
-    Assert.assertNotNull(graphiteEvent);
-    Assert.assertEquals(defaultNamespace + ".g1.jvm/gc/cpu", graphiteEvent.getEventPath());
+    Assertions.assertNotNull(graphiteEvent);
+    Assertions.assertEquals(DEFAULT_NAMESPACE + ".g1.jvm/gc/cpu", graphiteEvent.getEventPath());
   }
 
-  @UsedByJUnitParamsRunner
-  private Object[] parametersForTestGetPath()
+  private static Object[] parametersForTestGetPath()
   {
     return new Object[]{
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("id", "dummy_id")
-                                            .setDimension("status", "some_status")
-                                            .setDimension("numDimensions", "1")
-                                            .setDimension("segment", "dummy_segment")
-                                            .setMetric("query/segment/time/balabla/more", 10)
-                .build(serviceName, hostname),
-            defaultNamespace + ".query/segment/time/balabla/more"
+                .setDimension("status", "some_status")
+                .setDimension("numDimensions", "1")
+                .setDimension("segment", "dummy_segment")
+                .setMetric("query/segment/time/balabla/more", 10)
+                .build(SERVICE_NAME, HOSTNAME),
+            DEFAULT_NAMESPACE + ".query/segment/time/balabla/more"
         },
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("dataSource", "some_data_source")
-                                            .setDimension("tier", "_default_tier")
-                                            .setMetric("segment/max", 10)
-                .build(serviceName, hostname),
+                .setDimension("tier", "_default_tier")
+                .setMetric("segment/max", 10)
+                .build(SERVICE_NAME, HOSTNAME),
             null
         },
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("dataSource", "data-source")
-                                            .setDimension("type", "groupBy")
-                                            .setDimension("interval", "2013/2015")
-                                            .setDimension("some_random_dim1", "random_dim_value1")
-                                            .setDimension("some_random_dim2", "random_dim_value2")
-                                            .setDimension("hasFilters", "no")
-                                            .setDimension("duration", "P1D")
-                                            .setDimension("remoteAddress", "194.0.90.2")
-                                            .setDimension("id", "ID")
-                                            .setDimension("context", "{context}")
-                                            .setMetric("query/time", 10)
-                .build(serviceName, hostname),
-            defaultNamespace + ".data-source.groupBy.query/time"
+                .setDimension("type", "groupBy")
+                .setDimension("interval", "2013/2015")
+                .setDimension("some_random_dim1", "random_dim_value1")
+                .setDimension("some_random_dim2", "random_dim_value2")
+                .setDimension("hasFilters", "no")
+                .setDimension("duration", "P1D")
+                .setDimension("remoteAddress", "194.0.90.2")
+                .setDimension("id", "ID")
+                .setDimension("context", "{context}")
+                .setMetric("query/time", 10)
+                .build(SERVICE_NAME, HOSTNAME),
+            DEFAULT_NAMESPACE + ".data-source.groupBy.query/time"
         },
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("dataSource", "data-source")
-                                            .setDimension("type", "groupBy")
-                                            .setDimension("some_random_dim1", "random_dim_value1")
-                                            .setMetric("ingest/persists/count", 10)
-                .build(serviceName, hostname),
-            defaultNamespace + ".ingest/persists/count"
+                .setDimension("type", "groupBy")
+                .setDimension("some_random_dim1", "random_dim_value1")
+                .setMetric("ingest/persists/count", 10)
+                .build(SERVICE_NAME, HOSTNAME),
+            DEFAULT_NAMESPACE + ".ingest/persists/count"
         },
         new Object[]{
             new ServiceMetricEvent.Builder().setDimension("bufferpoolName", "BufferPool")
-                                            .setDimension("type", "groupBy")
-                                            .setDimension("some_random_dim1", "random_dim_value1")
-                                            .setMetric("jvm/bufferpool/capacity", 10)
-                .build(serviceName, hostname),
+                .setDimension("type", "groupBy")
+                .setDimension("some_random_dim1", "random_dim_value1")
+                .setMetric("jvm/bufferpool/capacity", 10)
+                .build(SERVICE_NAME, HOSTNAME),
             null
         }
     };

@@ -27,8 +27,8 @@ import com.timgroup.statsd.StatsDClient;
 import org.apache.druid.java.util.emitter.service.AlertBuilder;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -218,11 +218,11 @@ public class StatsDEmitterTest
     );
 
     Event actualEvent = eventArgumentCaptor.getValue();
-    Assert.assertTrue(actualEvent.getMillisSinceEpoch() > 0);
-    Assert.assertEquals(expectedEvent.getPriority(), actualEvent.getPriority());
-    Assert.assertEquals(expectedEvent.getAlertType(), actualEvent.getAlertType());
-    Assert.assertEquals(expectedEvent.getTitle(), actualEvent.getTitle());
-    Assert.assertEquals(expectedEvent.getText(), actualEvent.getText());
+    Assertions.assertTrue(actualEvent.getMillisSinceEpoch() > 0);
+    Assertions.assertEquals(expectedEvent.getPriority(), actualEvent.getPriority());
+    Assertions.assertEquals(expectedEvent.getAlertType(), actualEvent.getAlertType());
+    Assertions.assertEquals(expectedEvent.getTitle(), actualEvent.getTitle());
+    Assertions.assertEquals(expectedEvent.getText(), actualEvent.getText());
   }
 
   @Test
@@ -254,6 +254,6 @@ public class StatsDEmitterTest
   @Test
   public void testJacksonModules()
   {
-    Assert.assertTrue(new StatsDEmitterModule().getJacksonModules().isEmpty());
+    Assertions.assertTrue(new StatsDEmitterModule().getJacksonModules().isEmpty());
   }
 }

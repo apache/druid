@@ -36,14 +36,16 @@ import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class OssDataSegmentMoverTest
 {
@@ -81,12 +83,12 @@ public class OssDataSegmentMoverTest
     );
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
         MapUtils.getString(targetLoadSpec, "key")
     );
-    Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertTrue(mockClient.didMove());
+    Assertions.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
+    Assertions.assertTrue(mockClient.didMove());
   }
 
   @Test
@@ -107,24 +109,26 @@ public class OssDataSegmentMoverTest
 
     Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
         MapUtils.getString(targetLoadSpec, "key")
     );
-    Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertFalse(mockOssClient.didMove());
+    Assertions.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
+    Assertions.assertFalse(mockOssClient.didMove());
   }
 
-  @Test(expected = SegmentLoadingException.class)
-  public void testMoveException() throws Exception
+  @Test
+  public void testMoveException()
   {
-    MockClient mockClient = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(mockClient), new OssStorageConfig());
+    assertThrows(SegmentLoadingException.class, () -> {
+      MockClient mockClient = new MockClient();
+      OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(mockClient), new OssStorageConfig());
 
-    mover.move(
-        SOURCE_SEGMENT,
-        ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
-    );
+      mover.move(
+          SOURCE_SEGMENT,
+          ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
+      );
+    });
   }
 
   @Test
@@ -150,27 +154,29 @@ public class OssDataSegmentMoverTest
     ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
   }
 
-  @Test(expected = SegmentLoadingException.class)
-  public void testFailsToMoveMissing() throws Exception
+  @Test
+  public void testFailsToMoveMissing()
   {
-    MockClient client = new MockClient();
-    OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(client), new OssStorageConfig());
-    mover.move(new DataSegment(
-        "test",
-        Intervals.of("2013-01-01/2013-01-02"),
-        "1",
-        ImmutableMap.of(
-            "key",
-            "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
-            "bucket",
-            "DOES NOT EXIST"
-        ),
-        ImmutableList.of("dim1", "dim1"),
-        ImmutableList.of("metric1", "metric2"),
-        NoneShardSpec.instance(),
-        0,
-        1
-    ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
+    assertThrows(SegmentLoadingException.class, () -> {
+      MockClient client = new MockClient();
+      OssDataSegmentMover mover = new OssDataSegmentMover(Suppliers.ofInstance(client), new OssStorageConfig());
+      mover.move(new DataSegment(
+          "test",
+          Intervals.of("2013-01-01/2013-01-02"),
+          "1",
+          ImmutableMap.of(
+              "key",
+              "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+              "bucket",
+              "DOES NOT EXIST"
+          ),
+          ImmutableList.of("dim1", "dim1"),
+          ImmutableList.of("metric1", "metric2"),
+          NoneShardSpec.instance(),
+          0,
+          1
+      ), ImmutableMap.of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
+    });
   }
 
   private static class MockClient extends OSSClient
