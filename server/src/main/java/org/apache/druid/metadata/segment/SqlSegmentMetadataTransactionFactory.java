@@ -150,7 +150,7 @@ public class SqlSegmentMetadataTransactionFactory extends SqlSegmentMetadataRead
   @Override
   public <T> T inReadWriteNoCacheTransaction(Function<SqlSegmentsMetadataQuery, T> sqlUpdate)
   {
-    return connector.retryReadOnlyTransaction(
+    return connector.retryTransaction(
         (handle, status) -> sqlUpdate.apply(createSqlQueryForTransaction(handle)),
         getQuietRetries(),
         getMaxRetries()

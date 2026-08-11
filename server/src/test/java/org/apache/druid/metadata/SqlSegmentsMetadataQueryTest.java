@@ -932,7 +932,9 @@ public class SqlSegmentsMetadataQueryTest
             StringUtils.format(
                 "Segment IDs[[%s]]"
                 + " cannot be marked as used since they were last updated more than [%s]"
-                + " ago and are now eligible for permanent deletion.",
+                + " ago and are now eligible for permanent deletion. Increase the value"
+                + " of runtime property ['druid.manager.segments.killUnused.bufferPeriod']"
+                + " to allow updating these segment IDs.",
                 segment.getId(),
                 managerConfig.getKillUnused().getBufferPeriod()
             )

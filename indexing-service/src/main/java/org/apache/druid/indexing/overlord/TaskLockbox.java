@@ -36,10 +36,10 @@ import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateRequest;
 import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
-import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.duty.UnusedSegmentsKiller;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -572,10 +572,11 @@ public class TaskLockbox
         throw new ISE("Unable to grant LockPosse to inactive Task [%s]", task.getId());
       }
 
-      if (request.getType() == TaskLockType.KILL && !KillUnusedSegmentsTask.TYPE.equals(task.getType())) {
+      if (request.getType() == TaskLockType.KILL
+          && !UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL.equals(task.getType())) {
         throw new ISE(
             "Task[%s] of type[%s] cannot acquire a KILL lock. Only tasks of type[%s] may use KILL locks.",
-            task.getId(), task.getType(), KillUnusedSegmentsTask.TYPE
+            task.getId(), task.getType(), UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL
         );
       }
 

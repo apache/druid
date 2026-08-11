@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -41,10 +42,10 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
-import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.duty.UnusedSegmentsKiller;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -60,6 +61,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
@@ -1316,7 +1318,7 @@ public class GlobalTaskLockboxTest
   public void test_getLockedIntervals_withOngoingKill_returnsEmpty()
   {
     final Interval killInterval = Intervals.of("2017/2018");
-    final Task task = new KillUnusedSegmentsTask("t1", "d1", killInterval, null, null, null, null, null);
+    final Task task = newEmbeddedKillTask(HIGH_PRIORITY);
     lockbox.add(task);
     taskStorage.insert(task, TaskStatus.running(task.getId()));
     tryTimeChunkLock(
@@ -1880,11 +1882,11 @@ public class GlobalTaskLockboxTest
   @Test
   public void testKillLockCompatibility()
   {
-    final Task killTask = newKillTask(MEDIUM_PRIORITY);
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
     final TaskLock theLock = validator.expectKillLockCreated(killTask, Intervals.of("2017/2018"));
 
     // A KILL lock cannot coexist with another KILL lock on an overlapping interval
-    validator.expectKillLockNotGranted(newKillTask(MEDIUM_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(MEDIUM_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
 
     // A KILL lock can coexist with all other lock types
     final TaskLock exclusiveLock = validator.expectLockCreated(
@@ -1921,13 +1923,13 @@ public class GlobalTaskLockboxTest
   public void testKillLockCanRevokeIncompatibleKillLock()
   {
     final TaskLock lowPriorityKillLock = validator.expectKillLockCreated(
-        newKillTask(LOW_PRIORITY),
+        newEmbeddedKillTask(LOW_PRIORITY),
         Intervals.of("2017-05-01/2017-06-01")
     );
 
     // A higher-priority KILL lock can revoke a lower-priority KILL lock
     final TaskLock highPriorityKillLock = validator.expectKillLockCreated(
-        newKillTask(HIGH_PRIORITY),
+        newEmbeddedKillTask(HIGH_PRIORITY),
         Intervals.of("2017/2018")
     );
 
@@ -1938,12 +1940,12 @@ public class GlobalTaskLockboxTest
   @Test
   public void testKillLockCannotRevokeHigherPriorityKillLock()
   {
-    validator.expectKillLockCreated(newKillTask(HIGH_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
-    validator.expectKillLockNotGranted(newKillTask(LOW_PRIORITY), Intervals.of("2017/2018"));
+    validator.expectKillLockCreated(newEmbeddedKillTask(HIGH_PRIORITY), Intervals.of("2017-05-01/2017-06-01"));
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(LOW_PRIORITY), Intervals.of("2017/2018"));
   }
 
   @Test
-  public void testOnlyKillTaskCanAcquireKillLock()
+  public void testOnlyEmbeddedKillTaskCanAcquireKillLock()
   {
     final Task nonKillTask = NoopTask.ofPriority(MEDIUM_PRIORITY);
     lockbox.add(nonKillTask);
@@ -1951,89 +1953,61 @@ public class GlobalTaskLockboxTest
 
     Assert.assertThrows(
         ISE.class,
-        () -> lockbox.tryLock(nonKillTask, new TimeChunkLockRequest(TaskLockType.KILL, nonKillTask, Intervals.of("2017/2018"), null))
+        () -> lockbox.tryLock(
+            nonKillTask,
+            new TimeChunkLockRequest(TaskLockType.KILL, nonKillTask, Intervals.of("2017/2018"), null)
+        )
     );
   }
 
   @Test
   public void testKillLockAcquireAndReleaseWithoutTaskInStorage()
   {
-    final Task killTask = newKillTask(MEDIUM_PRIORITY);
+    // Acquire a KILL lock on an interval
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
+    final Interval lockInterval = Intervals.of("2017/2018");
+    validator.expectKillLockCreated(killTask, lockInterval);
 
-    // Add task to lockbox only — do NOT insert into taskStorage (mirrors EmbeddedKillTask behaviour)
-    lockbox.add(killTask);
+    // Verify that the lock blocks another KILL on an overlapping interval
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
 
-    final LockResult result = lockbox.tryLock(
-        killTask,
-        new TimeChunkLockRequest(TaskLockType.KILL, killTask, Intervals.of("2017/2018"), null)
-    );
-    Assert.assertTrue(result.isOk());
-    final TaskLock killLock = result.getTaskLock();
-    Assert.assertNotNull(killLock);
-    Assert.assertEquals(TaskLockType.KILL, killLock.getType());
-    Assert.assertFalse(killLock.isRevoked());
-
-    // Verify the lock blocks another KILL on an overlapping interval
-    final Task otherKillTask = newKillTask(MEDIUM_PRIORITY);
-    lockbox.add(otherKillTask);
-    final LockResult blockedResult = lockbox.tryLock(
-        otherKillTask,
-        new TimeChunkLockRequest(TaskLockType.KILL, otherKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
-    );
-    Assert.assertFalse(blockedResult.isOk());
-
-    // Releasing the task removes the lock; the blocked task can now acquire
+    // Release the original task and its lock so that other tasks can acquire a lock
     lockbox.remove(killTask);
-
-    final LockResult afterRelease = lockbox.tryLock(
-        otherKillTask,
-        new TimeChunkLockRequest(TaskLockType.KILL, otherKillTask, Intervals.of("2017-06-01/2017-07-01"), null)
-    );
-    Assert.assertTrue(afterRelease.isOk());
-
-    lockbox.remove(otherKillTask);
+    validator.expectKillLockCreated(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
   }
 
   @Test
   public void testKillLockNotRestoredAfterSyncFromStorage()
   {
     // Acquire a KILL lock for a task that was never inserted into taskStorage
-    final Task killTask = newKillTask(MEDIUM_PRIORITY);
-    lockbox.add(killTask);
-    final LockResult result = lockbox.tryLock(
-        killTask,
-        new TimeChunkLockRequest(TaskLockType.KILL, killTask, Intervals.of("2017/2018"), null)
-    );
-    Assert.assertTrue(result.isOk());
+    final Interval lockInterval = Intervals.of("2017/2018");
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
+    final TaskLock killLock = validator.expectKillLockCreated(killTask, lockInterval);
+
+    // Verify that other tasks cannot acquire a lock on the same interval
+    validator.expectKillLockNotGranted(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
 
     // Sync from storage — the kill task was not persisted, so the lock must disappear
     final GlobalTaskLockbox newBox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
-    newBox.syncFromStorage();
+    final TaskLockboxSyncResult result = newBox.syncFromStorage();
+    Assert.assertEquals(0, result.getTaskLockCount());
 
-    // No locks should be present after sync
-    final Set<TaskLock> locksAfterSync = taskStorage.getActiveTasks()
-                                                    .stream()
-                                                    .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
-                                                    .collect(Collectors.toSet());
-    Assert.assertTrue(locksAfterSync.isEmpty());
+    // Verify that the lock is still present in storage
+    final List<TaskLock> locksInStorage = taskStorage.getLocks(killTask.getId());
+    Assert.assertEquals(1, locksInStorage.size());
+    Assert.assertEquals(killLock, locksInStorage.getFirst());
 
     // A new KILL lock on the same interval should now be grantable
-    final Task newKillTask = newKillTask(MEDIUM_PRIORITY);
-    newBox.add(newKillTask);
-    final LockResult newResult = newBox.tryLock(
-        newKillTask,
-        new TimeChunkLockRequest(TaskLockType.KILL, newKillTask, Intervals.of("2017/2018"), null)
-    );
-    Assert.assertTrue(newResult.isOk());
-
-    newBox.remove(newKillTask);
+    this.lockbox = newBox;
+    new TaskLockboxValidator(newBox, taskStorage)
+        .expectKillLockCreated(newEmbeddedKillTask(MEDIUM_PRIORITY), lockInterval);
   }
 
   @Test
   public void testKillLockRevocationByHigherPriorityKillTaskNotInStorage()
   {
     // Low-priority kill task not in storage acquires a KILL lock
-    final Task lowPriorityKillTask = newKillTask(LOW_PRIORITY);
+    final Task lowPriorityKillTask = newEmbeddedKillTask(LOW_PRIORITY);
     lockbox.add(lowPriorityKillTask);
     final LockResult lowResult = lockbox.tryLock(
         lowPriorityKillTask,
@@ -2043,7 +2017,7 @@ public class GlobalTaskLockboxTest
     Assert.assertFalse(lowResult.getTaskLock().isRevoked());
 
     // High-priority kill task not in storage revokes the low-priority KILL lock
-    final Task highPriorityKillTask = newKillTask(HIGH_PRIORITY);
+    final Task highPriorityKillTask = newEmbeddedKillTask(HIGH_PRIORITY);
     lockbox.add(highPriorityKillTask);
     final LockResult highResult = lockbox.tryLock(
         highPriorityKillTask,
@@ -2078,7 +2052,7 @@ public class GlobalTaskLockboxTest
     Assert.assertTrue(exclusiveResult.isOk());
 
     // A KILL task (not in storage) should be able to acquire a KILL lock on an overlapping interval
-    final Task killTask = newKillTask(MEDIUM_PRIORITY);
+    final Task killTask = newEmbeddedKillTask(MEDIUM_PRIORITY);
     lockbox.add(killTask);
     final LockResult killResult = lockbox.tryLock(
         killTask,
@@ -2320,18 +2294,23 @@ public class GlobalTaskLockboxTest
     );
   }
 
-  private static Task newKillTask(int priority)
+  private static Task newEmbeddedKillTask(int priority)
   {
-    return new KillUnusedSegmentsTask(
+    return new NoopTask(
+        IdUtils.getRandomId(),
         null,
-        "none",
-        Intervals.of("2000/3000"),
-        null,
-        Map.of(Tasks.PRIORITY_KEY, priority),
-        100,
-        null,
-        null
-    );
+        TestDataSource.WIKI,
+        1L,
+        1L,
+        Map.of(Tasks.PRIORITY_KEY, priority)
+    )
+    {
+      @Override
+      public String getType()
+      {
+        return UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL;
+      }
+    };
   }
 
   private class TaskLockboxValidator
@@ -2409,7 +2388,9 @@ public class GlobalTaskLockboxTest
     {
       if (tasks.add(task)) {
         lockbox.add(task);
-        taskStorage.insert(task, TaskStatus.running(task.getId()));
+        if (!UnusedSegmentsKiller.TASK_TYPE_EMBEDDED_KILL.equals(task.getType())) {
+          taskStorage.insert(task, TaskStatus.running(task.getId()));
+        }
       }
       TaskLock lock = tryTimeChunkLock(type, task, interval).getTaskLock();
       if (lock != null) {
@@ -2423,6 +2404,10 @@ public class GlobalTaskLockboxTest
       return tryTaskLock(type, NoopTask.ofPriority(priority), interval);
     }
 
+    /**
+     * Adds the given {@code killTask} to the lockbox (but not to TaskStorage)
+     * and verifies that a kill lock is successfully granted on the specified interval.
+     */
     public TaskLock expectKillLockCreated(Task killTask, Interval interval)
     {
       final TaskLock lock = tryTaskLock(TaskLockType.KILL, killTask, interval);

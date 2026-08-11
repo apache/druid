@@ -76,6 +76,12 @@ public class UnusedSegmentsKiller implements OverlordDuty
 
   private static final String TASK_ID_PREFIX = "overlord-issued";
 
+  /**
+   * Task type for embedded kill tasks. This type is not registered as a valid
+   * JSON subtype of {@code Task} since embedded kill tasks are never serialized.
+   */
+  public static final String TASK_TYPE_EMBEDDED_KILL = "kill_embedded";
+
   private static final int INITIAL_KILL_QUEUE_SIZE = 1000;
   private static final int MAX_INTERVALS_TO_KILL = 10_000;
   private static final int MAX_SEGMENTS_TO_KILL_IN_BATCH = 1000;
@@ -481,6 +487,12 @@ public class UnusedSegmentsKiller implements OverlordDuty
           candidate.numSegmentsToKill(),
           maxUpdatedTimeOfEligibleSegment
       );
+    }
+
+    @Override
+    public String getType()
+    {
+      return TASK_TYPE_EMBEDDED_KILL;
     }
 
     @Override
