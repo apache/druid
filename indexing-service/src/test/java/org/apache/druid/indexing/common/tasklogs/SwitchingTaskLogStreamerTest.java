@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogStreamer;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -69,12 +69,12 @@ public class SwitchingTaskLogStreamerTest
             emptyStreamer
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         getLogString(1, TASK_ID, 1),
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).get()))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         getReportString(1, TASK_ID),
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskReports(TASK_ID).get()))
     );
@@ -91,12 +91,12 @@ public class SwitchingTaskLogStreamerTest
             emptyStreamer
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         getLogString(2, TASK_ID, 1),
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).get()))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         getReportString(2, TASK_ID),
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskReports(TASK_ID).get()))
     );
@@ -112,12 +112,12 @@ public class SwitchingTaskLogStreamerTest
             emptyStreamer
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         getLogString(2, TASK_ID, 1),
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).get()))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         getReportString(2, TASK_ID),
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskReports(TASK_ID).get()))
     );
@@ -134,11 +134,11 @@ public class SwitchingTaskLogStreamerTest
             streamer2
         )
     );
-    Assert.assertThrows("expected log exception", IOException.class, () ->
+    Assertions.assertThrows(IOException.class, () ->
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).get()))
     );
 
-    Assert.assertThrows("expected report exception", IOException.class, () ->
+    Assertions.assertThrows(IOException.class, () ->
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskReports(TASK_ID).get()))
     );
   }
@@ -152,11 +152,11 @@ public class SwitchingTaskLogStreamerTest
             emptyStreamer
         )
     );
-    Assert.assertThrows("expected log exception", IOException.class, () ->
+    Assertions.assertThrows(IOException.class, () ->
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).get()))
     );
 
-    Assert.assertThrows("expected report exception", IOException.class, () ->
+    Assertions.assertThrows(IOException.class, () ->
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskReports(TASK_ID).get()))
     );
 
@@ -171,11 +171,11 @@ public class SwitchingTaskLogStreamerTest
             ioExceptionStreamer
         )
     );
-    Assert.assertThrows("expected log exception", IOException.class, () ->
+    Assertions.assertThrows(IOException.class, () ->
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).get()))
     );
 
-    Assert.assertThrows("expected report exception", IOException.class, () ->
+    Assertions.assertThrows(IOException.class, () ->
         StringUtils.fromUtf8(ByteStreams.toByteArray(switchingTaskLogStreamer.streamTaskReports(TASK_ID).get()))
     );
   }
@@ -189,8 +189,8 @@ public class SwitchingTaskLogStreamerTest
             emptyStreamer
         )
     );
-    Assert.assertFalse(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).isPresent());
-    Assert.assertFalse(switchingTaskLogStreamer.streamTaskReports(TASK_ID).isPresent());
+    Assertions.assertFalse(switchingTaskLogStreamer.streamTaskLog(TASK_ID, 1).isPresent());
+    Assertions.assertFalse(switchingTaskLogStreamer.streamTaskReports(TASK_ID).isPresent());
   }
 
   private static String getLogString(int id, String taskid, long offset)

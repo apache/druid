@@ -20,8 +20,8 @@
 package org.apache.druid.consul.discovery;
 
 import com.ecwid.consul.v1.ConsulClient;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for Consul client security validation, especially around basic auth over HTTP.
@@ -38,22 +38,22 @@ public class ConsulClientsSecurityTest
         // No TLS configured
         .build();
 
-    IllegalStateException exception = Assert.assertThrows(
+    IllegalStateException exception = Assertions.assertThrows(
         IllegalStateException.class,
         () -> ConsulClients.create(config)
     );
 
-    Assert.assertTrue(
-        "Exception should mention TLS not enabled",
-        exception.getMessage().contains("TLS is not enabled")
+    Assertions.assertTrue(
+        exception.getMessage().contains("TLS is not enabled"),
+        "Exception should mention TLS not enabled"
     );
-    Assert.assertTrue(
-        "Exception should mention cleartext transmission",
-        exception.getMessage().contains("cleartext")
+    Assertions.assertTrue(
+        exception.getMessage().contains("cleartext"),
+        "Exception should mention cleartext transmission"
     );
-    Assert.assertTrue(
-        "Exception should mention allowBasicAuthOverHttp flag",
-        exception.getMessage().contains("allowBasicAuthOverHttp")
+    Assertions.assertTrue(
+        exception.getMessage().contains("allowBasicAuthOverHttp"),
+        "Exception should mention allowBasicAuthOverHttp flag"
     );
   }
 
@@ -70,7 +70,7 @@ public class ConsulClientsSecurityTest
 
     // Should not throw with the flag enabled
     ConsulClient client = ConsulClients.create(config);
-    Assert.assertNotNull(client);
+    Assertions.assertNotNull(client);
   }
 
   @Test
@@ -84,14 +84,14 @@ public class ConsulClientsSecurityTest
         // No TLS configured
         .build();
 
-    IllegalStateException exception = Assert.assertThrows(
+    IllegalStateException exception = Assertions.assertThrows(
         IllegalStateException.class,
         () -> ConsulClients.create(config)
     );
 
-    Assert.assertTrue(
-        "Exception should mention TLS not enabled",
-        exception.getMessage().contains("TLS is not enabled")
+    Assertions.assertTrue(
+        exception.getMessage().contains("TLS is not enabled"),
+        "Exception should mention TLS not enabled"
     );
   }
 
@@ -105,7 +105,7 @@ public class ConsulClientsSecurityTest
 
     // Should succeed without basic auth even without TLS
     ConsulClient client = ConsulClients.create(config);
-    Assert.assertNotNull(client);
+    Assertions.assertNotNull(client);
   }
 
   @Test
@@ -119,7 +119,7 @@ public class ConsulClientsSecurityTest
 
     // Should succeed - validation only applies when both user and password are set
     ConsulClient client = ConsulClients.create(config);
-    Assert.assertNotNull(client);
+    Assertions.assertNotNull(client);
   }
 
   @Test
@@ -133,7 +133,7 @@ public class ConsulClientsSecurityTest
 
     // Should succeed - validation only applies when both user and password are set
     ConsulClient client = ConsulClients.create(config);
-    Assert.assertNotNull(client);
+    Assertions.assertNotNull(client);
   }
 
   @Test
@@ -143,9 +143,9 @@ public class ConsulClientsSecurityTest
         .servicePrefix("druid")
         .build();
 
-    Assert.assertFalse(
-        "allowBasicAuthOverHttp should default to false",
-        config.getAuth().getAllowBasicAuthOverHttp()
+    Assertions.assertFalse(
+        config.getAuth().getAllowBasicAuthOverHttp(),
+        "allowBasicAuthOverHttp should default to false"
     );
   }
 }

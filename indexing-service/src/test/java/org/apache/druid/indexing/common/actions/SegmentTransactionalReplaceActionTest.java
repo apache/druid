@@ -33,9 +33,9 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +57,7 @@ public class SegmentTransactionalReplaceActionTest
   private TaskActionToolbox toolbox;
   private Task task;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     emitter = new StubServiceEmitter("test", "localhost");
@@ -79,7 +79,7 @@ public class SegmentTransactionalReplaceActionTest
 
     action.registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, records(2));
 
-    Assert.assertEquals(2, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
+    Assertions.assertEquals(2, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
     EasyMock.verify(supervisorManager);
   }
 
@@ -95,7 +95,7 @@ public class SegmentTransactionalReplaceActionTest
 
     action.registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, records(3));
 
-    Assert.assertEquals(3, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
+    Assertions.assertEquals(3, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
     EasyMock.verify(supervisorManager);
   }
 
@@ -111,7 +111,7 @@ public class SegmentTransactionalReplaceActionTest
 
     action.registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, records(MORE_THAN_SAMPLE_SIZE));
 
-    Assert.assertEquals(MORE_THAN_SAMPLE_SIZE, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
+    Assertions.assertEquals(MORE_THAN_SAMPLE_SIZE, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
     EasyMock.verify(supervisorManager);
   }
 
@@ -129,7 +129,7 @@ public class SegmentTransactionalReplaceActionTest
 
     action.registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, records(2));
 
-    Assert.assertEquals(2, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
+    Assertions.assertEquals(2, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
     EasyMock.verify(supervisorManager);
   }
 
@@ -148,7 +148,7 @@ public class SegmentTransactionalReplaceActionTest
 
       action.registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, records(MORE_THAN_SAMPLE_SIZE));
 
-      Assert.assertEquals(MORE_THAN_SAMPLE_SIZE, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
+      Assertions.assertEquals(MORE_THAN_SAMPLE_SIZE, emitter.getMetricEventCount(SegmentUpgradeMetrics.PERSISTED));
       EasyMock.verify(supervisorManager);
     }
     finally {

@@ -23,8 +23,8 @@ import org.jclouds.io.Payload;
 import org.jclouds.openstack.swift.v1.domain.SwiftObject;
 import org.jclouds.openstack.swift.v1.features.ObjectApi;
 import org.jclouds.rackspace.cloudfiles.v1.CloudFilesApi;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -51,10 +51,10 @@ public class CloudFilesObjectApiProxyTest
     CloudFilesObjectApiProxy cfoApiProxy = new CloudFilesObjectApiProxy(cloudFilesApi, region, container);
     CloudFilesObject cloudFilesObject = cfoApiProxy.get(path, 0);
 
-    Assert.assertEquals(cloudFilesObject.getPayload(), payload);
-    Assert.assertEquals(cloudFilesObject.getRegion(), region);
-    Assert.assertEquals(cloudFilesObject.getContainer(), container);
-    Assert.assertEquals(cloudFilesObject.getPath(), path);
+    Assertions.assertEquals(payload, cloudFilesObject.getPayload());
+    Assertions.assertEquals(region, cloudFilesObject.getRegion());
+    Assertions.assertEquals(container, cloudFilesObject.getContainer());
+    Assertions.assertEquals(path, cloudFilesObject.getPath());
 
     verify(cloudFilesApi).getObjectApi(region, container);
     verify(objectApi).get(path);

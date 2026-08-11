@@ -25,6 +25,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -39,6 +40,7 @@ public class CompressedBigDecimalSumAggregatorTimeseriesTest extends CompressedB
       .build();
 
   @Override
+  @Test
   public void testIngestAndTimeseriesQuery() throws Exception
   {
     testIngestAndTimeseriesQueryHelper(
@@ -49,6 +51,7 @@ public class CompressedBigDecimalSumAggregatorTimeseriesTest extends CompressedB
   }
 
   @Override
+  @Test
   public void testIngestMultipleSegmentsAndTimeseriesQuery() throws Exception
   {
     testIngestMultipleSegmentsAndTimeseriesQueryHelper(

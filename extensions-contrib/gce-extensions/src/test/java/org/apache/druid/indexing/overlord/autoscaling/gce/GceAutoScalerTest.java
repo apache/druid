@@ -38,10 +38,10 @@ import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
@@ -67,7 +67,7 @@ public class GceAutoScalerTest
   //provision
   private Compute.InstanceGroupManagers.Resize mockResizeRequest = null;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     // for every test let's create all (only a subset needed for each test tho)
@@ -88,7 +88,7 @@ public class GceAutoScalerTest
     mockResizeRequest = EasyMock.createMock(Compute.InstanceGroupManagers.Resize.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     // not calling verify here as we use different bits and pieces in each test
@@ -96,12 +96,12 @@ public class GceAutoScalerTest
 
   private static void verifyAutoScaler(final GceAutoScaler autoScaler)
   {
-    Assert.assertEquals(1, autoScaler.getEnvConfig().getNumInstances());
-    Assert.assertEquals(4, autoScaler.getMaxNumWorkers());
-    Assert.assertEquals(2, autoScaler.getMinNumWorkers());
-    Assert.assertEquals("winkie-country", autoScaler.getEnvConfig().getZoneName());
-    Assert.assertEquals("super-project", autoScaler.getEnvConfig().getProjectId());
-    Assert.assertEquals("druid-mig", autoScaler.getEnvConfig().getManagedInstanceGroupName());
+    Assertions.assertEquals(1, autoScaler.getEnvConfig().getNumInstances());
+    Assertions.assertEquals(4, autoScaler.getMaxNumWorkers());
+    Assertions.assertEquals(2, autoScaler.getMinNumWorkers());
+    Assertions.assertEquals("winkie-country", autoScaler.getEnvConfig().getZoneName());
+    Assertions.assertEquals("super-project", autoScaler.getEnvConfig().getProjectId());
+    Assertions.assertEquals("druid-mig", autoScaler.getEnvConfig().getManagedInstanceGroupName());
   }
 
   @Test
@@ -148,10 +148,10 @@ public class GceAutoScalerTest
       );
       verifyAutoScaler(roundTripAutoScaler);
 
-      Assert.assertEquals("Round trip equals", autoScaler, roundTripAutoScaler);
+      Assertions.assertEquals(autoScaler, roundTripAutoScaler, "Round trip equals");
     }
     catch (Exception e) {
-      Assert.fail(StringUtils.format("Got exception in test %s", e.getMessage()));
+      Assertions.fail(StringUtils.format("Got exception in test %s", e.getMessage()));
     }
   }
 
@@ -196,12 +196,12 @@ public class GceAutoScalerTest
     // empty IPs
     List<String> ips1 = Collections.emptyList();
     List<String> ids1 = autoScaler.ipToIdLookup(ips1);
-    Assert.assertEquals(0, ids1.size());
+    Assertions.assertEquals(0, ids1.size());
 
     // actually not IPs
     List<String> ips2 = Collections.singletonList("foo-bar-baz");
     List<String> ids2 = autoScaler.ipToIdLookup(ips2);
-    Assert.assertEquals(ips2, ids2);
+    Assertions.assertEquals(ips2, ids2);
 
     // actually IPs
     Instance i1 = makeInstance("foo", "1.2.3.5"); // not the one we look for
@@ -224,8 +224,8 @@ public class GceAutoScalerTest
 
     List<String> ips3 = Collections.singletonList("1.2.3.4");
     List<String> ids3 = autoScaler.ipToIdLookup(ips3);
-    Assert.assertEquals(1, ids3.size());
-    Assert.assertEquals("bar", ids3.get(0));
+    Assertions.assertEquals(1, ids3.size());
+    Assertions.assertEquals("bar", ids3.get(0));
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstances);
@@ -255,7 +255,7 @@ public class GceAutoScalerTest
     // empty IPs
     List<String> ids1 = Collections.emptyList();
     List<String> ips1 = autoScaler.idToIpLookup(ids1);
-    Assert.assertEquals(0, ips1.size());
+    Assertions.assertEquals(0, ips1.size());
 
     // actually IDs
     Instance i1 = makeInstance("foo", "null");    // invalid ip, not returned
@@ -281,8 +281,8 @@ public class GceAutoScalerTest
 
     List<String> ids3 = Arrays.asList("foo", "bar");
     List<String> ips3 = autoScaler.idToIpLookup(ids3);
-    Assert.assertEquals(1, ips3.size());
-    Assert.assertEquals("1.2.3.4", ips3.get(0));
+    Assertions.assertEquals(1, ips3.size());
+    Assertions.assertEquals("1.2.3.4", ips3.get(0));
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstances);
@@ -382,8 +382,8 @@ public class GceAutoScalerTest
 
     AutoScalingData autoScalingData =
             autoScaler.terminateWithIds(Collections.singletonList("baz"));
-    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
-    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+    Assertions.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assertions.assertEquals("baz", autoScalingData.getNodeIds().get(0));
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstanceGroupManagers);
@@ -485,8 +485,8 @@ public class GceAutoScalerTest
 
     AutoScalingData autoScalingData =
         autoScaler.terminate(Collections.singletonList("1.2.3.6"));
-    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
-    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+    Assertions.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assertions.assertEquals("baz", autoScalingData.getNodeIds().get(0));
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockIpToIdRequest);
@@ -582,8 +582,8 @@ public class GceAutoScalerTest
 
     AutoScalingData autoScalingData =
         autoScaler.terminateWithIds(Collections.singletonList("baz"));
-    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
-    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+    Assertions.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assertions.assertEquals("baz", autoScalingData.getNodeIds().get(0));
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstanceGroupManagers);
@@ -663,8 +663,8 @@ public class GceAutoScalerTest
     EasyMock.replay(mockCompute);
 
     AutoScalingData autoScalingData = autoScaler.provision();
-    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
-    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+    Assertions.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assertions.assertEquals("baz", autoScalingData.getNodeIds().get(0));
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstanceGroupManagers);
@@ -718,7 +718,7 @@ public class GceAutoScalerTest
     EasyMock.replay(mockCompute);
 
     AutoScalingData autoScalingData = autoScaler.provision();
-    Assert.assertEquals(0, autoScalingData.getNodeIds().size());
+    Assertions.assertEquals(0, autoScalingData.getNodeIds().size());
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstancesRequest);
@@ -805,8 +805,8 @@ public class GceAutoScalerTest
     EasyMock.replay(mockCompute);
 
     AutoScalingData autoScalingData = autoScaler.provision();
-    Assert.assertEquals(1, autoScalingData.getNodeIds().size());
-    Assert.assertEquals("baz", autoScalingData.getNodeIds().get(0));
+    Assertions.assertEquals(1, autoScalingData.getNodeIds().size());
+    Assertions.assertEquals("baz", autoScalingData.getNodeIds().get(0));
 
     EasyMock.verify(mockCompute);
     EasyMock.verify(mockInstanceGroupManagers);
@@ -847,7 +847,7 @@ public class GceAutoScalerTest
 
     List<String> ips = Collections.singletonList("1.2.3.4");
     List<String> ids = autoScaler.ipToIdLookup(ips);
-    Assert.assertEquals(0, ids.size());  // Exception caught in execution results in empty result
+    Assertions.assertEquals(0, ids.size());  // Exception caught in execution results in empty result
   }
 
 }
