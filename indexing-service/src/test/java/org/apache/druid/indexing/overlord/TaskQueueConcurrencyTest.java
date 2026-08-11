@@ -37,7 +37,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -69,7 +68,6 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
   @Override
   public void setUpIngestionTestBase() throws IOException
   {
-    derbyConnectorRule.before();
     super.setUpIngestionTestBase();
 
     threadToUpdateAction = new HashMap<>();
@@ -133,18 +131,6 @@ public class TaskQueueConcurrencyTest extends IngestionTestBase
         }
       }
     };
-  }
-
-  @AfterEach
-  @Override
-  public void tearDownIngestionTestBase()
-  {
-    try {
-      super.tearDownIngestionTestBase();
-    }
-    finally {
-      derbyConnectorRule.after();
-    }
   }
 
   @Timeout(20)

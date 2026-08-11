@@ -90,7 +90,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -120,7 +119,6 @@ public class TaskQueueTest extends IngestionTestBase
   @Override
   public void setUpIngestionTestBase() throws IOException
   {
-    derbyConnectorRule.before();
     super.setUpIngestionTestBase();
     serviceEmitter = new StubServiceEmitter();
     actionClientFactory = createActionClientFactory();
@@ -146,18 +144,6 @@ public class TaskQueueTest extends IngestionTestBase
         new NoopTaskContextEnricher()
     );
     taskQueue.setActive(true);
-  }
-
-  @AfterEach
-  @Override
-  public void tearDownIngestionTestBase()
-  {
-    try {
-      super.tearDownIngestionTestBase();
-    }
-    finally {
-      derbyConnectorRule.after();
-    }
   }
 
   @Timeout(30)
