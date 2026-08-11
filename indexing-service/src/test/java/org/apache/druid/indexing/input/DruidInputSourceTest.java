@@ -38,14 +38,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -59,10 +55,7 @@ public class DruidInputSourceTest
 
   private ObjectMapper mapper = null;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper = TestHelper.makeJsonMapper();
@@ -87,8 +80,8 @@ public class DruidInputSourceTest
 
     final InputSource inputSource = mapper.readValue(json, InputSource.class);
 
-    MatcherAssert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(DruidInputSource.class, inputSource);
+    Assertions.assertEquals(
         new DruidInputSource(
             "foo",
             Intervals.of("2000/2001"),
@@ -104,7 +97,7 @@ public class DruidInputSourceTest
         inputSource
     );
 
-    Assert.assertEquals(json, mapper.writeValueAsString(inputSource));
+    Assertions.assertEquals(json, mapper.writeValueAsString(inputSource));
   }
 
   @Test
@@ -120,8 +113,8 @@ public class DruidInputSourceTest
 
     final InputSource inputSource = mapper.readValue(json, InputSource.class);
 
-    MatcherAssert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(DruidInputSource.class, inputSource);
+    Assertions.assertEquals(
         new DruidInputSource(
             "foo",
             Intervals.of("2000/2001"),
@@ -137,7 +130,7 @@ public class DruidInputSourceTest
         inputSource
     );
 
-    Assert.assertEquals(json, mapper.writeValueAsString(inputSource));
+    Assertions.assertEquals(json, mapper.writeValueAsString(inputSource));
   }
 
   @Test
@@ -154,8 +147,8 @@ public class DruidInputSourceTest
 
     final InputSource inputSource = mapper.readValue(json, InputSource.class);
 
-    MatcherAssert.assertThat(inputSource, CoreMatchers.instanceOf(DruidInputSource.class));
-    Assert.assertEquals(
+    Assertions.assertInstanceOf(DruidInputSource.class, inputSource);
+    Assertions.assertEquals(
         new DruidInputSource(
             "foo",
             null,
@@ -176,7 +169,7 @@ public class DruidInputSourceTest
         inputSource
     );
 
-    Assert.assertEquals(json, mapper.writeValueAsString(inputSource));
+    Assertions.assertEquals(json, mapper.writeValueAsString(inputSource));
   }
 
   @Test
@@ -193,10 +186,11 @@ public class DruidInputSourceTest
                         + "}";
 
 
-    expectedException.expect(JsonProcessingException.class);
-    expectedException.expectMessage("Specify exactly one of 'interval' and 'segments'");
-
-    mapper.readValue(json, InputSource.class);
+    final JsonProcessingException exception = Assertions.assertThrows(
+        JsonProcessingException.class,
+        () -> mapper.readValue(json, InputSource.class)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Specify exactly one of 'interval' and 'segments'"));
   }
 
   @Test
@@ -207,10 +201,11 @@ public class DruidInputSourceTest
                         + "\"dataSource\":\"foo\""
                         + "}";
 
-    expectedException.expect(JsonProcessingException.class);
-    expectedException.expectMessage("Specify exactly one of 'interval' and 'segments'");
-
-    mapper.readValue(json, InputSource.class);
+    final JsonProcessingException exception = Assertions.assertThrows(
+        JsonProcessingException.class,
+        () -> mapper.readValue(json, InputSource.class)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Specify exactly one of 'interval' and 'segments'"));
   }
 
   @Test
@@ -221,10 +216,11 @@ public class DruidInputSourceTest
                         + "\"interval\":\"2000-01-01T00:00:00.000Z/2001-01-01T00:00:00.000Z\""
                         + "}";
 
-    expectedException.expect(JsonProcessingException.class);
-    expectedException.expectMessage("dataSource");
-
-    mapper.readValue(json, InputSource.class);
+    final JsonProcessingException exception = Assertions.assertThrows(
+        JsonProcessingException.class,
+        () -> mapper.readValue(json, InputSource.class)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("dataSource"));
   }
 
   @Test
@@ -257,8 +253,8 @@ public class DruidInputSourceTest
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
     ColumnsFilter columnsFilter = inputSourceReader.getColumnsFilter();
-    Assert.assertTrue(columnsFilter.apply(column));
-    Assert.assertTrue(columnsFilter.apply(metricName));
+    Assertions.assertTrue(columnsFilter.apply(column));
+    Assertions.assertTrue(columnsFilter.apply(metricName));
   }
 
   @Test
@@ -291,8 +287,8 @@ public class DruidInputSourceTest
     );
     InputRowSchema inputSourceReader = druidInputSource.getInputRowSchemaToUse(inputRowSchema);
     ColumnsFilter columnsFilter = inputSourceReader.getColumnsFilter();
-    Assert.assertTrue(columnsFilter.apply(column));
-    Assert.assertFalse(columnsFilter.apply(metricName));
+    Assertions.assertTrue(columnsFilter.apply(column));
+    Assertions.assertFalse(columnsFilter.apply(metricName));
   }
 
   @Test
@@ -312,6 +308,6 @@ public class DruidInputSourceTest
         segmentCacheManagerFactory,
         taskConfig
     );
-    Assert.assertEquals(ImmutableSet.of(DruidInputSource.TYPE_KEY), druidInputSource.getTypes());
+    Assertions.assertEquals(ImmutableSet.of(DruidInputSource.TYPE_KEY), druidInputSource.getTypes());
   }
 }
