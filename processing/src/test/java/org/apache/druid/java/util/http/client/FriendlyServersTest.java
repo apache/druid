@@ -49,9 +49,12 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -109,6 +112,95 @@ public class FriendlyServersTest
       Assert.assertEquals("hello!", response.getContent());
     }
     finally {
+      exec.shutdownNow();
+      serverSocket.close();
+      lifecycle.stop();
+    }
+  }
+
+  @Test
+  public void testCancelRequestClosesConnection() throws Exception
+  {
+    final CountDownLatch requestReceived = new CountDownLatch(1);
+    final CountDownLatch connectionClosed = new CountDownLatch(1);
+    final ExecutorService exec = Executors.newSingleThreadExecutor();
+    final ExecutorService requestExec = Executors.newSingleThreadExecutor();
+    final ServerSocket serverSocket = new ServerSocket(0);
+    exec.submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              try (
+                  Socket clientSocket = serverSocket.accept();
+                  BufferedReader in = new BufferedReader(
+                      new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                  )
+              ) {
+                while (!in.readLine().equals("")) {
+                  // skip lines
+                }
+                requestReceived.countDown();
+                while (in.read() != -1) {
+                  // Wait for the client to close the connection.
+                }
+              }
+              finally {
+                connectionClosed.countDown();
+              }
+
+              try (
+                  Socket clientSocket = serverSocket.accept();
+                  BufferedReader in = new BufferedReader(
+                      new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
+                  );
+                  OutputStream out = clientSocket.getOutputStream()
+              ) {
+                while (!in.readLine().equals("")) {
+                  // skip lines
+                }
+                out.write(
+                    "HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8)
+                );
+              }
+            }
+            catch (Exception e) {
+              // Suppress
+            }
+          }
+        }
+    );
+
+    final Lifecycle lifecycle = new Lifecycle();
+    try {
+      final HttpClient client = HttpClientInit.createClient(HttpClientConfig.builder().build(), lifecycle);
+      final ListenableFuture<StatusResponseHolder> future = client.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+          ),
+          StatusResponseHandler.getInstance()
+      );
+
+      Assert.assertTrue(requestReceived.await(10, TimeUnit.SECONDS));
+      Assert.assertTrue(future.cancel(true));
+      Assert.assertTrue(connectionClosed.await(10, TimeUnit.SECONDS));
+
+      final Future<StatusResponseHolder> secondResponse = requestExec.submit(
+          () -> client.go(
+              new Request(
+                  HttpMethod.GET,
+                  new URL(StringUtils.format("http://localhost:%d/", serverSocket.getLocalPort()))
+              ),
+              StatusResponseHandler.getInstance()
+          ).get()
+      );
+      Assert.assertEquals("hello!", secondResponse.get(10, TimeUnit.SECONDS).getContent());
+    }
+    finally {
+      requestExec.shutdownNow();
       exec.shutdownNow();
       serverSocket.close();
       lifecycle.stop();
