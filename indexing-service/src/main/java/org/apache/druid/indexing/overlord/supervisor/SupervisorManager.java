@@ -64,6 +64,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -664,17 +665,13 @@ public class SupervisorManager implements SupervisorStatsProvider
     }
 
     // Validate that this is a SeekableStreamSupervisor
-    final Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(supervisorId);
-    if (supervisorPair == null || supervisorPair.rhs == null || supervisorPair.lhs == null) {
-      throw NotFound.exception("Invalid supervisor[%s]", supervisorId);
-    } else if (!(supervisorPair.rhs instanceof SeekableStreamSupervisorSpec)) {
-      throw InvalidInput.exception(
-          "Cannot simulate autoscaling for supervisor[%s] of type[%s]",
-          supervisorId, supervisorPair.rhs.getType()
-      );
-    }
-
-    final SeekableStreamSupervisorSpec supervisorSpec = (SeekableStreamSupervisorSpec) supervisorPair.rhs;
+    final Pair<SeekableStreamSupervisor, SeekableStreamSupervisorSpec> supervisorPair =
+        getSupervisorOfType(
+            supervisorId,
+            SeekableStreamSupervisor.class,
+            SeekableStreamSupervisorSpec.class,
+            "simulateAutoscaling"
+        );
 
     // Validate the inputs
     final long criticalLag = Configs.valueOrDefault(config.getCriticalLagThreshold(), 1_000_000);
@@ -696,6 +693,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     );
 
     // Simulate from the supervisor's live task count unless the caller pins one.
+    final SeekableStreamSupervisorSpec supervisorSpec = Objects.requireNonNull(supervisorPair.rhs);
     final int currentTaskCount = supervisorSpec.getIoConfig().getTaskCount();
     final int simulationTaskCount = Math.max(
         config.getTaskCountMin(),
@@ -706,7 +704,7 @@ public class SupervisorManager implements SupervisorStatsProvider
     );
 
     // Use the partition count and task duration from the supervisor spec
-    final int partitionCount = ((SeekableStreamSupervisor<?, ?, ?>) supervisorPair.lhs).getKnownPartitionCount();
+    final int partitionCount = Objects.requireNonNull(supervisorPair.lhs).getKnownPartitionCount();
     if (partitionCount <= 0) {
       throw InternalServerError.exception(
           "Cannot simulate autoscaling since partition count for supervisor[%s] is unknown."
