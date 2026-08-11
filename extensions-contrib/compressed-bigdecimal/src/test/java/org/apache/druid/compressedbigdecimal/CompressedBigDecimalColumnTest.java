@@ -23,8 +23,8 @@ import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CompressedBigDecimalColumnTest
 {
@@ -39,13 +39,13 @@ public class CompressedBigDecimalColumnTest
         columnarInts,
         columnarMultiInts
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CompressedBigDecimalModule.COMPRESSED_BIG_DECIMAL,
         compressedBigDecimalColumn.getTypeName()
     );
-    Assert.assertEquals(12345, compressedBigDecimalColumn.getLength());
-    Assert.assertEquals(CompressedBigDecimalColumn.class, compressedBigDecimalColumn.getClazz());
-    Assert.assertNotNull(compressedBigDecimalColumn.makeColumnValueSelector(readableOffset));
+    Assertions.assertEquals(12345, compressedBigDecimalColumn.getLength());
+    Assertions.assertEquals(CompressedBigDecimalColumn.class, compressedBigDecimalColumn.getClazz());
+    Assertions.assertNotNull(compressedBigDecimalColumn.makeColumnValueSelector(readableOffset));
   }
 
 }

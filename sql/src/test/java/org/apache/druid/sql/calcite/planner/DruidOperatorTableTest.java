@@ -31,15 +31,15 @@ import org.apache.druid.sql.calcite.expression.OperatorConversions;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.rel.Windowing;
 import org.apache.druid.sql.calcite.table.RowSignatures;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class DruidOperatorTableTest
 {
@@ -48,22 +48,22 @@ public class DruidOperatorTableTest
   {
     DruidOperatorTable operatorTable = new DruidOperatorTable(ImmutableSet.of(), ImmutableSet.of());
     List<SqlOperator> operatorList = operatorTable.getOperatorList();
-    Assert.assertNotNull(operatorList);
-    Assert.assertTrue("Built-in operators should be loaded by default", operatorList.size() > 0);
+    Assertions.assertNotNull(operatorList);
+    Assertions.assertTrue(operatorList.size() > 0, "Built-in operators should be loaded by default");
   }
 
   @Test
   public void testIsFunctionSyntax()
   {
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_STAR));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_ID));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.SPECIAL));
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.INTERNAL));
+    Assertions.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION));
+    Assertions.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_STAR));
+    Assertions.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.FUNCTION_ID));
+    Assertions.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.SPECIAL));
+    Assertions.assertTrue(DruidOperatorTable.isFunctionSyntax(SqlSyntax.INTERNAL));
 
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.BINARY));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.PREFIX));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.POSTFIX));
+    Assertions.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.BINARY));
+    Assertions.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.PREFIX));
+    Assertions.assertFalse(DruidOperatorTable.isFunctionSyntax(SqlSyntax.POSTFIX));
   }
 
   @Test
@@ -91,15 +91,15 @@ public class DruidOperatorTableTest
 
     DruidOperatorTable operatorTable = new DruidOperatorTable(ImmutableSet.of(), extractionOperators);
     List<SqlOperator> operatorList = operatorTable.getOperatorList();
-    Assert.assertNotNull(operatorList);
-    Assert.assertTrue("We should have at least two operators -- the ones we loaded above plus the built-in"
-                      + " operators that gets loaded by default", operatorList.size() > 2);
+    Assertions.assertNotNull(operatorList);
+    Assertions.assertTrue(operatorList.size() > 2, "We should have at least two operators -- the ones we loaded above plus the built-in"
+                      + " operators that gets loaded by default");
 
-    Assert.assertTrue(operatorList.contains(operator1));
-    Assert.assertTrue(operatorList.contains(operator2));
+    Assertions.assertTrue(operatorList.contains(operator1));
+    Assertions.assertTrue(operatorList.contains(operator2));
 
-    Assert.assertTrue(DruidOperatorTable.isFunctionSyntax(operator1.getSyntax()));
-    Assert.assertFalse(DruidOperatorTable.isFunctionSyntax(operator2.getSyntax()));
+    Assertions.assertTrue(DruidOperatorTable.isFunctionSyntax(operator1.getSyntax()));
+    Assertions.assertFalse(DruidOperatorTable.isFunctionSyntax(operator2.getSyntax()));
   }
 
   @Test
@@ -118,8 +118,8 @@ public class DruidOperatorTableTest
           continue;
         default:
           assertFalse(
-              operator + " allows framing; should be supported or rejected and then exclude from this check",
-              operator.allowsFraming()
+              operator.allowsFraming(),
+              operator + " allows framing; should be supported or rejected and then exclude from this check"
           );
       }
     }

@@ -52,6 +52,9 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.joda.time.Period;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.rules.ExternalResource;
 
 import java.util.HashMap;
@@ -59,7 +62,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-public class TaskActionTestKit extends ExternalResource
+public class TaskActionTestKit extends ExternalResource implements BeforeEachCallback, AfterEachCallback
 {
   private final MetadataStorageTablesConfig metadataStorageTablesConfig = MetadataStorageTablesConfig.fromBase("druid");
 
@@ -343,5 +346,17 @@ public class TaskActionTestKit extends ExternalResource
     segmentMetadataCache.stop();
     supervisorManager.stop();
     useSegmentMetadataCache = false;
+  }
+
+  @Override
+  public void beforeEach(final ExtensionContext context)
+  {
+    before();
+  }
+
+  @Override
+  public void afterEach(final ExtensionContext context)
+  {
+    after();
   }
 }

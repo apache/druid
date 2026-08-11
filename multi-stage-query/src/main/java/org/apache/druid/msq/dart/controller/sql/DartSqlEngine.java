@@ -146,12 +146,12 @@ public class DartSqlEngine implements SqlEngine
       case WINDOW_FUNCTIONS:
       case WINDOW_LEAF_OPERATOR:
       case UNNEST:
+      case ALLOW_BINDABLE_PLAN:
         return true;
 
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
-      case ALLOW_BINDABLE_PLAN:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
       case ALLOW_TOP_LEVEL_UNION_ALL:
       case TIMESERIES_QUERY:

@@ -22,19 +22,16 @@ package org.apache.druid.indexing.scheduledbatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QuartzCronSchedulerConfigTest
 {
@@ -107,19 +104,19 @@ public class QuartzCronSchedulerConfigTest
   @Test
   public void testInvalidCronExpression()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> new QuartzCronSchedulerConfig("0 15 10 * *")
-        ),
-        // Expected parts order varies due to non-deterministic Set iteration.
-        Matchers.anyOf(
-            DruidExceptionMatcher.invalidInput().expectMessageIs(
-                "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [6, 7]]"
-            ),
-            DruidExceptionMatcher.invalidInput().expectMessageIs(
-                "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [7, 6]]"
-            )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> new QuartzCronSchedulerConfig("0 15 10 * *")
+    );
+    assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    assertEquals("invalidInput", exception.getErrorCode());
+    // Expected parts order varies due to non-deterministic Set iteration.
+    Assertions.assertTrue(
+        exception.getMessage().equals(
+            "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [6, 7]]"
+        ) || exception.getMessage().equals(
+            "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [7, 6]]"
         )
     );
   }
@@ -127,14 +124,16 @@ public class QuartzCronSchedulerConfigTest
   @Test
   public void testMacroExpressionsNotSupported()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
-            DruidException.class,
-            () -> new QuartzCronSchedulerConfig("@daily")
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "Quartz schedule[@daily] is invalid: [Nicknames not supported!]"
-        )
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> new QuartzCronSchedulerConfig("@daily")
+    );
+    assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    assertEquals("invalidInput", exception.getErrorCode());
+    assertEquals(
+        "Quartz schedule[@daily] is invalid: [Nicknames not supported!]",
+        exception.getMessage()
     );
   }
 }

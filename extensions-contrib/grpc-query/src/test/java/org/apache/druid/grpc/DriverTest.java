@@ -28,7 +28,6 @@ import org.apache.druid.grpc.proto.QueryOuterClass.QueryResultFormat;
 import org.apache.druid.grpc.proto.QueryOuterClass.QueryStatus;
 import org.apache.druid.grpc.server.QueryDriver;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
@@ -40,9 +39,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DriverTest extends BaseCalciteQueryTest
 {
@@ -61,7 +60,7 @@ public class DriverTest extends BaseCalciteQueryTest
         plannerFixture.statementFactory(),
         new DefaultQueryConfig(Map.of()),
         sqlTestFramework.queryLifecycleFactory(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER
+        TestServer.NOOP_SCHEDULER
     );
   }
 

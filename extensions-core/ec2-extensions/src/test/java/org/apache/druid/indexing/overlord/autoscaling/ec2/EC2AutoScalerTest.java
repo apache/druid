@@ -28,10 +28,10 @@ import org.apache.druid.indexing.overlord.autoscaling.AutoScalingData;
 import org.apache.druid.indexing.overlord.autoscaling.SimpleWorkerProvisioningConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.ec2.Ec2Client;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesRequest;
 import software.amazon.awssdk.services.ec2.model.DescribeInstancesResponse;
@@ -65,7 +65,7 @@ public class EC2AutoScalerTest
   private Instance instance;
   private SimpleWorkerProvisioningConfig managementConfig;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     amazonEC2Client = EasyMock.createMock(Ec2Client.class);
@@ -80,7 +80,7 @@ public class EC2AutoScalerTest
     managementConfig = new SimpleWorkerProvisioningConfig().setWorkerPort(8080).setWorkerVersion("");
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(amazonEC2Client);
@@ -119,13 +119,13 @@ public class EC2AutoScalerTest
 
     AutoScalingData created = autoScaler.provision();
 
-    Assert.assertEquals(created.getNodeIds().size(), 1);
-    Assert.assertEquals("theInstance", created.getNodeIds().get(0));
+    Assertions.assertEquals(1, created.getNodeIds().size());
+    Assertions.assertEquals("theInstance", created.getNodeIds().get(0));
 
     AutoScalingData deleted = autoScaler.terminate(Collections.singletonList("dummyIP"));
 
-    Assert.assertEquals(deleted.getNodeIds().size(), 1);
-    Assert.assertEquals(INSTANCE_ID, deleted.getNodeIds().get(0));
+    Assertions.assertEquals(1, deleted.getNodeIds().size());
+    Assertions.assertEquals(INSTANCE_ID, deleted.getNodeIds().get(0));
   }
 
   @Test
@@ -177,7 +177,7 @@ public class EC2AutoScalerTest
 
     List<String> ids = autoScaler.ipToIdLookup(ips);
 
-    Assert.assertEquals(n, ids.size());
+    Assertions.assertEquals(n, ids.size());
   }
 
   @Test
@@ -229,6 +229,6 @@ public class EC2AutoScalerTest
 
     List<String> resultIps = autoScaler.idToIpLookup(ids);
 
-    Assert.assertEquals(n, resultIps.size());
+    Assertions.assertEquals(n, resultIps.size());
   }
 }

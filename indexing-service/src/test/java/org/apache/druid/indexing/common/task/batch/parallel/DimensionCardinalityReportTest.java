@@ -32,10 +32,10 @@ import org.apache.druid.testing.junit.LoggerCaptureRule;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.LogEvent;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -51,18 +51,24 @@ public class DimensionCardinalityReportTest
 
   private DimensionCardinalityReport target;
 
-  @Rule
-  public final LoggerCaptureRule logger = new LoggerCaptureRule(ParallelIndexSupervisorTask.class);
+  private final LoggerCaptureRule logger = new LoggerCaptureRule(ParallelIndexSupervisorTask.class);
 
 
-  @Before
+  @BeforeEach
   public void setup()
   {
+    logger.before();
     Interval interval = Intervals.ETERNITY;
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     Map<Interval, byte[]> intervalToCardinality = Collections.singletonMap(interval, collector.toByteArray());
     String taskId = "abc";
     target = new DimensionCardinalityReport(taskId, intervalToCardinality);
+  }
+
+  @AfterEach
+  public void tearDown()
+  {
+    logger.after();
   }
 
   @Test
@@ -125,7 +131,7 @@ public class DimensionCardinalityReportTest
         reports,
         1
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             4,
@@ -139,7 +145,7 @@ public class DimensionCardinalityReportTest
         reports,
         2
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             2,
@@ -153,7 +159,7 @@ public class DimensionCardinalityReportTest
         reports,
         3
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             1,
@@ -167,7 +173,7 @@ public class DimensionCardinalityReportTest
         reports,
         4
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             1,
@@ -181,7 +187,7 @@ public class DimensionCardinalityReportTest
         reports,
         5
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             1,
@@ -239,7 +245,7 @@ public class DimensionCardinalityReportTest
         reports,
         1
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             4,
@@ -253,7 +259,7 @@ public class DimensionCardinalityReportTest
         reports,
         2
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             2,
@@ -267,7 +273,7 @@ public class DimensionCardinalityReportTest
         reports,
         3
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             1,
@@ -281,7 +287,7 @@ public class DimensionCardinalityReportTest
         reports,
         4
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             1,
@@ -295,7 +301,7 @@ public class DimensionCardinalityReportTest
         reports,
         5
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             Intervals.of("1970-01-01/P1D"),
             1,
@@ -317,20 +323,20 @@ public class DimensionCardinalityReportTest
     Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, negativeUnion);
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(10, intervalToUnion);
-    Assert.assertEquals(Integer.valueOf(7), intervalToNumShards.get(interval));
+    Assertions.assertEquals(Integer.valueOf(7), intervalToNumShards.get(interval));
 
     List<LogEvent> loggingEvents = logger.getLogEvents();
     String expectedLogMessage =
         "Estimated cardinality for union of estimates is zero or less: -1.00, setting num shards to 7";
-    Assert.assertTrue(
-        "Logging events: " + loggingEvents,
+    Assertions.assertTrue(
         loggingEvents.stream()
                      .anyMatch(l ->
                                    l.getLevel().equals(Level.WARN)
                                    && l.getMessage()
                                        .getFormattedMessage()
                                        .equals(expectedLogMessage)
-                     )
+                     ),
+        "Logging events: " + loggingEvents
     );
   }
 
@@ -343,7 +349,7 @@ public class DimensionCardinalityReportTest
     Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, union);
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(6, intervalToUnion);
-    Assert.assertEquals(Integer.valueOf(4), intervalToNumShards.get(interval));
+    Assertions.assertEquals(Integer.valueOf(4), intervalToNumShards.get(interval));
   }
 
   @Test
@@ -356,20 +362,20 @@ public class DimensionCardinalityReportTest
     Map<Interval, Union> intervalToUnion = ImmutableMap.of(interval, union);
     Map<Interval, Integer> intervalToNumShards =
         ParallelIndexSupervisorTask.computeIntervalToNumShards(24, intervalToUnion);
-    Assert.assertEquals(Integer.valueOf(1), intervalToNumShards.get(interval));
+    Assertions.assertEquals(Integer.valueOf(1), intervalToNumShards.get(interval));
 
     List<LogEvent> loggingEvents = logger.getLogEvents();
     String expectedLogMessage =
         "estimatedNumShards is ONE (1) given estimated cardinality 24.00 and maxRowsPerSegment 24";
-    Assert.assertTrue(
-        "Logging events: " + loggingEvents,
+    Assertions.assertTrue(
         loggingEvents.stream()
                      .anyMatch(l ->
                                    l.getLevel().equals(Level.INFO)
                                    && l.getMessage()
                                        .getFormattedMessage()
                                        .equals(expectedLogMessage)
-                     )
+                     ),
+        "Logging events: " + loggingEvents
     );
   }
 

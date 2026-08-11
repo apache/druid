@@ -21,8 +21,8 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.data.input.StringTuple;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ArrayOfStringTuplesSerDeTest
 {
@@ -59,31 +59,31 @@ public class ArrayOfStringTuplesSerDeTest
   public void testSizeOf()
   {
     StringTuple stringTuple = StringTuple.create("a", "b");
-    Assert.assertEquals(serde.sizeOf(stringTuple), serde.serializeToByteArray(stringTuple).length);
+    Assertions.assertEquals(serde.sizeOf(stringTuple), serde.serializeToByteArray(stringTuple).length);
   }
 
   private void testSerde(StringTuple stringTuple)
   {
     byte[] bytes = serde.serializeToByteArray(stringTuple);
-    Assert.assertEquals(serde.sizeOf(stringTuple), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(stringTuple), bytes.length);
 
     Memory wrappedMemory = Memory.wrap(bytes);
-    Assert.assertEquals(serde.sizeOf(wrappedMemory, 0, 1), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(wrappedMemory, 0, 1), bytes.length);
 
     StringTuple[] deserialized = serde.deserializeFromMemory(wrappedMemory, 1);
-    Assert.assertArrayEquals(new StringTuple[]{stringTuple}, deserialized);
+    Assertions.assertArrayEquals(new StringTuple[]{stringTuple}, deserialized);
   }
 
   private void testSerde(StringTuple[] inputArray)
   {
     byte[] bytes = serde.serializeToByteArray(inputArray);
-    Assert.assertEquals(serde.sizeOf(inputArray), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(inputArray), bytes.length);
 
     Memory wrappedMemory = Memory.wrap(bytes);
-    Assert.assertEquals(serde.sizeOf(wrappedMemory, 0, inputArray.length), bytes.length);
+    Assertions.assertEquals(serde.sizeOf(wrappedMemory, 0, inputArray.length), bytes.length);
 
     StringTuple[] deserialized = serde.deserializeFromMemory(wrappedMemory, inputArray.length);
-    Assert.assertArrayEquals(inputArray, deserialized);
+    Assertions.assertArrayEquals(inputArray, deserialized);
   }
 
 }

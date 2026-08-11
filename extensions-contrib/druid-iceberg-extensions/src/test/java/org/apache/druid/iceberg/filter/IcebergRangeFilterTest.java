@@ -21,8 +21,8 @@ package org.apache.druid.iceberg.filter;
 
 import org.apache.iceberg.expressions.Expression;
 import org.apache.iceberg.expressions.Expressions;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class IcebergRangeFilterTest
 {
@@ -36,7 +36,7 @@ public class IcebergRangeFilterTest
         Expressions.lessThan(TEST_COLUMN, 50)
     );
     IcebergRangeFilter rangeFilter = new IcebergRangeFilter(TEST_COLUMN, 45, 50, false, true);
-    Assert.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
   }
 
   @Test
@@ -47,7 +47,7 @@ public class IcebergRangeFilterTest
         Expressions.lessThanOrEqual(TEST_COLUMN, 50)
     );
     IcebergRangeFilter rangeFilter = new IcebergRangeFilter(TEST_COLUMN, 45, 50, true, false);
-    Assert.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
   }
 
   @Test
@@ -55,7 +55,7 @@ public class IcebergRangeFilterTest
   {
     Expression expectedExpression = Expressions.lessThanOrEqual(TEST_COLUMN, 50);
     IcebergRangeFilter rangeFilter = new IcebergRangeFilter(TEST_COLUMN, null, 50, null, false);
-    Assert.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
   }
 
   @Test
@@ -63,6 +63,6 @@ public class IcebergRangeFilterTest
   {
     Expression expectedExpression = Expressions.greaterThanOrEqual(TEST_COLUMN, 100);
     IcebergRangeFilter rangeFilter = new IcebergRangeFilter(TEST_COLUMN, 100, null, null, null);
-    Assert.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
+    Assertions.assertEquals(expectedExpression.toString(), rangeFilter.getFilterExpression().toString());
   }
 }

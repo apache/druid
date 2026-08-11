@@ -30,7 +30,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CombineAndSimplifyBoundsTest extends BaseCalciteQueryTest
 {

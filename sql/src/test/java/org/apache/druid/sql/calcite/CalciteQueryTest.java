@@ -133,13 +133,11 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -151,7 +149,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -361,7 +358,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCannotInsertWithNativeEngine()
   {
     msqIncompatible();
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             "INSERT INTO dst SELECT * FROM foo PARTITIONED BY ALL",
@@ -370,7 +367,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
+    assertDruidException(
         e,
         invalidSqlIs("INSERT operations are not supported by requested SQL engine [native], consider using MSQ.")
     );
@@ -380,7 +377,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testCannotReplaceWithNativeEngine()
   {
     msqIncompatible();
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             "REPLACE INTO dst OVERWRITE ALL SELECT * FROM foo PARTITIONED BY ALL",
@@ -389,7 +386,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         )
     );
 
-    assertThat(
+    assertDruidException(
         e,
         invalidSqlIs("REPLACE operations are not supported by the requested SQL engine [native].  Consider using MSQ.")
     );
@@ -6053,13 +6050,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     try {
       testQuery("SELECT STRING_AGG(unique_dim1, ',') FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("Aggregation [STRING_AGG] does not support type [COMPLEX<hyperUnique>]")
       );
-      Assert.assertEquals("invalidInput", e.getErrorCode());
+      Assertions.assertEquals("invalidInput", e.getErrorCode());
     }
   }
 
@@ -6376,10 +6373,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE TIME_IN_INTERVAL(__time, '2000-01-01/X')",
         CalciteContextException.class,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-            "From line 1, column 38 to line 1, column 77: "
-            + "Function 'TIME_IN_INTERVAL' second argument is not a valid ISO8601 interval: "
-            + "Invalid format: \"X\""))
+        e -> Assertions.assertTrue(
+            e.getMessage().contains(
+                "From line 1, column 38 to line 1, column 77: "
+                + "Function 'TIME_IN_INTERVAL' second argument is not a valid ISO8601 interval: "
+                + "Invalid format: \"X\""
+            )
+        )
     );
   }
 
@@ -6419,8 +6419,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*) FROM druid.foo "
         + "WHERE TIME_IN_INTERVAL(__time, dim1)",
         DruidException.class,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString(
+        e -> Assertions.assertTrue(
+            e.getMessage().contains(
                 "Argument to function 'TIME_IN_INTERVAL' must be a literal (line [1], column [63])"
             )
         )
@@ -6592,14 +6592,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       testBuilder().sql(sql).run();
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("Illegal TIMESTAMP constant [CAST('z2000-01-01 00:00:00'):TIMESTAMP(3) NOT NULL]")
       );
     }
     catch (Exception e) {
       log.error(e, "Expected DruidException for query: %s", sql);
-      Assert.fail(sql);
+      Assertions.fail(sql);
     }
   }
 
@@ -12046,10 +12046,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     // Regression test for https://github.com/apache/druid/pull/7710.
     try {
       testQuery("SELECT TIME_EXTRACT(__time) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs(
               "Invalid number of arguments to function 'TIME_EXTRACT'. Was expecting 2 arguments (line [1], column [8])"
@@ -14497,16 +14497,16 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT ANY_VALUE(dim3, 1000, 'true') FROM foo")
         .queryContext(ImmutableMap.of())
         .run());
-    assertThat(e, invalidSqlIs(
+    assertDruidException(e, invalidSqlIs(
         "Cannot apply 'ANY_VALUE' to arguments of type 'ANY_VALUE(<VARCHAR>, <INTEGER>, <CHAR(4)>)'. Supported form(s): 'ANY_VALUE(<expr>, [<maxBytesPerStringInt>, [<aggregateMultipleValuesBoolean>]])' (line [1], column [8])"));
     DruidException e1 = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT ANY_VALUE(dim3, 1000, null) FROM foo")
         .queryContext(ImmutableMap.of()).run());
-    Assert.assertEquals("Illegal use of 'NULL' (line [1], column [30])", e1.getMessage());
+    Assertions.assertEquals("Illegal use of 'NULL' (line [1], column [30])", e1.getMessage());
     DruidException e2 = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT ANY_VALUE(dim3, null, true) FROM foo")
         .queryContext(ImmutableMap.of()).run());
-    Assert.assertEquals("Illegal use of 'NULL' (line [1], column [24])", e2.getMessage());
+    Assertions.assertEquals("Illegal use of 'NULL' (line [1], column [24])", e2.getMessage());
   }
 
   @Test
@@ -14579,12 +14579,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
     }
   }
 
@@ -14596,12 +14596,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
     }
   }
 
@@ -14613,12 +14613,12 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("parameter `maxBytes` must be a numeric literal"));
     }
   }
 
@@ -15495,7 +15495,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .run()
     );
 
-    assertThat(e, invalidSqlContains("Aggregation [SUM] with DISTINCT is not supported"));
+    assertDruidException(e, invalidSqlContains("Aggregation [SUM] with DISTINCT is not supported"));
   }
 
   @Test
@@ -15505,7 +15505,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 DESC NULLS FIRST) from druid.foo")
         .run());
 
-    assertThat(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
+    assertDruidException(e, invalidSqlIs("DESCENDING ordering with NULLS FIRST is not supported! (line [1], column [41])"));
   }
 
   @Test
@@ -15514,7 +15514,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 NULLS LAST) from druid.foo")
         .run());
-    assertThat(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
+    assertDruidException(e, invalidSqlIs("ASCENDING ordering with NULLS LAST is not supported! (line [1], column [41])"));
   }
 
   @Test
@@ -15525,7 +15525,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) from druid.foo")
         .run());
-    assertThat(e, invalidSqlIs("Order By with RANGE clause currently supports only UNBOUNDED or CURRENT ROW. Use ROWS clause instead. (line [1], column [31])"));
+    assertDruidException(e, invalidSqlIs("Order By with RANGE clause currently supports only UNBOUNDED or CURRENT ROW. Use ROWS clause instead. (line [1], column [31])"));
   }
 
   @Test
@@ -15536,7 +15536,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(DruidException.class, () -> testBuilder()
         .sql("SELECT dim1,ROW_NUMBER() OVER (ORDER BY dim1 ROWS BETWEEN dim1 PRECEDING AND dim1 FOLLOWING) from druid.foo")
         .run());
-    assertThat(e, invalidSqlIs("Window frames with expression based lower/upper bounds are not supported. (line [1], column [31])"));
+    assertDruidException(e, invalidSqlIs("Window frames with expression based lower/upper bounds are not supported. (line [1], column [31])"));
   }
 
   @Test
@@ -15551,7 +15551,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .run()
     );
 
-    assertThat(e, invalidSqlContains("Framing of NTILE is not supported"));
+    assertDruidException(e, invalidSqlContains("Framing of NTILE is not supported"));
   }
 
   @Test
@@ -15566,7 +15566,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             .run()
     );
 
-    assertThat(e, invalidSqlContains("DISTINCT is not supported for window functions"));
+    assertDruidException(e, invalidSqlContains("DISTINCT is not supported for window functions"));
   }
 
   @Test
@@ -15582,7 +15582,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .sql("SELECT dim1, ROW_NUMBER() OVER W from druid.foo WINDOW W as (ORDER BY max(length(dim1)))")
         .run());
 
-    assertThat(e, invalidSqlContains("not supported with syntax WINDOW W AS <DEF>"));
+    assertDruidException(e, invalidSqlContains("not supported with syntax WINDOW W AS <DEF>"));
   }
 
   @Test

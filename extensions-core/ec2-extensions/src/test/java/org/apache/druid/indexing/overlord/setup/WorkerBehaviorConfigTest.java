@@ -30,8 +30,8 @@ import org.apache.druid.indexing.overlord.autoscaling.ec2.EC2EnvironmentConfig;
 import org.apache.druid.indexing.overlord.autoscaling.ec2.EC2NodeData;
 import org.apache.druid.indexing.overlord.autoscaling.ec2.StringEC2UserData;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -92,6 +92,6 @@ public class WorkerBehaviorConfigTest
           }
         }
     );
-    Assert.assertEquals(config, mapper.readValue(mapper.writeValueAsBytes(config), DefaultWorkerBehaviorConfig.class));
+    Assertions.assertEquals(config, mapper.readValue(mapper.writeValueAsBytes(config), DefaultWorkerBehaviorConfig.class));
   }
 }
