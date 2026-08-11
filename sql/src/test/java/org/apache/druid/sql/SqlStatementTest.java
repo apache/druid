@@ -54,6 +54,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement.ResultSet;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -64,7 +65,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -293,7 +293,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -356,7 +356,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -460,7 +460,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
