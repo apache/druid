@@ -424,7 +424,7 @@ Added `extensions-contrib/openlineage-emitter` as a community extension. It uses
 
 #### Java
 
-Druid now supports Java 25. While Druid 21 is still supported, we recommend you upgrade to Java 25.
+Druid now supports Java 25. While Java 21 is still supported, we recommend you upgrade to Java 25.
 
 Support for Java 17 has been dropped.
 
