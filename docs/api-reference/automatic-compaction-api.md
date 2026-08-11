@@ -779,12 +779,15 @@ The `latestStatus` object has the following properties:
 * `bytesAwaitingCompaction`: Total bytes of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `bytesCompacted`: Total bytes of this datasource that are already compacted with the spec set in the automatic compaction configuration.
 * `bytesSkipped`: Total bytes of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `bytesPolicyExcluded`: Total bytes of this datasource that do not match the automatic compaction configuration but whose intervals were filtered out by the compaction candidate search policy. Relaxing the policy thresholds makes these intervals eligible for compaction again.
 * `segmentCountAwaitingCompaction`: Total number of segments of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the automatic compaction configuration.
 * `segmentCountSkipped`: Total number of segments of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `segmentCountPolicyExcluded`: Total number of segments of this datasource that do not match the automatic compaction configuration but whose intervals were filtered out by the compaction candidate search policy.
 * `intervalCountAwaitingCompaction`: Total number of intervals of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `intervalCountCompacted`: Total number of intervals of this datasource that are already compacted with the spec set in the automatic compaction configuration.
 * `intervalCountSkipped`: Total number of intervals of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `intervalCountPolicyExcluded`: Total number of intervals of this datasource that need compaction but were filtered out by the compaction candidate search policy.
 
 #### URL
 

@@ -53,6 +53,9 @@ public class CoordinatorCompactionResourceTest
       1,
       1,
       1,
+      1,
+      1,
+      1,
       1
   );
 

@@ -128,6 +128,30 @@ describe('compaction status', () => {
       ).toEqual('Fully compacted (except the last P1D of data, 24 segments skipped)');
     });
 
+    it('works when some segments are excluded by the compaction policy', () => {
+      expect(
+        formatCompactionInfo({
+          config: BASIC_CONFIG,
+          status: {
+            dataSource: 'tbl',
+            scheduleStatus: 'RUNNING',
+            bytesAwaitingCompaction: 0,
+            bytesCompacted: 100,
+            bytesSkipped: 0,
+            bytesPolicyExcluded: 500,
+            segmentCountAwaitingCompaction: 0,
+            segmentCountCompacted: 10,
+            segmentCountSkipped: 0,
+            segmentCountPolicyExcluded: 999,
+            intervalCountAwaitingCompaction: 0,
+            intervalCountCompacted: 10,
+            intervalCountSkipped: 0,
+            intervalCountPolicyExcluded: 3,
+          },
+        }),
+      ).toEqual('Not fully compacted (999 segments excluded by the compaction policy)');
+    });
+
     it('works when fully compacted and some segments skipped (with legacy config)', () => {
       expect(
         formatCompactionInfo({

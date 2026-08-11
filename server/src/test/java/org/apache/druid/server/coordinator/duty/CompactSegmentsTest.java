@@ -371,6 +371,32 @@ public class CompactSegmentsTest
   }
 
   @Test
+  public void testMakeStats_forIntervalsRejectedBySearchPolicy()
+  {
+    // A policy with no eligible candidates rejects every interval
+    policy = new FixedIntervalOrderPolicy(List.of());
+
+    final CompactSegments compactSegments
+        = new CompactSegments(statusTracker, new TestOverlordClient(JSON_MAPPER));
+    final CoordinatorRunStats stats = doCompactSegments(compactSegments);
+
+    Assert.assertEquals(0, stats.get(Stats.Compaction.SUBMITTED_TASKS));
+
+    for (int i = 0; i < 3; i++) {
+      final AutoCompactionSnapshot snapshot
+          = compactSegments.getAutoCompactionSnapshot(DATA_SOURCE_PREFIX + i);
+
+      // Rejected intervals must be reported as policy excluded, not as awaiting or skipped
+      Assert.assertEquals(0, snapshot.getBytesAwaitingCompaction());
+      Assert.assertEquals(0, snapshot.getSegmentCountAwaitingCompaction());
+      Assert.assertEquals(0, snapshot.getBytesCompacted());
+      Assert.assertTrue(snapshot.getBytesPolicyExcluded() > 0);
+      Assert.assertTrue(snapshot.getSegmentCountPolicyExcluded() > 0);
+      Assert.assertTrue(snapshot.getIntervalCountPolicyExcluded() > 0);
+    }
+  }
+
+  @Test
   public void testMakeStats()
   {
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);

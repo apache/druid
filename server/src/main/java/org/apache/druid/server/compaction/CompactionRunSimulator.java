@@ -87,6 +87,8 @@ public class CompactionRunSimulator
         = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact");
     final Table skippedIntervals
         = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "reasonToSkip");
+    final Table policyExcludedIntervals
+        = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "reasonToExclude");
 
     // Add a read-only wrapper over the actual status tracker so that we can
     // account for the active tasks
@@ -120,6 +122,10 @@ public class CompactionRunSimulator
           );
         } else if (status.getState() == CompactionStatus.State.SKIPPED) {
           skippedIntervals.addRow(
+              createRow(candidateSegments, null, status.getReason())
+          );
+        } else if (status.getState() == CompactionStatus.State.POLICY_EXCLUDED) {
+          policyExcludedIntervals.addRow(
               createRow(candidateSegments, null, status.getReason())
           );
         }
@@ -167,6 +173,9 @@ public class CompactionRunSimulator
     }
     if (!skippedIntervals.isEmpty()) {
       compactionStates.put(CompactionStatus.State.SKIPPED, skippedIntervals);
+    }
+    if (!policyExcludedIntervals.isEmpty()) {
+      compactionStates.put(CompactionStatus.State.POLICY_EXCLUDED, policyExcludedIntervals);
     }
 
     return new CompactionSimulateResult(compactionStates);

@@ -72,6 +72,7 @@ import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.InlineReindexingRuleProvider;
+import org.apache.druid.server.compaction.MostFragmentedIntervalFirstPolicy;
 import org.apache.druid.server.compaction.Table;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
@@ -430,6 +431,44 @@ public class OverlordCompactionSchedulerTest
 
     serviceEmitter.verifyValue(Stats.Compaction.SUBMITTED_TASKS.getMetricName(), 1L);
     serviceEmitter.verifyValue(Stats.Compaction.PENDING_BYTES.getMetricName(), 100_000_000L);
+
+    scheduler.stopBeingLeader();
+  }
+
+  @Test
+  public void test_intervalsRejectedBySearchPolicy_areReportedAsPolicyExcluded()
+  {
+    createSegments(1, Granularities.DAY, JAN_20);
+
+    // The default 'minUncompactedCount' of this policy filters out the single
+    // uncompacted segment created above
+    compactionConfig.set(
+        new ClusterCompactionConfig(
+            1.0,
+            100,
+            new MostFragmentedIntervalFirstPolicy(null, null, null, null, null, null),
+            true,
+            null,
+            null
+        )
+    );
+
+    scheduler.becomeLeader();
+    scheduler.startCompaction(dataSource, createSupervisorWithInlineSpec());
+
+    runScheduledJob();
+    Mockito.verify(taskQueue, Mockito.never()).add(ArgumentMatchers.any());
+
+    final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
+    expectedSnapshot.incrementPolicyExcludedStats(CompactionStatistics.create(100_000_000, null, 1, 1));
+
+    Assertions.assertEquals(
+        expectedSnapshot.build(),
+        scheduler.getCompactionSnapshot(dataSource)
+    );
+
+    serviceEmitter.verifyValue(Stats.Compaction.POLICY_EXCLUDED_BYTES.getMetricName(), 100_000_000L);
+    serviceEmitter.verifyValue(Stats.Compaction.PENDING_BYTES.getMetricName(), 0L);
 
     scheduler.stopBeingLeader();
   }

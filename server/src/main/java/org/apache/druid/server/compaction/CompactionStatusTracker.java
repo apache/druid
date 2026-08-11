@@ -97,13 +97,13 @@ public class CompactionStatusTracker
       return status;
     }
 
-    // Skip intervals that have been filtered out by the policy
+    // Exclude intervals that have been filtered out by the policy
     final Eligibility eligibility
         = searchPolicy.checkEligibilityForCompaction(candidate, lastTaskStatus);
     if (eligibility.isEligible()) {
       return CompactionStatus.pending("Not compacted yet");
     } else {
-      return CompactionStatus.skipped("Rejected by search policy: %s", eligibility.getReason());
+      return CompactionStatus.policyExcluded("Rejected by search policy: %s", eligibility.getReason());
     }
   }
 

@@ -37,6 +37,7 @@ public class AutoCompactionSnapshotTest
       builder.incrementSkippedStats(CompactionStatistics.create(13, null, 13, 13));
       builder.incrementWaitingStats(CompactionStatistics.create(13, null, 13, 13));
       builder.incrementCompactedStats(CompactionStatistics.create(13, null, 13, 13));
+      builder.incrementPolicyExcludedStats(CompactionStatistics.create(13, null, 13, 13));
     }
 
     final AutoCompactionSnapshot actual = builder.withMessage(expectedMessage).build();
@@ -51,6 +52,9 @@ public class AutoCompactionSnapshotTest
     Assert.assertEquals(26, actual.getBytesAwaitingCompaction());
     Assert.assertEquals(26, actual.getIntervalCountAwaitingCompaction());
     Assert.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
+    Assert.assertEquals(26, actual.getBytesPolicyExcluded());
+    Assert.assertEquals(26, actual.getIntervalCountPolicyExcluded());
+    Assert.assertEquals(26, actual.getSegmentCountPolicyExcluded());
     Assert.assertEquals(AutoCompactionSnapshot.ScheduleStatus.RUNNING, actual.getScheduleStatus());
     Assert.assertEquals(expectedDataSource, actual.getDataSource());
     Assert.assertEquals(expectedMessage, actual.getMessage());
@@ -59,6 +63,9 @@ public class AutoCompactionSnapshotTest
         expectedDataSource,
         AutoCompactionSnapshot.ScheduleStatus.RUNNING,
         expectedMessage,
+        26,
+        26,
+        26,
         26,
         26,
         26,

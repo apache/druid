@@ -65,7 +65,7 @@ public class CompactionStatus
 
   public enum State
   {
-    COMPLETE, PENDING, RUNNING, SKIPPED
+    COMPLETE, PENDING, RUNNING, SKIPPED, POLICY_EXCLUDED
   }
 
   /**
@@ -127,6 +127,11 @@ public class CompactionStatus
   public boolean isSkipped()
   {
     return state == State.SKIPPED;
+  }
+
+  public boolean isPolicyExcluded()
+  {
+    return state == State.POLICY_EXCLUDED;
   }
 
   public String getReason()
@@ -270,6 +275,16 @@ public class CompactionStatus
   public static CompactionStatus skipped(String reasonFormat, Object... args)
   {
     return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args), null, null, null);
+  }
+
+  /**
+   * Denotes an interval that needs compaction but has been filtered out by the
+   * {@link CompactionCandidateSearchPolicy}. Unlike {@link #skipped}, such an
+   * interval becomes compactible again if the policy thresholds are relaxed.
+   */
+  public static CompactionStatus policyExcluded(String reasonFormat, Object... args)
+  {
+    return new CompactionStatus(State.POLICY_EXCLUDED, StringUtils.format(reasonFormat, args), null, null, null);
   }
 
   public static CompactionStatus running(String message)

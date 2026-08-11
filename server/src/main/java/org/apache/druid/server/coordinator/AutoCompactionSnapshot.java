@@ -51,17 +51,23 @@ public class AutoCompactionSnapshot
   @JsonProperty
   private final long bytesSkipped;
   @JsonProperty
+  private final long bytesPolicyExcluded;
+  @JsonProperty
   private final long segmentCountAwaitingCompaction;
   @JsonProperty
   private final long segmentCountCompacted;
   @JsonProperty
   private final long segmentCountSkipped;
   @JsonProperty
+  private final long segmentCountPolicyExcluded;
+  @JsonProperty
   private final long intervalCountAwaitingCompaction;
   @JsonProperty
   private final long intervalCountCompacted;
   @JsonProperty
   private final long intervalCountSkipped;
+  @JsonProperty
+  private final long intervalCountPolicyExcluded;
 
   public static Builder builder(String dataSource)
   {
@@ -76,12 +82,15 @@ public class AutoCompactionSnapshot
       @JsonProperty("bytesAwaitingCompaction") long bytesAwaitingCompaction,
       @JsonProperty("bytesCompacted") long bytesCompacted,
       @JsonProperty("bytesSkipped") long bytesSkipped,
+      @JsonProperty("bytesPolicyExcluded") long bytesPolicyExcluded,
       @JsonProperty("segmentCountAwaitingCompaction") long segmentCountAwaitingCompaction,
       @JsonProperty("segmentCountCompacted") long segmentCountCompacted,
       @JsonProperty("segmentCountSkipped") long segmentCountSkipped,
+      @JsonProperty("segmentCountPolicyExcluded") long segmentCountPolicyExcluded,
       @JsonProperty("intervalCountAwaitingCompaction") long intervalCountAwaitingCompaction,
       @JsonProperty("intervalCountCompacted") long intervalCountCompacted,
-      @JsonProperty("intervalCountSkipped") long intervalCountSkipped
+      @JsonProperty("intervalCountSkipped") long intervalCountSkipped,
+      @JsonProperty("intervalCountPolicyExcluded") long intervalCountPolicyExcluded
   )
   {
     this.dataSource = dataSource;
@@ -90,12 +99,15 @@ public class AutoCompactionSnapshot
     this.bytesAwaitingCompaction = bytesAwaitingCompaction;
     this.bytesCompacted = bytesCompacted;
     this.bytesSkipped = bytesSkipped;
+    this.bytesPolicyExcluded = bytesPolicyExcluded;
     this.segmentCountAwaitingCompaction = segmentCountAwaitingCompaction;
     this.segmentCountCompacted = segmentCountCompacted;
     this.segmentCountSkipped = segmentCountSkipped;
+    this.segmentCountPolicyExcluded = segmentCountPolicyExcluded;
     this.intervalCountAwaitingCompaction = intervalCountAwaitingCompaction;
     this.intervalCountCompacted = intervalCountCompacted;
     this.intervalCountSkipped = intervalCountSkipped;
+    this.intervalCountPolicyExcluded = intervalCountPolicyExcluded;
   }
 
   @NotNull
@@ -131,6 +143,16 @@ public class AutoCompactionSnapshot
     return bytesSkipped;
   }
 
+  /**
+   * Total bytes of segments in intervals that need compaction but have been
+   * filtered out by the {@code CompactionCandidateSearchPolicy}. These intervals
+   * become compactible again if the policy thresholds are relaxed.
+   */
+  public long getBytesPolicyExcluded()
+  {
+    return bytesPolicyExcluded;
+  }
+
   public long getSegmentCountAwaitingCompaction()
   {
     return segmentCountAwaitingCompaction;
@@ -144,6 +166,14 @@ public class AutoCompactionSnapshot
   public long getSegmentCountSkipped()
   {
     return segmentCountSkipped;
+  }
+
+  /**
+   * @see #getBytesPolicyExcluded()
+   */
+  public long getSegmentCountPolicyExcluded()
+  {
+    return segmentCountPolicyExcluded;
   }
 
   public long getIntervalCountAwaitingCompaction()
@@ -161,6 +191,14 @@ public class AutoCompactionSnapshot
     return intervalCountSkipped;
   }
 
+  /**
+   * @see #getBytesPolicyExcluded()
+   */
+  public long getIntervalCountPolicyExcluded()
+  {
+    return intervalCountPolicyExcluded;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -174,12 +212,15 @@ public class AutoCompactionSnapshot
     return bytesAwaitingCompaction == that.bytesAwaitingCompaction &&
            bytesCompacted == that.bytesCompacted &&
            bytesSkipped == that.bytesSkipped &&
+           bytesPolicyExcluded == that.bytesPolicyExcluded &&
            segmentCountAwaitingCompaction == that.segmentCountAwaitingCompaction &&
            segmentCountCompacted == that.segmentCountCompacted &&
            segmentCountSkipped == that.segmentCountSkipped &&
+           segmentCountPolicyExcluded == that.segmentCountPolicyExcluded &&
            intervalCountAwaitingCompaction == that.intervalCountAwaitingCompaction &&
            intervalCountCompacted == that.intervalCountCompacted &&
            intervalCountSkipped == that.intervalCountSkipped &&
+           intervalCountPolicyExcluded == that.intervalCountPolicyExcluded &&
            dataSource.equals(that.dataSource) &&
            scheduleStatus == that.scheduleStatus &&
            Objects.equals(message, that.message);
@@ -195,12 +236,15 @@ public class AutoCompactionSnapshot
         bytesAwaitingCompaction,
         bytesCompacted,
         bytesSkipped,
+        bytesPolicyExcluded,
         segmentCountAwaitingCompaction,
         segmentCountCompacted,
         segmentCountSkipped,
+        segmentCountPolicyExcluded,
         intervalCountAwaitingCompaction,
         intervalCountCompacted,
-        intervalCountSkipped
+        intervalCountSkipped,
+        intervalCountPolicyExcluded
     );
   }
 
@@ -214,12 +258,15 @@ public class AutoCompactionSnapshot
            ", bytesAwaitingCompaction=" + bytesAwaitingCompaction +
            ", bytesCompacted=" + bytesCompacted +
            ", bytesSkipped=" + bytesSkipped +
+           ", bytesPolicyExcluded=" + bytesPolicyExcluded +
            ", segmentCountAwaitingCompaction=" + segmentCountAwaitingCompaction +
            ", segmentCountCompacted=" + segmentCountCompacted +
            ", segmentCountSkipped=" + segmentCountSkipped +
+           ", segmentCountPolicyExcluded=" + segmentCountPolicyExcluded +
            ", intervalCountAwaitingCompaction=" + intervalCountAwaitingCompaction +
            ", intervalCountCompacted=" + intervalCountCompacted +
            ", intervalCountSkipped=" + intervalCountSkipped +
+           ", intervalCountPolicyExcluded=" + intervalCountPolicyExcluded +
            '}';
   }
 
@@ -232,6 +279,7 @@ public class AutoCompactionSnapshot
     private final CompactionStatistics compactedStats = new CompactionStatistics();
     private final CompactionStatistics skippedStats = new CompactionStatistics();
     private final CompactionStatistics waitingStats = new CompactionStatistics();
+    private final CompactionStatistics policyExcludedStats = new CompactionStatistics();
 
     private Builder(
         @NotNull String dataSource
@@ -275,6 +323,11 @@ public class AutoCompactionSnapshot
       skippedStats.increment(entry);
     }
 
+    public void incrementPolicyExcludedStats(CompactionStatistics entry)
+    {
+      policyExcludedStats.increment(entry);
+    }
+
     public AutoCompactionSnapshot build()
     {
       return new AutoCompactionSnapshot(
@@ -284,12 +337,15 @@ public class AutoCompactionSnapshot
           waitingStats.getTotalBytes(),
           compactedStats.getTotalBytes(),
           skippedStats.getTotalBytes(),
+          policyExcludedStats.getTotalBytes(),
           waitingStats.getNumSegments(),
           compactedStats.getNumSegments(),
           skippedStats.getNumSegments(),
+          policyExcludedStats.getNumSegments(),
           waitingStats.getNumIntervals(),
           compactedStats.getNumIntervals(),
-          skippedStats.getNumIntervals()
+          skippedStats.getNumIntervals(),
+          policyExcludedStats.getNumIntervals()
       );
     }
   }

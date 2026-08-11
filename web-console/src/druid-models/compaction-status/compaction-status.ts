@@ -30,12 +30,15 @@ export interface CompactionStatus {
   bytesAwaitingCompaction: number;
   bytesCompacted: number;
   bytesSkipped: number;
+  bytesPolicyExcluded?: number;
   segmentCountAwaitingCompaction: number;
   segmentCountCompacted: number;
   segmentCountSkipped: number;
+  segmentCountPolicyExcluded?: number;
   intervalCountAwaitingCompaction: number;
   intervalCountCompacted: number;
   intervalCountSkipped: number;
+  intervalCountPolicyExcluded?: number;
 }
 
 export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolean {
@@ -43,13 +46,24 @@ export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolea
     !compactionStatus.bytesAwaitingCompaction &&
     !compactionStatus.bytesCompacted &&
     !compactionStatus.bytesSkipped &&
+    !compactionStatus.bytesPolicyExcluded &&
     !compactionStatus.segmentCountAwaitingCompaction &&
     !compactionStatus.segmentCountCompacted &&
     !compactionStatus.segmentCountSkipped &&
+    !compactionStatus.segmentCountPolicyExcluded &&
     !compactionStatus.intervalCountAwaitingCompaction &&
     !compactionStatus.intervalCountCompacted &&
-    !compactionStatus.intervalCountSkipped
+    !compactionStatus.intervalCountSkipped &&
+    !compactionStatus.intervalCountPolicyExcluded
   );
+}
+
+/**
+ * Bytes that do not match the current compaction config, whether or not the
+ * compaction policy currently considers them worth compacting.
+ */
+export function bytesNotMatchingCompactionConfig(compactionStatus: CompactionStatus): number {
+  return compactionStatus.bytesAwaitingCompaction + (compactionStatus.bytesPolicyExcluded || 0);
 }
 
 export interface CompactionInfo {
@@ -67,7 +81,12 @@ export function formatCompactionInfo(compaction: CompactionInfo) {
         status.intervalCountAwaitingCompaction === 0 &&
         !zeroCompactionStatus(status)
       ) {
-        if (status.segmentCountSkipped) {
+        if (status.segmentCountPolicyExcluded) {
+          return `Not fully compacted (${pluralIfNeeded(
+            status.segmentCountPolicyExcluded,
+            'segment',
+          )} excluded by the compaction policy)`;
+        } else if (status.segmentCountSkipped) {
           return `Fully compacted (except the last ${config.skipOffsetFromLatest || 'P1D'} of data${
             compactionConfigHasLegacyInputSegmentSizeBytesSet(config)
               ? ` and segments larger than ${formatBytesCompact(config.inputSegmentSizeBytes!)}`

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.Eligibility;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -99,6 +100,11 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
                 .getCompactionPolicy()
                 .checkEligibilityForCompaction(candidate, params.getLatestTaskStatus(candidate));
       if (!eligibility.isEligible()) {
+        params.getSnapshotBuilder().addToPolicyExcluded(
+            candidate.withCurrentStatus(
+                CompactionStatus.policyExcluded("Rejected by search policy: %s", eligibility.getReason())
+            )
+        );
         continue;
       }
       final CompactionCandidate finalCandidate;

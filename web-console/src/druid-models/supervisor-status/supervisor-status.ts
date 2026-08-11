@@ -49,12 +49,15 @@ export interface SupervisorStatus {
     bytesAwaitingCompaction: number;
     bytesCompacted: number;
     bytesSkipped: number;
+    bytesPolicyExcluded?: number;
     segmentCountAwaitingCompaction: number;
     segmentCountCompacted: number;
     segmentCountSkipped: number;
+    segmentCountPolicyExcluded?: number;
     intervalCountAwaitingCompaction: number;
     intervalCountCompacted: number;
     intervalCountSkipped: number;
+    intervalCountPolicyExcluded?: number;
   };
 }
 

@@ -60,6 +60,12 @@ public class CompactionSnapshotBuilder
         .incrementSkippedStats(candidate.getStats());
   }
 
+  public void addToPolicyExcluded(CompactionCandidate candidate)
+  {
+    getBuilderForDatasource(candidate.getDataSource())
+        .incrementPolicyExcludedStats(candidate.getStats());
+  }
+
   public void moveFromPendingToSkipped(CompactionCandidate candidate)
   {
     getBuilderForDatasource(candidate.getDataSource())
@@ -104,5 +110,16 @@ public class CompactionSnapshotBuilder
     stats.add(Stats.Compaction.SKIPPED_BYTES, rowKey, autoCompactionSnapshot.getBytesSkipped());
     stats.add(Stats.Compaction.SKIPPED_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountSkipped());
     stats.add(Stats.Compaction.SKIPPED_INTERVALS, rowKey, autoCompactionSnapshot.getIntervalCountSkipped());
+    stats.add(Stats.Compaction.POLICY_EXCLUDED_BYTES, rowKey, autoCompactionSnapshot.getBytesPolicyExcluded());
+    stats.add(
+        Stats.Compaction.POLICY_EXCLUDED_SEGMENTS,
+        rowKey,
+        autoCompactionSnapshot.getSegmentCountPolicyExcluded()
+    );
+    stats.add(
+        Stats.Compaction.POLICY_EXCLUDED_INTERVALS,
+        rowKey,
+        autoCompactionSnapshot.getIntervalCountPolicyExcluded()
+    );
   }
 }

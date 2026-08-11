@@ -264,6 +264,9 @@ public class CompactSegments implements CoordinatorCustomDuty
       } else if (compactionStatus.isSkipped()) {
         snapshotBuilder.addToSkipped(candidatesWithStatus);
         continue;
+      } else if (compactionStatus.isPolicyExcluded()) {
+        snapshotBuilder.addToPolicyExcluded(candidatesWithStatus);
+        continue;
       } else {
         // As these segments will be compacted, we will aggregate the statistic to the Compacted statistics
         snapshotBuilder.addToComplete(entry);
