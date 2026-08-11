@@ -100,9 +100,9 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -363,7 +363,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     try (Statement stmt = client.createStatement()) {
       final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo;");
       final List<Map<String, Object>> rows = getRows(resultSet);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 6L)
           ),
@@ -379,10 +379,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     propertiesSetForbiddenKey.setProperty("user", "regularUserLA");
     propertiesSetForbiddenKey.setProperty("forbidden-key", "val");
     try (Statement stmt = DriverManager.getConnection(server.url, propertiesSetForbiddenKey).createStatement()) {
-      AvaticaSqlException e = Assert.assertThrows(AvaticaSqlException.class, () -> {
+      AvaticaSqlException e = Assertions.assertThrows(AvaticaSqlException.class, () -> {
         stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
       });
-      Assert.assertTrue(e.getMessage().contains("Remote driver error: Unauthorized"));
+      Assertions.assertTrue(e.getMessage().contains("Remote driver error: Unauthorized"));
     }
   }
 
@@ -392,7 +392,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     try (Statement stmt = clientNoTrailingSlash.createStatement()) {
       final ResultSet resultSet = stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
       final List<Map<String, Object>> rows = getRows(resultSet);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 6L)
           ),
@@ -407,7 +407,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     try (PreparedStatement stmt = client.prepareStatement("SELECT COUNT(*) AS cnt FROM druid.foo")) {
       final ResultSet resultSet = stmt.executeQuery();
       final List<Map<String, Object>> rows = getRows(resultSet);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 6L)
           ),
@@ -424,7 +424,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           "SELECT __time, CAST(__time AS DATE) AS t2 FROM druid.foo LIMIT 1"
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of(
                   "__time", new Timestamp(DateTimes.of("2000-01-01T00:00:00.000Z").getMillis()),
@@ -449,7 +449,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
       final List<Map<String, Object>> resultRows = getRows(resultSet);
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of(
                   "__time", new Timestamp(Calcites.jodaToCalciteTimestamp(localDateTime, timeZone)),
@@ -469,7 +469,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           "SELECT dim2 AS \"x\", dim2 AS \"y\" FROM druid.foo LIMIT 1"
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("x", "a", "y", "a")
           ),
@@ -486,7 +486,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           "SELECT dim2, dim2 IS NULL AS isnull FROM druid.foo LIMIT 1"
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("dim2", "a", "isnull", false)
           ),
@@ -503,7 +503,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           "EXPLAIN PLAN FOR SELECT COUNT(*) AS cnt FROM druid.foo"
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of(
                   "PLAN",
@@ -526,7 +526,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testDatabaseMetaDataCatalogs() throws SQLException
   {
     final DatabaseMetaData metaData = client.getMetaData();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(Pair.of("TABLE_CAT", "druid"))
         ),
@@ -538,7 +538,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testDatabaseMetaDataSchemas() throws SQLException
   {
     final DatabaseMetaData metaData = client.getMetaData();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(Pair.of("TABLE_CATALOG", "druid"), Pair.of("TABLE_SCHEM", "druid"))
         ),
@@ -550,7 +550,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testDatabaseMetaDataTables() throws SQLException
   {
     final DatabaseMetaData metaData = client.getMetaData();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_CAT", "druid"),
@@ -655,7 +655,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testDatabaseMetaDataTablesAsSuperuser() throws SQLException
   {
     final DatabaseMetaData metaData = superuserClient.getMetaData();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_CAT", "druid"),
@@ -765,7 +765,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testDatabaseMetaDataColumns() throws SQLException
   {
     final DatabaseMetaData metaData = client.getMetaData();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -843,7 +843,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testDatabaseMetaDataColumnsOnForbiddenDatasource() throws SQLException
   {
     final DatabaseMetaData metaData = client.getMetaData();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(),
         getRows(
             metaData.getColumns(null, "dr_id", CalciteTests.FORBIDDEN_DATASOURCE, null),
@@ -856,7 +856,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testDatabaseMetaDataColumnsWithSuperuser() throws SQLException
   {
     final DatabaseMetaData metaData = superuserClient.getMetaData();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -958,7 +958,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       throw new RE(e);
     }
     for (int i = 0; i < 2000; i++) {
-      Assert.assertEquals(i + 6, (int) integers.get(i));
+      Assertions.assertEquals(i + 6, (int) integers.get(i));
     }
     exec.shutdown();
   }
@@ -972,11 +972,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       client.createStatement();
     }
 
-    AvaticaClientRuntimeException ex = Assert.assertThrows(
+    AvaticaClientRuntimeException ex = Assertions.assertThrows(
         AvaticaClientRuntimeException.class,
         () -> client.createStatement()
     );
-    Assert.assertTrue(ex.getMessage().contains("Too many open statements, limit is 4"));
+    Assertions.assertTrue(ex.getMessage().contains("Too many open statements, limit is 4"));
   }
 
   @Test
@@ -1002,7 +1002,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         final ResultSet resultSet = statement.executeQuery(
             "SELECT COUNT(*) AS cnt FROM druid.foo"
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ImmutableList.of(
                 ImmutableMap.of("cnt", 6L)
             ),
@@ -1022,14 +1022,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     try (Statement statement = client.createStatement()) {
       try {
         statement.executeQuery("SELECT SUM(nonexistent) FROM druid.foo");
-        Assert.fail();
+        Assertions.fail();
       }
       catch (Exception e) {
         // Expected
       }
 
       final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(ImmutableMap.of("cnt", 6L)),
           getRows(resultSet)
       );
@@ -1046,7 +1046,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     for (int i = 0; i < 50; i++) {
       try (final Statement statement = client.createStatement()) {
         statement.executeQuery("SELECT SUM(nonexistent) FROM druid.foo");
-        Assert.fail();
+        Assertions.fail();
       }
       catch (Exception e) {
         // Expected
@@ -1060,7 +1060,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     for (int i = 0; i < 50; i++) {
       try (final Statement statement = client.createStatement()) {
         final ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
-        Assert.assertEquals(
+        Assertions.assertEquals(
             ImmutableList.of(ImmutableMap.of("cnt", 6L)),
             getRows(resultSet)
         );
@@ -1082,11 +1082,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     // codeql[java/database-resource-leak]
     clientNoTrailingSlash.createStatement();
 
-    AvaticaClientRuntimeException ex = Assert.assertThrows(
+    AvaticaClientRuntimeException ex = Assertions.assertThrows(
         AvaticaClientRuntimeException.class,
         () -> server.getUserConnection()
     );
-    Assert.assertTrue(ex.getMessage().contains("Too many connections"));
+    Assertions.assertTrue(ex.getMessage().contains("Too many connections"));
   }
 
   @Test
@@ -1113,7 +1113,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         final ResultSet resultSet = statement.executeQuery(
             "SELECT COUNT(*) AS cnt FROM druid.foo"
         );
-        Assert.assertTrue(resultSet.next());
+        Assertions.assertTrue(resultSet.next());
       }
     }
   }
@@ -1180,8 +1180,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
          final Statement statement = smallFrameClient.createStatement();
          final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
       final List<Map<String, Object>> rows = getRows(resultSet);
-      Assert.assertEquals(2, frames.size());
-      Assert.assertEquals(
+      Assertions.assertEquals(2, frames.size());
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("dim1", ""),
               ImmutableMap.of("dim1", "10.1"),
@@ -1227,7 +1227,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       ) throws NoSuchStatementException, MissingResultsException
       {
         // overriding fetch allows us to track how many frames are processed after the first frame, and also fetch size
-        Assert.assertEquals(config.minRowsPerFrame, fetchMaxRowCount);
+        Assertions.assertEquals(config.minRowsPerFrame, fetchMaxRowCount);
         Frame frame = super.fetch(statement, offset, fetchMaxRowCount);
         frames.add(frame);
         return frame;
@@ -1243,8 +1243,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       try (final ResultSet resultSet = statement.executeQuery()) {
         final List<Map<String, Object>> rows = getRows(resultSet);
         // expect minimum threshold to be used, which should be enough to do this all in first fetch
-        Assert.assertEquals(0, frames.size());
-        Assert.assertEquals(
+        Assertions.assertEquals(0, frames.size());
+        Assertions.assertEquals(
             ImmutableList.of(
                 ImmutableMap.of("dim1", ""),
                 ImmutableMap.of("dim1", "10.1"),
@@ -1272,48 +1272,48 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
       }
     }
-    Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
     for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
       final Map<String, Object> stats = logLine.getQueryStats().getStats();
-      Assert.assertEquals(true, stats.get("success"));
-      Assert.assertEquals("regularUser", stats.get("identity"));
-      Assert.assertTrue(stats.containsKey("sqlQuery/time"));
-      Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
-      Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
+      Assertions.assertEquals(true, stats.get("success"));
+      Assertions.assertEquals("regularUser", stats.get("identity"));
+      Assertions.assertTrue(stats.containsKey("sqlQuery/time"));
+      Assertions.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
+      Assertions.assertTrue(stats.containsKey("sqlQuery/bytes"));
     }
 
     // invalid sql
     testRequestLogger.clear();
     try (Statement stmt = client.createStatement()) {
       stmt.executeQuery("SELECT notexist FROM druid.foo");
-      Assert.fail("invalid SQL should throw SQLException");
+      Assertions.fail("invalid SQL should throw SQLException");
     }
     catch (SQLException e) {
       // Expected
     }
-    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
     {
       final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-      Assert.assertEquals(false, stats.get("success"));
-      Assert.assertEquals("regularUser", stats.get("identity"));
-      Assert.assertTrue(stats.containsKey("exception"));
+      Assertions.assertEquals(false, stats.get("success"));
+      Assertions.assertEquals("regularUser", stats.get("identity"));
+      Assertions.assertTrue(stats.containsKey("exception"));
     }
 
     // unauthorized sql
     testRequestLogger.clear();
     try (Statement stmt = client.createStatement()) {
       stmt.executeQuery("SELECT count(*) FROM druid.forbiddenDatasource");
-      Assert.fail("unauthorzed SQL should throw SQLException");
+      Assertions.fail("unauthorzed SQL should throw SQLException");
     }
     catch (SQLException e) {
       // Expected
     }
-    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
     {
       final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-      Assert.assertEquals(false, stats.get("success"));
-      Assert.assertEquals("regularUser", stats.get("identity"));
-      Assert.assertTrue(stats.containsKey("exception"));
+      Assertions.assertEquals(false, stats.get("success"));
+      Assertions.assertEquals("regularUser", stats.get("identity"));
+      Assertions.assertTrue(stats.containsKey("exception"));
     }
   }
 
@@ -1327,46 +1327,46 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         stmt.execute();
       }
     }
-    Assert.assertEquals(6, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(6, testRequestLogger.getSqlQueryLogs().size());
     for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
       final Map<String, Object> stats = logLine.getQueryStats().getStats();
-      Assert.assertEquals(true, stats.get("success"));
-      Assert.assertEquals("regularUser", stats.get("identity"));
-      Assert.assertTrue(stats.containsKey("sqlQuery/time"));
-      Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
-      Assert.assertTrue(stats.containsKey("sqlQuery/bytes"));
+      Assertions.assertEquals(true, stats.get("success"));
+      Assertions.assertEquals("regularUser", stats.get("identity"));
+      Assertions.assertTrue(stats.containsKey("sqlQuery/time"));
+      Assertions.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
+      Assertions.assertTrue(stats.containsKey("sqlQuery/bytes"));
     }
 
     // invalid sql
     testRequestLogger.clear();
     try (PreparedStatement stmt = client.prepareStatement("SELECT notexist FROM druid.foo")) {
-      Assert.fail("invalid SQL should throw SQLException");
+      Assertions.fail("invalid SQL should throw SQLException");
     }
     catch (SQLException e) {
       // Expected
     }
-    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
     {
       final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-      Assert.assertEquals(false, stats.get("success"));
-      Assert.assertEquals("regularUser", stats.get("identity"));
-      Assert.assertTrue(stats.containsKey("exception"));
+      Assertions.assertEquals(false, stats.get("success"));
+      Assertions.assertEquals("regularUser", stats.get("identity"));
+      Assertions.assertTrue(stats.containsKey("exception"));
     }
 
     // unauthorized sql
     testRequestLogger.clear();
     try (PreparedStatement stmt = client.prepareStatement("SELECT count(*) FROM druid.forbiddenDatasource")) {
-      Assert.fail("unauthorzed SQL should throw SQLException");
+      Assertions.fail("unauthorzed SQL should throw SQLException");
     }
     catch (SQLException e) {
       // Expected
     }
-    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
     {
       final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-      Assert.assertEquals(false, stats.get("success"));
-      Assert.assertEquals("regularUser", stats.get("identity"));
-      Assert.assertTrue(stats.containsKey("exception"));
+      Assertions.assertEquals(false, stats.get("success"));
+      Assertions.assertEquals("regularUser", stats.get("identity"));
+      Assertions.assertTrue(stats.containsKey("exception"));
     }
   }
 
@@ -1380,14 +1380,14 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       statement.setString(2, "def");
       final ResultSet resultSet = statement.executeQuery();
       final List<Map<String, Object>> rows = getRows(resultSet);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 2L)
           ),
           rows
       );
-      Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
-      Assert.assertEquals(
+      Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+      Assertions.assertEquals(
           List.of(
               new ClientSqlParameter(SqlType.VARCHAR.toString(), "abc"),
               new ClientSqlParameter(SqlType.VARCHAR.toString(), "def")
@@ -1404,10 +1404,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
              client.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?")) {
       statement.setString(1, "dummy");
 
-      Assert.assertThrows(
-          "Insufficient permission to view servers",
+      Assertions.assertThrows(
           AvaticaSqlException.class,
-          statement::executeQuery
+          statement::executeQuery,
+          "Insufficient permission to view servers"
       );
     }
   }
@@ -1418,7 +1418,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     try (PreparedStatement statement =
              superuserClient.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?")) {
       statement.setString(1, "dummy");
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 1L)
           ),
@@ -1433,19 +1433,19 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     try (PreparedStatement statement =
              superuserClient.prepareStatement("SELECT COUNT(*) AS cnt FROM sys.servers WHERE servers.host = ?")) {
       statement.setString(1, "dummy");
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 1L)
           ),
           getRows(statement.executeQuery())
       );
       statement.setString(1, "foo");
-      Assert.assertEquals(
+      Assertions.assertEquals(
           Collections.emptyList(),
           getRows(statement.executeQuery())
       );
       statement.setString(1, "dummy");
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 1L)
           ),
@@ -1462,7 +1462,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           "SELECT COUNT(*) AS cnt FROM druid.lotsocolumns WHERE dimMultivalEnumerated = 'ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ'"
       );
       final List<Map<String, Object>> rows = getRows(resultSet);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 1L)
           ),
@@ -1475,7 +1475,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       statement.setString(1, "ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ");
       final ResultSet resultSet2 = statement.executeQuery();
       final List<Map<String, Object>> rows = getRows(resultSet2);
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableMap.of("cnt", 1L)
           ),
@@ -1533,7 +1533,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
     // If the escape clause wasn't correctly set, rows for potentially none or more than
     // one datasource (some_datasource and somexdatasource) would have been returned
-    Assert.assertEquals(
+    Assertions.assertEquals(
         someDatasourceColumns,
         getRows(
             metaData.getColumns(null, "dr_id", CalciteTests.SOME_DATSOURCE_ESCAPED, null),
@@ -1568,7 +1568,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             Pair.of("COLUMN_NAME", "unique_dim1_x")
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         someXDatasourceColumns,
         getRows(
             metaData.getColumns(null, "dr_id", "somexdatasource", null),
@@ -1579,7 +1579,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     List<Map<String, Object>> columnsOfBothTables = new ArrayList<>(someDatasourceColumns);
     columnsOfBothTables.addAll(someXDatasourceColumns);
     // Assert that the pattern matching still works when no escape string is provided
-    Assert.assertEquals(
+    Assertions.assertEquals(
         columnsOfBothTables,
         getRows(
             metaData.getColumns(null, "dr_id", "some_datasource", null),
@@ -1588,7 +1588,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
 
     // Assert column name pattern works correctly when _ is in the column names
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -1608,7 +1608,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
 
     // Assert column name pattern with % works correctly for column names starting with m
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -1643,7 +1643,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   {
     final DatabaseMetaData metaData = client.getMetaData();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -1656,7 +1656,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -1670,7 +1670,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     );
 
     // Assert that some_datasource is treated as a pattern that matches some_datasource and somexdatasource
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -1695,15 +1695,15 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(dbl1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo")) {
       final ResultSet resultSet = statement.executeQuery();
       final List<Map<String, Object>> rows = getRows(resultSet);
-      Assert.assertEquals(1, rows.size());
-      Assert.assertTrue(rows.get(0).containsKey("arr1"));
-      Assert.assertTrue(rows.get(0).containsKey("arr2"));
-      Assert.assertTrue(rows.get(0).containsKey("arr3"));
-      Assert.assertTrue(rows.get(0).containsKey("arr4"));
-      Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
-      Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
-      Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
-      Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr4"));
+      Assertions.assertEquals(1, rows.size());
+      Assertions.assertTrue(rows.get(0).containsKey("arr1"));
+      Assertions.assertTrue(rows.get(0).containsKey("arr2"));
+      Assertions.assertTrue(rows.get(0).containsKey("arr3"));
+      Assertions.assertTrue(rows.get(0).containsKey("arr4"));
+      Assertions.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
+      Assertions.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
+      Assertions.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
+      Assertions.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr4"));
     }
   }
 
@@ -1720,13 +1720,13 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       statement.executeQuery(query);
     }
     catch (SQLException e) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           e.getMessage(),
           expectedError
       );
       return;
     }
-    Assert.fail("Test failed, did not get SQLException");
+    Assertions.fail("Test failed, did not get SQLException");
   }
 
   private static class TestResultFetcher extends ResultFetcher
@@ -1851,15 +1851,15 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
         try (final Statement statement = conn.createStatement();
              final ResultSet resultSet = statement.executeQuery("SELECT dim1 FROM druid.foo")) {
           final List<Map<String, Object>> rows = getRows(resultSet);
-          Assert.assertEquals(6, rows.size());
-          Assert.assertEquals(6, frames.size()); // 3 empty frames and then 3 frames of 2 rows each
+          Assertions.assertEquals(6, rows.size());
+          Assertions.assertEquals(6, frames.size()); // 3 empty frames and then 3 frames of 2 rows each
 
-          Assert.assertFalse(frames.get(0).rows.iterator().hasNext());
-          Assert.assertFalse(frames.get(1).rows.iterator().hasNext());
-          Assert.assertFalse(frames.get(2).rows.iterator().hasNext());
-          Assert.assertTrue(frames.get(3).rows.iterator().hasNext());
-          Assert.assertTrue(frames.get(4).rows.iterator().hasNext());
-          Assert.assertTrue(frames.get(5).rows.iterator().hasNext());
+          Assertions.assertFalse(frames.get(0).rows.iterator().hasNext());
+          Assertions.assertFalse(frames.get(1).rows.iterator().hasNext());
+          Assertions.assertFalse(frames.get(2).rows.iterator().hasNext());
+          Assertions.assertTrue(frames.get(3).rows.iterator().hasNext());
+          Assertions.assertTrue(frames.get(4).rows.iterator().hasNext());
+          Assertions.assertTrue(frames.get(5).rows.iterator().hasNext());
         }
       }
 
@@ -1874,12 +1874,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testMultiStatementFails() throws SQLException
   {
     try (Statement stmt = client.createStatement()) {
-      Throwable t = Assert.assertThrows(
+      Throwable t = Assertions.assertThrows(
           AvaticaSqlException.class,
           () -> stmt.executeQuery("SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo")
       );
       // ugly error message for statement
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Error -1 (00000) : Error while executing SQL \"SET useApproxCountDistinct = true; SELECT COUNT(DISTINCT dim1) AS cnt FROM druid.foo\": Remote driver error: QueryInterruptedException: SQL query string must contain only a single statement -> DruidException: SQL query string must contain only a single statement",
           t.getMessage()
       );
@@ -1889,12 +1889,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @Test
   public void testMultiPreparedStatementFails() throws SQLException
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         AvaticaSqlException.class,
         () -> client.prepareStatement("SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo")
     );
     // sad error message for prepared statement
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Error -1 (00000) : while preparing SQL: SET vectorize = 'force'; SELECT COUNT(*) AS cnt FROM druid.foo",
         t.getMessage()
     );
@@ -1917,11 +1917,11 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       int count = 0;
       while (iter.hasNext()) {
         Pair<Long, String> row = iter.next();
-        Assert.assertNotNull(row.lhs);
-        Assert.assertNotNull(row.rhs);
+        Assertions.assertNotNull(row.lhs);
+        Assertions.assertNotNull(row.rhs);
         count++;
       }
-      Assert.assertEquals(6, count);
+      Assertions.assertEquals(6, count);
     }
     finally {
       handle.close();
@@ -1984,16 +1984,16 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       stmt.executeQuery("SELECT COUNT(*) AS cnt FROM druid.foo");
     }
 
-    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
     RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
 
     String remoteAddress = logLine.getRemoteAddr();
-    Assert.assertNotNull("Remote address should not be null", remoteAddress);
+    Assertions.assertNotNull(remoteAddress, "Remote address should not be null");
 
-    Assert.assertTrue(
-        "Remote address should be a valid IP address, got: " + remoteAddress,
+    Assertions.assertTrue(
         IPV4_PATTERN.matcher(remoteAddress).matches() ||
-        IPV6_PATTERN.matcher(remoteAddress).matches()
+        IPV6_PATTERN.matcher(remoteAddress).matches(),
+        "Remote address should be a valid IP address, got: " + remoteAddress
     );
   }
 
@@ -2007,18 +2007,18 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
 
     try (Statement stmt = client.createStatement()) {
       stmt.executeQuery("SELECT nonexistent FROM druid.foo");
-      Assert.fail("Query should have failed");
+      Assertions.fail("Query should have failed");
     }
     catch (SQLException e) {
       // Expected exception
     }
 
-    Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
     RequestLogLine logLine = testRequestLogger.getSqlQueryLogs().get(0);
 
     String remoteAddress = logLine.getRemoteAddr();
-    Assert.assertNotNull("Remote address should not be null even in failed query", remoteAddress);
-    Assert.assertFalse("Remote address should not be empty even in failed query", remoteAddress.length() == 0);
+    Assertions.assertNotNull(remoteAddress, "Remote address should not be null even in failed query");
+    Assertions.assertFalse(remoteAddress.length() == 0, "Remote address should not be empty even in failed query");
   }
 
   /**
@@ -2037,20 +2037,20 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       stmt.executeQuery();
     }
 
-    Assert.assertFalse(
-        "Should have at least one log entry",
-        testRequestLogger.getSqlQueryLogs().isEmpty()
+    Assertions.assertFalse(
+        testRequestLogger.getSqlQueryLogs().isEmpty(),
+        "Should have at least one log entry"
     );
 
     for (RequestLogLine logLine : testRequestLogger.getSqlQueryLogs()) {
       String remoteAddress = logLine.getRemoteAddr();
-      Assert.assertNotNull(
-          "Every prepared-statement log entry must carry a remote address",
-          remoteAddress
+      Assertions.assertNotNull(
+          remoteAddress,
+          "Every prepared-statement log entry must carry a remote address"
       );
-      Assert.assertFalse(
-          "Every prepared-statement log entry must carry a non-empty remote address",
-          remoteAddress.isEmpty()
+      Assertions.assertFalse(
+          remoteAddress.isEmpty(),
+          "Every prepared-statement log entry must carry a non-empty remote address"
       );
     }
   }

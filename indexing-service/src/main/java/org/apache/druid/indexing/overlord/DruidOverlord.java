@@ -27,13 +27,11 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
-import org.apache.druid.indexing.compact.CompactionScheduler;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -42,6 +40,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -87,8 +86,7 @@ public class DruidOverlord
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
       final SegmentMetadataCache segmentMetadataCache,
-      final CompactionScheduler compactionScheduler,
-      final ScheduledBatchTaskManager scheduledBatchTaskManager,
+      final Set<LeaderOverlordService> overlordServices,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )
@@ -161,8 +159,7 @@ public class DruidOverlord
                 public void start()
                 {
                   taskMaster.becomeFullLeader();
-                  compactionScheduler.becomeLeader();
-                  scheduledBatchTaskManager.start();
+                  overlordServices.forEach(LeaderOverlordService::becomeLeader);
 
                   // Mark ready only after all the services have been initialized
                   initialized = true;
@@ -171,8 +168,7 @@ public class DruidOverlord
                 @Override
                 public void stop()
                 {
-                  scheduledBatchTaskManager.stop();
-                  compactionScheduler.stopBeingLeader();
+                  overlordServices.forEach(LeaderOverlordService::stopBeingLeader);
                   taskMaster.downgradeToHalfLeader();
                 }
               }

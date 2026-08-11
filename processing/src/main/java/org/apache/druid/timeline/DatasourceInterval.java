@@ -17,26 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.sql.destination;
+package org.apache.druid.timeline;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
+import org.joda.time.Interval;
 
-import java.io.IOException;
-
-public class TableDestinationTest
+/**
+ * A tuple containing a datasource and an interval.
+ */
+public record DatasourceInterval(String dataSource, Interval interval)
 {
-  @Test
-  public void testSerde() throws IOException
-  {
-    TableDestination tableDestination = new TableDestination("tableName");
-
-    ObjectMapper objectMapper = new DefaultObjectMapper();
-    byte[] bytes = objectMapper.writeValueAsBytes(tableDestination);
-
-    TableDestination deserialized = objectMapper.readValue(bytes, TableDestination.class);
-    Assertions.assertEquals(tableDestination, deserialized);
-  }
 }

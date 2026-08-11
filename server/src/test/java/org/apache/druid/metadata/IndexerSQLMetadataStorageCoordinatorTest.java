@@ -63,6 +63,7 @@ import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorSer
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -2252,7 +2253,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   }
 
   @Test
-  public void testRetrieveSomeUnusedSegmentIntervals()
+  public void testRetrieveSomeUnusedSegmentIntervalsForDatasource()
   {
     final String dataSource = defaultSegment.getDataSource();
     coordinator.commitSegments(Set.of(defaultSegment, defaultSegment3), null);
@@ -2275,6 +2276,38 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(
         1,
         coordinator.retrieveSomeUnusedSegmentIntervals(dataSource, 1).size()
+    );
+  }
+
+  @Test
+  public void testRetrieveSomeUnusedSegmentIntervals()
+  {
+    final String dataSource = defaultSegment.getDataSource();
+    coordinator.commitSegments(Set.of(defaultSegment, defaultSegment3), null);
+
+    final DateTime maxUpdatedTime = DateTimes.nowUtc();
+
+    Assert.assertTrue(coordinator.retrieveSomeUnusedSegmentIntervals(maxUpdatedTime, 100, 100).isEmpty());
+
+    markAllSegmentsUnused(Set.of(defaultSegment), DateTimes.nowUtc().minusHours(1));
+    Assert.assertEquals(
+        Map.of(new DatasourceInterval(dataSource, defaultSegment.getInterval()), 1),
+        coordinator.retrieveSomeUnusedSegmentIntervals(maxUpdatedTime, 100, 100)
+    );
+
+    markAllSegmentsUnused(Set.of(defaultSegment3), DateTimes.nowUtc().minusHours(1));
+    Assert.assertEquals(
+        Map.of(
+            new DatasourceInterval(dataSource, defaultSegment.getInterval()), 1,
+            new DatasourceInterval(dataSource, defaultSegment3.getInterval()), 1
+        ),
+        coordinator.retrieveSomeUnusedSegmentIntervals(maxUpdatedTime, 100, 100)
+    );
+
+    // Verify retrieve with limit 1 returns only 1 interval
+    Assert.assertEquals(
+        1,
+        coordinator.retrieveSomeUnusedSegmentIntervals(maxUpdatedTime, 1, 1).size()
     );
   }
 

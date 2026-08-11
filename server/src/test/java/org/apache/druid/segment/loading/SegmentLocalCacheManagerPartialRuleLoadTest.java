@@ -177,6 +177,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
     jsonMapper.registerSubtypes(new NamedType(PartialProjectionLoadSpec.class, PartialProjectionLoadSpec.TYPE));
     jsonMapper.registerSubtypes(new NamedType(CompositePartialLoadSpec.class, CompositePartialLoadSpec.TYPE));
+    jsonMapper.registerSubtypes(new NamedType(PartialBaseTableLoadSpec.class, PartialBaseTableLoadSpec.TYPE));
+    jsonMapper.registerSubtypes(new NamedType(PartialFullSegmentLoadSpec.class, PartialFullSegmentLoadSpec.TYPE));
     jsonMapper.registerModule(new SegmentizerModule());
     jsonMapper.registerModules(new LocalDataStorageDruidModule().getJacksonModules());
     jsonMapper.setInjectableValues(
@@ -231,6 +233,75 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertTrue(location.isWeakReserved(baseId), "base dependency should be weak-reserved");
     Assertions.assertFalse(location.isReserved(metaId), "metadata entry should NOT be in staticCacheEntries");
     Assertions.assertFalse(location.isReserved(aggId), "selected bundle should NOT be in staticCacheEntries");
+  }
+
+  @Test
+  void testLoadBaseTableWrapperHoldsOnlyTheBaseBundle() throws Exception
+  {
+    // What a projection matcher emits when none of its projections are on the segment. This fixture is unclustered,
+    // so the base table is the single __base bundle and none of the projections come along for the ride. The
+    // clustered branch (every __base$* group) is covered in PartialBaseTableLoadSpecTest.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(baseTableWrapperSegment());
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertTrue(metadata.isRuleHeld(), "rule must be applied to the metadata entry");
+    Assertions.assertEquals(PartialBaseTableLoadSpec.FINGERPRINT, metadata.getRuleFingerprint());
+    Assertions.assertTrue(
+        metadata.isBundleRuleHeld(Projections.BASE_TABLE_PROJECTION_NAME),
+        "__base should be rule-held by a base-table load"
+    );
+
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "metadata mount should produce a file mapper");
+    Assertions.assertTrue(
+        mapper.isBundleFullyDownloaded(Projections.BASE_TABLE_PROJECTION_NAME),
+        "__base must be fully downloaded eagerly"
+    );
+
+    for (String projectionBundle : List.of(AGG_BUNDLE, OTHER_AGG_BUNDLE)) {
+      Assertions.assertFalse(
+          location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, projectionBundle)),
+          "projection bundle[" + projectionBundle + "] must not be reserved by a base-table load"
+      );
+    }
+  }
+
+  @Test
+  void testLoadFullSegmentWrapperHoldsEveryBundle() throws Exception
+  {
+    // What CannotMatchBehavior.FULL_LOAD emits. Unlike dispatching with no wrapper — which on a virtual-storage
+    // historical only makes the segment available on demand — this pins every bundle up front.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(fullSegmentWrapperSegment());
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertTrue(metadata.isRuleHeld(), "rule must be applied to the metadata entry");
+    Assertions.assertEquals(PartialFullSegmentLoadSpec.FINGERPRINT, metadata.getRuleFingerprint());
+
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "metadata mount should produce a file mapper");
+    for (String bundleName : List.of(Projections.BASE_TABLE_PROJECTION_NAME, AGG_BUNDLE, OTHER_AGG_BUNDLE)) {
+      Assertions.assertTrue(
+          metadata.isBundleRuleHeld(bundleName),
+          "bundle[" + bundleName + "] should be rule-held by a full-segment load"
+      );
+      Assertions.assertTrue(
+          mapper.isBundleFullyDownloaded(bundleName),
+          "bundle[" + bundleName + "] must be fully downloaded eagerly"
+      );
+    }
+    // Nothing on the segment was left out: not just the three bundles named above, but every bundle the file carries.
+    for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
+      Assertions.assertTrue(
+          metadata.isBundleRuleHeld(bundleName),
+          "bundle[" + bundleName + "] present on the segment but not rule-held"
+      );
+    }
   }
 
   @Test
@@ -896,6 +967,43 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     return DataSegment.builder(SEGMENT_ID)
                       .shardSpec(NoneShardSpec.instance())
                       .loadSpec(wrapperWire)
+                      .size(0)
+                      .build();
+  }
+
+  /**
+   * A {@code partialFullSegment} wrapper, matching what {@code CannotMatchBehavior.FULL_LOAD} emits.
+   */
+  private DataSegment fullSegmentWrapperSegment()
+  {
+    final Map<String, Object> delegate = Map.of(
+        "type", "local",
+        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+    );
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(
+                          PartialFullSegmentLoadSpec.wireForm(delegate, PartialFullSegmentLoadSpec.FINGERPRINT)
+                      )
+                      .size(0)
+                      .build();
+  }
+
+  /**
+   * A {@code partialBaseTable} wrapper, matching what a projection matcher emits when none of its configured
+   * projections are present on the segment.
+   */
+  private DataSegment baseTableWrapperSegment()
+  {
+    final Map<String, Object> delegate = Map.of(
+        "type", "local",
+        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+    );
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(
+                          PartialBaseTableLoadSpec.wireForm(delegate, PartialBaseTableLoadSpec.FINGERPRINT)
+                      )
                       .size(0)
                       .build();
   }

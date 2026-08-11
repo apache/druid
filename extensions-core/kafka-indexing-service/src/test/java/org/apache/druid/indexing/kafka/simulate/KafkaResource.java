@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka.simulate;
 
 import org.apache.druid.indexing.kafka.KafkaConsumerConfigs;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
+import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.StreamIngestResource;
 import org.apache.kafka.clients.admin.Admin;
@@ -34,6 +35,7 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.RetriableException;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.testcontainers.kafka.KafkaContainer;
@@ -61,6 +63,7 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
    * image should set the system property to {@code apache/kafka-native}.
    */
   private static final String KAFKA_IMAGE = System.getProperty("druid.testing.kafka.image", "apache/kafka:4.3.0");
+  private static final int PARTITION_READINESS_MAX_TRIES = 5;
 
   private EmbeddedDruidCluster cluster;
 
@@ -308,11 +311,21 @@ public class KafkaResource extends StreamIngestResource<KafkaContainer>
     // Topic and partition creation may complete before the partition leaders
     // are ready to handle requests. Verify all partitions through their
     // leaders before allowing callers to publish records.
-    final Map<TopicPartition, OffsetSpec> partitionOffsets = new HashMap<>();
+    final Map<TopicPartition, OffsetSpec> partitionOffsetRequests = new HashMap<>();
     for (int partition = 0; partition < partitionCount; partition++) {
-      partitionOffsets.put(new TopicPartition(topic, partition), OffsetSpec.latest());
+      partitionOffsetRequests.put(new TopicPartition(topic, partition), OffsetSpec.latest());
     }
-    admin.listOffsets(partitionOffsets).all().get();
+    RetryUtils.retry(
+        () -> admin.listOffsets(partitionOffsetRequests).all().get(),
+        KafkaResource::isRetriableKafkaException,
+        PARTITION_READINESS_MAX_TRIES
+    );
+  }
+
+  private static boolean isRetriableKafkaException(Throwable throwable)
+  {
+    return throwable instanceof RetriableException
+           || (throwable.getCause() != null && isRetriableKafkaException(throwable.getCause()));
   }
 
   private Map<String, Object> commonClientProperties()
