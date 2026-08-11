@@ -30,6 +30,7 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
@@ -649,8 +650,11 @@ public class SupervisorManager implements SupervisorStatsProvider
   }
 
   /**
-   * Simulates the effects of the {@code costBased} auto-scaler by computing the optimal
-   * task count under various values of aggregate lag.
+   * Simulates the effects of the {@code costBased} auto-scaler by computing the
+   * optimal task count under various values of aggregate lag.
+   *
+   * @return Map containing a single entry with key {@code "data"} and value as
+   * the simulation rows.
    */
   public Map<String, Object> simulateAutoscaling(
       String supervisorId,
@@ -659,6 +663,10 @@ public class SupervisorManager implements SupervisorStatsProvider
       @Nullable Integer requestedTaskCount
   )
   {
+    if (!config.getEnableTaskAutoScaler()) {
+      throw InvalidInput.exception("Cannot simulate autoscaling since 'enableTaskAutoScaler' is false");
+    }
+
     // Validate that this is a SeekableStreamSupervisor
     final Pair<Supervisor, SupervisorSpec> supervisorPair = supervisors.get(supervisorId);
     if (supervisorPair == null || supervisorPair.rhs == null || supervisorPair.lhs == null) {
@@ -703,6 +711,13 @@ public class SupervisorManager implements SupervisorStatsProvider
 
     // Use the partition count and task duration from the supervisor spec
     final int partitionCount = ((SeekableStreamSupervisor<?, ?, ?>) supervisorPair.lhs).getKnownPartitionCount();
+    if (partitionCount <= 0) {
+      throw InternalServerError.exception(
+          "Cannot simulate autoscaling since partition count for supervisor[%s] is unknown."
+          + " Retry once the supervisor has discovered the current partition count from stream.",
+          supervisorId
+      );
+    }
     final long taskDurationSeconds = supervisorSpec.getIoConfig().getTaskDuration().getStandardSeconds();
 
     // Assume that the tasks are fully used since there is some lag
@@ -710,7 +725,7 @@ public class SupervisorManager implements SupervisorStatsProvider
 
     // Invoke the cost function for lag in the range [0, 2 * criticalLagThreshold)
     final Object[] rows = new Object[200];
-    final int lagStepSize = (int) (criticalLag / 100);
+    final long lagStepSize = criticalLag / 100;
     final CostBasedAutoScaler autoscaleSimulator = CostBasedAutoScaler.createSimulator(config, supervisorId);
     for (int i = 0; i < 200; ++i) {
       final double observedAggregateLag = (double) lagStepSize * i;

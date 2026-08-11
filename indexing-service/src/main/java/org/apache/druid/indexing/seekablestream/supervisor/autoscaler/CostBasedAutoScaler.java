@@ -301,21 +301,23 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
 
     if (validTaskCounts.length == 0) {
       // Return current count (not an error) so the supervisor can clamp it back into bounds.
-      log.warn("No valid task counts after applying constraints for supervisor[%s]", supervisorId);
+      if (!isSimulation) {
+        log.warn("No valid task counts after applying constraints for supervisor[%s]", supervisorId);
+      }
       return currentTaskCount;
     }
 
     final boolean highLag = isHighLag(metrics);
     final boolean criticalLag = isCriticalLag(metrics);
     if (criticalLag) {
-      log.info(
+      logInfo(
           "Supervisor[%s] aggregateLag[%.0f] crossed [%.0f%%] of criticalLagThreshold[%d]: skipping the argmin"
           + " search and jumping straight to the maximum task count.",
           supervisorId, metrics.getAggregateLag(), WeightedCostFunction.CRITICAL_LAG_THRESHOLD_FRACTION * 100,
           config.getCriticalLagThreshold()
       );
     } else if (highLag) {
-      log.info(
+      logInfo(
           "Supervisor[%s] aggregateLag[%.0f] crossed [%.0f%%] of criticalLagThreshold[%d]: widening scale-up"
           + " candidates and maxing out the high-lag cost factor.",
           supervisorId, metrics.getAggregateLag(), WeightedCostFunction.HIGH_LAG_THRESHOLD_FRACTION * 100,
@@ -329,22 +331,20 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
     CostResult optimalCost = currentCost;
     final double idleRatioEstimatedFromRate = metrics.estimateIdleRatioFromProcessingRate();
 
-    if (!isSimulation) {
-      log.info(
-          "Computing optimal taskCount for supervisor[%s] with metrics:"
-          + " currentTaskCount[%d], avgPartitionLag[%.1f], avgProcessingRate[%.1f], maxProcessingRate[%.1f]"
-          + " idleRatio[%.1f], pollIdleRatio[%.1f], lagWeight[%.2f], idleWeight[%.2f].",
-          supervisorId,
-          currentTaskCount,
-          metrics.getAvgPartitionLag(),
-          metrics.getAvgProcessingRate(),
-          metrics.getMaxObservedRate(),
-          idleRatioEstimatedFromRate,
-          metrics.getPollIdleRatio(),
-          config.getLagWeight(),
-          config.getIdleWeight()
-      );
-    }
+    logInfo(
+        "Computing optimal taskCount for supervisor[%s] with metrics:"
+        + " currentTaskCount[%d], avgPartitionLag[%.1f], avgProcessingRate[%.1f], maxProcessingRate[%.1f]"
+        + " idleRatio[%.1f], pollIdleRatio[%.1f], lagWeight[%.2f], idleWeight[%.2f].",
+        supervisorId,
+        currentTaskCount,
+        metrics.getAvgPartitionLag(),
+        metrics.getAvgProcessingRate(),
+        metrics.getMaxObservedRate(),
+        idleRatioEstimatedFromRate,
+        metrics.getPollIdleRatio(),
+        config.getLagWeight(),
+        config.getIdleWeight()
+    );
 
     // Find the evaluated task count with the lowest cost.
     final CostResult[] costResults = new CostResult[validTaskCounts.length];
@@ -406,7 +406,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       }
 
       if (optimalTaskCount != currentTaskCount) {
-        log.info(
+        logInfo(
             "Optimal taskCount[%d] for supervisor[%s] has lowest cost[%.4f] out of the following candidates: %n%s",
             optimalTaskCount, supervisorId, optimalCost.totalCost(), constructCostTable(validTaskCounts, costResults)
         );
@@ -419,7 +419,7 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
       final double costDropPercent
           = 100.0 * (currentCost.totalCost() - optimalCost.totalCost()) / currentCost.totalCost();
       if (costDropPercent < config.getMinCostDropPercentForScaling()) {
-        log.info(
+        logInfo(
             "Skipping scaling since cost drop percent[%.2f] is less than required minCostDropPercentForScaling[%d]",
             costDropPercent, config.getMinCostDropPercentForScaling()
         );
@@ -652,6 +652,13 @@ public class CostBasedAutoScaler implements SupervisorTaskAutoScaler
   {
     if (!isSimulator) {
       emitter.emit(eventBuilder);
+    }
+  }
+
+  private void logInfo(String msgFormat, Object... args)
+  {
+    if (!isSimulator) {
+      log.info(msgFormat, args);
     }
   }
 }

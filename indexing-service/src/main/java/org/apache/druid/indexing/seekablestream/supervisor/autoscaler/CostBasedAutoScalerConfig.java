@@ -133,10 +133,11 @@ public class CostBasedAutoScalerConfig implements AutoScalerConfig
     if (this.enableTaskAutoScaler) {
       Preconditions.checkNotNull(taskCountMax, "taskCountMax is required when enableTaskAutoScaler is true");
       Preconditions.checkNotNull(taskCountMin, "taskCountMin is required when enableTaskAutoScaler is true");
+      Preconditions.checkArgument(taskCountMin >= 1, "taskCountMin must be at least 1");
       Preconditions.checkArgument(taskCountMax >= taskCountMin, "taskCountMax must be >= taskCountMin");
       Preconditions.checkArgument(
           taskCountStart == null || (taskCountStart >= taskCountMin && taskCountStart <= taskCountMax),
-          "taskCountMin <= taskCountStart <= taskCountMax"
+          "1 <= taskCountMin <= taskCountStart <= taskCountMax"
       );
       this.taskCountMax = taskCountMax;
       this.taskCountMin = taskCountMin;
