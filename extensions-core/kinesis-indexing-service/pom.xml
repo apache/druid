@@ -158,7 +158,6 @@
         </dependency>
 
         <!-- Tests -->
-        <!-- SeekableStreamIndexTaskTestBase still uses JUnit 4 rules. -->
         <dependency>
             <groupId>org.easymock</groupId>
             <artifactId>easymock</artifactId>
@@ -208,11 +207,6 @@
             <artifactId>druid-indexing-service</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
