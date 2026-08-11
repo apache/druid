@@ -84,6 +84,8 @@ import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionSkipReason;
+import org.apache.druid.server.compaction.CompactionSkipStatistics;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.compaction.FixedIntervalOrderPolicy;
@@ -386,13 +388,22 @@ public class CompactSegmentsTest
       final AutoCompactionSnapshot snapshot
           = compactSegments.getAutoCompactionSnapshot(DATA_SOURCE_PREFIX + i);
 
-      // Rejected intervals must be reported as policy excluded, not as awaiting or skipped
+      // Rejected intervals must be reported as skipped, not as awaiting compaction
       Assert.assertEquals(0, snapshot.getBytesAwaitingCompaction());
       Assert.assertEquals(0, snapshot.getSegmentCountAwaitingCompaction());
       Assert.assertEquals(0, snapshot.getBytesCompacted());
-      Assert.assertTrue(snapshot.getBytesPolicyExcluded() > 0);
-      Assert.assertTrue(snapshot.getSegmentCountPolicyExcluded() > 0);
-      Assert.assertTrue(snapshot.getIntervalCountPolicyExcluded() > 0);
+      Assert.assertTrue(snapshot.getBytesSkipped() > 0);
+
+      // ...and attributed to the search policy, which is a DEFERRED reason
+      final CompactionSkipStatistics rejected = snapshot
+          .getSkippedStatsByReason()
+          .stream()
+          .filter(skipStats -> skipStats.getReason() == CompactionSkipReason.REJECTED_BY_SEARCH_POLICY)
+          .findFirst()
+          .orElseThrow();
+      Assert.assertEquals(CompactionSkipReason.Category.DEFERRED, rejected.getCategory());
+      Assert.assertTrue(rejected.getSegmentCount() > 0);
+      Assert.assertTrue(rejected.getIntervalCount() > 0);
     }
   }
 

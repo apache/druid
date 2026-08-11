@@ -60,12 +60,12 @@ public class CompactionStatus
 {
   private static final Logger log = new Logger(CompactionStatus.class);
 
-  private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null, null);
+  private static final CompactionStatus COMPLETE = new CompactionStatus(State.COMPLETE, null, null, null, null, null);
   public static final String NEVER_COMPACTED_REASON = "not compacted yet";
 
   public enum State
   {
-    COMPLETE, PENDING, RUNNING, SKIPPED, POLICY_EXCLUDED
+    COMPLETE, PENDING, RUNNING, SKIPPED
   }
 
   /**
@@ -97,6 +97,8 @@ public class CompactionStatus
   private final String reason;
 
   @Nullable
+  private final CompactionSkipReason skipReason;
+  @Nullable
   private final CompactionStatistics compactedStats;
   @Nullable
   private final CompactionStatistics uncompactedStats;
@@ -107,6 +109,7 @@ public class CompactionStatus
   private CompactionStatus(
       State state,
       String reason,
+      @Nullable CompactionSkipReason skipReason,
       @Nullable CompactionStatistics compactedStats,
       @Nullable CompactionStatistics uncompactedStats,
       @Nullable List<DataSegment> uncompactedSegments
@@ -114,6 +117,7 @@ public class CompactionStatus
   {
     this.state = state;
     this.reason = reason;
+    this.skipReason = skipReason;
     this.compactedStats = compactedStats;
     this.uncompactedStats = uncompactedStats;
     this.uncompactedSegments = uncompactedSegments;
@@ -129,9 +133,13 @@ public class CompactionStatus
     return state == State.SKIPPED;
   }
 
-  public boolean isPolicyExcluded()
+  /**
+   * Non-null only if this status is {@link State#SKIPPED}.
+   */
+  @Nullable
+  public CompactionSkipReason getSkipReason()
   {
-    return state == State.POLICY_EXCLUDED;
+    return skipReason;
   }
 
   public String getReason()
@@ -172,7 +180,7 @@ public class CompactionStatus
 
   public static CompactionStatus pending(String reasonFormat, Object... args)
   {
-    return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args), null, null, null);
+    return new CompactionStatus(State.PENDING, StringUtils.format(reasonFormat, args), null, null, null, null);
   }
 
   public static CompactionStatus pending(
@@ -186,6 +194,7 @@ public class CompactionStatus
     return new CompactionStatus(
         State.PENDING,
         StringUtils.format(reasonFormat, args),
+        null,
         compactedStats,
         uncompactedStats,
         uncompactedSegments
@@ -197,7 +206,7 @@ public class CompactionStatus
       CompactionStatistics uncompactedStats
   )
   {
-    return new CompactionStatus(State.COMPLETE, null, compactionStatistics, uncompactedStats, null);
+    return new CompactionStatus(State.COMPLETE, null, null, compactionStatistics, uncompactedStats, null);
   }
 
   /**
@@ -272,24 +281,30 @@ public class CompactionStatus
     }
   }
 
-  public static CompactionStatus skipped(String reasonFormat, Object... args)
-  {
-    return new CompactionStatus(State.SKIPPED, StringUtils.format(reasonFormat, args), null, null, null);
-  }
-
   /**
-   * Denotes an interval that needs compaction but has been filtered out by the
-   * {@link CompactionCandidateSearchPolicy}. Unlike {@link #skipped}, such an
-   * interval becomes compactible again if the policy thresholds are relaxed.
+   * Denotes an interval that was not compacted in this run. The {@code skipReason}
+   * is the stable code used to break down skipped stats in reports and metrics,
+   * while the formatted message carries the details for a human reader.
    */
-  public static CompactionStatus policyExcluded(String reasonFormat, Object... args)
+  public static CompactionStatus skipped(
+      CompactionSkipReason skipReason,
+      String reasonFormat,
+      Object... args
+  )
   {
-    return new CompactionStatus(State.POLICY_EXCLUDED, StringUtils.format(reasonFormat, args), null, null, null);
+    return new CompactionStatus(
+        State.SKIPPED,
+        StringUtils.format(reasonFormat, args),
+        skipReason,
+        null,
+        null,
+        null
+    );
   }
 
   public static CompactionStatus running(String message)
   {
-    return new CompactionStatus(State.RUNNING, message, null, null, null);
+    return new CompactionStatus(State.RUNNING, message, null, null, null, null);
   }
 
   /**
@@ -677,6 +692,7 @@ public class CompactionStatus
       final long inputSegmentSize = compactionConfig.getInputSegmentSizeBytes();
       if (totalSegmentBytes > inputSegmentSize) {
         return CompactionStatus.skipped(
+            CompactionSkipReason.INPUT_SEGMENT_SIZE_EXCEEDED,
             "'inputSegmentSize' exceeded: Total segment size[%d] is larger than allowed inputSegmentSize[%d]",
             totalSegmentBytes, inputSegmentSize
         );

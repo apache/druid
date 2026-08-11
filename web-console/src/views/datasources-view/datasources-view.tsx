@@ -60,7 +60,9 @@ import {
   formatCompactionInfo,
   getConsoleViewIcon,
   getDatasourceColor,
+  intervalsNotMatchingCompactionConfig,
   RuleUtil,
+  segmentsNotMatchingCompactionConfig,
   START_OF_TIME_DATE,
   zeroCompactionStatus,
 } from '../../druid-models';
@@ -1605,8 +1607,7 @@ GROUP BY 1, 2`;
                     text={formatPercent(
                       progress(
                         status.segmentCountCompacted,
-                        status.segmentCountAwaitingCompaction +
-                          (status.segmentCountPolicyExcluded || 0),
+                        segmentsNotMatchingCompactionConfig(status),
                       ),
                     )}
                     braces={PERCENT_BRACES}
@@ -1616,8 +1617,7 @@ GROUP BY 1, 2`;
                     text={formatPercent(
                       progress(
                         status.intervalCountCompacted,
-                        status.intervalCountAwaitingCompaction +
-                          (status.intervalCountPolicyExcluded || 0),
+                        intervalsNotMatchingCompactionConfig(status),
                       ),
                     )}
                     braces={PERCENT_BRACES}

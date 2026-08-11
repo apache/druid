@@ -158,13 +158,6 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("compactedIntv", "interval/compacted/count");
     public static final CoordinatorStat SKIPPED_INTERVALS
         = CoordinatorStat.toDebugAndEmit("compactSkipIntv", "interval/skipCompact/count");
-
-    public static final CoordinatorStat POLICY_EXCLUDED_BYTES
-        = CoordinatorStat.toDebugAndEmit("compactExcludedBytes", "segment/policyExcluded/bytes");
-    public static final CoordinatorStat POLICY_EXCLUDED_SEGMENTS
-        = CoordinatorStat.toDebugAndEmit("compactExcludedSeg", "segment/policyExcluded/count");
-    public static final CoordinatorStat POLICY_EXCLUDED_INTERVALS
-        = CoordinatorStat.toDebugAndEmit("compactExcludedIntv", "interval/policyExcluded/count");
   }
 
   public static class CoordinatorRun

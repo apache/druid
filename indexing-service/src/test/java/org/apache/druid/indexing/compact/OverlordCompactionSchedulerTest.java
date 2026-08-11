@@ -68,6 +68,7 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.metadata.HeapMemoryIndexingStateStorage;
 import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
+import org.apache.druid.server.compaction.CompactionSkipReason;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.apache.druid.server.compaction.CompactionStatus;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -436,7 +437,7 @@ public class OverlordCompactionSchedulerTest
   }
 
   @Test
-  public void test_intervalsRejectedBySearchPolicy_areReportedAsPolicyExcluded()
+  public void test_intervalsRejectedBySearchPolicy_areReportedAsSkipped()
   {
     createSegments(1, Granularities.DAY, JAN_20);
 
@@ -460,14 +461,28 @@ public class OverlordCompactionSchedulerTest
     Mockito.verify(taskQueue, Mockito.never()).add(ArgumentMatchers.any());
 
     final AutoCompactionSnapshot.Builder expectedSnapshot = AutoCompactionSnapshot.builder(dataSource);
-    expectedSnapshot.incrementPolicyExcludedStats(CompactionStatistics.create(100_000_000, null, 1, 1));
-
-    Assertions.assertEquals(
-        expectedSnapshot.build(),
-        scheduler.getCompactionSnapshot(dataSource)
+    expectedSnapshot.incrementSkippedStats(
+        CompactionSkipReason.REJECTED_BY_SEARCH_POLICY,
+        CompactionStatistics.create(100_000_000, null, 1, 1)
     );
 
-    serviceEmitter.verifyValue(Stats.Compaction.POLICY_EXCLUDED_BYTES.getMetricName(), 100_000_000L);
+    final AutoCompactionSnapshot snapshot = scheduler.getCompactionSnapshot(dataSource);
+    Assertions.assertEquals(expectedSnapshot.build(), snapshot);
+    Assertions.assertEquals(
+        CompactionSkipReason.Category.DEFERRED,
+        snapshot.getSkippedStatsByReason().get(0).getCategory()
+    );
+
+    // Skipped metrics carry both the reason and its category so that a dashboard
+    // can alert on the category without enumerating the reasons
+    serviceEmitter.verifyValue(
+        Stats.Compaction.SKIPPED_BYTES.getMetricName(),
+        Map.of(
+            "reason", CompactionSkipReason.REJECTED_BY_SEARCH_POLICY.name(),
+            "category", CompactionSkipReason.Category.DEFERRED.name()
+        ),
+        100_000_000L
+    );
     serviceEmitter.verifyValue(Stats.Compaction.PENDING_BYTES.getMetricName(), 0L);
 
     scheduler.stopBeingLeader();

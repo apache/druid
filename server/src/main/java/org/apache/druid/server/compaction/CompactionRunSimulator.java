@@ -85,10 +85,9 @@ public class CompactionRunSimulator
         = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact");
     final Table queuedIntervals
         = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "maxTaskSlots", "reasonToCompact");
-    final Table skippedIntervals
-        = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "reasonToSkip");
-    final Table policyExcludedIntervals
-        = Table.withColumnNames("dataSource", "interval", "numSegments", "bytes", "reasonToExclude");
+    final Table skippedIntervals = Table.withColumnNames(
+        "dataSource", "interval", "numSegments", "bytes", "skipReason", "skipCategory", "reasonToSkip"
+    );
 
     // Add a read-only wrapper over the actual status tracker so that we can
     // account for the active tasks
@@ -121,13 +120,7 @@ public class CompactionRunSimulator
               createRow(candidateSegments, ClientCompactionTaskQueryTuningConfig.from(config), status.getReason())
           );
         } else if (status.getState() == CompactionStatus.State.SKIPPED) {
-          skippedIntervals.addRow(
-              createRow(candidateSegments, null, status.getReason())
-          );
-        } else if (status.getState() == CompactionStatus.State.POLICY_EXCLUDED) {
-          policyExcludedIntervals.addRow(
-              createRow(candidateSegments, null, status.getReason())
-          );
+          skippedIntervals.addRow(createSkippedRow(candidateSegments, status));
         }
       }
 
@@ -174,11 +167,26 @@ public class CompactionRunSimulator
     if (!skippedIntervals.isEmpty()) {
       compactionStates.put(CompactionStatus.State.SKIPPED, skippedIntervals);
     }
-    if (!policyExcludedIntervals.isEmpty()) {
-      compactionStates.put(CompactionStatus.State.POLICY_EXCLUDED, policyExcludedIntervals);
-    }
 
     return new CompactionSimulateResult(compactionStates);
+  }
+
+  /**
+   * Creates a row for the skipped intervals table, which reports the stable
+   * {@link CompactionSkipReason} and its category alongside the detailed message.
+   */
+  private Object[] createSkippedRow(CompactionCandidate candidate, CompactionStatus status)
+  {
+    final CompactionSkipReason skipReason = status.getSkipReason();
+    return new Object[]{
+        candidate.getDataSource(),
+        candidate.getCompactionInterval(),
+        candidate.numSegments(),
+        candidate.getStats().getTotalBytes(),
+        skipReason == null ? null : skipReason.name(),
+        skipReason == null ? null : skipReason.getCategory().name(),
+        status.getReason()
+    };
   }
 
   private Object[] createRow(

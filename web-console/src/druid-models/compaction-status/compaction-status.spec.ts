@@ -128,7 +128,7 @@ describe('compaction status', () => {
       ).toEqual('Fully compacted (except the last P1D of data, 24 segments skipped)');
     });
 
-    it('works when some segments are excluded by the compaction policy', () => {
+    it('works when some segments are deferred by the compaction policy', () => {
       expect(
         formatCompactionInfo({
           config: BASIC_CONFIG,
@@ -137,19 +137,55 @@ describe('compaction status', () => {
             scheduleStatus: 'RUNNING',
             bytesAwaitingCompaction: 0,
             bytesCompacted: 100,
-            bytesSkipped: 0,
-            bytesPolicyExcluded: 500,
+            bytesSkipped: 500,
             segmentCountAwaitingCompaction: 0,
             segmentCountCompacted: 10,
-            segmentCountSkipped: 0,
-            segmentCountPolicyExcluded: 999,
+            segmentCountSkipped: 999,
             intervalCountAwaitingCompaction: 0,
             intervalCountCompacted: 10,
-            intervalCountSkipped: 0,
-            intervalCountPolicyExcluded: 3,
+            intervalCountSkipped: 3,
+            skippedStatsByReason: [
+              {
+                reason: 'REJECTED_BY_SEARCH_POLICY',
+                category: 'DEFERRED',
+                bytes: 500,
+                segmentCount: 999,
+                intervalCount: 3,
+              },
+            ],
           },
         }),
-      ).toEqual('Not fully compacted (999 segments excluded by the compaction policy)');
+      ).toEqual('Not fully compacted (999 segments skipped: rejected by search policy)');
+    });
+
+    it('stays fully compacted when segments are only skipped as out of scope', () => {
+      expect(
+        formatCompactionInfo({
+          config: BASIC_CONFIG,
+          status: {
+            dataSource: 'tbl',
+            scheduleStatus: 'RUNNING',
+            bytesAwaitingCompaction: 0,
+            bytesCompacted: 0,
+            bytesSkipped: 3776979,
+            segmentCountAwaitingCompaction: 0,
+            segmentCountCompacted: 0,
+            segmentCountSkipped: 24,
+            intervalCountAwaitingCompaction: 0,
+            intervalCountCompacted: 0,
+            intervalCountSkipped: 24,
+            skippedStatsByReason: [
+              {
+                reason: 'SKIP_OFFSET',
+                category: 'OUT_OF_SCOPE',
+                bytes: 3776979,
+                segmentCount: 24,
+                intervalCount: 24,
+              },
+            ],
+          },
+        }),
+      ).toEqual('Fully compacted (except the last P1D of data, 24 segments skipped)');
     });
 
     it('works when fully compacted and some segments skipped (with legacy config)', () => {

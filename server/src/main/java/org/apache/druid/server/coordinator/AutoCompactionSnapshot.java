@@ -23,10 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.server.compaction.CompactionSkipReason;
+import org.apache.druid.server.compaction.CompactionSkipStatistics;
 import org.apache.druid.server.compaction.CompactionStatistics;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class AutoCompactionSnapshot
@@ -51,15 +57,11 @@ public class AutoCompactionSnapshot
   @JsonProperty
   private final long bytesSkipped;
   @JsonProperty
-  private final long bytesPolicyExcluded;
-  @JsonProperty
   private final long segmentCountAwaitingCompaction;
   @JsonProperty
   private final long segmentCountCompacted;
   @JsonProperty
   private final long segmentCountSkipped;
-  @JsonProperty
-  private final long segmentCountPolicyExcluded;
   @JsonProperty
   private final long intervalCountAwaitingCompaction;
   @JsonProperty
@@ -67,7 +69,7 @@ public class AutoCompactionSnapshot
   @JsonProperty
   private final long intervalCountSkipped;
   @JsonProperty
-  private final long intervalCountPolicyExcluded;
+  private final List<CompactionSkipStatistics> skippedStatsByReason;
 
   public static Builder builder(String dataSource)
   {
@@ -82,15 +84,13 @@ public class AutoCompactionSnapshot
       @JsonProperty("bytesAwaitingCompaction") long bytesAwaitingCompaction,
       @JsonProperty("bytesCompacted") long bytesCompacted,
       @JsonProperty("bytesSkipped") long bytesSkipped,
-      @JsonProperty("bytesPolicyExcluded") long bytesPolicyExcluded,
       @JsonProperty("segmentCountAwaitingCompaction") long segmentCountAwaitingCompaction,
       @JsonProperty("segmentCountCompacted") long segmentCountCompacted,
       @JsonProperty("segmentCountSkipped") long segmentCountSkipped,
-      @JsonProperty("segmentCountPolicyExcluded") long segmentCountPolicyExcluded,
       @JsonProperty("intervalCountAwaitingCompaction") long intervalCountAwaitingCompaction,
       @JsonProperty("intervalCountCompacted") long intervalCountCompacted,
       @JsonProperty("intervalCountSkipped") long intervalCountSkipped,
-      @JsonProperty("intervalCountPolicyExcluded") long intervalCountPolicyExcluded
+      @JsonProperty("skippedStatsByReason") @Nullable List<CompactionSkipStatistics> skippedStatsByReason
   )
   {
     this.dataSource = dataSource;
@@ -99,15 +99,13 @@ public class AutoCompactionSnapshot
     this.bytesAwaitingCompaction = bytesAwaitingCompaction;
     this.bytesCompacted = bytesCompacted;
     this.bytesSkipped = bytesSkipped;
-    this.bytesPolicyExcluded = bytesPolicyExcluded;
     this.segmentCountAwaitingCompaction = segmentCountAwaitingCompaction;
     this.segmentCountCompacted = segmentCountCompacted;
     this.segmentCountSkipped = segmentCountSkipped;
-    this.segmentCountPolicyExcluded = segmentCountPolicyExcluded;
     this.intervalCountAwaitingCompaction = intervalCountAwaitingCompaction;
     this.intervalCountCompacted = intervalCountCompacted;
     this.intervalCountSkipped = intervalCountSkipped;
-    this.intervalCountPolicyExcluded = intervalCountPolicyExcluded;
+    this.skippedStatsByReason = skippedStatsByReason == null ? List.of() : List.copyOf(skippedStatsByReason);
   }
 
   @NotNull
@@ -143,16 +141,6 @@ public class AutoCompactionSnapshot
     return bytesSkipped;
   }
 
-  /**
-   * Total bytes of segments in intervals that need compaction but have been
-   * filtered out by the {@code CompactionCandidateSearchPolicy}. These intervals
-   * become compactible again if the policy thresholds are relaxed.
-   */
-  public long getBytesPolicyExcluded()
-  {
-    return bytesPolicyExcluded;
-  }
-
   public long getSegmentCountAwaitingCompaction()
   {
     return segmentCountAwaitingCompaction;
@@ -166,14 +154,6 @@ public class AutoCompactionSnapshot
   public long getSegmentCountSkipped()
   {
     return segmentCountSkipped;
-  }
-
-  /**
-   * @see #getBytesPolicyExcluded()
-   */
-  public long getSegmentCountPolicyExcluded()
-  {
-    return segmentCountPolicyExcluded;
   }
 
   public long getIntervalCountAwaitingCompaction()
@@ -192,11 +172,12 @@ public class AutoCompactionSnapshot
   }
 
   /**
-   * @see #getBytesPolicyExcluded()
+   * Breakdown of the skipped stats by the reason the intervals were skipped.
+   * The totals of this list are the {@code *Skipped} fields of this snapshot.
    */
-  public long getIntervalCountPolicyExcluded()
+  public List<CompactionSkipStatistics> getSkippedStatsByReason()
   {
-    return intervalCountPolicyExcluded;
+    return skippedStatsByReason;
   }
 
   @Override
@@ -212,18 +193,16 @@ public class AutoCompactionSnapshot
     return bytesAwaitingCompaction == that.bytesAwaitingCompaction &&
            bytesCompacted == that.bytesCompacted &&
            bytesSkipped == that.bytesSkipped &&
-           bytesPolicyExcluded == that.bytesPolicyExcluded &&
            segmentCountAwaitingCompaction == that.segmentCountAwaitingCompaction &&
            segmentCountCompacted == that.segmentCountCompacted &&
            segmentCountSkipped == that.segmentCountSkipped &&
-           segmentCountPolicyExcluded == that.segmentCountPolicyExcluded &&
            intervalCountAwaitingCompaction == that.intervalCountAwaitingCompaction &&
            intervalCountCompacted == that.intervalCountCompacted &&
            intervalCountSkipped == that.intervalCountSkipped &&
-           intervalCountPolicyExcluded == that.intervalCountPolicyExcluded &&
            dataSource.equals(that.dataSource) &&
            scheduleStatus == that.scheduleStatus &&
-           Objects.equals(message, that.message);
+           Objects.equals(message, that.message) &&
+           skippedStatsByReason.equals(that.skippedStatsByReason);
   }
 
   @Override
@@ -236,15 +215,13 @@ public class AutoCompactionSnapshot
         bytesAwaitingCompaction,
         bytesCompacted,
         bytesSkipped,
-        bytesPolicyExcluded,
         segmentCountAwaitingCompaction,
         segmentCountCompacted,
         segmentCountSkipped,
-        segmentCountPolicyExcluded,
         intervalCountAwaitingCompaction,
         intervalCountCompacted,
         intervalCountSkipped,
-        intervalCountPolicyExcluded
+        skippedStatsByReason
     );
   }
 
@@ -258,15 +235,13 @@ public class AutoCompactionSnapshot
            ", bytesAwaitingCompaction=" + bytesAwaitingCompaction +
            ", bytesCompacted=" + bytesCompacted +
            ", bytesSkipped=" + bytesSkipped +
-           ", bytesPolicyExcluded=" + bytesPolicyExcluded +
            ", segmentCountAwaitingCompaction=" + segmentCountAwaitingCompaction +
            ", segmentCountCompacted=" + segmentCountCompacted +
            ", segmentCountSkipped=" + segmentCountSkipped +
-           ", segmentCountPolicyExcluded=" + segmentCountPolicyExcluded +
            ", intervalCountAwaitingCompaction=" + intervalCountAwaitingCompaction +
            ", intervalCountCompacted=" + intervalCountCompacted +
            ", intervalCountSkipped=" + intervalCountSkipped +
-           ", intervalCountPolicyExcluded=" + intervalCountPolicyExcluded +
+           ", skippedStatsByReason=" + skippedStatsByReason +
            '}';
   }
 
@@ -279,7 +254,13 @@ public class AutoCompactionSnapshot
     private final CompactionStatistics compactedStats = new CompactionStatistics();
     private final CompactionStatistics skippedStats = new CompactionStatistics();
     private final CompactionStatistics waitingStats = new CompactionStatistics();
-    private final CompactionStatistics policyExcludedStats = new CompactionStatistics();
+
+    /**
+     * Breakdown of {@link #skippedStats} by reason. Kept in an {@link EnumMap}
+     * so that the reported order of reasons is stable across runs.
+     */
+    private final Map<CompactionSkipReason, CompactionStatistics> skippedStatsByReason
+        = new EnumMap<>(CompactionSkipReason.class);
 
     private Builder(
         @NotNull String dataSource
@@ -318,18 +299,20 @@ public class AutoCompactionSnapshot
       compactedStats.increment(entry);
     }
 
-    public void incrementSkippedStats(CompactionStatistics entry)
+    public void incrementSkippedStats(CompactionSkipReason reason, CompactionStatistics entry)
     {
       skippedStats.increment(entry);
-    }
-
-    public void incrementPolicyExcludedStats(CompactionStatistics entry)
-    {
-      policyExcludedStats.increment(entry);
+      skippedStatsByReason.computeIfAbsent(reason, r -> new CompactionStatistics())
+                          .increment(entry);
     }
 
     public AutoCompactionSnapshot build()
     {
+      final List<CompactionSkipStatistics> skipBreakdown = new ArrayList<>();
+      skippedStatsByReason.forEach(
+          (reason, stats) -> skipBreakdown.add(CompactionSkipStatistics.of(reason, stats))
+      );
+
       return new AutoCompactionSnapshot(
           dataSource,
           scheduleStatus,
@@ -337,15 +320,13 @@ public class AutoCompactionSnapshot
           waitingStats.getTotalBytes(),
           compactedStats.getTotalBytes(),
           skippedStats.getTotalBytes(),
-          policyExcludedStats.getTotalBytes(),
           waitingStats.getNumSegments(),
           compactedStats.getNumSegments(),
           skippedStats.getNumSegments(),
-          policyExcludedStats.getNumSegments(),
           waitingStats.getNumIntervals(),
           compactedStats.getNumIntervals(),
           skippedStats.getNumIntervals(),
-          policyExcludedStats.getNumIntervals()
+          skipBreakdown
       );
     }
   }

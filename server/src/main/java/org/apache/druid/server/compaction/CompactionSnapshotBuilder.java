@@ -19,12 +19,14 @@
 
 package org.apache.druid.server.compaction;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,23 +56,36 @@ public class CompactionSnapshotBuilder
         .incrementWaitingStats(candidate.getStats());
   }
 
+  /**
+   * Adds the given candidate to the skipped stats, using the
+   * {@link CompactionSkipReason} of its current status.
+   */
   public void addToSkipped(CompactionCandidate candidate)
   {
-    getBuilderForDatasource(candidate.getDataSource())
-        .incrementSkippedStats(candidate.getStats());
+    addToSkipped(candidate, candidate.getCurrentStatus().getSkipReason());
   }
 
-  public void addToPolicyExcluded(CompactionCandidate candidate)
+  /**
+   * @throws DruidException if the reason is null, since skipped stats would then
+   *                        be reported without attribution
+   */
+  public void addToSkipped(CompactionCandidate candidate, @Nullable CompactionSkipReason reason)
   {
+    if (reason == null) {
+      throw DruidException.defensive(
+          "No skip reason for interval[%s] of datasource[%s] with status[%s]",
+          candidate.getUmbrellaInterval(), candidate.getDataSource(), candidate.getCurrentStatus()
+      );
+    }
     getBuilderForDatasource(candidate.getDataSource())
-        .incrementPolicyExcludedStats(candidate.getStats());
+        .incrementSkippedStats(reason, candidate.getStats());
   }
 
-  public void moveFromPendingToSkipped(CompactionCandidate candidate)
+  public void moveFromPendingToSkipped(CompactionCandidate candidate, @Nullable CompactionSkipReason reason)
   {
+    addToSkipped(candidate, reason);
     getBuilderForDatasource(candidate.getDataSource())
         .decrementWaitingStats(candidate.getStats());
-    addToSkipped(candidate);
   }
 
   public void moveFromPendingToCompleted(CompactionCandidate candidate)
@@ -107,19 +122,19 @@ public class CompactionSnapshotBuilder
     stats.add(Stats.Compaction.COMPACTED_BYTES, rowKey, autoCompactionSnapshot.getBytesCompacted());
     stats.add(Stats.Compaction.COMPACTED_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountCompacted());
     stats.add(Stats.Compaction.COMPACTED_INTERVALS, rowKey, autoCompactionSnapshot.getIntervalCountCompacted());
-    stats.add(Stats.Compaction.SKIPPED_BYTES, rowKey, autoCompactionSnapshot.getBytesSkipped());
-    stats.add(Stats.Compaction.SKIPPED_SEGMENTS, rowKey, autoCompactionSnapshot.getSegmentCountSkipped());
-    stats.add(Stats.Compaction.SKIPPED_INTERVALS, rowKey, autoCompactionSnapshot.getIntervalCountSkipped());
-    stats.add(Stats.Compaction.POLICY_EXCLUDED_BYTES, rowKey, autoCompactionSnapshot.getBytesPolicyExcluded());
-    stats.add(
-        Stats.Compaction.POLICY_EXCLUDED_SEGMENTS,
-        rowKey,
-        autoCompactionSnapshot.getSegmentCountPolicyExcluded()
-    );
-    stats.add(
-        Stats.Compaction.POLICY_EXCLUDED_INTERVALS,
-        rowKey,
-        autoCompactionSnapshot.getIntervalCountPolicyExcluded()
-    );
+
+    // Skipped stats are emitted per reason. The total for a datasource is the sum
+    // across all values of the 'reason' dimension. The 'category' dimension allows
+    // alerting on a class of reasons without enumerating the reasons themselves.
+    for (CompactionSkipStatistics skipStats : autoCompactionSnapshot.getSkippedStatsByReason()) {
+      final RowKey skipRowKey = RowKey
+          .with(Dimension.DATASOURCE, autoCompactionSnapshot.getDataSource())
+          .with(Dimension.REASON, skipStats.getReason().name())
+          .and(Dimension.CATEGORY, skipStats.getCategory().name());
+
+      stats.add(Stats.Compaction.SKIPPED_BYTES, skipRowKey, skipStats.getBytes());
+      stats.add(Stats.Compaction.SKIPPED_SEGMENTS, skipRowKey, skipStats.getSegmentCount());
+      stats.add(Stats.Compaction.SKIPPED_INTERVALS, skipRowKey, skipStats.getIntervalCount());
+    }
   }
 }

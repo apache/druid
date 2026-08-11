@@ -20,6 +20,7 @@ import { max, sum } from 'd3-array';
 
 import type { NumberLike } from '../../utils';
 import { deepGet, filterMap } from '../../utils';
+import type { CompactionSkipStatistics } from '../compaction-status/compaction-status';
 
 export type SupervisorOffsetMap = Record<string, NumberLike>;
 
@@ -49,15 +50,13 @@ export interface SupervisorStatus {
     bytesAwaitingCompaction: number;
     bytesCompacted: number;
     bytesSkipped: number;
-    bytesPolicyExcluded?: number;
     segmentCountAwaitingCompaction: number;
     segmentCountCompacted: number;
     segmentCountSkipped: number;
-    segmentCountPolicyExcluded?: number;
     intervalCountAwaitingCompaction: number;
     intervalCountCompacted: number;
     intervalCountSkipped: number;
-    intervalCountPolicyExcluded?: number;
+    skippedStatsByReason?: CompactionSkipStatistics[];
   };
 }
 

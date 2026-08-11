@@ -24,21 +24,34 @@ function capitalizeFirst(str: string): string {
   return str.slice(0, 1).toUpperCase() + str.slice(1).toLowerCase();
 }
 
+/**
+ * Tells the console how to treat an interval that was skipped, without needing to
+ * know the individual skip reasons. Unknown categories from a newer server are
+ * treated as counting against the datasource being fully compacted.
+ */
+export type CompactionSkipCategory = 'OUT_OF_SCOPE' | 'TRANSIENT' | 'DEFERRED' | 'UNSUPPORTED';
+
+export interface CompactionSkipStatistics {
+  reason: string;
+  category: CompactionSkipCategory;
+  bytes: number;
+  segmentCount: number;
+  intervalCount: number;
+}
+
 export interface CompactionStatus {
   dataSource: string;
   scheduleStatus: string;
   bytesAwaitingCompaction: number;
   bytesCompacted: number;
   bytesSkipped: number;
-  bytesPolicyExcluded?: number;
   segmentCountAwaitingCompaction: number;
   segmentCountCompacted: number;
   segmentCountSkipped: number;
-  segmentCountPolicyExcluded?: number;
   intervalCountAwaitingCompaction: number;
   intervalCountCompacted: number;
   intervalCountSkipped: number;
-  intervalCountPolicyExcluded?: number;
+  skippedStatsByReason?: CompactionSkipStatistics[];
 }
 
 export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolean {
@@ -46,24 +59,67 @@ export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolea
     !compactionStatus.bytesAwaitingCompaction &&
     !compactionStatus.bytesCompacted &&
     !compactionStatus.bytesSkipped &&
-    !compactionStatus.bytesPolicyExcluded &&
     !compactionStatus.segmentCountAwaitingCompaction &&
     !compactionStatus.segmentCountCompacted &&
     !compactionStatus.segmentCountSkipped &&
-    !compactionStatus.segmentCountPolicyExcluded &&
     !compactionStatus.intervalCountAwaitingCompaction &&
     !compactionStatus.intervalCountCompacted &&
-    !compactionStatus.intervalCountSkipped &&
-    !compactionStatus.intervalCountPolicyExcluded
+    !compactionStatus.intervalCountSkipped
   );
 }
 
 /**
+ * Intervals skipped for a reason that leaves them not matching the compaction
+ * config. `OUT_OF_SCOPE` intervals were deliberately excluded by the config, so
+ * they are the only ones that do not count against being fully compacted.
+ */
+export function skippedStatsNotMatchingConfig(
+  compactionStatus: CompactionStatus,
+): CompactionSkipStatistics[] {
+  return (compactionStatus.skippedStatsByReason || []).filter(s => s.category !== 'OUT_OF_SCOPE');
+}
+
+export function skippedStatsOfCategory(
+  compactionStatus: CompactionStatus,
+  category: CompactionSkipCategory,
+): CompactionSkipStatistics[] {
+  return (compactionStatus.skippedStatsByReason || []).filter(s => s.category === category);
+}
+
+function sumBy(
+  stats: CompactionSkipStatistics[],
+  field: 'bytes' | 'segmentCount' | 'intervalCount',
+): number {
+  return stats.reduce((total, s) => total + s[field], 0);
+}
+
+/**
  * Bytes that do not match the current compaction config, whether or not the
- * compaction policy currently considers them worth compacting.
+ * scheduler currently intends to compact them.
  */
 export function bytesNotMatchingCompactionConfig(compactionStatus: CompactionStatus): number {
-  return compactionStatus.bytesAwaitingCompaction + (compactionStatus.bytesPolicyExcluded || 0);
+  return (
+    compactionStatus.bytesAwaitingCompaction +
+    sumBy(skippedStatsNotMatchingConfig(compactionStatus), 'bytes')
+  );
+}
+
+export function segmentsNotMatchingCompactionConfig(compactionStatus: CompactionStatus): number {
+  return (
+    compactionStatus.segmentCountAwaitingCompaction +
+    sumBy(skippedStatsNotMatchingConfig(compactionStatus), 'segmentCount')
+  );
+}
+
+export function intervalsNotMatchingCompactionConfig(compactionStatus: CompactionStatus): number {
+  return (
+    compactionStatus.intervalCountAwaitingCompaction +
+    sumBy(skippedStatsNotMatchingConfig(compactionStatus), 'intervalCount')
+  );
+}
+
+function formatSkipReasons(stats: CompactionSkipStatistics[]): string {
+  return stats.map(s => s.reason.toLowerCase().replace(/_/g, ' ')).join(', ');
 }
 
 export interface CompactionInfo {
@@ -81,11 +137,16 @@ export function formatCompactionInfo(compaction: CompactionInfo) {
         status.intervalCountAwaitingCompaction === 0 &&
         !zeroCompactionStatus(status)
       ) {
-        if (status.segmentCountPolicyExcluded) {
+        // Intervals skipped for a reason other than being out of scope still do
+        // not match the compaction config, so the datasource is not fully compacted
+        const notMatching = skippedStatsNotMatchingConfig(status);
+        if (notMatching.length) {
+          const deferred = skippedStatsOfCategory(status, 'DEFERRED');
+          const reported = deferred.length ? deferred : notMatching;
           return `Not fully compacted (${pluralIfNeeded(
-            status.segmentCountPolicyExcluded,
+            sumBy(reported, 'segmentCount'),
             'segment',
-          )} excluded by the compaction policy)`;
+          )} skipped: ${formatSkipReasons(reported)})`;
         } else if (status.segmentCountSkipped) {
           return `Fully compacted (except the last ${config.skipOffsetFromLatest || 'P1D'} of data${
             compactionConfigHasLegacyInputSegmentSizeBytesSet(config)
