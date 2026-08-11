@@ -222,7 +222,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   @Test
   public void testProxyResponseContextHeader() throws Exception
   {
-    final URL url = new URL("http://localhost:" + port + "/proxy/response-context");
+    final URL url = URI.create("http://localhost:" + port + "/proxy/response-context").toURL();
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
 
     Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
