@@ -19,13 +19,16 @@
 
 package org.apache.druid.storage.s3;
 
+import org.apache.druid.common.aws.AWSClientConfig;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.retries.api.RetryStrategy;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Grant;
@@ -40,6 +43,8 @@ import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -253,6 +258,35 @@ public class ServerSideEncryptingAmazonS3Test
 
     Assertions.assertNotNull(s3);
     Assertions.assertEquals(builtClient, s3.getS3Client());
+  }
+
+  @Test
+  public void testEachClientGetsItsOwnRetryStrategy()
+  {
+    final List<RetryStrategy> issued = new ArrayList<>();
+    final AWSClientConfig clientConfig = new AWSClientConfig()
+    {
+      @Override
+      public RetryStrategy getRetryStrategy()
+      {
+        final RetryStrategy strategy = super.getRetryStrategy();
+        issued.add(strategy);
+        return strategy;
+      }
+    };
+
+    ServerSideEncryptingAmazonS3.builder(
+        AnonymousCredentialsProvider.create(),
+        new S3StorageConfig(new NoopServerSideEncryption(), new S3TransferConfig()),
+        null,
+        null,
+        clientConfig,
+        null,
+        null
+    );
+
+    Assertions.assertEquals(2, issued.size(), "one strategy per client, sync and async");
+    Assertions.assertNotSame(issued.get(0), issued.get(1));
   }
 
   @Test
