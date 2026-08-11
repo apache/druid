@@ -2013,13 +2013,13 @@ name: Apache HttpClient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.13
+version: 4.5.14
 libraries:
   - org.apache.httpcomponents: httpclient
 notices:
   - httpclient: |
       Apache HttpClient
-      Copyright 1999-2017 The Apache Software Foundation
+      Copyright 1999-2022 The Apache Software Foundation
 
 ---
 
