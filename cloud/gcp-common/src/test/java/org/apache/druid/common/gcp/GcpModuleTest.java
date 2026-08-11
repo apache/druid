@@ -30,8 +30,8 @@ import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import org.apache.druid.guice.DruidScopes;
 import org.apache.druid.guice.LazySingleton;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class GcpModuleTest
 {
@@ -55,7 +55,7 @@ public class GcpModuleTest
         return new MockGoogleCredential.Builder().setTransport(transport).setJsonFactory(factory).build();
       }
     }));
-    Assert.assertTrue(injector.getInstance(HttpRequestInitializer.class) instanceof MockGoogleCredential);
-    Assert.assertTrue(injector.getInstance(HttpTransport.class) instanceof MockHttpTransport);
+    Assertions.assertTrue(injector.getInstance(HttpRequestInitializer.class) instanceof MockGoogleCredential);
+    Assertions.assertTrue(injector.getInstance(HttpTransport.class) instanceof MockHttpTransport);
   }
 }

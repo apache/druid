@@ -57,13 +57,13 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -77,7 +77,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class SupervisorResourceTest extends EasyMockSupport
 {
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
@@ -112,7 +112,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
   private SupervisorResource supervisorResource;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     supervisorResource = new SupervisorResource(
@@ -179,8 +179,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
@@ -199,8 +199,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("id", "my-id", "modified", false, "restarted", true), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("id", "my-id", "modified", false, "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -209,7 +209,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -241,8 +241,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "nope"), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", "nope"), response.getEntity());
   }
 
   @Test
@@ -274,8 +274,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specPost(spec, true, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", false), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", false), response.getEntity());
 
     resetAll();
 
@@ -292,8 +292,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specPost(spec, true, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("id", "my-id", "modified", false, "restarted", false), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("id", "my-id", "modified", false, "restarted", false), response.getEntity());
 
     resetAll();
 
@@ -313,8 +313,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specPost(spec, true, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
   }
 
   @Test
@@ -345,8 +345,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(Map.of("id", "my-id", "modified", true, "restarted", true), response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -355,13 +355,13 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
 
     resetAll();
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
     response = supervisorResource.specPost(spec, null, request);
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
     verifyAll();
   }
 
@@ -389,8 +389,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true).times(2);
     replayAll();
 
-    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, false, request));
-    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, null, request));
+    Assertions.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, false, request));
+    Assertions.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, null, request));
     verifyAll();
   }
 
@@ -407,8 +407,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specGetAll(null, null, null, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(SUPERVISOR_IDS, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(SUPERVISOR_IDS, response.getEntity());
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
@@ -417,7 +417,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specGetAll(null, null, null, request);
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -433,10 +433,10 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specGetAll(null, null, null, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     // Only id1 (datasource1) should be returned since user lacks READ access to datasource2
     Set<String> returnedIds = (Set<String>) response.getEntity();
-    Assert.assertEquals(ImmutableSet.of("id1"), returnedIds);
+    Assertions.assertEquals(ImmutableSet.of("id1"), returnedIds);
   }
 
   @Test
@@ -457,9 +457,9 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specGetAll("", null, null, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     List<SupervisorStatus> specs = (List<SupervisorStatus>) response.getEntity();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         specs.stream()
              .allMatch(spec ->
                            ("id1".equals(spec.getId()) && spec.getDataSource().equals("datasource1") && SPEC1.equals(spec.getSpec())) ||
@@ -486,19 +486,19 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specGetAll(null, null, "", request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     List<SupervisorStatus> specs = (List<SupervisorStatus>) response.getEntity();
     specs.sort(Comparator.comparing(SupervisorStatus::getId));
-    Assert.assertEquals(2, specs.size());
+    Assertions.assertEquals(2, specs.size());
     SupervisorStatus spec = specs.get(0);
-    Assert.assertEquals("id1", spec.getId());
-    Assert.assertEquals("RUNNING", spec.getState());
-    Assert.assertEquals("RUNNING", spec.getDetailedState());
-    Assert.assertEquals(true, spec.isHealthy());
-    Assert.assertEquals("{\"type\":\"SupervisorResourceTest$TestSupervisorSpec\"}", spec.getSpecString());
-    Assert.assertEquals("test", spec.getType());
-    Assert.assertEquals("dummy", spec.getSource());
-    Assert.assertEquals(false, spec.isSuspended());
+    Assertions.assertEquals("id1", spec.getId());
+    Assertions.assertEquals("RUNNING", spec.getState());
+    Assertions.assertEquals("RUNNING", spec.getDetailedState());
+    Assertions.assertEquals(true, spec.isHealthy());
+    Assertions.assertEquals("{\"type\":\"SupervisorResourceTest$TestSupervisorSpec\"}", spec.getSpecString());
+    Assertions.assertEquals("test", spec.getType());
+    Assertions.assertEquals("dummy", spec.getSource());
+    Assertions.assertEquals(false, spec.isSuspended());
   }
 
   @Test
@@ -519,9 +519,9 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specGetAll(null, true, null, request);
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     List<SupervisorStatus> states = (List<SupervisorStatus>) response.getEntity();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         states.stream()
               .allMatch(state -> {
                 final String id = (String) state.getId();
@@ -553,12 +553,12 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.specGet("my-id");
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(spec, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(spec, response.getEntity());
 
     response = supervisorResource.specGet("my-id-2");
 
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
     verifyAll();
 
     resetAll();
@@ -569,7 +569,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specGet("my-id");
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -584,12 +584,12 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.specGetStatus("my-id");
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(report, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(report, response.getEntity());
 
     response = supervisorResource.specGetStatus("my-id-2");
 
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
     verifyAll();
 
     resetAll();
@@ -600,7 +600,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specGetStatus("my-id");
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -614,18 +614,18 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.specGetHealth("my-id");
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("healthy", true), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("healthy", true), response.getEntity());
 
     response = supervisorResource.specGetHealth("my-id-2");
 
-    Assert.assertEquals(503, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("healthy", false), response.getEntity());
+    Assertions.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("healthy", false), response.getEntity());
 
     response = supervisorResource.specGetHealth("my-id-3");
 
-    Assert.assertEquals(404, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("error", "[my-id-3] does not exist or health check not implemented"),
         response.getEntity()
     );
@@ -653,10 +653,10 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specSuspend("my-id");
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     TestSupervisorSpec responseSpec = (TestSupervisorSpec) response.getEntity();
-    Assert.assertEquals(suspended.id, responseSpec.id);
-    Assert.assertEquals(suspended.suspended, responseSpec.suspended);
+    Assertions.assertEquals(suspended.id, responseSpec.id);
+    Assertions.assertEquals(suspended.suspended, responseSpec.suspended);
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
@@ -667,8 +667,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specSuspend("my-id");
     verifyAll();
 
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "[my-id] is already suspended"), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", "[my-id] is already suspended"), response.getEntity());
   }
 
   @Test
@@ -691,10 +691,10 @@ public class SupervisorResourceTest extends EasyMockSupport
     Response response = supervisorResource.specResume("my-id");
     verifyAll();
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     TestSupervisorSpec responseSpec = (TestSupervisorSpec) response.getEntity();
-    Assert.assertEquals(running.id, responseSpec.id);
-    Assert.assertEquals(running.suspended, responseSpec.suspended);
+    Assertions.assertEquals(running.id, responseSpec.id);
+    Assertions.assertEquals(running.suspended, responseSpec.suspended);
     resetAll();
 
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
@@ -705,8 +705,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specResume("my-id");
     verifyAll();
 
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("error", "[my-id] is already running"), response.getEntity());
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("error", "[my-id] is already running"), response.getEntity());
   }
 
   @Test
@@ -719,12 +719,12 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.terminate("my-id");
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
 
     response = supervisorResource.terminate("my-id-2");
 
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
     verifyAll();
 
     resetAll();
@@ -735,7 +735,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.terminate("my-id");
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -752,8 +752,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.suspendAll(request);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
     verifyAll();
   }
 
@@ -770,8 +770,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.suspendAll(request);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
     verifyAll();
   }
 
@@ -789,8 +789,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.resumeAll(request);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
     verifyAll();
   }
 
@@ -807,8 +807,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.resumeAll(request);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
     verifyAll();
   }
 
@@ -826,8 +826,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.terminateAll(request);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
     verifyAll();
   }
 
@@ -844,8 +844,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.terminateAll(request);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("status", "success"), response.getEntity());
     verifyAll();
   }
 
@@ -920,8 +920,8 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.specGetAllHistory(request);
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(history, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(history, response.getEntity());
 
     resetAll();
 
@@ -931,7 +931,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specGetAllHistory(request);
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -1054,8 +1054,8 @@ public class SupervisorResourceTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(filteredHistory, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(filteredHistory, response.getEntity());
 
     resetAll();
 
@@ -1065,7 +1065,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specGetAllHistory(request);
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -1109,17 +1109,17 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.specGetHistory(request, "id1", null);
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(versions1, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(versions1, response.getEntity());
 
     response = supervisorResource.specGetHistory(request, "id2", null);
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(versions2, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(versions2, response.getEntity());
 
     response = supervisorResource.specGetHistory(request, "id3", null);
 
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
 
     resetAll();
 
@@ -1129,7 +1129,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specGetHistory(request, "id1", null);
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -1202,17 +1202,17 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.specGetHistory(request, "id1", null);
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(versions1, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(versions1, response.getEntity());
 
     response = supervisorResource.specGetHistory(request, "id2", null);
 
     // user is not authorized to access datasource2
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
 
     response = supervisorResource.specGetHistory(request, "id3", null);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(
         ImmutableList.of(
             new VersionedSupervisorSpec(
                 new TestSupervisorSpec("id3", null, Collections.singletonList("datasource3")),
@@ -1239,7 +1239,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     );
 
     response = supervisorResource.specGetHistory(request, "id4", null);
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
 
 
     resetAll();
@@ -1250,7 +1250,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     response = supervisorResource.specGetHistory(request, "id1", null);
     verifyAll();
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
   }
 
   @Test
@@ -1290,29 +1290,29 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     // Test with valid limit
     Response response = supervisorResource.specGetHistory(request, "id1", 2);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(limitedVersions, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(limitedVersions, response.getEntity());
 
     // Test with limit=0 (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", 0);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("error", "Count must be greater than zero if set (count was 0)"),
         response.getEntity()
     );
 
     // Test with negative limit (should return 400 Bad Request)
     response = supervisorResource.specGetHistory(request, "id1", -1);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("error", "Count must be greater than zero if set (count was -1)"),
         response.getEntity()
     );
 
     // Test with limit larger than available history
     response = supervisorResource.specGetHistory(request, "id1", 100);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(versions, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(versions, response.getEntity());
 
     verifyAll();
   }
@@ -1333,8 +1333,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.specGetHistory(request, "id1", null);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(versions, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(versions, response.getEntity());
 
     verifyAll();
   }
@@ -1357,14 +1357,14 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.reset("my-id");
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
 
     response = supervisorResource.reset("my-id-2");
 
-    Assert.assertEquals(404, response.getStatus());
-    Assert.assertEquals("my-id", id1.getValue());
-    Assert.assertEquals("my-id-2", id2.getValue());
+    Assertions.assertEquals(404, response.getStatus());
+    Assertions.assertEquals("my-id", id1.getValue());
+    Assertions.assertEquals("my-id-2", id2.getValue());
     verifyAll();
 
     resetAll();
@@ -1374,7 +1374,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     response = supervisorResource.terminate("my-id");
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
     verifyAll();
   }
 
@@ -1404,14 +1404,14 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     Response response = supervisorResource.resetOffsets("my-id", datasourceMetadata);
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
 
     response = supervisorResource.resetOffsets("my-id-2", datasourceMetadata);
 
-    Assert.assertEquals(404, response.getStatus());
-    Assert.assertEquals("my-id", id1.getValue());
-    Assert.assertEquals("my-id-2", id2.getValue());
+    Assertions.assertEquals(404, response.getStatus());
+    Assertions.assertEquals("my-id", id1.getValue());
+    Assertions.assertEquals("my-id-2", id2.getValue());
     verifyAll();
 
     resetAll();
@@ -1421,7 +1421,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     response = supervisorResource.terminate("my-id");
 
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
     verifyAll();
   }
 
@@ -1436,8 +1436,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     Response response = supervisorResource.resetToLatestAndBackfill("my-id", null);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("id", "my-id", "backfillSupervisorId", "my-id_backfill_abcdefgh"),
         response.getEntity()
     );
@@ -1450,7 +1450,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     response = supervisorResource.resetToLatestAndBackfill("my-id", null);
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
     verifyAll();
     resetAll();
 
@@ -1462,8 +1462,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     response = supervisorResource.resetToLatestAndBackfill("my-id", null);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("error", "Supervisor[my-id] must be in a RUNNING state"),
         response.getEntity()
     );
@@ -1478,8 +1478,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     response = supervisorResource.resetToLatestAndBackfill("my-id", null);
-    Assert.assertEquals(500, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(500, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("error", "Failed to get latest offsets from stream"),
         response.getEntity()
     );
@@ -1490,8 +1490,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     response = supervisorResource.resetToLatestAndBackfill("my-id", 0);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
         response.getEntity()
     );
@@ -1502,8 +1502,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     response = supervisorResource.resetToLatestAndBackfill("my-id", -1);
-    Assert.assertEquals(400, response.getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(
         ImmutableMap.of("error", "backfillTaskCount must be a positive integer"),
         response.getEntity()
     );
@@ -1515,7 +1515,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     response = supervisorResource.resetToLatestAndBackfill("my-id", null);
-    Assert.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(503, response.getStatus());
     verifyAll();
   }
 
@@ -1526,11 +1526,11 @@ public class SupervisorResourceTest extends EasyMockSupport
     String oldSpec = "{\"type\":\"NoopSupervisorSpec\",\"id\":null,\"dataSources\":null}";
     NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
     NoopSupervisorSpec deserializedSpec = mapper.readValue(oldSpec, NoopSupervisorSpec.class);
-    Assert.assertEquals(expectedSpec, deserializedSpec);
+    Assertions.assertEquals(expectedSpec, deserializedSpec);
 
     NoopSupervisorSpec spec = new NoopSupervisorSpec("abcd", Collections.singletonList("defg"));
     NoopSupervisorSpec specRoundTrip = mapper.readValue(mapper.writeValueAsBytes(spec), NoopSupervisorSpec.class);
-    Assert.assertEquals(spec, specRoundTrip);
+    Assertions.assertEquals(spec, specRoundTrip);
   }
 
   @Test
@@ -1542,7 +1542,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     newSpec.merge(existingSpec);
 
-    Assert.assertEquals(5, newSpec.getIoConfig().getTaskCount());
+    Assertions.assertEquals(5, newSpec.getIoConfig().getTaskCount());
   }
 
   @Test
@@ -1554,7 +1554,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     newSpec.merge(existingSpec);
 
-    Assert.assertEquals(3, newSpec.getIoConfig().getTaskCount());
+    Assertions.assertEquals(3, newSpec.getIoConfig().getTaskCount());
   }
 
   @Test
@@ -1566,12 +1566,12 @@ public class SupervisorResourceTest extends EasyMockSupport
     final TestSeekableStreamSupervisorSpec existingSpec = createTestSpec(null, 1);
     final TestSeekableStreamSupervisorSpec newSpec = createTestSpec(null, 4);
 
-    Assert.assertEquals(1, existingSpec.getIoConfig().getTaskCount());
-    Assert.assertEquals(4, newSpec.getIoConfig().getTaskCount());
+    Assertions.assertEquals(1, existingSpec.getIoConfig().getTaskCount());
+    Assertions.assertEquals(4, newSpec.getIoConfig().getTaskCount());
 
     newSpec.merge(existingSpec);
 
-    Assert.assertEquals(1, newSpec.getIoConfig().getTaskCount());
+    Assertions.assertEquals(1, newSpec.getIoConfig().getTaskCount());
   }
 
   @Test
@@ -1590,8 +1590,8 @@ public class SupervisorResourceTest extends EasyMockSupport
     replayAll();
 
     final Response response = supervisorResource.handoffTaskGroups(spec.getId(), handoffRequest);
-    Assert.assertEquals(202, response.getStatus());
-    Assert.assertNull(response.getEntity());
+    Assertions.assertEquals(202, response.getStatus());
+    Assertions.assertNull(response.getEntity());
 
     verifyAll();
   }

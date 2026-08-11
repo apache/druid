@@ -40,17 +40,18 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -69,8 +70,8 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   private static final int NUM_ROWS = 128;
   private static final String TIMESTAMP_STRING = "2019-01-01";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private File temporaryFolder;
 
   @Test
   public void testRead() throws IOException
@@ -88,7 +89,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        temporaryFolder.newFolder()
+        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null)
     );
 
     int read = 0;
@@ -96,14 +97,14 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     try (CloseableIterator<InputRow> iterator = reader.read(inputStats)) {
       for (; read < NUM_ROWS && iterator.hasNext(); read++) {
         final InputRow inputRow = iterator.next();
-        Assert.assertEquals(DateTimes.of(TIMESTAMP_STRING), inputRow.getTimestamp());
-        Assert.assertEquals(NUM_COLS - 1, inputRow.getDimensions().size());
+        Assertions.assertEquals(DateTimes.of(TIMESTAMP_STRING), inputRow.getTimestamp());
+        Assertions.assertEquals(NUM_COLS - 1, inputRow.getDimensions().size());
       }
     }
 
-    Assert.assertTrue(inputStats.getProcessedBytes() > NUM_ROWS * supplier.getMinRowSize());
-    Assert.assertEquals(NUM_ROWS, read);
-    Assert.assertTrue(supplier.isClosed());
+    Assertions.assertTrue(inputStats.getProcessedBytes() > NUM_ROWS * supplier.getMinRowSize());
+    Assertions.assertEquals(NUM_ROWS, read);
+    Assertions.assertTrue(supplier.isClosed());
   }
 
   @Test
@@ -122,7 +123,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        temporaryFolder.newFolder()
+        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null)
     );
 
     int read = 0;
@@ -132,9 +133,9 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
         iterator.next();
       }
     }
-    Assert.assertEquals(0, inputStats.getProcessedBytes());
-    Assert.assertEquals(0, read);
-    Assert.assertTrue(supplier.isClosed());
+    Assertions.assertEquals(0, inputStats.getProcessedBytes());
+    Assertions.assertEquals(0, read);
+    Assertions.assertTrue(supplier.isClosed());
   }
 
   @Test
@@ -145,11 +146,11 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
            .thenThrow(new StreamException(new Exception("Something bad happened")));
 
     //noinspection ResultOfObjectAllocationIgnored
-    final SamplerException exception = Assert.assertThrows(
+    final SamplerException exception = Assertions.assertThrows(
         SamplerException.class,
         () -> new RecordSupplierInputSource<>("test-stream", supplier, false, null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Exception while seeking to the [latest] offset of partitions in topic [test-stream]: Something bad happened",
         exception.getMessage()
     );

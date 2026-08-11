@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.common.task;
 
 import org.apache.druid.java.util.common.Intervals;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ArchiveTaskTest
 {
@@ -35,6 +35,6 @@ public class ArchiveTaskTest
         null
     );
 
-    Assert.assertTrue(task.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(task.getInputSourceResources().isEmpty());
   }
 }

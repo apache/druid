@@ -21,8 +21,8 @@ package org.apache.druid.sql;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -41,7 +41,7 @@ public class SqlQueryPlusTest
                           .build()
     );
 
-    MatcherAssert.assertThat(
+    BaseCalciteQueryTest.assertDruidException(
         e,
         DruidExceptionMatcher
             .invalidSqlInput()
@@ -64,7 +64,7 @@ public class SqlQueryPlusTest
         sqlQueryPlus::freshCopy
     );
 
-    MatcherAssert.assertThat(
+    BaseCalciteQueryTest.assertDruidException(
         e,
         DruidExceptionMatcher
             .invalidSqlInput()

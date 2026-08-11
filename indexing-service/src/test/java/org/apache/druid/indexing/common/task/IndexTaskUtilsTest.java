@@ -22,17 +22,20 @@ package org.apache.druid.indexing.common.task;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Map;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class IndexTaskUtilsTest
 {
   private static final Map<String, Object> METRIC_TAGS = ImmutableMap.of("k1", "v1", "k2", 20);
@@ -43,7 +46,7 @@ public class IndexTaskUtilsTest
   private AbstractTask abstractTask;
   private ServiceMetricEvent.Builder metricBuilder;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     metricBuilder = ServiceMetricEvent.builder();
@@ -60,14 +63,14 @@ public class IndexTaskUtilsTest
   public void testSetTaskDimensionsWithContextTagsShouldSetTags()
   {
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    Assert.assertEquals(METRIC_TAGS, metricBuilder.getDimension(DruidMetrics.TAGS));
+    Assertions.assertEquals(METRIC_TAGS, metricBuilder.getDimension(DruidMetrics.TAGS));
   }
 
   @Test
   public void testSetTaskDimensionsForAbstractTaskWithContextTagsShouldSetTags()
   {
     IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
-    Assert.assertEquals(METRIC_TAGS, metricBuilder.getDimension(DruidMetrics.TAGS));
+    Assertions.assertEquals(METRIC_TAGS, metricBuilder.getDimension(DruidMetrics.TAGS));
   }
 
   @Test
@@ -75,7 +78,7 @@ public class IndexTaskUtilsTest
   {
     task = new NoopTask(null, null, "wiki", 1L, 0L, null);
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    Assert.assertNull(metricBuilder.getDimension(DruidMetrics.TAGS));
+    Assertions.assertNull(metricBuilder.getDimension(DruidMetrics.TAGS));
   }
 
   @Test
@@ -83,21 +86,21 @@ public class IndexTaskUtilsTest
   {
     Mockito.when(abstractTask.getContextValue(DruidMetrics.TAGS)).thenReturn(null);
     IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
-    Assert.assertNull(metricBuilder.getDimension(DruidMetrics.TAGS));
+    Assertions.assertNull(metricBuilder.getDimension(DruidMetrics.TAGS));
   }
 
   @Test
   public void testSetTaskDimensionsWithGroupIdShouldSetGroupId()
   {
     IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    Assert.assertEquals(GROUP_ID, metricBuilder.getDimension(DruidMetrics.GROUP_ID));
+    Assertions.assertEquals(GROUP_ID, metricBuilder.getDimension(DruidMetrics.GROUP_ID));
   }
 
   @Test
   public void testSetTaskDimensionsForAbstractTaskWithGroupIdShouldSetGroupId()
   {
     IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
-    Assert.assertEquals(GROUP_ID, metricBuilder.getDimension(DruidMetrics.GROUP_ID));
+    Assertions.assertEquals(GROUP_ID, metricBuilder.getDimension(DruidMetrics.GROUP_ID));
   }
 
   @Test
@@ -105,6 +108,6 @@ public class IndexTaskUtilsTest
   {
     Mockito.when(abstractTask.getGroupId()).thenReturn(null);
     IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
-    Assert.assertNull(metricBuilder.getDimension(DruidMetrics.GROUP_ID));
+    Assertions.assertNull(metricBuilder.getDimension(DruidMetrics.GROUP_ID));
   }
 }
