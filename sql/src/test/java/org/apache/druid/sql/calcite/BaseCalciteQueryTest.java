@@ -558,7 +558,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           buildUnplannableExceptionMatcher().expectMessageContains(expectedError)
       );
@@ -1074,7 +1074,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final DruidExceptionMatcher exceptionMatcher
   )
   {
-    testQueryThrows(sql, null, DruidException.class, e -> assertThat(e, exceptionMatcher));
+    testQueryThrows(sql, null, DruidException.class, e -> assertDruidException(e, exceptionMatcher));
   }
 
   public void testQueryThrows(
@@ -1083,7 +1083,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final DruidExceptionMatcher exceptionMatcher
   )
   {
-    testQueryThrows(sql, null, exceptionType, e -> assertThat(e, exceptionMatcher));
+    testQueryThrows(sql, null, exceptionType, e -> assertDruidException(e, exceptionMatcher));
   }
 
   public void testQueryThrows(
@@ -1093,7 +1093,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final DruidExceptionMatcher exceptionMatcher
   )
   {
-    testQueryThrows(sql, queryContext, exceptionType, e -> assertThat(e, exceptionMatcher));
+    testQueryThrows(sql, queryContext, exceptionType, e -> assertDruidException(e, exceptionMatcher));
   }
 
   public <T extends Exception> void testQueryThrows(
@@ -1135,6 +1135,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             .run()
     );
     exceptionVerifier.accept(e);
+  }
+
+  public static void assertDruidException(
+      final DruidException exception,
+      final DruidExceptionMatcher exceptionMatcher
+  )
+  {
+    // DruidExceptionMatcher is a Hamcrest matcher, so this delegates to Hamcrest's MatcherAssert.assertThat.
+    // Remove this bridge in the final cleanup after all DruidExceptionMatcher callers are migrated.
+    assertThat(exception, exceptionMatcher);
   }
 
   public void analyzeResources(

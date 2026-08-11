@@ -73,7 +73,7 @@
         <java.version>25</java.version>
         <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
-        <aether.version>0.9.0.M2</aether.version>
+        <aether.version>1.1.0</aether.version>
         <apache.curator.version>5.9.0</apache.curator.version>
         <apache.kafka.version>4.3.0</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
@@ -85,7 +85,7 @@
         <avatica.version>1.28.0</avatica.version>
         <avro.version>1.12.0</avro.version>
         <parquet.version>1.17.1</parquet.version>
-        <bytebuddy.version>1.18.5</bytebuddy.version>
+        <bytebuddy.version>1.18.11</bytebuddy.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
@@ -125,7 +125,7 @@
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.793</aws.sdk.v1.version>
-        <aws.sdk.v2.version>2.49.6</aws.sdk.v2.version>
+        <aws.sdk.v2.version>2.51.0</aws.sdk.v2.version>
         <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
@@ -418,7 +418,7 @@
             <dependency>
                 <groupId>com.github.rvesse</groupId>
                 <artifactId>airline</artifactId>
-                <version>2.8.4</version>
+                <version>3.3.0</version>
             </dependency>
             <dependency>
                 <groupId>software.amazon.awssdk</groupId>
@@ -960,7 +960,7 @@
             <dependency>
                 <groupId>com.lmax</groupId>
                 <artifactId>disruptor</artifactId>
-                <version>3.4.4</version>
+                <version>4.0.0</version>
             </dependency>
             <dependency>
                 <groupId>com.amazonaws</groupId>
@@ -2089,7 +2089,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-shade-plugin</artifactId>
-                    <version>3.6.1</version>
+                    <version>3.6.2</version>
                 </plugin>
                 <plugin>
                     <groupId>org.scala-tools</groupId>

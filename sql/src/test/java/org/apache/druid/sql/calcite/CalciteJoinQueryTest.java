@@ -105,7 +105,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
@@ -1576,7 +1575,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       Assertions.fail("Expected exception to be thrown.");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
               .expectMessageIs(

@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.HashMap;
@@ -39,9 +39,9 @@ public class LocalCatalogTest
     LocalCatalog before = new LocalCatalog(warehouseDir.getPath(), new HashMap<>(), true);
     LocalCatalog after = mapper.readValue(
         mapper.writeValueAsString(before), LocalCatalog.class);
-    Assert.assertEquals(before, after);
-    Assert.assertEquals("hadoop", before.retrieveCatalog().name());
-    Assert.assertEquals("hadoop", after.retrieveCatalog().name());
+    Assertions.assertEquals(before, after);
+    Assertions.assertEquals("hadoop", before.retrieveCatalog().name());
+    Assertions.assertEquals("hadoop", after.retrieveCatalog().name());
   }
 
   @Test

@@ -33,8 +33,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-
 public class CalciteUnionQueryTest extends BaseCalciteQueryTest
 {
   @Test
@@ -137,7 +135,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [42])"));
     }
   }
 
@@ -464,7 +462,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -484,7 +482,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [45])"));
     }
   }
 
@@ -504,7 +502,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
+      assertDruidException(e, invalidSqlIs("Column count mismatch in UNION ALL (line [3], column [70])"));
     }
   }
 

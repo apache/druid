@@ -97,6 +97,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -256,8 +257,10 @@ public class OverlordTest
         new TestDruidLeaderSelector(),
         EasyMock.createNiceMock(SegmentAllocationQueue.class),
         EasyMock.createNiceMock(SegmentMetadataCache.class),
-        EasyMock.createNiceMock(CompactionScheduler.class),
-        EasyMock.createNiceMock(ScheduledBatchTaskManager.class),
+        Set.of(
+            EasyMock.createNiceMock(CompactionScheduler.class),
+            EasyMock.createNiceMock(ScheduledBatchTaskManager.class)
+        ),
         new DefaultObjectMapper(),
         new NoopTaskContextEnricher()
     );

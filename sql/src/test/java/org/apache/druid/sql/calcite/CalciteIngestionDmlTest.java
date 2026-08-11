@@ -85,8 +85,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-
 @SqlTestFrameworkConfig.ComponentSupplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
@@ -335,7 +333,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     {
       return expectValidationError(e -> {
         Assertions.assertInstanceOf(DruidException.class, e);
-        assertThat((DruidException) e, exceptionMatcher);
+        assertDruidException((DruidException) e, exceptionMatcher);
       });
     }
 

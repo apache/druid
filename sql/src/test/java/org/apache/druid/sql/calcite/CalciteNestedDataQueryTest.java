@@ -83,7 +83,6 @@ import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -154,43 +153,6 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .put("nester", 2L)
                   .build()
   );
-
-  @Nested
-  public static class DefaultCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
-  {
-  }
-
-  @Nested
-  public static class NoneObjectStorageCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
-  {
-    public NoneObjectStorageCalciteNestedDataQueryTest()
-    {
-      super();
-      // Override with none object storage
-      NestedCommonFormatColumnFormatSpec noneObjectStorage =
-          NestedCommonFormatColumnFormatSpec.builder().setObjectStorageEncoding(ObjectStorageEncoding.NONE).build();
-      Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
-          DimensionsSpec.builder().setDimensions(
-              ImmutableList.<DimensionSchema>builder()
-                           .add(new AutoTypeColumnSchema("string", null, noneObjectStorage))
-                           .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
-                           .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
-                           .add(new AutoTypeColumnSchema("long", null, noneObjectStorage))
-                           .add(new AutoTypeColumnSchema("string_sparse", null, noneObjectStorage))
-                           .build()
-          ).build());
-      Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
-          DimensionsSpec.builder().setDimensions(
-              ImmutableList.<DimensionSchema>builder()
-                           .add(new StringDimensionSchema("string"))
-                           .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
-                           .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
-                           .add(new LongDimensionSchema("long"))
-                           .add(new StringDimensionSchema("string_sparse"))
-                           .build()
-          ).build());
-    }
-  }
 
   public static final InputRowSchema ALL_JSON_COLUMNS = Mockito.mock(InputRowSchema.class);
 
@@ -8035,5 +7997,40 @@ public abstract class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .add("EXPR$0", ColumnType.LONG)
                     .build()
     );
+  }
+}
+
+class DefaultCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
+{
+}
+
+class NoneObjectStorageCalciteNestedDataQueryTest extends CalciteNestedDataQueryTest
+{
+  NoneObjectStorageCalciteNestedDataQueryTest()
+  {
+    super();
+    // Override with none object storage
+    final NestedCommonFormatColumnFormatSpec noneObjectStorage =
+        NestedCommonFormatColumnFormatSpec.builder().setObjectStorageEncoding(ObjectStorageEncoding.NONE).build();
+    Mockito.when(ALL_JSON_COLUMNS.getDimensionsSpec()).thenReturn(
+        DimensionsSpec.builder().setDimensions(
+            ImmutableList.<DimensionSchema>builder()
+                         .add(new AutoTypeColumnSchema("string", null, noneObjectStorage))
+                         .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
+                         .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
+                         .add(new AutoTypeColumnSchema("long", null, noneObjectStorage))
+                         .add(new AutoTypeColumnSchema("string_sparse", null, noneObjectStorage))
+                         .build()
+        ).build());
+    Mockito.when(JSON_AND_SCALAR_MIX.getDimensionsSpec()).thenReturn(
+        DimensionsSpec.builder().setDimensions(
+            ImmutableList.<DimensionSchema>builder()
+                         .add(new StringDimensionSchema("string"))
+                         .add(new AutoTypeColumnSchema("nest", null, noneObjectStorage))
+                         .add(new AutoTypeColumnSchema("nester", null, noneObjectStorage))
+                         .add(new LongDimensionSchema("long"))
+                         .add(new StringDimensionSchema("string_sparse"))
+                         .build()
+        ).build());
   }
 }

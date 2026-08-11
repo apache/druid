@@ -29,8 +29,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-
 public class CalciteTableAppendTest extends BaseCalciteQueryTest
 {
   @Test
@@ -224,7 +222,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("No match found for function signature APPEND() (line [1], column [24])")
       );
@@ -241,7 +239,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs(
               "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
@@ -260,7 +258,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs(
               "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
@@ -279,7 +277,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("Table [nonexistent] not found (line [1], column [37])")
       );
@@ -297,7 +295,7 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("Table [t0] not found (line [1], column [62])")
       );

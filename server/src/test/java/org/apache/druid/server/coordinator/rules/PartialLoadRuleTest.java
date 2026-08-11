@@ -27,6 +27,8 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
+import org.apache.druid.segment.loading.PartialFullSegmentLoadSpec;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -87,7 +89,7 @@ public class PartialLoadRuleTest
         false,
         tier(1),
         null,
-        exact("nonexistent"),
+        cannotMatch(),
         CannotMatchBehavior.FALL_THROUGH
     );
     DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
@@ -95,17 +97,35 @@ public class PartialLoadRuleTest
   }
 
   @Test
-  void testAppliesToMatcherDoesNotApplyFullLoadIsDefault()
+  void testAppliesToMatcherDoesNotApplyDefaultStillApplies()
   {
-    // FULL_LOAD is the default. Segment has projections but matcher resolves to nothing,
-    // so the rule still applies and the segment gets full-loaded on this tier.
+    // LOAD_ON_DEMAND is the default, and like every behavior other than FALL_THROUGH it still applies the rule; a
+    // matcher that cannot reason about the segment does not take the segment out of this tier.
+    PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
+        new Period("P30D"),
+        false,
+        tier(1),
+        null,
+        cannotMatch(),
+        null
+    );
+    DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
+    Assertions.assertTrue(rule.appliesTo(segment, NOW));
+  }
+
+  @Test
+  void testAppliesToProjectionMatcherWithNoMatchingProjection()
+  {
+    // A projection matcher always applies: no matching projection resolves to a base-table load, not a non-match, so
+    // onCannotMatch never comes into play. Asserted under FALL_THROUGH because that is where the old behavior
+    // (matcher opaque -> rule skipped) would have been visible.
     PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
         new Period("P30D"),
         false,
         tier(1),
         null,
         exact("nonexistent"),
-        null
+        CannotMatchBehavior.FALL_THROUGH
     );
     DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
     Assertions.assertTrue(rule.appliesTo(segment, NOW));
@@ -114,7 +134,8 @@ public class PartialLoadRuleTest
   @Test
   void testAppliesToProjectionAgnosticSegmentFallThrough()
   {
-    // Pre-Druid-32 segment: projections == null. With FALL_THROUGH, rule does not apply.
+    // Pre-Druid-32 segment: projections == null. The projection matcher still applies, resolving to a base-table
+    // load, so FALL_THROUGH does not skip the rule.
     PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
         new Period("P30D"),
         false,
@@ -124,23 +145,32 @@ public class PartialLoadRuleTest
         CannotMatchBehavior.FALL_THROUGH
     );
     DataSegment segment = segmentWithProjections(IN_WINDOW, null);
-    Assertions.assertFalse(rule.appliesTo(segment, NOW));
+    Assertions.assertTrue(rule.appliesTo(segment, NOW));
   }
 
   @Test
-  void testAppliesToProjectionAgnosticSegmentFullLoad()
+  void testRunProjectionAgnosticSegmentRoutesToBaseTablePartialLoad()
   {
-    // Default behavior: pre-Druid-32 segments fall into full-load on this tier.
+    // Pre-Druid-32 segment: projections == null. The projection matcher resolves to a base-table load, so run()
+    // dispatches a partial load of the segment's rows rather than falling back to whole-segment replication.
     PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
         new Period("P30D"),
         false,
-        tier(1),
+        tier(2),
         null,
         exact("a"),
         null
     );
     DataSegment segment = segmentWithProjections(IN_WINDOW, null);
-    Assertions.assertTrue(rule.appliesTo(segment, NOW));
+    RecordingHandler handler = new RecordingHandler();
+    rule.run(segment, handler);
+    Assertions.assertEquals(0, handler.replicateCalls);
+    Assertions.assertEquals(1, handler.replicatePartialCalls);
+    Assertions.assertEquals(PartialBaseTableLoadSpec.FINGERPRINT, handler.lastProfile.fingerprint());
+    Assertions.assertEquals(
+        PartialBaseTableLoadSpec.wireForm(segment.getLoadSpec(), PartialBaseTableLoadSpec.FINGERPRINT),
+        handler.lastProfile.wrappedLoadSpec()
+    );
   }
 
   @Test
@@ -163,8 +193,26 @@ public class PartialLoadRuleTest
   @Test
   void testCascadeFallThroughToFullLoad()
   {
-    // Rule 1: partial { "a" } 30 days, explicit FALL_THROUGH when matcher cannot match
+    // Rule 1: partial cluster-group load over 30 days, explicit FALL_THROUGH when the matcher cannot match
     PartialLoadRule partial = new PeriodPartialLoadRule(
+        new Period("P30D"),
+        false,
+        tier(1),
+        null,
+        cannotMatch(),
+        CannotMatchBehavior.FALL_THROUGH
+    );
+    // Rule 2: forever full load
+    ForeverLoadRule full = new ForeverLoadRule(tier(1), null);
+
+    // Non-clustered segment: the cluster-group matcher is opaque, so the partial rule falls through and the cascade
+    // lands on full.
+    DataSegment unclustered = segmentWithProjections(IN_WINDOW, null);
+    Assertions.assertFalse(partial.appliesTo(unclustered, NOW));
+    Assertions.assertTrue(full.appliesTo(unclustered, NOW));
+
+    // A projection rule, by contrast, always applies and so always stops the cascade.
+    PartialLoadRule projectionPartial = new PeriodPartialLoadRule(
         new Period("P30D"),
         false,
         tier(1),
@@ -172,17 +220,8 @@ public class PartialLoadRuleTest
         exact("a"),
         CannotMatchBehavior.FALL_THROUGH
     );
-    // Rule 2: forever full load (no projections required)
-    ForeverLoadRule full = new ForeverLoadRule(tier(1), null);
-
-    // Segment with no projections. Partial rule falls through; cascade lands on full.
-    DataSegment legacy = segmentWithProjections(IN_WINDOW, null);
-    Assertions.assertFalse(partial.appliesTo(legacy, NOW));
-    Assertions.assertTrue(full.appliesTo(legacy, NOW));
-
-    // Segment with matching projection. Partial rule applies, cascade stops there.
-    DataSegment modern = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
-    Assertions.assertTrue(partial.appliesTo(modern, NOW));
+    Assertions.assertTrue(projectionPartial.appliesTo(unclustered, NOW));
+    Assertions.assertTrue(projectionPartial.appliesTo(segmentWithProjections(IN_WINDOW, List.of("a", "b")), NOW));
   }
 
   @Test
@@ -224,7 +263,7 @@ public class PartialLoadRuleTest
         "matcher": {"type": "exactProjection", "names": ["a"]}\
         }""";
     PeriodPartialLoadRule rule = (PeriodPartialLoadRule) OBJECT_MAPPER.readValue(json, Rule.class);
-    Assertions.assertEquals(CannotMatchBehavior.FULL_LOAD, rule.getOnCannotMatch());
+    Assertions.assertEquals(CannotMatchBehavior.LOAD_ON_DEMAND, rule.getOnCannotMatch());
     Assertions.assertEquals(PeriodLoadRule.DEFAULT_INCLUDE_FUTURE, rule.isIncludeFuture());
     Assertions.assertEquals(
         Map.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
@@ -233,11 +272,11 @@ public class PartialLoadRuleTest
   }
 
   @Test
-  void testUnknownOnCannotMatchValueDeserializesToFullLoadDefault() throws Exception
+  void testUnknownOnCannotMatchValueDeserializesToDefault() throws Exception
   {
     // Simulates an older coordinator reading a rule authored by a newer version that introduced
     // a new CannotMatchBehavior value. The rule should parse, with the unknown value falling
-    // back to the constructor's default (FULL_LOAD) rather than failing deserialization.
+    // back to the constructor's default (LOAD_ON_DEMAND) rather than failing deserialization.
     String json = """
         {\
         "type": "loadPartialByPeriod",\
@@ -246,7 +285,7 @@ public class PartialLoadRuleTest
         "onCannotMatch": "SOME_FUTURE_BEHAVIOR"\
         }""";
     PeriodPartialLoadRule rule = (PeriodPartialLoadRule) OBJECT_MAPPER.readValue(json, Rule.class);
-    Assertions.assertEquals(CannotMatchBehavior.FULL_LOAD, rule.getOnCannotMatch());
+    Assertions.assertEquals(CannotMatchBehavior.LOAD_ON_DEMAND, rule.getOnCannotMatch());
   }
 
   @Test
@@ -318,17 +357,17 @@ public class PartialLoadRuleTest
   }
 
   @Test
-  void testRunWithFullLoadFallbackRoutesToReplicateSegment()
+  void testRunWithLoadOnDemandFallbackRoutesToReplicateSegment()
   {
-    // Matcher does not apply but the rule's onCannotMatch is FULL_LOAD, so run() falls back to the regular full-load
-    // handler.
+    // Matcher does not apply and onCannotMatch is LOAD_ON_DEMAND, so run() dispatches the segment with no partial
+    // wrapper at all — on a virtual-storage historical its bundles are then fetched as queries touch them.
     PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
         new Period("P30D"),
         false,
         tier(2),
         null,
-        exact("nonexistent"),
-        CannotMatchBehavior.FULL_LOAD
+        cannotMatch(),
+        CannotMatchBehavior.LOAD_ON_DEMAND
     );
     DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
     RecordingHandler handler = new RecordingHandler();
@@ -337,6 +376,72 @@ public class PartialLoadRuleTest
     Assertions.assertEquals(0, handler.replicatePartialCalls);
     Assertions.assertEquals(tier(2), handler.lastTierToReplicaCount);
     Assertions.assertNull(handler.lastProfile);
+  }
+
+  @Test
+  void testRunWithBaseLoadFallbackRoutesToBaseTablePartialLoad()
+  {
+    PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
+        new Period("P30D"),
+        false,
+        tier(2),
+        null,
+        cannotMatch(),
+        CannotMatchBehavior.BASE_LOAD
+    );
+    DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
+    RecordingHandler handler = new RecordingHandler();
+    rule.run(segment, handler);
+    Assertions.assertEquals(0, handler.replicateCalls);
+    Assertions.assertEquals(1, handler.replicatePartialCalls);
+    Assertions.assertEquals(PartialBaseTableLoadSpec.FINGERPRINT, handler.lastProfile.fingerprint());
+    Assertions.assertEquals(
+        PartialBaseTableLoadSpec.wireForm(segment.getLoadSpec(), PartialBaseTableLoadSpec.FINGERPRINT),
+        handler.lastProfile.wrappedLoadSpec()
+    );
+  }
+
+  @Test
+  void testRunWithFullLoadFallbackRoutesToFullSegmentPartialLoad()
+  {
+    // FULL_LOAD means every bundle resident, which needs the partial-load path: dispatching without a wrapper would
+    // only make the segment available on demand.
+    PeriodPartialLoadRule rule = new PeriodPartialLoadRule(
+        new Period("P30D"),
+        false,
+        tier(2),
+        null,
+        cannotMatch(),
+        CannotMatchBehavior.FULL_LOAD
+    );
+    DataSegment segment = segmentWithProjections(IN_WINDOW, List.of("a", "b"));
+    RecordingHandler handler = new RecordingHandler();
+    rule.run(segment, handler);
+    Assertions.assertEquals(0, handler.replicateCalls);
+    Assertions.assertEquals(1, handler.replicatePartialCalls);
+    Assertions.assertEquals(PartialFullSegmentLoadSpec.FINGERPRINT, handler.lastProfile.fingerprint());
+    Assertions.assertEquals(
+        PartialFullSegmentLoadSpec.wireForm(segment.getLoadSpec(), PartialFullSegmentLoadSpec.FINGERPRINT),
+        handler.lastProfile.wrappedLoadSpec()
+    );
+  }
+
+  @Test
+  void testBaseLoadAndFullLoadFingerprintsDiffer()
+  {
+    // Otherwise the coordinator could not tell a rule swap between the two apart, and would never re-issue the load.
+    Assertions.assertNotEquals(PartialBaseTableLoadSpec.FINGERPRINT, PartialFullSegmentLoadSpec.FINGERPRINT);
+  }
+
+  @Test
+  void testAllCannotMatchBehaviorsRoundTrip() throws Exception
+  {
+    for (CannotMatchBehavior behavior : CannotMatchBehavior.values()) {
+      ForeverPartialLoadRule rule = new ForeverPartialLoadRule(tier(1), null, exact("a"), behavior);
+      Rule reread = OBJECT_MAPPER.readValue(OBJECT_MAPPER.writeValueAsString(rule), Rule.class);
+      Assertions.assertEquals(rule, reread, "round trip failed for " + behavior);
+      Assertions.assertEquals(behavior, ((ForeverPartialLoadRule) reread).getOnCannotMatch());
+    }
   }
 
   @Test
@@ -382,6 +487,16 @@ public class PartialLoadRuleTest
   private static PartialLoadMatcher exact(String... names)
   {
     return new ExactProjectionPartialLoadMatcher(Arrays.asList(names));
+  }
+
+  /**
+   * A matcher that cannot match any segment this test builds, so the rule's {@link CannotMatchBehavior} decides.
+   * Projection matchers no longer serve this purpose: they always apply, falling back to a base-table load when none
+   * of their projections are present. A cluster-group matcher is opaque to the non-clustered segments here.
+   */
+  private static PartialLoadMatcher cannotMatch()
+  {
+    return new WildcardClusterGroupPartialLoadMatcher(List.of(Map.of("tenant", "acme")), null);
   }
 
   private static Map<String, Integer> tier(int n)
