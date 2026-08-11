@@ -32,6 +32,7 @@ import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.easymock.EasyMock;
@@ -288,6 +289,7 @@ public class AzureStorageDruidModuleTest extends EasyMockSupport
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
               binder.bind(Properties.class).toInstance(props);
             },
+            new LocalDataStorageDruidModule(),
             new AzureStorageDruidModule()
         ));
   }

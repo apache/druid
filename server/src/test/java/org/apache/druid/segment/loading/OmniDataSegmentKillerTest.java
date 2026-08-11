@@ -28,6 +28,7 @@ import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -94,6 +95,7 @@ public class OmniDataSegmentKillerTest
   {
     return GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
+            (Module) new LocalDataStorageDruidModule(),
             binder -> {
               MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
               if (killer != null) {
@@ -111,6 +113,7 @@ public class OmniDataSegmentKillerTest
   private static Injector createInjectorFromMap(@NotNull Map<String, DataSegmentKiller> killerMap)
   {
     ImmutableList.Builder<Module> moduleListBuilder = ImmutableList.builder();
+    moduleListBuilder.add(new LocalDataStorageDruidModule());
     for (Map.Entry<String, DataSegmentKiller> typeToKiller : killerMap.entrySet()) {
       moduleListBuilder.add(binder -> {
         MapBinder<String, DataSegmentKiller> mapBinder = Binders.dataSegmentKillerBinder(binder);
@@ -141,7 +144,7 @@ public class OmniDataSegmentKillerTest
   }
 
   @Test
-  public void testKillRecursively_delegatesToAllKillers() throws IOException
+  public void testKillRecursively_delegatesToOnlyBoundKiller() throws IOException
   {
     final DataSegmentKiller killerA = Mockito.mock(DataSegmentKiller.class);
     final DataSegmentKiller killerB = Mockito.mock(DataSegmentKiller.class);
@@ -153,8 +156,8 @@ public class OmniDataSegmentKillerTest
     final String relativePath = "intermediate/batch_1";
     segmentKiller.killRecursively(relativePath);
 
-    Mockito.verify(killerA).killRecursively(relativePath);
-    Mockito.verify(killerB).killRecursively(relativePath);
+    Mockito.verify(killerA, Mockito.never()).killRecursively(relativePath);
+    Mockito.verify(killerB, Mockito.never()).killRecursively(relativePath);
   }
 
   @Test
