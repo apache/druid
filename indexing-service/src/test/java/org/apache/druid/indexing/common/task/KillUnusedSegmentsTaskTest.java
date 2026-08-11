@@ -1406,7 +1406,7 @@ public class KillUnusedSegmentsTaskTest extends IngestionTestBase
   {
     final KillUnusedSegmentsTask task = new KillUnusedSegmentsTaskBuilder()
         .dataSource(DATA_SOURCE)
-        .context(ImmutableMap.of(Tasks.TASK_LOCK_TYPE, TaskLockType.APPEND))
+        .context(ImmutableMap.of(Tasks.TASK_LOCK_TYPE, TaskLockType.APPEND.name()))
         .interval(Intervals.of("2019-03-01/2019-04-01"))
         .build();
 

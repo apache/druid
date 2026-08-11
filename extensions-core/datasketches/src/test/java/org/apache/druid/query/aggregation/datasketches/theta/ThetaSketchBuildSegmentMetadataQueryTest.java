@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.BaseSketchBuildSegmentMetadataQueryTest;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 public class ThetaSketchBuildSegmentMetadataQueryTest extends BaseSketchBuildSegmentMetadataQueryTest
 {
@@ -51,17 +51,17 @@ public class ThetaSketchBuildSegmentMetadataQueryTest extends BaseSketchBuildSeg
   @Override
   protected void assertMergedSketchAggregator(AggregatorFactory aggregator, String sketchColumn)
   {
-    Assert.assertTrue(
-        "Sketch aggregator should be SketchMergeAggregatorFactory but was " + aggregator.getClass().getName(),
-        aggregator instanceof SketchMergeAggregatorFactory
+    Assertions.assertTrue(
+        aggregator instanceof SketchMergeAggregatorFactory,
+        "Sketch aggregator should be SketchMergeAggregatorFactory but was " + aggregator.getClass().getName()
     );
 
     SketchMergeAggregatorFactory thetaAggregator = (SketchMergeAggregatorFactory) aggregator;
-    Assert.assertEquals("Aggregator name should match", sketchColumn, thetaAggregator.getName());
-    Assert.assertEquals("Field name should match", sketchColumn, thetaAggregator.getFieldName());
-    Assert.assertEquals("size should be default value", SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE, thetaAggregator.getSize());
-    Assert.assertFalse("shouldFinalize should be false", thetaAggregator.getShouldFinalize());
-    Assert.assertFalse("isInputThetaSketch should be false", thetaAggregator.getIsInputThetaSketch());
-    Assert.assertNull("errorBoundsStdDev should be null", thetaAggregator.getErrorBoundsStdDev());
+    Assertions.assertEquals(sketchColumn, thetaAggregator.getName(), "Aggregator name should match");
+    Assertions.assertEquals(sketchColumn, thetaAggregator.getFieldName(), "Field name should match");
+    Assertions.assertEquals(SketchAggregatorFactory.DEFAULT_MAX_SKETCH_SIZE, thetaAggregator.getSize(), "size should be default value");
+    Assertions.assertFalse(thetaAggregator.getShouldFinalize(), "shouldFinalize should be false");
+    Assertions.assertFalse(thetaAggregator.getIsInputThetaSketch(), "isInputThetaSketch should be false");
+    Assertions.assertNull(thetaAggregator.getErrorBoundsStdDev(), "errorBoundsStdDev should be null");
   }
 }

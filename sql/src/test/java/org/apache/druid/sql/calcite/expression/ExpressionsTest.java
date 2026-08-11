@@ -75,10 +75,9 @@ import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
-import org.hamcrest.core.StringContains;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -86,8 +85,6 @@ import org.mockito.Mockito;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.Map;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class ExpressionsTest extends CalciteTestBase
 {
@@ -1280,7 +1277,7 @@ public class ExpressionsTest extends CalciteTestBase
   {
     final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             roundFunction,
@@ -1299,7 +1296,7 @@ public class ExpressionsTest extends CalciteTestBase
             "IAE Exception"
         )
     );
-    Assert.assertEquals("Function[round] second argument should be a LONG but got STRING instead", t.getMessage());
+    Assertions.assertEquals("Function[round] second argument should be a LONG but got STRING instead", t.getMessage());
   }
 
   @Test
@@ -2303,7 +2300,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalRightWithNegativeNumber()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             new RightOperatorConversion().calciteOperator(),
@@ -2315,7 +2312,7 @@ public class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    Assert.assertEquals("Function[right] needs a positive integer as the second argument", t.getMessage());
+    Assertions.assertEquals("Function[right] needs a positive integer as the second argument", t.getMessage());
   }
 
   @Test
@@ -2375,7 +2372,7 @@ public class ExpressionsTest extends CalciteTestBase
   @Test
   public void testAbnormalLeftWithNegativeNumber()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> testHelper.testExpressionString(
             new LeftOperatorConversion().calciteOperator(),
@@ -2387,7 +2384,7 @@ public class ExpressionsTest extends CalciteTestBase
             null
         )
     );
-    Assert.assertEquals("Function[left] needs a positive integer as the second argument", t.getMessage());
+    Assertions.assertEquals("Function[left] needs a positive integer as the second argument", t.getMessage());
   }
 
   @Test
@@ -2739,12 +2736,12 @@ public class ExpressionsTest extends CalciteTestBase
         false
     );
 
-    CannotBuildQueryException t = Assert.assertThrows(
+    CannotBuildQueryException t = Assertions.assertThrows(
         CannotBuildQueryException.class,
         () -> testHelper.testExpression(rexNode, null, plannerContext)
     );
 
-    assertThat(t.getMessage(), StringContains.containsString("Unexpected OVER expression"));
+    Assertions.assertTrue(t.getMessage().contains("Unexpected OVER expression"));
   }
 
   @Test
@@ -2889,7 +2886,7 @@ public class ExpressionsTest extends CalciteTestBase
         )
     );
 
-    Assert.assertNull(
+    Assertions.assertNull(
         Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeCast(
@@ -2910,7 +2907,7 @@ public class ExpressionsTest extends CalciteTestBase
       final DruidLiteral actual
   )
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         StringUtils.format("%s: %s", expected.type(), expected.value()),
         StringUtils.format("%s: %s", actual.type(), actual.value())
     );

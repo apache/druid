@@ -21,8 +21,8 @@ package org.apache.druid.sql.calcite.planner;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class PlannerConfigTest
 {
@@ -30,9 +30,9 @@ public class PlannerConfigTest
   public void testPlannerConfigDefaults()
   {
     PlannerConfig config = new PlannerConfig();
-    Assert.assertFalse(config.isUseLexicographicTopN());
-    Assert.assertTrue(config.isUseApproximateTopN());
-    Assert.assertTrue(config.isUseApproximateCountDistinct());
+    Assertions.assertFalse(config.isUseLexicographicTopN());
+    Assertions.assertTrue(config.isUseApproximateTopN());
+    Assertions.assertTrue(config.isUseApproximateCountDistinct());
   }
 
   @Test
@@ -41,8 +41,8 @@ public class PlannerConfigTest
     PlannerConfig config = PlannerConfig.builder()
                                         .useLexicographicTopN(true)
                                         .build();
-    Assert.assertTrue(config.isUseLexicographicTopN());
-    Assert.assertTrue(config.isUseApproximateTopN());
+    Assertions.assertTrue(config.isUseLexicographicTopN());
+    Assertions.assertTrue(config.isUseApproximateTopN());
   }
 
   @Test
@@ -52,8 +52,8 @@ public class PlannerConfigTest
                                         .useLexicographicTopN(false)
                                         .useApproximateTopN(false)
                                         .build();
-    Assert.assertFalse(config.isUseLexicographicTopN());
-    Assert.assertFalse(config.isUseApproximateTopN());
+    Assertions.assertFalse(config.isUseLexicographicTopN());
+    Assertions.assertFalse(config.isUseApproximateTopN());
   }
 
   @Test

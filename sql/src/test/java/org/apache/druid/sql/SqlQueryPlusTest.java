@@ -23,8 +23,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -34,7 +34,7 @@ public class SqlQueryPlusTest
   public void testSyntaxError()
   {
     // SqlQueryPlus throws parse errors on build() if the statement is invalid
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> SqlQueryPlus.builder("SELECT COUNT(*) AS cnt, 'foo' AS")
                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
@@ -59,7 +59,7 @@ public class SqlQueryPlusTest
                     .buildJdbc();
 
     // It does throw exceptions on freshCopy(), though.
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         sqlQueryPlus::freshCopy
     );
@@ -83,24 +83,24 @@ public class SqlQueryPlusTest
                     .queryContext(userProvidedContext)
                     .auth(CalciteTests.REGULAR_USER_AUTH_RESULT);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Map.of("key", "user-provided-value", "key2", "system-default2"),
         sqlQueryPlusBuilder.build().context()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Map.of("key", "user-provided-value", "key2", "system-default2"),
         sqlQueryPlusBuilder.buildJdbc().context()
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Map.of("key", "user-provided-value", "key2", "system-default2"),
         sqlQueryPlusBuilder.build().withContext(systemDefaultContext, userProvidedContext).context()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Map.of("key", "system-default", "key2", "system-default2"),
         sqlQueryPlusBuilder.build().withContext(systemDefaultContext, Map.of()).context()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Map.of("key", "user-provided-value"),
         sqlQueryPlusBuilder.build().withContext(Map.of(), userProvidedContext).context()
     );

@@ -43,17 +43,19 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructors")
 public class ExpressionFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
@@ -97,6 +99,12 @@ public class ExpressionFilterTest extends BaseFilterTest
       makeSchemaRow(SCHEMA, ROW_SIGNATURE, "9", 9L, 9.0f, 1.234d, 1.234d, null)
   );
 
+  public static Stream<Object[]> constructors()
+  {
+    return BaseFilterTest.makeConstructors().stream();
+  }
+
+
   public ExpressionFilterTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -118,7 +126,7 @@ public class ExpressionFilterTest extends BaseFilterTest
     );
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception
   {
     BaseFilterTest.tearDown(ExpressionFilterTest.class.getName());
@@ -333,13 +341,13 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testGetRequiredColumn()
   {
-    Assert.assertEquals(edf("like(dim1, '1%')").getRequiredColumns(), Sets.newHashSet("dim1"));
-    Assert.assertEquals(edf("dim2 == '1'").getRequiredColumns(), Sets.newHashSet("dim2"));
-    Assert.assertEquals(edf("dim3 < '2'").getRequiredColumns(), Sets.newHashSet("dim3"));
-    Assert.assertEquals(edf("dim4 == ''").getRequiredColumns(), Sets.newHashSet("dim4"));
-    Assert.assertEquals(edf("1 + 1").getRequiredColumns(), new HashSet<>());
-    Assert.assertEquals(edf("dim0 == dim3").getRequiredColumns(), Sets.newHashSet("dim0", "dim3"));
-    Assert.assertEquals(edf("missing == ''").getRequiredColumns(), Sets.newHashSet("missing"));
+    Assertions.assertEquals(edf("like(dim1, '1%')").getRequiredColumns(), Sets.newHashSet("dim1"));
+    Assertions.assertEquals(edf("dim2 == '1'").getRequiredColumns(), Sets.newHashSet("dim2"));
+    Assertions.assertEquals(edf("dim3 < '2'").getRequiredColumns(), Sets.newHashSet("dim3"));
+    Assertions.assertEquals(edf("dim4 == ''").getRequiredColumns(), Sets.newHashSet("dim4"));
+    Assertions.assertEquals(edf("1 + 1").getRequiredColumns(), new HashSet<>());
+    Assertions.assertEquals(edf("dim0 == dim3").getRequiredColumns(), Sets.newHashSet("dim0", "dim3"));
+    Assertions.assertEquals(edf("missing == ''").getRequiredColumns(), Sets.newHashSet("missing"));
   }
 
   @Test
@@ -355,13 +363,13 @@ public class ExpressionFilterTest extends BaseFilterTest
   public void testRequiredColumnRewrite()
   {
     Filter filter = edf("dim1 == '1'").toFilter();
-    Assert.assertFalse(filter.supportsRequiredColumnRewrite());
+    Assertions.assertFalse(filter.supportsRequiredColumnRewrite());
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         UnsupportedOperationException.class,
         () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"))
     );
-    Assert.assertEquals("Required column rewrite is not supported by this filter.", t.getMessage());
+    Assertions.assertEquals("Required column rewrite is not supported by this filter.", t.getMessage());
   }
 
   /**
@@ -374,9 +382,9 @@ public class ExpressionFilterTest extends BaseFilterTest
   {
     // "now() > 0" has no required bindings — would otherwise trigger constant folding in asBitmapColumnIndex.
     Filter filter = edf("now() > 0").toFilter();
-    Assert.assertNull(
-        "ExpressionFilter.getBitmapColumnIndex should return null for non-deterministic now()",
-        filter.getBitmapColumnIndex(null)
+    Assertions.assertNull(
+        filter.getBitmapColumnIndex(null),
+        "ExpressionFilter.getBitmapColumnIndex should return null for non-deterministic now()"
     );
   }
 
@@ -389,9 +397,9 @@ public class ExpressionFilterTest extends BaseFilterTest
   @Test
   public void testNowDimFilterCacheKeyIsNotStableAcrossInstances()
   {
-    Assert.assertFalse(
-        "ExpressionDimFilter cache keys for now() must differ across instances to defeat result caching",
-        java.util.Arrays.equals(edf("now()").getCacheKey(), edf("now()").getCacheKey())
+    Assertions.assertFalse(
+        java.util.Arrays.equals(edf("now()").getCacheKey(), edf("now()").getCacheKey()),
+        "ExpressionDimFilter cache keys for now() must differ across instances to defeat result caching"
     );
   }
 
