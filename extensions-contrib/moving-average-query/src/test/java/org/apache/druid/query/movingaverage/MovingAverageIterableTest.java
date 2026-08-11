@@ -34,12 +34,10 @@ import org.apache.druid.query.movingaverage.averagers.AveragerFactory;
 import org.apache.druid.query.movingaverage.averagers.ConstantAveragerFactory;
 import org.apache.druid.query.movingaverage.averagers.LongMeanAveragerFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -115,54 +113,54 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
 
     Iterator<Row> iter = iterable.iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row r = iter.next();
-    Assert.assertEquals(JAN_1, r.getTimestamp());
-    Assert.assertEquals("m", r.getRaw(GENDER));
+    Assertions.assertEquals(JAN_1, r.getTimestamp());
+    Assertions.assertEquals("m", r.getRaw(GENDER));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
-    Assert.assertEquals(JAN_1, r.getTimestamp());
-    Assert.assertEquals("f", r.getRaw(GENDER));
+    Assertions.assertEquals(JAN_1, r.getTimestamp());
+    Assertions.assertEquals("f", r.getRaw(GENDER));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
-    Assert.assertEquals(JAN_2, r.getTimestamp());
-    Assert.assertEquals("m", r.getRaw(GENDER));
+    Assertions.assertEquals(JAN_2, r.getTimestamp());
+    Assertions.assertEquals("m", r.getRaw(GENDER));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
-    Assert.assertEquals(JAN_2, r.getTimestamp());
-    Assert.assertEquals("f", r.getRaw(GENDER));
+    Assertions.assertEquals(JAN_2, r.getTimestamp());
+    Assertions.assertEquals("f", r.getRaw(GENDER));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
     Row r2 = r;
-    Assert.assertEquals(JAN_3, r.getTimestamp());
-    Assert.assertEquals("US", r.getRaw(COUNTRY));
+    Assertions.assertEquals(JAN_3, r.getTimestamp());
+    Assertions.assertEquals("US", r.getRaw(COUNTRY));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
-    Assert.assertEquals(JAN_3, r.getTimestamp());
-    Assert.assertEquals("US", r.getRaw(COUNTRY));
-    MatcherAssert.assertThat(r.getRaw(AGE), CoreMatchers.not(CoreMatchers.equalTo(r2.getRaw(AGE))));
+    Assertions.assertEquals(JAN_3, r.getTimestamp());
+    Assertions.assertEquals("US", r.getRaw(COUNTRY));
+    Assertions.assertNotEquals(r.getRaw(AGE), r2.getRaw(AGE));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
-    Assert.assertEquals(JAN_4, r.getTimestamp());
-    Assert.assertEquals("f", r.getRaw(GENDER));
+    Assertions.assertEquals(JAN_4, r.getTimestamp());
+    Assertions.assertEquals("f", r.getRaw(GENDER));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
-    Assert.assertEquals(JAN_4, r.getTimestamp());
-    Assert.assertEquals("u", r.getRaw(GENDER));
+    Assertions.assertEquals(JAN_4, r.getTimestamp());
+    Assertions.assertEquals("u", r.getRaw(GENDER));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     r = iter.next();
-    Assert.assertEquals(JAN_4, r.getTimestamp());
-    Assert.assertEquals("m", r.getRaw(GENDER));
+    Assertions.assertEquals(JAN_4, r.getTimestamp());
+    Assertions.assertEquals("m", r.getRaw(GENDER));
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   @Test
@@ -212,30 +210,30 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(new LongSumAggregatorFactory("pageViews", "pageViews"))
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row caResult = iter.next();
 
-    Assert.assertEquals(JAN_1, caResult.getTimestamp());
-    Assert.assertEquals("m", (caResult.getDimension("gender")).get(0));
-    Assert.assertEquals(retval, caResult.getMetric("costPageViews").floatValue(), 0.0f);
-    Assert.assertEquals(1.4285715f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals(JAN_1, caResult.getTimestamp());
+    Assertions.assertEquals("m", (caResult.getDimension("gender")).get(0));
+    Assertions.assertEquals(retval, caResult.getMetric("costPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals(1.4285715f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     caResult = iter.next();
-    Assert.assertEquals("m", (caResult.getDimension("gender")).get(0));
-    Assert.assertEquals(4.285714f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (caResult.getDimension("gender")).get(0));
+    Assertions.assertEquals(4.285714f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     caResult = iter.next();
-    Assert.assertEquals("m", (caResult.getDimension("gender")).get(0));
-    Assert.assertEquals(8.571428f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (caResult.getDimension("gender")).get(0));
+    Assertions.assertEquals(8.571428f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     caResult = iter.next();
-    Assert.assertEquals("f", (caResult.getDimension("gender")).get(0));
-    Assert.assertEquals(5.714285850f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("f", (caResult.getDimension("gender")).get(0));
+    Assertions.assertEquals(5.714285850f, caResult.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
 
   }
 
@@ -281,37 +279,37 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(new LongSumAggregatorFactory("pageViews", "pageViews"))
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
 
   }
 
@@ -355,27 +353,27 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(new LongSumAggregatorFactory("pageViews", "pageViews"))
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   // test injection when the data is missing at the end
@@ -417,37 +415,37 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(new LongSumAggregatorFactory("pageViews", "pageViews"))
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   // test injection when the data is missing in the middle
@@ -496,70 +494,70 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
     ).iterator();
 
     // Jan 1
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_1, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_1, (result.getTimestamp()));
 
     // Jan 2
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_2, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_2, (result.getTimestamp()));
 
     // Jan 3
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_3, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_3, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_3, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_3, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_3, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_3, (result.getTimestamp()));
 
     // Jan 4
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_4, (result.getTimestamp()));
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_4, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("u", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_4, (result.getTimestamp()));
+    Assertions.assertEquals("u", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_4, (result.getTimestamp()));
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("f", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(JAN_4, (result.getTimestamp()));
+    Assertions.assertEquals("f", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(JAN_4, (result.getTimestamp()));
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   @Test
@@ -597,17 +595,17 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(new LongSumAggregatorFactory("pageViews", "pageViews"))
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   @Test
@@ -644,27 +642,27 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(new LongSumAggregatorFactory("pageViews", "pageViews"))
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   @Test
@@ -705,27 +703,27 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(filteredAggregatorFactory)
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 
   @Test
@@ -764,37 +762,37 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
         Collections.singletonList(new LongSumAggregatorFactory("pageViews", "pageViews"))
     ).iterator();
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     Row result = iter.next();
 
-    Assert.assertEquals(JAN_1, result.getTimestamp());
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals(JAN_1, result.getTimestamp());
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(2.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals(JAN_2, result.getTimestamp());
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals(JAN_2, result.getTimestamp());
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals(JAN_3, result.getTimestamp());
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals(JAN_3, result.getTimestamp());
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals(JAN_4, result.getTimestamp());
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals(JAN_4, result.getTimestamp());
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(7.5f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
+    Assertions.assertTrue(iter.hasNext());
     result = iter.next();
-    Assert.assertEquals(JAN_5, result.getTimestamp());
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(5.0f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
+    Assertions.assertEquals(JAN_5, result.getTimestamp());
+    Assertions.assertEquals("m", (result.getDimension("gender")).get(0));
+    Assertions.assertEquals(5.0f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertFalse(iter.hasNext());
+    Assertions.assertFalse(iter.hasNext());
   }
 }
