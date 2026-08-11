@@ -24,7 +24,6 @@ import com.google.common.io.ByteSource;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
@@ -38,14 +37,12 @@ import org.apache.druid.timeline.partition.BucketNumberedShardSpec;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.ShardSpecLookup;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,19 +52,19 @@ import java.util.Optional;
 
 public class LocalIntermediaryDataManagerManualAddAndDeleteTest
 {
-  @Rule
-  public TemporaryFolder tempDir = new TemporaryFolder();
+  @TempDir
+  private File tempDir;
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File intermediarySegmentsLocation;
   private File siblingLocation;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final WorkerConfig workerConfig = new WorkerConfig();
-    intermediarySegmentsLocation = tempDir.newFolder();
-    siblingLocation = tempDir.newFolder();
+    intermediarySegmentsLocation = newTempDir("intermediary");
+    siblingLocation = newTempDir("sibling");
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 1200L, null)))
         .build();
@@ -76,8 +73,8 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
     intermediaryDataManager.start();
   }
 
-  @After
-  public void teardown()
+  @AfterEach
+  public void teardown() throws IOException
   {
     intermediaryDataManager.stop();
   }
@@ -94,11 +91,11 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
     File segmentFile = generateSegmentDir("file_" + i);
     DataSegment segment = newSegment(Intervals.of("2018/2019"), 4);
 
-    IllegalStateException e = Assert.assertThrows(
+    final IllegalStateException e = Assertions.assertThrows(
         IllegalStateException.class,
         () -> intermediaryDataManager.addSegment("supervisorTaskId", "subTaskId", segment, segmentFile)
     );
-    Assert.assertEquals(StringUtils.format("Can't find location to handle segment[%s]", segment), e.getMessage());
+    Assertions.assertEquals(StringUtils.format("Can't find location to handle segment[%s]", segment), e.getMessage());
   }
 
   @Test
@@ -119,7 +116,7 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
           interval,
           partitionId
       );
-      Assert.assertTrue(file.isPresent());
+      Assertions.assertTrue(file.isPresent());
     }
   }
 
@@ -140,7 +137,7 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
 
     for (int partitionId = 0; partitionId < 2; partitionId++) {
       for (int subTaskId = 0; subTaskId < 2; subTaskId++) {
-        Assert.assertFalse(
+        Assertions.assertFalse(
             intermediaryDataManager.findPartitionFile(supervisorTaskId, "subTaskId_" + subTaskId, interval, partitionId)
                                    .isPresent()
         );
@@ -176,19 +173,24 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
         "test data",
         StandardCharsets.UTF_8
     );
-    Assert.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
-    Assert.assertTrue(dataFile.exists());
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () -> intermediaryDataManager.deletePartitions(supervisorTaskId)),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            StringUtils.format(
-                "Invalid value for field [supervisorTaskId]: Value [%s] cannot start with '.'.",
-                supervisorTaskId
-            )
-        )
+    Assertions.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
+    Assertions.assertTrue(dataFile.exists());
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () -> intermediaryDataManager.deletePartitions(supervisorTaskId)
     );
-    Assert.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
-    Assert.assertTrue(dataFile.exists());
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(
+        StringUtils.format(
+            "Invalid value for field [supervisorTaskId]: Value [%s] cannot start with '.'.",
+            supervisorTaskId
+        ),
+        exception.getMessage()
+    );
+    Assertions.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
+    Assertions.assertTrue(dataFile.exists());
   }
 
   @Test
@@ -213,35 +215,47 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
         StandardCharsets.UTF_8
     );
 
-    Assert.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
-    Assert.assertTrue(
+    Assertions.assertTrue(new File(intermediarySegmentsLocation, supervisorTaskId).exists());
+    Assertions.assertTrue(
         new File(intermediarySegmentsLocation, supervisorTaskId + "/" + someFilePath).exists());
 
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () ->
+    final DruidException exception = Assertions.assertThrows(
+        DruidException.class,
+        () ->
             intermediaryDataManager.findPartitionFile(
                 supervisorTaskId,
                 someFile,
                 interval,
                 partitionId
-            )),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            StringUtils.format(
-                "Invalid value for field [supervisorTaskId]: Value [%s] cannot start with '.'.",
-                supervisorTaskId
             )
-        )
+    );
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(
+        StringUtils.format(
+            "Invalid value for field [supervisorTaskId]: Value [%s] cannot start with '.'.",
+            supervisorTaskId
+        ),
+        exception.getMessage()
     );
   }
 
   private File generateSegmentDir(String fileName) throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = tempDir.newFolder();
+    final File segmentDir = newTempDir(fileName);
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
+  }
+
+  private File newTempDir(String name) throws IOException
+  {
+    final File directory = new File(tempDir, name);
+    org.apache.druid.java.util.common.FileUtils.mkdirp(directory);
+    return directory;
   }
 
   private DataSegment newSegment(Interval interval, int bucketId)
