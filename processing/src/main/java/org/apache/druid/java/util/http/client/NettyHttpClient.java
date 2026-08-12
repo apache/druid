@@ -254,13 +254,6 @@ public class NettyHttpClient extends AbstractHttpClient
 
                 assert currentChunkNum == 0;
                 possiblySuspendReads(response);
-                // Servers (notably Druid's QueryResource on the historical) often flush the response
-                // status line + headers in one TCP write and the chunked body in subsequent writes.
-                // Netty 4's AUTO_READ chains reads automatically after a complete read cycle, but in
-                // practice the body chunks for these split writes are not picked up without an explicit
-                // ctx.read(), leaving the caller blocked on an InputStream that never gets bytes.
-                // Force a read here to drain the body chunks for these multi-write responses.
-                ctx.read();
               }
 
               if (msg instanceof HttpContent httpContent) {
