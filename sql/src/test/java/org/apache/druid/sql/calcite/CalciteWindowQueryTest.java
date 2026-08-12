@@ -38,7 +38,7 @@ import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputC
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -52,9 +52,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
@@ -126,7 +126,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       if (results.exception != null) {
         throw new RE(results.exception, "Failed to execute because of exception.");
       }
-      Assert.assertEquals(1, results.recordedQueries.size());
+      Assertions.assertEquals(1, results.recordedQueries.size());
 
       maybeDumpActualResults(results.results);
       if (input.expectedOperators != null) {
@@ -138,7 +138,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
       ColumnType[] types = new ColumnType[outputSignature.size()];
       for (int i = 0; i < outputSignature.size(); ++i) {
         types[i] = outputSignature.getColumnType(i).get();
-        Assert.assertEquals(types[i], results.signature.getColumnType(i).get());
+        Assertions.assertEquals(types[i], results.signature.getColumnType(i).get());
       }
 
       for (Object[] result : input.expectedResults) {
@@ -178,13 +178,15 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         final OperatorFactory expectedOperator = expectedOperators.get(i);
         final OperatorFactory actualOperator = currentOperators.get(i);
         if (!expectedOperator.validateEquivalent(actualOperator)) {
-          assertEquals("Operator Mismatch, index[" + i + "]",
+          assertEquals(
               queryJackson.writeValueAsString(expectedOperator),
-              queryJackson.writeValueAsString(actualOperator));
+              queryJackson.writeValueAsString(actualOperator),
+              "Operator Mismatch, index[" + i + "]"
+          );
           fail("validateEquivalent failed; but textual comparision of operators didn't reported the mismatch!");
         }
       }
-      assertEquals("Operator count mismatch!", expectedOperators.size(), currentOperators.size());
+      assertEquals(expectedOperators.size(), currentOperators.size(), "Operator count mismatch!");
     }
 
     private void maybeDumpActualResults(List<Object[]> results) throws Exception
@@ -284,7 +286,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFailure_partitionByMVD()
   {
-    final DruidException e = Assert.assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testBuilder()
             .sql("select cityName, countryName, array_to_mv(array[1,length(cityName)]),\n"
@@ -302,7 +304,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         e.getMessage()
     );
 
-    final DruidException e1 = Assert.assertThrows(
+    final DruidException e1 = Assertions.assertThrows(
         DruidException.class,
         () -> testBuilder()
             .sql("select cityName, countryName, array_to_mv(array[1,length(cityName)]),\n"
