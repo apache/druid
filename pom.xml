@@ -343,7 +343,7 @@
            <dependency>
                <groupId>commons-net</groupId>
                <artifactId>commons-net</artifactId>
-               <version>3.9.0</version>
+               <version>3.13.0</version>
            </dependency>
           <dependency>
               <groupId>com.github.seancfoley</groupId>
