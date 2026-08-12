@@ -154,6 +154,7 @@ public class StorageLocation
     } else {
       this.freeSpaceToKeep = 0;
     }
+    log.info("SegmentLocation[%s] configured with capacity[%,d] bytes.", path, maxSizeBytes);
     resetStaticStats();
     resetWeakStats();
   }
@@ -1000,6 +1001,14 @@ public class StorageLocation
   public long availableSizeBytes()
   {
     return maxSizeBytes - currSizeBytes.get();
+  }
+
+  /**
+   * The configured capacity of this location, i.e. the maximum value {@link #currentSizeBytes()} can reach.
+   */
+  public long getMaxSizeBytes()
+  {
+    return maxSizeBytes;
   }
 
   public long currentSizeBytes()
