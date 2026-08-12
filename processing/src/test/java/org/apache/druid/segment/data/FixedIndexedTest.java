@@ -145,15 +145,13 @@ public class FixedIndexedTest extends InitializedNullHandlingTest
     }
     Iterator<Long> longIterator = writer.getIterator();
     int ctr = 0;
-    int totalCount = withNull ? 1 + LONGS.length : LONGS.length;
-    for (int i = 0; i < totalCount; i++) {
-      if (withNull) {
-        if (i == 0) {
-          Assertions.assertNull(writer.get(i));
-        } else {
-          Assertions.assertEquals(LONGS[i - 1], writer.get(i), " index: " + i);
-        }
-      } else {
+    if (withNull) {
+      Assertions.assertNull(writer.get(0));
+      for (int i = 1; i <= LONGS.length; i++) {
+        Assertions.assertEquals(LONGS[i - 1], writer.get(i), " index: " + i);
+      }
+    } else {
+      for (int i = 0; i < LONGS.length; i++) {
         Assertions.assertEquals(LONGS[i], writer.get(i), " index: " + i);
       }
     }
