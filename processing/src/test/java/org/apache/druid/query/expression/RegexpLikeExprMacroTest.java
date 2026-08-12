@@ -25,8 +25,8 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class RegexpLikeExprMacroTest extends MacroTestBase
 {
@@ -38,22 +38,28 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testErrorZeroArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_like] requires 2 arguments");
-    eval("regexp_like()", InputBindings.nilBindings());
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_like] requires 2 arguments",
+        () -> eval("regexp_like()", InputBindings.nilBindings())
+    );
   }
 
   @Test
   public void testErrorThreeArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_like] requires 2 arguments");
-    eval("regexp_like('a', 'b', 'c')", InputBindings.nilBindings());
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_like] requires 2 arguments",
+        () -> eval("regexp_like('a', 'b', 'c')", InputBindings.nilBindings())
+    );
   }
 
   @Test
   public void testInvalidRegexpLikePattern()
   {
     MatcherAssert.assertThat(
-        Assert.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> eval("regexp_like('a', '[Ab-C]')", InputBindings.nilBindings())),
         DruidExceptionMatcher.invalidInput().expectMessageContains(
@@ -70,7 +76,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
         "regexp_like(a, 'f.o')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
@@ -83,7 +89,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
         "regexp_like(a, 'f.x')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ExprEval.ofLongBoolean(false).value(),
         result.value()
     );
@@ -92,15 +98,13 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testNullPattern()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
-
-    final ExprEval<?> result = eval(
-        "regexp_like(a, null)",
-        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
-    );
-    Assert.assertEquals(
-        ExprEval.ofLongBoolean(true).value(),
-        result.value()
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_like] pattern must be a STRING literal",
+        () -> eval(
+            "regexp_like(a, null)",
+            InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+        )
     );
   }
 
@@ -111,7 +115,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
         "regexp_like(a, '')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
@@ -120,15 +124,13 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnEmptyString()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
-
-    final ExprEval<?> result = eval(
-        "regexp_like(a, null)",
-        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "")
-    );
-    Assert.assertEquals(
-        ExprEval.ofLongBoolean(true).value(),
-        result.value()
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_like] pattern must be a STRING literal",
+        () -> eval(
+            "regexp_like(a, null)",
+            InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "")
+        )
     );
   }
 
@@ -139,7 +141,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
         "regexp_like(a, '')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "")
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ExprEval.ofLongBoolean(true).value(),
         result.value()
     );
@@ -148,12 +150,10 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnNull()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_like] pattern must be a STRING literal");
-
-    final ExprEval<?> result = eval("regexp_like(a, null)", InputBindings.nilBindings());
-    Assert.assertEquals(
-        ExprEval.ofLongBoolean(true).value(),
-        result.value()
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_like] pattern must be a STRING literal",
+        () -> eval("regexp_like(a, null)", InputBindings.nilBindings())
     );
   }
 
@@ -161,6 +161,6 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   public void testEmptyStringPatternOnNull()
   {
     final ExprEval<?> result = eval("regexp_like(a, '')", InputBindings.nilBindings());
-    Assert.assertNull(result.value());
+    Assertions.assertNull(result.value());
   }
 }

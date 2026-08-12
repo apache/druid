@@ -43,8 +43,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -106,7 +106,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupBy(inMemorySegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }
@@ -120,7 +120,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupBy(mixedSegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }
@@ -143,7 +143,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithSelectFilter(inMemorySegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -158,7 +158,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithSelectFilter(mixedSegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -182,7 +182,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithRegexFilter(inMemorySegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -197,7 +197,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testGroupByWithRegexFilter(mixedSegments, true, true, true, true);
-      Assert.fail("value matchers must be required");
+      Assertions.fail("value matchers must be required");
     }
     catch (Exception ex) {
 
@@ -220,7 +220,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testTopN(inMemorySegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }
@@ -234,7 +234,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
 
     try {
       testTopN(mixedSegments, false, true);
-      Assert.fail("must need row based methods");
+      Assertions.fail("must need row based methods");
     }
     catch (Exception ex) {
     }
