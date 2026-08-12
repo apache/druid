@@ -53,7 +53,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -70,7 +69,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   private static QueryableIndex MMAP_INDEX_WITH_NULLS;
 
   @BeforeAll
-  public static void setup() throws IOException
+  public static void setup()
   {
     InputRowSchema rowSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),

@@ -65,7 +65,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -96,7 +95,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
 
 
   @BeforeAll
-  public static void setup() throws IOException
+  public static void setup()
   {
     CLOSER = Closer.create();
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
