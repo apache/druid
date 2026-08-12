@@ -179,6 +179,8 @@ public class IndexerWorkerContext implements WorkerContext
         QueryContext.of(task.getContext()),
         taskConfig.isVirtualStoragePartialDownloadsEnabled()
     );
+    // Divide tmpStorageBytesPerTask by 3 so the local cache never takes up the majority of space.
+    // In a typical leaf stage run, we may need some disk space for inputs and some for outputs.
     final Long segmentFetchCacheMaxBytes =
         taskConfig.getTmpStorageBytesPerTask() > 0 ? taskConfig.getTmpStorageBytesPerTask() / 3 : null;
     log.info(
@@ -190,8 +192,6 @@ public class IndexerWorkerContext implements WorkerContext
         injector.getInstance(SegmentCacheManagerFactory.class)
                 .manufacturate(
                     new File(toolbox.getIndexingTmpDir(), "segment-fetch"),
-                    // Divide tmpStorageBytesPerTask by 3 so the local cache never takes up the majority of space.
-                    // In a typical leaf stage run, we may need some disk space for inputs and some for outputs.
                     segmentFetchCacheMaxBytes,
                     true,
                     partialDownloadsEnabled
