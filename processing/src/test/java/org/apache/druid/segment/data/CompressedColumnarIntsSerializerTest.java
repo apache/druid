@@ -60,6 +60,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 @ParameterizedClass
+
 @MethodSource("constructorFeeder")
 public class CompressedColumnarIntsSerializerTest
 {

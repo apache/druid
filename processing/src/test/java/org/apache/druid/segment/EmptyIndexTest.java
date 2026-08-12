@@ -33,20 +33,20 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.Collection;
 import java.util.Collections;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class EmptyIndexTest
 {
-
-  @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
     return ImmutableList.of(
@@ -96,13 +96,13 @@ public class EmptyIndexTest
 
       QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);
 
-      Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
-      Assert.assertEquals("getMetricNames", 0, emptyQueryableIndex.getColumnNames().size());
-      Assert.assertEquals("getDataInterval", Intervals.of("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval());
-      Assert.assertEquals(
-          "getReadOnlyTimestamps",
+      Assertions.assertEquals(0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()), "getDimensionNames");
+      Assertions.assertEquals(0, emptyQueryableIndex.getColumnNames().size(), "getMetricNames");
+      Assertions.assertEquals(Intervals.of("2012-08-01/P3D"), emptyQueryableIndex.getDataInterval(), "getDataInterval");
+      Assertions.assertEquals(
           0,
-          emptyQueryableIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength()
+          emptyQueryableIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength(),
+          "getReadOnlyTimestamps"
       );
     }
     finally {
