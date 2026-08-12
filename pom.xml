@@ -1127,12 +1127,12 @@
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm</artifactId>
-                <version>9.9.1</version>
+                <version>9.10.1</version>
             </dependency>
             <dependency>
                 <groupId>org.ow2.asm</groupId>
                 <artifactId>asm-commons</artifactId>
-                <version>9.9.1</version>
+                <version>9.10.1</version>
             </dependency>
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
