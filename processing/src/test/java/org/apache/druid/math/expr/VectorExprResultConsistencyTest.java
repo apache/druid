@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test;
 import javax.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -808,7 +809,7 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
     Assertions.assertEquals(
         nonVectorEval.isError() ? nonVectorEval.error() : "",
         vectorEval.isError() ? vectorEval.error() : "",
-        StringUtils.format("Errors do not match for expr[%s], bindings[%s]", exprString, bindings.lhs)
+        StringUtils.format("Errors do not match for expr[%s], bindings[%s]", exprString, Arrays.toString(bindings.lhs))
     );
 
     if (vectorEval.isValue() && nonVectorEval.isValue()) {

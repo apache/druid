@@ -57,6 +57,8 @@ import org.apache.druid.utils.CloseableUtils;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -148,7 +150,7 @@ public class FrameProcessorExecutorTest
       final ListenableFuture<Long> muxerFuture = exec.runFully(muxer, null);
 
       Assertions.assertEquals(index.numRows(), (long) blasterFuture.get());
-      Assertions.assertEquals(index.numRows() * 2, (long) muxerFuture.get());
+      Assertions.assertEquals((long) index.numRows() * 2, (long) muxerFuture.get());
 
       Assertions.assertEquals(
           index.numRows() * 2,
@@ -496,6 +498,8 @@ public class FrameProcessorExecutorTest
       this.numThreads = numThreads;
     }
 
+    // Keep the JUnit 4 annotations for un-migrated test-jar consumers of this shared base class.
+    @Before
     @BeforeEach
     public void setUp() throws Exception
     {
@@ -509,6 +513,7 @@ public class FrameProcessorExecutorTest
       );
     }
 
+    @After
     @AfterEach
     public void tearDown() throws Exception
     {
