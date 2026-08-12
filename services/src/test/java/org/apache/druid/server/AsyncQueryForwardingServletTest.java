@@ -33,6 +33,7 @@ import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.Service;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.utils.SocketUtil;
@@ -112,11 +113,16 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -131,6 +137,8 @@ import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
+  private static final String RESPONSE_CONTEXT = "{\"missingSegments\":[]}";
+
   private static int port1;
   private static int port2;
 
@@ -181,6 +189,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
+                Jerseys.addResource(binder, ResponseContextResource.class);
                 LifecycleModule.register(binder, Server.class);
               }
             }
@@ -208,6 +217,16 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
+  }
+
+  @Test
+  public void testProxyResponseContextHeader() throws Exception
+  {
+    final URL url = URI.create("http://localhost:" + port + "/proxy/response-context").toURL();
+    final HttpURLConnection get = (HttpURLConnection) url.openConnection();
+
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
+    Assert.assertEquals(RESPONSE_CONTEXT, get.getHeaderField(QueryResource.HEADER_RESPONSE_CONTEXT));
   }
 
   @Test(timeout = 60_000L)
@@ -1038,6 +1057,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     return server;
   }
 
+  @Path("/response-context")
+  public static class ResponseContextResource
+  {
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public javax.ws.rs.core.Response get()
+    {
+      return javax.ws.rs.core.Response.ok(DEFAULT_RESPONSE_CONTENT)
+                                      .header(QueryResource.HEADER_RESPONSE_CONTEXT, RESPONSE_CONTEXT)
+                                      .build();
+    }
+  }
+
   public static class ProxyJettyServerInit implements JettyServerInitializer
   {
 
@@ -1115,6 +1147,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addFilter(GuiceFilter.class, "/slow/*", null);
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);
+      root.addFilter(GuiceFilter.class, "/response-context/*", null);
 
       final Handler.Sequence handlerList = new Handler.Sequence();
       handlerList.setHandlers(
