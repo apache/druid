@@ -1217,7 +1217,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.17.0
+version: 3.18.1
 libraries:
   - com.squareup.okio: okio
   - com.squareup.okio: okio-jvm
@@ -1228,7 +1228,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 3.17.0
+version: 3.18.1
 libraries:
   - com.squareup.okio: okio-jvm
 

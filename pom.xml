@@ -500,6 +500,11 @@
                 <version>3.18.1</version>
             </dependency>
             <dependency>
+                <groupId>com.squareup.okio</groupId>
+                <artifactId>okio-jvm</artifactId>
+                <version>3.18.1</version>
+            </dependency>
+            <dependency>
                 <groupId>redis.clients</groupId>
                 <artifactId>jedis</artifactId>
                 <version>7.0.0</version>
