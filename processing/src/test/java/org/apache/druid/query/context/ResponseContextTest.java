@@ -31,9 +31,9 @@ import org.apache.druid.query.context.ResponseContext.CounterKey;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.context.ResponseContext.StringKey;
+import org.apache.druid.testing.JupiterAssertions;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -60,19 +60,22 @@ public class ResponseContextTest
   static final Key UNREGISTERED_KEY = new StringKey(
       "unregistered-key", true, true);
 
-  @Test(expected = IllegalStateException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void putISETest()
   {
     ResponseContext.createEmpty().put(UNREGISTERED_KEY, new Object());
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void addISETest()
   {
     ResponseContext.createEmpty().add(UNREGISTERED_KEY, new Object());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void registerKeyIAETest()
   {
     Keys.INSTANCE.registerKey(Keys.NUM_SCANNED_ROWS);
@@ -83,9 +86,9 @@ public class ResponseContextTest
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
     ctx.putEntityTag("dummy-etag");
-    Assert.assertEquals("dummy-etag", ctx.getEntityTag());
+    JupiterAssertions.assertEquals("dummy-etag", ctx.getEntityTag());
     ctx.putEntityTag("new-dummy-etag");
-    Assert.assertEquals("new-dummy-etag", ctx.getEntityTag());
+    JupiterAssertions.assertEquals("new-dummy-etag", ctx.getEntityTag());
   }
 
   private static final Interval INTERVAL_01 = Intervals.of("2019-01-01/P1D");
@@ -97,12 +100,12 @@ public class ResponseContextTest
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
     ctx.putUncoveredIntervals(Collections.singletonList(INTERVAL_01), false);
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         Collections.singletonList(INTERVAL_01).toArray(),
         ctx.getUncoveredIntervals().toArray()
     );
     ctx.add(Keys.UNCOVERED_INTERVALS, Arrays.asList(INTERVAL_12, INTERVAL_23));
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         Arrays.asList(INTERVAL_01, INTERVAL_12, INTERVAL_23).toArray(),
         ctx.getUncoveredIntervals().toArray()
     );
@@ -119,7 +122,7 @@ public class ResponseContextTest
     ctx.addRemainingResponse(queryId2, 4);
     ctx.addRemainingResponse(queryId, -1);
     ctx.addRemainingResponse(queryId, -2);
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableMap.of(queryId, 0, queryId2, 4),
         ctx.get(Keys.REMAINING_RESPONSES_FROM_QUERY_SERVERS)
     );
@@ -131,14 +134,14 @@ public class ResponseContextTest
     final ResponseContext ctx = ResponseContext.createEmpty();
     final SegmentDescriptor sd01 = new SegmentDescriptor(INTERVAL_01, "01", 0);
     ctx.addMissingSegments(Collections.singletonList(sd01));
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         Collections.singletonList(sd01).toArray(),
         ctx.getMissingSegments().toArray()
     );
     final SegmentDescriptor sd12 = new SegmentDescriptor(INTERVAL_12, "12", 1);
     final SegmentDescriptor sd23 = new SegmentDescriptor(INTERVAL_23, "23", 2);
     ctx.addMissingSegments(Arrays.asList(sd12, sd23));
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         Arrays.asList(sd01, sd12, sd23).toArray(),
         ctx.getMissingSegments().toArray()
     );
@@ -148,22 +151,22 @@ public class ResponseContextTest
   public void initScannedRowsTest()
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
-    Assert.assertNull(ctx.getRowScanCount());
+    JupiterAssertions.assertNull(ctx.getRowScanCount());
     ctx.initializeRowScanCount();
-    Assert.assertEquals((Long) 0L, ctx.getRowScanCount());
+    JupiterAssertions.assertEquals((Long) 0L, ctx.getRowScanCount());
   }
 
   @Test
   public void mergeScannedRowsTest()
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
-    Assert.assertNull(ctx.getRowScanCount());
+    JupiterAssertions.assertNull(ctx.getRowScanCount());
     ctx.addRowScanCount(0L);
-    Assert.assertEquals((Long) 0L, ctx.getRowScanCount());
+    JupiterAssertions.assertEquals((Long) 0L, ctx.getRowScanCount());
     ctx.addRowScanCount(1L);
-    Assert.assertEquals((Long) 1L, ctx.getRowScanCount());
+    JupiterAssertions.assertEquals((Long) 1L, ctx.getRowScanCount());
     ctx.addRowScanCount(3L);
-    Assert.assertEquals((Long) 4L, ctx.getRowScanCount());
+    JupiterAssertions.assertEquals((Long) 4L, ctx.getRowScanCount());
   }
 
   @Test
@@ -171,11 +174,11 @@ public class ResponseContextTest
   {
     final ResponseContext ctx = ResponseContext.createEmpty();
     ctx.add(Keys.UNCOVERED_INTERVALS_OVERFLOWED, false);
-    Assert.assertEquals(false, ctx.get(Keys.UNCOVERED_INTERVALS_OVERFLOWED));
+    JupiterAssertions.assertEquals(false, ctx.get(Keys.UNCOVERED_INTERVALS_OVERFLOWED));
     ctx.add(Keys.UNCOVERED_INTERVALS_OVERFLOWED, true);
-    Assert.assertEquals(true, ctx.get(Keys.UNCOVERED_INTERVALS_OVERFLOWED));
+    JupiterAssertions.assertEquals(true, ctx.get(Keys.UNCOVERED_INTERVALS_OVERFLOWED));
     ctx.add(Keys.UNCOVERED_INTERVALS_OVERFLOWED, false);
-    Assert.assertEquals(true, ctx.get(Keys.UNCOVERED_INTERVALS_OVERFLOWED));
+    JupiterAssertions.assertEquals(true, ctx.get(Keys.UNCOVERED_INTERVALS_OVERFLOWED));
   }
 
   @Test
@@ -194,19 +197,20 @@ public class ResponseContextTest
     ctx2.addRowScanCount(2L);
 
     ctx1.merge(ctx2);
-    Assert.assertEquals("dummy-etag-2", ctx1.getEntityTag());
-    Assert.assertEquals((Long) 3L, ctx1.getRowScanCount());
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertEquals("dummy-etag-2", ctx1.getEntityTag());
+    JupiterAssertions.assertEquals((Long) 3L, ctx1.getRowScanCount());
+    JupiterAssertions.assertArrayEquals(
         Arrays.asList(INTERVAL_01, INTERVAL_12).toArray(),
         ctx1.getUncoveredIntervals().toArray()
     );
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         Collections.singletonList(sd01).toArray(),
         ctx1.getMissingSegments().toArray()
     );
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void mergeISETest()
   {
     final ResponseContext ctx = new ResponseContext()
@@ -226,7 +230,7 @@ public class ResponseContextTest
     final ResponseContext ctx1 = ResponseContext.createEmpty();
     ctx1.add(EXTN_STRING_KEY, "string-value");
     final DefaultObjectMapper mapper = new DefaultObjectMapper();
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of(
             EXTN_STRING_KEY.getName(),
             "string-value")),
@@ -235,7 +239,7 @@ public class ResponseContextTest
     final ResponseContext ctx2 = ResponseContext.createEmpty(); // Add two non-header fields, and one that will be in the header ctx2.putEntityTag("not in header");
     ctx2.addCpuNanos(100);
     ctx2.add(EXTN_COUNTER_KEY, 100);
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of(
             EXTN_COUNTER_KEY.getName(), 100)),
         ctx2.serializeWith(mapper, Integer.MAX_VALUE).getResult());
@@ -254,7 +258,7 @@ public class ResponseContextTest
     ctx.put(EXTN_STRING_KEY, "long-string-that-is-supposed-to-be-removed-from-result");
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(ctx.getDelegate(), deserializeContext(res1.getResult(), objectMapper));
+    JupiterAssertions.assertEquals(ctx.getDelegate(), deserializeContext(res1.getResult(), objectMapper));
     final ResponseContext ctxCopy = ResponseContext.createEmpty();
     ctxCopy.merge(ctx);
     final int target = EXTN_COUNTER_KEY.getName().length() + 3 +
@@ -263,7 +267,7 @@ public class ResponseContextTest
     final ResponseContext.SerializationResult res2 = ctx.serializeWith(objectMapper, target);
     ctxCopy.remove(EXTN_STRING_KEY);
     ctxCopy.put(Keys.TRUNCATED, true);
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ctxCopy.getDelegate(),
         deserializeContext(res2.getResult(), objectMapper)
     );
@@ -289,8 +293,8 @@ public class ResponseContextTest
     final ObjectMapper mapper = new DefaultObjectMapper();
     String serialized = mapper.writeValueAsString(bogus);
     ResponseContext ctx = ResponseContext.deserialize(serialized, mapper);
-    Assert.assertEquals(1, ctx.getDelegate().size());
-    Assert.assertEquals("eTag", ctx.get(Keys.ETAG));
+    JupiterAssertions.assertEquals(1, ctx.getDelegate().size());
+    JupiterAssertions.assertEquals("eTag", ctx.get(Keys.ETAG));
   }
 
   // Interval value for the test. Must match the deserialized value.
@@ -319,7 +323,7 @@ public class ResponseContextTest
     );
     final DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     final ResponseContext.SerializationResult res1 = ctx.serializeWith(objectMapper, Integer.MAX_VALUE);
-    Assert.assertEquals(ctx.getDelegate(),
+    JupiterAssertions.assertEquals(ctx.getDelegate(),
         deserializeContext(res1.getResult(), objectMapper)
     );
     final int maxLen = INTERVAL_LEN * 4 + Keys.UNCOVERED_INTERVALS.getName().length() + 4 +
@@ -330,7 +334,7 @@ public class ResponseContextTest
     // length.
     ctxCopy.put(Keys.UNCOVERED_INTERVALS, Arrays.asList(interval(1), interval(2), interval(3)));
     ctxCopy.put(Keys.TRUNCATED, true);
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ctxCopy.getDelegate(),
         deserializeContext(res2.getResult(), objectMapper)
     );
@@ -350,13 +354,13 @@ public class ResponseContextTest
         ),
         mapper
     );
-    Assert.assertEquals("string-value", ctx.getEntityTag());
-    Assert.assertEquals((Long) 100L, ctx.getRowScanCount());
-    Assert.assertEquals((Long) 100000L, ctx.getCpuNanos());
+    JupiterAssertions.assertEquals("string-value", ctx.getEntityTag());
+    JupiterAssertions.assertEquals((Long) 100L, ctx.getRowScanCount());
+    JupiterAssertions.assertEquals((Long) 100000L, ctx.getCpuNanos());
     ctx.addRowScanCount(10L);
-    Assert.assertEquals((Long) 110L, ctx.getRowScanCount());
+    JupiterAssertions.assertEquals((Long) 110L, ctx.getRowScanCount());
     ctx.addCpuNanos(100L);
-    Assert.assertEquals((Long) 100100L, ctx.getCpuNanos());
+    JupiterAssertions.assertEquals((Long) 100100L, ctx.getCpuNanos());
   }
 
   @Test
@@ -371,9 +375,9 @@ public class ResponseContextTest
     ctxFinal.add(EXTN_STRING_KEY, "old-string-value");
     ctxFinal.add(EXTN_COUNTER_KEY, 1L);
     ctxFinal.merge(ctx);
-    Assert.assertEquals("etag", ctxFinal.getEntityTag());
-    Assert.assertEquals("string-value", ctxFinal.get(EXTN_STRING_KEY));
-    Assert.assertEquals(1L + 2L, ctxFinal.get(EXTN_COUNTER_KEY));
+    JupiterAssertions.assertEquals("etag", ctxFinal.getEntityTag());
+    JupiterAssertions.assertEquals("string-value", ctxFinal.get(EXTN_STRING_KEY));
+    JupiterAssertions.assertEquals(1L + 2L, ctxFinal.get(EXTN_COUNTER_KEY));
   }
 
   @Test
@@ -382,6 +386,6 @@ public class ResponseContextTest
     final ResponseContext ctx = ResponseContext.createEmpty();
     ctx.putEntityTag("etag");
     Map<String, Object> map = ctx.toMap();
-    Assert.assertEquals(map.get(ResponseContext.Keys.ETAG.getName()), "etag");
+    JupiterAssertions.assertEquals(map.get(ResponseContext.Keys.ETAG.getName()), "etag");
   }
 }

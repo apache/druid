@@ -40,22 +40,18 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.selector.TestColumnValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
 public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandlingTest
 {
-  private static ObjectMapper MAPPER = TestHelper.makeJsonMapper();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
 
   @Test
   public void testSerde() throws IOException
@@ -77,7 +73,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(agg, MAPPER.readValue(MAPPER.writeValueAsBytes(agg), ExpressionLambdaAggregatorFactory.class));
+    JupiterAssertions.assertEquals(agg, MAPPER.readValue(MAPPER.writeValueAsBytes(agg), ExpressionLambdaAggregatorFactory.class));
   }
 
   @Test
@@ -104,10 +100,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
   @Test
   public void testInitialValueMustBeConstant()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("initial value must be constant");
-
-    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+    final ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
         "expr_agg_name",
         ImmutableSet.of("some_column", "some_other_column"),
         null,
@@ -124,16 +117,17 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    agg.getIntermediateType();
+    final IllegalArgumentException exception = JupiterAssertions.assertThrows(
+        IllegalArgumentException.class,
+        agg::getIntermediateType
+    );
+    JupiterAssertions.assertTrue(exception.getMessage().contains("initial value must be constant"));
   }
 
   @Test
   public void testInitialCombineValueMustBeConstant()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("initial combining value must be constant");
-
-    ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
+    final ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
         "expr_agg_name",
         ImmutableSet.of("some_column", "some_other_column"),
         null,
@@ -150,7 +144,11 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    agg.getResultType();
+    final IllegalArgumentException exception = JupiterAssertions.assertThrows(
+        IllegalArgumentException.class,
+        agg::getResultType
+    );
+    JupiterAssertions.assertTrue(exception.getMessage().contains("initial combining value must be constant"));
   }
 
   @Test
@@ -173,7 +171,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(1L, agg.combine(0L, 1L));
+    JupiterAssertions.assertEquals(1L, agg.combine(0L, 1L));
   }
 
   @Test
@@ -196,8 +194,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertArrayEquals(new Object[]{"hello"}, (Object[]) agg.combine(null, new Object[]{"hello"}));
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(new Object[]{"hello"}, (Object[]) agg.combine(null, new Object[]{"hello"}));
+    JupiterAssertions.assertArrayEquals(
         new Object[]{"hello", "world"},
         (Object[]) agg.combine(new Object[]{"hello"}, new Object[]{"world"})
     );
@@ -223,8 +221,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertNull(agg.combine(null, new Object[]{"hello"}));
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertNull(agg.combine(null, new Object[]{"hello"}));
+    JupiterAssertions.assertArrayEquals(
         new Object[]{"hello", "world"},
         (Object[]) agg.combine(new Object[]{"hello"}, new Object[]{"world"})
     );
@@ -250,7 +248,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(100L, agg.finalizeComputation(0L));
+    JupiterAssertions.assertEquals(100L, agg.finalizeComputation(0L));
   }
 
   @Test
@@ -273,8 +271,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals("a,b,c", agg.finalizeComputation(new String[]{"a", "b", "c"}));
-    Assert.assertEquals("a,b,c", agg.finalizeComputation(ImmutableList.of("a", "b", "c")));
+    JupiterAssertions.assertEquals("a,b,c", agg.finalizeComputation(new String[]{"a", "b", "c"}));
+    JupiterAssertions.assertEquals("a,b,c", agg.finalizeComputation(ImmutableList.of("a", "b", "c")));
   }
 
   @Test
@@ -297,9 +295,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -322,9 +320,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.LONG, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.LONG, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.LONG, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.LONG, agg.getResultType());
   }
 
   @Test
@@ -347,9 +345,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE, agg.getResultType());
   }
 
   @Test
@@ -372,9 +370,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -397,9 +395,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.STRING, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -422,9 +420,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.LONG_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -447,9 +445,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.LONG_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -472,9 +470,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getResultType());
   }
 
   @Test
@@ -497,9 +495,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
-    Assert.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.STRING, agg.getResultType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE_ARRAY, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.STRING, agg.getResultType());
   }
 
   @Test
@@ -522,9 +520,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getResultType());
+    JupiterAssertions.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getResultType());
   }
 
   @Test
@@ -547,9 +545,9 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
-    Assert.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
-    Assert.assertEquals(ColumnType.DOUBLE, agg.getResultType());
+    JupiterAssertions.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(HyperUniquesAggregatorFactory.TYPE, agg.getCombiningFactory().getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.DOUBLE, agg.getResultType());
   }
 
   @Test
@@ -579,15 +577,15 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     );
     selector.advance();
     combiner.reset(selector);
-    Assert.assertEquals(1L, combiner.getLong());
+    JupiterAssertions.assertEquals(1L, combiner.getLong());
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(3L, combiner.getLong());
+    JupiterAssertions.assertEquals(3L, combiner.getLong());
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(6L, combiner.getLong());
+    JupiterAssertions.assertEquals(6L, combiner.getLong());
   }
 
   @Test
@@ -617,15 +615,15 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     );
     selector.advance();
     combiner.reset(selector);
-    Assert.assertEquals(1.5, combiner.getDouble(), 0.0);
+    JupiterAssertions.assertEquals(1.5, combiner.getDouble(), 0.0);
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(3.75, combiner.getDouble(), 0.0);
+    JupiterAssertions.assertEquals(3.75, combiner.getDouble(), 0.0);
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(4.0, combiner.getDouble(), 0.0);
+    JupiterAssertions.assertEquals(4.0, combiner.getDouble(), 0.0);
   }
 
   @Test
@@ -652,20 +650,20 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     NullableLongSelector selector = new NullableLongSelector(Arrays.asList(null, 5L, null, 7L));
     selector.advance();
     combiner.reset(selector);
-    Assert.assertTrue(combiner.isNull());
+    JupiterAssertions.assertTrue(combiner.isNull());
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertFalse(combiner.isNull());
-    Assert.assertEquals(5L, combiner.getLong());
+    JupiterAssertions.assertFalse(combiner.isNull());
+    JupiterAssertions.assertEquals(5L, combiner.getLong());
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(5L, combiner.getLong());
+    JupiterAssertions.assertEquals(5L, combiner.getLong());
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(12L, combiner.getLong());
+    JupiterAssertions.assertEquals(12L, combiner.getLong());
   }
 
   @Test
@@ -694,16 +692,16 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     NullableLongSelector selector = new NullableLongSelector(Arrays.asList(1L, null, 3L));
     selector.advance();
     combiner.reset(selector);
-    Assert.assertEquals(1L, combiner.getLong());
+    JupiterAssertions.assertEquals(1L, combiner.getLong());
 
     // null is passed through to the expression, which coalesces to 0
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(1L, combiner.getLong());
+    JupiterAssertions.assertEquals(1L, combiner.getLong());
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertEquals(4L, combiner.getLong());
+    JupiterAssertions.assertEquals(4L, combiner.getLong());
   }
 
   @Test
@@ -732,12 +730,12 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     NullableLongSelector selector = new NullableLongSelector(Arrays.asList(1L, null));
     selector.advance();
     combiner.reset(selector);
-    Assert.assertFalse(combiner.isNull());
-    Assert.assertEquals(1L, combiner.getLong());
+    JupiterAssertions.assertFalse(combiner.isNull());
+    JupiterAssertions.assertEquals(1L, combiner.getLong());
 
     selector.advance();
     combiner.fold(selector);
-    Assert.assertTrue(combiner.isNull());
+    JupiterAssertions.assertTrue(combiner.isNull());
   }
 
 
@@ -800,7 +798,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     }
   }
 
-  @Test(expected = UOE.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(UOE.class)
   public void testAggregateCombinerNotSupportedForNonNumericTypes()
   {
     ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
@@ -823,7 +822,8 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     agg.makeAggregateCombiner();
   }
 
-  @Test(expected = UOE.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(UOE.class)
   public void testAggregateCombinerNotSupportedWhenFoldAndCombineTypesDiffer()
   {
     // fold seed is LONG (intermediate column type), but combine seed is LONG_ARRAY — combining a long segment column
@@ -845,7 +845,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    Assert.assertEquals(ColumnType.LONG, agg.getIntermediateType());
+    JupiterAssertions.assertEquals(ColumnType.LONG, agg.getIntermediateType());
     agg.makeAggregateCombiner();
   }
 
@@ -1047,7 +1047,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
               )
               .build();
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("string_expr", ColumnType.STRING)

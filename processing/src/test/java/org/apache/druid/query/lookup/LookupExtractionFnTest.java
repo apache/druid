@@ -28,10 +28,10 @@ import com.google.common.collect.Sets;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.MapLookupExtractor;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -40,10 +40,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class LookupExtractionFnTest
 {
-  @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
@@ -101,10 +102,10 @@ public class LookupExtractionFnTest
         false
     );
 
-    Assert.assertEquals(lookupExtractionFn1, lookupExtractionFn2);
-    Assert.assertEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn2.hashCode());
-    Assert.assertNotEquals(lookupExtractionFn1, lookupExtractionFn3);
-    Assert.assertNotEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn3.hashCode());
+    JupiterAssertions.assertEquals(lookupExtractionFn1, lookupExtractionFn2);
+    JupiterAssertions.assertEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn2.hashCode());
+    JupiterAssertions.assertNotEquals(lookupExtractionFn1, lookupExtractionFn3);
+    JupiterAssertions.assertNotEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn3.hashCode());
   }
 
   @Test
@@ -125,24 +126,25 @@ public class LookupExtractionFnTest
 
     final LookupExtractionFn lookupExtractionFn2 = OBJECT_MAPPER.readValue(str1, LookupExtractionFn.class);
 
-    Assert.assertEquals(retainMissing, lookupExtractionFn2.isRetainMissingValue());
-    Assert.assertEquals(replaceMissing, lookupExtractionFn2.getReplaceMissingValueWith());
+    JupiterAssertions.assertEquals(retainMissing, lookupExtractionFn2.isRetainMissingValue());
+    JupiterAssertions.assertEquals(replaceMissing, lookupExtractionFn2.getReplaceMissingValueWith());
 
     if (injective == null) {
-      Assert.assertEquals(lookupExtractionFn2.getLookup().isOneToOne(), lookupExtractionFn2.isInjective());
+      JupiterAssertions.assertEquals(lookupExtractionFn2.getLookup().isOneToOne(), lookupExtractionFn2.isInjective());
     } else {
-      Assert.assertEquals(injective, lookupExtractionFn2.isInjective());
+      JupiterAssertions.assertEquals(injective, lookupExtractionFn2.isInjective());
     }
 
-    Assert.assertArrayEquals(lookupExtractionFn.getCacheKey(), lookupExtractionFn2.getCacheKey());
+    JupiterAssertions.assertArrayEquals(lookupExtractionFn.getCacheKey(), lookupExtractionFn2.getCacheKey());
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         str1,
         OBJECT_MAPPER.writeValueAsString(lookupExtractionFn2)
     );
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testIllegalArgs()
   {
     if (retainMissing && replaceMissing != null) {
@@ -178,7 +180,7 @@ public class LookupExtractionFnTest
     );
 
     if (replaceMissing == null || retainMissing) {
-      Assert.assertFalse(
+      JupiterAssertions.assertFalse(
           Arrays.equals(
               lookupExtractionFn.getCacheKey(),
               new LookupExtractionFn(
@@ -190,7 +192,7 @@ public class LookupExtractionFnTest
               ).getCacheKey()
           )
       );
-      Assert.assertFalse(
+      JupiterAssertions.assertFalse(
           Arrays.equals(
               lookupExtractionFn.getCacheKey(),
               new LookupExtractionFn(
@@ -203,7 +205,7 @@ public class LookupExtractionFnTest
           )
       );
     }
-    Assert.assertFalse(
+    JupiterAssertions.assertFalse(
         Arrays.equals(
             lookupExtractionFn.getCacheKey(),
             new LookupExtractionFn(
@@ -215,7 +217,7 @@ public class LookupExtractionFnTest
             ).getCacheKey()
         )
     );
-    Assert.assertFalse(
+    JupiterAssertions.assertFalse(
         Arrays.equals(
             lookupExtractionFn.getCacheKey(),
             new LookupExtractionFn(

@@ -79,9 +79,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -91,7 +91,7 @@ import java.util.List;
 
 public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     AggregatorsModule.registerComplexMetricsAndSerde();
@@ -136,8 +136,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    JupiterAssertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -197,8 +197,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    JupiterAssertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -260,8 +260,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    JupiterAssertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -345,8 +345,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    JupiterAssertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -437,8 +437,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    JupiterAssertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -501,8 +501,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    JupiterAssertions.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertFalse(Arrays.equals(
         strategy1.computeResultLevelCacheKey(query1),
         strategy2.computeResultLevelCacheKey(query2)
     ));
@@ -556,7 +556,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    JupiterAssertions.assertEquals(result1, fromCacheResult);
   }
 
   @Test
@@ -608,7 +608,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    JupiterAssertions.assertEquals(result1, fromCacheResult);
   }
 
   @Test
@@ -639,7 +639,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Object[] rowObjects = {DateTimes.of("2000").getMillis(), "foo", 100, 10.0};
     final ResultRow resultRow = ResultRow.of(rowObjects);
 
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         "standard mapper reads ResultRows",
         rowObjects,
         objectMapper.readValue(
@@ -648,7 +648,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "standard mapper reads MapBasedRows",
         resultRow.toMapBasedRow(query),
         objectMapper.readValue(
@@ -657,7 +657,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "array mapper reads arrays",
         resultRow,
         arraysObjectMapper.readValue(
@@ -666,7 +666,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "array mapper reads arrays (2)",
         resultRow,
         arraysObjectMapper.readValue(
@@ -675,7 +675,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "map mapper reads arrays",
         resultRow,
         mapsObjectMapper.readValue(
@@ -684,7 +684,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "map mapper reads maps",
         resultRow,
         mapsObjectMapper.readValue(
@@ -738,7 +738,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     // There are no tests with the standard mapper since it cannot convert the generic deserialized type for Pair class
     // into the Pair class
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "array mapper reads arrays",
         resultRow,
         arraysObjectMapper.readValue(
@@ -747,7 +747,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "array mapper reads arrays (2)",
         resultRow,
         arraysObjectMapper.readValue(
@@ -756,7 +756,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "map mapper reads arrays",
         resultRow,
         mapsObjectMapper.readValue(
@@ -765,7 +765,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "map mapper reads maps",
         resultRow,
         mapsObjectMapper.readValue(
@@ -817,7 +817,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final ResultRow resultRow = ResultRow.of(rowObjects);
 
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         resultRow,
         arraysObjectMapper.readValue(
             StringUtils.format("[%s, \"foo\", 100, 10.0]", DateTimes.of("2000").getMillis()),
@@ -825,7 +825,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         "standard mapper reads ResultRows",
         rowObjects,
         objectMapper.readValue(
@@ -834,7 +834,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "standard mapper reads MapBasedRows",
         resultRow.toMapBasedRow(query),
         objectMapper.readValue(
@@ -843,7 +843,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "array mapper reads arrays",
         resultRow,
         arraysObjectMapper.readValue(
@@ -852,7 +852,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "array mapper reads maps",
         resultRow,
         arraysObjectMapper.readValue(
@@ -877,7 +877,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "map mapper reads arrays",
         resultRow,
         mapsObjectMapper.readValue(
@@ -886,7 +886,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         "map mapper reads maps",
         resultRow,
         mapsObjectMapper.readValue(
@@ -908,7 +908,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
         .build();
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         RowSignature.builder()
                     .add("dim", ColumnType.STRING)
                     .add("rows", ColumnType.LONG)
@@ -932,7 +932,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setPostAggregatorSpecs(ImmutableList.of(QueryRunnerTestHelper.CONSTANT))
         .build();
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("dim", ColumnType.STRING)
@@ -1006,7 +1006,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCanPerformSubqueryOnGroupBys()
   {
-    Assert.assertTrue(
+    JupiterAssertions.assertTrue(
         new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             new GroupByQuery.Builder()
                 .setDataSource(
@@ -1028,7 +1028,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCanPerformSubqueryOnTimeseries()
   {
-    Assert.assertFalse(
+    JupiterAssertions.assertFalse(
         new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -1042,7 +1042,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @Test
   public void testCanPerformSubqueryOnGroupByOfTimeseries()
   {
-    Assert.assertFalse(
+    JupiterAssertions.assertFalse(
         new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             new GroupByQuery.Builder()
                 .setDataSource(
@@ -1137,7 +1137,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
 
     ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result1, fromCacheResult);
+    JupiterAssertions.assertEquals(result1, fromCacheResult);
 
     // test timestamps that result in integer size millis
     final ResultRow result2 = ResultRow.of(123L, dimValue, 1, dimValue, 10, 20);
@@ -1163,7 +1163,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     );
 
     ResultRow fromResultCacheResult = strategy.pullFromCache(true).apply(fromResultCacheValue);
-    Assert.assertEquals(typeAdjustedResult2, fromResultCacheResult);
+    JupiterAssertions.assertEquals(typeAdjustedResult2, fromResultCacheResult);
   }
 
   @Test
@@ -1216,8 +1216,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertFalse(Arrays.equals(
+    JupiterAssertions.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertFalse(Arrays.equals(
         strategy1.computeCacheKey(query1),
         strategy2.computeCacheKey(queryNoLimit)
     ));
@@ -1253,8 +1253,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
         new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
-    Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
-    Assert.assertTrue(
+    JupiterAssertions.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
+    JupiterAssertions.assertTrue(
         Arrays.equals(
             strategy1.computeResultLevelCacheKey(query1),
             strategy2.computeResultLevelCacheKey(query2)
@@ -1309,15 +1309,15 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query, mapper);
-    Assert.assertTrue(
+    JupiterAssertions.assertTrue(
         "result level cache on broker server for GroupByStrategyV2 should be enabled",
         cacheStrategy.isCacheable(query, false, false)
     );
-    Assert.assertFalse(
+    JupiterAssertions.assertFalse(
         "segment level cache on broker server for GroupByStrategyV2 should be disabled",
         cacheStrategy.isCacheable(query, false, true)
     );
-    Assert.assertTrue(
+    JupiterAssertions.assertTrue(
         "segment level cache on data server for GroupByStrategyV2 should be enabled",
         cacheStrategy.isCacheable(query, true, true)
     );

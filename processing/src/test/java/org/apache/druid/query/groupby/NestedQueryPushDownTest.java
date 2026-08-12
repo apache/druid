@@ -77,11 +77,11 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.JupiterAssertions;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -137,7 +137,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .build();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     closer = Closer.create();
@@ -248,9 +248,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     TestBufferPool mergePool2 = TestBufferPool.offHeap(10_000_000, 10);
     closer.register(() -> {
       // Verify that all objects have been returned to the pool.
-      Assert.assertEquals(0, bufferPool.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePool.getOutstandingObjectCount());
-      Assert.assertEquals(0, mergePool2.getOutstandingObjectCount());
+      JupiterAssertions.assertEquals(0, bufferPool.getOutstandingObjectCount());
+      JupiterAssertions.assertEquals(0, mergePool.getOutstandingObjectCount());
+      JupiterAssertions.assertEquals(0, mergePool2.getOutstandingObjectCount());
     });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
@@ -324,7 +324,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     closer.close();
@@ -393,9 +393,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         "totalSum", 6000L
     );
 
-    Assert.assertEquals(2, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
+    JupiterAssertions.assertEquals(2, results.size());
+    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
+    JupiterAssertions.assertEquals(expectedRow1, results.get(1));
   }
 
   @Test
@@ -447,9 +447,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         "renamedDimB", "sweet",
         "maxBSum", 60L
     );
-    Assert.assertEquals(2, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
+    JupiterAssertions.assertEquals(2, results.size());
+    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
+    JupiterAssertions.assertEquals(expectedRow1, results.get(1));
   }
 
   @Test
@@ -499,7 +499,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(0, results.size());
+    JupiterAssertions.assertEquals(0, results.size());
   }
 
   @Test
@@ -549,8 +549,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
+    JupiterAssertions.assertEquals(1, results.size());
+    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
   }
 
   @Test
@@ -600,8 +600,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
+    JupiterAssertions.assertEquals(1, results.size());
+    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
   }
 
   @Test
@@ -653,9 +653,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(2, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
-    Assert.assertEquals(expectedRow1, results.get(1));
+    JupiterAssertions.assertEquals(2, results.size());
+    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
+    JupiterAssertions.assertEquals(expectedRow1, results.get(1));
   }
 
   @Test
@@ -700,8 +700,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     Sequence<ResultRow> queryResult = runNestedQueryWithForcePushDown(nestedQuery);
     List<ResultRow> results = queryResult.toList();
 
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(expectedRow0, results.get(0));
+    JupiterAssertions.assertEquals(1, results.size());
+    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
   }
 
   private Sequence<ResultRow> runNestedQueryWithForcePushDown(GroupByQuery nestedQuery)
@@ -803,8 +803,8 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
         .build();
     QueryToolChest<ResultRow, GroupByQuery> toolChest = groupByFactory.getToolchest();
     GroupByQuery rewrittenQuery = ((GroupByQueryQueryToolChest) toolChest).rewriteNestedQueryForPushDown(nestedQuery);
-    Assert.assertEquals(outputNameB, rewrittenQuery.getDimensions().get(0).getDimension());
-    Assert.assertEquals(outputNameAgg, rewrittenQuery.getAggregatorSpecs().get(0).getName());
+    JupiterAssertions.assertEquals(outputNameB, rewrittenQuery.getDimensions().get(0).getDimension());
+    JupiterAssertions.assertEquals(outputNameAgg, rewrittenQuery.getAggregatorSpecs().get(0).getName());
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(

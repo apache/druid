@@ -50,11 +50,11 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.JupiterAssertions;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,10 +66,11 @@ import java.util.Map;
 
 public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder tempFoler = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFoler = new TemporaryFolderExtension();
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(UnsupportedOperationException.class)
   public void testComputeWithoutFinalizing()
   {
     String aggName = "rows";
@@ -82,7 +83,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     metricValues.put(aggName, agg.get());
 
     FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
-    Assert.assertEquals(3L, postAgg.compute(metricValues));
+    JupiterAssertions.assertEquals(3L, postAgg.compute(metricValues));
   }
 
   @Test
@@ -100,12 +101,12 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     );
 
     // Check that the class matches exactly; see https://github.com/apache/druid/issues/6063
-    Assert.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
+    JupiterAssertions.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
 
     Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, "test");
 
-    Assert.assertEquals(3L, postAgg.compute(metricValues));
+    JupiterAssertions.assertEquals(3L, postAgg.compute(metricValues));
     EasyMock.verify(aggFactory);
   }
 
@@ -131,7 +132,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
 
     ArithmeticPostAggregator arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggsList);
 
-    Assert.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
+    JupiterAssertions.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
     EasyMock.verify();
   }
 
@@ -170,7 +171,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val4")));
 
     Collections.sort(computedValues, postAgg.getComparator());
-    Assert.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[0]));
+    JupiterAssertions.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[0]));
     EasyMock.verify();
   }
 
@@ -196,7 +197,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val4")));
     Collections.sort(computedValues, postAgg.getComparator());
 
-    Assert.assertArrayEquals(
+    JupiterAssertions.assertArrayEquals(
         new Object[]{null, "test_val1", "test_val2", "test_val4"},
         computedValues.toArray(new Object[0])
     );
@@ -208,7 +209,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
   public void testIngestAndQueryWithArithmeticPostAggregator() throws Exception
   {
     try (
-        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
             Collections.singletonList(new AggregatorsModule()),
             GroupByQueryRunnerTest.testConfigs().get(0),
             tempFoler
@@ -258,9 +259,9 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
       );
 
       final ResultRow resultRow = seq.toList().get(0);
-      Assert.assertEquals("hll_market", 3.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
-      Assert.assertEquals("hll_quality", 9.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
-      Assert.assertEquals("uniq_add", 12.0, ((Number) resultRow.get(2)).floatValue(), 0.1);
+      JupiterAssertions.assertEquals("hll_market", 3.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
+      JupiterAssertions.assertEquals("hll_quality", 9.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
+      JupiterAssertions.assertEquals("uniq_add", 12.0, ((Number) resultRow.get(2)).floatValue(), 0.1);
     }
   }
 
@@ -272,7 +273,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
         ImmutableMap.of("bar", new CountAggregatorFactory("bar"))
     );
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         original,
         objectMapper.readValue(objectMapper.writeValueAsString(decorated), PostAggregator.class)
     );
@@ -296,7 +297,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
               )
               .build();
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

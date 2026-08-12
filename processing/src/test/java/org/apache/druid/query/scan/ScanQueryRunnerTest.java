@@ -62,10 +62,10 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,7 +80,8 @@ import java.util.Set;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 {
 
@@ -146,7 +147,6 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       new ScanQueryConfig()
   );
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
@@ -826,12 +826,12 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     responseContext.putTimeoutTime(timeoutAt);
     try {
       runner.run(QueryPlus.wrap(query), responseContext).toList();
-      Assert.fail("didn't timeout");
+      JupiterAssertions.fail("didn't timeout");
     }
     catch (RuntimeException e) {
-      Assert.assertTrue(e instanceof QueryTimeoutException);
-      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
-      Assert.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
+      JupiterAssertions.assertTrue(e instanceof QueryTimeoutException);
+      JupiterAssertions.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      JupiterAssertions.assertEquals(timeoutAt, responseContext.getTimeoutTime().longValue());
     }
   }
 
@@ -857,11 +857,11 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               })
       ).run(QueryPlus.wrap(query), DefaultResponseContext.createEmpty()).toList();
 
-      Assert.fail("didn't timeout");
+      JupiterAssertions.fail("didn't timeout");
     }
     catch (RuntimeException e) {
-      Assert.assertTrue(e instanceof QueryTimeoutException);
-      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
+      JupiterAssertions.assertTrue(e instanceof QueryTimeoutException);
+      JupiterAssertions.assertEquals("Query timeout", ((QueryTimeoutException) e).getErrorCode());
     }
   }
 
@@ -1062,11 +1062,11 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       ScanResultValue expected = expectedIter.next();
       ScanResultValue actual = actualIter.next();
 
-      Assert.assertEquals(expected.getSegmentId(), actual.getSegmentId());
+      JupiterAssertions.assertEquals(expected.getSegmentId(), actual.getSegmentId());
 
       Set exColumns = Sets.newTreeSet(expected.getColumns());
       Set acColumns = Sets.newTreeSet(actual.getColumns());
-      Assert.assertEquals(exColumns, acColumns);
+      JupiterAssertions.assertEquals(exColumns, acColumns);
 
       Iterator<Map<String, Object>> expectedEvts = ((List<Map<String, Object>>) expected.getEvents()).iterator();
       Iterator<Map<String, Object>> actualEvts = ((List<Map<String, Object>>) actual.getEvents()).iterator();
@@ -1084,7 +1084,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
           Object exValue = ex.getValue();
           if (exValue instanceof Double || exValue instanceof Float) {
             final double expectedDoubleValue = ((Number) exValue).doubleValue();
-            Assert.assertNotNull(
+            JupiterAssertions.assertNotNull(
                 StringUtils.format(
                     "invalid null value for %s (expected %f)",
                     ex.getKey(),
@@ -1092,14 +1092,14 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 ),
                 actVal
             );
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 "invalid value for " + ex.getKey(),
                 expectedDoubleValue,
                 ((Number) actVal).doubleValue(),
                 expectedDoubleValue * 1e-6
             );
           } else {
-            Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
+            JupiterAssertions.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
           }
         }
 
@@ -1113,14 +1113,14 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
           if (exVal instanceof Double || exVal instanceof Float) {
             final double exDoubleValue = ((Number) exVal).doubleValue();
-            Assert.assertEquals(
+            JupiterAssertions.assertEquals(
                 "invalid value for " + ac.getKey(),
                 exDoubleValue,
                 ((Number) actVal).doubleValue(),
                 exDoubleValue * 1e-6
             );
           } else {
-            Assert.assertEquals("invalid value for " + ac.getKey(), exVal, actVal);
+            JupiterAssertions.assertEquals("invalid value for " + ac.getKey(), exVal, actVal);
           }
         }
       }

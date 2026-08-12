@@ -49,11 +49,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -67,7 +67,8 @@ import java.util.Map;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
@@ -81,13 +82,11 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     this.commonAggregators = commonAggregators;
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws IOException
   {
     RESOURCE_CLOSER.close();
   }
-
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     List<Object[]> constructors = new ArrayList<>();
@@ -395,8 +394,8 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     assertExpectedResultsWithCustomRunner(expectedResults, query, vcrunner);
     RESOURCE_CLOSER.register(() -> {
       // Verify that all objects have been returned to the pool.
-      Assert.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
-      Assert.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
+      JupiterAssertions.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
+      JupiterAssertions.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
       defaultPool.close();
       customPool.close();
     });

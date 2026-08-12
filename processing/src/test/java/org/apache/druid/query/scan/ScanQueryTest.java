@@ -45,10 +45,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.JupiterAssertions;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -65,7 +65,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   private static ScanResultValue s2;
   private static ScanResultValue s3;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup()
   {
     intervalSpec = new MultipleIntervalSegmentSpec(
@@ -117,13 +117,14 @@ public class ScanQueryTest extends InitializedNullHandlingTest
                             .dataSource("source")
                             .intervals(intervalSpec)
                             .build();
-    Assert.assertFalse(query.isLegacy());
+    JupiterAssertions.assertFalse(query.isLegacy());
     String json = JSON_MAPPER.writeValueAsString(query);
-    Assert.assertTrue(json.contains("\"legacy\":false"));
-    Assert.assertEquals(query, JSON_MAPPER.readValue(json, Query.class));
+    JupiterAssertions.assertTrue(json.contains("\"legacy\":false"));
+    JupiterAssertions.assertEquals(query, JSON_MAPPER.readValue(json, Query.class));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testAscendingScanQueryWithInvalidColumns()
   {
     Druids.newScanQueryBuilder()
@@ -134,7 +135,8 @@ public class ScanQueryTest extends InitializedNullHandlingTest
           .build();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testDescendingScanQueryWithInvalidColumns()
   {
     Druids.newScanQueryBuilder()
@@ -148,7 +150,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testConflictingOrderByAndTimeOrder()
   {
-    Assert.assertThrows(
+    JupiterAssertions.assertThrows(
         "Cannot provide 'order' incompatible with 'orderBy'",
         IllegalArgumentException.class,
         () ->
@@ -171,7 +173,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   @Test
   public void testCompatibleOrderByAndTimeOrder()
   {
-    Assert.assertNotNull(
+    JupiterAssertions.assertNotNull(
         Druids.newScanQueryBuilder()
               .order(Order.ASCENDING)
               .orderBy(ImmutableList.of(OrderBy.ascending("__time")))
@@ -287,7 +289,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
         ).flatMerge(seq -> seq, noOrderScan.getResultOrdering());
 
     List<ScanResultValue> noOrderList = noOrderSeq.toList();
-    Assert.assertEquals(3, noOrderList.size());
+    JupiterAssertions.assertEquals(3, noOrderList.size());
 
 
     // Ascending
@@ -299,9 +301,9 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     ).flatMerge(seq -> seq, ascendingOrderScan.getResultOrdering());
 
     List<ScanResultValue> ascendingList = ascendingOrderSeq.toList();
-    Assert.assertEquals(2, ascendingList.size());
-    Assert.assertEquals(s1, ascendingList.get(0));
-    Assert.assertEquals(s2, ascendingList.get(1));
+    JupiterAssertions.assertEquals(2, ascendingList.size());
+    JupiterAssertions.assertEquals(s1, ascendingList.get(0));
+    JupiterAssertions.assertEquals(s2, ascendingList.get(1));
 
     // Descending
     Sequence<ScanResultValue> descendingOrderSeq = Sequences.simple(
@@ -312,12 +314,13 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     ).flatMerge(seq -> seq, descendingOrderScan.getResultOrdering());
 
     List<ScanResultValue> descendingList = descendingOrderSeq.toList();
-    Assert.assertEquals(2, descendingList.size());
-    Assert.assertEquals(s2, descendingList.get(0));
-    Assert.assertEquals(s1, descendingList.get(1));
+    JupiterAssertions.assertEquals(2, descendingList.size());
+    JupiterAssertions.assertEquals(s2, descendingList.get(0));
+    JupiterAssertions.assertEquals(s1, descendingList.get(1));
   }
 
-  @Test(expected = ISE.class)
+  @Test
+  @org.apache.druid.testing.ExpectThrows(ISE.class)
   public void testTimeOrderingWithoutTimeColumn()
   {
     ScanQuery descendingOrderScan = Druids.newScanQueryBuilder()
@@ -350,7 +353,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
               .intervals(intervalSpec)
               .build();
 
-    Assert.assertNotNull(scanQuery.getResultOrdering());
+    JupiterAssertions.assertNotNull(scanQuery.getResultOrdering());
   }
 
   @Test
@@ -366,7 +369,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
               .intervals(intervalSpec)
               .build();
 
-    Assert.assertThrows("Cannot execute query with orderBy [quality ASC]", ISE.class, scanQuery::getResultOrdering);
+    JupiterAssertions.assertThrows("Cannot execute query with orderBy [quality ASC]", ISE.class, scanQuery::getResultOrdering);
   }
 
   @Test
@@ -380,7 +383,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
               .intervals(intervalSpec)
               .build();
 
-    Assert.assertNull(query.getRequiredColumns());
+    JupiterAssertions.assertNull(query.getRequiredColumns());
   }
 
   @Test
@@ -395,7 +398,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
               .columns(Collections.emptyList())
               .build();
 
-    Assert.assertNull(query.getRequiredColumns());
+    JupiterAssertions.assertNull(query.getRequiredColumns());
   }
 
   @Test
@@ -409,7 +412,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
               .columns("foo", "bar")
               .build();
 
-    Assert.assertEquals(ImmutableSet.of("__time", "foo", "bar"), query.getRequiredColumns());
+    JupiterAssertions.assertEquals(ImmutableSet.of("__time", "foo", "bar"), query.getRequiredColumns());
   }
 
   @Test
@@ -427,7 +430,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
         .add("bar", ColumnType.FLOAT)
         .build();
 
-    Assert.assertEquals(sig, query.getRowSignature());
+    JupiterAssertions.assertEquals(sig, query.getRowSignature());
   }
 
   @Test
@@ -446,10 +449,10 @@ public class ScanQueryTest extends InitializedNullHandlingTest
               .build();
 
     final CursorBuildSpec buildSpec = ScanQueryEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
-    Assert.assertNull(buildSpec.getGroupingColumns());
-    Assert.assertNull(buildSpec.getAggregators());
-    Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    JupiterAssertions.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
+    JupiterAssertions.assertNull(buildSpec.getGroupingColumns());
+    JupiterAssertions.assertNull(buildSpec.getAggregators());
+    JupiterAssertions.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
   }
 
   @Test

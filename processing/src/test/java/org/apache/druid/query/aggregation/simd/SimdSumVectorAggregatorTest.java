@@ -26,8 +26,8 @@ import org.apache.druid.query.aggregation.LongSumVectorAggregator;
 import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.FakeVectorValueSelector;
 import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.NullPattern;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -119,7 +119,7 @@ public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
       simd.init(simdBuf, position);
       scalar.aggregate(scalarBuf, position, startRow, endRow);
       simd.aggregate(simdBuf, position, startRow, endRow);
-      Assert.assertEquals(msg, scalarBuf.getLong(position), simdBuf.getLong(position));
+      JupiterAssertions.assertEquals(msg, scalarBuf.getLong(position), simdBuf.getLong(position));
     } else {
       long expected = 0;
       boolean anyNonNull = false;
@@ -132,9 +132,9 @@ public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
       final ByteBuffer simdBuf = ByteBuffer.allocate(position + Long.BYTES);
       simd.init(simdBuf, position);
       final boolean reported = simd.aggregate(simdBuf, position, startRow, endRow, nulls);
-      Assert.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
+      JupiterAssertions.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
       if (reported) {
-        Assert.assertEquals(msg, expected, simdBuf.getLong(position));
+        JupiterAssertions.assertEquals(msg, expected, simdBuf.getLong(position));
       }
     }
   }
@@ -168,7 +168,7 @@ public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
       simd.init(simdBuf, position);
       scalar.aggregate(scalarBuf, position, startRow, endRow);
       simd.aggregate(simdBuf, position, startRow, endRow);
-      Assert.assertEquals(
+      JupiterAssertions.assertEquals(
           msg,
           scalarBuf.getDouble(position),
           simdBuf.getDouble(position),
@@ -186,9 +186,9 @@ public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
       final ByteBuffer simdBuf = ByteBuffer.allocate(position + Double.BYTES);
       simd.init(simdBuf, position);
       final boolean reported = simd.aggregate(simdBuf, position, startRow, endRow, nulls);
-      Assert.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
+      JupiterAssertions.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
       if (reported) {
-        Assert.assertEquals(
+        JupiterAssertions.assertEquals(
             msg,
             expected,
             simdBuf.getDouble(position),
@@ -227,7 +227,7 @@ public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
       simd.init(simdBuf, position);
       scalar.aggregate(scalarBuf, position, startRow, endRow);
       simd.aggregate(simdBuf, position, startRow, endRow);
-      Assert.assertEquals(
+      JupiterAssertions.assertEquals(
           msg,
           scalarBuf.getFloat(position),
           simdBuf.getFloat(position),
@@ -245,9 +245,9 @@ public class SimdSumVectorAggregatorTest extends InitializedNullHandlingTest
       final ByteBuffer simdBuf = ByteBuffer.allocate(position + Float.BYTES);
       simd.init(simdBuf, position);
       final boolean reported = simd.aggregate(simdBuf, position, startRow, endRow, nulls);
-      Assert.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
+      JupiterAssertions.assertEquals(msg + " (anyNonNull)", anyNonNull, reported);
       if (reported) {
-        Assert.assertEquals(
+        JupiterAssertions.assertEquals(
             msg,
             expected,
             simdBuf.getFloat(position),

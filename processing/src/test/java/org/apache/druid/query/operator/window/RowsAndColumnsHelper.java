@@ -30,7 +30,7 @@ import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
-import org.junit.Assert;
+import org.apache.druid.testing.JupiterAssertions;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,33 +44,33 @@ public class RowsAndColumnsHelper
   public static void assertEquals(RowsAndColumns rac, String name, int[] expectedResults)
   {
     final Column column = rac.findColumn(name);
-    Assert.assertNotNull(column);
+    JupiterAssertions.assertNotNull(column);
     final ColumnAccessor accessor = column.toAccessor();
-    Assert.assertEquals(expectedResults.length, accessor.numRows());
+    JupiterAssertions.assertEquals(expectedResults.length, accessor.numRows());
     for (int i = 0; i < expectedResults.length; ++i) {
-      Assert.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getInt(i));
+      JupiterAssertions.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getInt(i));
     }
   }
 
   public static void assertEquals(RowsAndColumns rac, String name, long[] expectedResults)
   {
     final Column column = rac.findColumn(name);
-    Assert.assertNotNull(column);
+    JupiterAssertions.assertNotNull(column);
     final ColumnAccessor accessor = column.toAccessor();
-    Assert.assertEquals(expectedResults.length, accessor.numRows());
+    JupiterAssertions.assertEquals(expectedResults.length, accessor.numRows());
     for (int i = 0; i < expectedResults.length; ++i) {
-      Assert.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getLong(i));
+      JupiterAssertions.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getLong(i));
     }
   }
 
   public static void assertEquals(RowsAndColumns rac, String name, double[] expectedResults)
   {
     final Column column = rac.findColumn(name);
-    Assert.assertNotNull(column);
+    JupiterAssertions.assertNotNull(column);
     final ColumnAccessor accessor = column.toAccessor();
-    Assert.assertEquals(expectedResults.length, accessor.numRows());
+    JupiterAssertions.assertEquals(expectedResults.length, accessor.numRows());
     for (int i = 0; i < expectedResults.length; ++i) {
-      Assert.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getDouble(i), 0.0d);
+      JupiterAssertions.assertEquals(StringUtils.format("%s[%s]", name, i), expectedResults[i], accessor.getDouble(i), 0.0d);
     }
   }
 
@@ -149,7 +149,7 @@ public class RowsAndColumnsHelper
     if (this.expectedSize.get() == null) {
       this.expectedSize.set(expectedSize);
     }
-    Assert.assertEquals("Columns should be defined with same size", this.expectedSize.get().intValue(), expectedSize);
+    JupiterAssertions.assertEquals("Columns should be defined with same size", this.expectedSize.get().intValue(), expectedSize);
     ColumnHelper retVal = helpers.get(column);
     if (retVal == null) {
       retVal = new ColumnHelper(expectedSize, expectedType);
@@ -186,13 +186,13 @@ public class RowsAndColumnsHelper
   {
     if (fullColumnSet != null) {
       final Collection<String> columnNames = rac.getColumnNames();
-      Assert.assertEquals(name, fullColumnSet.size(), columnNames.size());
-      Assert.assertTrue(name, fullColumnSet.containsAll(columnNames));
+      JupiterAssertions.assertEquals(name, fullColumnSet.size(), columnNames.size());
+      JupiterAssertions.assertTrue(name, fullColumnSet.containsAll(columnNames));
     }
 
     for (Map.Entry<String, ColumnHelper> entry : helpers.entrySet()) {
       final Column racColumn = rac.findColumn(entry.getKey());
-      Assert.assertNotNull(racColumn);
+      JupiterAssertions.assertNotNull(racColumn);
       entry.getValue().validate(StringUtils.format("%s.%s", name, entry.getKey()), racColumn);
     }
   }
@@ -260,64 +260,64 @@ public class RowsAndColumnsHelper
     {
       final ColumnAccessor accessor = col.toAccessor();
 
-      Assert.assertEquals(msgBase, expectedType, accessor.getType());
-      Assert.assertEquals(msgBase, expectedVals.length, accessor.numRows());
+      JupiterAssertions.assertEquals(msgBase, expectedType, accessor.getType());
+      JupiterAssertions.assertEquals(msgBase, expectedVals.length, accessor.numRows());
       for (int i = 0; i < accessor.numRows(); ++i) {
         final String msg = StringUtils.format("%s[%s]", msgBase, i);
         Object expectedVal = expectedVals[i];
         if (expectedVal == null) {
-          Assert.assertTrue(msg, expectedNulls[i]);
-          Assert.assertTrue(msg, accessor.isNull(i));
-          Assert.assertNull(msg, accessor.getObject(i));
+          JupiterAssertions.assertTrue(msg, expectedNulls[i]);
+          JupiterAssertions.assertTrue(msg, accessor.isNull(i));
+          JupiterAssertions.assertNull(msg, accessor.getObject(i));
         }
 
-        Assert.assertEquals(msg + " is null?", expectedNulls[i], accessor.isNull(i));
+        JupiterAssertions.assertEquals(msg + " is null?", expectedNulls[i], accessor.isNull(i));
         if (expectedVal instanceof Float) {
           if (expectedNulls[i]) {
-            Assert.assertEquals(msg, 0.0f, accessor.getFloat(i), 0.0);
+            JupiterAssertions.assertEquals(msg, 0.0f, accessor.getFloat(i), 0.0);
           } else {
-            Assert.assertEquals(msg, (Float) expectedVal, accessor.getFloat(i), 0.0);
+            JupiterAssertions.assertEquals(msg, (Float) expectedVal, accessor.getFloat(i), 0.0);
           }
         } else if (expectedVal instanceof Double) {
           if (expectedNulls[i]) {
-            Assert.assertEquals(msg, 0.0d, accessor.getDouble(i), 0.0);
+            JupiterAssertions.assertEquals(msg, 0.0d, accessor.getDouble(i), 0.0);
           } else {
-            Assert.assertEquals(msg, (Double) expectedVal, accessor.getDouble(i), 0.0);
+            JupiterAssertions.assertEquals(msg, (Double) expectedVal, accessor.getDouble(i), 0.0);
           }
         } else if (expectedVal instanceof Integer) {
           if (expectedNulls[i]) {
-            Assert.assertEquals(msg, 0, accessor.getInt(i));
+            JupiterAssertions.assertEquals(msg, 0, accessor.getInt(i));
           } else {
-            Assert.assertEquals(msg, ((Integer) expectedVal).intValue(), accessor.getInt(i));
+            JupiterAssertions.assertEquals(msg, ((Integer) expectedVal).intValue(), accessor.getInt(i));
           }
         } else if (expectedVal instanceof Long) {
           if (expectedNulls[i]) {
-            Assert.assertEquals(msg, 0, accessor.getLong(i));
+            JupiterAssertions.assertEquals(msg, 0, accessor.getLong(i));
           } else {
-            Assert.assertEquals(msg, ((Long) expectedVal).longValue(), accessor.getLong(i));
+            JupiterAssertions.assertEquals(msg, ((Long) expectedVal).longValue(), accessor.getLong(i));
           }
         } else if (expectedVal instanceof Object[]) {
           Object actualVal = accessor.getObject(i);
           if (expectedNulls[i]) {
-            Assert.assertNull(msg, accessor.getObject(i));
+            JupiterAssertions.assertNull(msg, accessor.getObject(i));
           } else {
             if (actualVal instanceof ArrayList) {
-              Assert.assertArrayEquals(msg, (Object[]) expectedVals[i], ((ArrayList<?>) actualVal).toArray());
+              JupiterAssertions.assertArrayEquals(msg, (Object[]) expectedVals[i], ((ArrayList<?>) actualVal).toArray());
             } else {
-              Assert.assertArrayEquals(msg, (Object[]) expectedVals[i], (Object[]) actualVal);
+              JupiterAssertions.assertArrayEquals(msg, (Object[]) expectedVals[i], (Object[]) actualVal);
             }
           }
         } else {
           if (expectedNulls[i]) {
-            Assert.assertNull(msg, accessor.getObject(i));
+            JupiterAssertions.assertNull(msg, accessor.getObject(i));
             // asserting null on the expected value is here for consistency in the tests.  If it fails, it's most
             // likely indicative of something wrong with the test setup than the actual logic, we keep it for
             // sanity's sake to things consistent.
-            Assert.assertNull(msg, expectedVal);
+            JupiterAssertions.assertNull(msg, expectedVal);
           } else {
             final Object obj = accessor.getObject(i);
-            Assert.assertNotNull(msg, obj);
-            Assert.assertEquals(msg, expectedVal, obj);
+            JupiterAssertions.assertNotNull(msg, obj);
+            JupiterAssertions.assertEquals(msg, expectedVal, obj);
           }
         }
       }

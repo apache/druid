@@ -51,10 +51,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.SingleIndexedInt;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 
 public class FilteredAggregatorTest extends InitializedNullHandlingTest
@@ -406,17 +407,17 @@ public class FilteredAggregatorTest extends InitializedNullHandlingTest
     );
 
     // Validate state before any aggregation
-    Assert.assertTrue(agg.isNull());
-    Assert.assertNull(agg.get());
+    JupiterAssertions.assertTrue(agg.isNull());
+    JupiterAssertions.assertNull(agg.get());
 
     for (Float expectedValue : expectedValues) {
       aggregate(selector, agg);
       if (expectedValue == null) {
-        Assert.assertTrue(agg.isNull());
-        Assert.assertNull(agg.get());
+        JupiterAssertions.assertTrue(agg.isNull());
+        JupiterAssertions.assertNull(agg.get());
       } else {
-        Assert.assertFalse(agg.isNull());
-        Assert.assertEquals(expectedValue, agg.getFloat(), 0.001);
+        JupiterAssertions.assertFalse(agg.isNull());
+        JupiterAssertions.assertEquals(expectedValue, agg.getFloat(), 0.001);
       }
     }
   }

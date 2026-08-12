@@ -31,8 +31,8 @@ import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -75,7 +75,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   {
     ScanResultValueFramesIterable iterable = createIterable();
     List<FrameSignaturePair> frames = Lists.newArrayList(iterable);
-    Assert.assertEquals(0, frames.size());
+    JupiterAssertions.assertEquals(0, frames.size());
   }
 
   @Test
@@ -87,7 +87,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue1(0)
         )
     );
-    Assert.assertEquals(0, frames1.size());
+    JupiterAssertions.assertEquals(0, frames1.size());
 
     List<FrameSignaturePair> frames2 = Lists.newArrayList(
         createIterable(
@@ -96,7 +96,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue1(0)
         )
     );
-    Assert.assertEquals(0, frames2.size());
+    JupiterAssertions.assertEquals(0, frames2.size());
   }
 
   @Test
@@ -108,7 +108,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue1(2)
         )
     );
-    Assert.assertEquals(1, frames.size());
+    JupiterAssertions.assertEquals(1, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
             new Object[]{1000L, 1100.0D},
@@ -164,7 +164,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
     );
 
     for (List<FrameSignaturePair> frames : framesList) {
-      Assert.assertEquals(1, frames.size());
+      JupiterAssertions.assertEquals(1, frames.size());
       QueryToolChestTestHelper.assertArrayResultsEquals(
           ImmutableList.of(
               new Object[]{1000L, 1100.0D},
@@ -188,7 +188,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue2(2)
         )
     );
-    Assert.assertEquals(2, frames.size());
+    JupiterAssertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
             new Object[]{1000L, 1100.0D},
@@ -214,7 +214,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue3(2)
         )
     );
-    Assert.assertEquals(2, frames.size());
+    JupiterAssertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
             new Object[]{1000L, 1100.0D},
@@ -245,7 +245,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue2(0)
         )
     );
-    Assert.assertEquals(2, frames.size());
+    JupiterAssertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
             new Object[]{1000L, 1100.0D},
@@ -276,7 +276,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue2(0)
         )
     );
-    Assert.assertEquals(2, frames.size());
+    JupiterAssertions.assertEquals(2, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
             new Object[]{1000L, 1100.0D},
@@ -307,7 +307,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             scanResultValue3(0)
         )
     );
-    Assert.assertEquals(1, frames.size());
+    JupiterAssertions.assertEquals(1, frames.size());
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.of(
             new Object[]{3000.0D, 3100L},
@@ -323,7 +323,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
   public void testExceptionThrownWithMissingType()
   {
     Sequence<FrameSignaturePair> frames = Sequences.simple(createIterable(incompleteTypeScanResultValue(1)));
-    Assert.assertThrows(DruidException.class, frames::toList);
+    JupiterAssertions.assertThrows(DruidException.class, frames::toList);
   }
 
 
@@ -335,7 +335,7 @@ public class ScanResultValueFramesIterableTest extends InitializedNullHandlingTe
             Collections.nCopies(100, scanResultValue1(2)).toArray(new ScanResultValue[0])
         )
     );
-    Assert.assertEquals(5, frames.size());
+    JupiterAssertions.assertEquals(5, frames.size());
   }
 
   private static ScanResultValueFramesIterable createIterable(

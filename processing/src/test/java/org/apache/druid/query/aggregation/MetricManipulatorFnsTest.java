@@ -23,21 +23,22 @@ import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.TestLongColumnSelector;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class MetricManipulatorFnsTest
 {
   private static final String NAME = "name";
   private static final String FIELD = "field";
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final ArrayList<Object[]> constructorArrays = new ArrayList<>();
@@ -116,7 +117,7 @@ public class MetricManipulatorFnsTest
 
 
     for (Object[] argList : constructorArrays) {
-      Assert.assertEquals(
+      JupiterAssertions.assertEquals(
           StringUtils.format(
               "Arglist %s is too short. Expected 6 found %d",
               Arrays.toString(argList),
@@ -154,21 +155,21 @@ public class MetricManipulatorFnsTest
   @Test
   public void testIdentity()
   {
-    Assert.assertEquals(identity, agg);
-    Assert.assertEquals(identity, MetricManipulatorFns.identity().manipulate(aggregatorFactory, agg));
+    JupiterAssertions.assertEquals(identity, agg);
+    JupiterAssertions.assertEquals(identity, MetricManipulatorFns.identity().manipulate(aggregatorFactory, agg));
   }
 
   @Test
   public void testFinalize()
   {
-    Assert.assertEquals(identity, agg);
-    Assert.assertEquals(finalize, MetricManipulatorFns.finalizing().manipulate(aggregatorFactory, agg));
+    JupiterAssertions.assertEquals(identity, agg);
+    JupiterAssertions.assertEquals(finalize, MetricManipulatorFns.finalizing().manipulate(aggregatorFactory, agg));
   }
 
   @Test
   public void testDeserialize()
   {
-    Assert.assertEquals(identity, agg);
-    Assert.assertEquals(deserForm, MetricManipulatorFns.deserializing().manipulate(aggregatorFactory, serialForm));
+    JupiterAssertions.assertEquals(identity, agg);
+    JupiterAssertions.assertEquals(deserForm, MetricManipulatorFns.deserializing().manipulate(aggregatorFactory, serialForm));
   }
 }

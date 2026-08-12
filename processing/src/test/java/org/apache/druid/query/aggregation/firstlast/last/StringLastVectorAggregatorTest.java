@@ -38,11 +38,12 @@ import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -83,7 +84,7 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   private VectorColumnSelectorFactory selectorFactory;
 
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     byte[] randomBytes = new byte[1024];
@@ -331,30 +332,30 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     targetWithPairs.aggregate(buf, 0, 0, pairs.length);
     Pair<Long, String> result = (Pair<Long, String>) targetWithPairs.get(buf, 0);
     //Should come 0 as the last value as the left of the pair is greater
-    Assert.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
-    Assert.assertEquals(pairs[0].rhs, result.rhs);
+    JupiterAssertions.assertEquals(pairs[0].lhs.longValue(), result.lhs.longValue());
+    JupiterAssertions.assertEquals(pairs[0].rhs, result.rhs);
   }
 
   @Test
   public void testFactory()
   {
-    Assert.assertTrue(stringLastAggregatorFactory.canVectorize(selectorFactory));
+    JupiterAssertions.assertTrue(stringLastAggregatorFactory.canVectorize(selectorFactory));
     VectorAggregator vectorAggregator = stringLastAggregatorFactory.factorizeVector(selectorFactory);
-    Assert.assertNotNull(vectorAggregator);
-    Assert.assertEquals(StringLastVectorAggregator.class, vectorAggregator.getClass());
+    JupiterAssertions.assertNotNull(vectorAggregator);
+    JupiterAssertions.assertEquals(StringLastVectorAggregator.class, vectorAggregator.getClass());
   }
 
   @Test
   public void testStringLastOnNonStringColumns()
   {
-    Assert.assertTrue(stringLastAggregatorFactory1.canVectorize(selectorFactory));
+    JupiterAssertions.assertTrue(stringLastAggregatorFactory1.canVectorize(selectorFactory));
     VectorAggregator vectorAggregator = stringLastAggregatorFactory1.factorizeVector(selectorFactory);
-    Assert.assertNotNull(vectorAggregator);
-    Assert.assertEquals(StringLastVectorAggregator.class, vectorAggregator.getClass());
+    JupiterAssertions.assertNotNull(vectorAggregator);
+    JupiterAssertions.assertEquals(StringLastVectorAggregator.class, vectorAggregator.getClass());
     vectorAggregator.aggregate(buf, 0, 0, LONG_VALUES.length);
     Pair<Long, String> result = (Pair<Long, String>) vectorAggregator.get(buf, 0);
-    Assert.assertEquals(times[3], result.lhs.longValue());
-    Assert.assertEquals(STRING_VALUES[3], result.rhs);
+    JupiterAssertions.assertEquals(times[3], result.lhs.longValue());
+    JupiterAssertions.assertEquals(STRING_VALUES[3], result.rhs);
   }
 
   @Test
@@ -362,7 +363,7 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   {
     target.init(buf, 0);
     long initVal = buf.getLong(0);
-    Assert.assertEquals(DateTimes.MIN.getMillis(), initVal);
+    JupiterAssertions.assertEquals(DateTimes.MIN.getMillis(), initVal);
   }
 
   @Test
@@ -370,8 +371,8 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   {
     target.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, String> result = (Pair<Long, String>) target.get(buf, 0);
-    Assert.assertEquals(times[3], result.lhs.longValue());
-    Assert.assertEquals(VALUES[3], result.rhs);
+    JupiterAssertions.assertEquals(times[3], result.lhs.longValue());
+    JupiterAssertions.assertEquals(VALUES[3], result.rhs);
   }
 
   @Test
@@ -402,8 +403,8 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     target.aggregate(buf, 3, positions, null, positionOffset);
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) target.get(buf, positions[i] + positionOffset);
-      Assert.assertEquals(times[i], result.lhs.longValue());
-      Assert.assertEquals(VALUES[i], result.rhs);
+      JupiterAssertions.assertEquals(times[i], result.lhs.longValue());
+      JupiterAssertions.assertEquals(VALUES[i], result.rhs);
     }
   }
 
@@ -417,8 +418,8 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     target.aggregate(buf, 3, positions, rows, positionOffset);
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) target.get(buf, positions[i] + positionOffset);
-      Assert.assertEquals(times[rows[i]], result.lhs.longValue());
-      Assert.assertEquals(VALUES[rows[i]], result.rhs);
+      JupiterAssertions.assertEquals(times[rows[i]], result.lhs.longValue());
+      JupiterAssertions.assertEquals(VALUES[rows[i]], result.rhs);
     }
   }
 
@@ -427,8 +428,8 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
   {
     targetSingleDim.aggregate(buf, 0, 0, VALUES.length);
     Pair<Long, String> result = (Pair<Long, String>) targetSingleDim.get(buf, 0);
-    Assert.assertEquals(times[3], result.lhs.longValue());
-    Assert.assertEquals(VALUES[3], result.rhs);
+    JupiterAssertions.assertEquals(times[3], result.lhs.longValue());
+    JupiterAssertions.assertEquals(VALUES[3], result.rhs);
   }
 
   @Test
@@ -440,8 +441,8 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     targetSingleDim.aggregate(buf, 3, positions, null, positionOffset);
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) targetSingleDim.get(buf, positions[i] + positionOffset);
-      Assert.assertEquals(times[i], result.lhs.longValue());
-      Assert.assertEquals(VALUES[i], result.rhs);
+      JupiterAssertions.assertEquals(times[i], result.lhs.longValue());
+      JupiterAssertions.assertEquals(VALUES[i], result.rhs);
     }
   }
 
@@ -455,8 +456,8 @@ public class StringLastVectorAggregatorTest extends InitializedNullHandlingTest
     targetSingleDim.aggregate(buf, 3, positions, rows, positionOffset);
     for (int i = 0; i < positions.length; i++) {
       Pair<Long, String> result = (Pair<Long, String>) targetSingleDim.get(buf, positions[i] + positionOffset);
-      Assert.assertEquals(times[rows[i]], result.lhs.longValue());
-      Assert.assertEquals(VALUES[rows[i]], result.rhs);
+      JupiterAssertions.assertEquals(times[rows[i]], result.lhs.longValue());
+      JupiterAssertions.assertEquals(VALUES[rows[i]], result.rhs);
     }
   }
 

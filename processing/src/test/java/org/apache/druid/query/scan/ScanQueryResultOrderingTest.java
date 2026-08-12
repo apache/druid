@@ -44,13 +44,13 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.JupiterAssertions;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -66,7 +66,8 @@ import java.util.stream.IntStream;
  * <p>
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "datasource";
@@ -144,7 +145,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
   private ScanQueryRunnerFactory queryRunnerFactory;
   private List<QueryRunner<ScanResultValue>> segmentRunners;
 
-  @Parameterized.Parameters(name = "Segment-to-server map[{0}], limit[{1}], batchSize[{2}], maxRowsQueuedForOrdering[{3}]")
   public static Iterable<Object[]> constructorFeeder()
   {
     // Set number of server equal to number of segments, then try all possible distributions of segments to servers.
@@ -188,7 +188,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
     this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     queryRunnerFactory = new ScanQueryRunnerFactory(
@@ -383,7 +383,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
         brokerRunner
     );
 
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         expectedResults.stream().limit(limit == 0 ? Long.MAX_VALUE : limit).collect(Collectors.toList()),
         results
     );

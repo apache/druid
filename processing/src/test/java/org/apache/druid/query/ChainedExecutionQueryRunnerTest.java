@@ -33,13 +33,13 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.testing.JupiterAssertions;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -65,7 +65,7 @@ public class ChainedExecutionQueryRunnerTest
   private final Lock neverRelease = new ReentrantLock();
   private QueryProcessingPool processingPool;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     neverRelease.lock();
@@ -75,13 +75,14 @@ public class ChainedExecutionQueryRunnerTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     processingPool.shutdown();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @org.junit.jupiter.api.Timeout(value = 60_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
   public void testQueryCancellation() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
@@ -164,7 +165,7 @@ public class ChainedExecutionQueryRunnerTest
     queriesStarted.await();
 
     // cancel the query
-    Assert.assertTrue(capturedFuture.hasCaptured());
+    JupiterAssertions.assertTrue(capturedFuture.hasCaptured());
     ListenableFuture future = capturedFuture.getValue();
     future.cancel(true);
 
@@ -173,38 +174,39 @@ public class ChainedExecutionQueryRunnerTest
       resultFuture.get();
     }
     catch (ExecutionException e) {
-      Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
+      JupiterAssertions.assertTrue(e.getCause() instanceof QueryInterruptedException);
       cause = (QueryInterruptedException) e.getCause();
     }
     queriesInterrupted.await();
-    Assert.assertNotNull(cause);
-    Assert.assertTrue(future.isCancelled());
+    JupiterAssertions.assertNotNull(cause);
+    JupiterAssertions.assertTrue(future.isCancelled());
 
     DyingQueryRunner interrupted1 = interrupted.poll();
     synchronized (interrupted1) {
-      Assert.assertTrue("runner 1 started", interrupted1.hasStarted);
-      Assert.assertTrue("runner 1 interrupted", interrupted1.interrupted);
+      JupiterAssertions.assertTrue("runner 1 started", interrupted1.hasStarted);
+      JupiterAssertions.assertTrue("runner 1 interrupted", interrupted1.interrupted);
     }
     DyingQueryRunner interrupted2 = interrupted.poll();
     synchronized (interrupted2) {
-      Assert.assertTrue("runner 2 started", interrupted2.hasStarted);
-      Assert.assertTrue("runner 2 interrupted", interrupted2.interrupted);
+      JupiterAssertions.assertTrue("runner 2 started", interrupted2.hasStarted);
+      JupiterAssertions.assertTrue("runner 2 interrupted", interrupted2.interrupted);
     }
     runners.remove(interrupted1);
     runners.remove(interrupted2);
     DyingQueryRunner remainingRunner = runners.iterator().next();
     synchronized (remainingRunner) {
-      Assert.assertTrue("runner 3 should be interrupted or not have started",
+      JupiterAssertions.assertTrue("runner 3 should be interrupted or not have started",
                         !remainingRunner.hasStarted || remainingRunner.interrupted);
     }
-    Assert.assertFalse("runner 1 not completed", interrupted1.hasCompleted);
-    Assert.assertFalse("runner 2 not completed", interrupted2.hasCompleted);
-    Assert.assertFalse("runner 3 not completed", remainingRunner.hasCompleted);
+    JupiterAssertions.assertFalse("runner 1 not completed", interrupted1.hasCompleted);
+    JupiterAssertions.assertFalse("runner 2 not completed", interrupted2.hasCompleted);
+    JupiterAssertions.assertFalse("runner 3 not completed", remainingRunner.hasCompleted);
 
     EasyMock.verify(watcher);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @org.junit.jupiter.api.Timeout(value = 60_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
   public void testQueryTimeout() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
@@ -288,7 +290,7 @@ public class ChainedExecutionQueryRunnerTest
     queryIsRegistered.await();
     queriesStarted.await();
 
-    Assert.assertTrue(capturedFuture.hasCaptured());
+    JupiterAssertions.assertTrue(capturedFuture.hasCaptured());
     ListenableFuture future = capturedFuture.getValue();
 
     // wait for query to time out
@@ -297,34 +299,34 @@ public class ChainedExecutionQueryRunnerTest
       resultFuture.get();
     }
     catch (ExecutionException e) {
-      Assert.assertTrue(e.getCause() instanceof QueryTimeoutException);
-      Assert.assertEquals("Query timeout", ((QueryTimeoutException) e.getCause()).getErrorCode());
+      JupiterAssertions.assertTrue(e.getCause() instanceof QueryTimeoutException);
+      JupiterAssertions.assertEquals("Query timeout", ((QueryTimeoutException) e.getCause()).getErrorCode());
       cause = (QueryTimeoutException) e.getCause();
     }
     queriesInterrupted.await();
-    Assert.assertNotNull(cause);
-    Assert.assertTrue(future.isCancelled());
+    JupiterAssertions.assertNotNull(cause);
+    JupiterAssertions.assertTrue(future.isCancelled());
 
     DyingQueryRunner interrupted1 = interrupted.poll();
     synchronized (interrupted1) {
-      Assert.assertTrue("runner 1 started", interrupted1.hasStarted);
-      Assert.assertTrue("runner 1 interrupted", interrupted1.interrupted);
+      JupiterAssertions.assertTrue("runner 1 started", interrupted1.hasStarted);
+      JupiterAssertions.assertTrue("runner 1 interrupted", interrupted1.interrupted);
     }
     DyingQueryRunner interrupted2 = interrupted.poll();
     synchronized (interrupted2) {
-      Assert.assertTrue("runner 2 started", interrupted2.hasStarted);
-      Assert.assertTrue("runner 2 interrupted", interrupted2.interrupted);
+      JupiterAssertions.assertTrue("runner 2 started", interrupted2.hasStarted);
+      JupiterAssertions.assertTrue("runner 2 interrupted", interrupted2.interrupted);
     }
     runners.remove(interrupted1);
     runners.remove(interrupted2);
     DyingQueryRunner remainingRunner = runners.iterator().next();
     synchronized (remainingRunner) {
-      Assert.assertTrue("runner 3 should be interrupted or not have started",
+      JupiterAssertions.assertTrue("runner 3 should be interrupted or not have started",
                         !remainingRunner.hasStarted || remainingRunner.interrupted);
     }
-    Assert.assertFalse("runner 1 not completed", interrupted1.hasCompleted);
-    Assert.assertFalse("runner 2 not completed", interrupted2.hasCompleted);
-    Assert.assertFalse("runner 3 not completed", remainingRunner.hasCompleted);
+    JupiterAssertions.assertFalse("runner 1 not completed", interrupted1.hasCompleted);
+    JupiterAssertions.assertFalse("runner 2 not completed", interrupted2.hasCompleted);
+    JupiterAssertions.assertFalse("runner 3 not completed", remainingRunner.hasCompleted);
 
     EasyMock.verify(watcher);
   }
@@ -355,10 +357,11 @@ public class ChainedExecutionQueryRunnerTest
     ArgumentCaptor<PrioritizedQueryRunnerCallable> captor = ArgumentCaptor.forClass(PrioritizedQueryRunnerCallable.class);
     Mockito.verify(queryProcessingPool, Mockito.times(2)).submitRunnerTask(captor.capture());
     List<QueryRunner> actual = captor.getAllValues().stream().map(PrioritizedQueryRunnerCallable::getRunner).collect(Collectors.toList());
-    Assert.assertEquals(runners, actual);
+    JupiterAssertions.assertEquals(runners, actual);
   }
 
-  @Test(timeout = 10_000L)
+  @Test
+  @org.junit.jupiter.api.Timeout(value = 10_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
   public void testPerSegmentTimeout()
   {
     QueryRunner<Integer> slowRunner = (queryPlus, responseContext) -> {
@@ -408,18 +411,19 @@ public class ChainedExecutionQueryRunnerTest
       thrown = e;
     }
 
-    Assert.assertNull("No results expected due to timeout", results);
-    Assert.assertNotNull("Exception should be thrown", thrown);
-    Assert.assertTrue(
+    JupiterAssertions.assertNull("No results expected due to timeout", results);
+    JupiterAssertions.assertNotNull("Exception should be thrown", thrown);
+    JupiterAssertions.assertTrue(
         "Should be QueryTimeoutException or caused by it",
         Throwables.getRootCause(thrown) instanceof QueryTimeoutException
     );
-    Assert.assertEquals("Query timeout, cancelling pending results for query [test]. Per-segment timeout exceeded.", thrown.getMessage());
+    JupiterAssertions.assertEquals("Query timeout, cancelling pending results for query [test]. Per-segment timeout exceeded.", thrown.getMessage());
 
     EasyMock.verify(watcher);
   }
 
-  @Test(timeout = 5_000L)
+  @Test
+  @org.junit.jupiter.api.Timeout(value = 5_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
   public void test_perSegmentTimeout_crossQuery() throws Exception
   {
     final CountDownLatch slowStarted = new CountDownLatch(2);
@@ -487,15 +491,15 @@ public class ChainedExecutionQueryRunnerTest
           fastQuery)).toList());
 
       boolean fastStartedEarly = fastStarted.await(500, TimeUnit.MILLISECONDS);
-      Assert.assertFalse(
+      JupiterAssertions.assertFalse(
           "Fast query should be blocked and not started while slow queries are running",
           fastStartedEarly
       );
 
-      ExecutionException ex = Assert.assertThrows(ExecutionException.class, slowFuture::get);
-      Assert.assertTrue(Throwables.getRootCause(ex) instanceof QueryTimeoutException);
-      Assert.assertEquals("Query timeout, cancelling pending results for query [slow]. Per-segment timeout exceeded.", ex.getCause().getMessage());
-      Assert.assertEquals(
+      ExecutionException ex = JupiterAssertions.assertThrows(ExecutionException.class, slowFuture::get);
+      JupiterAssertions.assertTrue(Throwables.getRootCause(ex) instanceof QueryTimeoutException);
+      JupiterAssertions.assertEquals("Query timeout, cancelling pending results for query [slow]. Per-segment timeout exceeded.", ex.getCause().getMessage());
+      JupiterAssertions.assertEquals(
           Collections.singletonList(
               new Result<>(null, new TimeseriesResultValue(ImmutableMap.of("count", 1)))
           ), fastFuture.get()

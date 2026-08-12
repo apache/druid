@@ -22,24 +22,24 @@ package org.apache.druid.query.rowsandcols.column;
 import org.apache.druid.query.rowsandcols.column.accessor.DoubleColumnAccessorBase;
 import org.apache.druid.query.rowsandcols.column.accessor.FloatColumnAccessorBase;
 import org.apache.druid.query.rowsandcols.column.accessor.LongColumnAccessorBase;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.apache.druid.testing.JupiterAssertions.assertEquals;
+import static org.apache.druid.testing.JupiterAssertions.assertFalse;
+import static org.apache.druid.testing.JupiterAssertions.assertTrue;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("getParameters")
 public class ColumnAccessorsTest
 {
   private TestAccessorShim testAccessor;
 
-  @Parameters
   public static List<Object[]> getParameters()
   {
     List<Object[]> ret = new ArrayList<>();

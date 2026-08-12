@@ -25,8 +25,8 @@ import org.apache.druid.query.aggregation.mean.DoubleMeanVectorAggregator;
 import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.FakeVectorValueSelector;
 import org.apache.druid.query.aggregation.simd.SimdAggregatorTestHelpers.NullPattern;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 
@@ -109,14 +109,14 @@ public class SimdDoubleMeanVectorAggregatorTest extends InitializedNullHandlingT
   {
     final DoubleMeanHolder expected = DoubleMeanHolder.get(expectedBuf, position);
     final DoubleMeanHolder actual = DoubleMeanHolder.get(actualBuf, position);
-    Assert.assertEquals(msg + " (count)", count(expected), count(actual));
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(msg + " (count)", count(expected), count(actual));
+    JupiterAssertions.assertEquals(
         msg + " (sum)",
         sum(expected),
         sum(actual),
         Math.max(Math.abs(sum(expected)) * 1e-12, DELTA)
     );
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         msg + " (mean)",
         expected.mean(),
         actual.mean(),

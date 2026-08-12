@@ -35,21 +35,22 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class TimeseriesQueryTest extends InitializedNullHandlingTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
-  @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));
@@ -77,7 +78,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
     String json = JSON_MAPPER.writeValueAsString(query);
     Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
-    Assert.assertEquals(query, serdeQuery);
+    JupiterAssertions.assertEquals(query, serdeQuery);
   }
 
   @Test
@@ -106,7 +107,7 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
               .descending(descending)
               .build();
 
-    Assert.assertEquals(ImmutableSet.of("__time", "fieldFromVirtualColumn", "aField"), query.getRequiredColumns());
+    JupiterAssertions.assertEquals(ImmutableSet.of("__time", "fieldFromVirtualColumn", "aField"), query.getRequiredColumns());
   }
 
   @Test
@@ -138,9 +139,9 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
               .build();
 
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
-    Assert.assertNull(buildSpec.getGroupingColumns());
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
+    JupiterAssertions.assertNull(buildSpec.getGroupingColumns());
+    JupiterAssertions.assertEquals(
         ImmutableList.of(
             QueryRunnerTestHelper.ROWS_COUNT,
             QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
@@ -149,8 +150,8 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getAggregators()
     );
-    Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
-    Assert.assertTrue(buildSpec.getPreferredOrdering().isEmpty());
+    JupiterAssertions.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    JupiterAssertions.assertTrue(buildSpec.getPreferredOrdering().isEmpty());
   }
 
   @Test
@@ -182,12 +183,12 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
               .build();
 
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(QueryRunnerTestHelper.FULL_ON_INTERVAL, buildSpec.getInterval());
+    JupiterAssertions.assertEquals(
         Collections.singletonList(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
         buildSpec.getGroupingColumns()
     );
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         ImmutableList.of(
             QueryRunnerTestHelper.ROWS_COUNT,
             QueryRunnerTestHelper.INDEX_DOUBLE_SUM,
@@ -196,14 +197,14 @@ public class TimeseriesQueryTest extends InitializedNullHandlingTest
         ),
         buildSpec.getAggregators()
     );
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         VirtualColumns.create(
             Granularities.toVirtualColumn(query.getGranularity(), Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
             virtualColumns.getVirtualColumns()[0]
         ),
         buildSpec.getVirtualColumns()
     );
-    Assert.assertEquals(
+    JupiterAssertions.assertEquals(
         descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder(),
         buildSpec.getPreferredOrdering()
     );

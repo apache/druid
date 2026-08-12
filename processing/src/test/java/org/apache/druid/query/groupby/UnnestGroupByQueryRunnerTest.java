@@ -58,15 +58,15 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.JupiterAssertions;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.DateTime;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -77,7 +77,10 @@ import java.util.List;
 import java.util.Map;
 
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+
+@MethodSource("constructorFeeder")
 public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 {
   private static TestGroupByBuffers BUFFER_POOLS = null;
@@ -86,11 +89,11 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   private final GroupByQueryConfig config;
   private final boolean vectorize;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public final JupiterAssertions.ExceptionExpectation expectedException = new JupiterAssertions.ExceptionExpectation();
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
 
   public UnnestGroupByQueryRunnerTest(
       GroupByQueryConfig config,
@@ -188,8 +191,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
-
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
     setUpClass();
@@ -208,7 +209,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     if (BUFFER_POOLS == null) {
@@ -216,7 +217,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass()
   {
     BUFFER_POOLS.close();
