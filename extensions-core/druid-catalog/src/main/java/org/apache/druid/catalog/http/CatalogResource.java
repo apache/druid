@@ -31,6 +31,7 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -140,8 +141,8 @@ public class CatalogResource
       try {
         catalog.validate(table);
       }
-      catch (IAE e) {
-        throw CatalogException.badRequest(e.getMessage());
+      catch (IAE | DruidException e) {
+        throw CatalogException.validationError(e);
       }
 
       long newVersion;
@@ -270,6 +271,10 @@ public class CatalogResource
     }
     catch (CatalogException e) {
       return e.toResponse();
+    }
+    catch (IAE | DruidException e) {
+      // Edits merge and re-validate the table spec, so validation failures surface here.
+      return CatalogException.validationError(e).toResponse();
     }
   }
 
@@ -524,8 +529,8 @@ public class CatalogResource
     try {
       spec.validate();
     }
-    catch (IAE e) {
-      throw CatalogException.badRequest(e.getMessage());
+    catch (IAE | DruidException e) {
+      throw CatalogException.validationError(e);
     }
 
     if (!schema.accepts(spec.type())) {

@@ -965,6 +965,9 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
           }
           vectorBinding.addString(entry.getKey(), strings);
           break;
+        case ARRAY:
+        case COMPLEX:
+          throw new IllegalArgumentException("Unsupported vector binding type: " + entry.getValue());
       }
     }
 

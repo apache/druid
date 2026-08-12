@@ -28,9 +28,9 @@ public interface DartWorkerClient extends WorkerClient
   /**
    * Close a single worker's clients. Used when that worker fails, so we stop trying to contact it.
    *
-   * @param workerHost worker host:port
+   * @param workerId worker ID string
    */
-  void closeClient(String hostAndPort);
+  void closeClient(String workerId);
 
   /**
    * Stops a worker. Dart-only API, used by the {@link DartWorkerManager}.

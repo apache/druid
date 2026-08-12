@@ -36,7 +36,7 @@ import org.junit.Assert;
 import java.util.ArrayDeque;
 import java.util.Map;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Mock implementation of {@link ServiceClient}.
@@ -76,13 +76,14 @@ public class MockServiceClient implements ServiceClient
       return Futures.immediateFuture(response.getObj());
     } else {
       final Throwable error = expectation.response.error();
-      if (error instanceof BlockingSentinel) {
+      if (error instanceof BlockingSentinel sentinel) {
+        sentinel.requestStarted.countDown();
         try {
           Thread.sleep(10_000);
           return Futures.immediateFailedFuture(new RuntimeException("expected interruption did not happen"));
         }
         catch (InterruptedException e) {
-          ((BlockingSentinel) error).interruptedFlag.set(true);
+          sentinel.requestInterrupted.countDown();
           Thread.currentThread().interrupt();
           return Futures.immediateFailedFuture(e);
         }
@@ -125,23 +126,31 @@ public class MockServiceClient implements ServiceClient
   }
 
   /**
-   * Sleep on the request thread until interrupted; sets {@code interruptedFlag} when the thread is interrupted.
-   * Replaces the Netty-3 idiom of overriding {@code HttpResponse.getContent()} to block, which is no longer
-   * applicable in Netty 4 where the initial {@link HttpResponse} carries no body.
+   * Counts down {@code requestStarted} when the request begins and {@code requestInterrupted} when the sleeping
+   * request thread is interrupted. Replaces the Netty-3 idiom of overriding {@code HttpResponse.getContent()} to
+   * block, which is no longer applicable in Netty 4 where the initial {@link HttpResponse} carries no body.
    */
-  public MockServiceClient expectAndBlock(final RequestBuilder request, final AtomicBoolean interruptedFlag)
+  public MockServiceClient expectAndBlock(
+      final RequestBuilder request,
+      final CountDownLatch requestStarted,
+      final CountDownLatch requestInterrupted
+  )
   {
-    expectations.add(new Expectation(request, Either.error(new BlockingSentinel(interruptedFlag)), null));
+    expectations.add(
+        new Expectation(request, Either.error(new BlockingSentinel(requestStarted, requestInterrupted)), null)
+    );
     return this;
   }
 
   private static class BlockingSentinel extends RuntimeException
   {
-    private final AtomicBoolean interruptedFlag;
+    private final CountDownLatch requestStarted;
+    private final CountDownLatch requestInterrupted;
 
-    BlockingSentinel(AtomicBoolean interruptedFlag)
+    BlockingSentinel(CountDownLatch requestStarted, CountDownLatch requestInterrupted)
     {
-      this.interruptedFlag = interruptedFlag;
+      this.requestStarted = requestStarted;
+      this.requestInterrupted = requestInterrupted;
     }
   }
 

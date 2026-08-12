@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -48,6 +49,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.utils.CloseableUtils;
@@ -1079,7 +1081,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @return List of distinct unused segment intervals for the specified datasource
    * containing at least 1 entry if there is any unused segment for the datasource,
-   * upto a maximum of {@code limit} entries.
+   * up to a maximum of {@code limit} entries.
    */
   public List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit)
   {
@@ -1117,6 +1119,70 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
+   * Scans up to {@code maxSegmentsToScan} unused segments which are eligible for
+   * kill and returns the unique datasource-interval for the segments scanned.
+   * <p>
+   * This method ensures that if there is any unused segment in any datasource
+   * which was updated earlier than {@code maxUpdatedTime}, then the returned
+   * map is not empty. However, it does NOT guarantee that:
+   * <ul>
+   * <li>the candidates in the returned map would be ordered by datasource or interval</li>
+   * <li>the result would contain {@code maxResultSize} entries when there are more distinct
+   * intervals with eligible unused segments in the metadata store.</li>
+   * </ul>
+   *
+   * @param maxUpdatedTime    Unused segments are considered eligible for kill
+   *                          if they were last updated before this time.
+   * @param maxResultSize     Maximum number of candidate intervals to return
+   *                          across all datasources.
+   * @param maxSegmentsToScan Maximum number of eligible unused segments to scan
+   *                          in the metadata store.
+   * @return Map from {@link DatasourceInterval} to the number of unused segments
+   * eligible for kill.
+   */
+  public Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  )
+  {
+    final String sql = StringUtils.format(
+        // Disable checkstyle to avoid argumentLineBreaking rule from getting triggered
+        //CHECKSTYLE.OFF: Regexp
+        """
+            SELECT dataSource, start, %2$send%2$s, COUNT(*) AS totalCount
+            FROM (
+              SELECT dataSource, start, %2$send%2$s
+              FROM %1$s
+              WHERE used = false
+              AND (used_status_last_updated IS NULL OR used_status_last_updated <= :maxUpdatedTime)
+              %3$s
+            ) AS unused
+            GROUP BY dataSource, %2$send%2$s, start
+            %4$s
+            """,
+        //CHECKSTYLE.ON: Regexp
+        dbTables.getSegmentsTable(),
+        connector.getQuoteString(),
+        connector.limitClause(maxSegmentsToScan),
+        connector.limitClause(maxResultSize)
+    );
+
+    final List<Pair<DatasourceInterval, Integer>> unusedSegmentIntervals = connector.inReadOnlyTransaction(
+        (handle, status) ->
+            handle.createQuery(sql)
+                  .setFetchSize(connector.getStreamingFetchSize())
+                  .bind("maxUpdatedTime", maxUpdatedTime.toString())
+                  .map((index, r, ctx) -> mapToUnusedSegmentInterval(r))
+                  .list()
+    );
+
+    return unusedSegmentIntervals.stream().filter(Objects::nonNull).collect(
+        Collectors.toMap(pair -> pair.lhs, pair -> pair.rhs)
+    );
+  }
+
+  /**
    * Retrieves unused segments that exactly match the given interval.
    *
    * @param interval       Returned segments must exactly match this interval.
@@ -1124,7 +1190,7 @@ public class SqlSegmentsMetadataQuery
    *                       which is either null or earlier than this value.
    * @param limit          Maximum number of segments to return
    */
-  public List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
+  public List<DataSegmentPlus> retrieveUnusedSegmentsWithExactInterval(
       String dataSource,
       Interval interval,
       DateTime maxUpdatedTime,
@@ -1132,7 +1198,7 @@ public class SqlSegmentsMetadataQuery
   )
   {
     final String sql = StringUtils.format(
-        "SELECT id, payload FROM %1$s"
+        "SELECT id, payload, upgraded_from_segment_id FROM %1$s"
         + " WHERE dataSource = :dataSource AND used = false"
         + " AND %2$send%2$s = :end AND start = :start"
         + " AND (used_status_last_updated IS NULL OR used_status_last_updated <= :maxUpdatedTime)"
@@ -1140,7 +1206,7 @@ public class SqlSegmentsMetadataQuery
         dbTables.getSegmentsTable(), connector.getQuoteString(), connector.limitClause(limit)
     );
 
-    final List<DataSegment> segments = connector.inReadOnlyTransaction(
+    final List<DataSegmentPlus> segments = connector.inReadOnlyTransaction(
         (handle, status) ->
             handle.createQuery(sql)
                   .setFetchSize(connector.getStreamingFetchSize())
@@ -1148,7 +1214,7 @@ public class SqlSegmentsMetadataQuery
                   .bind("start", interval.getStart().toString())
                   .bind("end", interval.getEnd().toString())
                   .bind("maxUpdatedTime", maxUpdatedTime.toString())
-                  .map((index, r, ctx) -> mapToSegment(r))
+                  .map((index, r, ctx) -> mapToSegmentPlusUpgradedId(r))
                   .list()
     );
 
@@ -1691,6 +1757,9 @@ public class SqlSegmentsMetadataQuery
     return sql;
   }
 
+  /**
+   * Reads the fields {@code start} and {@code end} from the given result set.
+   */
   @Nullable
   private Interval mapToInterval(ResultSet resultSet, String dataSource)
   {
@@ -1702,6 +1771,30 @@ public class SqlSegmentsMetadataQuery
     }
     catch (Throwable t) {
       log.error(t, "Could not read an interval of datasource[%s]", dataSource);
+      return null;
+    }
+  }
+
+  /**
+   * Reads the fields {@code dataSource}, {@code start}, {@code end} and
+   * {@code totalCount} from the given result set.
+   */
+  @Nullable
+  private Pair<DatasourceInterval, Integer> mapToUnusedSegmentInterval(ResultSet resultSet)
+  {
+    try {
+      final String dataSource = resultSet.getString("dataSource");
+      final int totalCount = resultSet.getInt("totalCount");
+
+      final Interval interval = mapToInterval(resultSet, "");
+      if (interval == null) {
+        return null;
+      } else {
+        return Pair.of(new DatasourceInterval(dataSource, interval), totalCount);
+      }
+    }
+    catch (Throwable t) {
+      log.error(t, "Could not read unused segment interval record");
       return null;
     }
   }
@@ -1878,13 +1971,27 @@ public class SqlSegmentsMetadataQuery
     }).iterator();
   }
 
+  /**
+   * Maps the given result set to a {@link DataSegmentPlus} with the segment
+   * payload and the {@code upgradedFromSegmentId} populated (if non-null).
+   */
   @Nullable
-  private DataSegment mapToSegment(ResultSet resultSet)
+  private DataSegmentPlus mapToSegmentPlusUpgradedId(ResultSet resultSet)
   {
     String segmentId = "";
     try {
       segmentId = resultSet.getString("id");
-      return JacksonUtils.readValue(jsonMapper, resultSet.getBytes("payload"), DataSegment.class);
+      final String upgradedFromSegmentId = resultSet.getString("upgraded_from_segment_id");
+      return new DataSegmentPlus(
+          JacksonUtils.readValue(jsonMapper, resultSet.getBytes("payload"), DataSegment.class),
+          null,
+          null,
+          null,
+          null,
+          null,
+          upgradedFromSegmentId,
+          null
+      );
     }
     catch (Throwable t) {
       log.error(t, "Could not read segment with ID[%s]", segmentId);

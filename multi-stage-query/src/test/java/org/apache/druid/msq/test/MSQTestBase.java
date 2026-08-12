@@ -474,7 +474,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager =
-        SegmentCacheManagerFactory.createWithOwnedPool(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), null, true);
+        SegmentCacheManagerFactory.createWithOwnedPool(indexIO, objectMapper)
+                                  .manufacturate(newTempFolder("cacheManager"), null, true, false);
 
     testSegmentManager = new TestSegmentManager();
 
@@ -1804,4 +1805,3 @@ public class MSQTestBase extends BaseCalciteQueryTest
   }
 
 }
-

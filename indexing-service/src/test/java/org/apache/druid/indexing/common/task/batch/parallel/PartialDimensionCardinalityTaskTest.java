@@ -56,13 +56,14 @@ import org.apache.logging.log4j.core.LogEvent;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -75,32 +76,27 @@ public class PartialDimensionCardinalityTaskTest
 
   public static class ConstructorTest
   {
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
-
     @Test
     public void requiresForceGuaranteedRollup()
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("forceGuaranteedRollup must be set");
-
       ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
           .forParallelIndexTask()
           .withPartitionsSpec(new DynamicPartitionsSpec(null, null))
           .withForceGuaranteedRollup(false)
           .build();
 
-      new PartialDimensionCardinalityTaskBuilder()
-          .tuningConfig(tuningConfig)
-          .build();
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> new PartialDimensionCardinalityTaskBuilder()
+              .tuningConfig(tuningConfig)
+              .build()
+      );
+      Assertions.assertTrue(exception.getMessage().contains("forceGuaranteedRollup must be set"));
     }
 
     @Test
     public void requiresHashedPartitions()
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("hashed partitionsSpec required");
-
       PartitionsSpec partitionsSpec = new SingleDimensionPartitionsSpec(null, 1, "a", false);
       ParallelIndexTuningConfig tuningConfig =
           TuningConfigBuilder.forParallelIndexTask()
@@ -108,9 +104,13 @@ public class PartialDimensionCardinalityTaskTest
                              .withPartitionsSpec(partitionsSpec)
                              .build();
 
-      new PartialDimensionCardinalityTaskBuilder()
-          .tuningConfig(tuningConfig)
-          .build();
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> new PartialDimensionCardinalityTaskBuilder()
+              .tuningConfig(tuningConfig)
+              .build()
+      );
+      Assertions.assertTrue(exception.getMessage().contains("hashed partitionsSpec required"));
     }
 
     @Test
@@ -126,7 +126,7 @@ public class PartialDimensionCardinalityTaskTest
     {
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
           .build();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           Collections.singleton(
               new ResourceAction(new Resource(
                   InlineInputSource.TYPE_KEY,
@@ -142,33 +142,29 @@ public class PartialDimensionCardinalityTaskTest
       PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
           .id(ParallelIndexTestingFactory.AUTOMATIC_ID)
           .build();
-      Assert.assertTrue(task.getId().startsWith(PartialDimensionCardinalityTask.TYPE));
+      Assertions.assertTrue(task.getId().startsWith(PartialDimensionCardinalityTask.TYPE));
     }
   }
 
   public static class RunTaskTest
   {
-    @Rule
-    public ExpectedException exception = ExpectedException.none();
-
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Rule
-    public LoggerCaptureRule logger = new LoggerCaptureRule(ParseExceptionHandler.class);
+    @TempDir
+    private File temporaryFolder;
+    private final LoggerCaptureRule logger = new LoggerCaptureRule(ParseExceptionHandler.class);
 
     private Capture<SubTaskReport> reportCapture;
     private TaskToolbox taskToolbox;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
+      logger.before();
       reportCapture = Capture.newInstance();
       ParallelIndexSupervisorTaskClient taskClient = EasyMock.mock(ParallelIndexSupervisorTaskClient.class);
       taskClient.report(EasyMock.capture(reportCapture));
       EasyMock.replay(taskClient);
       taskToolbox = EasyMock.mock(TaskToolbox.class);
-      EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolder.getRoot());
+      EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolder);
       EasyMock.expect(taskToolbox.getSupervisorTaskClientProvider())
               .andReturn((supervisorTaskId, httpTimeout, numRetries) -> taskClient);
       EasyMock.expect(taskToolbox.getOverlordClient()).andReturn(null);
@@ -176,24 +172,32 @@ public class PartialDimensionCardinalityTaskTest
       EasyMock.replay(taskToolbox);
     }
 
+    @AfterEach
+    public void tearDown() throws IOException
+    {
+      logger.after();
+    }
+
     @Test
     public void requiresPartitionDimension() throws Exception
     {
-      exception.expect(IllegalArgumentException.class);
-      exception.expectMessage("partitionDimensions must be specified");
-
-      ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
-          .forParallelIndexTask()
-          .withForceGuaranteedRollup(true)
-          .withPartitionsSpec(
-              new DimensionRangePartitionsSpec(null, null, null, false)
-          )
-          .build();
-      PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
-          .tuningConfig(tuningConfig)
-          .build();
-
-      task.runTask(taskToolbox);
+      final IllegalArgumentException exception = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> {
+            ParallelIndexTuningConfig tuningConfig = TuningConfigBuilder
+                .forParallelIndexTask()
+                .withForceGuaranteedRollup(true)
+                .withPartitionsSpec(
+                    new DimensionRangePartitionsSpec(null, null, null, false)
+                )
+                .build();
+            PartialDimensionCardinalityTask task = new PartialDimensionCardinalityTaskBuilder()
+                .tuningConfig(tuningConfig)
+                .build();
+            task.runTask(taskToolbox);
+          }
+      );
+      Assertions.assertTrue(exception.getMessage().contains("partitionDimensions must be specified"));
     }
 
     @Test
@@ -217,9 +221,9 @@ public class PartialDimensionCardinalityTaskTest
       task.runTask(taskToolbox);
 
       List<LogEvent> logEvents = logger.getLogEvents();
-      Assert.assertEquals(1, logEvents.size());
+      Assertions.assertEquals(1, logEvents.size());
       String logMessage = logEvents.get(0).getMessage().getFormattedMessage();
-      Assert.assertTrue(logMessage.contains("Encountered parse exception"));
+      Assertions.assertTrue(logMessage.contains("Encountered parse exception"));
     }
 
     @Test
@@ -237,7 +241,7 @@ public class PartialDimensionCardinalityTaskTest
 
       task.runTask(taskToolbox);
 
-      Assert.assertEquals(Collections.emptyList(), logger.getLogEvents());
+      Assertions.assertEquals(Collections.emptyList(), logger.getLogEvents());
     }
 
     @Test
@@ -253,10 +257,11 @@ public class PartialDimensionCardinalityTaskTest
           .tuningConfig(tuningConfig)
           .build();
 
-      exception.expect(RuntimeException.class);
-      exception.expectMessage("Max parse exceptions[0] exceeded");
-
-      task.runTask(taskToolbox);
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> task.runTask(taskToolbox)
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Max parse exceptions[0] exceeded"));
     }
 
     @Test
@@ -270,12 +275,12 @@ public class PartialDimensionCardinalityTaskTest
 
       DimensionCardinalityReport report = runTask(taskBuilder);
 
-      Assert.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
+      Assertions.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
       Map<Interval, byte[]> intervalToCardinalities = report.getIntervalToCardinalities();
       byte[] hllSketchBytes = Iterables.getOnlyElement(intervalToCardinalities.values());
       HllSketch hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
-      Assert.assertNotNull(hllSketch);
-      Assert.assertEquals(1L, (long) hllSketch.getEstimate());
+      Assertions.assertNotNull(hllSketch);
+      Assertions.assertEquals(1L, (long) hllSketch.getEstimate());
     }
 
     @Test
@@ -302,12 +307,12 @@ public class PartialDimensionCardinalityTaskTest
 
       DimensionCardinalityReport report = runTask(taskBuilder);
 
-      Assert.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
+      Assertions.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
       Map<Interval, byte[]> intervalToCardinalities = report.getIntervalToCardinalities();
       byte[] hllSketchBytes = Iterables.getOnlyElement(intervalToCardinalities.values());
       HllSketch hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
-      Assert.assertNotNull(hllSketch);
-      Assert.assertEquals(4L, (long) hllSketch.getEstimate());
+      Assertions.assertNotNull(hllSketch);
+      Assertions.assertEquals(4L, (long) hllSketch.getEstimate());
 
     }
 
@@ -327,21 +332,21 @@ public class PartialDimensionCardinalityTaskTest
 
       DimensionCardinalityReport report = runTask(taskBuilder);
 
-      Assert.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
+      Assertions.assertEquals(ParallelIndexTestingFactory.ID, report.getTaskId());
       Map<Interval, byte[]> intervalToCardinalities = report.getIntervalToCardinalities();
-      Assert.assertEquals(2, intervalToCardinalities.size());
+      Assertions.assertEquals(2, intervalToCardinalities.size());
 
       byte[] hllSketchBytes;
       HllSketch hllSketch;
       hllSketchBytes = intervalToCardinalities.get(Intervals.of("1970-01-01T00:00:00.000Z/1970-01-02T00:00:00.000Z"));
       hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
-      Assert.assertNotNull(hllSketch);
-      Assert.assertEquals(1L, (long) hllSketch.getEstimate());
+      Assertions.assertNotNull(hllSketch);
+      Assertions.assertEquals(1L, (long) hllSketch.getEstimate());
 
       hllSketchBytes = intervalToCardinalities.get(Intervals.of("1970-01-02T00:00:00.000Z/1970-01-03T00:00:00.000Z"));
       hllSketch = HllSketch.wrap(Memory.wrap(hllSketchBytes));
-      Assert.assertNotNull(hllSketch);
-      Assert.assertEquals(4L, (long) hllSketch.getEstimate());
+      Assertions.assertNotNull(hllSketch);
+      Assertions.assertEquals(4L, (long) hllSketch.getEstimate());
     }
 
     @Test
@@ -352,8 +357,8 @@ public class PartialDimensionCardinalityTaskTest
 
       TaskStatus taskStatus = task.runTask(taskToolbox);
 
-      Assert.assertEquals(ParallelIndexTestingFactory.ID, taskStatus.getId());
-      Assert.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
+      Assertions.assertEquals(ParallelIndexTestingFactory.ID, taskStatus.getId());
+      Assertions.assertEquals(TaskState.SUCCESS, taskStatus.getStatusCode());
     }
 
     private DimensionCardinalityReport runTask(PartialDimensionCardinalityTaskBuilder taskBuilder)

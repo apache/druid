@@ -25,10 +25,10 @@ import com.sun.net.httpserver.HttpServer;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.rest.RESTCatalog;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -44,7 +44,7 @@ public class RestCatalogTest
   private HttpServer server = null;
   private ServerSocket serverSocket = null;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     serverSocket = new ServerSocket(0);
@@ -81,12 +81,12 @@ public class RestCatalogTest
     );
     RESTCatalog innerCatalog = (RESTCatalog) testRestCatalog.retrieveCatalog();
 
-    Assert.assertEquals("rest", innerCatalog.name());
-    Assert.assertNotNull(innerCatalog.properties());
-    Assert.assertNotNull(testRestCatalog.getCatalogProperties());
-    Assert.assertEquals(testRestCatalog.getCatalogUri(), innerCatalog.properties().get("uri"));
+    Assertions.assertEquals("rest", innerCatalog.name());
+    Assertions.assertNotNull(innerCatalog.properties());
+    Assertions.assertNotNull(testRestCatalog.getCatalogProperties());
+    Assertions.assertEquals(testRestCatalog.getCatalogUri(), innerCatalog.properties().get("uri"));
   }
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     if (server != null) {

@@ -25,7 +25,7 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.catalog.sync.RestUpdateSender.RestSender;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.server.DruidNode;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 import java.util.Arrays;
@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class CacheNotifierTest
 {

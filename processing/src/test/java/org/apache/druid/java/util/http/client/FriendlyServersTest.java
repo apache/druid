@@ -36,12 +36,13 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.SslConnectionFactory;
 import org.eclipse.jetty.util.ssl.KeyStoreScanner;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -110,8 +111,8 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().code());
-      Assert.assertEquals("hello!", response.getContent());
+      Assertions.assertEquals(200, response.getStatus().code());
+      Assertions.assertEquals("hello!", response.getContent());
     }
     finally {
       exec.shutdownNow();
@@ -155,7 +156,7 @@ public class FriendlyServersTest
                 out.write("HTTP/1.1 200 OK\r\nContent-Length: 6\r\n\r\nhello!".getBytes(StandardCharsets.UTF_8));
               }
               catch (Exception e) {
-                Assert.fail(e.toString());
+                Assertions.fail(e.toString());
               }
             }
           }
@@ -180,10 +181,10 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().code());
-      Assert.assertEquals("hello!", response.getContent());
+      Assertions.assertEquals(200, response.getStatus().code());
+      Assertions.assertEquals("hello!", response.getContent());
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "CONNECT anotherHost:8080 HTTP/1.1\r\nProxy-Authorization: Basic Ym9iOnNhbGx5\r\n",
           requestContent.get()
       );
@@ -247,9 +248,9 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get();
 
-      Assert.assertEquals(200, response.getStatus().code());
-      Assert.assertEquals("hello!", response.getContent());
-      Assert.assertTrue(foundAcceptEncoding.get());
+      Assertions.assertEquals(200, response.getStatus().code());
+      Assertions.assertEquals("hello!", response.getContent());
+      Assertions.assertTrue(foundAcceptEncoding.get());
     }
     finally {
       exec.shutdownNow();
@@ -305,7 +306,7 @@ public class FriendlyServersTest
                 ),
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
-        Assert.assertEquals(404, status.code());
+        Assertions.assertEquals(404, status.code());
       }
 
       // Incorrect name ("127.0.0.1")
@@ -327,8 +328,11 @@ public class FriendlyServersTest
           ea = e.getCause();
         }
 
-        Assert.assertTrue("ChannelException thrown by 'get'", ea instanceof ChannelException);
-        Assert.assertTrue("Expected error message", ea.getCause().getMessage().contains("Failed to handshake"));
+        Assertions.assertTrue(ea instanceof ChannelException, "ChannelException thrown by 'get'");
+        Assertions.assertTrue(
+            ea.getCause().getMessage().contains("Failed to handshake"),
+            "Expected error message"
+        );
       }
 
       {
@@ -349,10 +353,10 @@ public class FriendlyServersTest
         catch (ExecutionException e) {
           eb = e.getCause();
         }
-        Assert.assertNotNull("ChannelException thrown by 'get'", eb);
-        Assert.assertTrue(
-            "Root cause is SSLHandshakeException",
-            eb.getCause().getCause() instanceof SSLHandshakeException
+        Assertions.assertNotNull(eb, "ChannelException thrown by 'get'");
+        Assertions.assertTrue(
+            eb.getCause().getCause() instanceof SSLHandshakeException,
+            "Root cause is SSLHandshakeException"
         );
       }
     }
@@ -363,7 +367,7 @@ public class FriendlyServersTest
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testHttpBin() throws Throwable
   {
     final Lifecycle lifecycle = new Lifecycle();
@@ -378,7 +382,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.code());
+        Assertions.assertEquals(200, status.code());
       }
 
       {
@@ -389,7 +393,7 @@ public class FriendlyServersTest
                 StatusResponseHandler.getInstance()
             ).get().getStatus();
 
-        Assert.assertEquals(200, status.code());
+        Assertions.assertEquals(200, status.code());
       }
     }
     finally {
@@ -477,27 +481,27 @@ public class FriendlyServersTest
       final Request request = new Request(HttpMethod.POST, url).setContent(payload);
 
       // First send.
-      Assert.assertEquals(
+      Assertions.assertEquals(
           200,
           client.go(request, StatusResponseHandler.getInstance()).get().getStatus().code()
       );
 
       // KerberosHttpClient's retry pattern: copy the request and send the copy. This must not
       // observe a released ByteBuf nor an already-drained reader index on the original.
-      Assert.assertEquals(
+      Assertions.assertEquals(
           200,
           client.go(request.copy(), StatusResponseHandler.getInstance()).get().getStatus().code()
       );
 
       // And the original Request must still be sendable a third time on its own.
-      Assert.assertEquals(
+      Assertions.assertEquals(
           200,
           client.go(request, StatusResponseHandler.getInstance()).get().getStatus().code()
       );
 
-      Assert.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
-      Assert.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
-      Assert.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
+      Assertions.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
+      Assertions.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
+      Assertions.assertEquals("hello-body", receivedBodies.poll(10, TimeUnit.SECONDS));
     }
     finally {
       exec.shutdownNow();
@@ -556,13 +560,13 @@ public class FriendlyServersTest
           .setHeader("Host", "override.example.com")
           .setHeader("Accept-Encoding", "identity");
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           200,
           client.go(request, StatusResponseHandler.getInstance()).get().getStatus().code()
       );
 
       final java.util.List<String> hdrs = receivedHeaders.poll(10, TimeUnit.SECONDS);
-      Assert.assertNotNull("no headers received", hdrs);
+      Assertions.assertNotNull(hdrs, "no headers received");
 
       int hostCount = 0;
       int acceptEncodingCount = 0;
@@ -570,20 +574,20 @@ public class FriendlyServersTest
         final String name = hdr.substring(0, hdr.indexOf(':')).toLowerCase(Locale.ROOT);
         if ("host".equals(name)) {
           hostCount++;
-          Assert.assertTrue(
-              "Host header should reflect caller value, was: " + hdr,
-              hdr.toLowerCase(Locale.ROOT).contains("override.example.com")
+          Assertions.assertTrue(
+              hdr.toLowerCase(Locale.ROOT).contains("override.example.com"),
+              "Host header should reflect caller value, was: " + hdr
           );
         } else if ("accept-encoding".equals(name)) {
           acceptEncodingCount++;
-          Assert.assertTrue(
-              "Accept-Encoding should be caller-supplied identity, was: " + hdr,
-              hdr.toLowerCase(Locale.ROOT).contains("identity")
+          Assertions.assertTrue(
+              hdr.toLowerCase(Locale.ROOT).contains("identity"),
+              "Accept-Encoding should be caller-supplied identity, was: " + hdr
           );
         }
       }
-      Assert.assertEquals("exactly one Host header on the wire", 1, hostCount);
-      Assert.assertEquals("exactly one Accept-Encoding header on the wire", 1, acceptEncodingCount);
+      Assertions.assertEquals(1, hostCount, "exactly one Host header on the wire");
+      Assertions.assertEquals(1, acceptEncodingCount, "exactly one Accept-Encoding header on the wire");
     }
     finally {
       exec.shutdownNow();

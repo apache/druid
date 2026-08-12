@@ -28,59 +28,56 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.ResultRow;
-import org.hamcrest.collection.IsCollectionWithSize;
-import org.hamcrest.collection.IsMapContaining;
-import org.hamcrest.collection.IsMapWithSize;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
 
-@RunWith(Parameterized.class)
 public abstract class CompressedBigDecimalAggregatorGroupByTestBase
 {
-  private final AggregationTestHelper helper;
-
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder(new File("target"));
-
+  private final GroupByQueryConfig config;
   private final CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig;
+  private AggregationTestHelper helper;
 
-  /**
-   * Constructor.
-   *
-   * @param config config object
-   */
-  public CompressedBigDecimalAggregatorGroupByTestBase(
+  @TempDir
+  public File tempFolder;
+
+  protected CompressedBigDecimalAggregatorGroupByTestBase(
       GroupByQueryConfig config,
       CompressedBigDecimalGroupByQueryConfig cbdGroupByQueryConfig
   )
   {
+    this.config = config;
     this.cbdGroupByQueryConfig = cbdGroupByQueryConfig;
-    CompressedBigDecimalModule module = new CompressedBigDecimalModule();
+  }
+
+  @BeforeEach
+  public void setup()
+  {
+    final CompressedBigDecimalModule module = new CompressedBigDecimalModule();
     CompressedBigDecimalModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        module.getJacksonModules(), config, tempFolder);
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+        module.getJacksonModules(),
+        config,
+        tempFolder
+    );
   }
 
 
   /**
    * Default setup of UTC timezone.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     System.setProperty("user.timezone", "UTC");
@@ -93,7 +90,7 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
    * @throws Exception   Exception
    */
   @Test
-  public void testIngestAndGroupByAllQuery() throws IOException, Exception
+  public void testIngestAndGroupByAllQuery() throws Exception
   {
     Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
         this.getClass().getResourceAsStream("/" + "bd_test_data.csv"),
@@ -107,37 +104,28 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertThat(results, IsCollectionWithSize.hasSize(1));
+    Assertions.assertEquals(1, results.size());
     ResultRow row = results.get(0);
     MapBasedRow mapBasedRow = row.toMapBasedRow(cbdGroupByQueryConfig.getQuery());
     Map<String, Object> event = mapBasedRow.getEvent();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new DateTime("2017-01-01T00:00:00Z", DateTimeZone.forTimeZone(TimeZone.getTimeZone("UTC"))),
         mapBasedRow.getTimestamp()
     );
-    Assert.assertThat(event, IsMapWithSize.aMapWithSize(3));
-    Assert.assertThat(
-        event,
-        IsMapContaining.hasEntry(
-            "cbdRevenueFromString",
-            new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getStringRevenue()))
-        )
+    Assertions.assertEquals(3, event.size());
+    Assertions.assertEquals(
+        new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getStringRevenue())),
+        event.get("cbdRevenueFromString")
     );
     // long conversion of 5000000000.000000005 results in null/0 value
-    Assert.assertThat(
-        event,
-        IsMapContaining.hasEntry(
-            "cbdRevenueFromLong",
-            new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getLongRevenue()))
-        )
+    Assertions.assertEquals(
+        new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getLongRevenue())),
+        event.get("cbdRevenueFromLong")
     );
     // double input changes 5000000000.000000005 to 5000000000.5 to fit in double mantissa space
-    Assert.assertThat(
-        event,
-        IsMapContaining.hasEntry(
-            "cbdRevenueFromDouble",
-            new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getDoubleRevenue()))
-        )
+    Assertions.assertEquals(
+        new ArrayCompressedBigDecimal(new BigDecimal(cbdGroupByQueryConfig.getDoubleRevenue())),
+        event.get("cbdRevenueFromDouble")
     );
   }
 }

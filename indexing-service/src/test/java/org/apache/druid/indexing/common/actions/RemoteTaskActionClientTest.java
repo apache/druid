@@ -42,11 +42,9 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientImpl;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -58,13 +56,10 @@ import java.util.concurrent.ExecutionException;
 
 public class RemoteTaskActionClientTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private ServiceClient directOverlordClient;
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     directOverlordClient = EasyMock.createMock(ServiceClient.class);
@@ -107,7 +102,7 @@ public class RemoteTaskActionClientTest
     RemoteTaskActionClient client = new RemoteTaskActionClient(task, directOverlordClient, objectMapper);
     final List<TaskLock> locks = client.submit(action);
 
-    Assert.assertEquals(expectedLocks, locks);
+    Assertions.assertEquals(expectedLocks, locks);
     EasyMock.verify(directOverlordClient);
   }
 
@@ -140,12 +135,15 @@ public class RemoteTaskActionClientTest
     EasyMock.replay(directOverlordClient);
 
     RemoteTaskActionClient client = new RemoteTaskActionClient(task, directOverlordClient, objectMapper);
-    expectedException.expect(IOException.class);
-    expectedException.expectMessage(
-        "Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. "
-        + "Check overlord logs for details."
+    final IOException exception = Assertions.assertThrows(
+        IOException.class,
+        () -> client.submit(action)
     );
-    client.submit(action);
+    Assertions.assertEquals(
+        "Error with status[400 Bad Request] and message[testSubmitWithIllegalStatusCode]. "
+        + "Check overlord logs for details.",
+        exception.getMessage()
+    );
 
     EasyMock.verify(directOverlordClient, response);
   }
@@ -171,6 +169,6 @@ public class RemoteTaskActionClientTest
       totalWaitTimeMillis += ServiceClientImpl.computeBackoffMs(retryPolicy, attempt);
     }
 
-    Assert.assertEquals(13, defaultRetryConfig.getMaxRetryCount());
+    Assertions.assertEquals(13, defaultRetryConfig.getMaxRetryCount());
   }
 }

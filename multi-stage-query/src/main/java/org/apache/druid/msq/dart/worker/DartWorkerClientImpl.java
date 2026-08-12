@@ -31,6 +31,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.rpc.BaseWorkerClientImpl;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.FixedServiceLocator;
 import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
@@ -64,10 +65,13 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   @GuardedBy("clientMap")
   private final Map<String, Pair<ServiceClient, Closeable>> clientMap = new HashMap<>();
 
+  @GuardedBy("clientMap")
+  private boolean closed;
+
   /**
    * Create a worker client.
    *
-   * @param queryId        dart query ID. see {@link org.apache.druid.query.QueryContexts#CTX_DART_QUERY_ID}
+   * @param queryId        dart query ID. see {@link QueryContexts#CTX_DART_QUERY_ID}
    * @param clientFactory  service client factor
    * @param smileMapper    Smile object mapper
    * @param controllerHost Controller host (see {@link DartWorkerResource#HEADER_CONTROLLER_HOST}) if this is a
@@ -99,26 +103,19 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
   @Override
   protected ServiceClient getClient(final String workerIdString)
   {
-    final WorkerId workerId = WorkerId.fromString(workerIdString);
-    if (!queryId.equals(workerId.getQueryId())) {
-      throw DruidException.defensive("Unexpected queryId[%s]. Expected queryId[%s]", workerId.getQueryId(), queryId);
-    }
-
-    synchronized (clientMap) {
-      return clientMap.computeIfAbsent(workerId.getHostAndPort(), ignored -> makeNewClient(workerId)).left();
-    }
+    return getClientAndLocator(workerIdString).left();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public void closeClient(final String workerHost)
+  public void closeClient(final String workerIdString)
   {
+    // Close, but do not remove from clientMap, so it stays closed. Note that if closeClient is called before
+    // getClient(), then the client will be created and immediately closed. This is intentional, since it allows
+    // server-removed notifications to be respected even if we haven't tried to contact a worker yet.
     synchronized (clientMap) {
-      final Pair<ServiceClient, Closeable> clientPair = clientMap.remove(workerHost);
-      if (clientPair != null) {
-        CloseableUtils.closeAndWrapExceptions(clientPair.right());
+      // Do nothing if we have already been closed; in this case we know there are no clients active.
+      if (!closed) {
+        CloseableUtils.closeAndWrapExceptions(getClientAndLocator(workerIdString).right());
       }
     }
   }
@@ -138,12 +135,10 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
       }
 
       clientMap.clear();
+      closed = true;
     }
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public ListenableFuture<?> stopWorker(String workerId)
   {
@@ -171,6 +166,22 @@ public class DartWorkerClientImpl extends BaseWorkerClientImpl implements DartWo
     }
 
     return Pair.of(client, locator);
+  }
+
+  private Pair<ServiceClient, Closeable> getClientAndLocator(final String workerIdString)
+  {
+    final WorkerId workerId = WorkerId.fromString(workerIdString);
+    if (!queryId.equals(workerId.getQueryId())) {
+      throw DruidException.defensive("Unexpected queryId[%s]. Expected queryId[%s]", workerId.getQueryId(), queryId);
+    }
+
+    synchronized (clientMap) {
+      if (closed) {
+        throw DruidException.defensive("%s is closed", getClass().getName());
+      }
+
+      return clientMap.computeIfAbsent(workerId.getHostAndPort(), ignored -> makeNewClient(workerId));
+    }
   }
 
   /**

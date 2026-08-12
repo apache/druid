@@ -45,26 +45,26 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 public class CursorGranularizerTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private CursorFactory cursorFactory;
   private TimeBoundaryInspector timeBoundaryInspector;
   private Interval interval;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final RowSignature signature = RowSignature.builder()
@@ -156,7 +156,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                             )
                         )
                     )
-                    .tmpDir(temporaryFolder.newFolder());
+                    .tmpDir(temporaryFolder);
 
     final QueryableIndex index = bob.buildMMappedIndex(Intervals.of("2024-01-01T00:00Z/2024-01-02T00:00Z"));
     interval = index.getDataInterval();
@@ -196,7 +196,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                    });
 
       List<List<String>> granularized = theSequence.toList();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("a", "b", "c", "d"),
               ImmutableList.of("e", "f"),
@@ -249,7 +249,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                    });
 
       List<List<String>> granularized = theSequence.toList();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("l"),
               ImmutableList.of(),
@@ -302,7 +302,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                    });
 
       List<List<String>> granularized = theSequence.toList();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("a", "c"),
               ImmutableList.of("e"),
@@ -355,7 +355,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                    });
 
       List<List<String>> granularized = theSequence.toList();
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of(),
               ImmutableList.of()

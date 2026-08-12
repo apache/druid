@@ -20,10 +20,9 @@
 package org.apache.druid.common.semantic;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.reflections.Reflections;
 import org.reflections.scanners.MethodAnnotationsScanner;
 
@@ -34,19 +33,19 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Ensures that the usage of the {@link SemanticCreator} annotations follows some basic rules.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("getParameters")
 public class SemanticCreatorUsageTest
 {
 
   private final Method method;
 
-  @Parameters(name = "{0}")
   public static List<Object[]> getParameters()
   {
     List<Object[]> params = new ArrayList<>();
@@ -74,7 +73,7 @@ public class SemanticCreatorUsageTest
   public void testPublic()
   {
     int modifiers = method.getModifiers();
-    assertTrue(StringUtils.format("method [%s] is not public", method), Modifier.isPublic(modifiers));
+    assertTrue(Modifier.isPublic(modifiers), StringUtils.format("method [%s] is not public", method));
   }
 
   /**
@@ -87,8 +86,8 @@ public class SemanticCreatorUsageTest
   {
     Class<?> returnType = method.getReturnType();
     assertTrue(
-        returnType + " is not an interface; this method must return with an interface; ",
-        returnType.isInterface()
+        returnType.isInterface(),
+        returnType + " is not an interface; this method must return with an interface; "
     );
   }
 
@@ -103,7 +102,7 @@ public class SemanticCreatorUsageTest
     Class<?> returnType = method.getReturnType();
 
     String desiredMethodName = "to" + returnType.getSimpleName();
-    assertEquals("should be named as " + desiredMethodName, desiredMethodName, method.getName());
+    assertEquals(desiredMethodName, method.getName(), "should be named as " + desiredMethodName);
 
   }
 }

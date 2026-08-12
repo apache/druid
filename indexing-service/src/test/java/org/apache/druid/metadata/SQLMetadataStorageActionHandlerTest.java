@@ -51,6 +51,7 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -454,9 +455,11 @@ public class SQLMetadataStorageActionHandlerTest
               "SELECT COUNT(*) FROM %s WHERE type is NULL or group_id is NULL",
               entryTable
           );
-          ResultSet resultSet = handle.getConnection().createStatement().executeQuery(sql);
-          resultSet.next();
-          return resultSet.getInt(1);
+          try (final Statement statement = handle.getConnection().createStatement();
+               final ResultSet resultSet = statement.executeQuery(sql)) {
+            resultSet.next();
+            return resultSet.getInt(1);
+          }
         }
     );
   }

@@ -70,7 +70,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,50 +104,21 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     final File segmentCacheDir = temporaryFolder.newFolder();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return segmentCacheDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(segmentCacheDir, null, null)
-        );
-      }
-    };
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(segmentCacheDir)
+        .locations(new StorageLocationConfig(segmentCacheDir, null, null))
+        .build();
 
     final File vsfRoot = temporaryFolder.newFolder();
     final File virtualSegmentCacheDir = new File(vsfRoot, "segmentCache");
     FileUtils.mkdirp(virtualSegmentCacheDir);
     final File vsfInfoDir = new File(vsfRoot, "info");
     FileUtils.mkdirp(vsfInfoDir);
-    final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return vsfInfoDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(virtualSegmentCacheDir, null, null)
-        );
-      }
-
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-    };
+    final SegmentLoaderConfig virtualLoaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(vsfInfoDir)
+        .locations(new StorageLocationConfig(virtualSegmentCacheDir, null, null))
+        .virtualStorage(true)
+        .build();
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);

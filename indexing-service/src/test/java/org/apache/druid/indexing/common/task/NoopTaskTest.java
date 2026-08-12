@@ -19,8 +19,8 @@
 
 package org.apache.druid.indexing.common.task;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NoopTaskTest
 {
@@ -28,6 +28,6 @@ public class NoopTaskTest
   public void testNullInputSources()
   {
     NoopTask task = NoopTask.create();
-    Assert.assertTrue(task.getInputSourceResources().isEmpty());
+    Assertions.assertTrue(task.getInputSourceResources().isEmpty());
   }
 }

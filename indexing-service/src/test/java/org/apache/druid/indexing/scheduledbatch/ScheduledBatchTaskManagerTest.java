@@ -41,17 +41,17 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ScheduledBatchTaskManagerTest
 {
@@ -89,7 +89,7 @@ public class ScheduledBatchTaskManagerTest
 
   private ScheduledBatchTaskManager scheduler;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     brokerClient = Mockito.mock(BrokerClient.class);
@@ -126,7 +126,7 @@ public class ScheduledBatchTaskManagerTest
     Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
-    scheduler.start();
+    scheduler.becomeLeader();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
 
@@ -144,7 +144,7 @@ public class ScheduledBatchTaskManagerTest
         ImmutableList.of(TaskStatus.success(expectedTaskStatus.getTaskId()))
     );
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
     assertNull(scheduler.getSupervisorStatus(SUPERVISOR_ID_FOO));
     serviceEmitter.verifyEmitted(
         "task/scheduledBatch/submit/success",
@@ -167,7 +167,7 @@ public class ScheduledBatchTaskManagerTest
                    )
                ));
 
-    scheduler.start();
+    scheduler.becomeLeader();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
 
@@ -178,7 +178,7 @@ public class ScheduledBatchTaskManagerTest
         ScheduledBatchSupervisor.State.SUSPENDED
     );
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
     assertNull(scheduler.getSupervisorStatus(SUPERVISOR_ID_FOO));
     serviceEmitter.verifyEmitted(
         "task/scheduledBatch/submit/failed",
@@ -194,7 +194,7 @@ public class ScheduledBatchTaskManagerTest
     Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
-    scheduler.start();
+    scheduler.becomeLeader();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
 
@@ -222,7 +222,7 @@ public class ScheduledBatchTaskManagerTest
     );
     executor.finishNextPendingTasks(1);
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
     assertNull(scheduler.getSupervisorStatus(SUPERVISOR_ID_FOO));
     serviceEmitter.verifyEmitted(
         "task/scheduledBatch/submit/success",
@@ -238,7 +238,7 @@ public class ScheduledBatchTaskManagerTest
     Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
-    scheduler.start();
+    scheduler.becomeLeader();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
 
@@ -258,7 +258,7 @@ public class ScheduledBatchTaskManagerTest
     );
     assertFalse(executor.hasPendingTasks());
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
     assertNull(scheduler.getSupervisorStatus(SUPERVISOR_ID_FOO));
     serviceEmitter.verifyEmitted(
         "task/scheduledBatch/submit/success",
@@ -285,7 +285,7 @@ public class ScheduledBatchTaskManagerTest
 
     assertFalse(executor.hasPendingTasks());
 
-    scheduler.start();
+    scheduler.becomeLeader();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query2);
 
@@ -314,7 +314,7 @@ public class ScheduledBatchTaskManagerTest
         ImmutableList.of(TaskStatus.failure(TASK_ID_BAR1, null), TaskStatus.success(TASK_ID_BAR2))
     );
 
-    scheduler.stop();
+    scheduler.stopBeingLeader();
     assertNull(scheduler.getSupervisorStatus(SUPERVISOR_ID_FOO));
     assertNull(scheduler.getSupervisorStatus(SUPERVISOR_ID_BAR));
     serviceEmitter.verifyEmitted(

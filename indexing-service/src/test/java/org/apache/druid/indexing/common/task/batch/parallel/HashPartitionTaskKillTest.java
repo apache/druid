@@ -44,9 +44,10 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -90,10 +91,10 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     super(LockGranularity.TIME_CHUNK, 0, 0);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = temporaryFolder.newFolder("data");
+    inputDir = createTempDir("data");
     final Set<Interval> intervals = new HashSet<>();
     // set up data
     for (int i = 0; i < 10; i++) {
@@ -119,7 +120,8 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     inputIntervals.sort(Comparators.intervalsByStartThenEnd());
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsInFirstPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
@@ -135,19 +137,20 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
     TaskStatus taskStatus = task.runHashPartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-1]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsInSecondPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
@@ -163,19 +166,20 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
     TaskStatus taskStatus = task.runHashPartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-2]. See task logs for details.",
         taskStatus.getErrorMsg()
     );
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(5)
   public void failsInThirdPhase() throws Exception
   {
     final ParallelIndexSupervisorTask task =
@@ -195,14 +199,14 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
     final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
 
     prepareTaskForLocking(task);
-    Assert.assertTrue(task.isReady(actionClient));
+    Assertions.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
     task.setToolbox(toolbox);
     TaskStatus taskStatus = task.runHashPartitionMultiPhaseParallel(toolbox);
 
-    Assert.assertTrue(taskStatus.isFailure());
-    Assert.assertEquals(
+    Assertions.assertTrue(taskStatus.isFailure());
+    Assertions.assertEquals(
         "Failed in phase[PHASE-3]. See task logs for details.",
         taskStatus.getErrorMsg()
     );

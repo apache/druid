@@ -21,6 +21,7 @@ package org.apache.druid.segment.projections;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -40,6 +41,8 @@ import javax.annotation.Nullable;
  * Vectorized counterpart of {@link ClusteringColumnSelectorFactory}. Wraps a delegate
  * {@link VectorColumnSelectorFactory} and intercepts requests for clustering columns, returning constant-typed
  * vector selectors (via {@link ConstantVectorSelectors}). Other column requests pass through to delegating wrappers.
+ * As with the scalar wrapper, a clustering column whose name is also a query virtual column's output is NOT
+ * intercepted but left to the delegate (which resolves virtual columns before physical columns).
  *
  * The factory is mutable via {@link #setDelegate(VectorColumnSelectorFactory, Object[])}: a multi-group
  * {@code ConcatenatingVectorCursor} swaps the underlying delegate + clustering values on each group transition.
@@ -52,6 +55,8 @@ import javax.annotation.Nullable;
 public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelectorFactory
 {
   private final RowSignature clusteringColumns;
+  // Query virtual columns whose output names shadow a clustering column are deferred to the delegate; see class doc.
+  private final VirtualColumns queryVirtualColumns;
   private final int maxVectorSize;
   private VectorColumnSelectorFactory delegate;
   private Object[] clusteringValues;
@@ -80,9 +85,30 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
       int maxVectorSize
   )
   {
+    this(delegate, clusteringColumns, clusteringValues, maxVectorSize, VirtualColumns.EMPTY);
+  }
+
+  public ClusteringVectorColumnSelectorFactory(
+      VectorColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues,
+      int maxVectorSize,
+      VirtualColumns queryVirtualColumns
+  )
+  {
     this.clusteringColumns = clusteringColumns;
+    this.queryVirtualColumns = queryVirtualColumns;
     this.maxVectorSize = maxVectorSize;
     setDelegate(delegate, clusteringValues);
+  }
+
+  /**
+   * Whether {@code column} should be served as this group's clustering constant: a clustering column not shadowed by a
+   * query virtual column of the same output name (see class doc).
+   */
+  private boolean servesClusteringConstant(String column)
+  {
+    return clusteringColumns.indexOf(column) >= 0 && !queryVirtualColumns.exists(column);
   }
 
   /**
@@ -156,30 +182,28 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
   @Override
   public VectorValueSelector makeValueSelector(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
+    if (!servesClusteringConstant(column)) {
       return new DelegatingVectorValueSelector(this, column);
     }
-    return new ClusteringVectorValueSelector(this, idx);
+    return new ClusteringVectorValueSelector(this, clusteringColumns.indexOf(column));
   }
 
   @Override
   public VectorObjectSelector makeObjectSelector(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
+    if (!servesClusteringConstant(column)) {
       return new DelegatingVectorObjectSelector(this, column);
     }
-    return new ClusteringVectorObjectSelector(this, idx);
+    return new ClusteringVectorObjectSelector(this, clusteringColumns.indexOf(column));
   }
 
   @Nullable
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
-      // Non-clustering columns are stored per cluster group with per-group local dictionaries that are NOT stable
+    if (!servesClusteringConstant(column)) {
+      // Non-clustering columns (or a clustering column shadowed by a query VC, resolved by the delegate) are stored
+      // per cluster group with per-group local dictionaries that are NOT stable
       // across the concatenating vector cursor. We must not advertise dictionary encoding: the vectorized group-by
       // keys on the selector's (per-group-local) IDs when the column reports as dictionary-encoded
       // (GroupByVectorColumnProcessorFactory#useDictionaryEncodedSelector), conflating distinct values across groups.
@@ -195,6 +219,7 @@ public class ClusteringVectorColumnSelectorFactory implements VectorColumnSelect
                                    .setDictionaryValuesUnique(false)
                                    .setHasBitmapIndexes(false);
     }
+    final int idx = clusteringColumns.indexOf(column);
     final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
     if (type.is(ValueType.STRING)) {
       return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();

@@ -25,8 +25,8 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.TestHelper;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -47,8 +47,8 @@ public class RetrieveUsedSegmentsActionSerdeTest
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
-    Assert.assertEquals(ImmutableList.of(interval), actual.getIntervals());
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(ImmutableList.of(interval), actual.getIntervals());
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -62,8 +62,8 @@ public class RetrieveUsedSegmentsActionSerdeTest
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
-    Assert.assertEquals(intervals, actual.getIntervals());
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(intervals, actual.getIntervals());
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -72,7 +72,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"intervals\": [\"2014/2015\"]}";
     RetrieveUsedSegmentsAction actual = (RetrieveUsedSegmentsAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new RetrieveUsedSegmentsAction(
             "test",
             Collections.singletonList(Intervals.of("2014/2015")),

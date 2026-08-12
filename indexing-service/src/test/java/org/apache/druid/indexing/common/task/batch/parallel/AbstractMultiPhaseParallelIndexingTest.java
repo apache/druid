@@ -59,7 +59,7 @@ import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -156,7 +156,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   {
     task.addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockGranularity == LockGranularity.TIME_CHUNK);
     TaskStatus taskStatus = getIndexingServiceClient().runAndWait(task);
-    Assert.assertEquals("Actual task status: " + taskStatus, expectedTaskStatus, taskStatus.getStatusCode());
+    Assertions.assertEquals(expectedTaskStatus, taskStatus.getStatusCode(), "Actual task status: " + taskStatus);
   }
 
   DataSegmentsWithSchemas runTask(Task task, TaskState expectedTaskStatus)
@@ -258,7 +258,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   private Segment loadSegment(DataSegment dataSegment, File tempSegmentDir)
   {
     final SegmentCacheManager cacheManager = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, getObjectMapper())
-        .manufacturate(tempSegmentDir, null, false);
+        .manufacturate(tempSegmentDir, null, false, false);
     try {
       cacheManager.load(dataSegment);
       return cacheManager.acquireCachedSegment(dataSegment.getId(), AcquireMode.FULL).orElseThrow();

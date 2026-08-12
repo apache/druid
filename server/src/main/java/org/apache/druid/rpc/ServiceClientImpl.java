@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -79,6 +80,15 @@ public class ServiceClientImpl implements ServiceClient
     if (retryPolicy.maxAttempts() == 0) {
       throw new IAE("Invalid maxAttempts[%d] in retry policy", retryPolicy.maxAttempts());
     }
+  }
+
+  @VisibleForTesting
+  public static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
+  {
+    return Math.max(
+        retryPolicy.minWaitMillis(),
+        Math.min(retryPolicy.maxWaitMillis(), (long) (Math.pow(2, attemptNumber) * retryPolicy.minWaitMillis()))
+    );
   }
 
   @Override
@@ -362,9 +372,9 @@ public class ServiceClientImpl implements ServiceClient
                       final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
 
                       log.info(
-                          "Service [%s] issued redirect to unknown URL [%s] on attempt #%d; retrying in %,d ms.",
+                          "Service [%s] %s on attempt #%d; retrying in %,d ms.",
                           serviceName,
-                          newUri,
+                          unknownRedirectTargetMessage(newUri),
                           nextAttemptNumber,
                           backoffMs
                       );
@@ -376,11 +386,7 @@ public class ServiceClientImpl implements ServiceClient
                       );
                     } else {
                       retVal.setException(
-                          new ServiceNotAvailableException(
-                              serviceName,
-                              "issued redirect to unknown URL [%s]",
-                              newUri
-                          )
+                          new ServiceNotAvailableException(serviceName, "%s", unknownRedirectTargetMessage(newUri))
                       );
                     }
                   }
@@ -487,12 +493,20 @@ public class ServiceClientImpl implements ServiceClient
     return errorMessage.toString();
   }
 
-  @VisibleForTesting
-  public static long computeBackoffMs(final ServiceRetryPolicy retryPolicy, final long attemptNumber)
+  /**
+   * Generates the message used by logs or errors that occur due to redirection to an unknown URL.
+   */
+  private String unknownRedirectTargetMessage(final String newUri)
   {
-    return Math.max(
-        retryPolicy.minWaitMillis(),
-        Math.min(retryPolicy.maxWaitMillis(), (long) (Math.pow(2, attemptNumber) * retryPolicy.minWaitMillis()))
+    // Standard service names used by ServiceClientModule. If we are a client for one of these services, we'll include
+    // some language about how this redirect can indicate a failover in progress.
+    final boolean isOverlordOrCoordinator =
+        NodeRole.OVERLORD.getJsonName().equals(serviceName) || NodeRole.COORDINATOR.getJsonName().equals(serviceName);
+
+    return StringUtils.format(
+        "issued redirect to unknown URL [%s]%s",
+        newUri,
+        isOverlordOrCoordinator ? " (can be leader failover in progress)" : ""
     );
   }
 

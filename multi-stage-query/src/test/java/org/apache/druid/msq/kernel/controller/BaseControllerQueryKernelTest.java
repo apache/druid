@@ -210,6 +210,9 @@ public class BaseControllerQueryKernelTest extends InitializedNullHandlingTest
         case FAILED:
           controllerQueryKernel.failStage(stageId);
           break;
+
+        case RETRYING:
+          throw new IAE("Cannot initialize a stage directly in the retrying phase");
       }
       if (!recursiveCall) {
         setupStages.add(stageNumber);

@@ -22,6 +22,7 @@ package org.apache.druid.security.basic.authentication.db.cache;
 import com.google.inject.Injector;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponseStatus;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
@@ -32,21 +33,23 @@ import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   @Test
   public void test_stop_interruptsPollingThread() throws InterruptedException, IOException
@@ -74,31 +77,35 @@ public class CoordinatorPollingBasicAuthenticatorCacheManagerTest
     );
 
     // Block the second request so that it can be interrupted by stop()
-    final AtomicBoolean isInterrupted = new AtomicBoolean(false);
+    final CountDownLatch requestStarted = new CountDownLatch(1);
+    final CountDownLatch requestInterrupted = new CountDownLatch(1);
 
-    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, path), isInterrupted);
+    serviceClient.expectAndBlock(new RequestBuilder(HttpMethod.GET, path), requestStarted, requestInterrupted);
 
     EasyMock.replay(injector);
 
     final int numRetries = 10;
     final CoordinatorPollingBasicAuthenticatorCacheManager manager = new CoordinatorPollingBasicAuthenticatorCacheManager(
         injector,
-        new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
+        new BasicAuthCommonCacheConfig(0L, 1L, newFolder(temporaryFolder, "junit").getAbsolutePath(), numRetries),
         TestHelper.JSON_MAPPER,
         serviceClient
     );
 
     // Start the manager and wait for a while to ensure that polling has started
     manager.start();
-    Thread.sleep(10);
+    Assertions.assertTrue(requestStarted.await(5, TimeUnit.SECONDS));
 
     // Stop the manager and verify that the polling thread has been interrupted
     manager.stop();
-    Thread.sleep(10);
-
-    Assert.assertTrue(isInterrupted.get());
+    Assertions.assertTrue(requestInterrupted.await(5, TimeUnit.SECONDS));
 
     EasyMock.verify(injector);
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 
 }

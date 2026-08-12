@@ -33,21 +33,6 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <dependencyManagement>
-        <dependencies>
-            <!-- snakeyaml explicitly pinned to version 1.33 as it is
-            a transitive dependency of:
-            com.netflix.astyanax:astyanax:jar -> g.apache.cassandra:cassandra-all:jar
-            please remove this pin after the update of astyanax, see comment below
-             -->
-            <dependency>
-                <groupId>org.yaml</groupId>
-                <artifactId>snakeyaml</artifactId>
-                <version>1.33</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <dependencies>
         <dependency>
             <groupId>org.apache.druid</groupId>
@@ -129,6 +114,12 @@
                     <groupId>org.slf4j</groupId>
                     <artifactId>slf4j-log4j12</artifactId>
                 </exclusion>
+                <!-- Cassandra uses SnakeYAML only for unused server configuration; exclude the vulnerable,
+                     binary-incompatible transitive dependency rather than upgrading it. -->
+                <exclusion>
+                    <groupId>org.yaml</groupId>
+                    <artifactId>snakeyaml</artifactId>
+                </exclusion>
                 <exclusion>
                     <groupId>com.github.stephenc.high-scale-lib</groupId>
                     <artifactId>high-scale-lib</artifactId>
@@ -175,12 +166,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Tests -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>

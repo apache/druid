@@ -73,7 +73,7 @@ public class DruidAvaticaProtobufHandler extends DruidAvaticaHandler
 
     try {
       if (AVATICA_PATH_NO_TRAILING_SLASH.equals(StringUtils.maybeRemoveTrailingSlash(requestURI))) {
-        try (Timer.Context ctx = this.requestTimer.start()) {
+        try (Timer.Context ignoredContext = this.requestTimer.start()) {
           if (!"POST".equals(request.getMethod())) {
             response.setStatus(405);
             response.write(

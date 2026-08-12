@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.projections;
 
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -27,13 +28,19 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.TestObjectColumnSelector;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
 
@@ -44,9 +51,36 @@ class MergingColumnSelectorFactoryTest
 
   private MergingColumnSelectorFactory factory(ColumnSelectorFactory... groups)
   {
+    // No clustering columns: every requested column dispatches to the per-group factories.
+    return factory(RowSignature.empty(), Collections.nCopies(groups.length, new Object[0]), groups);
+  }
+
+  private MergingColumnSelectorFactory factory(
+      RowSignature clusteringColumns,
+      List<Object[]> clusteringValuesByGroup,
+      ColumnSelectorFactory... groups
+  )
+  {
+    return factory(clusteringColumns, clusteringValuesByGroup, VirtualColumns.EMPTY, groups);
+  }
+
+  private MergingColumnSelectorFactory factory(
+      RowSignature clusteringColumns,
+      List<Object[]> clusteringValuesByGroup,
+      VirtualColumns queryVirtualColumns,
+      ColumnSelectorFactory... groups
+  )
+  {
     final IntSupplier currentGroupSupplier = () -> currentGroup[0];
     final LongSupplier rowIdSupplier = () -> rowId[0];
-    return new MergingColumnSelectorFactory(groups, currentGroupSupplier, rowIdSupplier);
+    return new MergingColumnSelectorFactory(
+        groups,
+        clusteringColumns,
+        clusteringValuesByGroup,
+        queryVirtualColumns,
+        currentGroupSupplier,
+        rowIdSupplier
+    );
   }
 
   @Test
@@ -104,6 +138,76 @@ class MergingColumnSelectorFactoryTest
     Assertions.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, selector.getValueCardinality());
     Assertions.assertNull(selector.idLookup());
     Assertions.assertFalse(selector.nameLookupPossibleInAdvance());
+  }
+
+  @Test
+  void testClusteringColumnExposedAsWinningGroupConstant()
+  {
+    // Clustering columns are not read from the per-group cursors (which may not carry them); the factory injects the
+    // winning group's clustering value. Verify both the value selector and dimension selector track the current group.
+    final RowSignature clusteringColumns = RowSignature.builder().add("tenant", ColumnType.STRING).build();
+    final List<Object[]> clusteringValuesByGroup = List.of(new Object[]{"acme"}, new Object[]{"globex"});
+    final MergingColumnSelectorFactory factory =
+        factory(clusteringColumns, clusteringValuesByGroup, groupFactory("g0"), groupFactory("g1"));
+
+    final ColumnValueSelector valueSelector = factory.makeColumnValueSelector("tenant");
+    final DimensionSelector dimensionSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of("tenant"));
+    currentGroup[0] = 0;
+    Assertions.assertEquals("acme", valueSelector.getObject());
+    Assertions.assertEquals("acme", dimensionSelector.getObject());
+    currentGroup[0] = 1;
+    Assertions.assertEquals("globex", valueSelector.getObject());
+    Assertions.assertEquals("globex", dimensionSelector.getObject());
+
+    // Clustering capabilities are type-based and never dictionary-encoded across the merge.
+    final ColumnCapabilities caps = factory.getColumnCapabilities("tenant");
+    Assertions.assertNotNull(caps);
+    Assertions.assertTrue(caps.is(ValueType.STRING));
+    Assertions.assertTrue(caps.isDictionaryEncoded().isFalse());
+    Assertions.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, dimensionSelector.getValueCardinality());
+  }
+
+  @Test
+  void testNumericClusteringColumnExposedAsWinningGroupConstant()
+  {
+    final RowSignature clusteringColumns = RowSignature.builder().add("priority", ColumnType.LONG).build();
+    final List<Object[]> clusteringValuesByGroup = List.of(new Object[]{5L}, new Object[]{9L});
+    final MergingColumnSelectorFactory factory =
+        factory(clusteringColumns, clusteringValuesByGroup, groupFactory("g0"), groupFactory("g1"));
+
+    final ColumnValueSelector selector = factory.makeColumnValueSelector("priority");
+    currentGroup[0] = 0;
+    Assertions.assertEquals(5L, selector.getLong());
+    Assertions.assertEquals(5L, selector.getObject());
+    currentGroup[0] = 1;
+    Assertions.assertEquals(9L, selector.getLong());
+
+    Assertions.assertTrue(factory.getColumnCapabilities("priority").is(ValueType.LONG));
+  }
+
+  @Test
+  void testClusteringColumnShadowedByQueryVcDispatchesToGroup()
+  {
+    // A query virtual column whose output name equals a clustering column must NOT be served as the group's clustering
+    // constant; it dispatches to the winning group (whose factory resolves the VC), mirroring
+    // ClusteringColumnSelectorFactory. The stub group factory answers "g0"/"g1" for any column, standing in for the
+    // computed VC value; the assertion is that we get the dispatched value, not the "acme"/"globex" constant.
+    final RowSignature clusteringColumns = RowSignature.builder().add("tenant", ColumnType.STRING).build();
+    final List<Object[]> clusteringValuesByGroup = List.of(new Object[]{"acme"}, new Object[]{"globex"});
+    final VirtualColumns shadowingVc = VirtualColumns.create(
+        new ExpressionVirtualColumn("tenant", "concat('t_', m)", ColumnType.STRING, ExprMacroTable.nil())
+    );
+    final MergingColumnSelectorFactory factory =
+        factory(clusteringColumns, clusteringValuesByGroup, shadowingVc, groupFactory("g0"), groupFactory("g1"));
+
+    final ColumnValueSelector valueSelector = factory.makeColumnValueSelector("tenant");
+    final DimensionSelector dimensionSelector = factory.makeDimensionSelector(DefaultDimensionSpec.of("tenant"));
+    currentGroup[0] = 0;
+    Assertions.assertEquals("g0", valueSelector.getObject());
+    Assertions.assertEquals("g0", dimensionSelector.getObject());
+    currentGroup[0] = 1;
+    Assertions.assertEquals("g1", valueSelector.getObject());
+    Assertions.assertEquals("g1", dimensionSelector.getObject());
   }
 
   @Test

@@ -158,7 +158,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-storage</artifactId>
-      <version>8.6.0</version>
+      <version>8.6.6</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -612,7 +612,7 @@
     <dependency>
       <groupId>io.aiven</groupId>
       <artifactId>testcontainers-fake-gcs-server</artifactId>
-      <version>0.1.0</version>
+      <version>0.3.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -771,7 +771,7 @@
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
-      <version>0.13.0</version>
+      <version>0.23.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -866,7 +866,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.6.2</version>
+        <version>3.6.3</version>
         <executions>
           <execution>
             <id>default-cli</id>

@@ -28,6 +28,7 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
@@ -161,10 +162,11 @@ public interface IndexerMetadataStorageCoordinator
    * @param maxUpdatedTime Returned segments must have a {@code used_status_last_updated}
    *                       which is either null or earlier than this value.
    * @param limit          Maximum number of segments to return.
-   *
    * @return Unsorted list of unused segments that match the given parameters.
+   * The entries in the list are required to have the {@link DataSegmentPlus#getDataSegment()}
+   * and {@link DataSegmentPlus#getUpgradedFromSegmentId()} fields populated.
    */
-  List<DataSegment> retrieveUnusedSegmentsWithExactInterval(
+  List<DataSegmentPlus> retrieveUnusedSegmentsWithExactInterval(
       String dataSource,
       Interval interval,
       DateTime maxUpdatedTime,
@@ -616,6 +618,16 @@ public interface IndexerMetadataStorageCoordinator
    * upto a maximum of {@code limit} entries.
    */
   List<Interval> retrieveSomeUnusedSegmentIntervals(String dataSource, int limit);
+
+  /**
+   * Extracts eligible unused segments intervals from the metadata store using
+   * {@link org.apache.druid.metadata.SqlSegmentsMetadataQuery#retrieveSomeUnusedSegmentIntervals(DateTime, int, int)}
+   */
+  Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  );
 
   /**
    * Returns the number of segment entries in the database whose state was changed as the result of this call (that is,

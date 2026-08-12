@@ -42,6 +42,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.AllGranularity;
@@ -430,6 +431,39 @@ public class ForkingTaskRunnerTest
         3,
         ForkingTaskRunner.getNextAttemptID(new File(dirTracker.pickStorageSlot(taskId).getDirectory(), taskId))
     );
+  }
+
+  @Test
+  public void testGettingTheNextAttemptDirFailsIfAttemptDirectoryCannotBeCreated() throws IOException
+  {
+    final File taskDir = temporaryFolder.newFile();
+    final File attemptDir = new File(taskDir, "attempt");
+
+    final ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> ForkingTaskRunner.getNextAttemptID(taskDir)
+    );
+
+    Assert.assertEquals("Error creating directory[" + attemptDir + "]", exception.getMessage());
+    Assert.assertTrue(exception.getCause() instanceof IOException);
+  }
+
+  @Test
+  public void testGettingTheNextAttemptDirFailsIfAttemptCannotBeCreated() throws IOException
+  {
+    final File taskDir = temporaryFolder.newFolder();
+    final File attemptDir = new File(taskDir, "attempt");
+    FileUtils.mkdirp(attemptDir);
+    final File attempt = new File(attemptDir, "1");
+    Assert.assertTrue(attempt.createNewFile());
+
+    final ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> ForkingTaskRunner.getNextAttemptID(taskDir)
+    );
+
+    Assert.assertEquals("Error creating directory[" + attempt + "]", exception.getMessage());
+    Assert.assertTrue(exception.getCause() instanceof IOException);
   }
 
   @Test

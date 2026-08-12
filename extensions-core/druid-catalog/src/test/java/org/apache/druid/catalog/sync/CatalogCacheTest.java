@@ -27,15 +27,15 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
-import org.apache.druid.metadata.TestDerbyConnector;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Builds on the generic {@link CatalogSyncTest} to focus on cache-specific
@@ -43,22 +43,22 @@ import static org.junit.Assert.assertTrue;
  */
 public class CatalogCacheTest
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE = new JUnit5TestDerbyConnector();
 
   private CatalogTests.DbFixture dbFixture;
   private CatalogStorage storage;
   private ObjectMapper jsonMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
-    dbFixture = new CatalogTests.DbFixture(derbyConnectorRule);
+    dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTOR_RULE);
     storage = dbFixture.storage;
     jsonMapper = new ObjectMapper();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     CatalogTests.tearDown(dbFixture);

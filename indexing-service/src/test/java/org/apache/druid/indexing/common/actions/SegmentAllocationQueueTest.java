@@ -31,13 +31,13 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,10 +46,11 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("getTestParameters")
 public class SegmentAllocationQueueTest
 {
-  @Rule
+  @RegisterExtension
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private SegmentAllocationQueue allocationQueue;
@@ -60,7 +61,6 @@ public class SegmentAllocationQueueTest
 
   private final boolean reduceMetadataIO;
 
-  @Parameterized.Parameters(name = "reduceMetadataIO = {0}, useSegmentCache = {1}")
   public static Object[][] getTestParameters()
   {
     return new Object[][]{
@@ -78,7 +78,7 @@ public class SegmentAllocationQueueTest
     taskActionTestKit.setUseSegmentMetadataCache(useSegmentMetadataCache);
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     managerExec = new BlockingExecutorService("test-manager-exec");
@@ -127,7 +127,7 @@ public class SegmentAllocationQueueTest
     allocationQueue.becomeLeader();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (allocationQueue != null) {
@@ -261,8 +261,8 @@ public class SegmentAllocationQueueTest
     processDistinctDatasourceBatches();
     processDistinctDatasourceBatches();
 
-    Assert.assertNotNull(getSegmentId(hourSegmentFuture));
-    Assert.assertNull(getSegmentId(halfHourSegmentFuture));
+    Assertions.assertNotNull(getSegmentId(hourSegmentFuture));
+    Assertions.assertNull(getSegmentId(halfHourSegmentFuture));
   }
 
   @Test
@@ -279,8 +279,8 @@ public class SegmentAllocationQueueTest
     Future<SegmentIdWithShardSpec> future = allocationQueue.add(request);
 
     // Verify that the future is already complete and segment allocation has failed
-    Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
-    Assert.assertEquals(
+    Throwable t = Assertions.assertThrows(ISE.class, () -> getSegmentId(future));
+    Assertions.assertEquals(
         "Segment allocation queue is full. Check the metric `task/action/batch/runTime` "
         + "to determine if metadata operations are slow.",
         t.getMessage()
@@ -297,11 +297,11 @@ public class SegmentAllocationQueueTest
     }
 
     // Verify that next request is added to a new batch
-    Assert.assertEquals(1, allocationQueue.size());
+    Assertions.assertEquals(1, allocationQueue.size());
     SegmentAllocateRequest request =
         allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1")).build();
     allocationQueue.add(request);
-    Assert.assertEquals(2, allocationQueue.size());
+    Assertions.assertEquals(2, allocationQueue.size());
   }
 
   @Test
@@ -324,7 +324,7 @@ public class SegmentAllocationQueueTest
     SegmentIdWithShardSpec segmentId1 = getSegmentId(segmentFutures.get(0));
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
-      Assert.assertEquals(getSegmentId(future), segmentId1);
+      Assertions.assertEquals(getSegmentId(future), segmentId1);
     }
 
     // Verify each datasource batch is marked skipped just once
@@ -351,8 +351,8 @@ public class SegmentAllocationQueueTest
     processDistinctDatasourceBatches();
 
     for (Future<SegmentIdWithShardSpec> future : segmentFutures) {
-      Throwable t = Assert.assertThrows(ISE.class, () -> getSegmentId(future));
-      Assert.assertEquals("Not leader anymore", t.getMessage());
+      Throwable t = Assertions.assertThrows(ISE.class, () -> getSegmentId(future));
+      Assertions.assertEquals("Not leader anymore", t.getMessage());
     }
   }
 
@@ -362,12 +362,12 @@ public class SegmentAllocationQueueTest
       boolean canBatch
   )
   {
-    Assert.assertEquals(0, allocationQueue.size());
+    Assertions.assertEquals(0, allocationQueue.size());
     final Future<SegmentIdWithShardSpec> futureA = allocationQueue.add(a);
     final Future<SegmentIdWithShardSpec> futureB = allocationQueue.add(b);
 
     final int expectedCount = canBatch ? 1 : 2;
-    Assert.assertEquals(expectedCount, allocationQueue.size());
+    Assertions.assertEquals(expectedCount, allocationQueue.size());
 
     // Process both the jobs
     processDistinctDatasourceBatches();
@@ -375,8 +375,8 @@ public class SegmentAllocationQueueTest
     emitter.verifyEmitted("task/action/batch/size", expectedCount);
     emitter.verifySum("task/action/batch/submitted", expectedCount);
 
-    Assert.assertNotNull(getSegmentId(futureA));
-    Assert.assertNotNull(getSegmentId(futureB));
+    Assertions.assertNotNull(getSegmentId(futureA));
+    Assertions.assertNotNull(getSegmentId(futureB));
   }
 
   private SegmentIdWithShardSpec getSegmentId(Future<SegmentIdWithShardSpec> future)

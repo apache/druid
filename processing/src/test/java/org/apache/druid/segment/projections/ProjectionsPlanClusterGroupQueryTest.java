@@ -20,6 +20,7 @@
 package org.apache.druid.segment.projections;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -45,6 +46,8 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Coverage for {@link Projections#planClusterGroupQuery}, exercised through both facets of the returned
@@ -184,7 +187,94 @@ class ProjectionsPlanClusterGroupQueryTest
                 TestExprMacroTable.INSTANCE
             )
         ),
-        List.of("tenant_lower", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        // raw `tenant` is retained, so lower(tenant) is a pure-optimization remap (recompute from tenant is also valid)
+        List.of("tenant_lower", "tenant", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        built.dictionaries(),
+        built.specs()
+    );
+    return built.specs().get(0);
+  }
+
+  /**
+   * Group clustered on {@code tenant_lower := lower(tenant)} (a clustering column produced by a group VC) with a
+   * non-clustering materialized column {@code region_upper := upper(region)}. The raw inputs {@code tenant} and
+   * {@code region} are retained as stored columns, so both equivalences are pure-optimization remaps (the query VC
+   * could also be correctly recomputed from the retained input).
+   */
+  private static TableClusterGroupSpec materializedVcGroup(String loweredTenant)
+  {
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
+        clustering,
+        List.of(Arrays.asList(loweredTenant))
+    );
+    new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("region_upper", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ),
+        List.of("tenant_lower", "region_upper", "tenant", "region", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        built.dictionaries(),
+        built.specs()
+    );
+    return built.specs().get(0);
+  }
+
+  /**
+   * Like {@link #materializedVcGroup} but also materializes a NESTED virtual column
+   * {@code tenant_upper_lower := upper(tenant_lower)} (derived from the clustering column), so a query VC chain
+   * {@code v0 := lower(tenant)} -> {@code v1 := upper(v0)} can be materialized end-to-end.
+   */
+  private static TableClusterGroupSpec nestedMaterializedVcGroup(String loweredTenant)
+  {
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
+        clustering,
+        List.of(Arrays.asList(loweredTenant))
+    );
+    new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("tenant_upper_lower", "upper(tenant_lower)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ),
+        // raw `tenant` is retained so the whole chain (lower(tenant) -> upper(...)) is recomputable, hence remappable
+        List.of("tenant_lower", "tenant_upper_lower", "tenant", ColumnHolder.TIME_COLUMN_NAME, "metric"),
+        List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
+        clustering,
+        null,
+        built.dictionaries(),
+        built.specs()
+    );
+    return built.specs().get(0);
+  }
+
+  /**
+   * Like {@link #materializedVcGroup} but the summary also carries the metadata-only {@code __virtualGranularity}
+   * query-granularity carrier virtual column (HOUR). The carrier is deliberately NOT listed in the stored columns, so
+   * it must never be a remap target even though {@link VirtualColumns#findEquivalent} can match a query VC against its
+   * floor expression.
+   */
+  private static TableClusterGroupSpec granularityCarrierVcGroup(String loweredTenant)
+  {
+    final RowSignature clustering = RowSignature.builder().add("tenant_lower", ColumnType.STRING).build();
+    final ClusterGroupSchemaTestHelpers.Built built = ClusterGroupSchemaTestHelpers.buildClusterGroups(
+        clustering,
+        List.of(Arrays.asList(loweredTenant))
+    );
+    new ClusteredValueGroupsBaseTableSchema(
+        VirtualColumns.create(
+            new ExpressionVirtualColumn("tenant_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            Granularities.toVirtualColumn(Granularities.HOUR, Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
+        ),
+        // __virtualGranularity is intentionally absent from the stored columns; it is a metadata carrier only. Raw
+        // `tenant` is retained so lower(tenant) is remappable while the granularity carrier still isn't.
+        List.of("tenant_lower", "tenant", ColumnHolder.TIME_COLUMN_NAME, "metric"),
         List.of(OrderBy.ascending("tenant_lower"), OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME)),
         clustering,
         null,
@@ -899,5 +989,237 @@ class ProjectionsPlanClusterGroupQueryTest
         f,
         Projections.planClusterGroupQuery(List.of(group), buildSpec(f, queryVcs)).rewriteFor(group)
     );
+  }
+
+  @Test
+  void testVirtualColumnRemapMapsQueryVcEquivalentToClusteringColumn()
+  {
+    // Query VC v0 := lower(tenant) is equivalent to the group's clustering column tenant_lower (also lower(tenant)).
+    // The remap should map v0 -> tenant_lower so grouping/select reads the materialized clustering column.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("v0", "tenant_lower"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapMapsQueryVcEquivalentToNonClusteringMaterializedColumn()
+  {
+    // Query VC v1 := upper(region) is equivalent to the group's non-clustering materialized column region_upper.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("v1", "region_upper"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapExcludesTargetShadowedByAnotherQueryVc()
+  {
+    // v1 := upper(region) is equivalent to the materialized region_upper, but the query also has a VC NAMED
+    // region_upper (:= lower(region)). Remapping v1 -> region_upper would route through the per-group delegate, which
+    // resolves "region_upper" to the shadowing query VC (lowercase) instead of the stored column -- so v1 must NOT be
+    // remapped (it recomputes upper(region) instead). See the shadow guard in buildClusterVirtualColumnRemap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("region_upper", "lower(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testRebuildCursorBuildSpecDeclaresRemapTargetsInPhysicalColumns()
+  {
+    // v1 := upper(region) remaps to the materialized region_upper. A populated physicalColumns set carried the VC's
+    // raw input (region), not the target, so the rebuilt spec must add region_upper -- otherwise partial-segment
+    // prefetch omits it and the remapped read hits deep storage synchronously (and incremental capability checks
+    // reject the undeclared column). The raw input stays too.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = CursorBuildSpec.builder()
+                                                .setVirtualColumns(queryVcs)
+                                                .setPhysicalColumns(Set.of("region"))
+                                                .build();
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
+    Assertions.assertEquals(Map.of("v1", "region_upper"), plan.virtualColumnRemap());
+
+    final CursorBuildSpec rebuilt = plan.rebuildCursorBuildSpec(spec, group);
+    Assertions.assertTrue(rebuilt.getPhysicalColumns().contains("region_upper"));
+    Assertions.assertTrue(rebuilt.getPhysicalColumns().contains("region"));
+  }
+
+  @Test
+  void testRebuildCursorBuildSpecLeavesNullPhysicalColumnsNull()
+  {
+    // A null physicalColumns means "all columns"; rebuild must not fabricate a (now-incomplete) set from the remap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v1", "upper(region)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = buildSpec(null, queryVcs);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
+    Assertions.assertFalse(plan.virtualColumnRemap().isEmpty());
+
+    Assertions.assertNull(plan.rebuildCursorBuildSpec(spec, group).getPhysicalColumns());
+  }
+
+  @Test
+  void testRebuildCursorBuildSpecLeavesUnrewritableFilterUntouchedWhenDisjointFromRemap()
+  {
+    // A filter that can't rewrite its required columns, used alongside a remappable VC it does NOT reference, must be
+    // left untouched: v0 := lower(tenant) still remaps to tenant_lower, but the filter (on region) does not intersect
+    // the remap, so rebuildCursorBuildSpec must not call rewriteRequiredColumns on it (which would throw).
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final Filter filter = new NoRewriteFilter("region");
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = buildSpec(filter, queryVcs);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
+    Assertions.assertEquals(Map.of("v0", "tenant_lower"), plan.virtualColumnRemap());
+
+    Assertions.assertSame(filter, plan.rebuildCursorBuildSpec(spec, group).getFilter());
+  }
+
+  @Test
+  void testVirtualColumnRemapExcludesRetainedInputVcReferencedByUnrewritableFilter()
+  {
+    // v0 := lower(tenant) is remappable (tenant retained), but an unrewritable filter references it directly. The
+    // filter can't be rewritten to the materialized column, so v0 is left unremapped and recomputes from the retained
+    // tenant column -- the filter reads that value rather than throwing on an unsupported rewrite.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final Filter filter = new NoRewriteFilter("v0");
+    final TableClusterGroupSpec group = materializedVcGroup("acme");
+    final CursorBuildSpec spec = buildSpec(filter, queryVcs);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(List.of(group), spec);
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+
+    Assertions.assertSame(filter, plan.rebuildCursorBuildSpec(spec, group).getFilter());
+  }
+
+  @Test
+  void testVirtualColumnRemapExcludesMetadataOnlyGranularityCarrier()
+  {
+    // The summary carries a metadata-only __virtualGranularity VC (records the query granularity; not a stored
+    // column). A query VC equivalent to the carrier's floor expression must NOT be remapped to __virtualGranularity --
+    // the per-group / clustering selector can't serve it -- so it stays in place to recompute from __time. A sibling
+    // query VC equivalent to the (stored) clustering column is still remapped, proving only the carrier is excluded.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        Granularities.toVirtualColumn(Granularities.HOUR, "q_floor"),
+        new ExpressionVirtualColumn("q_lower", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(granularityCarrierVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("q_lower", "tenant_lower"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapEmptyWhenNoEquivalent()
+  {
+    // Query VC has no materialized equivalent in the group (no length(region) column / VC) → no remap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "strlen(region)", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testVirtualColumnRemapEmptyWhenNoQueryVirtualColumns()
+  {
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testVirtualColumnRemapBuiltEvenWithFilter()
+  {
+    // The remap must be computed even when the query has a filter (grouping/select substitution applies regardless).
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final Filter f = new EqualityFilter("v0", ColumnType.STRING, "acme", null);
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(f, queryVcs)
+    );
+    Assertions.assertEquals(Map.of("v0", "tenant_lower"), plan.virtualColumnRemap());
+  }
+
+  @Test
+  void testVirtualColumnRemapRespectsDependencyGuard()
+  {
+    // v0 := lower(tenant) (equivalent to clustering tenant_lower) AND v1 := concat(v0, 'x') which DEPENDS on v0.
+    // v0 must NOT be remapped/dropped because v1 still needs it as an input; v1 itself has no equivalent → no remap.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v1", "concat(v0, 'x')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(materializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
+  }
+
+  @Test
+  void testVirtualColumnRemapSubstitutesFullyMaterializedDependencyChain()
+  {
+    // v0 := lower(tenant) (equivalent to clustering tenant_lower) AND v1 := upper(v0) which DEPENDS on v0 but is
+    // ALSO materialized (equivalent to tenant_upper_lower := upper(tenant_lower)). Because v1 is substituted (dropped,
+    // read from its materialized column) it never recomputes, so it does not force v0 to be kept -> BOTH substitute.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v1", "upper(v0)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(nestedMaterializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertEquals(
+        Map.of("v0", "tenant_lower", "v1", "tenant_upper_lower"),
+        plan.virtualColumnRemap()
+    );
+  }
+
+  @Test
+  void testVirtualColumnRemapKeepsMaterializedChainNeededByNonMaterializedDependent()
+  {
+    // Transitive keep: v0 := lower(tenant) and v1 := upper(v0) are both materialized, but v2 := strlen(v1) is NOT
+    // (no strlen column). v2 is kept and recomputes -> needs v1 -> v1 kept -> v1 recomputes -> needs v0 -> v0 kept.
+    // So nothing substitutes, even though v0/v1's only direct dependents are themselves materialized.
+    final VirtualColumns queryVcs = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v1", "upper(v0)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("v2", "strlen(v1)", ColumnType.LONG, TestExprMacroTable.INSTANCE)
+    );
+    final ClusterGroupQueryPlan plan = Projections.planClusterGroupQuery(
+        List.of(nestedMaterializedVcGroup("acme")),
+        buildSpec(null, queryVcs)
+    );
+    Assertions.assertTrue(plan.virtualColumnRemap().isEmpty());
   }
 }

@@ -22,7 +22,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.indexer.report.KillTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class PushedSegmentsReportTest
 {

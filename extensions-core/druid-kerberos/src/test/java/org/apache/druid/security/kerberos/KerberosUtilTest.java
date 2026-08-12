@@ -20,8 +20,8 @@
 package org.apache.druid.security.kerberos;
 
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.net.CookieManager;
 import java.net.CookieStore;
@@ -42,12 +42,12 @@ public class KerberosUtilTest
     cookieStore.add(new URI("http://test1.druid.apache.com/abc/def"), cookie1);
 
     // mismatch domain name
-    Assert.assertNull(DruidKerberosUtil.getAuthCookie(cookieStore, new URI("https://test2.druid.apache.com/def")));
+    Assertions.assertNull(DruidKerberosUtil.getAuthCookie(cookieStore, new URI("https://test2.druid.apache.com/def")));
 
     // cookie is secure and the url is unsecure
-    Assert.assertNull(DruidKerberosUtil.getAuthCookie(cookieStore, new URI("http://test1.druid.apache.com/def")));
+    Assertions.assertNull(DruidKerberosUtil.getAuthCookie(cookieStore, new URI("http://test1.druid.apache.com/def")));
 
-    Assert.assertEquals(cookie1, DruidKerberosUtil.getAuthCookie(cookieStore, new URI("https://test1.druid.apache.com/def")));
+    Assertions.assertEquals(cookie1, DruidKerberosUtil.getAuthCookie(cookieStore, new URI("https://test1.druid.apache.com/def")));
 
 
   }

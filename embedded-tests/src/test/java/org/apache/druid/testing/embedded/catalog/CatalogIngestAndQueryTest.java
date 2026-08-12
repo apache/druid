@@ -460,7 +460,7 @@ public abstract class CatalogIngestAndQueryTest extends CatalogTestBase
         .sealed(true)
         .property(
             DatasourceDefn.BASE_TABLE_PROPERTY,
-            new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("varchar_col2"), null)
+            new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("varchar_col2"), null, null)
         )
         .property(
             DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,

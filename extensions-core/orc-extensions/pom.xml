@@ -31,6 +31,7 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <properties>
+        <hive-storage-api.version>2.8.1</hive-storage-api.version>
         <orc.version>1.7.6</orc.version>
     </properties>
     <dependencies>
@@ -199,6 +200,7 @@
         <dependency>
             <groupId>org.apache.hive</groupId>
             <artifactId>hive-storage-api</artifactId>
+            <version>${hive-storage-api.version}</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -212,8 +214,13 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

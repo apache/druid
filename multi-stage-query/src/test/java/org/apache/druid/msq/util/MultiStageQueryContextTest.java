@@ -471,6 +471,30 @@ public class MultiStageQueryContextTest
   }
 
   @Test
+  public void getVirtualStoragePartialDownloadsEnabled_unset_returnsDefault()
+  {
+    Assert.assertFalse(MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(QueryContext.empty(), false));
+    Assert.assertTrue(MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(QueryContext.empty(), true));
+  }
+
+  @Test
+  public void getVirtualStoragePartialDownloadsEnabled_set_overridesDefault()
+  {
+    Assert.assertTrue(
+        MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(
+            QueryContext.of(ImmutableMap.of(MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS, true)),
+            false
+        )
+    );
+    Assert.assertFalse(
+        MultiStageQueryContext.getVirtualStoragePartialDownloadsEnabled(
+            QueryContext.of(ImmutableMap.of(MultiStageQueryContext.CTX_VIRTUAL_STORAGE_PARTIAL_DOWNLOADS, false)),
+            true
+        )
+    );
+  }
+
+  @Test
   public void withCommonContext_noTimeout_setsStartTimeOnly()
   {
     final QueryContext context = MultiStageQueryContext.withCommonContext(QueryContext.empty());

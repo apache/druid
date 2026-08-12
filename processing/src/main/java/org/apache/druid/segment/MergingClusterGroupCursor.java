@@ -22,23 +22,32 @@ package org.apache.druid.segment;
 import com.google.common.base.Supplier;
 import it.unimi.dsi.fastutil.ints.IntHeapPriorityQueue;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.MergingColumnSelectorFactory;
+import org.apache.druid.utils.CloseableUtils;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * {@link Cursor} that presents a set of individually {@code __time}-sorted per-cluster-group cursors as a single
  * globally {@code __time}-ordered cursor, via a streaming k-way merge. Used for clustered base tables where
  * {@code __time} is the first non-clustering column (so each group, whose clustering prefix is constant, is sorted on
- * {@code __time}); built by {@code QueryableIndexCursorFactory#makeTimeMergedClusteredCursorHolder}.
+ * {@code __time}).
  * <p>
  * This is the time-ordered sibling of {@link ConcatenatingCursor}: where the concatenating cursor walks groups
  * back-to-back (order = {@code [clustering…, __time, …]}), this cursor interleaves them by {@code __time}. It opens
  * <em>all</em> surviving group cursors up front (so unlike the concatenating path it does not benefit from early-exit
  * laziness) and, on each {@link #advance()}, emits the row with the smallest (or largest, when descending)
- * {@code __time} across the groups. Each per-group sub-index already exposes the clustering columns as constants, so
- * the {@link MergingColumnSelectorFactory} simply dispatches every column to the winning group.
+ * {@code __time} across the groups. The {@link MergingColumnSelectorFactory} exposes each row's clustering values
+ * (constant per group) and dispatches non-clustering columns to the winning group. When the plan carries a
+ * query-virtual-column-to-materialized-column remap, the merging factory is wrapped in a
+ * {@link RemapColumnSelectorFactory} so reads of a remapped query virtual column's output name resolve to its
+ * materialized column (mirroring {@link ConcatenatingCursor}); the per-group specs already dropped those virtual
+ * columns and added their materialized targets as physical columns.
  * <p>
  * An {@link IntHeapPriorityQueue} of group indices, keyed on each group's current {@code __time} via
  * {@link #compareGroups}, drives the merge: the queue head is the winning group, {@link IntHeapPriorityQueue#changed()}
@@ -49,7 +58,11 @@ import java.util.List;
 public final class MergingClusterGroupCursor implements Cursor
 {
   private final List<Supplier<CursorHolder>> holderSuppliers;
+  private final RowSignature clusteringColumns;
+  private final List<Object[]> clusteringValuesByGroup;
   private final boolean descending;
+  private final VirtualColumns queryVirtualColumns;
+  private final Map<String, String> virtualColumnRemap;
 
   private boolean initialized;
   // Indexed by group. groupCursors[i] is null if that group's holder produced no cursor.
@@ -62,18 +75,81 @@ public final class MergingClusterGroupCursor implements Cursor
   private int currentGroup;
   // Monotonically increasing output-row id, one per emitted row; the merge emits exactly one row per advance.
   private long outputRowId;
-  private MergingColumnSelectorFactory factory;
+  // The factory exposed to callers: the MergingColumnSelectorFactory, wrapped in a RemapColumnSelectorFactory when
+  // virtualColumnRemap is non-empty.
+  private ColumnSelectorFactory exposedFactory;
 
   public MergingClusterGroupCursor(
       List<Supplier<CursorHolder>> holderSuppliers,
-      boolean descending
+      RowSignature clusteringColumns,
+      List<Object[]> clusteringValuesByGroup,
+      boolean descending,
+      VirtualColumns queryVirtualColumns,
+      Map<String, String> virtualColumnRemap
   )
   {
     if (holderSuppliers.isEmpty()) {
       throw DruidException.defensive("MergingClusterGroupCursor requires at least one cluster group");
     }
+    if (holderSuppliers.size() != clusteringValuesByGroup.size()) {
+      throw DruidException.defensive(
+          "holderSuppliers size [%s] must equal clusteringValuesByGroup size [%s]",
+          holderSuppliers.size(),
+          clusteringValuesByGroup.size()
+      );
+    }
     this.holderSuppliers = holderSuppliers;
+    this.clusteringColumns = clusteringColumns;
+    this.clusteringValuesByGroup = clusteringValuesByGroup;
     this.descending = descending;
+    this.queryVirtualColumns = queryVirtualColumns;
+    this.virtualColumnRemap = virtualColumnRemap;
+  }
+
+  /**
+   * Build a {@link CursorHolder} over a globally {@code __time}-ordered merge of the per-group holders, advertising
+   * ascending/descending {@code __time} ordering per {@code timeOrder}.The supplied {@link Closer} owns the per-group
+   * holders and is closed with the returned holder.
+   */
+  public static CursorHolder makeCursorHolder(
+      List<Supplier<CursorHolder>> holderSuppliers,
+      RowSignature clusteringColumns,
+      List<Object[]> clusteringValuesByGroup,
+      boolean descending,
+      VirtualColumns queryVirtualColumns,
+      Map<String, String> virtualColumnRemap,
+      Closer closer
+  )
+  {
+    final MergingClusterGroupCursor cursor = new MergingClusterGroupCursor(
+        holderSuppliers,
+        clusteringColumns,
+        clusteringValuesByGroup,
+        descending,
+        queryVirtualColumns,
+        virtualColumnRemap
+    );
+    final List<OrderBy> ordering = descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder();
+    return new CursorHolder()
+    {
+      @Override
+      public Cursor asCursor()
+      {
+        return cursor;
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        return ordering;
+      }
+
+      @Override
+      public void close()
+      {
+        CloseableUtils.closeAndWrapExceptions(closer);
+      }
+    };
   }
 
   private void initializeIfNeeded()
@@ -106,14 +182,24 @@ public final class MergingClusterGroupCursor implements Cursor
       }
     }
     currentGroup = heap.isEmpty() ? 0 : heap.firstInt();
-    factory = new MergingColumnSelectorFactory(groupFactories, () -> currentGroup, () -> outputRowId);
+    final MergingColumnSelectorFactory mergingFactory = new MergingColumnSelectorFactory(
+        groupFactories,
+        clusteringColumns,
+        clusteringValuesByGroup,
+        queryVirtualColumns,
+        () -> currentGroup,
+        () -> outputRowId
+    );
+    exposedFactory = virtualColumnRemap.isEmpty()
+                     ? mergingFactory
+                     : new RemapColumnSelectorFactory(mergingFactory, virtualColumnRemap);
   }
 
   @Override
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     initializeIfNeeded();
-    return factory;
+    return exposedFactory;
   }
 
   @Override

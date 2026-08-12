@@ -52,9 +52,9 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -66,7 +66,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
 {
   private QueryRunner<ResultRow> runner;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final IncrementalIndex incrementalIndex = MapVirtualColumnTestBase.generateIndex();
@@ -146,11 +146,11 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         null
     );
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> runner.run(QueryPlus.wrap(query)).toList()
     );
-    Assert.assertEquals("Unable to group on the column[params]", t.getMessage());
+    Assertions.assertEquals("Unable to group on the column[params]", t.getMessage());
   }
 
 
@@ -181,7 +181,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         new MapBasedRow(DateTimes.of("2011-01-12T00:00:00.000Z"), MapVirtualColumnTestBase.mapOf("count", 2L))
     ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
 
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -210,7 +210,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         )
     ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
 
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -239,7 +239,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
         )
     ).stream().map(row -> ResultRow.fromLegacyRow(row, query)).collect(Collectors.toList());
 
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -263,7 +263,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
     final List<ResultRow> expected = Collections.emptyList();
 
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 
   @Test
@@ -287,6 +287,6 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final List<ResultRow> result = runner.run(QueryPlus.wrap(query)).toList();
     final List<ResultRow> expected = Collections.emptyList();
 
-    Assert.assertEquals(expected, result);
+    Assertions.assertEquals(expected, result);
   }
 }

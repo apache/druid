@@ -33,6 +33,7 @@ import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -417,10 +418,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return files == null ? new File[0] : files;
   }
 
+  private File getSegmentInfoFile(final DataSegment segment)
+  {
+    return FileUtils.resolveFileWithinDirectory(getEffectiveInfoDir(), segment.getId().toString());
+  }
+
   @Override
   public void storeInfoFile(final DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
     if (!segmentInfoCacheFile.exists()) {
       FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
       FileUtils.writeAtomically(
@@ -456,24 +462,31 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  private void deleteSegmentInfoFile(DataSegment segment)
+  private void deleteSegmentInfoFile(final DataSegment segment)
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile;
+    try {
+      segmentInfoCacheFile = getSegmentInfoFile(segment);
+    }
+    catch (IAE e) {
+      log.warn(e, "Refusing to delete info file with invalid path for segment[%s].", segment.getId());
+      return;
+    }
     if (!segmentInfoCacheFile.delete()) {
       log.warn("Unable to delete cache file[%s] for segment[%s].", segmentInfoCacheFile, segment.getId());
     }
   }
 
   /**
-   * Write the info file for a partial-load segment, overwriting any existing content atomically. Distinct from
-   * {@link #storeInfoFile} which skips the write when the file already exists, for partial segments we must
-   * unconditionally rewrite so an incoming rule swap (new {@code fingerprint}/{@code delegate} inside the
-   * wrapped load spec) reaches disk. Otherwise bootstrap after a restart would restore the segment using the
-   * prior wrapper and re-announce the old rule until the coordinator resyncs.
+   * Write the info file for a segment, overwriting any existing content atomically. Distinct from
+   * {@link #storeInfoFile}, which skips the write when the file already exists: a partial-load transition must reach
+   * disk unconditionally, whether it is a rule swap (new {@code fingerprint}/{@code delegate} inside the wrapped load
+   * spec) or a return to a regular full load (no wrapper at all). Otherwise bootstrap after a restart would restore
+   * the segment using the prior wrapper and re-announce the old rule until the coordinator resyncs.
    */
-  private void writePartialInfoFile(DataSegment segment) throws IOException
+  private void rewriteInfoFile(DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), segment.getId().toString());
+    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
     FileUtils.mkdirp(getEffectiveInfoDir());
     FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
       jsonMapper.writeValue(out, segment);
@@ -530,7 +543,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           try {
             if (hold != null) {
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
-              final File segmentInfoCacheFile = new File(getEffectiveInfoDir(), dataSegment.getId().toString());
+              final File segmentInfoCacheFile = getSegmentInfoFile(dataSegment);
               if (!segmentInfoCacheFile.exists()) {
                 FileUtils.mkdirp(getEffectiveInfoDir());
                 FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
@@ -903,7 +916,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
               location.getPath()
           );
         }
-        writePartialInfoFile(dataSegment);
+        rewriteInfoFile(dataSegment);
         partial.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
         return new ReservedPartial(partial, location, hold);
       }
@@ -1041,7 +1054,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           // branch. On the find-existing branch the info file on disk still carries the PRIOR rule's wrapped
           // load spec, so a rule swap here would apply in memory only. Rewrite unconditionally before mount.
           try {
-            writePartialInfoFile(dataSegment);
+            rewriteInfoFile(dataSegment);
           }
           catch (IOException e) {
             throw new SegmentLoadingException(
@@ -1299,8 +1312,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                                 );
           }
           if (complete.isMounted()) {
+            // the entry is already mounted, so hand back its cached reference provider. Read the volatile
+            // referenceProvider exactly once, inside the supplier, rather than trusting the isMounted() check above and
+            // reading the field again when the supplier runs later: for a static (non-virtual-storage) entry a
+            // concurrent drop (release() -> unmount()) can null it in between. The reservation hold does not prevent
+            // this (it only guards weak entries against reclaim), so a weak entry would stay mounted here, but a
+            // static entry can be unmounted out from under us. A dropped entry is reported as absent (empty) rather
+            // than reloaded.
             return new AcquireSegmentAction(
-                () -> Futures.immediateFuture(AcquireSegmentResult.cached(complete.referenceProvider)),
+                () -> {
+                  final ReferenceCountedSegmentProvider provider = complete.referenceProvider;
+                  return Futures.immediateFuture(
+                      provider != null ? AcquireSegmentResult.cached(provider) : AcquireSegmentResult.empty()
+                  );
+                },
                 hold
             );
           } else {
@@ -1338,15 +1363,21 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return loadPartial(dataSegment);
       }
       // virtual storage doesn't do anything with loading immediately, but check to see if the segment is already cached
-      // and if so, clear out the onUnmount action
+      // and if so, clear out the onUnmount action. Reaching here with a rule applied means the coordinator asked for
+      // the whole segment again: a rule is only ever applied on the loadPartial path above, so the request that got
+      // here carries no partial-load wrapper for this segment. Release the rule.
       final ReferenceCountingLock lock = lock(dataSegment);
       synchronized (lock) {
         try {
           final SegmentCacheEntryIdentifier cacheEntryIdentifier = new SegmentCacheEntryIdentifier(dataSegment.getId());
           for (StorageLocation location : locations) {
             final SegmentCacheEntry cacheEntry = location.getCacheEntry(cacheEntryIdentifier);
-            if (cacheEntry != null) {
-              cacheEntry.setOnUnmount(null);
+            if (cacheEntry == null) {
+              continue;
+            }
+            cacheEntry.setOnUnmount(null);
+            if (cacheEntry instanceof PartialSegmentMetadataCacheEntry partial && partial.isRuleHeld()) {
+              releaseRuleForFullLoad(dataSegment, partial);
             }
           }
         }
@@ -1426,7 +1457,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 reapplyRuleFromInfoFile(dataSegment, partial);
                 loadedProfile = PartialLoadProfile.forLoaded(
                     dataSegment.getLoadSpec(),
-                    (String) dataSegment.getLoadSpec().get("fingerprint"),
+                    (String) dataSegment.getLoadSpec().get(PartialLoadSpec.FINGERPRINT_FIELD),
                     partial.getRealizedBytes()
                 );
               }
@@ -1527,6 +1558,48 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
+   * Releases the partial-load rule applied to {@code dataSegment} in response to an unwrapped load request: the
+   * coordinator has stopped asking for parts of the segment, so the metadata entry and the rule's bundles are unpinned.
+   * That is what a full load means under virtual storage — nothing is pinned, each part is fetched on demand — and
+   * reclaim of the partial state on disk is left to eviction, as it is for {@link #drop}.
+   * <p>
+   * The info file is rewritten before the rule is cleared, and a failed rewrite fails the load. Nothing is left half
+   * converted: releasing the holds cannot fail, and a load failure sends the historical down its drop path, which
+   * clears the rule and removes the info file, so there is no stale rule for a restart to reinstate. Leaving the rule
+   * applied and carrying on is not an option, because an unwrapped request announces as a full load either way, so the
+   * coordinator would record a replica with no profile and never ask again.
+   * <p>
+   * Callers must hold this segment's {@link #lock(DataSegment)}, which is the external lock that
+   * {@link PartialSegmentMetadataCacheEntry#clearRule} requires to be serialized against
+   * {@link PartialSegmentMetadataCacheEntry#applyRule}.
+   */
+  private void releaseRuleForFullLoad(DataSegment dataSegment, PartialSegmentMetadataCacheEntry partial)
+      throws SegmentLoadingException
+  {
+    // Snapshot both before clearRule zeroes out the rule state so the log can describe what was released.
+    final String priorFingerprint = partial.getRuleFingerprint();
+    final long priorRealizedBytes = partial.getRealizedBytes();
+    try {
+      rewriteInfoFile(dataSegment);
+    }
+    catch (IOException e) {
+      throw new SegmentLoadingException(
+          e,
+          "Failed to rewrite info file for segment[%s] while releasing partial-load rule[fingerprint=%s]",
+          dataSegment.getId(),
+          priorFingerprint
+      );
+    }
+    partial.clearRule();
+    log.info(
+        "Released partial-load rule[fingerprint=%s, realizedBytes=%d] for segment[%s]; it is a regular full load now.",
+        priorFingerprint,
+        priorRealizedBytes,
+        dataSegment.getId()
+    );
+  }
+
+  /**
    * Reapply the persisted partial-load rule to a bootstrap-restored metadata entry. Reads the wrapper from the
    * segment's info-file {@code loadSpec}, resolves the selected bundle names against the just-parsed on-disk
    * metadata header, calls {@link PartialSegmentMetadataCacheEntry#applyRule}, then drives eager downloads for any
@@ -1593,6 +1666,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   public StorageLoadingThreadPool getLoadingThreadPool()
   {
     return virtualStorageLoadingThreadPool;
+  }
+
+  @VisibleForTesting
+  public SegmentLoaderConfig getConfig()
+  {
+    return config;
   }
 
   /**
@@ -1878,7 +1957,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     private SegmentLazyLoadFailCallback lazyLoadCallback = SegmentLazyLoadFailCallback.NOOP;
     private StorageLocation location;
     private File storageDir;
-    private ReferenceCountedSegmentProvider referenceProvider;
+    // volatile so isMounted() can read it without blocking behind a concurrent mount()/unmount() holding entryLock.
+    private volatile ReferenceCountedSegmentProvider referenceProvider;
     private final AtomicReference<Runnable> onUnmount = new AtomicReference<>();
     // switched from synchronized to use a ReentrantLock to avoid pinning virtual threads to platform threads until
     // https://openjdk.org/jeps/491, we could consider switching back after java 24+ is the minimum version
@@ -1906,13 +1986,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     @Override
     public boolean isMounted()
     {
-      entryLock.lock();
-      try {
-        return referenceProvider != null;
-      }
-      finally {
-        entryLock.unlock();
-      }
+      return referenceProvider != null;
     }
 
     @Override

@@ -22,6 +22,7 @@ package org.apache.druid.common.exception;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,13 +53,31 @@ public class PersonaBasedErrorTransformStrategyTest
   {
     DruidException druidException = DruidException.defensive().build("Test Defensive exception");
 
-    DruidExceptionMatcher druidExceptionMatcher = new DruidExceptionMatcher(
-        DruidException.Persona.USER,
-        druidException.getCategory(),
-        druidException.getErrorCode()
-    ).expectMessageContains("Could not process the query, please contact your administrator with Error ID");
+    MatcherAssert.assertThat(
+        target.maybeTransform(druidException, Optional.of("the-error")).get(),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.RUNTIME_FAILURE,
+            "general"
+        ).expectMessageIs(
+            "Internal server error, please contact your administrator with Error ID [the-error] if the issue persists."
+        )
+    );
+  }
 
-    druidExceptionMatcher.matches(target.maybeTransform(druidException, Optional.of("the-error")).get());
+  @Test
+  public void testErrorIdIsGeneratedWhenAbsent()
+  {
+    DruidException druidException = DruidException.defensive().build("Test Defensive exception");
+
+    MatcherAssert.assertThat(
+        target.maybeTransform(druidException, Optional.empty()).get(),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.RUNTIME_FAILURE,
+            "general"
+        ).expectMessageContains("please contact your administrator with Error ID [")
+    );
   }
 
   @Test
