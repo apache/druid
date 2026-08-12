@@ -53,7 +53,6 @@ import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
@@ -63,8 +62,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -80,8 +80,8 @@ import static org.apache.druid.segment.filter.Filters.or;
 
 public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
 {
-  @RegisterExtension
-  public static TemporaryFolderExtension tmp = new TemporaryFolderExtension();
+  @TempDir
+  public static File tmp;
   private static Closer CLOSER;
   private static IncrementalIndex INCREMENTAL_INDEX;
   private static IncrementalIndexCursorFactory INCREMENTAL_INDEX_CURSOR_FACTORY;
@@ -132,7 +132,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
     );
     IndexBuilder bob = IndexBuilder.create()
-                                   .tmpDir(tmp.newFolder())
+                                   .tmpDir(new File(tmp, "index"))
                                    .schema(
                                        IncrementalIndexSchema.builder()
                                                              .withTimestampSpec(TimestampSpec.DEFAULT)
@@ -146,7 +146,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                                    .inputSource(inputSource)
                                    .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
                                    .transform(TransformSpec.NONE)
-                                   .inputTmpDir(tmp.newFolder());
+                                   .inputTmpDir(new File(tmp, "input"));
     QUERYABLE_INDEX = CLOSER.register(bob.buildMMappedIndex());
     UNNEST_ARRAYS = new UnnestCursorFactory(
         new QueryableIndexCursorFactory(QUERYABLE_INDEX),
