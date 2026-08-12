@@ -751,7 +751,7 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
-  public void testTaskSubmissionToTaskRunnerBasedOnPriority() throws Exception
+  public void testTaskSubmissionToTaskRunnerBasedOnPriority()
   {
     final RecordingTaskRunner recordingRunner = new RecordingTaskRunner(serviceEmitter);
     final TaskQueue priorityQueue = new TaskQueue(
@@ -772,7 +772,9 @@ public class TaskQueueTest extends IngestionTestBase
     final NoopTask lowPriority2 = NoopTask.ofPriority(10);
     final NoopTask medPriority = NoopTask.ofPriority(50);
     final NoopTask highPriority1 = NoopTask.ofPriority(90);
-    final NoopTask highPriority2 = NoopTask.ofPriority(100);
+
+    // Create a task with a String priority value to verify that it gets coerced as an integer
+    final NoopTask highPriority2 = new NoopTask(null, null, null, 0, 0, Map.of(Tasks.PRIORITY_KEY, "100"));
 
     priorityQueue.add(lowPriority1);
     priorityQueue.add(medPriority);

@@ -22,6 +22,8 @@ package org.apache.druid.indexing.common.task;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.Map;
+
 public class NoopTaskTest
 {
   @Test
@@ -29,5 +31,13 @@ public class NoopTaskTest
   {
     NoopTask task = NoopTask.create();
     Assertions.assertTrue(task.getInputSourceResources().isEmpty());
+  }
+
+  @Test
+  public void test_getPriority_coercesStringValuesToInteger()
+  {
+    final NoopTask task = new NoopTask(null, null, null, 0, 0, Map.of(Tasks.PRIORITY_KEY, "1000"));
+    Assertions.assertEquals(1000, task.getPriority());
+    Assertions.assertEquals(Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY, task.getDefaultPriority());
   }
 }
