@@ -1572,9 +1572,9 @@ Note that if `druid.segmentCache.numLoadingThreads` > 1, multiple threads can do
 
 #### Loading segments
 
-| Property                  | Description                                                                                                                                                                                                                                                                                                 | Default |
-|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
-| `druid.segment.timeline.fastIntervalSearch` | Segment metadata is loaded into memory by the Historical services for serving the segments. This setting enables the use of an index based on Interval trees to store this metadata in memory for faster identification and retrieval. Set it to true to speed up loading and searching of segments. | false |
+| Property                  | Description                                                                                                                                                                                                                                                                        | Default |
+|---------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|
+| `druid.segment.timeline.fastIntervalSearch` | Segment metadata is loaded into memory by the Historical services to serve segments. This setting enables an index based on interval trees to store that metadata in memory for faster identification and retrieval. Set it to true to speed up loading and searching of segments. | false |
 
 #### Historical query configs
 
