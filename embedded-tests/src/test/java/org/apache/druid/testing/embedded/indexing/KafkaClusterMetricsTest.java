@@ -206,7 +206,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   @MethodSource("getCompactionSupervisorTestParams")
   @ParameterizedTest(name = "engine={0}, policy={1}")
   @Timeout(120)
-  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments(
+  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andKillUnusedSegments(
       CompactionEngine engine,
       CompactionCandidateSearchPolicy policy
   )
@@ -306,9 +306,16 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(1)
     );
 
-    // Verify that the segments are skipped since the interval is still being appended to
+    // Verify that some unused segments have been killed from metadata store
     overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/kill/skippedIntervals/count")
+        event -> event.hasMetricName("segment/killed/metadataStore/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
+
+    // Verify that some segments were not deleted from deep store due to being upgraded
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/kill/deepStorageSkipped/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(1)
     );
