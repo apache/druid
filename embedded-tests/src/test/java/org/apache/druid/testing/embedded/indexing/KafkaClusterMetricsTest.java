@@ -30,6 +30,7 @@ import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.metadata.UnusedSegmentKillerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -105,6 +106,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
       }
     };
 
+    final Period killBufferPeriod = Period.millis(100).minus(UnusedSegmentKillerConfig.GRACE_PERIOD);
+
     indexer.setServerMemory(1_000_000_000L)
            .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
            .addProperty("druid.worker.capacity", "10");
@@ -112,7 +115,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
             .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s")
             .addProperty("druid.manager.segments.killUnused.enabled", "true")
-            .addProperty("druid.manager.segments.killUnused.bufferPeriod", "PT0.1s")
+            .addProperty("druid.manager.segments.killUnused.bufferPeriod", killBufferPeriod.toString())
             .addProperty("druid.manager.segments.killUnused.dutyPeriod", "PT1s");
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
     cluster.addExtension(KafkaIndexTaskModule.class)
