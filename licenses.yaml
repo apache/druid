@@ -3679,7 +3679,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 3.49.2
+version: 4.2.2
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
