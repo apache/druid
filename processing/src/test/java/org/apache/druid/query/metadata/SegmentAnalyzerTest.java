@@ -141,7 +141,11 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
       final boolean isString = schema.getColumnType().is(ValueType.STRING);
 
-      JupiterAssertions.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
+      JupiterAssertions.assertEquals(
+          dimension,
+          schema.getColumnType().toString(),
+          columnAnalysis.getTypeSignature().asTypeString()
+      );
       JupiterAssertions.assertEquals(dimension, 0, columnAnalysis.getSize());
       if (isString) {
         if (analyses == null) {
@@ -156,14 +160,22 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     for (String metric : TestIndex.DOUBLE_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
-      JupiterAssertions.assertEquals(metric, ValueType.DOUBLE.name(), columnAnalysis.getType());
+      JupiterAssertions.assertEquals(
+          metric,
+          ValueType.DOUBLE.name(),
+          columnAnalysis.getTypeSignature().asTypeString()
+      );
       JupiterAssertions.assertEquals(metric, 0, columnAnalysis.getSize());
       JupiterAssertions.assertNull(metric, columnAnalysis.getCardinality());
     }
 
     for (String metric : TestIndex.FLOAT_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
-      JupiterAssertions.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
+      JupiterAssertions.assertEquals(
+          metric,
+          ValueType.FLOAT.name(),
+          columnAnalysis.getTypeSignature().asTypeString()
+      );
       JupiterAssertions.assertEquals(metric, 0, columnAnalysis.getSize());
       JupiterAssertions.assertNull(metric, columnAnalysis.getCardinality());
     }
@@ -204,7 +216,11 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       JupiterAssertions.assertEquals(dimension, analysisEntry.getKey());
       final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
       final boolean isString = schema.getColumnType().is(ValueType.STRING);
-      JupiterAssertions.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
+      JupiterAssertions.assertEquals(
+          dimension,
+          schema.getColumnType().toString(),
+          columnAnalysis.getTypeSignature().asTypeString()
+      );
       JupiterAssertions.assertEquals(dimension, 0, columnAnalysis.getSize());
 
       if (isString) {
@@ -221,14 +237,22 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     for (String metric : TestIndex.DOUBLE_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
 
-      JupiterAssertions.assertEquals(metric, ValueType.DOUBLE.name(), columnAnalysis.getType());
+      JupiterAssertions.assertEquals(
+          metric,
+          ValueType.DOUBLE.name(),
+          columnAnalysis.getTypeSignature().asTypeString()
+      );
       JupiterAssertions.assertEquals(metric, 0, columnAnalysis.getSize());
       JupiterAssertions.assertNull(metric, columnAnalysis.getCardinality());
     }
 
     for (String metric : TestIndex.FLOAT_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
-      JupiterAssertions.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
+      JupiterAssertions.assertEquals(
+          metric,
+          ValueType.FLOAT.name(),
+          columnAnalysis.getTypeSignature().asTypeString()
+      );
       JupiterAssertions.assertEquals(metric, 0, columnAnalysis.getSize());
       JupiterAssertions.assertNull(metric, columnAnalysis.getCardinality());
     }
@@ -333,7 +357,10 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
       ColumnAnalysis columnAnalysis = analyses.get(invalid_aggregator);
       JupiterAssertions.assertFalse(columnAnalysis.isError());
-      JupiterAssertions.assertEquals("invalid_complex_column_type", columnAnalysis.getType());
+      JupiterAssertions.assertEquals(
+          "invalid_complex_column_type",
+          columnAnalysis.getTypeSignature().getComplexTypeName()
+      );
       JupiterAssertions.assertEquals(ColumnType.ofComplex("invalid_complex_column_type"), columnAnalysis.getTypeSignature());
     }
 

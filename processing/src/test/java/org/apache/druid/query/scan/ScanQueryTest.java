@@ -117,7 +117,6 @@ public class ScanQueryTest extends InitializedNullHandlingTest
                             .dataSource("source")
                             .intervals(intervalSpec)
                             .build();
-    JupiterAssertions.assertFalse(query.isLegacy());
     String json = JSON_MAPPER.writeValueAsString(query);
     JupiterAssertions.assertTrue(json.contains("\"legacy\":false"));
     JupiterAssertions.assertEquals(query, JSON_MAPPER.readValue(json, Query.class));

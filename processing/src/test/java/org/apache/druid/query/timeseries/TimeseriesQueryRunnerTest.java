@@ -324,6 +324,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
     }
 
     stubServiceEmitter.verifyEmitted("query/wait/time", ImmutableMap.of("vectorized", vectorize), 1);
+    if (lastResult == null) {
+      throw new AssertionError("Expected at least one timeseries result");
+    }
     JupiterAssertions.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
@@ -356,6 +359,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       lastResult = result;
     }
 
+    if (lastResult == null) {
+      throw new AssertionError("Expected at least one timeseries result");
+    }
     JupiterAssertions.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
@@ -2820,6 +2826,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       lastResult = result;
       ++count;
     }
+    if (lastResult == null) {
+      throw new AssertionError("Expected at least one timeseries result");
+    }
     JupiterAssertions.assertEquals(expectedLast, lastResult[0]);
   }
 
@@ -2925,6 +2934,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
       ++count;
     }
 
+    if (lastResult == null) {
+      throw new AssertionError("Expected at least one timeseries result");
+    }
     JupiterAssertions.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
   }
 
