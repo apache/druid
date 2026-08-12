@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.StringTuple;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -92,7 +93,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -206,6 +206,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnector,
         leaderSelector,
         segmentMetadataCache,
+        new SegmentsMetadataManagerConfig(null, cacheMode, null),
         emitter
     )
     {
@@ -599,9 +600,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       replacingSegments.add(segment);
     }
 
-    Assert.assertFalse(
-        coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null)
-                   .isSuccess()
+    Assert.assertThrows(
+        DruidException.class,
+        () -> coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null)
     );
   }
 
@@ -1590,7 +1591,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
 
     Assert.assertEquals(requestedLimit, actualUnusedSegments.size());
-    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).collect(Collectors.toList())));
+    Assert.assertTrue(actualUnusedSegments.containsAll(segments.stream().limit(requestedLimit).toList()));
   }
 
   @Test
@@ -3597,16 +3598,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Verify that the next attempt fails
     MatcherAssert.assertThat(
         Assert.assertThrows(
-            CallbackFailedException.class,
+            DruidException.class,
             () -> allocatePendingSegmentForAppendTask(wiki, firstOfJan23, IdUtils.getRandomId())
         ),
-        ExceptionMatcher.of(CallbackFailedException.class).expectRootCause(
-            DruidExceptionMatcher.internalServerError().expectMessageIs(
-                "Could not allocate segment"
-                + "[wiki_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_1970-01-01T00:00:00.000Z]"
-                + " as there are too many clashing unused versions(upto [1970-01-01T00:00:00.000ZSSSSSSSSSS])"
-                + " in the interval. Kill the old unused versions to proceed."
-            )
+        DruidExceptionMatcher.internalServerError().expectMessageIs(
+            "Could not allocate segment"
+            + "[wiki_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_1970-01-01T00:00:00.000Z]"
+            + " as there are too many clashing unused versions(upto [1970-01-01T00:00:00.000ZSSSSSSSSSS])"
+            + " in the interval. Kill the old unused versions to proceed."
         )
     );
   }
