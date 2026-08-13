@@ -563,7 +563,7 @@ name: OpenCSV
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.6
+version: 5.12.0
 libraries:
   - com.opencsv: opencsv
 
