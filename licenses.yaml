@@ -868,7 +868,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.22
+version: 4.2.39
 libraries:
   - io.dropwizard.metrics: metrics-core
 
