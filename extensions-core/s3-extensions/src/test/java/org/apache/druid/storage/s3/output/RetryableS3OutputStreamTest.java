@@ -197,25 +197,34 @@ public class RetryableS3OutputStreamTest
     s3.assertCompleted(chunkSize, Integer.BYTES * 25);
   }
 
+  /**
+   * A part that fails every retry leaves the multipart upload aborted and no object at the key, so close() must report
+   * it. Returning normally would tell the caller its bytes are readable back when they no longer exist anywhere.
+   */
   @Test
-  public void testFailToUploadAfterRetries() throws IOException
+  public void testFailToUploadAfterRetries()
   {
     final TestAmazonS3 s3 = new TestAmazonS3(3);
 
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    try (RetryableS3OutputStream out =
-             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
-      for (int i = 0; i < 2; i++) {
+    final IOException e = Assertions.assertThrows(IOException.class, () -> {
+      try (RetryableS3OutputStream out =
+               new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
+        for (int i = 0; i < 2; i++) {
+          bb.clear();
+          bb.putInt(i);
+          out.write(bb.array());
+        }
+
         bb.clear();
-        bb.putInt(i);
+        bb.putInt(3);
         out.write(bb.array());
       }
+    });
 
-      bb.clear();
-      bb.putInt(3);
-      out.write(bb.array());
-    }
-
+    Assertions.assertTrue(e.getMessage().contains("no object was written"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains(path), e.getMessage());
+    Assertions.assertNotNull(e.getCause());
     s3.assertCancelled();
   }
 
