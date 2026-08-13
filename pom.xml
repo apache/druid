@@ -2351,11 +2351,11 @@
                                 <exclude>.github/workflows/codeql.yml</exclude>
                                 <exclude>.github/config/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
-                                <exclude>src/**/*.snap</exclude>
+                                <exclude>**/src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
-                                <exclude>.editorconfig</exclude>
+                                <exclude>**/.editorconfig</exclude>
                                 <exclude>**/hadoop.indexer.libs.version</exclude>
                                 <exclude>**/codegen/**/*</exclude>
                                 <exclude>**/.settings/**/*</exclude> <!-- Eclipse -->
