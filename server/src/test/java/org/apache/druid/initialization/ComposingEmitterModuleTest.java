@@ -28,6 +28,7 @@ import com.google.inject.name.Names;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.java.util.emitter.core.Emitter;
+import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.server.emitter.ComposingEmitterConfig;
 import org.apache.druid.server.emitter.ComposingEmitterModule;
 import org.easymock.EasyMock;
@@ -68,6 +69,36 @@ public class ComposingEmitterModuleTest
     composingEmitter.start();
 
     EasyMock.verify(config, emitter, injector);
+  }
+
+  @Test
+  public void testEmitDoesNotReResolveChildEmitters()
+  {
+    ComposingEmitterConfig config = EasyMock.createMock(ComposingEmitterConfig.class);
+    EasyMock.expect(config.getEmitters()).andReturn(Collections.singletonList(testEmitterType)).anyTimes();
+
+    Event event = EasyMock.createNiceMock(Event.class);
+
+    Emitter child = EasyMock.createMock(Emitter.class);
+    child.start();
+    child.emit(event);
+    EasyMock.expectLastCall().times(3);
+    EasyMock.replay(child, event);
+
+    Injector injector = EasyMock.createMock(Injector.class);
+    // The child emitter must be resolved from the injector exactly once (at construction), not once per emitted event.
+    EasyMock.expect(injector.getInstance(Key.get(Emitter.class, Names.named(testEmitterType))))
+            .andReturn(child)
+            .once();
+    EasyMock.replay(config, injector);
+
+    Emitter composingEmitter = new ComposingEmitterModule().getEmitter(config, injector);
+    composingEmitter.start();
+    composingEmitter.emit(event);
+    composingEmitter.emit(event);
+    composingEmitter.emit(event);
+
+    EasyMock.verify(config, injector, child);
   }
 
   @Test

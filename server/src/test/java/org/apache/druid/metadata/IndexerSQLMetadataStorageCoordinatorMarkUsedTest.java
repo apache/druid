@@ -80,6 +80,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         derbyConnector,
         new TestDruidLeaderSelector(),
         NoopSegmentMetadataCache.instance(),
+        new SegmentsMetadataManagerConfig(null, null, null),
         NoopServiceEmitter.instance()
     )
     {

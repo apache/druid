@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.task.TaskMetrics;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
-import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -84,7 +83,7 @@ public class UnusedSegmentsKillerTest
     emitter = taskActionTestKit.getServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
     dataSegmentKiller = new TestDataSegmentKiller();
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO, null, null);
+    killerConfig = new UnusedSegmentKillerConfig(true, zeroBufferPeriod(), null, null);
     killExecutor = new BlockingExecutorService("UnusedSegmentsKillerTest-%s");
     storageCoordinator = taskActionTestKit.getMetadataStorageCoordinator();
     initKiller();
@@ -104,7 +103,6 @@ public class UnusedSegmentsKillerTest
             SegmentMetadataCache.UsageMode.ALWAYS,
             killerConfig
         ),
-        new DefaultTaskConfig(),
         taskActionTestKit::createTaskActionClient,
         storageCoordinator,
         leaderSelector,
@@ -220,7 +218,7 @@ public class UnusedSegmentsKillerTest
   @Test
   public void test_maxSegmentsKilledInRun_isLimitedByConfig()
   {
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO, null, 700);
+    killerConfig = new UnusedSegmentKillerConfig(true, zeroBufferPeriod(), null, 700);
     initKiller();
     leaderSelector.becomeLeader();
 
@@ -483,7 +481,7 @@ public class UnusedSegmentsKillerTest
   }
 
   @Test
-  public void test_run_skipsLockedIntervals() throws InterruptedException
+  public void test_run_doesNotSkipLockedIntervals() throws InterruptedException
   {
     storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
@@ -508,10 +506,10 @@ public class UnusedSegmentsKillerTest
       killer.run();
       finishQueuedKillJobs();
 
-      // Verify that unused segments from locked intervals are not killed
-      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 5L);
-      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 5L);
-      emitter.verifySum(UnusedSegmentsKiller.Metric.SKIPPED_INTERVALS, 5L);
+      // Verify that unused segments from locked intervals are also killed
+      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10L);
+      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
+      emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.SKIPPED_INTERVALS);
     }
     finally {
       taskLockbox.remove(ingestionTask);
@@ -532,5 +530,14 @@ public class UnusedSegmentsKillerTest
         null,
         null
     );
+  }
+
+  /**
+   * Buffer period which ensures that segments are killed as soon as they become unused.
+   */
+  private static Period zeroBufferPeriod()
+  {
+    // Subtract the grace period
+    return Period.ZERO.minus(UnusedSegmentKillerConfig.GRACE_PERIOD);
   }
 }

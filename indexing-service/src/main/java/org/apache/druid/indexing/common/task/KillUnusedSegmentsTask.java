@@ -315,7 +315,16 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 
       // 4. Delete deep store files only for segments which do not share load specs with other segments
       toolbox.getDataSegmentKiller().kill(segmentsToKillFromDeepStore);
-      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, segmentsToKillFromDeepStore.size());
+
+      final int numSegmentsDeletedFromDeepStore = segmentsToKillFromDeepStore.size();
+      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, numSegmentsDeletedFromDeepStore);
+      if (numSegmentsDeletedFromMetadataStore > numSegmentsDeletedFromDeepStore) {
+        emitMetric(
+            toolbox.getEmitter(),
+            TaskMetrics.SEGMENTS_SKIPPED_DEEPSTORE_KILL,
+            numSegmentsDeletedFromMetadataStore - numSegmentsDeletedFromDeepStore
+        );
+      }
 
       numBatchesProcessed++;
       totalSegmentsDeletedFromMetadataStore += numSegmentsDeletedFromMetadataStore;

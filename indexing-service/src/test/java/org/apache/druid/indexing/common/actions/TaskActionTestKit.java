@@ -302,9 +302,11 @@ public class TaskActionTestKit extends ExternalResource implements BeforeEachCal
           ? SegmentMetadataCache.UsageMode.ALWAYS
           : SegmentMetadataCache.UsageMode.NEVER;
 
+    final SegmentsMetadataManagerConfig managerConfig =
+        new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode, null);
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.seconds(1), cacheMode, null)),
+        Suppliers.ofInstance(managerConfig),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         new NoopSegmentSchemaCache(),
         new IndexingStateCache(),
@@ -322,6 +324,7 @@ public class TaskActionTestKit extends ExternalResource implements BeforeEachCal
         testDerbyConnector,
         leaderSelector,
         segmentMetadataCache,
+        managerConfig,
         emitter
     )
     {
