@@ -316,7 +316,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-install-plugin</artifactId>
-          <version>2.5.1</version>
+          <version>3.1.4</version>
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
