@@ -63,6 +63,7 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
@@ -1298,7 +1299,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
           new RetrieveUsedSegmentsAction(
               TestDataSource.WIKI,
               ImmutableList.of(interval),
-              visibility
+              visibility,
+              SegmentDetail.all()
           )
       );
       Assertions.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
@@ -1315,7 +1317,8 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
       Collection<DataSegment> allUsedSegments = taskActionClient.submit(
           new RetrieveUsedSegmentsAction(
               TestDataSource.WIKI,
-              Collections.singletonList(interval)
+              Collections.singletonList(interval),
+              SegmentDetail.all()
           )
       );
       Assertions.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
