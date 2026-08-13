@@ -1584,6 +1584,12 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+            <!-- Keep re2j aligned for Google Cloud Storage and Druid processing test dependencies. -->
+            <dependency>
+                <groupId>com.google.re2j</groupId>
+                <artifactId>re2j</artifactId>
+                <version>1.8</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
