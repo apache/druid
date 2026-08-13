@@ -33,7 +33,7 @@ package org.apache.druid.server.compaction;
 public enum CompactionSkipReason
 {
   /**
-   * Interval falls within {@code skipOffsetFromLatest} or a configured
+   * Interval falls within {@code skipOffsetFromLatest}, {@code skipOffsetFromNow}, or a configured
    * {@code skipIntervals}.
    */
   SKIP_OFFSET(Category.OUT_OF_SCOPE),
@@ -85,29 +85,46 @@ public enum CompactionSkipReason
    * Tells a consumer how to treat a skipped interval. Reporting should be driven
    * by the category so that a newly added {@link CompactionSkipReason} behaves
    * sensibly without the consumer being updated.
+   * <p>
+   * The single question a category answers is <i>does this interval count against
+   * the datasource being fully compacted?</i> Only {@link #DEFERRED} and
+   * {@link #UNSUPPORTED} do. When adding a reason, pick its category by that
+   * question rather than by how the interval is worded in a log line.
    */
   public enum Category
   {
     /**
-     * Interval was deliberately excluded by the compaction config. It does not
-     * count against the datasource being fully compacted.
+     * Interval was deliberately excluded by the compaction config, so it was
+     * never meant to be compacted.
+     * <p>
+     * Does not count against the datasource being fully compacted.
      */
     OUT_OF_SCOPE,
 
     /**
-     * Interval could not be compacted in this run but is expected to be picked
-     * up in a later run with no operator action.
+     * Interval could not be evaluated or acted upon in this run, but is expected
+     * to be picked up in a later run with no operator action. Whether it matches
+     * the compaction config is unknown, and in the case of
+     * {@link #TIMELINE_NOT_UPDATED} it very likely does, since compaction of that
+     * interval has just succeeded.
+     * <p>
+     * Does not count against the datasource being fully compacted, so that the
+     * reported progress does not dip while a successful compaction settles.
      */
     TRANSIENT,
 
     /**
-     * Interval does not match the compaction config and will keep being passed
-     * over until the compaction config or policy is changed.
+     * Interval is known not to match the compaction config and will keep being
+     * passed over until the compaction config or policy is changed.
+     * <p>
+     * Counts against the datasource being fully compacted.
      */
     DEFERRED,
 
     /**
      * Interval cannot be compacted as it currently stands, regardless of config.
+     * <p>
+     * Counts against the datasource being fully compacted.
      */
     UNSUPPORTED
   }

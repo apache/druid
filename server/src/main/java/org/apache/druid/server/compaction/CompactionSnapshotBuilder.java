@@ -26,7 +26,6 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 
-import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,7 +57,8 @@ public class CompactionSnapshotBuilder
 
   /**
    * Adds the given candidate to the skipped stats, using the
-   * {@link CompactionSkipReason} of its current status.
+   * {@link CompactionSkipReason} of its current status, which must be a
+   * {@link CompactionStatus.State#SKIPPED} status.
    */
   public void addToSkipped(CompactionCandidate candidate)
   {
@@ -66,10 +66,13 @@ public class CompactionSnapshotBuilder
   }
 
   /**
-   * @throws DruidException if the reason is null, since skipped stats would then
-   *                        be reported without attribution
+   * Adds the given candidate to the skipped stats for the given reason.
+   * <p>
+   * The reason is required. Rather than dropping the stats of a candidate that
+   * arrives without one, this fails the run so that segments cannot silently go
+   * missing from the compaction snapshot.
    */
-  public void addToSkipped(CompactionCandidate candidate, @Nullable CompactionSkipReason reason)
+  public void addToSkipped(CompactionCandidate candidate, CompactionSkipReason reason)
   {
     if (reason == null) {
       throw DruidException.defensive(
@@ -81,7 +84,7 @@ public class CompactionSnapshotBuilder
         .incrementSkippedStats(reason, candidate.getStats());
   }
 
-  public void moveFromPendingToSkipped(CompactionCandidate candidate, @Nullable CompactionSkipReason reason)
+  public void moveFromPendingToSkipped(CompactionCandidate candidate, CompactionSkipReason reason)
   {
     addToSkipped(candidate, reason);
     getBuilderForDatasource(candidate.getDataSource())

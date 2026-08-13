@@ -26,10 +26,16 @@ function capitalizeFirst(str: string): string {
 
 /**
  * Tells the console how to treat an interval that was skipped, without needing to
- * know the individual skip reasons. Unknown categories from a newer server are
- * treated as counting against the datasource being fully compacted.
+ * know the individual skip reasons.
+ *
+ * `OUT_OF_SCOPE` intervals were deliberately excluded by the compaction config and
+ * `TRANSIENT` ones will be re-evaluated in a later run, so neither counts against
+ * the datasource being fully compacted. Unknown categories from a newer server do
+ * count, which is the safe default.
  */
 export type CompactionSkipCategory = 'OUT_OF_SCOPE' | 'TRANSIENT' | 'DEFERRED' | 'UNSUPPORTED';
+
+const CATEGORIES_MATCHING_CONFIG: CompactionSkipCategory[] = ['OUT_OF_SCOPE', 'TRANSIENT'];
 
 export interface CompactionSkipStatistics {
   reason: string;
@@ -70,13 +76,16 @@ export function zeroCompactionStatus(compactionStatus: CompactionStatus): boolea
 
 /**
  * Intervals skipped for a reason that leaves them not matching the compaction
- * config. `OUT_OF_SCOPE` intervals were deliberately excluded by the config, so
- * they are the only ones that do not count against being fully compacted.
+ * config. Excludes the categories that were either never meant to be compacted
+ * or will be re-evaluated on their own, so that reported progress does not dip
+ * while a successful compaction settles.
  */
 export function skippedStatsNotMatchingConfig(
   compactionStatus: CompactionStatus,
 ): CompactionSkipStatistics[] {
-  return (compactionStatus.skippedStatsByReason || []).filter(s => s.category !== 'OUT_OF_SCOPE');
+  return (compactionStatus.skippedStatsByReason || []).filter(
+    s => !CATEGORIES_MATCHING_CONFIG.includes(s.category),
+  );
 }
 
 export function skippedStatsOfCategory(
