@@ -7391,6 +7391,9 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
+
+---
+
 name: Google API GAX
 license_category: binary
 module: extensions/druid-google-extensions
@@ -7470,7 +7473,7 @@ name: gRPC API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.83.0
+version: 1.83.1
 libraries:
   - io.grpc: grpc-api
 

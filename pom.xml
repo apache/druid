@@ -1623,7 +1623,7 @@
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-api</artifactId>
-                <version>1.83.0</version>
+                <version>1.83.1</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
