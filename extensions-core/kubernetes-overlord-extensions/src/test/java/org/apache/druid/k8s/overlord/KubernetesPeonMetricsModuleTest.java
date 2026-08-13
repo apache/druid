@@ -20,21 +20,37 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.server.emitter.ExtraServiceDimensions;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
+import java.util.ServiceLoader;
 
 public class KubernetesPeonMetricsModuleTest
 {
   private static final Key<Map<String, String>> EXTRA_DIMENSIONS_KEY =
       Key.get(new TypeLiteral<>() {}, ExtraServiceDimensions.class);
+
+  @Test
+  public void test_moduleIsRegisteredAsDruidModule()
+  {
+    final List<String> registered = ServiceLoader.load(DruidModule.class)
+                                                 .stream()
+                                                 .map(provider -> provider.type().getName())
+                                                 .toList();
+
+    Assertions.assertTrue(
+        registered.contains(KubernetesPeonMetricsModule.class.getName()),
+        "KubernetesPeonMetricsModule must be listed in META-INF/services/org.apache.druid.initialization.DruidModule"
+    );
+  }
 
   @Test
   public void test_podTemplateEnvSet_addsDimension()
@@ -57,16 +73,24 @@ public class KubernetesPeonMetricsModuleTest
     Assertions.assertEquals(Map.of(), extraDimensions(""));
   }
 
+  /**
+   * Resolves what the module contributes to {@link ExtraServiceDimensions}. {@code EmitterModule}
+   * owns getting these onto emitted events, and {@code EmitterModuleTest} covers that.
+   */
   private static Map<String, String> extraDimensions(@Nullable String podTemplateName)
   {
-    Injector injector = Guice.createInjector(new KubernetesPeonMetricsModule()
+    return Guice.createInjector(podTemplateModule(podTemplateName)).getInstance(EXTRA_DIMENSIONS_KEY);
+  }
+
+  private static KubernetesPeonMetricsModule podTemplateModule(@Nullable String podTemplateName)
+  {
+    return new KubernetesPeonMetricsModule()
     {
       @Override
       String getPodTemplateName()
       {
         return podTemplateName;
       }
-    });
-    return injector.getInstance(EXTRA_DIMENSIONS_KEY);
+    };
   }
 }
