@@ -447,7 +447,9 @@ public class FileSmoosher implements SegmentFileBuilder
       this.outFile = outFile;
       this.maxLength = maxLength;
 
-      FileOutputStream outStream = closer.register(new FileOutputStream(outFile));  // lgtm [java/output-resource-leak]
+      // The closer owns this stream for the lifetime of the writer and releases it in close().
+      // codeql[java/output-resource-leak]
+      final FileOutputStream outStream = closer.register(new FileOutputStream(outFile));
       this.channel = closer.register(outStream.getChannel());
     }
 

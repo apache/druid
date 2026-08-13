@@ -22,359 +22,318 @@ package org.apache.druid.java.util.common;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.utils.CollectionUtils;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.groups.Default;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 public class HumanReadableBytesTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  private static final String INVALID_FORMAT_PREFIX = "Invalid format";
+  private static final String OVERFLOW_PREFIX = "Number overflow";
 
   @Test
   public void testNumberString()
   {
-    Assert.assertEquals(0, HumanReadableBytes.parse("0"));
-    Assert.assertEquals(1, HumanReadableBytes.parse("1"));
-    Assert.assertEquals(10000000, HumanReadableBytes.parse("10000000"));
+    Assertions.assertEquals(0, HumanReadableBytes.parse("0"));
+    Assertions.assertEquals(1, HumanReadableBytes.parse("1"));
+    Assertions.assertEquals(10000000, HumanReadableBytes.parse("10000000"));
   }
 
   @Test
   public void testWithWhiteSpace()
   {
-    Assert.assertEquals(12345, HumanReadableBytes.parse(" 12345 "));
-    Assert.assertEquals(12345, HumanReadableBytes.parse("\t12345\t"));
+    Assertions.assertEquals(12345, HumanReadableBytes.parse(" 12345 "));
+    Assertions.assertEquals(12345, HumanReadableBytes.parse("\t12345\t"));
   }
 
   @Test
   public void testK()
   {
-    Assert.assertEquals(1000, HumanReadableBytes.parse("1k"));
-    Assert.assertEquals(1000, HumanReadableBytes.parse("1K"));
+    Assertions.assertEquals(1000, HumanReadableBytes.parse("1k"));
+    Assertions.assertEquals(1000, HumanReadableBytes.parse("1K"));
   }
 
   @Test
   public void testM()
   {
-    Assert.assertEquals(1000_000, HumanReadableBytes.parse("1m"));
-    Assert.assertEquals(1000_000, HumanReadableBytes.parse("1M"));
+    Assertions.assertEquals(1000_000, HumanReadableBytes.parse("1m"));
+    Assertions.assertEquals(1000_000, HumanReadableBytes.parse("1M"));
   }
 
   @Test
   public void testG()
   {
-    Assert.assertEquals(1000_000_000, HumanReadableBytes.parse("1g"));
-    Assert.assertEquals(1000_000_000, HumanReadableBytes.parse("1G"));
+    Assertions.assertEquals(1000_000_000, HumanReadableBytes.parse("1g"));
+    Assertions.assertEquals(1000_000_000, HumanReadableBytes.parse("1G"));
   }
 
   @Test
   public void testT()
   {
-    Assert.assertEquals(1000_000_000_000L, HumanReadableBytes.parse("1t"));
-    Assert.assertEquals(1000_000_000_000L, HumanReadableBytes.parse("1T"));
+    Assertions.assertEquals(1000_000_000_000L, HumanReadableBytes.parse("1t"));
+    Assertions.assertEquals(1000_000_000_000L, HumanReadableBytes.parse("1T"));
   }
 
   @Test
   public void testKiB()
   {
-    Assert.assertEquals(1024, HumanReadableBytes.parse("1kib"));
-    Assert.assertEquals(9 * 1024, HumanReadableBytes.parse("9KiB"));
-    Assert.assertEquals(9 * 1024, HumanReadableBytes.parse("9Kib"));
-    Assert.assertEquals(9 * 1024, HumanReadableBytes.parse("9Ki"));
+    Assertions.assertEquals(1024, HumanReadableBytes.parse("1kib"));
+    Assertions.assertEquals(9 * 1024, HumanReadableBytes.parse("9KiB"));
+    Assertions.assertEquals(9 * 1024, HumanReadableBytes.parse("9Kib"));
+    Assertions.assertEquals(9 * 1024, HumanReadableBytes.parse("9Ki"));
   }
 
   @Test
   public void testMiB()
   {
-    Assert.assertEquals(1024 * 1024, HumanReadableBytes.parse("1mib"));
-    Assert.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9MiB"));
-    Assert.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9Mib"));
-    Assert.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9Mi"));
+    Assertions.assertEquals(1024 * 1024, HumanReadableBytes.parse("1mib"));
+    Assertions.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9MiB"));
+    Assertions.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9Mib"));
+    Assertions.assertEquals(9 * 1024 * 1024, HumanReadableBytes.parse("9Mi"));
   }
 
   @Test
   public void testGiB()
   {
-    Assert.assertEquals(1024 * 1024 * 1024, HumanReadableBytes.parse("1gib"));
-    Assert.assertEquals(1024 * 1024 * 1024, HumanReadableBytes.parse("1GiB"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Gib"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Gi"));
+    Assertions.assertEquals(1024 * 1024 * 1024, HumanReadableBytes.parse("1gib"));
+    Assertions.assertEquals(1024 * 1024 * 1024, HumanReadableBytes.parse("1GiB"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Gib"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Gi"));
   }
 
   @Test
   public void testTiB()
   {
-    Assert.assertEquals(1024L * 1024 * 1024 * 1024, HumanReadableBytes.parse("1tib"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9TiB"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Tib"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Ti"));
+    Assertions.assertEquals(1024L * 1024 * 1024 * 1024, HumanReadableBytes.parse("1tib"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9TiB"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Tib"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Ti"));
   }
 
   @Test
   public void testPiB()
   {
-    Assert.assertEquals(1024L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("1pib"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9PiB"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Pib"));
-    Assert.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Pi"));
+    Assertions.assertEquals(1024L * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("1pib"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9PiB"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Pib"));
+    Assertions.assertEquals(9L * 1024 * 1024 * 1024 * 1024 * 1024, HumanReadableBytes.parse("9Pi"));
   }
 
   @Test
   public void testDefault()
   {
-    Assert.assertEquals(-123, HumanReadableBytes.parse(" ", -123));
-    Assert.assertEquals(-456, HumanReadableBytes.parse(null, -456));
-    Assert.assertEquals(-789, HumanReadableBytes.parse("\t", -789));
-  }
-
-  static class ExceptionMatcher implements Matcher
-  {
-    static ExceptionMatcher INVALIDFORMAT = new ExceptionMatcher("Invalid format");
-    static ExceptionMatcher OVERFLOW = new ExceptionMatcher("Number overflow");
-
-    private String prefix;
-
-    public ExceptionMatcher(String prefix)
-    {
-      this.prefix = prefix;
-    }
-
-    @Override
-    public boolean matches(Object item)
-    {
-      if (!(item instanceof IAE)) {
-        return false;
-      }
-
-      return ((IAE) item).getMessage().startsWith(prefix);
-    }
-
-    @Override
-    public void describeMismatch(Object item, Description mismatchDescription)
-    {
-    }
-
-    @Override
-    public void _dont_implement_Matcher___instead_extend_BaseMatcher_()
-    {
-    }
-
-    @Override
-    public void describeTo(Description description)
-    {
-    }
+    Assertions.assertEquals(-123, HumanReadableBytes.parse(" ", -123));
+    Assertions.assertEquals(-456, HumanReadableBytes.parse(null, -456));
+    Assertions.assertEquals(-789, HumanReadableBytes.parse("\t", -789));
   }
 
   @Test
   public void testNull()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse(null);
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(null));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testEmpty()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(""));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testWhitespace()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("   ");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("   "));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testNegative()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("-1");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("-1"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatOneChar()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("b");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("b"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatOneCharK8s()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("i");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("i"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatOneChar2()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("B");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("B"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatExtraSpace()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("1 b");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1 b"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormat4()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("1b");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1b"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatMiBExtraSpace()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("1 mib");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1 mib"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatMiExtraSpace()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("1 mi");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("1 mi"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatTiB()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("tib");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("tib"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatTi()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("ti");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("ti"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
 
   @Test
   public void testInvalidFormatGiB()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("gib");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("gib"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidFormatPiB()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse(" pib");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(" pib"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testInvalidCharacter()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    HumanReadableBytes.parse("c");
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse("c"));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testExtraLargeNumber()
   {
-    expectedException.expect(ExceptionMatcher.INVALIDFORMAT);
-    String extraLarge = Long.MAX_VALUE + "1";
-    HumanReadableBytes.parse(extraLarge);
+    final String extraLarge = Long.MAX_VALUE + "1";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(extraLarge));
+    Assertions.assertTrue(exception.getMessage().startsWith(INVALID_FORMAT_PREFIX));
   }
 
   @Test
   public void testOverflowK()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / 1000 + 1) + "k";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / 1000 + 1) + "k";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowM()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / 1000_000 + 1) + "m";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / 1000_000 + 1) + "m";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowG()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / 1000_000_000L + 1) + "g";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / 1000_000_000L + 1) + "g";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowT()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / 1000_000_000_000L + 1) + "t";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / 1000_000_000_000L + 1) + "t";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowP()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / 1_000_000_000_000_000L + 1) + "p";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / 1_000_000_000_000_000L + 1) + "p";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowKiB()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / 1024 + 1) + "KiB";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / 1024 + 1) + "KiB";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowMiB()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / (1024 * 1024) + 1) + "MiB";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / (1024 * 1024) + 1) + "MiB";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowGiB()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024) + 1) + "GiB";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024) + 1) + "GiB";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowTiB()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024) + 1) + "TiB";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024) + 1) + "TiB";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
   public void testOverflowPiB()
   {
-    expectedException.expect(ExceptionMatcher.OVERFLOW);
-    String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024 * 1024) + 1) + "PiB";
-    HumanReadableBytes.parse(overflow);
+    final String overflow = (Long.MAX_VALUE / (1024L * 1024 * 1024 * 1024 * 1024) + 1) + "PiB";
+    final IAE exception = Assertions.assertThrows(IAE.class, () -> HumanReadableBytes.parse(overflow));
+    Assertions.assertTrue(exception.getMessage().startsWith(OVERFLOW_PREFIX));
   }
 
   @Test
@@ -384,15 +343,17 @@ public class HumanReadableBytesTest
     HumanReadableBytes bytes = new HumanReadableBytes("5m");
     String serialized = mapper.writeValueAsString(bytes);
     HumanReadableBytes deserialized = mapper.readValue(serialized, HumanReadableBytes.class);
-    Assert.assertEquals(bytes, deserialized);
+    Assertions.assertEquals(bytes, deserialized);
   }
 
   @Test
   public void testGetInt()
   {
-    expectedException.expectMessage("Number [2147483648] exceeds range of Integer.MAX_VALUE");
-    HumanReadableBytes bytes = new HumanReadableBytes("2GiB");
-    bytes.getBytesInInt();
+    final HumanReadableBytes bytes = new HumanReadableBytes("2GiB");
+    final ISE exception = Assertions.assertThrows(ISE.class, bytes::getBytesInInt);
+    Assertions.assertTrue(
+        exception.getMessage().contains("Number [2147483648] exceeds range of Integer.MAX_VALUE")
+    );
   }
 
   static class TestBytesRange
@@ -410,108 +371,112 @@ public class HumanReadableBytesTest
   public void testBytesRange()
   {
     String message = validate(new TestBytesRange(HumanReadableBytes.valueOf(-1)));
-    Assert.assertEquals("value must be in the range of [0, 5]", message);
+    Assertions.assertEquals("value must be in the range of [0, 5]", message);
 
     message = validate(new TestBytesRange(HumanReadableBytes.valueOf(0)));
-    Assert.assertEquals(null, message);
+    Assertions.assertEquals(null, message);
 
     message = validate(new TestBytesRange(HumanReadableBytes.valueOf(5)));
-    Assert.assertEquals(null, message);
+    Assertions.assertEquals(null, message);
 
     message = validate(new TestBytesRange(HumanReadableBytes.valueOf(6)));
-    Assert.assertEquals("value must be in the range of [0, 5]", message);
+    Assertions.assertEquals("value must be in the range of [0, 5]", message);
   }
 
   @Test
   public void testFormatInBinaryByte()
   {
-    Assert.assertEquals("-8.00 EiB", HumanReadableBytes.format(Long.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("-8.000 EiB", HumanReadableBytes.format(Long.MIN_VALUE, 3, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("-8.00 EiB", HumanReadableBytes.format(Long.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("-8.000 EiB", HumanReadableBytes.format(Long.MIN_VALUE, 3, HumanReadableBytes.UnitSystem.BINARY_BYTE));
 
-    Assert.assertEquals("-2.00 GiB", HumanReadableBytes.format(Integer.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("-32.00 KiB", HumanReadableBytes.format(Short.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("-2.00 GiB", HumanReadableBytes.format(Integer.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("-32.00 KiB", HumanReadableBytes.format(Short.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
 
-    Assert.assertEquals("-128 B", HumanReadableBytes.format(Byte.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("-1 B", HumanReadableBytes.format(-1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("0 B", HumanReadableBytes.format(0, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1 B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("-128 B", HumanReadableBytes.format(Byte.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("-1 B", HumanReadableBytes.format(-1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("0 B", HumanReadableBytes.format(0, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1 B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
 
-    Assert.assertEquals("1.00 KiB", HumanReadableBytes.format(1024L, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.00 MiB", HumanReadableBytes.format(1024L * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.00 GiB", HumanReadableBytes.format(1024L * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.00 TiB", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.00 PiB", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("8.00 EiB", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.00 KiB", HumanReadableBytes.format(1024L, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.00 MiB", HumanReadableBytes.format(1024L * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.00 GiB", HumanReadableBytes.format(1024L * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.00 TiB", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.00 PiB", HumanReadableBytes.format(1024L * 1024 * 1024 * 1024 * 1024, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("8.00 EiB", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
   }
 
   @Test
   public void testPrecisionInBinaryFormat()
   {
-    Assert.assertEquals("1 KiB", HumanReadableBytes.format(1500, 0, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.5 KiB", HumanReadableBytes.format(1500, 1, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.46 KiB", HumanReadableBytes.format(1500, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
-    Assert.assertEquals("1.465 KiB", HumanReadableBytes.format(1500, 3, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1 KiB", HumanReadableBytes.format(1500, 0, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.5 KiB", HumanReadableBytes.format(1500, 1, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.46 KiB", HumanReadableBytes.format(1500, 2, HumanReadableBytes.UnitSystem.BINARY_BYTE));
+    Assertions.assertEquals("1.465 KiB", HumanReadableBytes.format(1500, 3, HumanReadableBytes.UnitSystem.BINARY_BYTE));
   }
 
   @Test
   public void testPrecisionInDecimalFormat()
   {
-    Assert.assertEquals("1 KB", HumanReadableBytes.format(1456, 0, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.5 KB", HumanReadableBytes.format(1456, 1, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.46 KB", HumanReadableBytes.format(1456, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.456 KB", HumanReadableBytes.format(1456, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1 KB", HumanReadableBytes.format(1456, 0, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.5 KB", HumanReadableBytes.format(1456, 1, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.46 KB", HumanReadableBytes.format(1456, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.456 KB", HumanReadableBytes.format(1456, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
   }
 
   @Test
   public void testFormatInDecimalByte()
   {
-    Assert.assertEquals("1 B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.00 KB", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.00 MB", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.00 GB", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.00 TB", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("1.00 PB", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("9.22 EB", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1 B", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.00 KB", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.00 MB", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.00 GB", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.00 TB", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("1.00 PB", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("9.22 EB", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
 
-    Assert.assertEquals("100.00 KB", HumanReadableBytes.format(99999, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("99.999 KB", HumanReadableBytes.format(99999, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("100.00 KB", HumanReadableBytes.format(99999, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("99.999 KB", HumanReadableBytes.format(99999, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
 
-    Assert.assertEquals("999.9 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 1, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("999.95 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
-    Assert.assertEquals("999.949 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("999.9 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 1, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("999.95 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 2, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
+    Assertions.assertEquals("999.949 PB", HumanReadableBytes.format(999_949_999_999_999_999L, 3, HumanReadableBytes.UnitSystem.DECIMAL_BYTE));
   }
 
   @Test
   public void testFormatInDecimal()
   {
-    Assert.assertEquals("1", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("999", HumanReadableBytes.format(999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("-999", HumanReadableBytes.format(-999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("-1.00 K", HumanReadableBytes.format(-1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("1.00 K", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("1.00 M", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("1.00 G", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("1.00 T", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("1.00 P", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("-9.22 E", HumanReadableBytes.format(Long.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("9.22 E", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("1", HumanReadableBytes.format(1, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("999", HumanReadableBytes.format(999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("-999", HumanReadableBytes.format(-999, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("-1.00 K", HumanReadableBytes.format(-1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("1.00 K", HumanReadableBytes.format(1000L, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("1.00 M", HumanReadableBytes.format(1000L * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("1.00 G", HumanReadableBytes.format(1000L * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("1.00 T", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("1.00 P", HumanReadableBytes.format(1000L * 1000 * 1000 * 1000 * 1000, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("-9.22 E", HumanReadableBytes.format(Long.MIN_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("9.22 E", HumanReadableBytes.format(Long.MAX_VALUE, 2, HumanReadableBytes.UnitSystem.DECIMAL));
   }
 
   @Test
   public void testInvalidPrecisionArgumentLowerBound()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("precision [-1] must be in the range of [0,3]");
-    Assert.assertEquals("1.00", HumanReadableBytes.format(1, -1, HumanReadableBytes.UnitSystem.DECIMAL));
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> HumanReadableBytes.format(1, -1, HumanReadableBytes.UnitSystem.DECIMAL)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("precision [-1] must be in the range of [0,3]"));
   }
 
   @Test
   public void testInvalidPrecisionArgumentUpperBound()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("precision [4] must be in the range of [0,3]");
-    Assert.assertEquals("1", HumanReadableBytes.format(1, 3, HumanReadableBytes.UnitSystem.DECIMAL));
-    Assert.assertEquals("1", HumanReadableBytes.format(1, 4, HumanReadableBytes.UnitSystem.DECIMAL));
+    Assertions.assertEquals("1", HumanReadableBytes.format(1, 3, HumanReadableBytes.UnitSystem.DECIMAL));
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> HumanReadableBytes.format(1, 4, HumanReadableBytes.UnitSystem.DECIMAL)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("precision [4] must be in the range of [0,3]"));
   }
 
   private static <T> String validate(T obj)

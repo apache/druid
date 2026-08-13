@@ -24,9 +24,9 @@ import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.WorkerTaskManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 
@@ -38,7 +38,7 @@ public class WorkerResourceTest
   private WorkerTaskManager workerTaskManager;
   private WorkerResource workerResource;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     worker = new Worker(
@@ -65,7 +65,7 @@ public class WorkerResourceTest
     EasyMock.replay(workerTaskManager);
 
     Response res = workerResource.doDisable();
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
 
     EasyMock.verify(workerTaskManager);
   }
@@ -78,7 +78,7 @@ public class WorkerResourceTest
     EasyMock.replay(workerTaskManager);
 
     Response res = workerResource.doEnable();
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
 
     EasyMock.verify(workerTaskManager);
   }
@@ -90,7 +90,7 @@ public class WorkerResourceTest
     EasyMock.replay(workerTaskManager);
 
     Response res = workerResource.isEnabled();
-    Assert.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), res.getStatus());
 
     EasyMock.verify(workerTaskManager);
   }

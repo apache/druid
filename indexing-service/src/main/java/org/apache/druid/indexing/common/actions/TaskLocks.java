@@ -33,6 +33,7 @@ import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -168,6 +169,61 @@ public class TaskLocks
     } else {
       return TaskLockType.valueOf(lockType.toString());
     }
+  }
+
+  /**
+   * Checks if an append task with the given context should use concurrent locks.
+   */
+  public static boolean shouldUseConcurrentLocksForAppend(Map<String, Object> context, boolean defaultValue)
+  {
+    return shouldUseConcurrentLocks(context, defaultValue, TaskLockType.APPEND);
+  }
+
+  /**
+   * Checks if a replace task with the given context should use concurrent locks.
+   */
+  public static boolean shouldUseConcurrentLocksForReplace(Map<String, Object> context, boolean defaultValue)
+  {
+    return shouldUseConcurrentLocks(context, defaultValue, TaskLockType.REPLACE);
+  }
+
+  /**
+   * Checks if an append or replace task with the given context should use
+   * concurrent locks.
+   *
+   * @param context                 Context used by the task.
+   * @param defaultValue            Default behaviour in case the context does not
+   *                                explicitly specify any value for {@code useConcurrentLocks}
+   *                                or {@code taskLockType}.
+   * @param validConcurrentLockType Expected concurrent lock type (APPEND or REPLACE)
+   *                                for the given task.
+   */
+  private static boolean shouldUseConcurrentLocks(
+      Map<String, Object> context,
+      boolean defaultValue,
+      TaskLockType validConcurrentLockType
+  )
+  {
+    if (context == null) {
+      return defaultValue;
+    }
+    Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
+        Tasks.USE_CONCURRENT_LOCKS,
+        context.get(Tasks.USE_CONCURRENT_LOCKS)
+    );
+    if (useConcurrentLocks != null) {
+      return useConcurrentLocks;
+    }
+    TaskLockType taskLockType = QueryContexts.getAsEnum(
+        Tasks.TASK_LOCK_TYPE,
+        context.get(Tasks.TASK_LOCK_TYPE),
+        TaskLockType.class
+    );
+    if (taskLockType != null) {
+      return taskLockType == validConcurrentLockType;
+    }
+
+    return defaultValue;
   }
 
   /**

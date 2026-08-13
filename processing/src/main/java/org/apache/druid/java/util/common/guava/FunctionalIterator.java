@@ -59,6 +59,8 @@ public class FunctionalIterator<T> implements Iterator<T>
   @Override
   public void remove()
   {
+    // Iterator.remove is optional; preserve the removal capability of the wrapped iterator.
+    // codeql[java/iterator-remove-failure]
     delegate.remove();
   }
 

@@ -377,8 +377,7 @@ public class InformationSchema extends AbstractSchema
                                       return generateColumnMetadata(
                                           schemaName,
                                           tableName,
-                                           table.getRowType(typeFactory),
-                                          typeFactory
+                                          table.getRowType(typeFactory)
                                       );
                                     }
                                   }
@@ -395,8 +394,7 @@ public class InformationSchema extends AbstractSchema
                                           return generateColumnMetadata(
                                               schemaName,
                                               functionName,
-                                              viewMacro.apply(Collections.emptyList()).getRowType(typeFactory),
-                                              typeFactory
+                                              viewMacro.apply(Collections.emptyList()).getRowType(typeFactory)
                                           );
                                         }
                                         catch (Exception e) {
@@ -442,8 +440,7 @@ public class InformationSchema extends AbstractSchema
     private Iterable<Object[]> generateColumnMetadata(
         final String schemaName,
         final String tableName,
-        final RelDataType tableSchema,
-        final RelDataTypeFactory typeFactory
+        final RelDataType tableSchema
     )
     {
       return FluentIterable

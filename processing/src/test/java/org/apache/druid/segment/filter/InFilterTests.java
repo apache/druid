@@ -52,12 +52,12 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.partition.TypedValueSet;
-import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -68,13 +68,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class InFilterTests
 {
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructors")
   public static class InFilterTest extends BaseFilterTest
   {
+    public static Stream<Object[]> constructors()
+    {
+      return BaseFilterTest.makeConstructors().stream();
+    }
+
     private static final List<InputRow> ROWS = ImmutableList.of(
         makeDefaultSchemaRow("a", "", ImmutableList.of("a", "b"), "2017-07-25", "", 0.0, 0.0f, 0L),
         makeDefaultSchemaRow("b", "10", ImmutableList.of(), "2017-07-25", "a", 10.1, 10.1f, 100L),
@@ -98,7 +105,7 @@ public class InFilterTests
     }
 
 
-    @AfterClass
+    @AfterAll
     public static void tearDown() throws Exception
     {
       BaseFilterTest.tearDown(InFilterTest.class.getName());
@@ -361,6 +368,121 @@ public class InFilterTests
     }
 
     @Test
+    public void testNumericMatchValuesAreNotTruncatedWhenMatchingLongs()
+    {
+      // Match values with a fractional part must not be truncated into a value that matches a stored long.
+      // l0 is [0, 100, 40, null, 9001, 12345].
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(0.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(-0.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(100.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(40.5, 9001.5, 12345.5)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.DOUBLE, Collections.singletonList(100.5))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Same as above, but with FLOAT.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(0.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(-0.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(40.5f, 9001.5f, 12345.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Same as above, but with STRING.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("0.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("-0.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Arrays.asList("12345.5", "40.5", "9001.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5"))),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
+
+      // Exactly representable values still match, and are not thrown out along with their fractional neighbors.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.0, 9001.5)),
+          ImmutableList.of("b")
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.5, 9001.0)),
+          ImmutableList.of("e")
+      );
+      assertTypedFilterMatches(
+          NotDimFilter.of(inFilter("l0", ColumnType.DOUBLE, Arrays.asList(100.5, 9001.0))),
+          ImmutableList.of("a", "b", "c", "f")
+      );
+
+      // Nulls are still matched too.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.DOUBLE, Arrays.asList(null, 100.5)),
+          ImmutableList.of("d")
+      );
+
+      // Same story for FLOAT match values.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Collections.singletonList(100.5f)),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(0.5f, 9001.0f)),
+          ImmutableList.of("e")
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.FLOAT, Arrays.asList(null, 100.5f)),
+          ImmutableList.of("d")
+      );
+
+      // And for STRING match values that spell out a non-integral number.
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Collections.singletonList("100.5")),
+          ImmutableList.of()
+      );
+      assertTypedFilterMatches(
+          inFilter("l0", ColumnType.STRING, Arrays.asList("100.5", "9001.0")),
+          ImmutableList.of("e")
+      );
+    }
+
+    @Test
     public void testLegacyNumericDefaults()
     {
       assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
@@ -567,29 +689,29 @@ public class InFilterTests
       ObjectMapper mapper = new DefaultObjectMapper();
       TypedInFilter filter = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "c"));
       String s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
 
       filter = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "b", null, "c"));
       s = mapper.writeValueAsString(filter);
       TypedInFilter deserialized = mapper.readValue(s, TypedInFilter.class);
-      Assert.assertEquals(Arrays.asList(null, "a", "b", "c"), deserialized.getSortedValues());
-      Assert.assertEquals(filter, deserialized);
+      Assertions.assertEquals(Arrays.asList(null, "a", "b", "c"), deserialized.getSortedValues());
+      Assertions.assertEquals(filter, deserialized);
 
       filter = inFilter("column", ColumnType.LONG, Arrays.asList(1L, 2L, 2L, null, 3L));
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
 
       filter = inFilter("column", ColumnType.DOUBLE, Arrays.asList(1.1, 2.2, 2.3, null, 3.3));
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
 
       filter = inFilter("column", ColumnType.FLOAT, Arrays.asList(1.1f, 2.2f, 2.2f, null, 3.3f));
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
 
       filter = inFilter("column", ColumnType.FLOAT, Arrays.asList(1.1, 2.2, 2.3, null, 3.3));
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, TypedInFilter.class));
     }
 
     @Test
@@ -605,10 +727,10 @@ public class InFilterTests
           null
       );
 
-      Assert.assertEquals(filterPresorted, filterUnsorted);
-      Assert.assertNotEquals(filterDifferent, filterPresorted);
-      Assert.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
-      Assert.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
+      Assertions.assertEquals(filterPresorted, filterUnsorted);
+      Assertions.assertNotEquals(filterDifferent, filterPresorted);
+      Assertions.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
 
       filterUnsorted = inFilter("column", ColumnType.LONG, Arrays.asList(2L, -2L, 1L, null, 3L));
       filterDifferent = inFilter("column", ColumnType.LONG, Arrays.asList(2L, -2L, 1L, 3L));
@@ -620,10 +742,10 @@ public class InFilterTests
           null
       );
 
-      Assert.assertEquals(filterPresorted, filterUnsorted);
-      Assert.assertNotEquals(filterDifferent, filterPresorted);
-      Assert.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
-      Assert.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
+      Assertions.assertEquals(filterPresorted, filterUnsorted);
+      Assertions.assertNotEquals(filterDifferent, filterPresorted);
+      Assertions.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
 
       filterUnsorted = inFilter("column", ColumnType.DOUBLE, Arrays.asList(2.2, -2.2, 1.1, null, 3.3));
       filterDifferent = inFilter("column", ColumnType.DOUBLE, Arrays.asList(2.2, -2.2, 1.1, 3.3));
@@ -635,10 +757,10 @@ public class InFilterTests
           null
       );
 
-      Assert.assertEquals(filterPresorted, filterUnsorted);
-      Assert.assertNotEquals(filterDifferent, filterPresorted);
-      Assert.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
-      Assert.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
+      Assertions.assertEquals(filterPresorted, filterUnsorted);
+      Assertions.assertNotEquals(filterDifferent, filterPresorted);
+      Assertions.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
 
       filterUnsorted = inFilter("column", ColumnType.FLOAT, Arrays.asList(2.2f, -2.2f, 1.1f, null, 3.3f));
       filterDifferent = inFilter("column", ColumnType.FLOAT, Arrays.asList(2.2f, -2.2f, 1.1f, 3.3f));
@@ -650,30 +772,30 @@ public class InFilterTests
           null
       );
 
-      Assert.assertEquals(filterPresorted, filterUnsorted);
-      Assert.assertNotEquals(filterDifferent, filterPresorted);
-      Assert.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
-      Assert.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
+      Assertions.assertEquals(filterPresorted, filterUnsorted);
+      Assertions.assertNotEquals(filterDifferent, filterPresorted);
+      Assertions.assertArrayEquals(filterPresorted.getCacheKey(), filterUnsorted.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(filterDifferent.getCacheKey(), filterPresorted.getCacheKey()));
     }
 
     @Test
     public void testInvalidParameters()
     {
-      Throwable t = Assert.assertThrows(
+      Throwable t = Assertions.assertThrows(
           DruidException.class,
           () -> new TypedInFilter(null, ColumnType.STRING, null, null, null)
       );
-      Assert.assertEquals("Invalid IN filter, column cannot be null", t.getMessage());
-      t = Assert.assertThrows(
+      Assertions.assertEquals("Invalid IN filter, column cannot be null", t.getMessage());
+      t = Assertions.assertThrows(
           DruidException.class,
           () -> new TypedInFilter("dim0", null, null, null, null)
       );
-      Assert.assertEquals("Invalid IN filter on column [dim0], matchValueType cannot be null", t.getMessage());
-      t = Assert.assertThrows(
+      Assertions.assertEquals("Invalid IN filter on column [dim0], matchValueType cannot be null", t.getMessage());
+      t = Assertions.assertThrows(
           DruidException.class,
           () -> new TypedInFilter("dim0", ColumnType.STRING, null, null, null)
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Invalid IN filter on column [dim0], exactly one of values or sortedValues must be non-null",
           t.getMessage()
       );
@@ -685,18 +807,18 @@ public class InFilterTests
       TypedInFilter filter = inFilter("x", ColumnType.STRING, Arrays.asList(null, "a", "b", "c"));
       TypedInFilter filter2 = inFilter("x", ColumnType.STRING, Arrays.asList("a", "b", null, "c"));
 
-      Assert.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
+      Assertions.assertEquals(filter.getDimensionRangeSet("x"), filter2.getDimensionRangeSet("x"));
       RangeSet<String> range = filter.getDimensionRangeSet("x");
-      Assert.assertTrue(range.contains("b"));
+      Assertions.assertTrue(range.contains("b"));
 
       // Non-STRING match value types must not return a RangeSet.
-      Assert.assertNull(
+      Assertions.assertNull(
           inFilter("x", ColumnType.LONG, Arrays.asList(null, 1L, 2L, 3L)).getDimensionRangeSet("x")
       );
-      Assert.assertNull(
+      Assertions.assertNull(
           inFilter("x", ColumnType.DOUBLE, Arrays.asList(null, 1.1, 2.2, 3.3)).getDimensionRangeSet("x")
       );
-      Assert.assertNull(
+      Assertions.assertNull(
           inFilter("x", ColumnType.FLOAT, Arrays.asList(null, 1.1f, 2.2f, 3.3f)).getDimensionRangeSet("x")
       );
     }
@@ -707,26 +829,26 @@ public class InFilterTests
       // LONG IN yields a LONG-typed set of stringified values for the matching column, null for another.
       final TypedInFilter longFilter = inFilter("x", ColumnType.LONG, Arrays.asList(1L, 2L, 3L));
       final TypedValueSet valueSet = longFilter.getDimensionValueSet("x");
-      Assert.assertNotNull(valueSet);
-      Assert.assertEquals(ColumnType.LONG, valueSet.getType());
-      Assert.assertEquals(new HashSet<>(Arrays.asList("1", "2", "3")), valueSet.getValues());
-      Assert.assertNull(longFilter.getDimensionValueSet("y"));
+      Assertions.assertNotNull(valueSet);
+      Assertions.assertEquals(ColumnType.LONG, valueSet.getType());
+      Assertions.assertEquals(new HashSet<>(Arrays.asList("1", "2", "3")), valueSet.getValues());
+      Assertions.assertNull(longFilter.getDimensionValueSet("y"));
 
       // A null IN element is kept as a null set element (a null match value).
       final TypedValueSet withNull = inFilter("x", ColumnType.LONG, Arrays.asList(null, 1L, 2L)).getDimensionValueSet("x");
-      Assert.assertNotNull(withNull);
+      Assertions.assertNotNull(withNull);
       final Set<String> expectedWithNull = new HashSet<>(Arrays.asList("1", "2"));
       expectedWithNull.add(null);
-      Assert.assertEquals(expectedWithNull, withNull.getValues());
+      Assertions.assertEquals(expectedWithNull, withNull.getValues());
 
       // Non-LONG match value types must NOT return a typed value set.
-      Assert.assertNull(
+      Assertions.assertNull(
           inFilter("x", ColumnType.STRING, Arrays.asList("a", "b")).getDimensionValueSet("x")
       );
-      Assert.assertNull(
+      Assertions.assertNull(
           inFilter("x", ColumnType.DOUBLE, Arrays.asList(1.1, 2.2)).getDimensionValueSet("x")
       );
-      Assert.assertNull(
+      Assertions.assertNull(
           inFilter("x", ColumnType.FLOAT, Arrays.asList(1.1f, 2.2f)).getDimensionValueSet("x")
       );
     }
@@ -737,17 +859,17 @@ public class InFilterTests
       TypedInFilter filter = inFilter("dim0", ColumnType.STRING, Arrays.asList("a", "c"));
       TypedInFilter filter2 = inFilter("dim1", ColumnType.STRING, Arrays.asList("a", "c"));
 
-      Assert.assertTrue(filter.supportsRequiredColumnRewrite());
-      Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+      Assertions.assertTrue(filter.supportsRequiredColumnRewrite());
+      Assertions.assertTrue(filter2.supportsRequiredColumnRewrite());
 
       Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
-      Assert.assertEquals(filter2, rewrittenFilter);
+      Assertions.assertEquals(filter2, rewrittenFilter);
 
-      Throwable t = Assert.assertThrows(
+      Throwable t = Assertions.assertThrows(
           IAE.class,
           () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"))
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0",
           t.getMessage()
       );
@@ -791,17 +913,17 @@ public class InFilterTests
       InDimFilter filter = (InDimFilter) legacyInFilter("dim0", "a", "c").toFilter();
       InDimFilter filter2 = (InDimFilter) legacyInFilter("dim1", "a", "c").toFilter();
 
-      Assert.assertTrue(filter.supportsRequiredColumnRewrite());
-      Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+      Assertions.assertTrue(filter.supportsRequiredColumnRewrite());
+      Assertions.assertTrue(filter2.supportsRequiredColumnRewrite());
 
       Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
-      Assert.assertEquals(filter2, rewrittenFilter);
+      Assertions.assertEquals(filter2, rewrittenFilter);
 
-      Throwable t = Assert.assertThrows(
+      Throwable t = Assertions.assertThrows(
           IAE.class,
           () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"))
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0",
           t.getMessage()
       );

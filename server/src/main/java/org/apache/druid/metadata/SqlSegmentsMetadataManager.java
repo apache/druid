@@ -90,7 +90,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
      * leadership changes.
      */
     final CompletableFuture<Void> firstPollCompletionFuture = new CompletableFuture<>();
-    long lastPollStartTimestampInMs = -1;
+    Long lastPollStartTimestampInNanos = null;
   }
 
   /**
@@ -101,11 +101,24 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   static class OnDemandDatabasePoll implements DatabasePoll
   {
     final long initiationTimeNanos = System.nanoTime();
-    final CompletableFuture<Void> pollCompletionFuture = new CompletableFuture<>();
+    final CompletableFuture<Long> pollCompletionFuture = new CompletableFuture<>();
 
     long nanosElapsedFromInitiation()
     {
       return System.nanoTime() - initiationTimeNanos;
+    }
+
+    boolean hasCompletedSuccessfullyAfter(long timestampNanons)
+    {
+      return pollCompletionFuture.isDone()
+             && !pollCompletionFuture.isCancelled()
+             && !pollCompletionFuture.isCompletedExceptionally()
+             && Futures.getUnchecked(pollCompletionFuture) > timestampNanons;
+    }
+
+    void waitToFinish()
+    {
+      Futures.getUnchecked(pollCompletionFuture);
     }
   }
 
@@ -429,7 +442,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       lock.lock();
       try {
         if (startOrder == currentStartPollingOrder) {
-          periodicDatabasePoll.lastPollStartTimestampInMs = System.currentTimeMillis();
+          periodicDatabasePoll.lastPollStartTimestampInNanos = System.nanoTime();
           poll();
           periodicDatabasePoll.firstPollCompletionFuture.complete(null);
           latestDatabasePoll = periodicDatabasePoll;
@@ -549,29 +562,34 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   /**
    * This method will always force a database poll if there is no ongoing database poll. This method will then
-   * waits for the new poll or the ongoing poll to completes before returning.
+   * wait for the new poll or the ongoing poll to complete before returning.
    * This means that any method using this check can be sure that the latest poll for the snapshot was completed after
    * this method was called.
    */
   @VisibleForTesting
   void forceOrWaitOngoingDatabasePoll()
   {
-    long checkStartTime = System.currentTimeMillis();
+    long checkStartTimeNanos = System.nanoTime();
     ReentrantReadWriteLock.WriteLock lock = startStopPollLock.writeLock();
     lock.lock();
     try {
       DatabasePoll latestDatabasePoll = this.latestDatabasePoll;
       try {
         //Verify if there was a periodic poll completed while we were waiting for the lock
-        if (latestDatabasePoll instanceof PeriodicDatabasePoll
-            && ((PeriodicDatabasePoll) latestDatabasePoll).lastPollStartTimestampInMs > checkStartTime) {
-          return;
+        if (latestDatabasePoll instanceof PeriodicDatabasePoll latestPeriodicPoll) {
+          if (latestPeriodicPoll.lastPollStartTimestampInNanos != null
+              && latestPeriodicPoll.lastPollStartTimestampInNanos > checkStartTimeNanos) {
+            return;
+          }
         }
-        // Verify if there was a on-demand poll completed while we were waiting for the lock
-        if (latestDatabasePoll instanceof OnDemandDatabasePoll) {
-          long checkStartTimeNanos = TimeUnit.MILLISECONDS.toNanos(checkStartTime);
-          OnDemandDatabasePoll latestOnDemandPoll = (OnDemandDatabasePoll) latestDatabasePoll;
-          if (latestOnDemandPoll.initiationTimeNanos > checkStartTimeNanos) {
+        // Verify if there was an on-demand poll completed while we were waiting for the lock
+        if (latestDatabasePoll instanceof OnDemandDatabasePoll latestOnDemandPoll) {
+          if (latestOnDemandPoll.hasCompletedSuccessfullyAfter(checkStartTimeNanos)) {
+            // This poll completed while we were waiting for the lock
+            return;
+          } else if (latestOnDemandPoll.initiationTimeNanos > checkStartTimeNanos) {
+            // This poll started while we were waiting for the lock
+            latestOnDemandPoll.waitToFinish();
             return;
           }
         }
@@ -594,7 +612,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     try {
       poll();
-      onDemandPoll.pollCompletionFuture.complete(null);
+      onDemandPoll.pollCompletionFuture.complete(System.nanoTime());
     }
     catch (Throwable t) {
       onDemandPoll.pollCompletionFuture.completeExceptionally(t);

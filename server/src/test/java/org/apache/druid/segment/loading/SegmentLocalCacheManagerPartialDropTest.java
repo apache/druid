@@ -156,7 +156,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
     FileUtils.mkdirp(infoDir);
 
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheDir, ESTIMATE * 16, null);
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().setLocations(List.of(locConfig));
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().locations(locConfig).build();
     final List<StorageLocation> locations = loaderConfig.toStorageLocations();
     manager = new SegmentLocalCacheManager(
         locations,

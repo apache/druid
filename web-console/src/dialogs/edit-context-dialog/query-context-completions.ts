@@ -26,6 +26,10 @@ export const QUERY_CONTEXT_COMPLETIONS: JsonCompletionRule[] = [
     completions: [
       { value: 'timeout', documentation: 'Query timeout in milliseconds' },
       {
+        value: 'perSegmentTimeout',
+        documentation: 'Per-segment processing timeout in milliseconds',
+      },
+      {
         value: 'priority',
         documentation: 'Query priority (higher = more important)',
       },

@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +32,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import org.apache.druid.client.BrokerViewOfBrokerConfig;
+import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
@@ -40,6 +43,7 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.BaseSequence;
@@ -74,6 +78,8 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.policy.NoopPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -103,9 +109,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -122,12 +131,14 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class QueryResourceTest
@@ -261,33 +272,68 @@ public class QueryResourceTest
     queryResource = createQueryResource(ResponseContextConfig.newConfig(true));
   }
 
+  private QueryLifecycleFactory createQueryLifecycleFactory()
+  {
+    return new QueryLifecycleFactory(
+        CONGLOMERATE,
+        TEST_SEGMENT_WALKER,
+        new DefaultGenericQueryMetricsFactory(),
+        emitter,
+        testRequestLogger,
+        new AuthConfig(),
+        NoopPolicyEnforcer.instance(),
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        new DefaultQueryConfig(Map.of()),
+        null
+    );
+  }
+
   private QueryResource createQueryResource(ResponseContextConfig responseContextConfig)
   {
+    return createQueryResource(
+        createQueryLifecycleFactory(),
+        null,
+        queryScheduler,
+        responseContextConfig,
+        smileMapper,
+        new ServerConfig()
+    );
+  }
+
+  private QueryResource createQueryResource(QueryLifecycleFactory queryLifecycleFactory)
+  {
+    return createQueryResource(
+        queryLifecycleFactory,
+        null,
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        new ServerConfig()
+    );
+  }
+
+  /**
+   * Every {@link QueryResource} under test is built here, so a change to its constructor touches one call site.
+   *
+   * @param responseMapper mapper backing the response writer, i.e. the smile mapper unless the test needs json
+   */
+  private QueryResource createQueryResource(
+      final QueryLifecycleFactory queryLifecycleFactory,
+      @Nullable final AuthorizerMapper authorizerMapper,
+      final QueryScheduler queryScheduler,
+      final ResponseContextConfig responseContextConfig,
+      final ObjectMapper responseMapper,
+      final ServerConfig serverConfig
+  )
+  {
     return new QueryResource(
-        new QueryLifecycleFactory(
-            CONGLOMERATE,
-            TEST_SEGMENT_WALKER,
-            new DefaultGenericQueryMetricsFactory(),
-            emitter,
-            testRequestLogger,
-            new AuthConfig(),
-            NoopPolicyEnforcer.instance(),
-            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            new DefaultQueryConfig(Map.of()),
-            null
-        ),
+        queryLifecycleFactory,
         jsonMapper,
         queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            responseContextConfig,
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
-        )
+        authorizerMapper,
+        new QueryResourceQueryResultPusherFactory(jsonMapper, responseContextConfig, DRUID_NODE),
+        new ResourceIOReaderWriterFactory(jsonMapper, responseMapper),
+        serverConfig
     );
   }
 
@@ -313,7 +359,7 @@ public class QueryResourceTest
     final String overrideConfigKey = "priority";
     final String overrideConfigValue = "678";
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
@@ -325,18 +371,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
             null
-        ),
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
         )
     );
 
@@ -367,13 +401,13 @@ public class QueryResourceTest
     );
   }
 
-  @Test
-  public void testGoodQueryThrowsDruidExceptionFromLifecycleExecute() throws IOException
+  /**
+   * A {@link QueryResource} whose walker throws once the query is already executing, so the failure surfaces through
+   * {@link QueryResultPusher} rather than before it.
+   */
+  private QueryResource createQueryResourceFailingInExecute(final DefaultQueryConfig queryConfig)
   {
-    String overrideConfigKey = "priority";
-    String overrideConfigValue = "678";
-    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
-    queryResource = new QueryResource(
+    return createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             new QuerySegmentWalker()
@@ -404,22 +438,19 @@ public class QueryResourceTest
             new AuthConfig(),
             NoopPolicyEnforcer.instance(),
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-            overrideConfig,
+            queryConfig,
             null
-        ),
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
         )
     );
+  }
+
+  @Test
+  public void testGoodQueryThrowsDruidExceptionFromLifecycleExecute() throws IOException
+  {
+    String overrideConfigKey = "priority";
+    String overrideConfigValue = "678";
+    DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
+    queryResource = createQueryResourceFailingInExecute(overrideConfig);
 
     expectPermissiveHappyPathAuth();
 
@@ -452,7 +483,7 @@ public class QueryResourceTest
   @Test
   public void testResponseWithIncludeTrailerHeader() throws IOException
   {
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             new QuerySegmentWalker()
@@ -507,16 +538,7 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             null
-        ),
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -543,7 +565,7 @@ public class QueryResourceTest
   @Test
   public void testResponseWithMidFlightExceptions() throws IOException
   {
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             new QuerySegmentWalker()
@@ -593,16 +615,7 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             null
-        ),
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(jsonMapper, smileMapper)
+        )
     );
 
     expectPermissiveHappyPathAuth();
@@ -630,7 +643,7 @@ public class QueryResourceTest
         Intervals.of("2025-01-01/P1D"), "0", 1
     );
 
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             new QuerySegmentWalker()
@@ -692,18 +705,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             new DefaultQueryConfig(Map.of()),
             null
-        ),
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
         )
     );
 
@@ -758,7 +759,7 @@ public class QueryResourceTest
       }
     };
 
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
 
         new QueryLifecycleFactory(null, null, null, null, null, null, NoopPolicyEnforcer.instance(), null, overrideConfig, null)
         {
@@ -772,11 +773,9 @@ public class QueryResourceTest
                 emitter,
                 testRequestLogger,
                 AuthTestUtils.TEST_AUTHORIZER_MAPPER,
-                overrideConfig,
                 new AuthConfig(),
                 NoopPolicyEnforcer.instance(),
-                null,
-                Collections.emptyMap(),
+                new QueryConfigSnapshot(overrideConfig.getContext(), null),
                 System.currentTimeMillis(),
                 System.nanoTime()
             )
@@ -789,19 +788,7 @@ public class QueryResourceTest
               }
             };
           }
-        },
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
-        )
+        }
     );
 
     expectPermissiveHappyPathAuth();
@@ -828,7 +815,7 @@ public class QueryResourceTest
     String overrideConfigKey = "priority";
     String overrideConfigValue = "678";
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
@@ -840,18 +827,6 @@ public class QueryResourceTest
             AuthTestUtils.TEST_AUTHORIZER_MAPPER,
             overrideConfig,
             null
-        ),
-        jsonMapper,
-        queryScheduler,
-        null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
         )
     );
 
@@ -1044,13 +1019,35 @@ public class QueryResourceTest
   }
 
   @Test
-  public void testResourceLimitExceeded() throws IOException
+  public void testIncompleteQuery() throws IOException
   {
-    Response response = queryResource.doPost(
-        new ExceptionalInputStream(() -> new ResourceLimitExceededException("You require too much of something")),
+    final Response response = queryResource.doPost(
+        new ByteArrayInputStream("{\"queryType\":\"scan\"}".getBytes(StandardCharsets.UTF_8)),
         null /*pretty*/,
         testServletRequest
     );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    final QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
+    Assert.assertEquals(QueryException.JSON_PARSE_ERROR_CODE, e.getErrorCode());
+    Assert.assertEquals(ValueInstantiationException.class.getName(), e.getErrorClass());
+    Assert.assertEquals("Invalid native query: dataSource can't be null", e.getMessage());
+  }
+
+  @Test
+  public void testResourceLimitExceeded() throws IOException
+  {
+    final Response response;
+    try (final ExceptionalInputStream inputStream = new ExceptionalInputStream(
+        () -> new ResourceLimitExceededException("You require too much of something")
+    )) {
+      response = queryResource.doPost(
+          inputStream,
+          null /*pretty*/,
+          testServletRequest
+      );
+    }
     Assert.assertNotNull(response);
     Assert.assertEquals(Status.BAD_REQUEST.getStatusCode(), response.getStatus());
     QueryException e = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
@@ -1062,11 +1059,16 @@ public class QueryResourceTest
   public void testUnsupportedQueryThrowsException() throws IOException
   {
     String errorMessage = "This will be support in Druid 9999";
-    Response response = queryResource.doPost(
-        new ExceptionalInputStream(() -> new QueryUnsupportedException(errorMessage)),
-        null /*pretty*/,
-        testServletRequest
-    );
+    final Response response;
+    try (final ExceptionalInputStream inputStream = new ExceptionalInputStream(
+        () -> new QueryUnsupportedException(errorMessage)
+    )) {
+      response = queryResource.doPost(
+          inputStream,
+          null /*pretty*/,
+          testServletRequest
+      );
+    }
     Assert.assertNotNull(response);
     Assert.assertEquals(QueryUnsupportedException.STATUS_CODE, response.getStatus());
     QueryException ex = jsonMapper.readValue((byte[]) response.getEntity(), QueryException.class);
@@ -1100,7 +1102,7 @@ public class QueryResourceTest
       }
     };
 
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
@@ -1113,18 +1115,11 @@ public class QueryResourceTest
             new DefaultQueryConfig(Map.of()),
             null
         ),
-        jsonMapper,
-        queryScheduler,
         authMapper,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
-        )
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        new ServerConfig()
     );
 
 
@@ -1182,7 +1177,7 @@ public class QueryResourceTest
       }
     };
 
-    final QueryResource timeoutQueryResource = new QueryResource(
+    final QueryResource timeoutQueryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             timeoutSegmentWalker,
@@ -1195,18 +1190,11 @@ public class QueryResourceTest
             new DefaultQueryConfig(Map.of()),
             null
         ),
-        jsonMapper,
-        queryScheduler,
         null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            jsonMapper
-        )
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        jsonMapper,
+        new ServerConfig()
     );
     expectPermissiveHappyPathAuth();
 
@@ -1287,7 +1275,7 @@ public class QueryResourceTest
       }
     };
 
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
@@ -1300,18 +1288,11 @@ public class QueryResourceTest
             new DefaultQueryConfig(Map.of()),
             null
         ),
-        jsonMapper,
-        queryScheduler,
         authMapper,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
-        )
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        new ServerConfig()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1401,7 +1382,7 @@ public class QueryResourceTest
       }
     };
 
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             TEST_SEGMENT_WALKER,
@@ -1414,18 +1395,11 @@ public class QueryResourceTest
             new DefaultQueryConfig(Map.of()),
             null
         ),
-        jsonMapper,
-        queryScheduler,
         authMapper,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
-        )
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        new ServerConfig()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1791,7 +1765,7 @@ public class QueryResourceTest
       }
     };
 
-    queryResource = new QueryResource(
+    queryResource = createQueryResource(
         new QueryLifecycleFactory(
             CONGLOMERATE,
             texasRanger,
@@ -1804,18 +1778,11 @@ public class QueryResourceTest
             new DefaultQueryConfig(Map.of()),
             null
         ),
-        jsonMapper,
-        scheduler,
         null,
-        new QueryResourceQueryResultPusherFactory(
-            jsonMapper,
-            ResponseContextConfig.newConfig(true),
-            DRUID_NODE
-        ),
-        new ResourceIOReaderWriterFactory(
-            jsonMapper,
-            smileMapper
-        )
+        scheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        new ServerConfig()
     );
   }
 
@@ -1833,6 +1800,220 @@ public class QueryResourceTest
       }
       return true;
     });
+  }
+
+  @Test
+  public void testBlocklistedQueryReturnsForbidden() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final QueryResource blockingQueryResource = createQueryResourceWithBlocklist(
+        new ServerConfig(),
+        new DefaultQueryBlocklistRule("block-mmx", ImmutableSet.of("mmx_metrics"), null, null)
+    );
+
+    final Response response = blockingQueryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
+    Assert.assertNotNull(response.getMetadata().getFirst(QueryResource.QUERY_ID_RESPONSE_HEADER));
+
+    MatcherAssert.assertThat(
+        ((ErrorResponse) response.getEntity()).getUnderlyingException(),
+        DruidExceptionMatcher.forbidden().expectMessageContains("blocked by rule[block-mmx]")
+    );
+
+    // Blocked queries are still recorded in metrics and the request log. FORBIDDEN maps to no query counter, the
+    // same as when the exception surfaces through QueryResultPusher.
+    Assert.assertEquals(0, blockingQueryResource.getFailedQueryCount());
+    Assert.assertEquals(0, blockingQueryResource.getInterruptedQueryCount());
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    final Map<String, Object> stats = testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats();
+    Assert.assertEquals(false, stats.get("success"));
+    // The blocklist throws mid-authorization, so the identity is only present if it was recorded before that point.
+    Assert.assertEquals(AUTHENTICATION_RESULT.getIdentity(), stats.get("identity"));
+    Assert.assertEquals(Status.FORBIDDEN.getStatusCode(), stats.get(DruidMetrics.STATUS_CODE));
+  }
+
+  @Test
+  public void testBlocklistedQueryIsSanitizedByErrorResponseTransformStrategy() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    // Always-transforming strategy, so the test does not depend on any particular strategy's persona rules.
+    final ErrorResponseTransformStrategy strategy = new ErrorResponseTransformStrategy()
+    {
+      @Override
+      public Optional<DruidException> maybeTransform(DruidException exception, Optional<String> errorId)
+      {
+        return Optional.of(
+            DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build("sanitized[%s]", errorId.orElse(null))
+        );
+      }
+
+      @Override
+      public Function<String, String> getErrorMessageTransformFunction()
+      {
+        throw new UnsupportedOperationException();
+      }
+    };
+
+    final QueryResource blockingQueryResource = createQueryResourceWithBlocklist(
+        new ServerConfig(strategy),
+        new DefaultQueryBlocklistRule("block-mmx", ImmutableSet.of("mmx_metrics"), null, null)
+    );
+
+    final Response response = blockingQueryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assert.assertNotNull(response);
+    // The transformed exception's own category now drives the status code, not the original FORBIDDEN.
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+
+    final Object queryId = response.getMetadata().getFirst(QueryResource.QUERY_ID_RESPONSE_HEADER);
+    Assert.assertNotNull(queryId);
+    MatcherAssert.assertThat(
+        ((ErrorResponse) response.getEntity()).getUnderlyingException(),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.RUNTIME_FAILURE,
+            "general"
+        ).expectMessageIs(StringUtils.format("sanitized[%s]", queryId))
+    );
+
+    // Sanitization applies to the client response only; the request log keeps the original 403.
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    Assert.assertEquals(
+        Status.FORBIDDEN.getStatusCode(),
+        testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats().get(DruidMetrics.STATUS_CODE)
+    );
+  }
+
+  @Test
+  public void testDruidExceptionFromAuthorizeIsCountedByCategory() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final QueryLifecycleFactory realFactory = createQueryLifecycleFactory();
+    final QueryLifecycleFactory failingFactory = Mockito.mock(QueryLifecycleFactory.class);
+    Mockito.when(failingFactory.factorize()).thenAnswer(invocation -> {
+      final QueryLifecycle lifecycle = Mockito.spy(realFactory.factorize());
+      // DEFENSIVE maps to the "failed" counter, unlike the FORBIDDEN thrown by the blocklist.
+      Mockito.doThrow(DruidException.defensive("oh no"))
+             .when(lifecycle)
+             .authorize(ArgumentMatchers.any(HttpServletRequest.class));
+      return lifecycle;
+    });
+
+    final QueryResource failingQueryResource = createQueryResource(failingFactory);
+
+    final Response response = failingQueryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+    Assert.assertEquals(1, failingQueryResource.getFailedQueryCount());
+    Assert.assertEquals(0, failingQueryResource.getInterruptedQueryCount());
+  }
+
+  @Test
+  public void testQueryExceptionFromAuthorizeIsRecorded() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final QueryLifecycleFactory realFactory = createQueryLifecycleFactory();
+    final QueryLifecycleFactory failingFactory = Mockito.mock(QueryLifecycleFactory.class);
+    Mockito.when(failingFactory.factorize()).thenAnswer(invocation -> {
+      final QueryLifecycle lifecycle = Mockito.spy(realFactory.factorize());
+      Mockito.doThrow(QueryCapacityExceededException.withErrorMessageAndResolvedHost("too busy"))
+             .when(lifecycle)
+             .authorize(ArgumentMatchers.any(HttpServletRequest.class));
+      return lifecycle;
+    });
+
+    final QueryResource failingQueryResource = createQueryResource(failingFactory);
+
+    final Response response = failingQueryResource.doPost(
+        new ByteArrayInputStream(SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8)),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    // A QueryException keeps its own status and its legacy response body.
+    Assert.assertNotNull(response);
+    Assert.assertEquals(429, response.getStatus());
+    MatcherAssert.assertThat(
+        StringUtils.fromUtf8((byte[]) response.getEntity()),
+        CoreMatchers.containsString("too busy")
+    );
+
+    // It now shares the DruidException path, so the failure is recorded server-side and not just returned.
+    Assert.assertEquals(1, failingQueryResource.getFailedQueryCount());
+    Assert.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
+    final Map<String, Object> stats = testRequestLogger.getNativeQuerylogs().get(0).getQueryStats().getStats();
+    Assert.assertEquals(false, stats.get("success"));
+    Assert.assertEquals(429, stats.get(DruidMetrics.STATUS_CODE));
+  }
+
+  @Test
+  public void testNonBlocklistedQueryIsNotAffectedByBlocklist() throws IOException
+  {
+    expectPermissiveHappyPathAuth();
+
+    final QueryResource blockingQueryResource = createQueryResourceWithBlocklist(
+        new ServerConfig(),
+        new DefaultQueryBlocklistRule("block-other", ImmutableSet.of("some_other_datasource"), null, null)
+    );
+
+    final MockHttpServletResponse response = expectAsyncRequestFlow(
+        testServletRequest,
+        SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
+        blockingQueryResource
+    );
+
+    Assert.assertEquals(Status.OK.getStatusCode(), response.getStatus());
+  }
+
+  private QueryResource createQueryResourceWithBlocklist(ServerConfig serverConfig, QueryBlocklistRule... rules)
+  {
+    final BrokerDynamicConfig dynamicConfig =
+        new BrokerDynamicConfig.Builder().withQueryBlocklist(Arrays.asList(rules)).build();
+    final BrokerViewOfBrokerConfig brokerViewOfBrokerConfig = Mockito.mock(BrokerViewOfBrokerConfig.class);
+    Mockito.when(brokerViewOfBrokerConfig.getDynamicConfig()).thenReturn(dynamicConfig);
+    Mockito.when(brokerViewOfBrokerConfig.snapshotForQuery())
+           .thenReturn(new QueryConfigSnapshot(Map.of(), dynamicConfig));
+
+    return createQueryResource(
+        new QueryLifecycleFactory(
+            CONGLOMERATE,
+            TEST_SEGMENT_WALKER,
+            new DefaultGenericQueryMetricsFactory(),
+            emitter,
+            testRequestLogger,
+            new AuthConfig(),
+            NoopPolicyEnforcer.instance(),
+            AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+            new DefaultQueryConfig(Map.of()),
+            brokerViewOfBrokerConfig
+        ),
+        null,
+        queryScheduler,
+        ResponseContextConfig.newConfig(true),
+        smileMapper,
+        serverConfig
+    );
   }
 
   private void expectPermissiveHappyPathAuth()

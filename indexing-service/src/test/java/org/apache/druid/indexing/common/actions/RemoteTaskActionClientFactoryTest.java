@@ -22,8 +22,8 @@ package org.apache.druid.indexing.common.actions;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class RemoteTaskActionClientFactoryTest
 {
@@ -34,13 +34,13 @@ public class RemoteTaskActionClientFactoryTest
     final StandardRetryPolicy retryPolicy = RemoteTaskActionClientFactory.buildRetryPolicy(config);
 
     // Default maxRetryCount is 13, so maxAttempts should be 14 (13 retries + 1 initial attempt)
-    Assert.assertEquals(14, retryPolicy.maxAttempts());
+    Assertions.assertEquals(14, retryPolicy.maxAttempts());
 
     // Default minWait is PT5S (5 seconds)
-    Assert.assertEquals(5000, retryPolicy.minWaitMillis());
+    Assertions.assertEquals(5000, retryPolicy.minWaitMillis());
 
     // Default maxWait is PT1M (1 minute)
-    Assert.assertEquals(60000, retryPolicy.maxWaitMillis());
+    Assertions.assertEquals(60000, retryPolicy.maxWaitMillis());
   }
 
   @Test
@@ -54,13 +54,13 @@ public class RemoteTaskActionClientFactoryTest
     final StandardRetryPolicy retryPolicy = RemoteTaskActionClientFactory.buildRetryPolicy(config);
 
     // maxRetryCount is 5, so maxAttempts should be 6 (5 retries + 1 initial attempt)
-    Assert.assertEquals(6, retryPolicy.maxAttempts());
+    Assertions.assertEquals(6, retryPolicy.maxAttempts());
 
     // minWait is PT10S (10 seconds)
-    Assert.assertEquals(10000, retryPolicy.minWaitMillis());
+    Assertions.assertEquals(10000, retryPolicy.minWaitMillis());
 
     // maxWait is PT2M (2 minutes)
-    Assert.assertEquals(120000, retryPolicy.maxWaitMillis());
+    Assertions.assertEquals(120000, retryPolicy.maxWaitMillis());
   }
 
   @Test
@@ -74,12 +74,12 @@ public class RemoteTaskActionClientFactoryTest
     final StandardRetryPolicy retryPolicy = RemoteTaskActionClientFactory.buildRetryPolicy(config);
 
     // maxRetryCount is 0, so maxAttempts should be 1 (0 retries + 1 initial attempt)
-    Assert.assertEquals(1, retryPolicy.maxAttempts());
+    Assertions.assertEquals(1, retryPolicy.maxAttempts());
 
     // minWait is PT1S (1 second)
-    Assert.assertEquals(1000, retryPolicy.minWaitMillis());
+    Assertions.assertEquals(1000, retryPolicy.minWaitMillis());
 
     // maxWait is PT30S (30 seconds)
-    Assert.assertEquals(30000, retryPolicy.maxWaitMillis());
+    Assertions.assertEquals(30000, retryPolicy.maxWaitMillis());
   }
 }

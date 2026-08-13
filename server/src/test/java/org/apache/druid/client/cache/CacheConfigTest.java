@@ -142,7 +142,7 @@ public class CacheConfigTest
   }
 
   @Test
-  public void testFALSE()
+  public void testUppercaseFalse()
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "FALSE");
     configProvider.inject(properties, configurator);
@@ -152,7 +152,7 @@ public class CacheConfigTest
 
 
   @Test(expected = ProvisionException.class)
-  public void testFaLse()
+  public void testMixedCaseFalseIsRejected()
   {
     properties.put(PROPERTY_PREFIX + ".populateCache", "FaLse");
     configProvider.inject(properties, configurator);

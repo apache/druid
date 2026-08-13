@@ -23,8 +23,8 @@ import org.apache.druid.compressedbigdecimal.aggregator.max.CompressedBigDecimal
 import org.apache.druid.compressedbigdecimal.aggregator.min.CompressedBigDecimalMinAggregatorFactory;
 import org.apache.druid.compressedbigdecimal.aggregator.sum.CompressedBigDecimalSumAggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Base64;
 import java.util.HashMap;
@@ -70,6 +70,6 @@ public class CompressedBigDecimalCachingTest
     cache.put(Base64.getEncoder().encodeToString(aggregatorFactory2.getCacheKey()), FLAG);
     cache.put(Base64.getEncoder().encodeToString(aggregatorFactory3.getCacheKey()), FLAG);
 
-    Assert.assertEquals(3, cache.size());
+    Assertions.assertEquals(3, cache.size());
   }
 }

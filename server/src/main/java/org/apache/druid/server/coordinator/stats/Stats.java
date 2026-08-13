@@ -79,6 +79,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("partialStaleDropped", "segment/partial/staleDropped/count");
     public static final CoordinatorStat PARTIAL_STALE_CANCELLED
         = CoordinatorStat.toDebugAndEmit("partialStaleCancelled", "segment/partial/staleCancelled/count");
+    public static final CoordinatorStat PARTIAL_RULE_REVERTED
+        = CoordinatorStat.toDebugAndEmit("partialRuleReverted", "segment/partial/ruleReverted/count");
   }
 
   public static class SegmentQueue

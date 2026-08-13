@@ -22,8 +22,8 @@ package org.apache.druid.segment.data;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.memory.internal.UnsafeUtil;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.CharArrayWriter;
 import java.io.IOException;
@@ -39,41 +39,41 @@ public class SafeWritableMemoryTest
   {
     final WritableMemory memory = getMemory();
     memory.putByte(3L, (byte) 0x01);
-    Assert.assertEquals(memory.getByte(3L), 0x01);
+    Assertions.assertEquals(memory.getByte(3L), 0x01);
 
     memory.putBoolean(1L, true);
-    Assert.assertTrue(memory.getBoolean(1L));
+    Assertions.assertTrue(memory.getBoolean(1L));
     memory.putBoolean(1L, false);
-    Assert.assertFalse(memory.getBoolean(1L));
+    Assertions.assertFalse(memory.getBoolean(1L));
 
     memory.putChar(10L, 'c');
-    Assert.assertEquals('c', memory.getChar(10L));
+    Assertions.assertEquals('c', memory.getChar(10L));
 
     memory.putDouble(14L, 3.3);
-    Assert.assertEquals(3.3, memory.getDouble(14L), 0.0);
+    Assertions.assertEquals(3.3, memory.getDouble(14L), 0.0);
 
     memory.putFloat(27L, 3.3f);
-    Assert.assertEquals(3.3f, memory.getFloat(27L), 0.0);
+    Assertions.assertEquals(3.3f, memory.getFloat(27L), 0.0);
 
     memory.putInt(11L, 1234);
-    Assert.assertEquals(1234, memory.getInt(11L));
+    Assertions.assertEquals(1234, memory.getInt(11L));
 
     memory.putLong(500L, 500L);
-    Assert.assertEquals(500L, memory.getLong(500L));
+    Assertions.assertEquals(500L, memory.getLong(500L));
 
     memory.putShort(11L, (short) 15);
-    Assert.assertEquals(15, memory.getShort(11L));
+    Assertions.assertEquals(15, memory.getShort(11L));
 
     long l = memory.getAndSetLong(900L, 10L);
-    Assert.assertEquals(0L, l);
+    Assertions.assertEquals(0L, l);
     l = memory.getAndSetLong(900L, 100L);
-    Assert.assertEquals(10L, l);
+    Assertions.assertEquals(10L, l);
     l = memory.getAndAddLong(900L, 10L);
-    Assert.assertEquals(100L, l);
-    Assert.assertEquals(110L, memory.getLong(900L));
-    Assert.assertTrue(memory.compareAndSwapLong(900L, 110L, 120L));
-    Assert.assertFalse(memory.compareAndSwapLong(900L, 110L, 120L));
-    Assert.assertEquals(120L, memory.getLong(900L));
+    Assertions.assertEquals(100L, l);
+    Assertions.assertEquals(110L, memory.getLong(900L));
+    Assertions.assertTrue(memory.compareAndSwapLong(900L, 110L, 120L));
+    Assertions.assertFalse(memory.compareAndSwapLong(900L, 110L, 120L));
+    Assertions.assertEquals(120L, memory.getLong(900L));
   }
 
   @Test
@@ -86,7 +86,7 @@ public class SafeWritableMemoryTest
     memory.putByteArray(15L, b1, 3, 1);
     memory.getByteArray(12L, b2, 0, 3);
     memory.getByteArray(15L, b2, 3, 1);
-    Assert.assertArrayEquals(b1, b2);
+    Assertions.assertArrayEquals(b1, b2);
 
     final boolean[] bool1 = new boolean[]{true, false, false, true};
     final boolean[] bool2 = new boolean[bool1.length];
@@ -94,13 +94,13 @@ public class SafeWritableMemoryTest
     memory.putBooleanArray(102L, bool1, 2, 2);
     memory.getBooleanArray(100L, bool2, 0, 2);
     memory.getBooleanArray(102L, bool2, 2, 2);
-    Assert.assertArrayEquals(bool1, bool2);
+    Assertions.assertArrayEquals(bool1, bool2);
 
     final char[] chars1 = new char[]{'a', 'b', 'c', 'd'};
     final char[] chars2 = new char[chars1.length];
     memory.putCharArray(10L, chars1, 0, 4);
     memory.getCharArray(10L, chars2, 0, chars1.length);
-    Assert.assertArrayEquals(chars1, chars2);
+    Assertions.assertArrayEquals(chars1, chars2);
 
     final double[] double1 = new double[]{1.1, -2.2, 3.3, 4.4};
     final double[] double2 = new double[double1.length];
@@ -109,7 +109,7 @@ public class SafeWritableMemoryTest
     memory.getDoubleArray(100L, double2, 0, 2);
     memory.getDoubleArray(100L + (2 * Double.BYTES), double2, 2, 2);
     for (int i = 0; i < double1.length; i++) {
-      Assert.assertEquals(double1[i], double2[i], 0.0);
+      Assertions.assertEquals(double1[i], double2[i], 0.0);
     }
 
     final float[] float1 = new float[]{1.1f, 2.2f, -3.3f, 4.4f};
@@ -119,7 +119,7 @@ public class SafeWritableMemoryTest
     memory.getFloatArray(100L, float2, 0, 2);
     memory.getFloatArray(100L + (2 * Float.BYTES), float2, 2, 2);
     for (int i = 0; i < float1.length; i++) {
-      Assert.assertEquals(float1[i], float2[i], 0.0);
+      Assertions.assertEquals(float1[i], float2[i], 0.0);
     }
 
     final int[] ints1 = new int[]{1, 2, -3, 4};
@@ -128,7 +128,7 @@ public class SafeWritableMemoryTest
     memory.putIntArray(100L + Integer.BYTES, ints1, 1, 3);
     memory.getIntArray(100L, ints2, 0, 2);
     memory.getIntArray(100L + (2 * Integer.BYTES), ints2, 2, 2);
-    Assert.assertArrayEquals(ints1, ints2);
+    Assertions.assertArrayEquals(ints1, ints2);
 
     final long[] longs1 = new long[]{1L, -2L, 3L, -14L};
     final long[] longs2 = new long[ints1.length];
@@ -136,7 +136,7 @@ public class SafeWritableMemoryTest
     memory.putLongArray(100L + Long.BYTES, longs1, 1, 3);
     memory.getLongArray(100L, longs2, 0, 2);
     memory.getLongArray(100L + (2 * Long.BYTES), longs2, 2, 2);
-    Assert.assertArrayEquals(longs1, longs2);
+    Assertions.assertArrayEquals(longs1, longs2);
 
     final short[] shorts1 = new short[]{1, -2, 3, -14};
     final short[] shorts2 = new short[ints1.length];
@@ -144,7 +144,7 @@ public class SafeWritableMemoryTest
     memory.putShortArray(100L + Short.BYTES, shorts1, 1, 3);
     memory.getShortArray(100L, shorts2, 0, 2);
     memory.getShortArray(100L + (2 * Short.BYTES), shorts2, 2, 2);
-    Assert.assertArrayEquals(shorts1, shorts2);
+    Assertions.assertArrayEquals(shorts1, shorts2);
   }
 
   @Test
@@ -157,35 +157,35 @@ public class SafeWritableMemoryTest
 
     memory.fill(theByte);
     for (int i = 0; i < memory.getCapacity(); i++) {
-      Assert.assertEquals(theByte, memory.getByte(i));
+      Assertions.assertEquals(theByte, memory.getByte(i));
     }
 
     memory.fill(halfWay, memory.getCapacity() - halfWay, anotherByte);
     for (int i = 0; i < memory.getCapacity(); i++) {
       if (i < halfWay) {
-        Assert.assertEquals(theByte, memory.getByte(i));
+        Assertions.assertEquals(theByte, memory.getByte(i));
       } else {
-        Assert.assertEquals(anotherByte, memory.getByte(i));
+        Assertions.assertEquals(anotherByte, memory.getByte(i));
       }
     }
 
     memory.clear(halfWay, memory.getCapacity() - halfWay);
     for (int i = 0; i < memory.getCapacity(); i++) {
       if (i < halfWay) {
-        Assert.assertEquals(theByte, memory.getByte(i));
+        Assertions.assertEquals(theByte, memory.getByte(i));
       } else {
-        Assert.assertEquals(0, memory.getByte(i));
+        Assertions.assertEquals(0, memory.getByte(i));
       }
     }
 
     memory.setBits(halfWay - 1, anotherByte);
-    Assert.assertEquals(0x03, memory.getByte(halfWay - 1));
+    Assertions.assertEquals(0x03, memory.getByte(halfWay - 1));
     memory.clearBits(halfWay - 1, theByte);
-    Assert.assertEquals(anotherByte, memory.getByte(halfWay - 1));
+    Assertions.assertEquals(anotherByte, memory.getByte(halfWay - 1));
 
     memory.clear();
     for (int i = 0; i < memory.getCapacity(); i++) {
-      Assert.assertEquals(0, memory.getByte(i));
+      Assertions.assertEquals(0, memory.getByte(i));
     }
   }
 
@@ -198,21 +198,21 @@ public class SafeWritableMemoryTest
 
     StringBuilder builder = new StringBuilder();
     memory.getCharsFromUtf8(10L, s1.length(), builder);
-    Assert.assertEquals(s1, builder.toString());
+    Assertions.assertEquals(s1, builder.toString());
 
     CharArrayWriter someAppendable = new CharArrayWriter();
     memory.getCharsFromUtf8(10L, s1.length(), someAppendable);
-    Assert.assertEquals(s1, someAppendable.toString());
+    Assertions.assertEquals(s1, someAppendable.toString());
   }
 
   @Test
   public void testRegion()
   {
     WritableMemory memory = getMemory();
-    Assert.assertEquals(CAPACITY, memory.getCapacity());
-    Assert.assertEquals(0, memory.getCumulativeOffset());
-    Assert.assertEquals(10L, memory.getCumulativeOffset(10L));
-    Assert.assertThrows(
+    Assertions.assertEquals(CAPACITY, memory.getCapacity());
+    Assertions.assertEquals(0, memory.getCumulativeOffset());
+    Assertions.assertEquals(10L, memory.getCumulativeOffset(10L));
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> memory.checkValidAndBounds(CAPACITY - 10, 11L)
     );
@@ -221,23 +221,23 @@ public class SafeWritableMemoryTest
     memory.putByteArray(10L, someBytes, 0, someBytes.length);
 
     Memory region = memory.region(10L, someBytes.length);
-    Assert.assertEquals(someBytes.length, region.getCapacity());
-    Assert.assertEquals(0, region.getCumulativeOffset());
-    Assert.assertEquals(2L, region.getCumulativeOffset(2L));
-    Assert.assertThrows(
+    Assertions.assertEquals(someBytes.length, region.getCapacity());
+    Assertions.assertEquals(0, region.getCumulativeOffset());
+    Assertions.assertEquals(2L, region.getCumulativeOffset(2L));
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> region.checkValidAndBounds(2L, 4L)
     );
 
     final byte[] andBack = new byte[someBytes.length];
     region.getByteArray(0L, andBack, 0, someBytes.length);
-    Assert.assertArrayEquals(someBytes, andBack);
+    Assertions.assertArrayEquals(someBytes, andBack);
 
     Memory differentOrderRegion = memory.region(10L, someBytes.length, ByteOrder.BIG_ENDIAN);
     // different order
-    Assert.assertFalse(region.isByteOrderCompatible(differentOrderRegion.getTypeByteOrder()));
+    Assertions.assertFalse(region.isByteOrderCompatible(differentOrderRegion.getTypeByteOrder()));
     // contents are equal tho
-    Assert.assertTrue(region.equalTo(0L, differentOrderRegion, 0L, someBytes.length));
+    Assertions.assertTrue(region.equalTo(0L, differentOrderRegion, 0L, someBytes.length));
   }
 
   @Test
@@ -252,20 +252,20 @@ public class SafeWritableMemoryTest
     memory.putByteArray(200L, shorterSameBytes, 0, shorterSameBytes.length);
     memory.putByteArray(500L, differentBytes, 0, differentBytes.length);
 
-    Assert.assertEquals(0, memory.compareTo(10L, someBytes.length, memory, 400L, someBytes.length));
-    Assert.assertEquals(4, memory.compareTo(10L, someBytes.length, memory, 200L, someBytes.length));
-    Assert.assertEquals(-1, memory.compareTo(10L, someBytes.length, memory, 500L, differentBytes.length));
+    Assertions.assertEquals(0, memory.compareTo(10L, someBytes.length, memory, 400L, someBytes.length));
+    Assertions.assertEquals(4, memory.compareTo(10L, someBytes.length, memory, 200L, someBytes.length));
+    Assertions.assertEquals(-1, memory.compareTo(10L, someBytes.length, memory, 500L, differentBytes.length));
 
     WritableMemory memory2 = getMemory();
     memory2.putByteArray(0L, someBytes, 0, someBytes.length);
 
-    Assert.assertEquals(0, memory.compareTo(10L, someBytes.length, memory2, 0L, someBytes.length));
+    Assertions.assertEquals(0, memory.compareTo(10L, someBytes.length, memory2, 0L, someBytes.length));
 
-    Assert.assertTrue(memory.equalTo(10L, memory2, 0L, someBytes.length));
+    Assertions.assertTrue(memory.equalTo(10L, memory2, 0L, someBytes.length));
 
     WritableMemory memory3 = getMemory();
     memory2.copyTo(0L, memory3, 0L, CAPACITY);
-    Assert.assertTrue(memory2.equalTo(0L, memory3, 0L, CAPACITY));
+    Assertions.assertTrue(memory2.equalTo(0L, memory3, 0L, CAPACITY));
   }
 
   @Test
@@ -282,12 +282,12 @@ public class SafeWritableMemoryTest
     memory.putIntArray(2L + longsLength, someInts, 0, someInts.length);
     memory.putByteArray(2L + longsLength + someIntsLength, someBytes, 0, someBytes.length);
     Memory memory2 = Memory.wrap(memory.getByteBuffer(), ByteOrder.LITTLE_ENDIAN);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         memory2.xxHash64(2L, totalLength, 0),
         memory.xxHash64(2L, totalLength, 0)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         memory2.xxHash64(2L, 0),
         memory.xxHash64(2L, 0)
     );
@@ -303,7 +303,7 @@ public class SafeWritableMemoryTest
     final long hcode = memory.hashCode() & 0XFFFFFFFFL;
     final long bufferhcode = memory.getByteBuffer().hashCode() & 0XFFFFFFFFL;
     final long reqhcode = memory.getMemoryRequestServer().hashCode() & 0XFFFFFFFFL;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "### SafeWritableMemory SUMMARY ###\n"
         + "Header Comment      : test memory dump\n"
         + "Call Parameters     : .toHexString(..., 0, 8), hashCode: " + hcode + "\n"
@@ -330,17 +330,17 @@ public class SafeWritableMemoryTest
   {
     WritableMemory memory = getMemory(10);
     WritableMemory memory2 = memory.getMemoryRequestServer().request(memory, 20);
-    Assert.assertEquals(20, memory2.getCapacity());
+    Assertions.assertEquals(20, memory2.getCapacity());
 
-    Assert.assertFalse(memory2.hasArray());
+    Assertions.assertFalse(memory2.hasArray());
 
-    Assert.assertFalse(memory2.isReadOnly());
-    Assert.assertFalse(memory2.isDirect());
-    Assert.assertTrue(memory2.isValid());
-    Assert.assertTrue(memory2.hasByteBuffer());
+    Assertions.assertFalse(memory2.isReadOnly());
+    Assertions.assertFalse(memory2.isDirect());
+    Assertions.assertTrue(memory2.isValid());
+    Assertions.assertTrue(memory2.hasByteBuffer());
 
-    Assert.assertFalse(memory2.isSameResource(memory));
-    Assert.assertTrue(memory2.isSameResource(memory2));
+    Assertions.assertFalse(memory2.isSameResource(memory));
+    Assertions.assertTrue(memory2.isSameResource(memory2));
 
     // does nothing
     memory.getMemoryRequestServer().requestClose(memory, memory2);

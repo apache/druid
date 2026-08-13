@@ -19,12 +19,16 @@
 
 package org.apache.druid.client;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -81,5 +85,53 @@ public class BrokerViewOfBrokerConfigTest
   {
     target.setDynamicConfig(BrokerDynamicConfig.builder().build());
     Assert.assertEquals(defaultQueryConfig.getContext(), target.getContext());
+  }
+
+  @Test
+  public void testSnapshotBeforeFirstSyncHasStaticDefaultsAndNoDynamicConfig()
+  {
+    final QueryConfigSnapshot snapshot = target.snapshotForQuery();
+    Assert.assertEquals(defaultQueryConfig.getContext(), snapshot.getResolvedDefaultQueryContext());
+    Assert.assertTrue(snapshot.getQueryBlocklist().isEmpty());
+  }
+
+  @Test
+  public void testSnapshotAndGetContextStayInSync()
+  {
+    final BrokerDynamicConfig dynamicConfig =
+        BrokerDynamicConfig.builder()
+                           .withQueryContext(QueryContext.of(ImmutableMap.of("priority", 5)))
+                           .withQueryBlocklist(ImmutableList.of(
+                               new DefaultQueryBlocklistRule("block-ds", ImmutableSet.of("ds"), null, null)
+                           ))
+                           .build();
+    target.setDynamicConfig(dynamicConfig);
+
+    final QueryConfigSnapshot snapshot = target.snapshotForQuery();
+    Assert.assertSame(target.getContext(), snapshot.getResolvedDefaultQueryContext());
+    Assert.assertEquals(dynamicConfig.getQueryBlocklist(), snapshot.getQueryBlocklist());
+    Assert.assertEquals(5, snapshot.getResolvedDefaultQueryContext().get("priority"));
+    Assert.assertSame(snapshot.getDynamicConfig(), target.getDynamicConfig());
+  }
+
+  @Test
+  public void testSnapshotIsUnaffectedByLaterConfigUpdate()
+  {
+    // A query holds its snapshot for the whole lifecycle, so a later swap must not change it.
+    target.setDynamicConfig(
+        BrokerDynamicConfig.builder()
+                           .withQueryContext(QueryContext.of(ImmutableMap.of("priority", 5)))
+                           .build()
+    );
+    final QueryConfigSnapshot snapshot = target.snapshotForQuery();
+
+    target.setDynamicConfig(
+        BrokerDynamicConfig.builder()
+                           .withQueryContext(QueryContext.of(ImmutableMap.of("priority", 9)))
+                           .build()
+    );
+
+    Assert.assertEquals(5, snapshot.getResolvedDefaultQueryContext().get("priority"));
+    Assert.assertEquals(9, target.getContext().get("priority"));
   }
 }

@@ -69,6 +69,7 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.AggregateProjectionMetadata;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -248,7 +249,13 @@ public class MSQInsertTest extends MSQTestBase
                     .column("delta", Columns.SQL_BIGINT)
                     .sealed(true)
                     .baseTable(
-                        new ClusteredValueGroupsBaseTableMetadata(ImmutableList.of("channel"), null)
+                        new ClusteredValueGroupsBaseTableMetadata(
+                            ImmutableList.of("channel"),
+                            null,
+                            // customize the segment-creation schema of a declared column: 'user' is stored as an
+                            // auto column cast to its declared VARCHAR type (the logical schema is unchanged)
+                            ImmutableList.of(new AutoTypeColumnSchema("user", ColumnType.STRING, null))
+                        )
                     )
                     .property(
                         DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,

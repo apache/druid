@@ -21,7 +21,6 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
@@ -123,15 +122,6 @@ public class DatasourceDefn extends TableDefn
       // Cross-validate the layout against the declared columns by deriving the physical spec, so that catalog writes
       // fail fast instead of surfacing layout problems at ingest time.
       baseTable.createSpec(table.spec().columns());
-    }
-  }
-
-  @Override
-  protected void validateColumn(ColumnSpec spec)
-  {
-    super.validateColumn(spec);
-    if (Columns.isTimeColumn(spec.name()) && spec.dataType() != null) {
-      // Validate type in next PR
     }
   }
 

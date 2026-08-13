@@ -46,7 +46,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -75,22 +74,10 @@ public class SegmentCacheBootstrapperCacheTest
   {
     infoDir = temporaryFolder.newFolder();
     cacheDir = temporaryFolder.newFolder();
-    loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return infoDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(cacheDir, MAX_SIZE, null)
-        );
-      }
-    };
+    loaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(infoDir)
+        .locations(new StorageLocationConfig(cacheDir, MAX_SIZE, null))
+        .build();
 
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
@@ -116,7 +103,7 @@ public class SegmentCacheBootstrapperCacheTest
   public void testLoadStartStopWithEmptyLocations() throws IOException
   {
     final List<StorageLocation> emptyLocations = ImmutableList.of();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig();
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().build();
     segmentManager = new SegmentManager(
         new SegmentLocalCacheManager(
             emptyLocations,

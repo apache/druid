@@ -26,18 +26,18 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class CompactionInputSpecTest
 {
   private static final String DATASOURCE = "datasource";
@@ -46,7 +46,6 @@ public class CompactionInputSpecTest
       SEGMENTS.stream().map(DataSegment::getInterval).collect(Collectors.toList())
   );
 
-  @Parameters
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
@@ -96,15 +95,15 @@ public class CompactionInputSpecTest
   @Test
   public void testFindInterval()
   {
-    Assert.assertEquals(INTERVAL, inputSpec.findInterval(DATASOURCE));
+    Assertions.assertEquals(INTERVAL, inputSpec.findInterval(DATASOURCE));
   }
 
   @Test
   public void testValidateSegments()
   {
-    Assert.assertTrue(inputSpec.validateSegments(LockGranularity.TIME_CHUNK, SEGMENTS));
-    Assert.assertTrue(inputSpec.validateSegments(LockGranularity.SEGMENT, SEGMENTS));
-    Assert.assertFalse(inputSpec.validateSegments(LockGranularity.SEGMENT, SEGMENTS.subList(0, SEGMENTS.size() - 1)));
+    Assertions.assertTrue(inputSpec.validateSegments(LockGranularity.TIME_CHUNK, SEGMENTS));
+    Assertions.assertTrue(inputSpec.validateSegments(LockGranularity.SEGMENT, SEGMENTS));
+    Assertions.assertFalse(inputSpec.validateSegments(LockGranularity.SEGMENT, SEGMENTS.subList(0, SEGMENTS.size() - 1)));
   }
 
   @Test
@@ -112,10 +111,10 @@ public class CompactionInputSpecTest
   {
     final List<DataSegment> someSegmentIsMissing = new ArrayList<>(SEGMENTS);
     someSegmentIsMissing.remove(0);
-    Assert.assertFalse(inputSpec.validateSegments(LockGranularity.TIME_CHUNK, someSegmentIsMissing));
+    Assertions.assertFalse(inputSpec.validateSegments(LockGranularity.TIME_CHUNK, someSegmentIsMissing));
 
     final List<DataSegment> someSegmentIsUnknown = new ArrayList<>(SEGMENTS);
     someSegmentIsUnknown.add(newSegment(Intervals.of("2018-01-01/2018-01-02")));
-    Assert.assertFalse(inputSpec.validateSegments(LockGranularity.TIME_CHUNK, someSegmentIsUnknown));
+    Assertions.assertFalse(inputSpec.validateSegments(LockGranularity.TIME_CHUNK, someSegmentIsUnknown));
   }
 }

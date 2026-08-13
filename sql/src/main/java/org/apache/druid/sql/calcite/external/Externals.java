@@ -273,8 +273,14 @@ public class Externals
       throw unsupportedType(name, dataType);
     }
     String simpleName = typeNameIdentifier.getSimple();
-    if (StringUtils.toLowerCase(simpleName).startsWith(("complex<"))) {
-      return simpleName;
+    if (StringUtils.toLowerCase(simpleName).startsWith("complex<")) {
+      // Parse and validate rather than passing the raw string downstream, where a malformed type string would
+      // silently resolve to a different type; return the canonical form.
+      final ColumnType complexType = ColumnType.fromString(simpleName);
+      if (complexType == null) {
+        throw unsupportedType(name, dataType);
+      }
+      return complexType.asTypeString();
     }
     SqlTypeName type = SqlTypeName.get(simpleName);
     if (type == null) {

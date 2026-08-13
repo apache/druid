@@ -21,7 +21,7 @@ package org.apache.druid.sql.calcite.run;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.sql.hook.DruidHook;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class DruidHookTest
 {

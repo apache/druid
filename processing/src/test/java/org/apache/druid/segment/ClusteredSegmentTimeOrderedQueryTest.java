@@ -38,6 +38,8 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -65,6 +67,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -245,6 +248,21 @@ class ClusteredSegmentTimeOrderedQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  void testTimeOrderedScanPruningAllGroupsReturnsEmpty()
+  {
+    // A filter on the clustering column that matches no group prunes every cluster group, so the clustered cursor
+    // factory returns an empty holder. The scan engine hard-enforces cursor time ordering, so the empty holder must
+    // advertise the requested __time direction (asc or desc) or the scan explodes instead of returning zero rows.
+    // Covers both the historical (QueryableIndexCursorFactory) and realtime (IncrementalIndexCursorFactory) paths.
+    final DimFilter noGroup = new EqualityFilter("tenant", ColumnType.STRING, "nobody", null);
+    final Segment incremental = buildClusteredIncremental(ROWS);
+    for (final Segment segment : List.of(clusteredSegment, incremental)) {
+      Assertions.assertEquals(List.of(), runScanRows(segment, Order.ASCENDING, noGroup));
+      Assertions.assertEquals(List.of(), runScanRows(segment, Order.DESCENDING, noGroup));
+    }
+  }
+
+  @Test
   void testTimeOrderedQueriesOverIncrementalClusteredSegment()
   {
     // The realtime path (IncrementalIndexCursorFactory) must also k-way-merge groups for a __time-ordered query.
@@ -310,13 +328,21 @@ class ClusteredSegmentTimeOrderedQueryTest extends InitializedNullHandlingTest
 
   private static List<List<Object>> runScanRows(Segment segment, Order order)
   {
-    final ScanQuery query = Druids.newScanQueryBuilder()
-                                  .dataSource(DATA_SOURCE)
-                                  .intervals(new MultipleIntervalSegmentSpec(List.of(INTERVAL)))
-                                  .columns(ColumnHolder.TIME_COLUMN_NAME, "tenant", "m")
-                                  .order(order)
-                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
-                                  .build();
+    return runScanRows(segment, order, null);
+  }
+
+  private static List<List<Object>> runScanRows(Segment segment, Order order, @Nullable DimFilter filter)
+  {
+    final Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
+                                                  .dataSource(DATA_SOURCE)
+                                                  .intervals(new MultipleIntervalSegmentSpec(List.of(INTERVAL)))
+                                                  .columns(ColumnHolder.TIME_COLUMN_NAME, "tenant", "m")
+                                                  .order(order)
+                                                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST);
+    if (filter != null) {
+      builder.filters(filter);
+    }
+    final ScanQuery query = builder.build();
     final ScanQueryRunnerFactory factory = new ScanQueryRunnerFactory(
         new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
         new ScanQueryEngine(),

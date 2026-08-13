@@ -111,8 +111,7 @@ function loadInitialData(datasourceName: string) {
   runIndexTask(ingestionSpec, sedCommands);
 }
 
-function validateConnectLocalData(preview: string) {
-  const lines = preview.split('\n');
+function validateConnectLocalData(lines: string[]) {
   expect(lines.length).toBe(500);
   const firstLine = lines[0];
   expect(firstLine).toBe(
