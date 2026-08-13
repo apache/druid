@@ -3460,7 +3460,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 1.12.0
+version: 1.12.1
 libraries:
   - org.apache.avro: avro
 notices:
