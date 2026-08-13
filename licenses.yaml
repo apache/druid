@@ -465,7 +465,7 @@ name: j2objc
 license_category: binary
 module: core
 license_name: Apache License version 2.0
-version: 1.3
+version: 3.1
 libraries:
   - com.google.j2objc: j2objc-annotations
 
@@ -563,7 +563,7 @@ name: OpenCSV
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.6
+version: 5.12.0
 libraries:
   - com.opencsv: opencsv
 
@@ -718,7 +718,7 @@ name: Apache Commons Collections
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.0
+version: 4.6.0
 libraries:
   - org.apache.commons: commons-collections4
 notices:
@@ -826,6 +826,25 @@ notices:
 
 ---
 
+name: Apache Commons Pool
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.13.1
+libraries:
+  - org.apache.commons: commons-pool2
+notices:
+  - commons-pool2: |
+      Apache Commons Pool
+      Copyright 2001-2025 The Apache Software Foundation
+
+      The LinkedBlockingDeque implementation is based on an implementation written by
+      Doug Lea with assistance from members of JCP JSR-166 Expert Group and released
+      to the public domain, as explained at
+      http://creativecommons.org/licenses/publicdomain
+
+---
+
 name: Apache Commons Text
 license_category: binary
 module: java-core
@@ -868,7 +887,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.22
+version: 4.2.39
 libraries:
   - io.dropwizard.metrics: metrics-core
 
@@ -1217,7 +1236,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 3.17.0
+version: 3.18.1
 libraries:
   - com.squareup.okio: okio
   - com.squareup.okio: okio-jvm
@@ -1228,7 +1247,7 @@ name: com.squareup.okio okio
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 3.17.0
+version: 3.18.1
 libraries:
   - com.squareup.okio: okio-jvm
 
@@ -3313,7 +3332,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 1.12.0
+version: 1.12.1
 libraries:
   - org.apache.avro: avro
 notices:
@@ -3541,7 +3560,7 @@ name: j2objc
 license_category: binary
 module: extensions/protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.8
+version: 3.1
 libraries:
   - com.google.j2objc: j2objc-annotations
 
@@ -4132,7 +4151,7 @@ name: Apache ORC libraries
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 1.7.6
+version: 2.3.1
 libraries:
   - org.apache.orc: orc-mapreduce
   - org.apache.orc: orc-core
@@ -4140,13 +4159,27 @@ libraries:
 notices:
   - orc-mapreduce: |
       ORC MapReduce
-      Copyright 2013-2021 The Apache Software Foundation
+      Copyright 2013-2026 The Apache Software Foundation
   - orc-core: |
       ORC Core
-      Copyright 2013-2021 The Apache Software Foundation
+      Copyright 2013-2026 The Apache Software Foundation
   - orc-shims: |
       ORC Shims
-      Copyright 2013-2021 The Apache Software Foundation
+      Copyright 2013-2026 The Apache Software Foundation
+
+---
+
+name: Apache ORC Format
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 1.1.1
+libraries:
+  - org.apache.orc: orc-format
+notices:
+  - orc-format: |
+      Apache ORC Format
+      Copyright 2013-2022 The Apache Software Foundation
 
 ---
 
@@ -4154,13 +4187,65 @@ name: ThreeTen
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: BSD-3-Clause License
-version: 1.5.0
+version: 1.9.0
 libraries:
   - org.threeten: threeten-extra
 notices:
   - threeten-extra: |
       ThreeTen-Extra
       Copyright (c) 2007-present, Stephen Colebourne & Michael Nascimento Santos.
+
+---
+
+name: Brotli4j
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: Apache License version 2.0
+version: 1.20.0
+libraries:
+  - com.aayushatharva.brotli4j: brotli4j
+  - com.aayushatharva.brotli4j: service
+  - com.aayushatharva.brotli4j: native-linux-x86_64
+  - com.aayushatharva.brotli4j: native-linux-s390x
+  - com.aayushatharva.brotli4j: native-linux-ppc64le
+  - com.aayushatharva.brotli4j: native-linux-aarch64
+  - com.aayushatharva.brotli4j: native-linux-armv7
+  - com.aayushatharva.brotli4j: native-linux-riscv64
+  - com.aayushatharva.brotli4j: native-windows-x86_64
+  - com.aayushatharva.brotli4j: native-windows-aarch64
+  - com.aayushatharva.brotli4j: native-osx-x86_64
+  - com.aayushatharva.brotli4j: native-osx-aarch64
+notice: |
+  =============== Brotli4j ===============
+
+  Copyright 2021, Aayush Atharva
+
+    Brotli4j licenses this file to you under the
+    Apache License, Version 2.0 (the "License");
+    you may not use this file except in compliance with the License.
+    You may obtain a copy of the License at
+
+         http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+
+  =========================================
+
+  This product includes Google Brotli, which is available under the MIT License.
+
+---
+
+name: Google Brotli bundled by Brotli4j
+license_category: binary
+module: extensions/druid-orc-extensions
+license_name: MIT License
+version: 1.1.0
+copyright: 2009, 2010, 2013-2016 the Brotli Authors
+license_file_path: licenses/bin/google-brotli.MIT
 
 ---
 
@@ -5170,8 +5255,8 @@ libraries:
 
 name: snappy-java
 license_category: binary
-version: 1.1.10.4
-module: druid-ranger-security
+version: 1.1.10.8
+module: java-core
 license_name: Apache License version 2.0
 libraries:
   - org.xerial.snappy: snappy-java
@@ -5180,9 +5265,12 @@ notices:
       This product includes software developed by Google
        Snappy: http://code.google.com/p/snappy/ (New BSD License)
 
+      This product includes software developed by Apache
+       PureJavaCrc32C from apache-hadoop-common http://hadoop.apache.org/
+       (Apache 2.0 license)
 
-      This library containd statically linked libstdc++. This inclusion is allowed by
-      "GCC RUntime Library Exception"
+      This library contains statically linked libstdc++. This inclusion is allowed by
+      "GCC Runtime Library Exception"
       http://gcc.gnu.org/onlinedocs/libstdc++/manual/license.html
 
       == Contributors ==
@@ -5190,6 +5278,12 @@ notices:
           * Providing benchmark suite
         * Alec Wysoker
           * Performance and memory usage improvement
+
+      Third-Party Notices and Licenses:
+
+      - Hadoop: Apache Hadoop is used as a dependency
+        License: Apache License 2.0
+        Source/Reference: https://github.com/apache/hadoop/blob/trunk/NOTICE.txt
 
 ---
 
@@ -5247,7 +5341,7 @@ name: jakarta.activation-api
 license_category: binary
 module: core
 license_name: Eclipse Distribution License 1.0
-version: 1.2.2
+version: 2.1.4
 libraries:
   - jakarta.activation: jakarta.activation-api
 
@@ -7156,3 +7250,46 @@ notice: |
   "Javassist is distributed under the Mozilla Public License 1.1 (MPL),
   the GNU Lesser General Public License 2.1 (LGPL), and the Apache License 2.0 (AL).
   You can choose one of them."
+
+---
+
+name: Kafka Schema Registry Client
+version: 8.3.1
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.confluent: kafka-schema-registry-client
+  - io.confluent: common-utils
+  - io.confluent: kafka-avro-types
+  - io.confluent: kafka-schema-types
+
+---
+
+name: Jackson Datatype JDK8
+version: 2.22.1
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - com.fasterxml.jackson.datatype: jackson-datatype-jdk8
+
+---
+
+name: swagger-annotations-jakarta
+version: 2.2.42
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger.core.v3: swagger-annotations-jakarta
+
+---
+
+name: Confluent Kafka Client
+version: 8.3.1-ccs
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
