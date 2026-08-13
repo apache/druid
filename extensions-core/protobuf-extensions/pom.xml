@@ -35,7 +35,7 @@
   </parent>
 
   <properties>
-    <okio.version>3.6.0</okio.version>
+    <okio.version>3.18.1</okio.version>
   </properties>
 
   <repositories>

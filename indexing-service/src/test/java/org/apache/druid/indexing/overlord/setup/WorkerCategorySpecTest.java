@@ -22,15 +22,15 @@ package org.apache.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class WorkerCategorySpecTest
 {
   private ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper = new DefaultObjectMapper();
@@ -55,8 +55,8 @@ public class WorkerCategorySpecTest
         ), WorkerCategorySpec.class
     );
 
-    Assert.assertTrue(workerCategorySpec.isStrong());
-    Assert.assertEquals(ImmutableMap.of(
+    Assertions.assertTrue(workerCategorySpec.isStrong());
+    Assertions.assertEquals(ImmutableMap.of(
         "index_kafka",
         new WorkerCategorySpec.CategoryConfig("c1", ImmutableMap.of("ds1", "c2"), null)
     ), workerCategorySpec.getCategoryMap());

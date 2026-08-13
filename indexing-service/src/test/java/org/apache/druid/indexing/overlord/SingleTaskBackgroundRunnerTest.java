@@ -63,14 +63,11 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -84,18 +81,18 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SingleTaskBackgroundRunnerTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  private File temporaryFolder;
 
   private SingleTaskBackgroundRunner runner;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     final TestUtils utils = new TestUtils();
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(temporaryFolder.newFile().toString())
+        .setBaseDir(File.createTempFile("base", null, temporaryFolder).toString())
         .setRestoreTasksOnRestart(true)
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();
@@ -154,7 +151,7 @@ public class SingleTaskBackgroundRunnerTest
     );
   }
 
-  @After
+  @AfterEach
   public void teardown()
   {
     runner.stop();
@@ -164,7 +161,7 @@ public class SingleTaskBackgroundRunnerTest
   public void testRun() throws ExecutionException, InterruptedException
   {
     NoopTask task = new NoopTask(null, null, null, 500L, 0, null);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskState.SUCCESS,
         runner.run(task).get().getStatusCode()
     );
@@ -182,7 +179,7 @@ public class SingleTaskBackgroundRunnerTest
             .build()
             .getRunner(runner);
 
-    MatcherAssert.assertThat(queryRunner, CoreMatchers.instanceOf(SetAndVerifyContextQueryRunner.class));
+    Assertions.assertInstanceOf(SetAndVerifyContextQueryRunner.class, queryRunner);
   }
 
   @Test
@@ -201,11 +198,11 @@ public class SingleTaskBackgroundRunnerTest
         }
     );
     runner.stop();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskState.FAILED,
         future.get(1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
-    Assert.assertTrue(methodCallHolder.get());
+    Assertions.assertTrue(methodCallHolder.get());
   }
 
   @Test
@@ -216,11 +213,11 @@ public class SingleTaskBackgroundRunnerTest
         new RestorableTask(holder)
     );
     runner.stop();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TaskState.SUCCESS,
         future.get(1000, TimeUnit.MILLISECONDS).getStatusCode()
     );
-    Assert.assertTrue(holder.get());
+    Assertions.assertTrue(holder.get());
   }
 
   @Test
@@ -275,8 +272,8 @@ public class SingleTaskBackgroundRunnerTest
         }
     );
     runner.stop();
-    Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
-    Assert.assertEquals(
+    Assertions.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
+    Assertions.assertEquals(
         "Failed to stop gracefully with exception. See task logs for more details.",
         statusHolder.get().getErrorMsg()
     );
@@ -336,10 +333,10 @@ public class SingleTaskBackgroundRunnerTest
         }
     );
 
-    Assert.assertTrue(runLatch.await(1, TimeUnit.SECONDS));
+    Assertions.assertTrue(runLatch.await(1, TimeUnit.SECONDS));
     runner.stop();
 
-    Assert.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
+    Assertions.assertEquals(TaskState.FAILED, statusHolder.get().getStatusCode());
 
     // Do not verify the failure error message as there is a race condition
     // where the error message may either originate from NoopTask or the runner

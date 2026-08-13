@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task.concurrent;
 
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -590,14 +589,13 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
 
     // Verify that segment cannot be committed since there is no lock
     final DataSegment segmentV10 = createSegment(FIRST_OF_JAN_23, SEGMENT_V0);
-    final ISE exception = Assertions.assertThrows(ISE.class, () -> replaceTask.commitReplaceSegments(segmentV10));
-    final Throwable throwable = Throwables.getRootCause(exception);
+    final DruidException exception = Assertions.assertThrows(DruidException.class, () -> replaceTask.commitReplaceSegments(segmentV10));
     Assertions.assertEquals(
         StringUtils.format(
             "Segment IDs[[%s]] are not covered by locks[[]] for task[%s]",
             segmentV10.getId(), replaceTask.getId()
         ),
-        throwable.getMessage()
+        exception.getMessage()
     );
 
     final DataSegment segmentV01 = asSegment(pendingSegment);
@@ -658,9 +656,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assertions.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     verifyIntervalHasUsedSegments(YEAR_23, segmentV01);
@@ -683,9 +681,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assertions.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     final DataSegment segmentV01 = asSegment(pendingSegment);
@@ -711,9 +709,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assertions.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     final DataSegment segmentV01 = asSegment(pendingSegment);
@@ -745,9 +743,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     final DataSegment segmentV1Q3 = createSegment(JUL_AUG_SEP_23, replaceLock.getVersion());
     final DataSegment segmentV1Q4 = createSegment(OCT_NOV_DEC_23, replaceLock.getVersion());
 
-    Assertions.assertFalse(
-        replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
-                   .isSuccess()
+    Assertions.assertThrows(
+        DruidException.class,
+        () -> replaceTask.commitReplaceSegments(segmentV1Q1, segmentV1Q2, segmentV1Q3, segmentV1Q4)
     );
 
     verifyIntervalHasUsedSegments(YEAR_23, segmentV01);
@@ -1203,13 +1201,9 @@ public class ConcurrentReplaceAndAppendTest extends IngestionTestBase
     }
 
     // Verify that the next attempt fails
-    final ISE exception = Assertions.assertThrows(
-        ISE.class,
-        () -> appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY)
-    );
-    final DruidException rootCause = Assertions.assertInstanceOf(
+    final DruidException rootCause = Assertions.assertThrows(
         DruidException.class,
-        Throwables.getRootCause(exception)
+        () -> appendTask.allocateSegmentForTimestamp(FIRST_OF_JAN_23.getStart(), Granularities.DAY)
     );
     Assertions.assertEquals(DruidException.Persona.OPERATOR, rootCause.getTargetPersona());
     Assertions.assertEquals(DruidException.Category.RUNTIME_FAILURE, rootCause.getCategory());

@@ -66,6 +66,7 @@ import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.client.Result;
 import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
+import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 
@@ -627,8 +628,27 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       Response serverResponse
   )
   {
+    // Response context is JSON rather than a comma-separated header value, so copy it verbatim instead of allowing
+    // Jetty's generic proxy header handling to parse it as a list.
+    final HttpField responseContext = serverResponse.getHeaders().getField(QueryResource.HEADER_RESPONSE_CONTEXT);
+    if (responseContext != null) {
+      proxyResponse.setHeader(responseContext.getName(), responseContext.getValue());
+    }
     StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
+  }
+
+  @Override
+  protected HttpField filterServerResponseHeader(
+      HttpServletRequest clientRequest,
+      Response serverResponse,
+      HttpField field
+  )
+  {
+    if (QueryResource.HEADER_RESPONSE_CONTEXT.equalsIgnoreCase(field.getName())) {
+      return null;
+    }
+    return super.filterServerResponseHeader(clientRequest, serverResponse, field);
   }
 
   @VisibleForTesting

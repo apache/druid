@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.opentest4j.IncompleteExecutionException;
+import org.opentest4j.TestAbortedException;
 
 import javax.annotation.Nullable;
 
@@ -37,7 +38,7 @@ import java.lang.reflect.Method;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Can be used to mark tests which are not-yet supported for some reason.
@@ -189,21 +190,21 @@ public @interface NotYetSupported
           }
           // If the base test case is supposed to be ignored already, just skip
           // the further evaluation
-          if (e instanceof AssumptionViolatedException) {
-            throw (AssumptionViolatedException) e;
+          if (e instanceof AssumptionViolatedException || e instanceof TestAbortedException) {
+            throw e;
           }
           if (e instanceof IncompleteExecutionException) {
             throw (IncompleteExecutionException) e;
           }
           Throwable finalE = e;
           assertThrows(
-              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
               ignoreMode.throwableClass,
               () -> {
                 if (finalE != null) {
                   throw finalE;
                 }
-              }
+              },
+              "Expected that this testcase will fail - it might got fixed; or failure have changed?"
           );
 
           String trace = Throwables.getStackTraceAsString(e);
@@ -212,7 +213,7 @@ public @interface NotYetSupported
           if (!m.find()) {
             throw new AssertionError("Exception stacktrace doesn't match regex: " + ignoreMode.regex, e);
           }
-          throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
+          throw new TestAbortedException("Test is not-yet supported; ignored with:" + annotation);
         }
       }
     }
