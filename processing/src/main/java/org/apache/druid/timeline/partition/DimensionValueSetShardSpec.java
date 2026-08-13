@@ -112,6 +112,9 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
    * is tested against the domain as {@link Range#lessThan} {@code ""} rather than as a point value. Every other value
    * (including the empty string {@code ""}) is tested as a singleton point, keeping null and {@code ""} distinct.
    *
+   * <p>A type-stamped (numeric) dimension defers its value ranges to {@link #possibleInValueDomain(Map)}, but its null
+   * channel is still evaluated here, since an {@code IS NULL} filter yields no typed value set.
+   *
    * @return true if segment needs to be considered for query, false if it can be pruned
    */
   @Override
@@ -125,14 +128,30 @@ public class DimensionValueSetShardSpec extends NumberedShardSpec
       final String dimension = entry.getKey();
       final List<String> allowedValues = entry.getValue();
 
-      if (dimensionColumnTypes.containsKey(dimension)) {
-        // Canonicalized numeric dimension: pruned only via possibleInValueDomain, not the literal string range.
-        continue;
-      }
-
       final RangeSet<String> domainRangeSet = domain.get(dimension);
       if (domainRangeSet == null || domainRangeSet.isEmpty()) {
         // Query doesn't constrain this dimension — cannot prune on it.
+        continue;
+      }
+
+      if (dimensionColumnTypes.containsKey(dimension)) {
+        // Canonicalized numeric dimension: value ranges are pruned by possibleInValueDomain, not the literal string
+        // range. Only the null channel is handled here, since an IS NULL filter yields no typed value set. Any concrete
+        // value sorts >= "", so a non-empty [",+inf) portion means the query has a value component: defer to it.
+        if (!domainRangeSet.subRangeSet(Range.atLeast("")).isEmpty()) {
+          continue;
+        }
+        // Pure IS NULL: prune unless this segment observed a null (allowedValues may reject contains(null)).
+        boolean declaresNull = false;
+        for (String value : allowedValues) {
+          if (value == null) {
+            declaresNull = true;
+            break;
+          }
+        }
+        if (!declaresNull) {
+          return false;
+        }
         continue;
       }
 

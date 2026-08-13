@@ -347,6 +347,44 @@ public class DimensionValueSetShardSpecTest
   }
 
   @Test
+  public void testNullDomain_prunesTypeStampedDimensionWithoutNull()
+  {
+    // IS NULL yields no typed value set, so it is pruned here (not by possibleInValueDomain): a segment with no null
+    // observed cannot match.
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1", "2")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertFalse(s.possibleInDomain(nullDomain(CODE)));
+  }
+
+  @Test
+  public void testNullDomain_keepsTypeStampedDimensionThatObservedNull()
+  {
+    // A LONG-stamped dim that observed a null value must be kept for an IS NULL query.
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, Arrays.asList("1", null)),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertTrue(s.possibleInDomain(nullDomain(CODE)));
+  }
+
+  @Test
+  public void testMixedNullAndValueDomain_defersTypeStampedDimensionToValueChannel()
+  {
+    // "code = 999 OR code IS NULL": with a value component present, possibleInDomain defers to possibleInValueDomain
+    // rather than prune on the null range alone.
+    final RangeSet<String> rangeSet = TreeRangeSet.create();
+    rangeSet.add(Range.lessThan(""));
+    rangeSet.add(Range.singleton("999"));
+    final DimensionValueSetShardSpec s = spec(
+        ImmutableMap.of(CODE, List.of("1", "2")),
+        ImmutableMap.of(CODE, ColumnType.LONG)
+    );
+    Assert.assertTrue(s.possibleInDomain(ImmutableMap.of(CODE, rangeSet)));
+  }
+
+  @Test
   public void testValueDomain_noFilters_alwaysTrue()
   {
     final DimensionValueSetShardSpec s = spec(Collections.emptyMap(), Collections.emptyMap());
