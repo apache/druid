@@ -1202,7 +1202,7 @@ name: org.jooq joou-java-6
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.9.4
+version: 0.9.5
 libraries:
   - org.jooq: joou-java-6
 
@@ -1345,7 +1345,7 @@ name: Jetbrains kotlin-stdlib
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.2.21
+version: 2.3.20
 libraries:
   - org.jetbrains.kotlin: kotlin-stdlib
 
@@ -1877,7 +1877,7 @@ name: Apache Calcite
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.41.0
+version: 1.42.0
 libraries:
   - org.apache.calcite: calcite-core
   - org.apache.calcite: calcite-linq4j
