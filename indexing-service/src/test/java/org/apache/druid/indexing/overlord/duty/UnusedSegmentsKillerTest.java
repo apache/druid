@@ -48,10 +48,11 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
 import java.util.Map;
@@ -60,8 +61,7 @@ import java.util.stream.Collectors;
 
 public class UnusedSegmentsKillerTest
 {
-  @Rule
-  public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
+  private final TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private static final List<DataSegment> WIKI_SEGMENTS_1X10D =
       CreateDataSegments.ofDatasource(TestDataSource.WIKI)
@@ -76,9 +76,10 @@ public class UnusedSegmentsKillerTest
   private TestDataSegmentKiller dataSegmentKiller;
   private IndexerMetadataStorageCoordinator storageCoordinator;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
+    taskActionTestKit.before();
     emitter = taskActionTestKit.getServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
     dataSegmentKiller = new TestDataSegmentKiller();
@@ -86,6 +87,12 @@ public class UnusedSegmentsKillerTest
     killExecutor = new BlockingExecutorService("UnusedSegmentsKillerTest-%s");
     storageCoordinator = taskActionTestKit.getMetadataStorageCoordinator();
     initKiller();
+  }
+
+  @AfterEach
+  public void tearDown()
+  {
+    taskActionTestKit.after();
   }
 
   private void initKiller()
@@ -123,8 +130,8 @@ public class UnusedSegmentsKillerTest
   public void test_getSchedule_returnsOneHourPeriod_ifEnabled()
   {
     final DutySchedule schedule = killer.getSchedule();
-    Assert.assertEquals(Duration.standardHours(1).getMillis(), schedule.getPeriodMillis());
-    Assert.assertEquals(Duration.standardMinutes(30).getMillis(), schedule.getInitialDelayMillis());
+    Assertions.assertEquals(Duration.standardHours(1).getMillis(), schedule.getPeriodMillis());
+    Assertions.assertEquals(Duration.standardMinutes(30).getMillis(), schedule.getInitialDelayMillis());
   }
 
   @Test
@@ -134,18 +141,18 @@ public class UnusedSegmentsKillerTest
     initKiller();
 
     final DutySchedule schedule = killer.getSchedule();
-    Assert.assertEquals(0, schedule.getPeriodMillis());
-    Assert.assertEquals(0, schedule.getInitialDelayMillis());
+    Assertions.assertEquals(0, schedule.getPeriodMillis());
+    Assertions.assertEquals(0, schedule.getInitialDelayMillis());
   }
 
   @Test
   public void test_run_startsProcessing_ifEnabled()
   {
-    Assert.assertFalse(killExecutor.hasPendingTasks());
-    Assert.assertTrue(killer.isEnabled());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killer.isEnabled());
 
     killer.run();
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
   }
 
   @Test
@@ -154,10 +161,10 @@ public class UnusedSegmentsKillerTest
     killerConfig = new UnusedSegmentKillerConfig(false, null, null, null);
     initKiller();
 
-    Assert.assertFalse(killer.isEnabled());
+    Assertions.assertFalse(killer.isEnabled());
 
     killer.run();
-    Assert.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
   }
 
   @Test
@@ -171,11 +178,11 @@ public class UnusedSegmentsKillerTest
 
     leaderSelector.stopBeingLeader();
 
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
 
     finishQueuedKillJobs();
     emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS);
-    Assert.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
   }
 
   @Test
@@ -188,7 +195,7 @@ public class UnusedSegmentsKillerTest
 
     // Reset the queue and verify that kill jobs have been added to the queue
     killer.run();
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
     emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS);
 
     finishQueuedKillJobs();
@@ -203,7 +210,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         retrieveUnusedSegments(Intervals.ETERNITY).isEmpty()
     );
   }
@@ -224,7 +231,7 @@ public class UnusedSegmentsKillerTest
     storageCoordinator.commitSegments(Set.copyOf(segments), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1000,
         retrieveUnusedSegments(Intervals.ETERNITY).size()
     );
@@ -237,7 +244,8 @@ public class UnusedSegmentsKillerTest
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 700L);
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_maxSegmentsKilledByTask_is_10k()
   {
     leaderSelector.becomeLeader();
@@ -252,7 +260,7 @@ public class UnusedSegmentsKillerTest
     storageCoordinator.commitSegments(Set.copyOf(segments), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         12_000,
         retrieveUnusedSegments(Intervals.ETERNITY).size()
     );
@@ -270,14 +278,15 @@ public class UnusedSegmentsKillerTest
                                         .stream()
                                         .map(event -> event.getUserDims().get("taskId").toString())
                                         .toList();
-    Assert.assertEquals(2, taskIds.size());
+    Assertions.assertEquals(2, taskIds.size());
 
     // Verify that the tasks killed 10k and 2k segments respectively
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, Map.of("taskId", taskIds.get(0)), 10_000);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, Map.of("taskId", taskIds.get(1)), 2_000);
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
   public void test_maxIntervalsKilledInADatasource_is_10k()
   {
     leaderSelector.becomeLeader();
@@ -290,7 +299,7 @@ public class UnusedSegmentsKillerTest
     storageCoordinator.commitSegments(Set.copyOf(segments), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         10_001,
         retrieveUnusedSegments(Intervals.ETERNITY).size()
     );
@@ -341,7 +350,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.QUEUE_RESET_TIME, 1);
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 5);
 
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
 
     // Invoke run again and verify that queue has not been reset
     emitter.flush();
@@ -351,7 +360,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 5);
 
     // All jobs have been processed
-    Assert.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
   }
 
   @Test
@@ -374,14 +383,14 @@ public class UnusedSegmentsKillerTest
       return Intervals.of(splits[4] + "/" + splits[5]);
     }).collect(Collectors.toList());
 
-    Assert.assertEquals(10, killIntervals.size());
+    Assertions.assertEquals(10, killIntervals.size());
 
     final List<Interval> expectedIntervals =
         WIKI_SEGMENTS_1X10D.stream()
                            .map(DataSegment::getInterval)
                            .sorted(Comparators.intervalsByEndThenStart())
                            .collect(Collectors.toList());
-    Assert.assertEquals(expectedIntervals, killIntervals);
+    Assertions.assertEquals(expectedIntervals, killIntervals);
   }
 
   @Test
