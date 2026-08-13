@@ -420,19 +420,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .indexSpecRules(List.of(indexSpecRule))
         .build();
 
-    CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
-        dataSource,
-        null,
-        null,
-        ruleProvider,
-        null,
-        null,
-        null,
-        Granularities.HOUR,
-        new DynamicPartitionsSpec(null, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate cascadingReindexingTemplate = CascadingReindexingTemplate.builder()
+        .forDataSource(dataSource)
+        .withRuleProvider(ruleProvider)
+        .withDefaultSegmentGranularity(Granularities.HOUR)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
@@ -491,21 +484,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         virtualColumns
     );
 
-    CascadingReindexingTemplate cascadingTemplate = new CascadingReindexingTemplate(
-        dataSource,
-        null,
-        null,
-        InlineReindexingRuleProvider.builder()
+    CascadingReindexingTemplate cascadingTemplate = CascadingReindexingTemplate.builder()
+        .forDataSource(dataSource)
+        .withRuleProvider(InlineReindexingRuleProvider.builder()
                                     .deletionRules(List.of(deletionRule))
-                                    .build(),
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(null, null),
-        null,
-        null
-    );
+                                    .build())
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
 
     runCompactionWithSpec(cascadingTemplate);
 
