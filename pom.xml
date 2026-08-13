@@ -2258,7 +2258,7 @@
                     <plugin>
                         <groupId>org.apache.rat</groupId>
                         <artifactId>apache-rat-plugin</artifactId>
-                        <version>0.15</version>
+                        <version>0.18</version>
                         <executions>
                             <execution>
                                 <phase>verify</phase>
@@ -2356,11 +2356,13 @@
                                 <exclude>.github/workflows/codeql.yml</exclude>
                                 <exclude>.github/config/codeql-config.yml</exclude>
                                 <exclude>git.version</exclude>
-                                <exclude>src/**/*.snap</exclude>
+                                <exclude>**/src/**/*.snap</exclude>
                                 <exclude>examples/conf/**</exclude>
                                 <exclude>.asf.yaml</exclude>
                                 <exclude>**/dependency-reduced-pom.xml</exclude>
-                                <exclude>.editorconfig</exclude>
+                                <exclude>**/.editorconfig</exclude>
+                                <exclude>**/node_modules/**</exclude>
+                                <exclude>**/public/**</exclude>
                                 <exclude>**/hadoop.indexer.libs.version</exclude>
                                 <exclude>**/codegen/**/*</exclude>
                                 <exclude>**/.settings/**/*</exclude> <!-- Eclipse -->
