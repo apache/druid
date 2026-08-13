@@ -718,7 +718,7 @@ name: Apache Commons Collections
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.5.0
+version: 4.6.0
 libraries:
   - org.apache.commons: commons-collections4
 notices:
