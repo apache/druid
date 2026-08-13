@@ -25,13 +25,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
@@ -50,8 +46,8 @@ import java.util.regex.Pattern;
  */
 public class S3DataSegmentPusherTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   @Test
   public void testPush() throws Exception
@@ -74,7 +70,7 @@ public class S3DataSegmentPusherTest
   @Test
   public void testEntityTooLarge()
   {
-    final DruidException exception = Assert.assertThrows(
+    final DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () ->
         testPushInternalForEntityTooLarge(
@@ -83,10 +79,7 @@ public class S3DataSegmentPusherTest
         )
     );
 
-    MatcherAssert.assertThat(
-            exception,
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Got error[EntityTooLarge] from S3"))
-    );
+    Assertions.assertTrue(exception.getMessage().startsWith("Got error[EntityTooLarge] from S3"));
   }
 
   @Test
@@ -123,7 +116,7 @@ public class S3DataSegmentPusherTest
         new byte[]{0x0, 0x0, 0x0, 0x1}
     );
     // V1 (test fixture) → not V10 → rangeable stamped as false (skips legacy HEAD probe).
-    Assert.assertEquals(Boolean.FALSE, segment.getLoadSpec().get("rangeable"));
+    Assertions.assertEquals(Boolean.FALSE, segment.getLoadSpec().get("rangeable"));
   }
 
   @Test
@@ -161,8 +154,8 @@ public class S3DataSegmentPusherTest
         config,
         new byte[]{0x0, 0x0, 0x0, 0x0A}
     );
-    Assert.assertEquals(10, (int) segment.getBinaryVersion());
-    Assert.assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
+    Assertions.assertEquals(10, (int) segment.getBinaryVersion());
+    Assertions.assertEquals(Boolean.TRUE, segment.getLoadSpec().get("rangeable"));
   }
 
   @Test
@@ -188,7 +181,7 @@ public class S3DataSegmentPusherTest
         "key/foo/2015-01-01T00:00:00\\.000Z_2016-01-01T00:00:00\\.000Z/0/0/index\\.zip",
         s3Client
     );
-    Assert.assertFalse(segment.getLoadSpec().containsKey("rangeable"));
+    Assertions.assertFalse(segment.getLoadSpec().containsKey("rangeable"));
   }
 
   private void testPushInternal(boolean useUniquePath, String matcher) throws Exception
@@ -242,7 +235,7 @@ public class S3DataSegmentPusherTest
     config.setBaseKey("key");
     // Default version.bin is V1 for historical reasons.
     DataSegment segment = validate(useUniquePath, matcher, s3Client, config, new byte[]{0x0, 0x0, 0x0, 0x1});
-    Assert.assertEquals(1, (int) segment.getBinaryVersion());
+    Assertions.assertEquals(1, (int) segment.getBinaryVersion());
     return segment;
   }
 
@@ -257,7 +250,7 @@ public class S3DataSegmentPusherTest
     S3DataSegmentPusher pusher = new S3DataSegmentPusher(s3Client, config);
 
     // Create a mock segment on disk
-    File tmp = tempFolder.newFile("version.bin");
+    File tmp = new File(tempFolder, "version.bin");
 
     Files.write(versionBytes, tmp);
     final long size = versionBytes.length;
@@ -274,15 +267,15 @@ public class S3DataSegmentPusherTest
             size
     );
 
-    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush, useUniquePath);
+    DataSegment segment = pusher.push(tempFolder, segmentToPush, useUniquePath);
 
-    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
-    Assert.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
-    Assert.assertTrue(
-            segment.getLoadSpec().get("key").toString(),
-            Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches()
+    Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
+    Assertions.assertEquals("bucket", segment.getLoadSpec().get("bucket"));
+    Assertions.assertTrue(
+            Pattern.compile(matcher).matcher(segment.getLoadSpec().get("key").toString()).matches(),
+            segment.getLoadSpec().get("key").toString()
     );
-    Assert.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
+    Assertions.assertEquals("s3_zip", segment.getLoadSpec().get("type"));
 
     EasyMock.verify(s3Client);
     return segment;

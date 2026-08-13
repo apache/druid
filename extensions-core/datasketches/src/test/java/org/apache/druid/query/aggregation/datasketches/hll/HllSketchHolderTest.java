@@ -22,8 +22,8 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.datasketches.hll.Union;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HllSketchHolderTest
 {
@@ -38,8 +38,8 @@ public class HllSketchHolderTest
 
     HllSketchHolder result = holder1.merge(holder2);
 
-    Assert.assertSame(holder1, result);
-    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
+    Assertions.assertSame(holder1, result);
+    Assertions.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -50,8 +50,8 @@ public class HllSketchHolderTest
 
     HllSketchHolder result = holder1.merge(holder2);
 
-    Assert.assertSame(holder2, result);
-    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
+    Assertions.assertSame(holder2, result);
+    Assertions.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -62,8 +62,8 @@ public class HllSketchHolderTest
 
     HllSketchHolder result = holder1.merge(holder2);
 
-    Assert.assertSame(holder1, result);
-    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
+    Assertions.assertSame(holder1, result);
+    Assertions.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -74,8 +74,8 @@ public class HllSketchHolderTest
 
     HllSketchHolder result = holder1.merge(holder2);
 
-    Assert.assertSame(holder1, result);
-    Assert.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
+    Assertions.assertSame(holder1, result);
+    Assertions.assertEquals(NUM_VALUES * 2, result.getEstimate(), 0.01);
   }
 
   @Test
@@ -90,7 +90,7 @@ public class HllSketchHolderTest
 
     HllSketchHolder optimizedResult = holder1.merge(holder2);
 
-    Assert.assertEquals(naiveHolder1.getEstimate(), optimizedResult.getEstimate(), 0.0);
+    Assertions.assertEquals(naiveHolder1.getEstimate(), optimizedResult.getEstimate(), 0.0);
   }
 
   @Test
@@ -101,7 +101,7 @@ public class HllSketchHolderTest
 
     HllSketchHolder result = holder1.merge(holder2);
 
-    Assert.assertEquals(TgtHllType.HLL_4, result.getSketch().getTgtHllType());
+    Assertions.assertEquals(TgtHllType.HLL_4, result.getSketch().getTgtHllType());
   }
 
   @Test
@@ -114,7 +114,7 @@ public class HllSketchHolderTest
 
     double estimate = result.getEstimate();
     double expected = NUM_VALUES + (double) NUM_VALUES / 2;
-    Assert.assertEquals(expected, estimate, expected * 0.01);
+    Assertions.assertEquals(expected, estimate, expected * 0.01);
   }
 
   private static HllSketchHolder makeSketchHolder(int startValue, int endValue)

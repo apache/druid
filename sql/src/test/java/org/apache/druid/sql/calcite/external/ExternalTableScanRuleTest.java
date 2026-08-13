@@ -43,8 +43,8 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -93,7 +93,7 @@ public class ExternalTableScanRuleTest
 
     ExternalTableScanRule rule = new ExternalTableScanRule(plannerContext);
     rule.matches(EasyMock.createMock(RelOptRuleCall.class));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot use [EXTERN] with SQL engine [native].",
         plannerContext.getPlanningError()
     );

@@ -220,6 +220,12 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     return skipOffsetFromLatest;
   }
 
+  @Override
+  public List<Interval> getSkipIntervals()
+  {
+    return List.of();
+  }
+
   @JsonProperty
   @Nullable
   private Period getSkipOffsetFromNow()

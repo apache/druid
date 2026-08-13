@@ -290,31 +290,39 @@ public class JettyTest extends BaseJettyTest
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty("Accept-Encoding", "gzip");
     Assert.assertEquals("gzip", get.getContentEncoding());
-    Assert.assertEquals(
-        DEFAULT_RESPONSE_CONTENT,
-        IOUtils.toString(new GZIPInputStream(get.getInputStream()), StandardCharsets.UTF_8)
-    );
+    try (final InputStream inputStream = new GZIPInputStream(get.getInputStream())) {
+      Assert.assertEquals(
+          DEFAULT_RESPONSE_CONTENT,
+          IOUtils.toString(inputStream, StandardCharsets.UTF_8)
+      );
+    }
 
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestProperty("Accept-Encoding", "gzip");
     post.setRequestMethod("POST");
     Assert.assertEquals("gzip", post.getContentEncoding());
-    Assert.assertEquals(
-        DEFAULT_RESPONSE_CONTENT,
-        IOUtils.toString(new GZIPInputStream(post.getInputStream()), StandardCharsets.UTF_8)
-    );
+    try (final InputStream inputStream = new GZIPInputStream(post.getInputStream())) {
+      Assert.assertEquals(
+          DEFAULT_RESPONSE_CONTENT,
+          IOUtils.toString(inputStream, StandardCharsets.UTF_8)
+      );
+    }
 
     final HttpURLConnection getNoGzip = (HttpURLConnection) url.openConnection();
     Assert.assertNotEquals("gzip", getNoGzip.getContentEncoding());
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(getNoGzip.getInputStream(), StandardCharsets.UTF_8));
+    try (final InputStream inputStream = getNoGzip.getInputStream()) {
+      Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(inputStream, StandardCharsets.UTF_8));
+    }
 
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
-    Assert.assertEquals(
-        DEFAULT_RESPONSE_CONTENT,
-        IOUtils.toString(postNoGzip.getInputStream(), StandardCharsets.UTF_8)
-    );
+    try (final InputStream inputStream = postNoGzip.getInputStream()) {
+      Assert.assertEquals(
+          DEFAULT_RESPONSE_CONTENT,
+          IOUtils.toString(inputStream, StandardCharsets.UTF_8)
+      );
+    }
   }
 
   // Tests that threads are not stuck when partial chunk is not finalized

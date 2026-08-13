@@ -23,24 +23,21 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.sql.SQLException;
 
-@RunWith(Parameterized.class)
 public class PostgreSQLConnectorTest
 {
   private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
-  public PostgreSQLConnectorTest(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+  public void initPostgreSQLConnectorTest(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
   {
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Object[][] constructorFeeder()
   {
     return new Object[][]{
@@ -49,9 +46,11 @@ public class PostgreSQLConnectorTest
     };
   }
 
-  @Test
-  public void testIsTransientException()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testIsTransientException(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
   {
+    initPostgreSQLConnectorTest(centralizedDatasourceSchemaConfig);
     PostgreSQLConnector connector = new PostgreSQLConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
@@ -60,18 +59,20 @@ public class PostgreSQLConnectorTest
         centralizedDatasourceSchemaConfig
     );
 
-    Assert.assertTrue(connector.isTransientException(new SQLException("bummer, connection problem", "08DIE")));
-    Assert.assertTrue(connector.isTransientException(new SQLException("bummer, too many things going on", "53RES")));
-    Assert.assertFalse(connector.isTransientException(new SQLException("oh god, no!", "58000")));
-    Assert.assertFalse(connector.isTransientException(new SQLException("help!")));
-    Assert.assertFalse(connector.isTransientException(new SQLException()));
-    Assert.assertFalse(connector.isTransientException(new Exception("I'm not happy")));
-    Assert.assertFalse(connector.isTransientException(new Throwable("I give up")));
+    Assertions.assertTrue(connector.isTransientException(new SQLException("bummer, connection problem", "08DIE")));
+    Assertions.assertTrue(connector.isTransientException(new SQLException("bummer, too many things going on", "53RES")));
+    Assertions.assertFalse(connector.isTransientException(new SQLException("oh god, no!", "58000")));
+    Assertions.assertFalse(connector.isTransientException(new SQLException("help!")));
+    Assertions.assertFalse(connector.isTransientException(new SQLException()));
+    Assertions.assertFalse(connector.isTransientException(new Exception("I'm not happy")));
+    Assertions.assertFalse(connector.isTransientException(new Throwable("I give up")));
   }
 
-  @Test
-  public void testIsUniqueConstraintViolation()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testIsUniqueConstraintViolation(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
   {
+    initPostgreSQLConnectorTest(centralizedDatasourceSchemaConfig);
     PostgreSQLConnector connector = new PostgreSQLConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
@@ -81,27 +82,29 @@ public class PostgreSQLConnectorTest
     );
 
     // PostgreSQL unique_violation SQL state (23505)
-    Assert.assertTrue(connector.isUniqueConstraintViolation(
+    Assertions.assertTrue(connector.isUniqueConstraintViolation(
         new SQLException("duplicate key value violates unique constraint", "23505")
     ));
 
     // Different SQL state should return false
-    Assert.assertFalse(connector.isUniqueConstraintViolation(
+    Assertions.assertFalse(connector.isUniqueConstraintViolation(
         new SQLException("some other error", "42P01")
     ));
 
     // SQLException wrapped in another exception (tests cause chain traversal)
-    Assert.assertTrue(connector.isUniqueConstraintViolation(
+    Assertions.assertTrue(connector.isUniqueConstraintViolation(
         new RuntimeException(new SQLException("duplicate key", "23505"))
     ));
 
     // Non-SQLException exception
-    Assert.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
+    Assertions.assertFalse(connector.isUniqueConstraintViolation(new Exception("not a SQLException")));
   }
 
-  @Test
-  public void testLimitClause()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testLimitClause(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
   {
+    initPostgreSQLConnectorTest(centralizedDatasourceSchemaConfig);
     PostgreSQLConnector connector = new PostgreSQLConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
         Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(null)),
@@ -109,6 +112,6 @@ public class PostgreSQLConnectorTest
         new PostgreSQLTablesConfig(),
         centralizedDatasourceSchemaConfig
     );
-    Assert.assertEquals("LIMIT 100", connector.limitClause(100));
+    Assertions.assertEquals("LIMIT 100", connector.limitClause(100));
   }
 }

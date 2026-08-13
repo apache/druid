@@ -52,6 +52,7 @@ import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataManagerModule;
 import org.apache.druid.guice.PolyBind;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
@@ -76,6 +77,7 @@ import org.apache.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
+import org.apache.druid.indexing.overlord.LeaderOverlordService;
 import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
@@ -259,6 +261,12 @@ public class CliOverlord extends ServerRunnable
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
             binder.bind(ShuffleClient.class).toProvider(Providers.of(null));
             binder.bind(ChatHandlerProvider.class).in(LazySingleton.class);
+
+            // Bind the schedulers as impls of LeaderOverlordService
+            final Multibinder<LeaderOverlordService> leaderServiceBinder =
+                Multibinder.newSetBinder(binder, LeaderOverlordService.class);
+            leaderServiceBinder.addBinding().to(CompactionScheduler.class);
+            leaderServiceBinder.addBinding().to(ScheduledBatchTaskManager.class);
 
             CliPeon.bindDataSegmentKiller(binder);
 
@@ -505,7 +513,8 @@ public class CliOverlord extends ServerRunnable
         new SamplerModule(),
         new MSQIndexingModule(),
         new MSQDurableStorageModule(),
-        new MSQExternalDataSourceModule()
+        new MSQExternalDataSourceModule(),
+        new RegexEngineModule()
     );
   }
 

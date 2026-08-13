@@ -29,12 +29,18 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.DimensionHandler;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.DoubleDimensionHandler;
 import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -48,6 +54,10 @@ import java.util.Map;
 
 public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHandlingTest
 {
+  static {
+    BuiltInTypesModule.registerHandlersAndSerde();
+  }
+
   private final ObjectMapper mapper = new DefaultObjectMapper().setInjectableValues(
       new InjectableValues.Std()
           .addValue(ExprMacroTable.class, ExprMacroTable.nil())
@@ -428,7 +438,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
     // Declared types are retained in the ingestion schema rather than left to inference: arrays cast an auto column
     // to the declared type (an all-null batch has no values to infer from; FLOAT ARRAY is stored as DOUBLE ARRAY by
-    // the auto schema), and COMPLEX<json> uses the dedicated nested column schema.
+    // the auto schema). COMPLEX<json> resolves through its dimension handler to an uncast auto column, which is how
+    // json columns are stored everywhere else.
     Assert.assertEquals(
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
                                                    .columns(
@@ -437,8 +448,8 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
                                                        new AutoTypeColumnSchema("tags", ColumnType.STRING_ARRAY, null),
                                                        new AutoTypeColumnSchema("vals", ColumnType.LONG_ARRAY, null),
                                                        new AutoTypeColumnSchema("ratios", ColumnType.DOUBLE_ARRAY, null),
-                                                       new NestedDataColumnSchema("attrs", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
-                                                       new NestedDataColumnSchema("attrs2", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION),
+                                                       AutoTypeColumnSchema.of("attrs"),
+                                                       AutoTypeColumnSchema.of("attrs2"),
                                                        new AutoTypeColumnSchema("vals2", ColumnType.LONG_ARRAY, null)
                                                    )
                                                    .clusteringColumns("tenant")
@@ -447,8 +458,13 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     );
   }
 
+  /**
+   * A complex type with no registered dimension handler cannot be stored, and the handler lookup reports it rather
+   * than the type being rejected as unsupported in general: the handler may simply belong to an extension that is not
+   * loaded on the service validating the spec.
+   */
   @Test
-  public void testCreateSpecUnsupportedComplexTypeFails()
+  public void testCreateSpecComplexTypeWithoutHandlerFails()
   {
     final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
         Collections.singletonList("tenant"),
@@ -461,7 +477,75 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
         new ColumnSpec("unique_things", "COMPLEX<hyperUnique>", null)
     );
     final DruidException e = Assert.assertThrows(DruidException.class, () -> metadata.createSpec(columns));
-    Assert.assertTrue(e.getMessage().contains("column [unique_things] has unsupported type [COMPLEX<hyperUnique>]"));
+    Assert.assertEquals(
+        "Complex type[hyperUnique] for dimension[unique_things] is not a valid type",
+        e.getMessage()
+    );
+  }
+
+  /**
+   * A complex type that does have a registered handler resolves through it, which is how types contributed by
+   * extensions become declarable.
+   */
+  @Test
+  public void testCreateSpecComplexTypeWithRegisteredHandler()
+  {
+    final String typeName = "clusteredBaseTableTestType";
+    // Only getDimensionSchema is exercised; the handler's storage behavior is irrelevant to building a spec.
+    DimensionHandlerUtils.registerDimensionHandlerProvider(
+        typeName,
+        name -> new DoubleDimensionHandler(name)
+        {
+          @Override
+          public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
+          {
+            return new TestComplexDimensionSchema(name, typeName);
+          }
+        }
+    );
+
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        null
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("sketch", StringUtils.format("COMPLEX<%s>", typeName), null)
+    );
+
+    final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
+    final DimensionSchema stored = specColumns.get(specColumns.size() - 1);
+    Assert.assertEquals("sketch", stored.getName());
+    Assert.assertEquals(ColumnType.ofComplex(typeName), stored.getColumnType());
+  }
+
+  @Test
+  public void testCreateSpecNestedTypeUsesRegisteredHandler()
+  {
+    final DatasourceBaseTableMetadata metadata = new ClusteredValueGroupsBaseTableMetadata(
+        Collections.singletonList("tenant"),
+        null,
+        null
+    );
+    final List<ColumnSpec> columns = Arrays.asList(
+        new ColumnSpec("tenant", Columns.SQL_VARCHAR, null),
+        new ColumnSpec(Columns.TIME_COLUMN, null, null),
+        new ColumnSpec("payload", ColumnType.NESTED_DATA.asTypeString(), null)
+    );
+
+    final List<DimensionSchema> specColumns = metadata.createSpec(columns).getDimensionsSpec().getDimensions();
+    final DimensionSchema stored = specColumns.get(specColumns.size() - 1);
+    Assert.assertEquals(AutoTypeColumnSchema.of("payload"), stored);
+    Assert.assertEquals(ColumnType.NESTED_DATA, stored.getColumnType());
+    // The schema a json column used to get here, retained for backwards compatibility, selects the same handler
+    // (DimensionHandler has no equals, so compare the class and the dimension spec it hands out, which carries the
+    // type the handler stores).
+    final DimensionHandler<?, ?, ?> legacyHandler =
+        new NestedDataColumnSchema("payload", NestedDataColumnSchema.DEFAULT_FORMAT_VERSION).getDimensionHandler();
+    Assert.assertEquals(legacyHandler.getClass(), stored.getDimensionHandler().getClass());
+    Assert.assertEquals(legacyHandler.getDimensionSpec(), stored.getDimensionHandler().getDimensionSpec());
   }
 
   @Test
@@ -593,5 +677,32 @@ public class ClusteredValueGroupsBaseTableMetadataTest extends InitializedNullHa
     EqualsVerifier.forClass(ClusteredValueGroupsBaseTableMetadata.class)
                   .usingGetClass()
                   .verify();
+  }
+
+  /**
+   * Minimal complex {@link DimensionSchema}, the shape an honest handler for a complex type returns: the column type
+   * it reports is the type it was registered for.
+   */
+  private static class TestComplexDimensionSchema extends DimensionSchema
+  {
+    private final String typeName;
+
+    TestComplexDimensionSchema(String name, String typeName)
+    {
+      super(name, null, false);
+      this.typeName = typeName;
+    }
+
+    @Override
+    public String getTypeName()
+    {
+      return typeName;
+    }
+
+    @Override
+    public ColumnType getColumnType()
+    {
+      return ColumnType.ofComplex(typeName);
+    }
   }
 }

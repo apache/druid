@@ -35,7 +35,7 @@
   </parent>
 
   <properties>
-    <okio.version>3.6.0</okio.version>
+    <okio.version>3.18.1</okio.version>
   </properties>
 
   <repositories>
@@ -92,6 +92,10 @@
         <exclusion>
           <artifactId>jakarta.ws.rs-api</artifactId>
           <groupId>jakarta.ws.rs</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>lz4-java</artifactId>
+          <groupId>org.lz4</groupId>
         </exclusion>
       </exclusions>
     </dependency>

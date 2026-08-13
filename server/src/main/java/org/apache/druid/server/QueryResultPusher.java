@@ -249,6 +249,11 @@ public abstract class QueryResultPusher
       case TIMEOUT:
         counter.incrementTimedOut();
         break;
+      case CONFLICT:
+      case FORBIDDEN:
+      case NOT_FOUND:
+      case SERVICE_UNAVAILABLE:
+        break;
     }
   }
 

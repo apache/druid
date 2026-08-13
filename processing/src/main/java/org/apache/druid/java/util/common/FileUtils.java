@@ -42,6 +42,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.FileSystemException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -264,7 +265,7 @@ public class FileUtils
     final File tmpFile = new File(tmpDir, StringUtils.format(".%s.%s", file.getName(), UUID.randomUUID()));
 
     //noinspection unused
-    try (final Closeable deleter = () -> Files.deleteIfExists(tmpFile.toPath())) {
+    try (final Closeable ignoredDeleter = () -> Files.deleteIfExists(tmpFile.toPath())) {
       final T retVal;
 
       try (
@@ -444,6 +445,30 @@ public class FileUtils
       throw new ISE("System property java.io.tmpdir is not set, cannot create temporary directories");
     }
     return new File(parentDirectory).toPath();
+  }
+
+  /**
+   * Resolves {@code path} below {@code directory}, rejecting absolute paths and parent traversal that would escape it.
+   * This is intended for paths containing externally supplied identifiers.
+   */
+  public static File resolveFileWithinDirectory(final File directory, final String path)
+  {
+    final Path normalizedDirectory = directory.toPath().toAbsolutePath().normalize();
+    final Path childPath;
+    try {
+      childPath = Path.of(path);
+    }
+    catch (InvalidPathException e) {
+      throw new IAE(e, "Path[%s] is not within directory[%s]", path, directory);
+    }
+    if (childPath.isAbsolute()) {
+      throw new IAE("Path[%s] is not within directory[%s]", path, directory);
+    }
+    final Path resolvedPath = normalizedDirectory.resolve(childPath).normalize();
+    if (!resolvedPath.startsWith(normalizedDirectory)) {
+      throw new IAE("Path[%s] is not within directory[%s]", path, directory);
+    }
+    return resolvedPath.toFile();
   }
 
   @SuppressForbidden(reason = "Files#createTempDirectory")

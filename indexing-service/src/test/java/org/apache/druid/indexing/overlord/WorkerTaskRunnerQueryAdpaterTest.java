@@ -35,10 +35,10 @@ import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URL;
 
@@ -50,7 +50,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
   private WorkerTaskRunner workerTaskRunner;
   private TaskMaster taskMaster;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     httpClient = EasyMock.createNiceMock(HttpClient.class);
@@ -87,7 +87,7 @@ public class WorkerTaskRunnerQueryAdpaterTest
     ).once();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(workerTaskRunner, taskMaster, httpClient);
@@ -104,8 +104,8 @@ public class WorkerTaskRunnerQueryAdpaterTest
 
     workerTaskRunnerQueryAdapter.disableWorker("worker-host1");
 
-    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
+    Assertions.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assertions.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
   }
 
   @Test
@@ -116,23 +116,24 @@ public class WorkerTaskRunnerQueryAdpaterTest
 
     EasyMock.replay(workerTaskRunner, taskMaster, httpClient);
 
-    try {
-      workerTaskRunnerQueryAdapter.disableWorker("worker-host1");
-      Assert.fail("Should raise RE exception!");
-    }
-    catch (RE re) {
-    }
+    Assertions.assertThrows(
+        RE.class,
+        () -> workerTaskRunnerQueryAdapter.disableWorker("worker-host1")
+    );
 
-    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
+    Assertions.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assertions.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
   }
 
-  @Test(expected = RE.class)
+  @Test
   public void testDisableWorkerWhenWorkerNotExists()
   {
     EasyMock.replay(workerTaskRunner, taskMaster, httpClient);
 
-    workerTaskRunnerQueryAdapter.disableWorker("not-existing-worker");
+    Assertions.assertThrows(
+        RE.class,
+        () -> workerTaskRunnerQueryAdapter.disableWorker("not-existing-worker")
+    );
   }
 
   @Test
@@ -146,8 +147,8 @@ public class WorkerTaskRunnerQueryAdpaterTest
 
     workerTaskRunnerQueryAdapter.enableWorker("worker-host2");
 
-    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
+    Assertions.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assertions.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
   }
 
   @Test
@@ -158,23 +159,24 @@ public class WorkerTaskRunnerQueryAdpaterTest
 
     EasyMock.replay(workerTaskRunner, taskMaster, httpClient);
 
-    try {
-      workerTaskRunnerQueryAdapter.enableWorker("worker-host2");
-      Assert.fail("Should raise RE exception!");
-    }
-    catch (RE re) {
-    }
+    Assertions.assertThrows(
+        RE.class,
+        () -> workerTaskRunnerQueryAdapter.enableWorker("worker-host2")
+    );
 
-    Assert.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
-    Assert.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
+    Assertions.assertEquals(HttpMethod.POST, capturedRequest.getValue().getMethod());
+    Assertions.assertEquals(workerUrl, capturedRequest.getValue().getUrl());
   }
 
-  @Test(expected = RE.class)
+  @Test
   public void testEnableWorkerWhenWorkerNotExists()
   {
     EasyMock.replay(workerTaskRunner, taskMaster, httpClient);
 
-    workerTaskRunnerQueryAdapter.enableWorker("not-existing-worker");
+    Assertions.assertThrows(
+        RE.class,
+        () -> workerTaskRunnerQueryAdapter.enableWorker("not-existing-worker")
+    );
   }
 
   private Capture<Request> getHttpClientRequestCapture(HttpResponseStatus httpStatus, String responseContent)

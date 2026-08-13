@@ -162,6 +162,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
       transactionFactory = new SqlSegmentMetadataReadOnlyTransactionFactory(
           mapper,
           derbyConnectorRule.metadataTablesConfigSupplier().get(),
+          new SegmentsMetadataManagerConfig(null, null, null),
           derbyConnector
       );
     } else {
@@ -171,6 +172,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
           derbyConnector,
           leaderSelector,
           segmentMetadataCache,
+          new SegmentsMetadataManagerConfig(null, cacheMode, null),
           emitter
       );
     }

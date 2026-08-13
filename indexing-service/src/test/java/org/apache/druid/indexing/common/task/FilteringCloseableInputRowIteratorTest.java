@@ -115,7 +115,7 @@ public class FilteringCloseableInputRowIteratorTest
         if (currentIdx % 2 == 0) {
           return ROWS.get(currentIdx / 2);
         } else {
-          throw new ParseException(null, "Parse exception at ", currentIdx);
+          throw new ParseException(null, "Parse exception at [%d]", currentIdx);
         }
       }
 
@@ -198,7 +198,7 @@ public class FilteringCloseableInputRowIteratorTest
         if (currentIndex % 2 == 0) {
           return currentIndex < numRowsToIterate;
         } else {
-          throw new ParseException(null, "Parse exception at ", currentIndex);
+          throw new ParseException(null, "Parse exception at [%d]", currentIndex);
         }
       }
 

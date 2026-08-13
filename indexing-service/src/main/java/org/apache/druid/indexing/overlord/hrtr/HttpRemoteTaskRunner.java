@@ -1385,7 +1385,17 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
     ).collect(Collectors.toList());
   }
 
+  /**
+   * @deprecated Use {@link #getBlacklistedWorkerInfos()} instead.
+   */
+  @Deprecated
+  @SuppressWarnings("PMD.ConfusingMethodName")
   public Collection<ImmutableWorkerInfo> getBlackListedWorkers()
+  {
+    return getBlacklistedWorkerInfos();
+  }
+
+  public Collection<ImmutableWorkerInfo> getBlacklistedWorkerInfos()
   {
     return ImmutableList.copyOf(Collections2.transform(blackListedWorkers.values(), WorkerHolder::toImmutable));
   }
@@ -1683,7 +1693,7 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer, 
   public Map<String, Long> getBlacklistedTaskSlotCount()
   {
     Map<String, Long> totalBlacklistedPeons = new HashMap<>();
-    for (ImmutableWorkerInfo worker : getBlackListedWorkers()) {
+    for (ImmutableWorkerInfo worker : getBlacklistedWorkerInfos()) {
       String workerCategory = worker.getWorker().getCategory();
       int workerBlacklistedPeons = worker.getWorker().getCapacity();
       totalBlacklistedPeons.compute(

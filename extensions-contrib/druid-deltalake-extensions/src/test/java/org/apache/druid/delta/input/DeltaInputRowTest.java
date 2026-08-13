@@ -33,11 +33,10 @@ import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.FileStatus;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.delta.DeltaAssertions;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.hadoop.conf.Configuration;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -102,23 +101,23 @@ public class DeltaInputRowTest
           FilteredColumnarBatch dataReadResult = dataIter.next();
           Row next = dataReadResult.getRows().next();
           DeltaInputRow deltaInputRow = new DeltaInputRow(next, schema);
-          Assert.assertNotNull(deltaInputRow);
-          Assert.assertEquals(dimensions, deltaInputRow.getDimensions());
+          Assertions.assertNotNull(deltaInputRow);
+          Assertions.assertEquals(dimensions, deltaInputRow.getDimensions());
 
           Map<String, Object> expectedRow = expectedRows.get(totalRecordCount);
           for (String key : expectedRow.keySet()) {
             if (schema.getTimestampSpec().getTimestampColumn().equals(key)) {
               final long expectedMillis = ((Long) expectedRow.get(key)) * 1000;
-              Assert.assertEquals(expectedMillis, deltaInputRow.getTimestampFromEpoch());
+              Assertions.assertEquals(expectedMillis, deltaInputRow.getTimestampFromEpoch());
             } else {
-              Assert.assertEquals(expectedRow.get(key), deltaInputRow.getRaw(key));
+              Assertions.assertEquals(expectedRow.get(key), deltaInputRow.getRaw(key));
             }
           }
           totalRecordCount += 1;
         }
       }
     }
-    Assert.assertEquals(expectedRows.size(), totalRecordCount);
+    Assertions.assertEquals(expectedRows.size(), totalRecordCount);
   }
 
   @MethodSource("data")
@@ -127,14 +126,12 @@ public class DeltaInputRowTest
   {
     final DeltaInputSource deltaInputSource = new DeltaInputSource("non-existent-table", null, null, null);
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> deltaInputSource.reader(null, null, null)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "tablePath[non-existent-table] not found."
-        )
+        "tablePath[non-existent-table] not found."
     );
   }
 }

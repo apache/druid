@@ -37,30 +37,27 @@ import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 /**
  */
-@RunWith(Parameterized.class)
 public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandlingTest
 {
   private static final Closer RESOURCE_CLOSER = Closer.create();
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  private final QueryRunner<ResultRow> runner;
-  private final GroupByQueryRunnerFactory factory;
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     if (BUFFER_POOLS == null) {
@@ -68,14 +65,13 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass()
   {
     BUFFER_POOLS.close();
     BUFFER_POOLS = null;
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     setUpClass();
@@ -103,35 +99,27 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
             config.toString(),
             runner.toString()
         );
-        constructors.add(new Object[]{testName, factory, runner});
+        constructors.add(new Object[]{testName, runner});
       }
     }
 
     return constructors;
   }
 
-  @SuppressWarnings("unused")
-  public FixedBucketsHistogramGroupByQueryTest(
-      String testName,
-      GroupByQueryRunnerFactory factory,
-      QueryRunner runner
-  )
-  {
-    this.factory = factory;
-    this.runner = runner;
-
-    ApproximateHistogramDruidModule.registerSerde();
-  }
-
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     RESOURCE_CLOSER.close();
   }
 
-  @Test
-  public void testGroupByWithFixedHistogramAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupByWithFixedHistogramAgg(
+      String testName,
+      QueryRunner runner
+  )
   {
+    ApproximateHistogramDruidModule.registerSerde();
     FixedBucketsHistogramAggregatorFactory aggFactory = new FixedBucketsHistogramAggregatorFactory(
         "histo",
         "index",
@@ -191,51 +179,58 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testGroupByWithSameNameComplexPostAgg()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupByWithSameNameComplexPostAgg(
+      String testName,
+      QueryRunner runner
+  )
   {
-    FixedBucketsHistogramAggregatorFactory aggFactory = new FixedBucketsHistogramAggregatorFactory(
-        "histo",
-        "index",
-        10,
-        0,
-        2000,
-        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-        false
-    );
+    ApproximateHistogramDruidModule.registerSerde();
+    assertThrows(IllegalArgumentException.class, () -> {
+      FixedBucketsHistogramAggregatorFactory aggFactory = new FixedBucketsHistogramAggregatorFactory(
+          "histo",
+          "index",
+          10,
+          0,
+          2000,
+          FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+          false
+      );
 
-    GroupByQuery query = new GroupByQuery.Builder()
-        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(new DefaultDimensionSpec(
-            QueryRunnerTestHelper.MARKET_DIMENSION,
-            "marketalias"
-        ))
-        .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL)
-        .setLimitSpec(
-            new DefaultLimitSpec(
-                Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
-                1
-            )
-        ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, aggFactory)
-        .setPostAggregatorSpecs(
-            Collections.singletonList(
-                new QuantilePostAggregator("quantile", "quantile", 0.5f)
-            )
-        )
-        .build();
+      GroupByQuery query = new GroupByQuery.Builder()
+          .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+          .setGranularity(QueryRunnerTestHelper.ALL_GRAN).setDimensions(new DefaultDimensionSpec(
+          QueryRunnerTestHelper.MARKET_DIMENSION,
+          "marketalias"
+      ))
+          .setInterval(QueryRunnerTestHelper.FULL_ON_INTERVAL)
+          .setLimitSpec(
+              new DefaultLimitSpec(
+                  Collections.singletonList(new OrderByColumnSpec("marketalias", OrderByColumnSpec.Direction.DESCENDING)),
+                  1
+              )
+          ).setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, aggFactory)
+          .setPostAggregatorSpecs(
+              Collections.singletonList(
+                  new QuantilePostAggregator("quantile", "quantile", 0.5f)
+              )
+          )
+          .build();
 
-    List<ResultRow> expectedResults = Collections.singletonList(
-        GroupByQueryRunnerTestHelper.createExpectedRow(
-            query,
-            "1970-01-01T00:00:00.000Z",
-            "marketalias", "upfront",
-            "rows", 186L,
-            "quantile", 969.6969604492188f
-        )
-    );
+      List<ResultRow> expectedResults = Collections.singletonList(
+          GroupByQueryRunnerTestHelper.createExpectedRow(
+              query,
+              "1970-01-01T00:00:00.000Z",
+              "marketalias", "upfront",
+              "rows", 186L,
+              "quantile", 969.6969604492188f
+          )
+      );
 
-    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
-                                        .toList();
-    TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
+      Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+          .toList();
+      TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
+    });
   }
 }

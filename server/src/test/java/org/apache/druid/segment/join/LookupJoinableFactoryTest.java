@@ -30,6 +30,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.MapLookupExtractorFactory;
 import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -125,7 +126,7 @@ public class LookupJoinableFactoryTest
   {
     final Joinable joinable = factory.build(lookupDataSource, makeCondition("x == \"j.k\"")).get();
 
-    Assert.assertThat(joinable, CoreMatchers.instanceOf(LookupJoinable.class));
+    MatcherAssert.assertThat(joinable, CoreMatchers.instanceOf(LookupJoinable.class));
     Assert.assertEquals(ImmutableList.of("k", "v"), joinable.getAvailableColumns());
     Assert.assertEquals(Joinable.CARDINALITY_UNKNOWN, joinable.getCardinality("k"));
     Assert.assertEquals(Joinable.CARDINALITY_UNKNOWN, joinable.getCardinality("v"));
