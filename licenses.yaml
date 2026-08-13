@@ -7378,3 +7378,46 @@ notice: |
   "Javassist is distributed under the Mozilla Public License 1.1 (MPL),
   the GNU Lesser General Public License 2.1 (LGPL), and the Apache License 2.0 (AL).
   You can choose one of them."
+
+---
+
+name: Kafka Schema Registry Client
+version: 8.3.1
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.confluent: kafka-schema-registry-client
+  - io.confluent: common-utils
+  - io.confluent: kafka-avro-types
+  - io.confluent: kafka-schema-types
+
+---
+
+name: Jackson Datatype JDK8
+version: 2.22.1
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - com.fasterxml.jackson.datatype: jackson-datatype-jdk8
+
+---
+
+name: swagger-annotations-jakarta
+version: 2.2.42
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - io.swagger.core.v3: swagger-annotations-jakarta
+
+---
+
+name: Confluent Kafka Client
+version: 8.3.1-ccs
+license_category: binary
+module: extensions/druid-protobuf-extensions
+license_name: Apache License version 2.0
+libraries:
+  - org.apache.kafka: kafka-clients
