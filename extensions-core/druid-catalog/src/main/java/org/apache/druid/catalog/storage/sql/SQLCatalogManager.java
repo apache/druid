@@ -51,11 +51,13 @@ import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.function.Function;
 
 @ManageLifecycle
 public class SQLCatalogManager implements CatalogManager
@@ -333,7 +335,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final String SELECT_PROPERTIES_STMT =
-      "SELECT tableType, properties, columns\n" +
+      "SELECT tableType, properties, columns, updateTime\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
@@ -344,7 +346,8 @@ public class SQLCatalogManager implements CatalogManager
       "  properties = :properties,\n" +
       "  updateTime = :updateTime\n" +
       "WHERE schemaName = :schemaName\n" +
-      "  AND name = :name\n";
+      "  AND name = :name\n" +
+      "  AND updateTime = :oldVersion";
 
   @Override
   public long updateProperties(
@@ -352,83 +355,22 @@ public class SQLCatalogManager implements CatalogManager
       final TableTransform transform
   ) throws CatalogException
   {
-    try {
-      final TableMetadata result = dbi.withHandle(
-          new HandleCallback<>()
-          {
-            @Override
-            public TableMetadata withHandle(Handle handle) throws CatalogException
-            {
-              handle.begin();
-              try {
-                final Query<Map<String, Object>> query = handle
-                    .createQuery(statement(SELECT_PROPERTIES_STMT))
-                    .setFetchSize(connector.getStreamingFetchSize())
-                    .bind(SCHEMA_NAME_COL, id.schema())
-                    .bind(TABLE_NAME_COL, id.name());
-
-                final ResultIterator<TableSpec> resultIterator = query
-                      .map((index, r, ctx) ->
-                          tableSpecFromBytes(
-                              jsonMapper,
-                              r.getString(1),
-                              r.getBytes(2),
-                              r.getBytes(3)
-                          )
-                       )
-                      .iterator();
-                final TableSpec tableSpec;
-                if (resultIterator.hasNext()) {
-                  tableSpec = resultIterator.next();
-                } else {
-                  throw tableNotFound(id);
-                }
-                final TableSpec revised = transform.apply(TableMetadata.of(id, tableSpec));
-                if (revised == null) {
-                  handle.rollback();
-                  return null;
-                }
-                final long updateTime = System.currentTimeMillis();
-                final int updateCount = handle
-                    .createStatement(statement(UPDATE_PROPERTIES_STMT))
-                    .bind(SCHEMA_NAME_COL, id.schema())
-                    .bind(TABLE_NAME_COL, id.name())
-                    .bind(PROPERTIES_COL, JacksonUtils.toBytes(jsonMapper, revised.properties()))
-                    .bind(UPDATE_TIME_COL, updateTime)
-                    .execute();
-                if (updateCount == 0) {
-                  // Should never occur because we're holding a lock.
-                  throw new ISE("Table %s: not found", id.sqlName());
-                }
-                handle.commit();
-                return TableMetadata.forUpdate(id, updateTime, revised);
-              }
-              catch (Exception e) {
-                handle.rollback();
-                throw e;
-              }
-            }
-          }
-      );
-      if (result == null) {
-        return 0;
-      }
-      sendUpdate(EventType.PROPERTY_UPDATE, result);
-      return result.updateTime();
-    }
-    catch (CallbackFailedException e) {
-      if (e.getCause() instanceof CatalogException) {
-        throw (CatalogException) e.getCause();
-      }
-      throw e;
-    }
+    return updateSpec(
+        id,
+        SELECT_PROPERTIES_STMT,
+        UPDATE_PROPERTIES_STMT,
+        PROPERTIES_COL,
+        TableSpec::properties,
+        EventType.PROPERTY_UPDATE,
+        transform
+    );
   }
 
   /**
    * Loads the whole spec, not just the columns this transaction writes back. See {@link #SELECT_PROPERTIES_STMT}.
    */
   private static final String SELECT_COLUMNS_STMT =
-      "SELECT tableType, properties, columns\n" +
+      "SELECT tableType, properties, columns, updateTime\n" +
       "FROM %s\n" +
       "WHERE schemaName = :schemaName\n" +
       "  AND name = :name\n" +
@@ -439,11 +381,49 @@ public class SQLCatalogManager implements CatalogManager
       "  columns = :columns,\n" +
       "  updateTime = :updateTime\n" +
       "WHERE schemaName = :schemaName\n" +
-      "  AND name = :name\n";
+      "  AND name = :name\n" +
+      "  AND updateTime = :oldVersion";
 
   @Override
   public long updateColumns(
       final TableId id,
+      final TableTransform transform
+  ) throws CatalogException
+  {
+    return updateSpec(
+        id,
+        SELECT_COLUMNS_STMT,
+        UPDATE_COLUMNS_STMT,
+        COLUMNS_COL,
+        TableSpec::columns,
+        EventType.COLUMNS_UPDATE,
+        transform
+    );
+  }
+
+  /**
+   * Read-modify-write of one half of a table spec: the whole spec is read, the transform revises it, and only the blob
+   * this operation owns is written back, so that an edit to the properties cannot clobber a concurrent edit to the
+   * columns.
+   * <p>
+   * The write carries the {@code updateTime} the read saw, so it applies only if nothing else has committed in
+   * between. That is what makes a transform's decisions binding: a check it makes against the spec it read, such as a
+   * projection not already existing, still holds at the moment the row changes. Opening a transaction is not enough
+   * on its own, since these run at the connection's default isolation, where two writers can read the same row and
+   * both commit.
+   * <p>
+   * A write that does not apply fails rather than being retried here. Retrying would re-run the transform against the
+   * newer spec, but only the transform: an edit whose payload was derived from the spec the caller read, such as a
+   * projection planned against its columns, would be re-applied as it was. Reporting the conflict sends the caller
+   * back through the whole operation, which is what re-derives the edit from the state it will actually land on.
+   */
+  private long updateSpec(
+      final TableId id,
+      final String selectStmt,
+      final String updateStmt,
+      final String blobColumn,
+      final Function<TableSpec, Object> blob,
+      final EventType eventType,
       final TableTransform transform
   ) throws CatalogException
   {
@@ -456,44 +436,44 @@ public class SQLCatalogManager implements CatalogManager
             {
               handle.begin();
               try {
-                final Query<Map<String, Object>> query = handle
-                    .createQuery(statement(SELECT_COLUMNS_STMT))
+                final ResultIterator<TableMetadata> resultIterator = handle
+                    .createQuery(statement(selectStmt))
                     .setFetchSize(connector.getStreamingFetchSize())
                     .bind(SCHEMA_NAME_COL, id.schema())
-                    .bind(TABLE_NAME_COL, id.name());
-
-                final ResultIterator<TableSpec> resultIterator = query
-                      .map((index, r, ctx) ->
-                          tableSpecFromBytes(
-                              jsonMapper,
-                              r.getString(1),
-                              r.getBytes(2),
-                              r.getBytes(3)
-                          )
-                       )
-                      .iterator();
-                final TableSpec tableSpec;
+                    .bind(TABLE_NAME_COL, id.name())
+                    .map((index, r, ctx) ->
+                        TableMetadata.forUpdate(
+                            id,
+                            r.getLong(4),
+                            tableSpecFromBytes(jsonMapper, r.getString(1), r.getBytes(2), r.getBytes(3))
+                        )
+                    )
+                    .iterator();
+                final TableMetadata existing;
                 if (resultIterator.hasNext()) {
-                  tableSpec = resultIterator.next();
+                  existing = resultIterator.next();
                 } else {
                   throw tableNotFound(id);
                 }
-                final TableSpec revised = transform.apply(TableMetadata.of(id, tableSpec));
+                final TableSpec revised = transform.apply(existing);
                 if (revised == null) {
                   handle.rollback();
                   return null;
                 }
                 final long updateTime = System.currentTimeMillis();
                 final int updateCount = handle
-                    .createStatement(statement(UPDATE_COLUMNS_STMT))
+                    .createStatement(statement(updateStmt))
                     .bind(SCHEMA_NAME_COL, id.schema())
                     .bind(TABLE_NAME_COL, id.name())
-                    .bind(COLUMNS_COL, JacksonUtils.toBytes(jsonMapper, revised.columns()))
+                    .bind(blobColumn, JacksonUtils.toBytes(jsonMapper, blob.apply(revised)))
                     .bind(UPDATE_TIME_COL, updateTime)
+                    .bind(OLD_VERSION_PARAM, existing.updateTime())
                     .execute();
                 if (updateCount == 0) {
-                  // Should never occur because we're holding a lock.
-                  throw new ISE("Table %s: not found", id.sqlName());
+                  // The row was updated or removed since it was read, so this revision was computed against a spec
+                  // that is no longer current. Report the conflict rather than overwrite whatever landed in between.
+                  handle.rollback();
+                  throw new StaleUpdateException();
                 }
                 handle.commit();
                 return TableMetadata.forUpdate(id, updateTime, revised);
@@ -508,15 +488,31 @@ public class SQLCatalogManager implements CatalogManager
       if (result == null) {
         return 0;
       }
-      sendUpdate(EventType.COLUMNS_UPDATE, result);
+      sendUpdate(eventType, result);
       return result.updateTime();
     }
     catch (CallbackFailedException e) {
+      if (e.getCause() instanceof StaleUpdateException) {
+        throw new CatalogException(
+            CatalogException.BAD_STATE,
+            Response.Status.CONFLICT,
+            "Table %s: was changed by another update; retry the operation against its current definition",
+            id.sqlName()
+        );
+      }
       if (e.getCause() instanceof CatalogException) {
         throw (CatalogException) e.getCause();
       }
       throw e;
     }
+  }
+
+  /**
+   * Signals that the compare-and-set predicate did not match, so the edit was computed against a spec that is no
+   * longer current.
+   */
+  private static class StaleUpdateException extends RuntimeException
+  {
   }
 
   private static final String MARK_DELETING_STMT =
