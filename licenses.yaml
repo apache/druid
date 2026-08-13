@@ -5469,7 +5469,7 @@ name: jakarta.activation-api
 license_category: binary
 module: core
 license_name: Eclipse Distribution License 1.0
-version: 1.2.2
+version: 2.1.4
 libraries:
   - jakarta.activation: jakarta.activation-api
 
