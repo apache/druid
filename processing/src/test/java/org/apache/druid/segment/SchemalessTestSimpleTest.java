@@ -58,10 +58,10 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedClass;
-import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -72,10 +72,11 @@ import java.util.List;
 
 /**
  */
-@ParameterizedClass
-@MethodSource("constructorFeeder")
+@RunWith(Parameterized.class)
 public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
 {
+
+  @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
     List<Object[]> argumentArrays = new ArrayList<>();
@@ -164,7 +165,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
 
   //  @Test TODO: Handling of null values is inconsistent right now, need to make it all consistent and re-enable test
   // TODO: Complain to Eric when you see this.  It shouldn't be like this...
-  @Disabled
+  @Ignore
   @SuppressWarnings("unused")
   public void testFullOnTopN()
   {
