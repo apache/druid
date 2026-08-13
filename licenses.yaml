@@ -7391,3 +7391,95 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
+name: Google API GAX
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 2.83.0
+libraries:
+  - com.google.api: gax
+  - com.google.api: gax-grpc
+  - com.google.api: gax-httpjson
+
+---
+
+name: Google Cloud Core
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 2.73.0
+libraries:
+  - com.google.cloud: google-cloud-core
+  - com.google.cloud: google-cloud-core-grpc
+  - com.google.cloud: google-cloud-core-http
+
+---
+
+name: Google API Common
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 2.66.0
+libraries:
+  - com.google.api: api-common
+
+---
+
+name: Google IAM API
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.69.0
+libraries:
+  - com.google.api.grpc: proto-google-iam-v1
+
+---
+
+name: Google Auth
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 1.50.0
+libraries:
+  - com.google.auth: google-auth-library-credentials
+  - com.google.auth: google-auth-library-oauth2-http
+
+---
+
+name: Google Auto Value
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.11.0
+libraries:
+  - com.google.auto.value: auto-value-annotations
+
+---
+
+name: Google HTTP Client
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 2.2.0
+libraries:
+  - com.google.http-client: google-http-client-gson
+
+---
+
+name: gRPC API
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.83.0
+libraries:
+  - io.grpc: grpc-api
+
+---
+
+name: threetenbp
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-3-Clause License
+version: 1.7.0
+libraries:
+  - org.threeten: threetenbp
