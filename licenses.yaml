@@ -2060,13 +2060,13 @@ name: Apache HttpClient 5
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.6.2
+version: 5.6.4
 libraries:
   - org.apache.httpcomponents.client5: httpclient5
 notices:
   - httpclient5: |
       Apache HttpClient
-      Copyright 1999-2021 The Apache Software Foundation
+      Copyright 1999-2025 The Apache Software Foundation
 
 ---
 
