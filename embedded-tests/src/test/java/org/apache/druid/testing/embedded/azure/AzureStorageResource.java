@@ -62,7 +62,17 @@ public class AzureStorageResource extends TestcontainerResource<AzuriteContainer
       protected void configure()
       {
         super.configure();
-        withCommand("azurite-blob", "--blobHost", "0.0.0.0", "--loose", "--skipApiVersionCheck");
+        withCommand(
+            "azurite",
+            "--blobHost",
+            "0.0.0.0",
+            "--queueHost",
+            "0.0.0.0",
+            "--tableHost",
+            "0.0.0.0",
+            "--loose",
+            "--skipApiVersionCheck"
+        );
       }
     };
   }
