@@ -62,9 +62,8 @@ import java.util.stream.Collectors;
  * returned for an interval. This ensures that the input set of segments for this
  * replace task remains consistent even when new data is appended by other concurrent tasks.
  * <p>
- * Callers declare which optional segment details they need through {@code details}. Details that are not requested are
- * nulled out of the returned segments, so a caller that asks for a detail it did not declare sees an empty or null
- * value rather than an error. Keep the declared set as small as the caller's actual reads.
+ * Callers declare which optional segment details they need through {@code details}. Details that
+ * are not requested are nulled out of the returned segments.
  */
 public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSegment>>
 {

@@ -98,6 +98,9 @@ public class ActionBasedPublishedSegmentRetriever implements PublishedSegmentRet
             dataSource,
             usedSearchIntervals,
             Segments.INCLUDING_OVERSHADOWED,
+            // LOAD_SPEC is required: callers compare the load specs of the returned segments against the ones they
+            // pushed themselves, to decide whether the pushed copies are safe to delete from deep storage. See
+            // BaseAppenderatorDriver#publishInBackground.
             EnumSet.of(SegmentDetail.LOAD_SPEC)
         )
     );

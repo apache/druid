@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -686,12 +687,18 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
                     // Clean up pushed segments if they are physically disjoint from the published ones (this means
                     // they were probably pushed by a replica, and with the unique paths option).
-                    final boolean physicallyDisjoint = Sets.intersection(
-                        publishedSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet()),
-                        ourSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet())
-                    ).isEmpty();
+                    final Set<Map<String, Object>> publishedLoadSpecs =
+                        publishedSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet());
+                    final Set<Map<String, Object>> ourLoadSpecs =
+                        ourSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet());
 
-                    if (physicallyDisjoint) {
+                    if (publishedLoadSpecs.contains(null) || ourLoadSpecs.contains(null)) {
+                      // We don't expect loadSpecs to be missing. If they are, it may indicate a bug in something.
+                      throw DruidException.defensive("Unexpectedly null loadSpec encountered");
+                    }
+
+                    if (Sets.intersection(publishedLoadSpecs, ourLoadSpecs).isEmpty()) {
+                      // Pushed segments are physically disjoint from the published ones.
                       segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
                     }
                   } else {

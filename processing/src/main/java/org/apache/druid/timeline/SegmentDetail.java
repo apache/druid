@@ -41,45 +41,13 @@ import java.util.EnumSet;
  */
 public enum SegmentDetail
 {
-  /**
-   * {@link DataSegment#getDimensions()}. When dropped, the dimensions read back as an empty list.
-   */
   DIMENSIONS("dimensions"),
-
-  /**
-   * {@link DataSegment#getMetrics()}. When dropped, the metrics read back as an empty list.
-   */
   METRICS("metrics"),
-
-  /**
-   * {@link DataSegment#getProjections()}. When dropped, the projections read back as null, which is indistinguishable
-   * from a segment that predates projections. Callers that care about that distinction must retain this detail.
-   */
   PROJECTIONS("projections"),
-
-  /**
-   * {@link DataSegment#getClusterGroups()}.
-   */
   CLUSTER_GROUPS("clusterGroups"),
-
-  /**
-   * {@link DataSegment#getLastCompactionState()}.
-   */
   COMPACTION_STATE("lastCompactionState"),
-
-  /**
-   * {@link DataSegment#getLoadSpec()}. Required to read the segment out of deep storage.
-   */
   LOAD_SPEC("loadSpec"),
-
-  /**
-   * {@link DataSegment#getTotalRows()}.
-   */
   ROW_COUNT("totalRows"),
-
-  /**
-   * {@link DataSegment#getIndexingStateFingerprint()}.
-   */
   INDEXING_STATE_FINGERPRINT("indexingStateFingerprint");
 
   private final String jsonName;

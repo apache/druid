@@ -98,7 +98,7 @@ public class SegmentDetailTest
   public void test_retainOnlyDetails_all()
   {
     final DataSegment retained = FULL_SEGMENT.retainOnlyDetails(SegmentDetail.all());
-    Assertions.assertEquals(FULL_SEGMENT, retained);
+    assertAllFieldsEqual(FULL_SEGMENT, retained);
   }
 
   @Test
@@ -106,7 +106,7 @@ public class SegmentDetailTest
   {
     // Equivalent to "retain all".
     final DataSegment retained = FULL_SEGMENT.retainOnlyDetails(null);
-    Assertions.assertEquals(FULL_SEGMENT, retained);
+    assertAllFieldsEqual(FULL_SEGMENT, retained);
   }
 
   @Test
@@ -167,7 +167,27 @@ public class SegmentDetailTest
   {
     final DataSegment retained = FULL_SEGMENT.retainOnlyDetails(EnumSet.of(SegmentDetail.LOAD_SPEC));
     final DataSegment deserialized = MAPPER.readValue(MAPPER.writeValueAsString(retained), DataSegment.class);
-    Assertions.assertEquals(retained.toString(), deserialized.toString());
+    assertAllFieldsEqual(retained, deserialized);
     Assertions.assertEquals(FULL_SEGMENT.getLoadSpec(), deserialized.getLoadSpec());
+  }
+
+  private static void assertAllFieldsEqual(final DataSegment expected, final DataSegment actual)
+  {
+    Assertions.assertEquals(expected.getId(), actual.getId(), "id");
+    Assertions.assertEquals(expected.getShardSpec(), actual.getShardSpec(), "shardSpec");
+    Assertions.assertEquals(expected.getBinaryVersion(), actual.getBinaryVersion(), "binaryVersion");
+    Assertions.assertEquals(expected.getSize(), actual.getSize(), "size");
+    Assertions.assertEquals(expected.getLoadSpec(), actual.getLoadSpec(), "loadSpec");
+    Assertions.assertEquals(expected.getDimensions(), actual.getDimensions(), "dimensions");
+    Assertions.assertEquals(expected.getMetrics(), actual.getMetrics(), "metrics");
+    Assertions.assertEquals(expected.getProjections(), actual.getProjections(), "projections");
+    Assertions.assertEquals(expected.getClusterGroups(), actual.getClusterGroups(), "clusterGroups");
+    Assertions.assertEquals(expected.getLastCompactionState(), actual.getLastCompactionState(), "lastCompactionState");
+    Assertions.assertEquals(expected.getTotalRows(), actual.getTotalRows(), "totalRows");
+    Assertions.assertEquals(
+        expected.getIndexingStateFingerprint(),
+        actual.getIndexingStateFingerprint(),
+        "indexingStateFingerprint"
+    );
   }
 }
