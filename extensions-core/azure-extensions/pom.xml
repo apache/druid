@@ -42,12 +42,6 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
-            <!-- azure-core-http-netty 1.16.5 requires Reactor Core 3.7.19. -->
-            <dependency>
-                <groupId>io.projectreactor</groupId>
-                <artifactId>reactor-core</artifactId>
-                <version>3.7.19</version>
-            </dependency>
         </dependencies>
     </dependencyManagement>
     <dependencies>
@@ -76,6 +70,12 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-core</artifactId>
+        </dependency>
+        <!-- azure-core-http-netty 1.16.5 requires Reactor Core 3.7.19. -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.7.19</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
