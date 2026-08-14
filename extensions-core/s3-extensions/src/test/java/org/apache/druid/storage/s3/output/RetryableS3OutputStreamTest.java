@@ -20,6 +20,7 @@
 package org.apache.druid.storage.s3.output;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
@@ -207,7 +208,7 @@ public class RetryableS3OutputStreamTest
     final TestAmazonS3 s3 = new TestAmazonS3(3);
 
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
-    final IOException e = Assertions.assertThrows(IOException.class, () -> {
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> {
       try (RetryableS3OutputStream out =
                new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
         for (int i = 0; i < 2; i++) {
@@ -225,6 +226,9 @@ public class RetryableS3OutputStreamTest
     Assertions.assertTrue(e.getMessage().contains("no object was written"), e.getMessage());
     Assertions.assertTrue(e.getMessage().contains(path), e.getMessage());
     Assertions.assertNotNull(e.getCause());
+    // An aborted upload means S3 rejected the parts, which an operator can act on, rather than a Druid defect.
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.RUNTIME_FAILURE, e.getCategory());
     s3.assertCancelled();
   }
 
