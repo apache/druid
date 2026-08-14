@@ -51,6 +51,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -90,10 +91,11 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -109,10 +111,12 @@ import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @org.junit.Rule
+  public final org.junit.rules.TemporaryFolder junit4TemporaryFolder = new org.junit.rules.TemporaryFolder();
 
-  @Rule
+  @TempDir
+  public File temporaryFolder;
+
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
@@ -145,11 +149,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
 
   @Before
+  @BeforeEach
   public void setUpIngestionTestBase() throws IOException
   {
+    if (temporaryFolder == null) {
+      temporaryFolder = junit4TemporaryFolder.getRoot();
+    }
+    derbyConnectorRule.before();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    temporaryFolder.create();
-    baseDir = temporaryFolder.newFolder();
+    baseDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "base");
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
@@ -188,7 +196,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
     lockbox.syncFromStorage();
     segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, getObjectMapper());
-    reportsFile = temporaryFolder.newFile();
+    reportsFile = new File(temporaryFolder, "reports.json");
     dataSegmentKiller = new TestDataSegmentKiller();
     taskActionToolbox = createTaskActionToolbox();
 
@@ -197,11 +205,12 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   }
 
   @After
+  @AfterEach
   public void tearDownIngestionTestBase()
   {
-    temporaryFolder.delete();
     segmentMetadataCache.stopBeingLeader();
     segmentMetadataCache.stop();
+    derbyConnectorRule.after();
   }
 
   public TestLocalTaskActionClientFactory createActionClientFactory()
@@ -327,9 +336,11 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         = useSegmentMetadataCache
           ? SegmentMetadataCache.UsageMode.ALWAYS
           : SegmentMetadataCache.UsageMode.NEVER;
+    final SegmentsMetadataManagerConfig managerConfig =
+        new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode, null);
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), cacheMode, null)),
+        Suppliers.ofInstance(managerConfig),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         segmentSchemaCache,
         indexingStateCache,
@@ -347,6 +358,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         derbyConnectorRule.getConnector(),
         leaderSelector,
         segmentMetadataCache,
+        managerConfig,
         NoopServiceEmitter.instance()
     );
   }
@@ -468,7 +480,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         lockbox.add(task);
         taskStorage.insert(task, TaskStatus.running(task.getId()));
         taskActionClient = createActionClient(task);
-        taskReportsFile = temporaryFolder.newFile(
+        taskReportsFile = new File(
+            temporaryFolder,
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 
@@ -591,13 +604,13 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         continue;
       }
       nonTombstoneSegments++;
-      Assert.assertTrue(
+      Assertions.assertTrue(
           dataSegmentsWithSchemas.getSegmentSchemaMapping()
                                  .getSegmentIdToMetadataMap()
                                  .containsKey(segment.getId().toString())
       );
     }
-    Assert.assertEquals(
+    Assertions.assertEquals(
         nonTombstoneSegments,
         dataSegmentsWithSchemas.getSegmentSchemaMapping().getSegmentIdToMetadataMap().size()
     );

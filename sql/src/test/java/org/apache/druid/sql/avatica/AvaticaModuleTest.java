@@ -32,22 +32,21 @@ import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
 import org.eclipse.jetty.server.Handler;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
+
 import java.util.Properties;
 import java.util.Set;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class AvaticaModuleTest
 {
   private static final String HOST_AND_PORT = "HOST_AND_PORT";
@@ -57,13 +56,10 @@ public class AvaticaModuleTest
   @Mock
   private DruidMeta druidMeta;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private AvaticaModule target;
   private Injector injector;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     EasyMock.expect(druidNode.getHostAndPortToUse()).andStubReturn(HOST_AND_PORT);
@@ -85,9 +81,9 @@ public class AvaticaModuleTest
   public void testAvaticaMonitorIsInjectedAsSingleton()
   {
     AvaticaMonitor monitor = injector.getInstance(AvaticaMonitor.class);
-    Assert.assertNotNull(monitor);
+    Assertions.assertNotNull(monitor);
     AvaticaMonitor other = injector.getInstance(AvaticaMonitor.class);
-    Assert.assertSame(monitor, other);
+    Assertions.assertSame(monitor, other);
   }
 
   @Test
@@ -95,22 +91,22 @@ public class AvaticaModuleTest
   {
     Set<Class<? extends Monitor>> monitors =
         injector.getInstance(Key.get(new TypeLiteral<>() {}));
-    Assert.assertTrue(monitors.contains(AvaticaMonitor.class));
+    Assertions.assertTrue(monitors.contains(AvaticaMonitor.class));
   }
 
   @Test
   public void testAvaticaServerConfigIsInjectable()
   {
     AvaticaServerConfig config = injector.getInstance(AvaticaServerConfig.class);
-    Assert.assertNotNull(config);
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_MAX_CONNECTIONS, config.getMaxConnections());
-    Assert.assertEquals(
+    Assertions.assertNotNull(config);
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_MAX_CONNECTIONS, config.getMaxConnections());
+    Assertions.assertEquals(
         AvaticaServerConfig.DEFAULT_MAX_STATEMENTS_PER_CONNECTION,
         config.getMaxStatementsPerConnection()
     );
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_CONNECTION_IDLE_TIMEOUT, config.getConnectionIdleTimeout());
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_MIN_ROWS_PER_FRAME, config.getMinRowsPerFrame());
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_MAX_ROWS_PER_FRAME, config.getMaxRowsPerFrame());
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_CONNECTION_IDLE_TIMEOUT, config.getConnectionIdleTimeout());
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_MIN_ROWS_PER_FRAME, config.getMinRowsPerFrame());
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_MAX_ROWS_PER_FRAME, config.getMaxRowsPerFrame());
   }
 
   @Test
@@ -125,15 +121,15 @@ public class AvaticaModuleTest
     properties.setProperty("druid.sql.avatica.minRowsPerFrame", "10000");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final AvaticaServerConfig config = provider.get();
-    Assert.assertNotNull(config);
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_MAX_CONNECTIONS, config.getMaxConnections());
-    Assert.assertEquals(
+    Assertions.assertNotNull(config);
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_MAX_CONNECTIONS, config.getMaxConnections());
+    Assertions.assertEquals(
         AvaticaServerConfig.DEFAULT_MAX_STATEMENTS_PER_CONNECTION,
         config.getMaxStatementsPerConnection()
     );
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_CONNECTION_IDLE_TIMEOUT, config.getConnectionIdleTimeout());
-    Assert.assertEquals(10_000, config.getMinRowsPerFrame());
-    Assert.assertEquals(50_000, config.getMaxRowsPerFrame());
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_CONNECTION_IDLE_TIMEOUT, config.getConnectionIdleTimeout());
+    Assertions.assertEquals(10_000, config.getMinRowsPerFrame());
+    Assertions.assertEquals(50_000, config.getMaxRowsPerFrame());
   }
 
   @Test
@@ -147,22 +143,20 @@ public class AvaticaModuleTest
     properties.setProperty("druid.sql.avatica.maxRowsPerFrame", "50");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final AvaticaServerConfig config = provider.get();
-    Assert.assertNotNull(config);
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_MAX_CONNECTIONS, config.getMaxConnections());
-    Assert.assertEquals(
+    Assertions.assertNotNull(config);
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_MAX_CONNECTIONS, config.getMaxConnections());
+    Assertions.assertEquals(
         AvaticaServerConfig.DEFAULT_MAX_STATEMENTS_PER_CONNECTION,
         config.getMaxStatementsPerConnection()
     );
-    Assert.assertEquals(AvaticaServerConfig.DEFAULT_CONNECTION_IDLE_TIMEOUT, config.getConnectionIdleTimeout());
-    Assert.assertEquals(50, config.getMinRowsPerFrame());
-    Assert.assertEquals(50, config.getMaxRowsPerFrame());
+    Assertions.assertEquals(AvaticaServerConfig.DEFAULT_CONNECTION_IDLE_TIMEOUT, config.getConnectionIdleTimeout());
+    Assertions.assertEquals(50, config.getMinRowsPerFrame());
+    Assertions.assertEquals(50, config.getMaxRowsPerFrame());
   }
 
   @Test
   public void testAvaticaServerConfigPropertiesBadMinRowsPerFrame()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("'druid.sql.avatica.minRowsPerFrame' must be set to a value greater than 0");
     Properties properties = new Properties();
     final JsonConfigProvider<AvaticaServerConfig> provider = JsonConfigProvider.of(
         "druid.sql.avatica",
@@ -171,26 +165,32 @@ public class AvaticaModuleTest
     properties.setProperty("druid.sql.avatica.minRowsPerFrame", "-1");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     final AvaticaServerConfig config = provider.get();
-    Assert.assertNotNull(config);
-    config.getMinRowsPerFrame();
+    Assertions.assertNotNull(config);
+    final IllegalArgumentException e = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        config::getMinRowsPerFrame
+    );
+    Assertions.assertTrue(
+        e.getMessage().contains("'druid.sql.avatica.minRowsPerFrame' must be set to a value greater than 0")
+    );
   }
 
   @Test
   public void testDruidAvaticaJsonHandlerIsInjected()
   {
     DruidAvaticaJsonHandler handler = injector.getInstance(DruidAvaticaJsonHandler.class);
-    Assert.assertNotNull(handler);
+    Assertions.assertNotNull(handler);
     DruidAvaticaJsonHandler other = injector.getInstance(DruidAvaticaJsonHandler.class);
-    Assert.assertNotSame(handler, other);
+    Assertions.assertNotSame(handler, other);
   }
 
   @Test
   public void testDruidAvaticaProtobufHandlerIsInjected()
   {
     DruidAvaticaProtobufHandler handler = injector.getInstance(DruidAvaticaProtobufHandler.class);
-    Assert.assertNotNull(handler);
+    Assertions.assertNotNull(handler);
     DruidAvaticaProtobufHandler other = injector.getInstance(DruidAvaticaProtobufHandler.class);
-    Assert.assertNotSame(handler, other);
+    Assertions.assertNotSame(handler, other);
   }
 
   @Test
@@ -198,13 +198,13 @@ public class AvaticaModuleTest
   {
     Set<Handler> handlers =
         injector.getInstance(Key.get(new TypeLiteral<>() {}));
-    Assert.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaJsonHandler.class.equals(h.getClass())));
+    Assertions.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaJsonHandler.class.equals(h.getClass())));
   }
 
   @Test
   public void testDruidAvaticaProtobufHandlerIsRegisterdWithJerseyModule()
   {
     Set<Handler> handlers = injector.getInstance(Key.get(new TypeLiteral<>() {}));
-    Assert.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaProtobufHandler.class.equals(h.getClass())));
+    Assertions.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaProtobufHandler.class.equals(h.getClass())));
   }
 }

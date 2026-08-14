@@ -22,6 +22,7 @@ package org.apache.druid.server.compaction;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
@@ -350,12 +351,12 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   }
 
   /**
-   * Returns the initial searchInterval which is {@code (timeline.first().start, timeline.last().end - skipOffset)}.
+   * Returns the initial search intervals for compaction, excluding the provided skipIntervals,
+   * {@code config.getSkipIntervals()} and the computed skip interval from
+   * {@code config.getSkipOffsetFromLatest()}.
    */
-  private List<Interval> findInitialSearchInterval(
-      SegmentTimeline timeline,
-      @Nullable List<Interval> skipIntervals
-  )
+  @VisibleForTesting
+  List<Interval> findInitialSearchInterval(SegmentTimeline timeline, List<Interval> skipIntervals)
   {
     final Period skipOffset = config.getSkipOffsetFromLatest();
     Preconditions.checkArgument(timeline != null && !timeline.isEmpty(), "timeline should not be null or empty");
@@ -368,8 +369,11 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         last.getInterval().getEnd(),
         skipOffset
     );
-    final List<Interval> allSkipIntervals
-        = sortAndAddSkipIntervalFromLatest(latestSkipInterval, skipIntervals);
+    final List<Interval> allSkipIntervals = JodaUtils.condenseIntervals(Iterables.concat(
+        skipIntervals,
+        config.getSkipIntervals(),
+        List.of(latestSkipInterval)
+    ));
 
     // Collect stats for all skipped segments
     for (Interval skipInterval : allSkipIntervals) {
@@ -452,43 +456,6 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       DateTime skipOffsetBucketToSegmentGranularity = configuredSegmentGranularity.bucketStart(skipFromLastest);
       return new Interval(skipOffsetBucketToSegmentGranularity, latestDataTimestamp);
     }
-  }
-
-  @VisibleForTesting
-  static List<Interval> sortAndAddSkipIntervalFromLatest(
-      Interval skipFromLatest,
-      @Nullable List<Interval> skipIntervals
-  )
-  {
-    final List<Interval> nonNullSkipIntervals = skipIntervals == null
-                                                ? new ArrayList<>(1)
-                                                : new ArrayList<>(skipIntervals.size());
-
-    if (skipIntervals != null) {
-      final List<Interval> sortedSkipIntervals = new ArrayList<>(skipIntervals);
-      sortedSkipIntervals.sort(Comparators.intervalsByStartThenEnd());
-
-      final List<Interval> overlapIntervals = new ArrayList<>();
-
-      for (Interval interval : sortedSkipIntervals) {
-        if (interval.overlaps(skipFromLatest)) {
-          overlapIntervals.add(interval);
-        } else {
-          nonNullSkipIntervals.add(interval);
-        }
-      }
-
-      if (!overlapIntervals.isEmpty()) {
-        overlapIntervals.add(skipFromLatest);
-        nonNullSkipIntervals.add(JodaUtils.umbrellaInterval(overlapIntervals));
-      } else {
-        nonNullSkipIntervals.add(skipFromLatest);
-      }
-    } else {
-      nonNullSkipIntervals.add(skipFromLatest);
-    }
-
-    return nonNullSkipIntervals;
   }
 
   /**

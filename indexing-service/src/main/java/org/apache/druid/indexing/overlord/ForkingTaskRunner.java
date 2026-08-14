@@ -934,7 +934,7 @@ public class ForkingTaskRunner
       FileUtils.mkdirp(attemptDir);
     }
     catch (IOException e) {
-      throw new ISE("Error creating directory", e);
+      throw new ISE(e, "Error creating directory[%s]", attemptDir);
     }
     int maxAttempt =
         Arrays.stream(attemptDir.listFiles(File::isDirectory))
@@ -946,7 +946,7 @@ public class ForkingTaskRunner
       FileUtils.mkdirp(attempt);
     }
     catch (IOException e) {
-      throw new ISE("Error creating directory", e);
+      throw new ISE(e, "Error creating directory[%s]", attempt);
     }
     return maxAttempt + 1;
   }
@@ -996,4 +996,3 @@ public class ForkingTaskRunner
 
   }
 }
-

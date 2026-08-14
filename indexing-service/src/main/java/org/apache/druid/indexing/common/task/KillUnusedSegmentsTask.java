@@ -47,6 +47,7 @@ import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -87,10 +88,16 @@ import java.util.stream.Collectors;
  * <li> Filter the set of unreferenced segments using load specs from the set of used segments. </li>
  * <li> Kill the filtered set of segments from deep storage. </li>
  * </ol>
- * Note: When {@link Tasks#USE_CONCURRENT_LOCKS} is true, keep a large buffer
- * period before killing segments after they have been marked as unused.
- * Otherwise, there may be a potential data loss if a concurrent APPEND job
- * upgrades one of the segments that are being killed.
+ * <p>
+ * <b>Use concurrent locks:</b> A kill task using REPLACE locks (enabled by
+ * {@link Tasks#USE_CONCURRENT_LOCKS}) is affected by other tasks in the following
+ * manner:
+ * <ul>
+ * <li>Not affected by tasks using EXCLUSIVE, SHARED or another REPLACE lock
+ * since they are mutually exclusive with this REPLACE lock.</li>
+ * <li>Not affected by APPEND tasks since they can only upgrade used segments
+ * and do not modify unused segments.</li>
+ * </ul>
  */
 public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
 {
@@ -210,6 +217,7 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   {
     // Track stats for reporting
     int numSegmentsKilled = 0;
+    int totalSegmentsDeletedFromMetadataStore = 0;
     int numBatchesProcessed = 0;
 
     // List unused segments
@@ -294,14 +302,32 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
       }
 
       // 3. Nuke all eligible unused segments
-      taskActionClient.submit(new SegmentNukeAction(unusedSegments));
-      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, unusedIdToSegmentPlus.size());
+      final Number nukeResult = taskActionClient.submit(new SegmentNukeAction(unusedSegments));
+
+      // Older versions of the Overlord return a null value from the SegmentNukeAction
+      final int numSegmentsDeletedFromMetadataStore =
+          nukeResult == null ? unusedSegments.size() : nukeResult.intValue();
+      emitMetric(
+          toolbox.getEmitter(),
+          TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE,
+          numSegmentsDeletedFromMetadataStore
+      );
 
       // 4. Delete deep store files only for segments which do not share load specs with other segments
       toolbox.getDataSegmentKiller().kill(segmentsToKillFromDeepStore);
-      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, segmentsToKillFromDeepStore.size());
+
+      final int numSegmentsDeletedFromDeepStore = segmentsToKillFromDeepStore.size();
+      emitMetric(toolbox.getEmitter(), TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, numSegmentsDeletedFromDeepStore);
+      if (numSegmentsDeletedFromMetadataStore > numSegmentsDeletedFromDeepStore) {
+        emitMetric(
+            toolbox.getEmitter(),
+            TaskMetrics.SEGMENTS_SKIPPED_DEEPSTORE_KILL,
+            numSegmentsDeletedFromMetadataStore - numSegmentsDeletedFromDeepStore
+        );
+      }
 
       numBatchesProcessed++;
+      totalSegmentsDeletedFromMetadataStore += numSegmentsDeletedFromMetadataStore;
       numSegmentsKilled += segmentsToKillFromDeepStore.size();
 
       logInfo("Processed [%d] batches for kill task[%s].", numBatchesProcessed, getId());
@@ -312,8 +338,10 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     final String taskId = getId();
     logInfo(
         "Finished kill task[%s] for dataSource[%s] and interval[%s]."
-        + " Deleted total [%d] unused segments in [%d] batches.",
-        taskId, getDataSource(), getInterval(), numSegmentsKilled, numBatchesProcessed
+        + " Deleted [%d] unused segments from metadata store and files for"
+        + " [%d] segments from deep store in [%d] batches.",
+        taskId, getDataSource(), getInterval(),
+        totalSegmentsDeletedFromMetadataStore, numSegmentsKilled, numBatchesProcessed
     );
 
     final KillTaskReport.Stats stats =
@@ -512,13 +540,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
     final boolean useConcurrentLocks = Boolean.TRUE.equals(
-        getContextValue(
+        QueryContexts.getAsBoolean(
             Tasks.USE_CONCURRENT_LOCKS,
-            Tasks.DEFAULT_USE_CONCURRENT_LOCKS
+            getContextValue(Tasks.USE_CONCURRENT_LOCKS)
         )
     );
 
-    TaskLockType actualLockType = determineLockType(useConcurrentLocks);
+    final TaskLockType actualLockType = determineLockType(useConcurrentLocks);
 
     final TaskLock lock = taskActionClient.submit(
         new TimeChunkLockTryAcquireAction(
@@ -539,9 +567,13 @@ public class KillUnusedSegmentsTask extends AbstractFixedIntervalTask
     if (useConcurrentLocks) {
       actualLockType = TaskLockType.REPLACE;
     } else {
-      actualLockType = getContextValue(Tasks.TASK_LOCK_TYPE, TaskLockType.EXCLUSIVE);
+      actualLockType = QueryContexts.getAsEnum(
+          Tasks.TASK_LOCK_TYPE,
+          getContextValue(Tasks.TASK_LOCK_TYPE),
+          TaskLockType.class,
+          TaskLockType.EXCLUSIVE
+      );
     }
     return actualLockType;
   }
-
 }

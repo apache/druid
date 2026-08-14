@@ -536,6 +536,66 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   @Test
+  public void test_doPost_informationSchema()
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(CalciteTests.TEST_SUPERUSER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA ORDER BY SCHEMA_NAME",
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        Collections.emptyList()
+    );
+
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
+    Assertions.assertEquals(
+        "[[\"INFORMATION_SCHEMA\"],[\"druid\"],[\"lookup\"],[\"sys\"],[\"view\"]]\n",
+        StringUtils.fromUtf8(asyncResponse.baos.toByteArray())
+    );
+  }
+
+  @Test
+  public void test_doPost_sysTableJoinedToDatasource()
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(CalciteTests.TEST_SUPERUSER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        StringUtils.format(
+            "SELECT s.segment_id, f.dim1 FROM sys.segments AS s, %s AS f",
+            CalciteTests.DATASOURCE1
+        ),
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        Map.of(QueryContexts.ENGINE, DartSqlEngine.NAME),
+        Collections.emptyList()
+    );
+
+    // 501 Not Implemented.
+    final Response response = sqlResource.doPost(sqlQuery, httpServletRequest);
+    Assertions.assertEquals(501, response.getStatus());
+  }
+
+  @Test
   public void test_doPost_regularUser_forbidden()
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();

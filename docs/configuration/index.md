@@ -857,6 +857,7 @@ You can configure automatic compaction through the following properties:
 |`taskPriority`|[Priority](../ingestion/tasks.md#lock-priority) of compaction task.|no (default = 25)|
 |`inputSegmentSizeBytes`|Maximum number of total segment bytes processed per compaction task. Since a time chunk must be processed in its entirety, if the segments for a particular time chunk have a total size in bytes greater than this parameter, compaction will not run for that time chunk.|no (default = 100,000,000,000,000 i.e. 100TB)|
 |`skipOffsetFromLatest`|The offset for searching segments to be compacted in [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601) duration format. Strongly recommended to set for realtime datasources. See [Data handling with compaction](../data-management/compaction.md#data-handling-with-compaction).|no (default = "P1D")|
+|`skipIntervals`|A list of intervals to exclude from compaction. Any candidate compaction interval that overlaps one of these intervals is skipped. See [Skip compaction for specific intervals](../data-management/automatic-compaction.md#skip-compaction-for-specific-intervals).|no|
 |`tuningConfig`|Tuning config for compaction tasks. See below [Automatic compaction tuningConfig](#automatic-compaction-tuningconfig).|no|
 |`taskContext`|[Task context](../ingestion/tasks.md#context-parameters) for compaction tasks.|no|
 |`granularitySpec`|Custom `granularitySpec`. See [Automatic compaction granularitySpec](#automatic-compaction-granularityspec).|no|
@@ -1040,7 +1041,9 @@ None of the configs that apply to [auto-kill performed by the Coordinator](../da
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.manager.segments.killUnused.enabled`|Boolean flag to enable auto-kill of eligible unused segments on the Overlord. This feature can be used only when [segment metadata caching](#segment-metadata-cache) is enabled on the Overlord and MUST NOT be enabled if `druid.coordinator.kill.on` is already set to `true` on the Coordinator.|`true`|
-|`druid.manager.segments.killUnused.bufferPeriod`|Period after which a segment marked as unused becomes eligible for auto-kill on the Overlord. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|`P30D` (30 days)|
+|`druid.manager.segments.killUnused.bufferPeriod`|ISO8601 Period after which a segment marked as unused cannot be marked as used anymore and becomes eligible for auto-kill on the Overlord. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|`P30D` (30 days)|
+|`druid.manager.segments.killUnused.dutyPeriod`|ISO8601 Period defining the frequency at which unused segments should be added to the kill queue. If the queue already has some unused segments, new segments are not added. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|`PT1H` (1 hour)|
+|`druid.manager.segments.killUnused.maxSegmentsToKill`|Maximum number of unused segments that can be added to the kill queue in a single cycle. A very large value for this config may cause the metadata store to slow down while fetching unused segments to kill, whereas a very small value would cause the kill operation to be ineffective as it wouldn't be able to catch up with the number of old unused segments in the cluster. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|200,000|
 
 #### Overlord dynamic configuration
 

@@ -30,10 +30,10 @@ import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -51,13 +51,10 @@ import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -67,26 +64,15 @@ import java.util.List;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class SketchAggregationWithSimpleDataTest extends InitializedNullHandlingTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
-
-  private final GroupByQueryConfig config;
-  private final QueryContexts.Vectorize vectorize;
+  @TempDir
+  private File tempFolder;
 
   private SketchModule sm;
   private File s1;
   private File s2;
 
-  public SketchAggregationWithSimpleDataTest(GroupByQueryConfig config, String vectorize)
-  {
-    this.config = config;
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
-  }
-
-  @Parameterized.Parameters(name = "config = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -98,20 +84,19 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     return constructors;
   }
 
-  @Before
-  public void setup() throws Exception
+  private void setup(final GroupByQueryConfig config) throws Exception
   {
     SketchModule.registerSerde();
     sm = new SketchModule();
     try (
-        final AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        final AggregationTestHelper toolchest = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
             sm.getJacksonModules(),
             config,
             tempFolder
         )
     ) {
 
-      s1 = tempFolder.newFolder();
+      s1 = FileUtils.createTempDirInLocation(tempFolder.toPath(), "sketch");
       final InputRowSchema schema = new InputRowSchema(
           new TimestampSpec("timestamp", "yyyyMMddHH", null),
           new DimensionsSpec(DimensionsSpec.getDefaultSchemas(List.of("product"))),
@@ -132,7 +117,7 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
           5000
       );
 
-      s2 = tempFolder.newFolder();
+      s2 = FileUtils.createTempDirInLocation(tempFolder.toPath(), "sketch");
       toolchest.createIndex(
           new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
           schema,
@@ -149,11 +134,13 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     }
   }
 
-  @Test
-  public void testSimpleDataIngestAndGpByQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSimpleDataIngestAndGpByQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
+    setup(config);
     try (
-        final AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        final AggregationTestHelper gpByQueryAggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
             sm.getJacksonModules(),
             config,
             tempFolder
@@ -232,8 +219,8 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
       );
 
       List<MapBasedRow> results = seq.map(row -> row.toMapBasedRow(groupByQuery)).toList();
-      Assert.assertEquals(5, results.size());
-      Assert.assertEquals(
+      Assertions.assertEquals(5, results.size());
+      Assertions.assertEquals(
           ImmutableList.of(
               new MapBasedRow(
                   DateTimes.of("2014-10-19T00:00:00.000Z"),
@@ -306,10 +293,12 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
     }
   }
 
-  @Test
-  public void testSimpleDataIngestAndTimeseriesQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSimpleDataIngestAndTimeseriesQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    AggregationTestHelper timeseriesQueryAggregationTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
+    setup(config);
+    AggregationTestHelper timeseriesQueryAggregationTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
     );
@@ -376,21 +365,23 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(seq.toList());
 
-    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assertions.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(50.0, result.getValue().getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, result.getValue().getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, result.getValue().getDoubleMetric("non_existing_col_validation"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(50.0, result.getValue().getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, result.getValue().getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, result.getValue().getDoubleMetric("non_existing_col_validation"), 0.01);
   }
 
 
-  @Test
-  public void testSimpleDataIngestAndTopNQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSimpleDataIngestAndTopNQuery(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
+    setup(config);
+    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
     );
@@ -460,22 +451,24 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
     Result<TopNResultValue> result = Iterables.getOnlyElement(seq.toList());
 
-    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assertions.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
     DimensionAndMetricValueExtractor value = Iterables.getOnlyElement(result.getValue().getValue());
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(38.0, value.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, value.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals(0.0, value.getDoubleMetric("non_existing_col_validation"), 0.01);
-    Assert.assertEquals("product_3", value.getDimensionValue("product"));
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(38.0, value.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, value.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals(0.0, value.getDoubleMetric("non_existing_col_validation"), 0.01);
+    Assertions.assertEquals("product_3", value.getDimensionValue("product"));
   }
 
-  @Test
-  public void testTopNQueryWithSketchConstant() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testTopNQueryWithSketchConstant(GroupByQueryConfig config, String vectorize) throws Exception
   {
-    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
+    setup(config);
+    AggregationTestHelper topNQueryAggregationTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTempDir(
         sm.getJacksonModules(),
         tempFolder
     );
@@ -550,34 +543,34 @@ public class SketchAggregationWithSimpleDataTest extends InitializedNullHandling
 
     Result<TopNResultValue> result = Iterables.getOnlyElement(seq.toList());
 
-    Assert.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
+    Assertions.assertEquals(DateTimes.of("2014-10-20T00:00:00.000Z"), result.getTimestamp());
 
     DimensionAndMetricValueExtractor value1 = Iterables.get(result.getValue().getValue(), 0);
-    Assert.assertEquals(38.0, value1.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(38.0, value1.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(2.0, value1.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
-    Assert.assertEquals(39.0, value1.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(1.0, value1.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(37.0, value1.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals("product_3", value1.getDimensionValue("product"));
+    Assertions.assertEquals(38.0, value1.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(38.0, value1.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(2.0, value1.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
+    Assertions.assertEquals(39.0, value1.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(1.0, value1.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(37.0, value1.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals("product_3", value1.getDimensionValue("product"));
 
     DimensionAndMetricValueExtractor value2 = Iterables.get(result.getValue().getValue(), 1);
-    Assert.assertEquals(42.0, value2.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(42.0, value2.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(2.0, value2.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
-    Assert.assertEquals(42.0, value2.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(2.0, value2.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(40.0, value2.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals("product_1", value2.getDimensionValue("product"));
+    Assertions.assertEquals(42.0, value2.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(42.0, value2.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(2.0, value2.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
+    Assertions.assertEquals(42.0, value2.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(2.0, value2.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(40.0, value2.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals("product_1", value2.getDimensionValue("product"));
 
     DimensionAndMetricValueExtractor value3 = Iterables.get(result.getValue().getValue(), 2);
-    Assert.assertEquals(42.0, value3.getDoubleMetric("sketch_count"), 0.01);
-    Assert.assertEquals(42.0, value3.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
-    Assert.assertEquals(2.0, value3.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
-    Assert.assertEquals(42.0, value3.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
-    Assert.assertEquals(2.0, value3.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
-    Assert.assertEquals(40.0, value3.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
-    Assert.assertEquals("product_2", value3.getDimensionValue("product"));
+    Assertions.assertEquals(42.0, value3.getDoubleMetric("sketch_count"), 0.01);
+    Assertions.assertEquals(42.0, value3.getDoubleMetric("sketchEstimatePostAgg"), 0.01);
+    Assertions.assertEquals(2.0, value3.getDoubleMetric("sketchEstimatePostAggForSketchConstant"), 0.01);
+    Assertions.assertEquals(42.0, value3.getDoubleMetric("sketchUnionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(2.0, value3.getDoubleMetric("sketchIntersectionPostAggEstimate"), 0.01);
+    Assertions.assertEquals(40.0, value3.getDoubleMetric("sketchAnotBPostAggEstimate"), 0.01);
+    Assertions.assertEquals("product_2", value3.getDimensionValue("product"));
   }
 
 }

@@ -52,6 +52,7 @@ import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
@@ -135,10 +136,27 @@ public class DruidCoordinatorTest
     ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
     statusTracker = new CompactionStatusTracker();
+
+    final MetadataCleanupConfig cleanupDisabled = new MetadataCleanupConfig(false, null, null);
     druidCoordinatorConfig = new DruidCoordinatorConfig(
         new CoordinatorRunConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD)),
         new CoordinatorPeriodConfig(null, null),
-        CoordinatorKillConfigs.DEFAULT,
+        new CoordinatorKillConfigs(
+            cleanupDisabled,
+            cleanupDisabled,
+            cleanupDisabled,
+            cleanupDisabled,
+            cleanupDisabled,
+            cleanupDisabled,
+            cleanupDisabled,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        ),
         new CostBalancerStrategyFactory(),
         null
     );

@@ -418,6 +418,7 @@ These metrics are emitted only if [auto-kill of unused segments](../data-managem
 |`segment/killed/metadataStore/count`|Number of segments permanently deleted from the metadata store.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
 |`segment/killed/deepStorage/count`|Number of segments permanently deleted from the deep storage.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
 |`segment/kill/unusedIntervals/count`|Number of intervals containing unused segments for a given datasource.|`dataSource`|
+|`segment/kill/eligibleSegments/count`|Number of unused segments in an interval that are eligible for kill.|`dataSource`, `interval`|
 |`segment/kill/skippedIntervals/count`|Number of intervals that were skipped for kill due to being already locked by another task.|`taskId`, `groupId`, `taskType`(=`kill`), `dataSource`|
 |`segment/kill/queueReset/time`|Time taken in milliseconds to reset the kill queue.||
 |`segment/kill/queueProcess/time`|Time taken in milliseconds to fully process the kill queue.||

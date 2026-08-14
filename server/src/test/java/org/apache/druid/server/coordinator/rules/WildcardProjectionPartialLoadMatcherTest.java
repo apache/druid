@@ -26,6 +26,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -187,13 +188,13 @@ public class WildcardProjectionPartialLoadMatcherTest
   void testMatchReturnsNullWhenNoPatternsHit()
   {
     // Segment has projections but none match any configured pattern: distinct code path from the
-    // projection-agnostic-segment short-circuit.
+    // projection-agnostic-segment short-circuit. Both resolve to a base-table load.
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
         List.of("user_*"),
         null
     );
     DataSegment segment = segmentWithProjections(List.of("session_daily", "session_hourly", "other"));
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
+    assertBaseTableLoad(matcher.match(segment, segment.getLoadSpec()), segment.getLoadSpec());
   }
 
   @Test
@@ -215,14 +216,17 @@ public class WildcardProjectionPartialLoadMatcherTest
   }
 
   @Test
-  void testReturnsNullForProjectionAgnosticSegment()
+  void testFallsBackToBaseTableForProjectionAgnosticSegment()
   {
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
         List.of("*"),
         null
     );
-    Assertions.assertNull(matcher.match(segmentWithProjections(null), BASE_LOAD_SPEC));
-    Assertions.assertNull(matcher.match(segmentWithProjections(Collections.emptyList()), BASE_LOAD_SPEC));
+    assertBaseTableLoad(matcher.match(segmentWithProjections(null), BASE_LOAD_SPEC), BASE_LOAD_SPEC);
+    assertBaseTableLoad(
+        matcher.match(segmentWithProjections(Collections.emptyList()), BASE_LOAD_SPEC),
+        BASE_LOAD_SPEC
+    );
   }
 
   @Test
@@ -396,15 +400,26 @@ public class WildcardProjectionPartialLoadMatcherTest
   }
 
   @Test
-  void testExcludeAllMatchedReturnsNull()
+  void testExcludeAllMatchedFallsBackToBaseTable()
   {
-    // If excludePatterns consume every match the result is empty; the matcher reports "does not match".
+    // If excludePatterns consume every match the result is empty, which resolves to a base-table load — the same
+    // outcome as a segment that never had the projections at all.
     WildcardProjectionPartialLoadMatcher matcher = new WildcardProjectionPartialLoadMatcher(
         List.of("user_*"),
         List.of("user_*")
     );
     DataSegment segment = segmentWithProjections(List.of("user_daily", "user_hourly"));
-    Assertions.assertNull(matcher.match(segment, segment.getLoadSpec()));
+    assertBaseTableLoad(matcher.match(segment, segment.getLoadSpec()), segment.getLoadSpec());
+  }
+
+  private static void assertBaseTableLoad(PartialLoadMatcher.MatchResult result, Map<String, Object> baseLoadSpec)
+  {
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(PartialBaseTableLoadSpec.FINGERPRINT, result.fingerprint());
+    Assertions.assertEquals(
+        PartialBaseTableLoadSpec.wireForm(baseLoadSpec, PartialBaseTableLoadSpec.FINGERPRINT),
+        result.wrappedLoadSpec()
+    );
   }
 
   @Test

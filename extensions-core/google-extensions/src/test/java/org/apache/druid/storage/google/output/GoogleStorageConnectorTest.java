@@ -23,6 +23,7 @@ import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
@@ -30,12 +31,12 @@ import org.apache.druid.storage.google.GoogleStorageObjectMetadata;
 import org.apache.druid.storage.google.GoogleStorageObjectPage;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -46,8 +47,8 @@ public class GoogleStorageConnectorTest
   private static final String BUCKET = "BUCKET";
   private static final String PREFIX = "PREFIX";
   private static final String TEST_FILE = "TEST_FILE";
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private static final int MAX_LISTING_LEN = 10;
 
@@ -58,10 +59,10 @@ public class GoogleStorageConnectorTest
   private static final Exception RECOVERABLE_EXCEPTION = new StorageException(429, "recoverable");
   private static final Exception NON_RECOVERABLE_EXCEPTION = new StorageException(404, "non-recoverable");
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    GoogleOutputConfig config = new GoogleOutputConfig(BUCKET, PREFIX, temporaryFolder.newFolder(), CHUNK_SIZE, null);
+    GoogleOutputConfig config = new GoogleOutputConfig(BUCKET, PREFIX, newFolder(temporaryFolder, "junit"), CHUNK_SIZE, null);
     GoogleInputDataConfig inputDataConfig = new GoogleInputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_LISTING_LEN);
     googleStorageConnector = new GoogleStorageConnector(config, googleStorage, inputDataConfig);
@@ -74,9 +75,9 @@ public class GoogleStorageConnectorTest
     final Capture<String> path = Capture.newInstance();
     EasyMock.expect(googleStorage.exists(EasyMock.capture(bucket), EasyMock.capture(path))).andReturn(true);
     EasyMock.replay(googleStorage);
-    Assert.assertTrue(googleStorageConnector.pathExists(TEST_FILE));
-    Assert.assertEquals(BUCKET, bucket.getValue());
-    Assert.assertEquals(PREFIX + "/" + TEST_FILE, path.getValue());
+    Assertions.assertTrue(googleStorageConnector.pathExists(TEST_FILE));
+    Assertions.assertEquals(BUCKET, bucket.getValue());
+    Assertions.assertEquals(PREFIX + "/" + TEST_FILE, path.getValue());
     EasyMock.verify(googleStorage);
   }
 
@@ -87,9 +88,9 @@ public class GoogleStorageConnectorTest
     final Capture<String> path = Capture.newInstance();
     EasyMock.expect(googleStorage.exists(EasyMock.capture(bucket), EasyMock.capture(path))).andReturn(false);
     EasyMock.replay(googleStorage);
-    Assert.assertFalse(googleStorageConnector.pathExists(TEST_FILE));
-    Assert.assertEquals(BUCKET, bucket.getValue());
-    Assert.assertEquals(PREFIX + "/" + TEST_FILE, path.getValue());
+    Assertions.assertFalse(googleStorageConnector.pathExists(TEST_FILE));
+    Assertions.assertEquals(BUCKET, bucket.getValue());
+    Assertions.assertEquals(PREFIX + "/" + TEST_FILE, path.getValue());
     EasyMock.verify(googleStorage);
   }
 
@@ -105,8 +106,8 @@ public class GoogleStorageConnectorTest
 
     EasyMock.replay(googleStorage);
     googleStorageConnector.deleteFile(TEST_FILE);
-    Assert.assertEquals(BUCKET, bucketCapture.getValue());
-    Assert.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
+    Assertions.assertEquals(BUCKET, bucketCapture.getValue());
+    Assertions.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
   }
 
   @Test
@@ -122,8 +123,8 @@ public class GoogleStorageConnectorTest
 
     EasyMock.replay(googleStorage);
     googleStorageConnector.deleteFile(TEST_FILE);
-    Assert.assertEquals(BUCKET, bucketCapture.getValue());
-    Assert.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
+    Assertions.assertEquals(BUCKET, bucketCapture.getValue());
+    Assertions.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
   }
 
   @Test
@@ -137,9 +138,9 @@ public class GoogleStorageConnectorTest
     );
     EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION).once().andVoid().once();
     EasyMock.replay(googleStorage);
-    Assert.assertThrows(IOException.class, () -> googleStorageConnector.deleteFile(TEST_FILE));
-    Assert.assertEquals(BUCKET, bucketCapture.getValue());
-    Assert.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
+    Assertions.assertThrows(IOException.class, () -> googleStorageConnector.deleteFile(TEST_FILE));
+    Assertions.assertEquals(BUCKET, bucketCapture.getValue());
+    Assertions.assertEquals(PREFIX + "/" + TEST_FILE, pathCapture.getValue());
   }
 
   @Test
@@ -150,8 +151,8 @@ public class GoogleStorageConnectorTest
     googleStorage.batchDelete(EasyMock.capture(containerCapture), EasyMock.capture(pathsCapture));
     EasyMock.replay(googleStorage);
     googleStorageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.json"));
-    Assert.assertEquals(BUCKET, containerCapture.getValue());
-    Assert.assertEquals(
+    Assertions.assertEquals(BUCKET, containerCapture.getValue());
+    Assertions.assertEquals(
         ImmutableList.of(
             PREFIX + "/" + TEST_FILE + "_1.part",
             PREFIX + "/" + TEST_FILE + "_2.json"
@@ -171,8 +172,8 @@ public class GoogleStorageConnectorTest
 
     EasyMock.replay(googleStorage);
     googleStorageConnector.deleteFiles(ImmutableList.of(TEST_FILE + "_1.part", TEST_FILE + "_2.json"));
-    Assert.assertEquals(BUCKET, containerCapture.getValue());
-    Assert.assertEquals(
+    Assertions.assertEquals(BUCKET, containerCapture.getValue());
+    Assertions.assertEquals(
         ImmutableList.of(
             PREFIX + "/" + TEST_FILE + "_1.part",
             PREFIX + "/" + TEST_FILE + "_2.json"
@@ -191,15 +192,15 @@ public class GoogleStorageConnectorTest
     EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION).once().andVoid().once();
 
     EasyMock.replay(googleStorage);
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> googleStorageConnector.deleteFiles(ImmutableList.of(
             TEST_FILE + "_1.part",
             TEST_FILE + "_2.json"
         ))
     );
-    Assert.assertEquals(BUCKET, containerCapture.getValue());
-    Assert.assertEquals(
+    Assertions.assertEquals(BUCKET, containerCapture.getValue());
+    Assertions.assertEquals(
         ImmutableList.of(
             PREFIX + "/" + TEST_FILE + "_1.part",
             PREFIX + "/" + TEST_FILE + "_2.json"
@@ -245,8 +246,8 @@ public class GoogleStorageConnectorTest
 
     EasyMock.replay(googleStorage);
     googleStorageConnector.deleteRecursively("");
-    Assert.assertEquals(BUCKET, containerCapture.getValue());
-    Assert.assertEquals(
+    Assertions.assertEquals(BUCKET, containerCapture.getValue());
+    Assertions.assertEquals(
         ImmutableList.of(
             PREFIX + "/x/y/" + TEST_FILE,
             PREFIX + "/p/q/r/" + TEST_FILE
@@ -291,8 +292,8 @@ public class GoogleStorageConnectorTest
 
     EasyMock.replay(googleStorage);
     googleStorageConnector.deleteRecursively("");
-    Assert.assertEquals(BUCKET, containerCapture.getValue());
-    Assert.assertEquals(
+    Assertions.assertEquals(BUCKET, containerCapture.getValue());
+    Assertions.assertEquals(
         ImmutableList.of(
             PREFIX + "/x/y/" + TEST_FILE,
             PREFIX + "/p/q/r/" + TEST_FILE
@@ -335,9 +336,9 @@ public class GoogleStorageConnectorTest
     EasyMock.expectLastCall().andThrow(NON_RECOVERABLE_EXCEPTION).once().andVoid().once();
 
     EasyMock.replay(googleStorage);
-    Assert.assertThrows(IOException.class, () -> googleStorageConnector.deleteRecursively(""));
-    Assert.assertEquals(BUCKET, containerCapture.getValue());
-    Assert.assertEquals(
+    Assertions.assertThrows(IOException.class, () -> googleStorageConnector.deleteRecursively(""));
+    Assertions.assertEquals(BUCKET, containerCapture.getValue());
+    Assertions.assertEquals(
         ImmutableList.of(
             PREFIX + "/x/y/" + TEST_FILE,
             PREFIX + "/p/q/r/" + TEST_FILE
@@ -372,9 +373,9 @@ public class GoogleStorageConnectorTest
             .andReturn(new GoogleStorageObjectPage(ImmutableList.of(objectMetadata1, objectMetadata2), null));
     EasyMock.replay(googleStorage);
     List<String> ret = Lists.newArrayList(googleStorageConnector.listDir(""));
-    Assert.assertEquals(ImmutableList.of("x/y" + TEST_FILE, "p/q/r/" + TEST_FILE), ret);
-    Assert.assertEquals(MAX_LISTING_LEN, maxListingCapture.getValue().intValue());
-    Assert.assertEquals(null, pageTokenCapture.getValue());
+    Assertions.assertEquals(ImmutableList.of("x/y" + TEST_FILE, "p/q/r/" + TEST_FILE), ret);
+    Assertions.assertEquals(MAX_LISTING_LEN, maxListingCapture.getValue().intValue());
+    Assertions.assertEquals(null, pageTokenCapture.getValue());
 
   }
 
@@ -396,9 +397,9 @@ public class GoogleStorageConnectorTest
     EasyMock.replay(googleStorage);
     InputStream is = googleStorageConnector.read(TEST_FILE);
     byte[] dataBytes = new byte[data.length()];
-    Assert.assertEquals(data.length(), is.read(dataBytes));
-    Assert.assertEquals(-1, is.read());
-    Assert.assertEquals(data, new String(dataBytes, StandardCharsets.UTF_8));
+    Assertions.assertEquals(data.length(), is.read(dataBytes));
+    Assertions.assertEquals(-1, is.read());
+    Assertions.assertEquals(data, new String(dataBytes, StandardCharsets.UTF_8));
   }
 
   @Test
@@ -420,12 +421,17 @@ public class GoogleStorageConnectorTest
 
         InputStream is = googleStorageConnector.readRange(TEST_FILE, start, length);
         byte[] dataBytes = new byte[((Long) length).intValue()];
-        Assert.assertEquals(length, is.read(dataBytes));
-        Assert.assertEquals(-1, is.read());
-        Assert.assertEquals(dataQueried, new String(dataBytes, StandardCharsets.UTF_8));
+        Assertions.assertEquals(length, is.read(dataBytes));
+        Assertions.assertEquals(-1, is.read());
+        Assertions.assertEquals(dataQueried, new String(dataBytes, StandardCharsets.UTF_8));
         EasyMock.reset(googleStorage);
       }
     }
 
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

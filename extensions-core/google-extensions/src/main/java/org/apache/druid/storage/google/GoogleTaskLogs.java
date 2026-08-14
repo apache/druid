@@ -119,24 +119,24 @@ public class GoogleTaskLogs implements TaskLogs
   public Optional<InputStream> streamTaskLog(final String taskid, final long offset) throws IOException
   {
     final String taskKey = getTaskLogKey(taskid);
-    return streamTaskFile(taskid, offset, taskKey);
+    return streamTaskFile(offset, taskKey);
   }
 
   @Override
   public Optional<InputStream> streamTaskReports(String taskid) throws IOException
   {
     final String taskKey = getTaskReportKey(taskid);
-    return streamTaskFile(taskid, 0, taskKey);
+    return streamTaskFile(0, taskKey);
   }
 
   @Override
   public Optional<InputStream> streamTaskStatus(String taskid) throws IOException
   {
     final String taskKey = getTaskStatusKey(taskid);
-    return streamTaskFile(taskid, 0, taskKey);
+    return streamTaskFile(0, taskKey);
   }
 
-  private Optional<InputStream> streamTaskFile(final String taskid, final long offset, String taskKey)
+  private Optional<InputStream> streamTaskFile(final long offset, String taskKey)
       throws IOException
   {
     try {

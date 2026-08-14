@@ -30,6 +30,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupSegment;
 import org.apache.druid.query.lookup.LookupSegmentTest;
 import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -99,7 +100,7 @@ public class LookupSegmentWranglerTest
     );
 
     Assert.assertEquals(1, segments.size());
-    Assert.assertThat(Iterables.getOnlyElement(segments), CoreMatchers.instanceOf(LookupSegment.class));
+    MatcherAssert.assertThat(Iterables.getOnlyElement(segments), CoreMatchers.instanceOf(LookupSegment.class));
   }
 
   @Test

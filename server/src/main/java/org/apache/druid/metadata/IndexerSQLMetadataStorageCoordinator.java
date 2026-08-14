@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -61,6 +60,7 @@ import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.DatasourceInterval;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
@@ -172,6 +172,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   @Override
+  public Map<DatasourceInterval, Integer> retrieveSomeUnusedSegmentIntervals(
+      DateTime maxUpdatedTime,
+      int maxResultSize,
+      int maxSegmentsToScan
+  )
+  {
+    return inReadOnlyTransaction(
+        sql -> sql.retrieveSomeUnusedSegmentIntervals(maxUpdatedTime, maxResultSize, maxSegmentsToScan)
+    );
+  }
+
+  @Override
   public Set<DataSegment> retrieveUsedSegmentsForIntervals(
       final String dataSource,
       final List<Interval> intervals,
@@ -239,9 +251,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
-    final List<DataSegment> matchingSegments = inReadOnlyDatasourceTransaction(
-        dataSource,
-        transaction -> transaction.noCacheSql().findUnusedSegments(
+    final List<DataSegment> matchingSegments = inReadOnlyTransaction(
+        sql -> sql.findUnusedSegments(
             dataSource,
             interval,
             versions,
@@ -2856,50 +2867,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Performs a read-only transaction using the {@link SqlSegmentsMetadataQuery},
-   * which queries the metadata store directly.
+   * @see SegmentMetadataTransactionFactory#inReadOnlyNoCacheTransaction(Function)
    */
   private <T> T inReadOnlyTransaction(Function<SqlSegmentsMetadataQuery, T> sqlQuery)
   {
-    try {
-      return connector.retryReadOnlyTransaction(
-          (handle, status) -> sqlQuery.apply(
-              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-          ),
-          2, 3
-      );
-    }
-    catch (Throwable t) {
-      Throwable rootCause = Throwables.getRootCause(t);
-      if (rootCause instanceof DruidException) {
-        throw (DruidException) rootCause;
-      } else {
-        throw t;
-      }
-    }
+    return transactionFactory.inReadOnlyNoCacheTransaction(sqlQuery);
   }
 
   /**
-   * Performs a write transaction using the {@link SqlSegmentsMetadataQuery},
-   * which updates the metadata store directly.
+   * @see SegmentMetadataTransactionFactory#inReadWriteNoCacheTransaction(Function)
    */
   private <T> T inWriteTransaction(Function<SqlSegmentsMetadataQuery, T> sqlUpdate)
   {
-    try {
-      return connector.retryTransaction(
-          (handle, status) -> sqlUpdate.apply(
-              SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-          ),
-          2, 3
-      );
-    }
-    catch (Throwable t) {
-      Throwable rootCause = Throwables.getRootCause(t);
-      if (rootCause instanceof DruidException) {
-        throw (DruidException) rootCause;
-      } else {
-        throw t;
-      }
-    }
+    return transactionFactory.inReadWriteNoCacheTransaction(sqlUpdate);
   }
 }

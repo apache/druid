@@ -44,8 +44,7 @@ import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -134,16 +133,14 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                                 + "AS CSV "
                                 + "OVERWRITE ALL "
                                 + "SELECT dim2 FROM foo", LocalFileExportStorageProvider.TYPE_NAME))
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
-                ThrowableMessageMatcher.hasMessage(
-                    CoreMatchers.containsString(
-                        "REPLACE operations do no support EXTERN destinations. Use INSERT statements to write to an external destination."
-                    )
-                )
-            )
-        )
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(DruidException.class, e);
+          Assertions.assertTrue(
+              e.getMessage().contains(
+                  "REPLACE operations do no support EXTERN destinations. Use INSERT statements to write to an external destination."
+              )
+          );
+        })
         .verify();
   }
 
@@ -154,12 +151,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
         .sql(StringUtils.format("INSERT INTO EXTERN(%s()) "
                                 + "AS CSV "
                                 + "SELECT dim2 FROM foo", LocalFileExportStorageProvider.TYPE_NAME))
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(IllegalArgumentException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Missing required creator property 'exportPath'"))
-            )
-        )
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(IllegalArgumentException.class, e);
+          Assertions.assertTrue(e.getMessage().contains("Missing required creator property 'exportPath'"));
+        })
         .verify();
   }
 
@@ -271,12 +266,10 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
   {
     testIngestionQuery()
         .sql("insert into extern(nonExistent()) as csv select  __time, dim1 from foo")
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(IllegalArgumentException.class),
-                ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Could not resolve type id 'nonExistent' as a subtype"))
-            )
-        )
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(IllegalArgumentException.class, e);
+          Assertions.assertTrue(e.getMessage().contains("Could not resolve type id 'nonExistent' as a subtype"));
+        })
         .verify();
   }
 

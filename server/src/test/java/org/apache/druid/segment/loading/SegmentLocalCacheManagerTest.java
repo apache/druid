@@ -29,6 +29,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -59,6 +60,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -245,6 +247,26 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
     Assert.assertTrue(manager.canHandleSegments());
     assertThat(manager.getCachedSegments(), containsInAnyOrder(segment1, segment2));
     Assert.assertFalse(segment3InfoFile.exists());
+  }
+
+  @Test
+  public void testSegmentInfoFileRejectsPathTraversal() throws IOException
+  {
+    final DataSegment segment = TestSegmentUtils.makeSegment(
+        "../../outside",
+        "v0",
+        Intervals.of("2014-10-20T00:00:00Z/P1D")
+    );
+    final File infoDir = new File(localSegmentCacheDir, "info_dir");
+    final File unsafeInfoFile = new File(infoDir, segment.getId().toString());
+    FileUtils.mkdirp(infoDir);
+
+    Assert.assertThrows(IAE.class, () -> manager.storeInfoFile(segment));
+    Assert.assertFalse(unsafeInfoFile.exists());
+
+    Files.write(unsafeInfoFile.toPath(), new byte[]{1});
+    manager.removeInfoFile(segment);
+    Assert.assertTrue(unsafeInfoFile.exists());
   }
 
   @Test
@@ -916,6 +938,37 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
 
     theSegmentAfterDrop.get().close();
     segmentActionAfterDrop.close();
+  }
+
+  @Test
+  public void testAcquireExistingSegmentDroppedBeforeSupplierRunsReportsAbsent() throws Exception
+  {
+    final DataSegment segmentToLoad = makeTestDataSegment(segmentDeepStorageDir);
+    final File localSegmentFile = new File(segmentDeepStorageDir, TEST_DATA_RELATIVE_PATH);
+    makeSegmentZip(
+        localSegmentFile,
+        new File(segmentDeepStorageDir.getCanonicalPath() + "/" + TEST_DATA_RELATIVE_PATH + "/index.zip")
+    );
+
+    manager.load(segmentToLoad);
+    Assert.assertTrue("segment should be cached (static, mounted) after load", manager.isSegmentCached(segmentToLoad));
+
+    // Take the already-loaded fast path, but do NOT invoke the supplier yet (getSegmentFuture() is what runs it).
+    final AcquireSegmentAction action = manager.acquireSegment(segmentToLoad, AcquireMode.FULL);
+
+    // Drop the segment: for a static entry release() unmounts it immediately, nulling referenceProvider out from
+    // under the still-outstanding (no-op) hold.
+    manager.drop(segmentToLoad);
+
+    // Invoking the supplier now must not NPE; the segment is reported absent (empty) instead.
+    final AcquireSegmentResult result = action.getSegmentFuture().get();
+    Assert.assertNotNull("reference provider must never be null", result.getReferenceProvider());
+    Assert.assertFalse(
+        "a segment dropped before the supplier ran should be reported absent",
+        result.getReferenceProvider().acquireReference().isPresent()
+    );
+
+    action.close();
   }
 
   @Test

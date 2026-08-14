@@ -34,6 +34,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import javax.annotation.Nonnull;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -128,15 +129,15 @@ public class RetryingInputStreamTest
   public void testRetryOnCustomException() throws IOException
   {
     throwCustomExceptions = 1;
-    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+    try (final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> t instanceof CustomException,
         MAX_RETRY,
         false
-    );
-
-    retryHelper(retryingInputStream);
+    )) {
+      retryHelper(retryingInputStream);
+    }
 
     Assertions.assertEquals(0, throwCustomExceptions);
   }
@@ -168,15 +169,15 @@ public class RetryingInputStreamTest
     readBytesBeforeExceptions = 1000;
     throwCustomExceptions = 100;
 
-    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+    try (final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> true, // always retry
         MAX_RETRY,
         false
-    );
-
-    retryHelper(retryingInputStream);
+    )) {
+      retryHelper(retryingInputStream);
+    }
 
     // Tried more than MAX_RETRY times because progress was being made. (MAX_RETRIES applies to each call individually.)
     Assertions.assertEquals(81, throwCustomExceptions);
@@ -207,15 +208,15 @@ public class RetryingInputStreamTest
   {
     throwCustomExceptions = 1;
     throwIOExceptions = 1;
-    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+    try (final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> t instanceof IOException || t instanceof CustomException,
         MAX_RETRY,
         false
-    );
-
-    retryHelper(retryingInputStream);
+    )) {
+      retryHelper(retryingInputStream);
+    }
 
     Assertions.assertEquals(0, throwCustomExceptions);
     Assertions.assertEquals(0, throwIOExceptions);
@@ -242,13 +243,15 @@ public class RetryingInputStreamTest
       }
     }).when(objectOpenFunction).open(any(), anyLong());
 
-    new RetryingInputStream<>(
+    try (final RetryingInputStream<File> ignored = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> t instanceof CustomException,
         MAX_RETRY,
         false
-    );
+    )) {
+      // Construction itself exercises the retry behavior.
+    }
     verify(objectOpenFunction, times(3)).open(any(), anyLong());
     Assertions.assertEquals(0, throwCustomExceptions);
   }

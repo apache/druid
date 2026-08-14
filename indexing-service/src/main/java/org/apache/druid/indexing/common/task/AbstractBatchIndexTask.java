@@ -303,9 +303,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public abstract Granularity getSegmentGranularity();
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
   }
 
   public TaskLockHelper getTaskLockHelper()

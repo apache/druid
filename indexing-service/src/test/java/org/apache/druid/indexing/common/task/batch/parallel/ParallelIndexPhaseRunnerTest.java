@@ -27,10 +27,9 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,10 +49,10 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     super(DEFAULT_TRANSIENT_TASK_FAILURE_RATE, DEFAULT_TRANSIENT_API_FAILURE_RATE);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = temporaryFolder.newFolder("data");
+    inputDir = createTempDir("data");
     // set up data
     for (int i = 0; i < 5; i++) {
       try (final Writer writer =
@@ -73,12 +72,6 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     getObjectMapper().registerSubtypes(new NamedType(ReportingNoopTask.class, "reporting_noop"));
   }
 
-  @After
-  public void tearDown()
-  {
-    temporaryFolder.delete();
-  }
-
   @Test
   public void testLargeEstimatedNumSplits() throws Exception
   {
@@ -93,7 +86,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
         10,
         12
     );
-    Assert.assertEquals(TaskState.SUCCESS, runner.run());
+    Assertions.assertEquals(TaskState.SUCCESS, runner.run());
   }
 
   @Test
@@ -110,7 +103,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
         10,
         8
     );
-    Assert.assertEquals(TaskState.SUCCESS, runner.run());
+    Assertions.assertEquals(TaskState.SUCCESS, runner.run());
   }
 
   private static class TestPhaseRunner extends ParallelIndexPhaseRunner<ReportingNoopTask, EmptySubTaskReport>

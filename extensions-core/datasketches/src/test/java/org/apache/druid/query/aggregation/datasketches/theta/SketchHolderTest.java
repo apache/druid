@@ -23,8 +23,8 @@ import org.apache.datasketches.common.Family;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 
@@ -38,13 +38,13 @@ public class SketchHolderTest
     final byte[] bytes = union.getResult().toByteArray();
     final String base64 = StringUtils.encodeBase64String(bytes);
 
-    Assert.assertArrayEquals(bytes, SketchHolder.deserializeSafe(union.getResult()).getSketch().toByteArray());
-    Assert.assertArrayEquals(bytes, SketchHolder.deserializeSafe(bytes).getSketch().toByteArray());
-    Assert.assertArrayEquals(bytes, SketchHolder.deserializeSafe(base64).getSketch().toByteArray());
+    Assertions.assertArrayEquals(bytes, SketchHolder.deserializeSafe(union.getResult()).getSketch().toByteArray());
+    Assertions.assertArrayEquals(bytes, SketchHolder.deserializeSafe(bytes).getSketch().toByteArray());
+    Assertions.assertArrayEquals(bytes, SketchHolder.deserializeSafe(base64).getSketch().toByteArray());
 
     final byte[] trunacted = Arrays.copyOfRange(bytes, 0, 10);
-    Assert.assertThrows(IndexOutOfBoundsException.class, () -> SketchHolder.deserializeSafe(trunacted));
-    Assert.assertThrows(
+    Assertions.assertThrows(IndexOutOfBoundsException.class, () -> SketchHolder.deserializeSafe(trunacted));
+    Assertions.assertThrows(
         IndexOutOfBoundsException.class,
         () -> SketchHolder.deserializeSafe(StringUtils.encodeBase64String(trunacted))
     );

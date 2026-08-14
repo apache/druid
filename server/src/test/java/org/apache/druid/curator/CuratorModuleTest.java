@@ -135,7 +135,7 @@ public final class CuratorModuleTest
   {
     CuratorFramework curatorFramework = injector.getInstance(CuratorFramework.class);
     RetryPolicy retryPolicy = curatorFramework.getZookeeperClient().getRetryPolicy();
-    Assert.assertThat(retryPolicy, CoreMatchers.instanceOf(ExponentialBackoffRetry.class));
+    MatcherAssert.assertThat(retryPolicy, CoreMatchers.instanceOf(ExponentialBackoffRetry.class));
     RetryPolicy adjustedRetryPolicy = adjustRetryPolicy((BoundedExponentialBackoffRetry) retryPolicy, maxRetries);
     curatorFramework.getZookeeperClient().setRetryPolicy(adjustedRetryPolicy);
     return curatorFramework;

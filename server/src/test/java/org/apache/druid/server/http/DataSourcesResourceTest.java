@@ -60,6 +60,7 @@ import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -784,7 +785,7 @@ public class DataSourcesResourceTest
         null,
         null,
         new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
-        CannotMatchBehavior.FULL_LOAD
+        CannotMatchBehavior.LOAD_ON_DEMAND
     );
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
@@ -822,15 +823,16 @@ public class DataSourcesResourceTest
   @Test
   public void testIsHandOffCompleteWithPartialLoadRuleFallThrough()
   {
-    // A FALL_THROUGH partial rule whose matcher does not resolve on the segment (the projection it asks for is not
-    // present) should not halt the cascade. The next rule (drop) catches the segment, so the response is true.
+    // A FALL_THROUGH partial rule whose matcher does not resolve on the segment should not halt the cascade. The next
+    // rule (drop) catches the segment, so the response is true. The matcher is a cluster-group one because the
+    // segment is not clustered: projection matchers always apply, falling back to a base-table load.
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     Interval ruleInterval = Intervals.of("2013-01-01T00:00:00Z/2013-01-03T00:00:00Z");
     Rule partialRule = new IntervalPartialLoadRule(
         ruleInterval,
         null,
         null,
-        new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
+        new WildcardClusterGroupPartialLoadMatcher(ImmutableList.of(ImmutableMap.of("tenant", "acme")), null),
         CannotMatchBehavior.FALL_THROUGH
     );
     Rule dropRule = new IntervalDropRule(ruleInterval);

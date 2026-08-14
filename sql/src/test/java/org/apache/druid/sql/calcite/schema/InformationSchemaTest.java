@@ -45,7 +45,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -87,7 +87,7 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
   @Test
   public void testGetTableNamesMap()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("SCHEMATA", "TABLES", "COLUMNS", "ROUTINES"),
         informationSchema.getTableNames()
     );
@@ -102,19 +102,21 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertTrue("There should at least be 1 built-in function that gets statically loaded by default",
-                      rows.size() > 0);
+    Assertions.assertTrue(
+        rows.size() > 0,
+        "There should at least be 1 built-in function that gets statically loaded by default"
+    );
     RelDataType rowType = routinesTable.getRowType(new JavaTypeFactoryImpl());
-    Assert.assertEquals(6, rowType.getFieldCount());
+    Assertions.assertEquals(6, rowType.getFieldCount());
 
     for (Object[] row : rows) {
-      Assert.assertEquals(rowType.getFieldCount(), row.length);
-      Assert.assertEquals("druid", row[0]);
-      Assert.assertEquals("INFORMATION_SCHEMA", row[1]);
-      Assert.assertNotNull(row[2]);
-      Assert.assertNotNull(row[3]);
+      Assertions.assertEquals(rowType.getFieldCount(), row.length);
+      Assertions.assertEquals("druid", row[0]);
+      Assertions.assertEquals("INFORMATION_SCHEMA", row[1]);
+      Assertions.assertNotNull(row[2]);
+      Assertions.assertNotNull(row[3]);
       String isAggregator = row[4].toString();
-      Assert.assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
+      Assertions.assertTrue(isAggregator.contains("YES") || isAggregator.contains("NO"));
       // nothing to validate for signatures as it may be not be present if operandTypeChecker is not defined.
     }
   }
@@ -135,14 +137,17 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertNotNull(rows);
-    Assert.assertEquals("There should be exactly 2 rows; any non-function syntax operator should get filtered out",
-                        2, rows.size());
+    Assertions.assertNotNull(rows);
+    Assertions.assertEquals(
+        2,
+        rows.size(),
+        "There should be exactly 2 rows; any non-function syntax operator should get filtered out"
+    );
     Object[] expectedRow1 = {"druid", "INFORMATION_SCHEMA", "FOO", "FUNCTION", "NO", "'FOO([<ANY>])'"};
-    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
+    Assertions.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow1)));
 
     Object[] expectedRow2 = {"druid", "INFORMATION_SCHEMA", "BAR", "FUNCTION", "NO", "'BAR(<INTEGER>, <INTEGER>)'"};
-    Assert.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
+    Assertions.assertTrue(rows.stream().anyMatch(row -> Arrays.equals(row, expectedRow2)));
   }
 
   @Test
@@ -159,8 +164,8 @@ public class InformationSchemaTest extends BaseCalciteQueryTest
 
     List<Object[]> rows = routinesTable.scan(dataContext).toList();
 
-    Assert.assertNotNull(rows);
-    Assert.assertEquals(0, rows.size());
+    Assertions.assertNotNull(rows);
+    Assertions.assertEquals(0, rows.size());
   }
 
   private static Set<SqlOperatorConversion> customOperatorsToOperatorConversions()
