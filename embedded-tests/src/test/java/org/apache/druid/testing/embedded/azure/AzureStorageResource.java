@@ -57,7 +57,14 @@ public class AzureStorageResource extends TestcontainerResource<AzuriteContainer
     // Azure Storage SDK 12.35.0 sends service API 2026-06-06, which Azurite 3.35.0
     // does not recognize yet.
     return new AzuriteContainer(DockerImageName.parse(IMAGE_NAME))
-        .withCommand("azurite-blob", "--blobHost", "0.0.0.0", "--loose", "--skipApiVersionCheck");
+    {
+      @Override
+      protected void configure()
+      {
+        super.configure();
+        withCommand("azurite-blob", "--blobHost", "0.0.0.0", "--loose", "--skipApiVersionCheck");
+      }
+    };
   }
 
   @Override
