@@ -91,6 +91,14 @@ This is useful when performing things like blue/green deployments and you only w
 
 [#19486](https://github.com/apache/druid/pull/19486)
 
+#### Faster segment metadata search
+
+You can set `druid.segment.timeline.fastIntervalSearch` to `true` so that Druid uses an index based on interval trees to store that metadata in memory for faster identification and retrieval.
+
+This feature is off by default.
+
+[#19138](https://github.com/apache/druid/issues/19138) [#19850](https://github.com/apache/druid/issues/19850)
+
 #### Fetching files in the background
 
 The MSQ task engine now supports workers fetching input files from cloud storage asynchronously. This overlaps downloading with processing, which generally improves throughput when reading larger numbers of files. Otherwise, workers stream each file directly from cloud storage while processing it.
@@ -182,7 +190,7 @@ Supervisors no longer restart for all changes. Based on the type of change, one 
 
 For example, cosmetic changes to a supervisor spec no longer trigger a restart.
 
-[#19700](https://github.com/apache/druid/pull/19700)
+[#19700](https://github.com/apache/druid/pull/19700) [#19720](https://github.com/apache/druid/pull/19720)
 
 Additionally, the algorithm for determining a change in the spec has been improved. For example, changes to `ioConfig.taskCount` don't trigger a supervisor restart if auto-scaling is enabled.
 
@@ -275,7 +283,7 @@ Set `useUtilizationRatio` to `true` to use this new ratio for autoscaling.
 
 #### Other cluster management improvements
 
-- Added `datasource` filter pushdown to `sys.segments` table [#19718](https://github.com/apache/druid/pull/19718)
+- Added `datasource` filter pushdown to `sys.segments` table [#19718](https://github.com/apache/druid/pull/19718) [#19731](https://github.com/apache/druid/pull/19731)
 - Added a `restarted` boolean field to the supervisor POST endpoint response to indicate whether the supervisor was actually restarted [#19349](https://github.com/apache/druid/pull/19349)
 - Added `error_message` column to `sys.server_properties` table and made the table resilient to unreachable servers. Previously, the entire query would fail if any server was unreachable; now a row is returned with `error_message` populated. The table also now supports filter and projection pushdown [#19459](https://github.com/apache/druid/pull/19459)
 - Added `druid.expressions.useVectorApi` config to support the incubating JDK Vector API. To use the API, set the config to `true` and start Druid with the `--add-modules=jdk.incubator.vector` flag [#19512](https://github.com/apache/druid/pull/19512)
@@ -429,6 +437,12 @@ Druid now supports Java 25. While Java 21 is still supported, we recommend you u
 Support for Java 17 has been dropped.
 
 [#19304](https://github.com/apache/druid/pull/19304) [#19336](https://github.com/apache/druid/pull/19336)
+
+#### JAVA_HOME
+
+When Druid uses the bundled `bin/run-java` script during startup, it honors the `DRUID_JAVA_HOME`/`JAVA_HOME` environment variables. Otherwise, Druid falls back to `java` on the `PATH`.
+
+[#19709](https://github.com/apache/druid/pull/19709)
 
 #### ZooKeeper-based task runner
 
