@@ -22,17 +22,15 @@ package org.apache.druid.java.util.http.client;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferFactory;
-import org.jboss.netty.buffer.HeapChannelBufferFactory;
-import org.jboss.netty.handler.codec.base64.Base64;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpMethod;
 
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -43,8 +41,6 @@ import java.util.Map;
  */
 public class Request
 {
-  private static final ChannelBufferFactory FACTORY = HeapChannelBufferFactory.getInstance();
-
   private final HttpMethod method;
   private final URL url;
   private final Multimap<String, String> headers = Multimaps.newListMultimap(
@@ -59,7 +55,7 @@ public class Request
       }
   );
 
-  private ChannelBuffer content;
+  private ByteBuf content;
 
   public Request(
       HttpMethod method,
@@ -90,7 +86,7 @@ public class Request
     return content != null;
   }
 
-  public ChannelBuffer getContent()
+  public ByteBuf getContent()
   {
     return content;
   }
@@ -134,7 +130,7 @@ public class Request
     return setContent(null, bytes);
   }
 
-  public Request setContent(ChannelBuffer content)
+  public Request setContent(ByteBuf content)
   {
     return setContent(null, content);
   }
@@ -146,39 +142,30 @@ public class Request
 
   public Request setContent(String contentType, byte[] bytes, int offset, int length)
   {
-    return setContent(contentType, FACTORY.getBuffer(bytes, offset, length));
+    return setContent(contentType, Unpooled.wrappedBuffer(bytes, offset, length));
   }
 
-  public Request setContent(String contentType, ChannelBuffer content)
+  public Request setContent(String contentType, ByteBuf content)
   {
     if (contentType != null) {
-      setHeader(HttpHeaders.Names.CONTENT_TYPE, contentType);
+      setHeader(HttpHeaderNames.CONTENT_TYPE.toString(), contentType);
     }
 
     this.content = content;
 
-    setHeader(HttpHeaders.Names.CONTENT_LENGTH, String.valueOf(content.writerIndex()));
+    setHeader(HttpHeaderNames.CONTENT_LENGTH.toString(), String.valueOf(content.writerIndex()));
 
     return this;
   }
 
   public Request setBasicAuthentication(String username, String password)
   {
-    setHeader(HttpHeaders.Names.AUTHORIZATION, makeBasicAuthenticationString(username, password));
+    setHeader(HttpHeaderNames.AUTHORIZATION.toString(), makeBasicAuthenticationString(username, password));
     return this;
   }
 
   public static String makeBasicAuthenticationString(String username, String password)
   {
-    return "Basic " + base64Encode(username + ":" + password);
-  }
-
-  private static String base64Encode(final String value)
-  {
-    final ChannelBufferFactory bufferFactory = HeapChannelBufferFactory.getInstance();
-
-    return Base64
-        .encode(bufferFactory.getBuffer(ByteBuffer.wrap(value.getBytes(StandardCharsets.UTF_8))), false)
-        .toString(StandardCharsets.UTF_8);
+    return "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
   }
 }

@@ -21,15 +21,15 @@ package org.apache.druid.frame.file;
 
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * An {@link HttpResponseHandler} that streams data into a {@link ReadableByteChunksFrameChannel}.
@@ -69,29 +69,28 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
   @Override
   public ClientResponse<FrameFilePartialFetch> handleResponse(final HttpResponse response, final TrafficCop trafficCop)
   {
-    if (response.getStatus().getCode() != HttpResponseStatus.OK.getCode()) {
+    if (response.status().code() != HttpResponseStatus.OK.code()) {
       // Note: if the error body is chunked, we will discard all future chunks due to setting exceptionCaught here.
       // This is OK because we don't need the body; just the HTTP status code.
       final ClientResponse<FrameFilePartialFetch> clientResponse =
           ClientResponse.unfinished(new FrameFilePartialFetch(false));
-      exceptionCaught(clientResponse, new ISE("Server for [%s] returned [%s]", channel.getId(), response.getStatus()));
+      exceptionCaught(clientResponse, new ISE("Server for [%s] returned [%s]", channel.getId(), response.status()));
       return clientResponse;
     } else {
       final boolean lastFetchHeaderSet = HEADER_LAST_FETCH_VALUE.equals(response.headers().get(HEADER_LAST_FETCH_NAME));
-      final ClientResponse<FrameFilePartialFetch> clientResponse =
-          ClientResponse.unfinished(new FrameFilePartialFetch(lastFetchHeaderSet));
-      return response(clientResponse, response.getContent());
+      // Body content arrives via HttpContent chunks in Netty 4; nothing to append here.
+      return ClientResponse.unfinished(new FrameFilePartialFetch(lastFetchHeaderSet));
     }
   }
 
   @Override
   public ClientResponse<FrameFilePartialFetch> handleChunk(
       final ClientResponse<FrameFilePartialFetch> clientResponse,
-      final HttpChunk chunk,
+      final HttpContent chunk,
       final long chunkNum
   )
   {
-    return response(clientResponse, chunk.getContent());
+    return response(clientResponse, chunk.content());
   }
 
   @Override
@@ -111,7 +110,7 @@ public class FrameFileHttpResponseHandler implements HttpResponseHandler<FrameFi
 
   private ClientResponse<FrameFilePartialFetch> response(
       final ClientResponse<FrameFilePartialFetch> clientResponse,
-      final ChannelBuffer content
+      final ByteBuf content
   )
   {
     final FrameFilePartialFetch clientResponseObj = clientResponse.getObj();

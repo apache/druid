@@ -19,9 +19,9 @@
 
 package org.apache.druid.client;
 
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferInputStream;
+import io.netty.buffer.ByteBuf;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 public class InputStreamHolder
@@ -42,10 +42,20 @@ public class InputStreamHolder
     return new InputStreamHolder(stream, chunkNum, length);
   }
 
-  public static InputStreamHolder fromChannelBuffer(final ChannelBuffer buffer, final long chunkNum)
+  /**
+   * Copy the readable bytes of {@code buffer} into a heap byte array and wrap it in a {@link ByteArrayInputStream}.
+   *
+   * The copy is required because callers feed Netty 4 {@link ByteBuf}s drawn from a pooled allocator. Netty's
+   * {@code SimpleChannelInboundHandler} releases the buffer immediately after the read callback returns, so we
+   * cannot retain a reference past that boundary; doing so would corrupt the allocator's arena and surface as
+   * {@code IllegalReferenceCountException} on later reads.
+   */
+  public static InputStreamHolder fromChannelBuffer(final ByteBuf buffer, final long chunkNum)
   {
     final int length = buffer.readableBytes();
-    return new InputStreamHolder(new ChannelBufferInputStream(buffer), chunkNum, length);
+    final byte[] copy = new byte[length];
+    buffer.readBytes(copy);
+    return new InputStreamHolder(new ByteArrayInputStream(copy), chunkNum, length);
   }
 
   public InputStream getStream()

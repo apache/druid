@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.client.broker.Broker;
 import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.broker.BrokerClientImpl;
@@ -267,7 +268,7 @@ public class EmbeddedServiceClient
       StatusResponseHolder response = serviceClient.request(requestBuilder, responseHandler);
 
       // Handle all success status codes
-      final int statusCode = response.getStatus().getCode();
+      final int statusCode = response.getStatus().code();
       if (statusCode < 200 || statusCode >= 300) {
         throw new ISE(
             "Request[%s] failed with status[%s] content[%s].",

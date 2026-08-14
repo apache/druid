@@ -20,6 +20,11 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.netty.handler.codec.http.DefaultHttpResponse;
+import io.netty.handler.codec.http.HttpMethod;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpVersion;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -37,12 +42,6 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientImpl;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.easymock.EasyMock;
-import org.jboss.netty.buffer.BigEndianHeapChannelBuffer;
-import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
-import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -112,8 +111,7 @@ public class RemoteTaskActionClientTest
   {
     // return status code 400
     final HttpResponse response = EasyMock.createNiceMock(HttpResponse.class);
-    EasyMock.expect(response.getStatus()).andReturn(HttpResponseStatus.BAD_REQUEST).anyTimes();
-    EasyMock.expect(response.getContent()).andReturn(new BigEndianHeapChannelBuffer(0));
+    EasyMock.expect(response.status()).andReturn(HttpResponseStatus.BAD_REQUEST).anyTimes();
     EasyMock.replay(response);
 
     StringFullResponseHolder responseHolder = new StringFullResponseHolder(

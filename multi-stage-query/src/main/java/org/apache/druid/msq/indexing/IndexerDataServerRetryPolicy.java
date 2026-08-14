@@ -19,10 +19,10 @@
 
 package org.apache.druid.msq.indexing;
 
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.utils.Throwables;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
  * Retry policy for {@link IndexerDataServerQueryHandler}.

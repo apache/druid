@@ -19,8 +19,8 @@
 
 package org.apache.druid.java.util.http.client.response;
 
-import org.jboss.netty.handler.codec.http.HttpResponse;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpResponseStatus;
 
 /**
  * This class is to hold data while receiving stream data via HTTP. Used with {@link HttpResponseHandler}.
@@ -38,7 +38,7 @@ public abstract class FullResponseHolder<T>
 
   public HttpResponseStatus getStatus()
   {
-    return response.getStatus();
+    return response.status();
   }
 
   public HttpResponse getResponse()

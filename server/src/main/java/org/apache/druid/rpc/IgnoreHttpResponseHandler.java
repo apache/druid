@@ -19,10 +19,10 @@
 
 package org.apache.druid.rpc;
 
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 /**
  * An HTTP response handler that discards the response and returns nothing. It returns a finished response only
@@ -44,7 +44,7 @@ public class IgnoreHttpResponseHandler implements HttpResponseHandler<Void, Void
   }
 
   @Override
-  public ClientResponse<Void> handleChunk(ClientResponse<Void> clientResponse, HttpChunk chunk, long chunkNum)
+  public ClientResponse<Void> handleChunk(ClientResponse<Void> clientResponse, HttpContent chunk, long chunkNum)
   {
     return ClientResponse.unfinished(null);
   }

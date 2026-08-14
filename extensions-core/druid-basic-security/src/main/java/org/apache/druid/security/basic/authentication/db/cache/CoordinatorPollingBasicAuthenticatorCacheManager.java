@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
@@ -47,7 +48,6 @@ import org.apache.druid.security.basic.authentication.BasicHTTPAuthenticator;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;

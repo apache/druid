@@ -27,6 +27,7 @@ import com.google.common.io.CountingOutputStream;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.api.core.HttpContext;
+import io.netty.handler.codec.http.HttpResponseStatus;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
@@ -98,7 +99,6 @@ import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
-import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;

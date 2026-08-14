@@ -21,6 +21,7 @@ package org.apache.druid.msq.dart.controller.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
@@ -30,7 +31,6 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.sql.http.GetQueriesResponse;
 import org.apache.druid.sql.http.GetQueryReportResponse;
 import org.apache.http.client.utils.URIBuilder;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.net.URISyntaxException;
 

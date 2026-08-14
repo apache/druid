@@ -251,32 +251,6 @@
   </suppress>
 
   <suppress>
-    <!-- TODO: Fix by updating org.apache.druid.java.util.http.client.NettyHttpClient to use netty 4 -->
-    <notes><![CDATA[
-   file name: netty-3.10.6.Final.jar
-   ]]></notes>
-    <packageUrl regex="true">^pkg:maven/io\.netty/netty@3.10.6.Final$</packageUrl>
-    <cve>CVE-2019-16869</cve>
-    <cve>CVE-2019-20444</cve>
-    <cve>CVE-2019-20445</cve>
-    <cve>CVE-2020-11612</cve>
-    <cve>CVE-2021-21290</cve> <!-- We don't use HttpPostRequestDecoder or HttpPostMultiPartRequestDecoder which uses vulnerable AbstractDiskHttpData - https://github.com/advisories/GHSA-5mcr-gq6c-3hq2 -->
-    <cve>CVE-2021-21295</cve> <!-- We don't use HTTP2MultiplexCodec or Http2FrameCodec or Http2StreamFrameToHttpObjectCodec affected or convert HTTP/2 to HTTP/1.1 requests - https://github.com/advisories/GHSA-wm47-8v5p-wjpj -->
-    <cve>CVE-2021-21409</cve> <!-- We don't use Http2HeaderFrame or convert HTTP/2 to HTTP/1.1 requests https://github.com/advisories/GHSA-f256-j965-7f32 -->
-    <cve>CVE-2021-37136</cve>
-    <cve>CVE-2021-37137</cve>
-    <cve>CVE-2021-43797</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-wx5j-54mm-rqqq -->
-    <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
-    <cve>CVE-2022-41881</cve>
-    <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
-    <cve>CVE-2025-55163</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
-    <cve>CVE-2025-58056</cve>
-    <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
-    <cve>CVE-2026-33870</cve> <!-- We don't use HttpPostRequestDecoder -->
-    <cve>CVE-2026-33871</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
-  </suppress>
-
-  <suppress>
     <notes><![CDATA[
    file name: icu4j-77.1.jar
    ]]></notes>

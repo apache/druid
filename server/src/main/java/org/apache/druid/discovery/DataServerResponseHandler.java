@@ -21,6 +21,10 @@ package org.apache.druid.discovery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.HttpResponse;
 import org.apache.druid.client.InputStreamHolder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -32,10 +36,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.handler.codec.http.HttpChunk;
-import org.jboss.netty.handler.codec.http.HttpResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -89,7 +89,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
   {
     trafficCopRef.set(trafficCop);
     checkQueryTimeout();
-    log.debug("Received response status[%s] for queryId[%s]", response.getStatus(), query.getId());
+    log.debug("Received response status[%s] for queryId[%s]", response.status(), query.getId());
 
     final boolean continueReading;
     try {
@@ -98,7 +98,11 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
         responseContext.merge(ResponseContext.deserialize(queryResponseHeaders, objectMapper));
       }
 
-      continueReading = enqueue(response.getContent(), 0L);
+      // Netty 4: initial HttpResponse has no body content; body arrives via HttpContent chunks.
+      // Seed the queue with an empty placeholder so SequenceInputStream's constructor (which eagerly
+      // calls peekNextStream()) doesn't block before chunks arrive.
+      queue.put(InputStreamHolder.fromChannelBuffer(Unpooled.EMPTY_BUFFER, 0L));
+      continueReading = true;
     }
     catch (final IOException e) {
       return ClientResponse.finished(
@@ -159,13 +163,13 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
   @Override
   public ClientResponse<InputStream> handleChunk(
       ClientResponse<InputStream> clientResponse,
-      HttpChunk chunk,
+      HttpContent chunk,
       long chunkNum
   )
   {
     checkQueryTimeout();
 
-    final ChannelBuffer channelBuffer = chunk.getContent();
+    final ByteBuf channelBuffer = chunk.content();
     final int bytes = channelBuffer.readableBytes();
 
     boolean continueReading = true;
@@ -191,7 +195,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
       try {
         // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
         // after done is set to true, regardless of the rest of the stream's state.
-        queue.put(InputStreamHolder.fromChannelBuffer(ChannelBuffers.EMPTY_BUFFER, Long.MAX_VALUE));
+        queue.put(InputStreamHolder.fromChannelBuffer(Unpooled.EMPTY_BUFFER, Long.MAX_VALUE));
       }
       catch (InterruptedException e) {
         Thread.currentThread().interrupt();
@@ -215,7 +219,7 @@ public class DataServerResponseHandler implements HttpResponseHandler<InputStrea
     setupResponseReadFailure(msg, e);
   }
 
-  private boolean enqueue(ChannelBuffer buffer, long chunkNum) throws InterruptedException
+  private boolean enqueue(ByteBuf buffer, long chunkNum) throws InterruptedException
   {
     // Increment queuedByteCount before queueing the object, so queuedByteCount is at least as high as
     // the actual number of queued bytes at any particular time.

@@ -20,6 +20,7 @@
 package org.apache.druid.testing.embedded.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import io.netty.handler.codec.http.HttpMethod;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.DateTimes;
@@ -36,7 +37,6 @@ import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.EmbeddedRouter;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;

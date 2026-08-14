@@ -133,6 +133,12 @@ public class AppendableByteArrayInputStream extends InputStream
       if (currIndex >= curr.length) {
         synchronized (singleByteReaderDoer) {
           if (bytes.isEmpty()) {
+            // Throwable takes precedence over EOS: if exceptionCaught was called with no buffered
+            // bytes (possible when the handler never enqueued any data, e.g. an error response with
+            // no body in Netty 4), surface the exception rather than silently returning EOS.
+            if (throwable != null) {
+              throw new IOException(throwable);
+            }
             if (done) {
               break;
             }
