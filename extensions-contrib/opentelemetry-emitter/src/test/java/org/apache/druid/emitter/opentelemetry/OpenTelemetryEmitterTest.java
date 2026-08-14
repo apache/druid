@@ -105,7 +105,8 @@ public class OpenTelemetryEmitterTest
           new OpenTelemetryEmitterModule()
               .getEmitter(new OpenTelemetryEmitterConfig(), new ObjectMapper())
       );
-    } finally {
+    }
+    finally {
       if (previousTracesExporter == null) {
         System.clearProperty("otel.traces.exporter");
       } else {
