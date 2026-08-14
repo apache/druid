@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.error.InvalidInput;
@@ -102,6 +103,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   private final long inputSegmentSizeBytes;
   private final Period skipOffsetFromLatest;
   private final Period skipOffsetFromNow;
+  private final List<Interval> skipIntervals;
   private final Granularity defaultSegmentGranularity;
   private final PartitionsSpec defaultPartitionsSpec;
   @Nullable
@@ -119,6 +121,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
       @JsonProperty("taskContext") @Nullable Map<String, Object> taskContext,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
       @JsonProperty("skipOffsetFromNow") @Nullable Period skipOffsetFromNow,
+      @JsonProperty("skipIntervals") @Nullable List<Interval> skipIntervals,
       @JsonProperty("defaultSegmentGranularity") Granularity defaultSegmentGranularity,
       @JsonProperty("defaultPartitionsSpec") PartitionsSpec defaultPartitionsSpec,
       @JsonProperty("defaultPartitioningVirtualColumns") @Nullable VirtualColumns defaultPartitioningVirtualColumns,
@@ -157,6 +160,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
     }
     this.skipOffsetFromNow = skipOffsetFromNow;
     this.skipOffsetFromLatest = skipOffsetFromLatest;
+    this.skipIntervals = Configs.valueOrDefault(skipIntervals, List.of());
 
     this.defaultPartitioningRule = ReindexingPartitioningRule.syntheticRule(
         defaultSegmentGranularity,
@@ -221,9 +225,10 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   }
 
   @Override
+  @JsonProperty
   public List<Interval> getSkipIntervals()
   {
-    return List.of();
+    return skipIntervals;
   }
 
   @JsonProperty
@@ -464,6 +469,7 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
         .withInputSegmentSizeBytes(inputSegmentSizeBytes)
         .withEngine(CompactionEngine.MSQ)
         .withTaskContext(taskContext)
+        .withSkipIntervals(skipIntervals)
         .withSkipOffsetFromLatest(Period.ZERO); // We handle skip offsets at the timeline level, we know we want to cover the entirety of the interval
   }
 
@@ -923,5 +929,116 @@ public class CascadingReindexingTemplate implements CompactionJobTemplate, DataS
   public AggregatorFactory[] getMetricsSpec()
   {
     return new AggregatorFactory[0];
+  }
+
+  public static Builder builder()
+  {
+    return new Builder();
+  }
+
+  public static class Builder
+  {
+    private String dataSource;
+    private Integer taskPriority;
+    private Long inputSegmentSizeBytes;
+    private ReindexingRuleProvider ruleProvider;
+    private Map<String, Object> taskContext;
+    private Period skipOffsetFromLatest;
+    private Period skipOffsetFromNow;
+    private List<Interval> skipIntervals;
+    private Granularity defaultSegmentGranularity;
+    private PartitionsSpec defaultPartitionsSpec;
+    private VirtualColumns defaultPartitioningVirtualColumns;
+    private UserCompactionTaskQueryTuningConfig tuningConfig;
+
+    public CascadingReindexingTemplate build()
+    {
+      return new CascadingReindexingTemplate(
+          dataSource,
+          taskPriority,
+          inputSegmentSizeBytes,
+          ruleProvider,
+          taskContext,
+          skipOffsetFromLatest,
+          skipOffsetFromNow,
+          skipIntervals,
+          defaultSegmentGranularity,
+          defaultPartitionsSpec,
+          defaultPartitioningVirtualColumns,
+          tuningConfig
+      );
+    }
+
+    public Builder forDataSource(String dataSource)
+    {
+      this.dataSource = dataSource;
+      return this;
+    }
+
+    public Builder withTaskPriority(Integer taskPriority)
+    {
+      this.taskPriority = taskPriority;
+      return this;
+    }
+
+    public Builder withInputSegmentSizeBytes(Long inputSegmentSizeBytes)
+    {
+      this.inputSegmentSizeBytes = inputSegmentSizeBytes;
+      return this;
+    }
+
+    public Builder withRuleProvider(ReindexingRuleProvider ruleProvider)
+    {
+      this.ruleProvider = ruleProvider;
+      return this;
+    }
+
+    public Builder withTaskContext(Map<String, Object> taskContext)
+    {
+      this.taskContext = taskContext;
+      return this;
+    }
+
+    public Builder withSkipOffsetFromLatest(Period skipOffsetFromLatest)
+    {
+      this.skipOffsetFromLatest = skipOffsetFromLatest;
+      return this;
+    }
+
+    public Builder withSkipOffsetFromNow(Period skipOffsetFromNow)
+    {
+      this.skipOffsetFromNow = skipOffsetFromNow;
+      return this;
+    }
+
+    public Builder withSkipIntervals(List<Interval> skipIntervals)
+    {
+      this.skipIntervals = skipIntervals;
+      return this;
+    }
+
+    public Builder withDefaultSegmentGranularity(Granularity defaultSegmentGranularity)
+    {
+      this.defaultSegmentGranularity = defaultSegmentGranularity;
+      return this;
+    }
+
+    public Builder withDefaultPartitionsSpec(PartitionsSpec defaultPartitionsSpec)
+    {
+      this.defaultPartitionsSpec = defaultPartitionsSpec;
+      return this;
+    }
+
+    public Builder withDefaultPartitioningVirtualColumns(VirtualColumns defaultPartitioningVirtualColumns)
+    {
+      this.defaultPartitioningVirtualColumns = defaultPartitioningVirtualColumns;
+      return this;
+    }
+
+    public Builder withTuningConfig(UserCompactionTaskQueryTuningConfig tuningConfig)
+    {
+      this.tuningConfig = tuningConfig;
+      return this;
+    }
   }
 }
