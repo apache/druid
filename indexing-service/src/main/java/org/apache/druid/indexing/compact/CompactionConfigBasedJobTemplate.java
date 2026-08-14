@@ -27,8 +27,11 @@ import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexing.input.DruidInputSource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.compaction.CompactionCandidate;
+import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSlotManager;
+import org.apache.druid.server.compaction.CompactionTaskStatus;
 import org.apache.druid.server.compaction.DataSourceCompactibleSegmentIterator;
 import org.apache.druid.server.compaction.Eligibility;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
@@ -50,6 +53,8 @@ import java.util.Objects;
  */
 public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
 {
+  private static final Logger log = new Logger(CompactionConfigBasedJobTemplate.class);
+
   private final DataSourceCompactionConfig config;
   private final ReindexingConfigOptimizer configOptimizer;
 
@@ -94,10 +99,27 @@ public class CompactionConfigBasedJobTemplate implements CompactionJobTemplate
     // Create a job for each CompactionCandidate
     while (segmentIterator.hasNext()) {
       final CompactionCandidate candidate = segmentIterator.next();
-      final Eligibility eligibility =
-          params.getClusterCompactionConfig()
-                .getCompactionPolicy()
-                .checkEligibilityForCompaction(candidate, params.getLatestTaskStatus(candidate));
+      final CompactionCandidateSearchPolicy policy = params.getClusterCompactionConfig().getCompactionPolicy();
+      final CompactionTaskStatus latestTaskStatus = params.getLatestTaskStatus(candidate);
+
+      Eligibility eligibility = policy.checkEligibilityForCompaction(candidate, latestTaskStatus);
+      if (policy.isForceMandatoryCompactionEnabled()
+          && !eligibility.isEligible()
+          && configOptimizer.hasUnappliedDeletionRules(config, candidate, params)) {
+        // When the operator has opted in, a cascading reindexing interval with unapplied deletion rules
+        // must be reindexed for compliance even when it is below the policy's size thresholds; bypass
+        // those gates but keep its full-vs-minor decision.
+        final String policyRejectionReason = eligibility.getReason();
+        eligibility = policy.checkEligibilityForMandatoryCompaction(candidate, latestTaskStatus);
+        log.info(
+            "Forcing compaction of interval[%s] for dataSource[%s] in mode[%s] because it has unapplied"
+            + " deletion rules, even though it is not normally eligible[%s].",
+            candidate.getUmbrellaInterval(),
+            config.getDataSource(),
+            eligibility.getMode(),
+            policyRejectionReason
+        );
+      }
       if (!eligibility.isEligible()) {
         continue;
       }

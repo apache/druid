@@ -444,6 +444,59 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
   }
 
   @Test
+  public void test_cascadingReindexing_appliesPendingDeletionRule_evenWhenIntervalBelowFragmentationThreshold()
+  {
+    // minUncompactedCount is far above the segment count, so the interval only becomes a candidate
+    // because forcePendingDeletionCompaction is enabled and a deletion rule is pending.
+    configureCompaction(
+        CompactionEngine.MSQ,
+        new MostFragmentedIntervalFirstPolicy(10_000, null, null, null, null, null, true)
+    );
+
+    DateTime now = DateTimes.nowUtc();
+    // A few segments older than the rule period; half the rows are item='hat'.
+    String oldEvents = generateEventsInInterval(
+        new Interval(now.minusDays(31), now.minusDays(14)),
+        6,
+        Duration.ofHours(25).toMillis()
+    );
+    runIngestionAtGranularity("DAY", oldEvents);
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    Assertions.assertEquals(6, getNumSegmentsWith(Granularities.DAY));
+    verifyEventCountOlderThan(Period.days(7), "item", "hat", 3);
+
+    ReindexingDeletionRule deletionRule = new ReindexingDeletionRule(
+        "deletionRule",
+        "Drop rows where item is 'hat'",
+        Period.days(7),
+        new EqualityFilter("item", ColumnType.STRING, "hat", null),
+        null
+    );
+
+    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
+        dataSource,
+        null,
+        null,
+        InlineReindexingRuleProvider.builder().deletionRules(List.of(deletionRule)).build(),
+        null,
+        null,
+        null,
+        Granularities.DAY,
+        new DynamicPartitionsSpec(null, null),
+        null,
+        null
+    );
+
+    runCompactionWithSpec(template);
+    waitForAllCompactionTasksToFinish();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    // The pending deletion rule forced compaction despite the interval being below the size threshold.
+    verifyEventCountOlderThan(Period.days(7), "item", "hat", 0);
+  }
+
+  @Test
   public void test_cascadingReindexing_withVirtualColumnOnNestedData_filtersCorrectly()
   {
     // Virtual Columns on nested data is only supported with MSQ compaction engine right now.
@@ -1235,12 +1288,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     return List.of(
         new Object[]{
             // decides minor compaction based on bytes percent
-            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null),
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, 80, null, null, null),
             new DimensionRangePartitionsSpec(null, 10_000, List.of("page"), false)
         },
         new Object[]{
             // decides minor compaction based on rows percent
-            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, null, 51, null),
+            new MostFragmentedIntervalFirstPolicy(2, new HumanReadableBytes("1KiB"), null, null, 51, null, null),
             new DynamicPartitionsSpec(null, null)
         }
     );

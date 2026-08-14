@@ -911,6 +911,7 @@ This experimental policy prioritizes compaction of intervals with the largest nu
 |`maxAverageUncompactedBytesPerSegment`|Maximum average size of uncompacted segments in an interval eligible for compaction. Human-readable byte format (e.g., "2GiB").|2 GiB|
 |`minUncompactedBytesPercentForFullCompaction`|Threshold percentage (0-100) of uncompacted bytes to total bytes below which minor compaction is eligible instead of full compaction.|0|
 |`minUncompactedRowsPercentForFullCompaction`|Threshold percentage (0-100) of uncompacted rows to total rows below which minor compaction is eligible instead of full compaction.|0|
+|`forcePendingDeletionCompaction`|When `true`, an interval whose [cascading reindexing](../data-management/cascading-reindexing.md) deletion rules have not yet been applied to all of its segments is compacted even if it does not meet the minimum interval-size thresholds above. This applies only to cascading reindexing supervisors and their deletion rules; it has no effect on intervals without pending deletion rules or on any other compaction. Intended for operators who apply deletion rules for data compliance.|false|
 
 #### Compaction policy `fixedIntervalOrder`
 

@@ -56,4 +56,31 @@ public interface CompactionCandidateSearchPolicy
       CompactionTaskStatus latestTaskStatus
   );
 
+  /**
+   * Like {@link #checkEligibilityForCompaction} but for an interval that must be compacted regardless
+   * of any implementation-specific eligibility criteria. By default, this method calls
+   * {@link #checkEligibilityForCompaction} and by default upgrades a rejection to a {@link Eligibility#FULL full}
+   * compaction.
+   */
+  default Eligibility checkEligibilityForMandatoryCompaction(
+      CompactionCandidate candidate,
+      CompactionTaskStatus latestTaskStatus
+  )
+  {
+    final Eligibility eligibility = checkEligibilityForCompaction(candidate, latestTaskStatus);
+    return eligibility.isEligible() ? eligibility : Eligibility.FULL;
+  }
+
+  /**
+   * Whether an interval that is below this policy's normal eligibility criteria should still be compacted
+   * via {@link #checkEligibilityForMandatoryCompaction} when an external trigger requires it. The caller
+   * decides what constitutes such a trigger; today the only one is a cascading reindexing interval with
+   * deletion rules not yet applied to all of its segments. Defaults to false, so mandatory compaction is
+   * never forced unless a policy opts in.
+   */
+  default boolean isForceMandatoryCompactionEnabled()
+  {
+    return false;
+  }
+
 }
