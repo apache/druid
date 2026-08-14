@@ -970,7 +970,7 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>elasticache-java-cluster-client</artifactId>
-                <version>1.2.0</version>
+                <version>1.2.4</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
