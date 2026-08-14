@@ -438,7 +438,7 @@ Support for Java 17 has been dropped.
 
 [#19304](https://github.com/apache/druid/pull/19304) [#19336](https://github.com/apache/druid/pull/19336)
 
-#### JAVA_HOME
+#### `JAVA_HOME`
 
 When Druid uses the bundled `bin/run-java` script during startup, it honors the `DRUID_JAVA_HOME`/`JAVA_HOME` environment variables. Otherwise, Druid falls back to `java` on the `PATH`.
 
