@@ -291,11 +291,12 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
     if (!matchValueType.is(ValueType.LONG)) {
       return null;
     }
-    // sortedMatchValues is coerced to matchValueType, so Evals.asString yields the same canonical strings as ingest.
-    // A null element is kept as a null set element so it matches a shard's stamped null (missing value).
+    // Coerce to matchValueType before stringifying: the presorted (sortedValues) path stores values as supplied, so a
+    // LONG filter may carry 1.0, which must canonicalize to "1" to match ingest. A null is kept so it matches a shard's
+    // stamped null (missing value).
     final Set<String> values = new HashSet<>();
     for (Object value : sortedMatchValues.get()) {
-      values.add(Evals.asString(value));
+      values.add(Evals.asString(coerceValue(value, matchValueType)));
     }
     return new TypedValueSet(values, matchValueType);
   }

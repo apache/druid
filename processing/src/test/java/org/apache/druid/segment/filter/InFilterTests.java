@@ -841,6 +841,12 @@ public class InFilterTests
       expectedWithNull.add(null);
       Assertions.assertEquals(expectedWithNull, withNull.getValues());
 
+      // The presorted (sortedValues) path stores values as supplied, so a LONG filter carrying 1.0 must still
+      // canonicalize to "1" to match ingest, else the segment is wrongly pruned.
+      final TypedValueSet presorted =
+          new TypedInFilter("x", ColumnType.LONG, null, Arrays.asList(1.0, 2.0), null).getDimensionValueSet("x");
+      Assertions.assertEquals(new HashSet<>(Arrays.asList("1", "2")), presorted.getValues());
+
       // Non-LONG match value types must NOT return a typed value set.
       Assertions.assertNull(
           inFilter("x", ColumnType.STRING, Arrays.asList("a", "b")).getDimensionValueSet("x")
