@@ -687,18 +687,12 @@ public abstract class BaseAppenderatorDriver implements Closeable
 
                     // Clean up pushed segments if they are physically disjoint from the published ones (this means
                     // they were probably pushed by a replica, and with the unique paths option).
-                    final Set<Map<String, Object>> publishedLoadSpecs =
-                        publishedSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet());
-                    final Set<Map<String, Object>> ourLoadSpecs =
-                        ourSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet());
+                    final boolean physicallyDisjoint = Sets.intersection(
+                        getLoadSpecs("published", publishedSegments),
+                        getLoadSpecs("ours", ourSegments)
+                    ).isEmpty();
 
-                    if (publishedLoadSpecs.contains(null) || ourLoadSpecs.contains(null)) {
-                      // We don't expect loadSpecs to be missing. If they are, it may indicate a bug in something.
-                      throw DruidException.defensive("Unexpectedly null loadSpec encountered");
-                    }
-
-                    if (Sets.intersection(publishedLoadSpecs, ourLoadSpecs).isEmpty()) {
-                      // Pushed segments are physically disjoint from the published ones.
+                    if (physicallyDisjoint) {
                       segmentsAndCommitMetadata.getSegments().forEach(dataSegmentKiller::killQuietly);
                     }
                   } else {
@@ -768,6 +762,26 @@ public abstract class BaseAppenderatorDriver implements Closeable
   public void close()
   {
     executor.shutdownNow();
+  }
+
+  /**
+   * Returns a Set of {@link DataSegment#getLoadSpec()} from the provided segments. Throws if any loadspecs
+   * are null, which may indicate that they were incorrectly pruned by {@link DataSegment#retainOnlyDetails(Set)}.
+   *
+   * @param label label for the error message, if it fires
+   * @param dataSegments the segments
+   */
+  private static Set<Map<String, Object>> getLoadSpecs(String label, Iterable<DataSegment> dataSegments)
+  {
+    final Set<Map<String, Object>> loadSpecs = new HashSet<>();
+    for (final DataSegment segment : dataSegments) {
+      final Map<String, Object> loadSpec = segment.getLoadSpec();
+      if (loadSpec == null) {
+        throw DruidException.defensive("Segment[%s] (%s) missing loadSpec", segment.getId(), label);
+      }
+      loadSpecs.add(loadSpec);
+    }
+    return loadSpecs;
   }
 
   /**
