@@ -1857,7 +1857,7 @@ name: aws-elasticache-cluster-client-memcached-for-java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.2.0
+version: 1.2.4
 libraries:
   - com.amazonaws: elasticache-java-cluster-client
 
