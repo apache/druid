@@ -145,4 +145,41 @@ public class DataSourceCompactibleSegmentIteratorTest
         searchIntervals
     );
   }
+
+  @Test
+  public void testSkipIntervalNotAlignedWithSegmentGranularityIsNotCompacted()
+  {
+    // Segments are hourly, and compaction is configured to bucket them into DAY chunks.
+    final Iterator<DataSegment> segments = CreateDataSegments.ofDatasource("test_datasource")
+                                                             .forIntervals(24, Granularities.HOUR)
+                                                             .startingAt("2018-01-01")
+                                                             .withNumPartitions(1)
+                                                             .eachOfSizeInMb(100)
+                                                             .iterator();
+    final SegmentTimeline timeline = SegmentTimeline.forSegments(segments);
+    final DataSourceCompactionConfig config =
+        InlineSchemaDataSourceCompactionConfig.builder()
+                                              .forDataSource("test_datasource")
+                                              .withSkipOffsetFromLatest(new Period("PT0H"))
+                                              .withSegmentGranularity(Granularities.DAY)
+                                              .build();
+
+    // Skip interval is not aligned with the DAY segment granularity
+    final List<Interval> skipIntervals = List.of(Intervals.of("2018-01-01T10:00:00/2018-01-01T14:00:00"));
+
+    final DataSourceCompactibleSegmentIterator iterator = new DataSourceCompactibleSegmentIterator(
+        config,
+        timeline,
+        skipIntervals,
+        POLICY,
+        FINGERPRINT_MAPPER
+    );
+
+    // The DAY bucket overlaps the skip interval, so none of its segments should be picked up for compaction.
+    Assert.assertFalse(iterator.hasNext());
+    final List<CompactionCandidate> skipped = iterator.getSkippedSegments();
+    Assert.assertEquals(1, skipped.size());
+    Assert.assertEquals(Intervals.of("2018-01-01/2018-01-02"), skipped.getFirst().getUmbrellaInterval());
+    Assert.assertEquals(24, skipped.getFirst().getSegments().size());
+  }
 }
