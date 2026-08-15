@@ -4391,13 +4391,13 @@ name: Hive storage API
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 2.8.1
+version: 4.2.0
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
   - hive-storage-api: |
       Hive Storage API
-      Copyright 2018 The Apache Software Foundation
+      Copyright 2008-2025 The Apache Software Foundation
 
 ---
 
