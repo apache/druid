@@ -7270,7 +7270,7 @@ name: Apache Commons Configuration
 license_category: binary
 module: extensions-core/druid-kerberos
 license_name: Apache License version 2.0
-version: 2.15.0
+version: 2.15.1
 libraries:
   - org.apache.commons: commons-configuration2
 
