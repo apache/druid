@@ -5420,7 +5420,7 @@ name: RE2/J
 license_category: binary
 module: java-core
 license_name: The Go license
-version: 1.7
+version: 1.8
 license_file_path: licenses/bin/re2j.GO
 libraries:
   - com.google.re2j: re2j
@@ -7391,14 +7391,3 @@ module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
 libraries:
   - org.apache.kafka: kafka-clients
-
----
-
-name: re2j
-license_category: binary
-module: java-core
-license_name: The Go license
-version: 1.8
-license_file_path: licenses/bin/re2j.GO
-libraries:
-  - com.google.re2j: re2j
