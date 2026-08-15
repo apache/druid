@@ -146,7 +146,7 @@ public class StorageLocation
       long totalSpaceInPartition = path.getTotalSpace();
       this.freeSpaceToKeep = (long) ((freeSpacePercent * totalSpaceInPartition) / 100);
       log.info(
-          "SegmentLocation[%s] will try and maintain [%d:%d] free space while loading segments.",
+          "StorageLocation[%s] will try and maintain [%d:%d] free space while loading segments.",
           path,
           freeSpaceToKeep,
           totalSpaceInPartition
@@ -154,7 +154,7 @@ public class StorageLocation
     } else {
       this.freeSpaceToKeep = 0;
     }
-    log.info("SegmentLocation[%s] configured with capacity[%,d] bytes.", path, maxSizeBytes);
+    log.info("StorageLocation[%s] configured with capacity[%,d] bytes.", path, maxSizeBytes);
     resetStaticStats();
     resetWeakStats();
   }

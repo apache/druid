@@ -574,7 +574,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             throw CloseableUtils.closeAndWrapInCatch(t, hold);
           }
         }
-        throw DruidException.forPersona(DruidException.Persona.USER)
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
                             .build(
                                 "Unable to load segment[%s] on demand, ensure enough disk space has been allocated "
