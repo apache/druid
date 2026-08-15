@@ -28,7 +28,6 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.utils.JvmUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -91,7 +90,7 @@ public class FlattenJSONBenchmarkUtilTest
     Assertions.assertEquals("-1170723877", event.getRaw("d1").toString());
     Assertions.assertEquals("238976084", event.getRaw("d2").toString());
     Assertions.assertEquals("0.9818780016507468", event.getRaw("m3").toString());
-    Assertions.assertEquals("-3.8218837693501747E18", event.getRaw("m4").toString());
+    Assertions.assertEquals("-3821883769350174965", event.getRaw("m4").toString());
     Assertions.assertEquals("-509091100", event.getRaw("e1.d1").toString());
     Assertions.assertEquals("274706327", event.getRaw("e1.d2").toString());
     Assertions.assertEquals("870378185", event.getRaw("e2.d3").toString());
@@ -102,30 +101,16 @@ public class FlattenJSONBenchmarkUtilTest
     Assertions.assertEquals("1658972185", event.getRaw("e2.ad1[1]").toString());
     Assertions.assertEquals("-997010830", event.getRaw("e2.ad1[2]").toString());
 
-    // Java 19 changes some floating point string representation
-    // https://bugs.openjdk.org/browse/JDK-8291475
-    if (JvmUtils.majorVersion() < 19) {
-      Assertions.assertEquals("-5.8772014847368817E18", event.getRaw("e3.m1").toString());
-    } else {
-      Assertions.assertEquals("-5.877201484736882E18", event.getRaw("e3.m1").toString());
-    }
+    Assertions.assertEquals("-5877201484736882047", event.getRaw("e3.m1").toString());
 
     Assertions.assertEquals("0.4375433369079904", event.getRaw("e3.m2").toString());
     Assertions.assertEquals("0.8510482953607659", event.getRaw("e3.m3").toString());
-    Assertions.assertEquals("-2.3832626488759337E18", event.getRaw("e3.m4").toString());
-    if (JvmUtils.majorVersion() < 19) {
-      Assertions.assertEquals("7.9789762132607068E18", event.getRaw("e3.am1[0]").toString());
-      Assertions.assertEquals("-7.8634787235005573E18", event.getRaw("e3.am1[1]").toString());
-      Assertions.assertEquals("8.7372945568982446E18", event.getRaw("e3.am1[2]").toString());
-      Assertions.assertEquals("3.1928124802414899E18", event.getRaw("e3.am1[3]").toString());
-      Assertions.assertEquals("-3.9806631713718011E18", event.getRaw("e4.e4.m4").toString());
-    } else {
-      Assertions.assertEquals("7.978976213260707E18", event.getRaw("e3.am1[0]").toString());
-      Assertions.assertEquals("-7.863478723500557E18", event.getRaw("e3.am1[1]").toString());
-      Assertions.assertEquals("8.737294556898245E18", event.getRaw("e3.am1[2]").toString());
-      Assertions.assertEquals("3.19281248024149E18", event.getRaw("e3.am1[3]").toString());
-      Assertions.assertEquals("-3.980663171371801E18", event.getRaw("e4.e4.m4").toString());
-    }
+    Assertions.assertEquals("-2383262648875933574", event.getRaw("e3.m4").toString());
+    Assertions.assertEquals("7978976213260706704", event.getRaw("e3.am1[0]").toString());
+    Assertions.assertEquals("-7863478723500557583", event.getRaw("e3.am1[1]").toString());
+    Assertions.assertEquals("8737294556898244483", event.getRaw("e3.am1[2]").toString());
+    Assertions.assertEquals("3192812480241489927", event.getRaw("e3.am1[3]").toString());
+    Assertions.assertEquals("-3980663171371801209", event.getRaw("e4.e4.m4").toString());
     Assertions.assertEquals("-1915243040", event.getRaw("ae1[0].d1").toString());
     Assertions.assertEquals("-2020543641", event.getRaw("ae1[1].d1").toString());
     Assertions.assertEquals("1414285347", event.getRaw("ae1[2].e1.d2").toString());
