@@ -124,7 +124,7 @@
         <mockito.version>5.23.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
-        <aws.sdk.v1.version>1.12.793</aws.sdk.v1.version>
+        <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
         <aws.sdk.v2.version>2.51.3</aws.sdk.v2.version>
         <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
@@ -430,6 +430,12 @@
                 <artifactId>json-smart</artifactId>
                 <version>2.6.0</version>
             </dependency>
+            <!-- azure-core-http-netty 1.16.5 requires Reactor Core 3.7.19. -->
+            <dependency>
+                <groupId>io.projectreactor</groupId>
+                <artifactId>reactor-core</artifactId>
+                <version>3.7.19</version>
+            </dependency>
 
             <!-- transitive dependency of kafka-clients and kubernetes client
             this should get resolved with the update of above depdendencies -->
@@ -477,7 +483,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-configuration2</artifactId>
-                <version>2.15.0</version>
+                <version>2.15.1</version>
             </dependency>
             <dependency>
               <groupId>com.squareup.okhttp3</groupId>
@@ -1036,7 +1042,7 @@
             <dependency>
                 <groupId>org.apache.httpcomponents.client5</groupId>
                 <artifactId>httpclient5</artifactId>
-                <version>5.6.2</version>
+                <version>5.6.4</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents.core5</groupId>

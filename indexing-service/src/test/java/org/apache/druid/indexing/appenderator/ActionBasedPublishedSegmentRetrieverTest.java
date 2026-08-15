@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -105,7 +107,8 @@ public class ActionBasedPublishedSegmentRetrieverTest
             new RetrieveUsedSegmentsAction(
                 TestDataSource.WIKI,
                 Collections.singletonList(Intervals.of("2013-01-01/P3D")),
-                Segments.INCLUDING_OVERSHADOWED
+                Segments.INCLUDING_OVERSHADOWED,
+                EnumSet.of(SegmentDetail.LOAD_SPEC)
             )
         )
     ).andReturn(segments).once();
