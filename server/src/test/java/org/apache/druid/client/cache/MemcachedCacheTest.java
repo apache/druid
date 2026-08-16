@@ -38,6 +38,7 @@ import net.spy.memcached.ConnectionObserver;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.MemcachedNode;
 import net.spy.memcached.NodeLocator;
+import net.spy.memcached.config.NodeEndPoint;
 import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.internal.BulkGetCompletionListener;
 import net.spy.memcached.internal.OperationFuture;
@@ -369,6 +370,18 @@ class MockMemcachedClient implements MemcachedClientIF
 
   @Override
   public Collection<SocketAddress> getUnavailableServers()
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public Collection<NodeEndPoint> getAvailableNodeEndPoints()
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public Collection<NodeEndPoint> getAllNodeEndPoints()
   {
     throw new UnsupportedOperationException("not implemented");
   }
@@ -806,6 +819,102 @@ class MockMemcachedClient implements MemcachedClientIF
 
   @Override
   public Map<String, Object> getBulk(String... keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> BulkFuture<Map<String, CASValue<T>>> asyncGetsBulk(
+      Iterator<String> keys,
+      Iterator<Transcoder<T>> tcs
+  )
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> BulkFuture<Map<String, CASValue<T>>> asyncGetsBulk(
+      Collection<String> keys,
+      Iterator<Transcoder<T>> tcs
+  )
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> BulkFuture<Map<String, CASValue<T>>> asyncGetsBulk(
+      Iterator<String> keys,
+      Transcoder<T> tc
+  )
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> BulkFuture<Map<String, CASValue<T>>> asyncGetsBulk(
+      Collection<String> keys,
+      Transcoder<T> tc
+  )
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public BulkFuture<Map<String, CASValue<Object>>> asyncGetsBulk(Iterator<String> keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public BulkFuture<Map<String, CASValue<Object>>> asyncGetsBulk(Collection<String> keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> BulkFuture<Map<String, CASValue<T>>> asyncGetsBulk(Transcoder<T> tc, String... keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public BulkFuture<Map<String, CASValue<Object>>> asyncGetsBulk(String... keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> Map<String, CASValue<T>> getsBulk(Iterator<String> keys, Transcoder<T> tc)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> Map<String, CASValue<T>> getsBulk(Collection<String> keys, Transcoder<T> tc)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public Map<String, CASValue<Object>> getsBulk(Iterator<String> keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public Map<String, CASValue<Object>> getsBulk(Collection<String> keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public <T> Map<String, CASValue<T>> getsBulk(Transcoder<T> tc, String... keys)
+  {
+    throw new UnsupportedOperationException("not implemented");
+  }
+
+  @Override
+  public Map<String, CASValue<Object>> getsBulk(String... keys)
   {
     throw new UnsupportedOperationException("not implemented");
   }
