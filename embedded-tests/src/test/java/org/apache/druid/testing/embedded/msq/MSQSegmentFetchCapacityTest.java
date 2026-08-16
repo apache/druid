@@ -19,9 +19,14 @@
 
 package org.apache.druid.testing.embedded.msq;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.indexing.error.DruidExceptionFault;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.testing.embedded.EmbeddedBroker;
 import org.apache.druid.testing.embedded.EmbeddedCoordinator;
@@ -100,6 +105,17 @@ public class MSQSegmentFetchCapacityTest extends EmbeddedClusterTestBase
         cluster.callApi().waitForTaskToFinish(selectTaskStatus.getTaskId(), overlord.latchableEmitter());
 
     Assertions.assertEquals(TaskState.FAILED, finalStatus.getStatusCode());
+
+    final TaskReport.ReportMap taskReport = cluster.callApi().onLeaderOverlord(
+        o -> o.taskReportAsMap(selectTaskStatus.getTaskId())
+    );
+    final MSQTaskReportPayload payload = taskReport.<MSQTaskReport>findReport(MSQTaskReport.REPORT_KEY)
+                                                    .map(MSQTaskReport::getPayload)
+                                                    .orElse(null);
+    final DruidExceptionFault druidExceptionFault = (DruidExceptionFault) payload.getStatus().getErrorReport().getFault();
+
+    Assertions.assertEquals(DruidException.Category.CAPACITY_EXCEEDED.name(), druidExceptionFault.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR.name(), druidExceptionFault.getPersona());
     Assertions.assertTrue(
         finalStatus.getErrorMsg() != null && finalStatus.getErrorMsg().contains("Unable to load segment"),
         StringUtils.format("Unexpected error message: %s", finalStatus.getErrorMsg())
