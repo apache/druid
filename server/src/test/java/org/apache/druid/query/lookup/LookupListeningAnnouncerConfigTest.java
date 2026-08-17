@@ -110,7 +110,7 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testFailsOnEmptyTier()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> {
+    Assertions.assertThrows(NullPointerException.class, () -> {
       final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
       properties.put(PROPERTY_BASE + ".lookupTier", "");
       final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
@@ -148,7 +148,7 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testFailsInjection()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> {
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
       final String lookupTier = "some_tier";
       final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
       properties.put(PROPERTY_BASE + ".lookupTier", lookupTier);

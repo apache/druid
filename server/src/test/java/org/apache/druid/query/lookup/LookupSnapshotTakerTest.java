@@ -88,7 +88,7 @@ public class LookupSnapshotTakerTest
   @Test
   public void testIOExceptionDuringLookupPersist()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> {
+    Throwable exception = Assertions.assertThrows(ISE.class, () -> {
       File directory = temporaryFolder.newFolder();
       LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
       File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
@@ -126,7 +126,7 @@ public class LookupSnapshotTakerTest
   @Test
   public void tesLookupPullingFromCorruptFile()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> {
+    Assertions.assertThrows(ISE.class, () -> {
       File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
       Assertions.assertTrue(snapshotFile.createNewFile());
       byte[] bytes = StringUtils.toUtf8("test corrupt file");

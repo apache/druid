@@ -65,7 +65,7 @@ public class JsonParserIteratorTest
     @Test
     public void testConvertFutureTimeoutToQueryTimeoutException()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryTimeoutException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryTimeoutException.class, () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFailedFuture(
@@ -89,7 +89,7 @@ public class JsonParserIteratorTest
     @Test
     public void testConvertFutureCancellationToQueryInterruptedException()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryInterruptedException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryInterruptedException.class, () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateCancelledFuture(),
@@ -106,7 +106,7 @@ public class JsonParserIteratorTest
     @Test
     public void testConvertFutureInterruptedToQueryInterruptedException()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryInterruptedException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryInterruptedException.class, () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFailedFuture(new InterruptedException("interrupted future")),
@@ -123,7 +123,7 @@ public class JsonParserIteratorTest
     @Test
     public void testConvertIOExceptionToQueryInterruptedException()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryInterruptedException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryInterruptedException.class, () -> {
         InputStream exceptionThrowingStream = Mockito.mock(InputStream.class);
         IOException ioException = new IOException("ioexception test");
         Mockito.when(exceptionThrowingStream.read()).thenThrow(ioException);
@@ -172,7 +172,7 @@ public class JsonParserIteratorTest
     @Test
     public void testRestoreException()
     {
-      Throwable thrown = org.junit.jupiter.api.Assertions.assertThrows(exception.getClass(), () -> {
+      Throwable thrown = Assertions.assertThrows(exception.getClass(), () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFuture(mockErrorResponse(exception)),
@@ -193,7 +193,7 @@ public class JsonParserIteratorTest
     @Test
     public void testConvertQueryExceptionWithNullErrorCodeToQueryInterruptedException()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryInterruptedException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryInterruptedException.class, () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFuture(mockErrorResponse(new QueryException(null, "query exception test", null, null))),
@@ -210,7 +210,7 @@ public class JsonParserIteratorTest
     @Test
     public void testConvertQueryExceptionWithNonNullErrorCodeToQueryInterruptedException()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryInterruptedException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryInterruptedException.class, () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFuture(
@@ -233,7 +233,7 @@ public class JsonParserIteratorTest
     @Test
     public void testTimeoutBeforeCallingFuture()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryTimeoutException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryTimeoutException.class, () -> {
         JsonParserIterator<?> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Mockito.mock(Future.class),
@@ -250,7 +250,7 @@ public class JsonParserIteratorTest
     @Test
     public void testTimeoutWhileCallingFuture()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryTimeoutException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryTimeoutException.class, () -> {
         Future<InputStream> future = new AbstractFuture<>()
         {
           @Override
@@ -277,7 +277,7 @@ public class JsonParserIteratorTest
     @Test
     public void testTimeoutAfterCallingFuture()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryTimeoutException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryTimeoutException.class, () -> {
         ExecutorService service = Execs.singleThreaded("timeout-test");
         try {
           JsonParserIterator<?> iterator = new JsonParserIterator<>(
@@ -321,7 +321,7 @@ public class JsonParserIteratorTest
     @Test
     public void testNullErrorMsg()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryInterruptedException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryInterruptedException.class, () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFuture(
@@ -340,7 +340,7 @@ public class JsonParserIteratorTest
     @Test
     public void testParsingError()
     {
-      Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(QueryInterruptedException.class, () -> {
+      Throwable exception = Assertions.assertThrows(QueryInterruptedException.class, () -> {
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFuture(

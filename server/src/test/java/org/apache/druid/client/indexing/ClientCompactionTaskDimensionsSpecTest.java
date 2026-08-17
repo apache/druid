@@ -65,7 +65,7 @@ public class ClientCompactionTaskDimensionsSpecTest
   @Test
   public void testInvalidDimensionsField()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ParseException.class, () -> {
+    Assertions.assertThrows(ParseException.class, () -> {
       final ClientCompactionTaskDimensionsSpec expected = new ClientCompactionTaskDimensionsSpec(
           DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim", "dim"))
       );

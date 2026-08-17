@@ -52,7 +52,7 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
   @Test
   public void testLookupNotFound()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
+    Throwable exception = Assertions.assertThrows(IllegalStateException.class, () ->
       assertExpr("lookup(x, 'lookylook')", null));
     Assertions.assertTrue(exception.getMessage().contains("Lookup [lookylook] not found"));
   }

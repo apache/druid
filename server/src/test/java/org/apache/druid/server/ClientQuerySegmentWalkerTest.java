@@ -788,7 +788,7 @@ public class ClientQuerySegmentWalkerTest
   @Test
   public void testJoinOnTableErrorCantInlineTable()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> {
+    Throwable exception = Assertions.assertThrows(IllegalStateException.class, () -> {
       final GroupByQuery query =
           (GroupByQuery) GroupByQuery.builder()
               .setDataSource(
@@ -819,7 +819,7 @@ public class ClientQuerySegmentWalkerTest
   @Test
   public void testTimeseriesOnGroupByOnTableErrorTooManyRows()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(ResourceLimitExceededException.class, () -> {
+    Throwable exception = Assertions.assertThrows(ResourceLimitExceededException.class, () -> {
       initWalker(ImmutableMap.of("maxSubqueryRows", "2"));
 
       final GroupByQuery subquery =
@@ -917,7 +917,7 @@ public class ClientQuerySegmentWalkerTest
   @Test
   public void testTimeseriesOnGroupByOnTableErrorTooLarge()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(ResourceLimitExceededException.class, () -> {
+    Throwable exception = Assertions.assertThrows(ResourceLimitExceededException.class, () -> {
       final GroupByQuery subquery =
           GroupByQuery.builder()
               .setDataSource(FOO)
@@ -1309,7 +1309,7 @@ public class ClientQuerySegmentWalkerTest
   @Test
   public void testTopNArraysDoubles()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+    Throwable exception = Assertions.assertThrows(RuntimeException.class, () -> {
       final TopNQuery query =
           (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
               .granularity(Granularities.ALL)
@@ -1369,7 +1369,7 @@ public class ClientQuerySegmentWalkerTest
   @Test
   public void testTopNOnArraysLongs()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+    Throwable exception = Assertions.assertThrows(RuntimeException.class, () -> {
       final TopNQuery query =
           (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
               .granularity(Granularities.ALL)
@@ -1429,7 +1429,7 @@ public class ClientQuerySegmentWalkerTest
   @Test
   public void testTopNOnArraysStrings()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () -> {
+    Throwable exception = Assertions.assertThrows(RuntimeException.class, () -> {
       final TopNQuery query =
           (TopNQuery) new TopNQueryBuilder().dataSource(ARRAY)
               .granularity(Granularities.ALL)

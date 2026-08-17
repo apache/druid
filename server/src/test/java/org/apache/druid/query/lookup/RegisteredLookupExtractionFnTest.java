@@ -98,7 +98,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
   @Test
   public void testMissingDelegation()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> {
+    Throwable exception = Assertions.assertThrows(Exception.class, () -> {
       final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
       EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
       EasyMock.replay(manager);
@@ -122,7 +122,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
   @Test
   public void testNullLookup()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> {
+    Throwable exception = Assertions.assertThrows(Exception.class, () -> {
       new RegisteredLookupExtractionFn(
           null,
           null,

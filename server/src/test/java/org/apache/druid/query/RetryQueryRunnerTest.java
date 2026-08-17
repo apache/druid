@@ -98,7 +98,7 @@ public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestB
   @Test
   public void testFailWithPartialResultsAfterRetry()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(SegmentMissingException.class, () -> {
+    Throwable exception = Assertions.assertThrows(SegmentMissingException.class, () -> {
       prepareCluster(10);
       final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
       final RetryQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(

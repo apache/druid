@@ -209,7 +209,7 @@ public class QueryLifecycleTest
   @Test
   public void testRunSimpleUnauthorized()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, () -> {
+    Throwable exception = Assertions.assertThrows(DruidException.class, () -> {
 
       EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
       EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
@@ -347,7 +347,7 @@ public class QueryLifecycleTest
   @Test
   public void testRunSimple_foundDifferentPolicyRestrictions()
   {
-    Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> {
+    Throwable exception = Assertions.assertThrows(ISE.class, () -> {
 
       DimFilter originalFilterOnRDS = new NullFilter("some-column", null);
       Policy originalFilterPolicy = RowFilterPolicy.from(originalFilterOnRDS);

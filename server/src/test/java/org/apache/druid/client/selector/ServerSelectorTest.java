@@ -108,7 +108,7 @@ public class ServerSelectorTest
   @Test
   public void testSegmentCannotBeNull()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(NullPointerException.class, () -> {
+    Assertions.assertThrows(NullPointerException.class, () -> {
       final ServerSelector selector = new ServerSelector(
           null,
           new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),

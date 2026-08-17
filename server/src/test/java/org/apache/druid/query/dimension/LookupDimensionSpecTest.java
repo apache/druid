@@ -105,7 +105,7 @@ public class LookupDimensionSpecTest extends InitializedNullHandlingTest
   @Test
   public void testExceptionWhenNameAndLookupNotNull()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> {
+    Assertions.assertThrows(Exception.class, () -> {
       new LookupDimensionSpec("dimName", "outputName", MAP_LOOKUP_EXTRACTOR, false, "replace", "name", true, null);
     });
   }
@@ -113,7 +113,7 @@ public class LookupDimensionSpecTest extends InitializedNullHandlingTest
   @Test
   public void testExceptionWhenNameAndLookupNull()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> {
+    Assertions.assertThrows(Exception.class, () -> {
       new LookupDimensionSpec("dimName", "outputName", null, false, "replace", "", true, null);
     });
   }

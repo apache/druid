@@ -525,7 +525,7 @@ public class BrokerServerViewTest
   @Test
   public void testInvalidWatchedTiersConfig()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> {
+    Assertions.assertThrows(ISE.class, () -> {
       // Verify that specifying both ignoredTiers and watchedTiers fails startup
       final String tier1 = "tier1";
       final String tier2 = "tier2";
@@ -536,14 +536,14 @@ public class BrokerServerViewTest
   @Test
   public void testEmptyWatchedTiersConfig()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () ->
+    Assertions.assertThrows(ISE.class, () ->
       setupViews(Collections.emptySet(), null, true));
   }
 
   @Test
   public void testEmptyIgnoredTiersConfig()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () ->
+    Assertions.assertThrows(ISE.class, () ->
       setupViews(null, Collections.emptySet(), true));
   }
 

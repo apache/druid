@@ -82,7 +82,7 @@ public class InternalQueryConfigTest
   @Test
   public void testMalfomattedContext()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(JsonEOFException.class, () -> {
+    Assertions.assertThrows(JsonEOFException.class, () -> {
       String malformedJson = "{\"priority: 5}";
       MAPPER.readValue(
           MAPPER.writeValueAsString(

@@ -120,28 +120,28 @@ public class LookupReferencesManagerTest
   @Test
   public void testGetExceptionWhenClosed()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
+    Assertions.assertThrows(IllegalStateException.class, () ->
       lookupReferencesManager.get("test"));
   }
 
   @Test
   public void testAddExceptionWhenClosed()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
+    Assertions.assertThrows(IllegalStateException.class, () ->
       lookupReferencesManager.add("test", EasyMock.createMock(LookupExtractorFactoryContainer.class)));
   }
 
   @Test
   public void testRemoveExceptionWhenClosed()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
+    Assertions.assertThrows(IllegalStateException.class, () ->
       lookupReferencesManager.remove("test", null));
   }
 
   @Test
   public void testGetAllLookupsStateExceptionWhenClosed()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
+    Assertions.assertThrows(IllegalStateException.class, () ->
       lookupReferencesManager.getAllLookupsState());
   }
 

@@ -116,7 +116,7 @@ public class CacheConfigTest
   @Test
   public void testValidationError()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ProvisionException.class, () -> {
+    Assertions.assertThrows(ProvisionException.class, () -> {
       properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "-1");
 
       configProvider.inject(properties, configurator);
@@ -129,7 +129,7 @@ public class CacheConfigTest
   @Test
   public void testValidationInsaneError()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ProvisionException.class, () -> {
+    Assertions.assertThrows(ProvisionException.class, () -> {
       properties.put(PROPERTY_PREFIX + ".numBackgroundThreads", "BABBA YAGA");
       configProvider.inject(properties, configurator);
       CacheConfig config = configProvider.get();
@@ -159,7 +159,7 @@ public class CacheConfigTest
   @Test
   public void testMixedCaseFalseIsRejected()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ProvisionException.class, () -> {
+    Assertions.assertThrows(ProvisionException.class, () -> {
       properties.put(PROPERTY_PREFIX + ".populateCache", "FaLse");
       configProvider.inject(properties, configurator);
       CacheConfig config = configProvider.get();
