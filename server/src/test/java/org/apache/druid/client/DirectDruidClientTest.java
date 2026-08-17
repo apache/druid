@@ -53,6 +53,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -62,10 +63,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PipedInputStream;
@@ -82,8 +81,8 @@ public class DirectDruidClientTest
   @RegisterExtension
   public static QueryStackTests.ConglomerateExtension conglomerateRule = new QueryStackTests.ConglomerateExtension();
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   private final String hostName = "localhost:8080";
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -451,7 +450,7 @@ public class DirectDruidClientTest
   {
     try {
       return IndexBuilder.create()
-                         .tmpDir(newFolder(temporaryFolder, "junit"))
+                         .tmpDir(temporaryFolder.newFolder())
                          .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                          .schema(
                              new IncrementalIndexSchema.Builder()
@@ -465,7 +464,7 @@ public class DirectDruidClientTest
                              )
                          )
                          .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
-                         .inputTmpDir(newFolder(temporaryFolder, "junit"))
+                         .inputTmpDir(temporaryFolder.newFolder())
                          .buildMMappedIndex();
     }
     catch (IOException e) {
@@ -483,14 +482,4 @@ public class DirectDruidClientTest
     return QueryPlus.wrap(Druids.newTimeBoundaryQueryBuilder().dataSource("test").context(context).randomQueryId().build());
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
-  {
-    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
-      return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(root.toPath(), "junit");
-    }
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    org.apache.druid.java.util.common.FileUtils.mkdirp(result);
-    return result;
-  }
 }

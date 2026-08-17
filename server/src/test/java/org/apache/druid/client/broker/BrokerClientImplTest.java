@@ -39,16 +39,17 @@ import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BrokerClientImplTest
 {
@@ -56,7 +57,7 @@ public class BrokerClientImplTest
   private MockServiceClient serviceClient;
   private BrokerClient brokerClient;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     jsonMapper = new DefaultObjectMapper();
@@ -64,7 +65,7 @@ public class BrokerClientImplTest
     brokerClient = new BrokerClientImpl(serviceClient, jsonMapper);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     serviceClient.verify();

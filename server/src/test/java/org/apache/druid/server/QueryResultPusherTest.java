@@ -26,7 +26,7 @@ import org.apache.druid.server.QueryResource.QueryMetricCounter;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.apache.druid.server.QueryResultPusher.Writer;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.MediaType;
@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueryResultPusherTest
 {
@@ -133,7 +133,7 @@ public class QueryResultPusherTest
 
     pusher.push();
 
-    assertTrue("recordFailure(e) should have been invoked!", recordFailureInvoked.get());
+    assertTrue(recordFailureInvoked.get(), "recordFailure(e) should have been invoked!");
   }
 
   static class NoopQueryMetricCounter implements QueryMetricCounter

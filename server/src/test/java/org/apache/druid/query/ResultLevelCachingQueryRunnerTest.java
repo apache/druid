@@ -33,10 +33,10 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Answer;
@@ -45,20 +45,20 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestBase
 {
   private Cache cache;
   private static final int DEFAULT_CACHE_ENTRY_MAX_SIZE = Integer.MAX_VALUE;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     cache = MapCache.create(1024);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     cache.close();
@@ -79,9 +79,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
         newCacheConfig(false, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
@@ -93,10 +93,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
-    Assert.assertEquals(results1, results2);
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(results1, results2);
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
     emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
   }
@@ -116,9 +116,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
     emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
     emitter.flush();
@@ -133,10 +133,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
-    Assert.assertEquals(results1, results2);
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(results1, results2);
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
     emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
   }
@@ -156,9 +156,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(0, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
     emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
     emitter.flush();
@@ -173,10 +173,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
-    Assert.assertEquals(results1, results2);
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(results1, results2);
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
@@ -197,9 +197,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
@@ -215,10 +215,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
-    Assert.assertEquals(results1, results2);
-    Assert.assertEquals(1, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(results1, results2);
+    Assertions.assertEquals(1, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
@@ -239,9 +239,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
@@ -257,10 +257,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
-    Assert.assertEquals(results1, results2);
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(2, cache.getStats().getNumMisses());
+    Assertions.assertEquals(results1, results2);
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(2, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
@@ -293,12 +293,12 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
       fail("Expected to throw an exception");
     }
     catch (RuntimeException e) {
-      Assert.assertEquals("Exception for testing", e.getMessage());
+      Assertions.assertEquals("Exception for testing", e.getMessage());
     }
     finally {
-      Assert.assertEquals(0, cache.getStats().getNumHits());
-      Assert.assertEquals(0, cache.getStats().getNumEntries());
-      Assert.assertEquals(0, cache.getStats().getNumMisses());
+      Assertions.assertEquals(0, cache.getStats().getNumHits());
+      Assertions.assertEquals(0, cache.getStats().getNumEntries());
+      Assertions.assertEquals(0, cache.getStats().getNumMisses());
 
       emitter.verifyNotEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT);
     }
@@ -344,9 +344,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
@@ -358,10 +358,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
-    Assert.assertEquals(results1, results2);
-    Assert.assertEquals(1, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(results1, results2);
+    Assertions.assertEquals(1, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
@@ -372,10 +372,10 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         responseContext()
     );
     final List<Result<TimeseriesResultValue>> results3 = sequence3.toList();
-    Assert.assertEquals(results1, results3);
-    Assert.assertEquals(2, cache.getStats().getNumHits());
-    Assert.assertEquals(1, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(results1, results3);
+    Assertions.assertEquals(2, cache.getStats().getNumHits());
+    Assertions.assertEquals(1, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
@@ -398,9 +398,9 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
         QueryPlus.wrap(query),
         responseContext()
     ).toList();
-    Assert.assertEquals(0, cache.getStats().getNumHits());
-    Assert.assertEquals(0, cache.getStats().getNumEntries());
-    Assert.assertEquals(1, cache.getStats().getNumMisses());
+    Assertions.assertEquals(0, cache.getStats().getNumHits());
+    Assertions.assertEquals(0, cache.getStats().getNumEntries());
+    Assertions.assertEquals(1, cache.getStats().getNumMisses());
 
     emitter.verifyEmitted(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 1);
     emitter.verifyValue(DefaultQueryMetrics.QUERY_RESULT_CACHE_HIT, 0);
