@@ -33,6 +33,7 @@ import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -54,7 +55,6 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
@@ -111,13 +111,19 @@ import java.util.stream.Collectors;
  */
 public class AggregationTestHelper implements Closeable
 {
+  @FunctionalInterface
+  private interface TempFolderProvider
+  {
+    File newFolder() throws IOException;
+  }
+
   private final ObjectMapper mapper;
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
   private final QueryToolChest toolChest;
   private final QueryRunnerFactory factory;
 
-  private final TemporaryFolder tempFolder;
+  private final TempFolderProvider tempFolderProvider;
   private final Closer resourceCloser;
 
   private final Map<String, Object> queryContext;
@@ -128,7 +134,7 @@ public class AggregationTestHelper implements Closeable
       IndexIO indexIO,
       QueryToolChest toolchest,
       QueryRunnerFactory factory,
-      TemporaryFolder tempFolder,
+      TempFolderProvider tempFolderProvider,
       List<? extends Module> jsonModulesToRegister,
       Closer resourceCloser,
       Map<String, Object> queryContext
@@ -139,7 +145,7 @@ public class AggregationTestHelper implements Closeable
     this.indexIO = indexIO;
     this.toolChest = toolchest;
     this.factory = factory;
-    this.tempFolder = tempFolder;
+    this.tempFolderProvider = tempFolderProvider;
     this.resourceCloser = resourceCloser;
     this.queryContext = queryContext;
 
@@ -154,13 +160,39 @@ public class AggregationTestHelper implements Closeable
       TemporaryFolder tempFolder
   )
   {
+    return createGroupByQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        config,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  public static AggregationTestHelper createGroupByQueryAggregationTestHelperWithTempDir(
+      List<? extends Module> jsonModulesToRegister,
+      GroupByQueryConfig config,
+      File tempFolder
+  )
+  {
+    return createGroupByQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        config,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  private static AggregationTestHelper createGroupByQueryAggregationTestHelper(
+      List<? extends Module> jsonModulesToRegister,
+      GroupByQueryConfig config,
+      TempFolderProvider tempFolderProvider
+  )
+  {
     final Closer closer = Closer.create();
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
     final TestGroupByBuffers groupByBuffers = closer.register(TestGroupByBuffers.createDefault());
     for (Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
     }
-    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+    final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
         mapper,
         config,
         groupByBuffers
@@ -179,7 +211,7 @@ public class AggregationTestHelper implements Closeable
         indexIO,
         factory.getToolchest(),
         factory,
-        tempFolder,
+        tempFolderProvider,
         jsonModulesToRegister,
         closer,
         Collections.emptyMap()
@@ -189,6 +221,28 @@ public class AggregationTestHelper implements Closeable
   public static AggregationTestHelper createTimeseriesQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolder tempFolder
+  )
+  {
+    return createTimeseriesQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  public static AggregationTestHelper createTimeseriesQueryAggregationTestHelperWithTempDir(
+      List<? extends Module> jsonModulesToRegister,
+      File tempFolder
+  )
+  {
+    return createTimeseriesQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  private static AggregationTestHelper createTimeseriesQueryAggregationTestHelper(
+      List<? extends Module> jsonModulesToRegister,
+      TempFolderProvider tempFolderProvider
   )
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -214,7 +268,7 @@ public class AggregationTestHelper implements Closeable
         indexIO,
         toolchest,
         factory,
-        tempFolder,
+        tempFolderProvider,
         jsonModulesToRegister,
         Closer.create(),
         Collections.emptyMap()
@@ -224,6 +278,28 @@ public class AggregationTestHelper implements Closeable
   public static AggregationTestHelper createTopNQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolder tempFolder
+  )
+  {
+    return createTopNQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  public static AggregationTestHelper createTopNQueryAggregationTestHelperWithTempDir(
+      List<? extends Module> jsonModulesToRegister,
+      File tempFolder
+  )
+  {
+    return createTopNQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  private static AggregationTestHelper createTopNQueryAggregationTestHelper(
+      List<? extends Module> jsonModulesToRegister,
+      TempFolderProvider tempFolderProvider
   )
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -261,7 +337,7 @@ public class AggregationTestHelper implements Closeable
         indexIO,
         toolchest,
         factory,
-        tempFolder,
+        tempFolderProvider,
         jsonModulesToRegister,
         resourceCloser,
         Collections.emptyMap()
@@ -271,6 +347,28 @@ public class AggregationTestHelper implements Closeable
   public static AggregationTestHelper createScanQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolder tempFolder
+  )
+  {
+    return createScanQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  public static AggregationTestHelper createScanQueryAggregationTestHelperWithTempDir(
+      List<? extends Module> jsonModulesToRegister,
+      File tempFolder
+  )
+  {
+    return createScanQueryAggregationTestHelper(
+        jsonModulesToRegister,
+        tempFolderProvider(tempFolder)
+    );
+  }
+
+  private static AggregationTestHelper createScanQueryAggregationTestHelper(
+      List<? extends Module> jsonModulesToRegister,
+      TempFolderProvider tempFolderProvider
   )
   {
     ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -299,11 +397,21 @@ public class AggregationTestHelper implements Closeable
         indexIO,
         toolchest,
         factory,
-        tempFolder,
+        tempFolderProvider,
         jsonModulesToRegister,
         resourceCloser,
         Collections.emptyMap()
     );
+  }
+
+  private static TempFolderProvider tempFolderProvider(final TemporaryFolder tempFolder)
+  {
+    return () -> tempFolder.newFolder();
+  }
+
+  private static TempFolderProvider tempFolderProvider(final File tempFolder)
+  {
+    return () -> FileUtils.createTempDirInLocation(tempFolder.toPath(), "druid-");
   }
 
   public AggregationTestHelper withQueryContext(final Map<String, Object> queryContext)
@@ -316,7 +424,7 @@ public class AggregationTestHelper implements Closeable
         indexIO,
         toolChest,
         factory,
-        tempFolder,
+        tempFolderProvider,
         Collections.emptyList(),
         resourceCloser,
         newContext
@@ -334,7 +442,7 @@ public class AggregationTestHelper implements Closeable
       Query<T> query
   ) throws Exception
   {
-    File segmentDir = tempFolder.newFolder();
+    File segmentDir = tempFolderProvider.newFolder();
     createIndex(inputDataFile, inputSchema, inputFormat, aggregators, segmentDir, minTimestamp, gran, maxRowCount);
     return runQueryOnSegments(Collections.singletonList(segmentDir), query);
   }
@@ -350,7 +458,7 @@ public class AggregationTestHelper implements Closeable
       Query<T> query
   ) throws Exception
   {
-    File segmentDir = tempFolder.newFolder();
+    File segmentDir = tempFolderProvider.newFolder();
     createIndex(inputDataStream, inputSchema, inputFormat, aggregators, segmentDir, minTimestamp, gran, maxRowCount, true);
     return runQueryOnSegments(Collections.singletonList(segmentDir), query);
   }
@@ -366,17 +474,19 @@ public class AggregationTestHelper implements Closeable
       int maxRowCount
   ) throws Exception
   {
-    createIndex(
-        new FileInputStream(inputDataFile),
-        inputSchema,
-        inputFormat,
-        aggregators,
-        outDir,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        true
-    );
+    try (final InputStream inputStream = new FileInputStream(inputDataFile)) {
+      createIndex(
+          inputStream,
+          inputSchema,
+          inputFormat,
+          aggregators,
+          outDir,
+          minTimestamp,
+          gran,
+          maxRowCount,
+          true
+      );
+    }
   }
 
   public void createIndex(
@@ -391,17 +501,19 @@ public class AggregationTestHelper implements Closeable
       boolean rollup
   ) throws Exception
   {
-    createIndex(
-        new FileInputStream(inputDataFile),
-        inputSchema,
-        inputFormat,
-        aggregators,
-        outDir,
-        minTimestamp,
-        gran,
-        maxRowCount,
-        rollup
-    );
+    try (final InputStream inputStream = new FileInputStream(inputDataFile)) {
+      createIndex(
+          inputStream,
+          inputSchema,
+          inputFormat,
+          aggregators,
+          outDir,
+          minTimestamp,
+          gran,
+          maxRowCount,
+          rollup
+      );
+    }
   }
 
   public void createIndex(
@@ -430,12 +542,12 @@ public class AggregationTestHelper implements Closeable
         }
 
         @Override
-        public InputStream open()
+        public InputStream openRaw()
         {
           return inputDataStream;
         }
       };
-      InputEntityReader reader = inputFormat.createReader(inputSchema, streamEntity, tempFolder.newFolder());
+      InputEntityReader reader = inputFormat.createReader(inputSchema, streamEntity, tempFolderProvider.newFolder());
       AggregatorFactory[] metrics = aggregators.toArray(new AggregatorFactory[0]);
       index = new OnheapIncrementalIndex.Builder()
           .setIndexSchema(
@@ -454,7 +566,7 @@ public class AggregationTestHelper implements Closeable
         while (iter.hasNext()) {
           InputRow row = iter.next();
           if (!index.canAppendRow()) {
-            File tmp = tempFolder.newFolder();
+            File tmp = tempFolderProvider.newFolder();
             toMerge.add(tmp);
             indexMerger.persist(index, tmp, IndexSpec.getDefault(), null);
             index.close();
@@ -476,7 +588,7 @@ public class AggregationTestHelper implements Closeable
       }
 
       if (toMerge.size() > 0) {
-        File tmp = tempFolder.newFolder();
+        File tmp = tempFolderProvider.newFolder();
         toMerge.add(tmp);
         indexMerger.persist(index, tmp, IndexSpec.getDefault(), null);
 
@@ -506,7 +618,7 @@ public class AggregationTestHelper implements Closeable
   ) throws Exception
   {
     if (outDir == null) {
-      outDir = tempFolder.newFolder();
+      outDir = tempFolderProvider.newFolder();
     }
     indexMerger.persist(index, outDir, IndexSpec.getDefault(), null);
 
@@ -704,4 +816,3 @@ public class AggregationTestHelper implements Closeable
     resourceCloser.close();
   }
 }
-

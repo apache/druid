@@ -22,8 +22,8 @@ package org.apache.druid.storage.s3;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
@@ -45,7 +45,7 @@ public class S3DataSegmentPusherConfigTest
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(jsonConfig, Map.class);
     Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -57,7 +57,7 @@ public class S3DataSegmentPusherConfigTest
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Map<String, String> expected = JSON_MAPPER.readValue(expectedJsonConfig, Map.class);
     Map<String, String> actual = JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(config), Map.class);
-    Assert.assertEquals(expected, actual);
+    Assertions.assertEquals(expected, actual);
   }
 
   @Test
@@ -69,8 +69,8 @@ public class S3DataSegmentPusherConfigTest
 
     S3DataSegmentPusherConfig config = JSON_MAPPER.readValue(jsonConfig, S3DataSegmentPusherConfig.class);
     Set<ConstraintViolation<S3DataSegmentPusherConfig>> violations = validator.validate(config);
-    Assert.assertEquals(1, violations.size());
+    Assertions.assertEquals(1, violations.size());
     ConstraintViolation violation = Iterators.getOnlyElement(violations.iterator());
-    Assert.assertEquals("must be greater than or equal to 1", violation.getMessage());
+    Assertions.assertEquals("must be greater than or equal to 1", violation.getMessage());
   }
 }

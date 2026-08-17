@@ -19,19 +19,30 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamFullResponseHolder;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 
 public class TaskRunnerUtils
@@ -108,6 +119,38 @@ public class TaskRunnerUtils
       return taskLocation.makeURL(path);
     }
     catch (MalformedURLException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static Optional<InputStream> streamTaskReportsFromTaskLocation(
+      final HttpClient httpClient,
+      final URL url
+  ) throws IOException
+  {
+    try {
+      final InputStreamFullResponseHolder response = httpClient.go(
+          new Request(HttpMethod.GET, url),
+          new InputStreamFullResponseHandler()
+      ).get();
+      final HttpResponseStatus responseStatus = response.getResponse().getStatus();
+
+      if (HttpResponseStatus.OK.equals(responseStatus)) {
+        return Optional.of(response.getContent());
+      } else if (HttpResponseStatus.NOT_FOUND.equals(responseStatus)
+                 || HttpResponseStatus.SERVICE_UNAVAILABLE.equals(responseStatus)) {
+        return Optional.absent();
+      } else {
+        throw new IOException(
+            StringUtils.format("Failed to stream task reports from [%s]. Response status [%s].", url, responseStatus)
+        );
+      }
+    }
+    catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+    catch (ExecutionException e) {
+      Throwables.propagateIfPossible(e.getCause(), IOException.class);
       throw new RuntimeException(e);
     }
   }

@@ -30,6 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Used by {@link ServiceClientImplTest} so retries happen immediately.
@@ -75,7 +76,10 @@ public class NoDelayScheduledExecutorService extends ForwardingExecutorService i
 
   private static class NoDelayScheduledFuture<T> implements ScheduledFuture<T>
   {
+    private static final AtomicLong NEXT_SEQUENCE_NUMBER = new AtomicLong();
+
     private final Future<T> delegate;
+    private final long sequenceNumber = NEXT_SEQUENCE_NUMBER.getAndIncrement();
 
     public NoDelayScheduledFuture(final Future<T> delegate)
     {
@@ -89,9 +93,27 @@ public class NoDelayScheduledExecutorService extends ForwardingExecutorService i
     }
 
     @Override
-    public int compareTo(Delayed o)
+    public int compareTo(final Delayed o)
     {
-      return 0;
+      if (this == o) {
+        return 0;
+      }
+      if (o instanceof NoDelayScheduledFuture) {
+        return Long.compare(sequenceNumber, ((NoDelayScheduledFuture<?>) o).sequenceNumber);
+      }
+      return getClass().getName().compareTo(o.getClass().getName());
+    }
+
+    @Override
+    public boolean equals(final Object o)
+    {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return System.identityHashCode(this);
     }
 
     @Override

@@ -31,6 +31,8 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 
 public class FileUtilsTest
 {
@@ -51,6 +53,61 @@ public class FileUtilsTest
     }
     long buffersMemoryAfter = BufferUtils.totalMemoryUsedByDirectAndMappedBuffers();
     Assertions.assertEquals(buffersMemoryBefore, buffersMemoryAfter);
+  }
+
+  @Test
+  public void testDeleteDirectoryAndEmptyAncestorsRemovesEmptyIntermediateDirs() throws IOException
+  {
+    // base/mid/leaf, where 'leaf' is the scratch dir and 'mid' is an intermediate dir mkdirp created along the way.
+    final File mid = new File(temporaryFolder, "mid");
+    final File leaf = new File(mid, "leaf");
+    FileUtils.mkdirp(leaf);
+
+    FileUtils.deleteDirectoryAndEmptyAncestors(leaf, temporaryFolder);
+
+    Assertions.assertFalse(leaf.exists(), "leaf should be deleted");
+    Assertions.assertFalse(mid.exists(), "empty intermediate dir should be deleted");
+    Assertions.assertTrue(temporaryFolder.exists(), "base (stopAt) must survive");
+  }
+
+  @Test
+  public void testDeleteDirectoryAndEmptyAncestorsStopsAtNonEmptyAncestor() throws IOException
+  {
+    // Shared intermediate dir with two sibling leaves; deleting one leaf must leave the shared parent (and sibling).
+    final File shared = new File(temporaryFolder, "shared");
+    final File leafA = new File(shared, "leafA");
+    final File leafB = new File(shared, "leafB");
+    FileUtils.mkdirp(leafA);
+    FileUtils.mkdirp(leafB);
+
+    FileUtils.deleteDirectoryAndEmptyAncestors(leafA, temporaryFolder);
+
+    Assertions.assertFalse(leafA.exists(), "deleted leaf should be gone");
+    Assertions.assertTrue(leafB.exists(), "sibling leaf must survive");
+    Assertions.assertTrue(shared.exists(), "non-empty shared ancestor must survive");
+
+    // Deleting the last sibling then reclaims the now-empty shared ancestor, stopping at base.
+    FileUtils.deleteDirectoryAndEmptyAncestors(leafB, temporaryFolder);
+    Assertions.assertFalse(shared.exists(), "shared ancestor should be reclaimed once empty");
+    Assertions.assertTrue(temporaryFolder.exists(), "base (stopAt) must survive");
+  }
+
+  @Test
+  public void testDeleteDirectoryAndEmptyAncestorsDeletesNonEmptyLeafButNeverStopAt() throws IOException
+  {
+    // The leaf itself is deleted recursively even when non-empty; a leaf directly under stopAt leaves stopAt intact.
+    final File leaf = new File(temporaryFolder, "leaf");
+    FileUtils.mkdirp(leaf);
+    Assertions.assertTrue(new File(leaf, "buffer").createNewFile());
+
+    FileUtils.deleteDirectoryAndEmptyAncestors(leaf, temporaryFolder);
+
+    Assertions.assertFalse(leaf.exists(), "non-empty leaf should be deleted recursively");
+    Assertions.assertTrue(temporaryFolder.exists(), "base (stopAt) must survive");
+
+    // Passing stopAt itself is a no-op.
+    FileUtils.deleteDirectoryAndEmptyAncestors(temporaryFolder, temporaryFolder);
+    Assertions.assertTrue(temporaryFolder.exists(), "stopAt must never be deleted");
   }
 
   @Test
@@ -114,6 +171,53 @@ public class FileUtilsTest
       return null;
     });
     Assertions.assertEquals("baz", StringUtils.fromUtf8(Files.readAllBytes(tmpFile.toPath())));
+  }
+
+  @Test
+  public void testResolveFileWithinDirectory()
+  {
+    final File resolved = FileUtils.resolveFileWithinDirectory(temporaryFolder, "nested/file");
+
+    Assertions.assertEquals(
+        temporaryFolder.toPath().toAbsolutePath().resolve(Path.of("nested", "file")).normalize(),
+        resolved.toPath()
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsTraversal()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(temporaryFolder, "../outside")
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsAbsolutePath()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(
+            temporaryFolder,
+            temporaryFolder.toPath().resolve("inside").toAbsolutePath().toString()
+        )
+    );
+  }
+
+  @Test
+  public void testResolveFileWithinDirectoryRejectsInvalidPath()
+  {
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> FileUtils.resolveFileWithinDirectory(temporaryFolder, "invalid\0path")
+    );
+
+    Assertions.assertEquals(
+        StringUtils.format("Path[%s] is not within directory[%s]", "invalid\0path", temporaryFolder),
+        exception.getMessage()
+    );
+    Assertions.assertInstanceOf(InvalidPathException.class, exception.getCause());
   }
 
   @Test

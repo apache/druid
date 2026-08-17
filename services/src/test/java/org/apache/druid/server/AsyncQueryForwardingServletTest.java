@@ -33,6 +33,7 @@ import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.Service;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.utils.SocketUtil;
@@ -73,6 +74,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.log.NoopRequestLogger;
+import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.router.QueryHostFinder;
 import org.apache.druid.server.router.RendezvousHashAvaticaConnectionBalancer;
@@ -111,11 +113,16 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -130,6 +137,8 @@ import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
+  private static final String RESPONSE_CONTEXT = "{\"missingSegments\":[]}";
+
   private static int port1;
   private static int port2;
 
@@ -180,6 +189,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
+                Jerseys.addResource(binder, ResponseContextResource.class);
                 LifecycleModule.register(binder, Server.class);
               }
             }
@@ -207,6 +217,16 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
+  }
+
+  @Test
+  public void testProxyResponseContextHeader() throws Exception
+  {
+    final URL url = URI.create("http://localhost:" + port + "/proxy/response-context").toURL();
+    final HttpURLConnection get = (HttpURLConnection) url.openConnection();
+
+    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
+    Assert.assertEquals(RESPONSE_CONTEXT, get.getHeaderField(QueryResource.HEADER_RESPONSE_CONTEXT));
   }
 
   @Test(timeout = 60_000L)
@@ -506,7 +526,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testMetricsEmittedWithErrorStatusCodeButNoResultException()
+  public void testMetricsEmittedWithErrorStatusCodeButNoResultException() throws IOException
   {
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("foo")
@@ -539,6 +559,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     };
 
     final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
+    final RequestLogger requestLogger = Mockito.mock(RequestLogger.class);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         TestHelper.makeJsonMapper(),
@@ -547,7 +568,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         stubServiceEmitter,
-        NoopRequestLogger.instance(),
+        requestLogger,
         makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
@@ -566,6 +587,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         504,
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
+    assertNativeQueryStatusCodeMatchesMetric(requestLogger, getEmittedStatusCode(stubServiceEmitter));
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
     Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
@@ -643,7 +665,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   }
 
   @Test
-  public void testOnFailureWithExceptionAndUnassignedStatusCode()
+  public void testOnFailureWithExceptionAndUnassignedStatusCode() throws IOException
   {
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource("foo")
@@ -665,6 +687,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Mockito.when(responseMock.getHeaders()).thenReturn(HttpFields.build());
 
     final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
+    final RequestLogger requestLogger = Mockito.mock(RequestLogger.class);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         TestHelper.makeJsonMapper(),
@@ -673,7 +696,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         stubServiceEmitter,
-        NoopRequestLogger.instance(),
+        requestLogger,
         makeRouterTestOverrideEmittingFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         new Properties(),
@@ -693,6 +716,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         500, // Should default to 500 when status is 0
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
+    assertNativeQueryStatusCodeMatchesMetric(requestLogger, getEmittedStatusCode(stubServiceEmitter));
     Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
     Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
@@ -913,6 +937,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     };
     final Result result = new Result(proxyRequestMock, response);
     final StubServiceEmitter stubServiceEmitter = StubServiceEmitter.createStarted();
+    final RequestLogger requestLogger = Mockito.mock(RequestLogger.class);
     final AsyncQueryForwardingServlet servlet = new AsyncQueryForwardingServlet(
         new MapQueryToolChestWarehouse(ImmutableMap.of()),
         jsonMapper,
@@ -921,7 +946,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         null,
         null,
         stubServiceEmitter,
-        NoopRequestLogger.instance(),
+        requestLogger,
         new DefaultGenericQueryMetricsFactory(),
         new AuthenticatorMapper(ImmutableMap.of()),
         properties,
@@ -967,10 +992,51 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
       );
     }
+    if (!isJDBCSql) {
+      assertStatusCodeMatchesMetric(requestLogger, isNativeSql, getEmittedStatusCode(stubServiceEmitter));
+    }
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.
     EasyMock.verify(hostFinder, requestMock);
     Assert.assertEquals(1, didService.get());
+  }
+
+  private static int getEmittedStatusCode(StubServiceEmitter stubServiceEmitter)
+  {
+    return (int) stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE);
+  }
+
+  private static void assertStatusCodeMatchesMetric(
+      RequestLogger requestLogger,
+      boolean isSqlQuery,
+      int metricStatusCode
+  ) throws IOException
+  {
+    if (isSqlQuery) {
+      final ArgumentCaptor<RequestLogLine> requestLogLineCaptor = ArgumentCaptor.forClass(RequestLogLine.class);
+      Mockito.verify(requestLogger).logSqlQuery(requestLogLineCaptor.capture());
+      assertStatusCode(requestLogLineCaptor.getValue(), metricStatusCode);
+    } else {
+      assertNativeQueryStatusCodeMatchesMetric(requestLogger, metricStatusCode);
+    }
+  }
+
+  private static void assertNativeQueryStatusCodeMatchesMetric(
+      RequestLogger requestLogger,
+      int metricStatusCode
+  ) throws IOException
+  {
+    final ArgumentCaptor<RequestLogLine> requestLogLineCaptor = ArgumentCaptor.forClass(RequestLogLine.class);
+    Mockito.verify(requestLogger).logNativeQuery(requestLogLineCaptor.capture());
+    assertStatusCode(requestLogLineCaptor.getValue(), metricStatusCode);
+  }
+
+  private static void assertStatusCode(RequestLogLine requestLogLine, int metricStatusCode)
+  {
+    Assert.assertEquals(
+        metricStatusCode,
+        requestLogLine.getQueryStats().getStats().get(DruidMetrics.STATUS_CODE)
+    );
   }
 
   private static Server makeTestDeleteServer(int port, final CountDownLatch latch)
@@ -989,6 +1055,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     server.setHandler(servletContextHandler);
     return server;
+  }
+
+  @Path("/response-context")
+  public static class ResponseContextResource
+  {
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public javax.ws.rs.core.Response get()
+    {
+      return javax.ws.rs.core.Response.ok(DEFAULT_RESPONSE_CONTENT)
+                                      .header(QueryResource.HEADER_RESPONSE_CONTEXT, RESPONSE_CONTEXT)
+                                      .build();
+    }
   }
 
   public static class ProxyJettyServerInit implements JettyServerInitializer
@@ -1068,6 +1147,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addFilter(GuiceFilter.class, "/slow/*", null);
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);
+      root.addFilter(GuiceFilter.class, "/response-context/*", null);
 
       final Handler.Sequence handlerList = new Handler.Sequence();
       handlerList.setHandlers(

@@ -36,6 +36,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -182,5 +183,43 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", awsExternalId='" + awsExternalId + '\'' +
            ", deaggregate=" + deaggregate +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    KinesisSupervisorIOConfig that = (KinesisSupervisorIOConfig) o;
+    return fetchDelayMillis == that.fetchDelayMillis
+           && deaggregate == that.deaggregate
+           && Objects.equals(endpoint, that.endpoint)
+           && Objects.equals(recordsPerFetch, that.recordsPerFetch)
+           && Objects.equals(awsAssumedRoleArn, that.awsAssumedRoleArn)
+           && Objects.equals(awsExternalId, that.awsExternalId);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        super.hashCode(),
+        endpoint,
+        recordsPerFetch,
+        fetchDelayMillis,
+        awsAssumedRoleArn,
+        awsExternalId,
+        deaggregate
+    );
+  }
+
+  @Override
+  public KinesisIOConfigBuilder toBuilder()
+  {
+    return new KinesisIOConfigBuilder().copyFrom(this);
   }
 }

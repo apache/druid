@@ -424,6 +424,82 @@ public class StorageLocation
   }
 
   /**
+   * Adjusts the reservation size of an already-registered {@link ResizableCacheEntry} downward. Used when an entry's
+   * final size is not known at registration time (e.g. a partial-segment metadata entry that reserves a pessimistic
+   * estimate and shrinks to the actual on-disk header size once the header has been downloaded). Returns reclaimed
+   * capacity to the location's available budget; never triggers eviction.
+   * <p>
+   * Throws if {@code newSize} is greater than the entry's current size: grow semantics require checking the location's
+   * available budget and possibly evicting other entries, and aren't needed by the current callers.
+   */
+  public void adjustReservation(CacheEntryIdentifier id, long newSize)
+  {
+    lock.writeLock().lock();
+    try {
+      final CacheEntry entry;
+      final WeakCacheEntry weak;
+      if (staticCacheEntries.containsKey(id)) {
+        entry = staticCacheEntries.get(id);
+        weak = null;
+      } else {
+        weak = weakCacheEntries.get(id);
+        if (weak == null) {
+          throw DruidException.defensive(
+              "Cannot adjust reservation for unknown cache entry[%s]",
+              id
+          );
+        }
+        entry = weak.cacheEntry;
+      }
+
+      if (!(entry instanceof ResizableCacheEntry)) {
+        throw DruidException.defensive(
+            "Cache entry[%s] of type[%s] does not support reservation adjustment",
+            id,
+            entry.getClass().getSimpleName()
+        );
+      }
+
+      final long oldSize = entry.getSize();
+      final long delta = oldSize - newSize;
+      if (delta < 0) {
+        throw DruidException.defensive(
+            "Cannot grow reservation for cache entry[%s] from [%d] to [%d] bytes; only shrink is supported",
+            id,
+            oldSize,
+            newSize
+        );
+      }
+      if (delta == 0) {
+        return;
+      }
+
+      ((ResizableCacheEntry) entry).resizeReservation(newSize);
+      currSizeBytes.getAndAdd(-delta);
+      if (weak == null) {
+        currStaticSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        staticStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
+      } else {
+        currWeakSizeBytes.getAndAdd(-delta);
+        // The reservation (loadBegin) was recorded at the pre-shrink size; correct its byte total to match.
+        weakStats.getAndUpdate(s -> s.shrinkLoadBegin(delta));
+        // Each active hold contributed entry.getSize() to currHoldBytes via trackWeakHold; shrink each hold's
+        // contribution by the same delta so a future trackWeakRelease (which subtracts the new smaller size) lands
+        // on the correct total. Clamp at 0 defensively against any pre-existing drift.
+        final long activeHolds = weak.holdReferents.getRegisteredParties() - 1L;
+        if (activeHolds > 0) {
+          final long holdDelta = delta * activeHolds;
+          currHoldBytes.updateAndGet(v -> Math.max(0L, v - holdDelta));
+        }
+      }
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
    * Removes an item from {@link #staticCacheEntries}, reducing {@link #currSizeBytes} by {@link CacheEntry#getSize()}.
    * If the cache entry exists in {@link #weakCacheEntries}, it is left in place to be removed by
    * {@link #reclaim(long)} instead.
@@ -440,6 +516,66 @@ public class StorageLocation
     }
     finally {
       lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Remove a {@link #weakCacheEntries} entry that currently has no outstanding holds, unlinking it from the SIEVE
+   * queue and terminating its phaser (which fires the underlying {@link CacheEntry#unmount}). No-op when the entry
+   * is absent, is a {@link #staticCacheEntries} entry, or still has outstanding holds.
+   * <p>
+   * This exists for callers that register a weak entry <em>without</em> a {@link ReservationHold} (the bootstrap
+   * reserve path uses {@link #reserveWeak}) and need to clean it up after a failed mount. The normal runtime path
+   * registers weak entries via {@link #addWeakReservationHold} and relies on the hold's release runnable to evict a
+   * never-mounted entry on close; an entry registered without a hold has no such cleanup, so a failed mount would
+   * otherwise leave it lingering (and un-re-mountable if its on-disk state was deleted by the mount rollback). The
+   * hold guard makes this safe to call unconditionally on any mount failure: a held entry (runtime path) is left to
+   * its holder's release runnable.
+   */
+  public void removeUnheldWeakEntry(CacheEntryIdentifier id)
+  {
+    lock.writeLock().lock();
+    try {
+      final WeakCacheEntry[] evicted = new WeakCacheEntry[1];
+      weakCacheEntries.computeIfPresent(
+          id,
+          (cacheEntryIdentifier, weakCacheEntry) -> {
+            if (weakCacheEntry.isHeld()) {
+              return weakCacheEntry;
+            }
+            final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
+            unlinkWeakEntry(weakCacheEntry);
+            if (isMounted) {
+              weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
+            }
+            evicted[0] = weakCacheEntry;
+            return null;
+          }
+      );
+      unmountEvictedWeakEntry(evicted[0]);
+    }
+    finally {
+      lock.writeLock().unlock();
+    }
+  }
+
+  /**
+   * Fire {@link WeakCacheEntry#unmount()} for an entry that has just been removed from {@link #weakCacheEntries}.
+   * <p>
+   * MUST be called <em>after</em> the enclosing {@link Map#computeIfPresent}/{@link Map#computeIfAbsent} callback has
+   * returned, never from inside it. Unmounting a partial bundle entry drains its {@link Phaser}, whose termination
+   * cascades into {@code PartialSegmentBundleCacheEntry.doActualUnmount} -> parent bundle hold release ->
+   * {@code weakCacheEntries.computeIfPresent} for a <em>different</em> key. Structurally modifying
+   * {@link #weakCacheEntries} from within another entry's compute callback trips HashMap's fail-fast check
+   * (a {@link java.util.ConcurrentModificationException}). Removing the entry first, then unmounting, keeps the
+   * cascade's map mutations sequential. Callers hold the write lock across both steps so no reserve/re-mount can race
+   * the not-yet-drained phaser.
+   */
+  @GuardedBy("lock")
+  private void unmountEvictedWeakEntry(@Nullable WeakCacheEntry evicted)
+  {
+    if (evicted != null) {
+      evicted.unmount();
     }
   }
 
@@ -464,6 +600,7 @@ public class StorageLocation
 
       lock.writeLock().lock();
       try {
+        final WeakCacheEntry[] evicted = new WeakCacheEntry[1];
         weakCacheEntries.computeIfPresent(
             weakEntry.cacheEntry.getId(),
             (cacheEntryIdentifier, weakCacheEntry) -> {
@@ -473,16 +610,17 @@ public class StorageLocation
               if ((isNewEntry && !isMounted)
                   || (areWeakEntriesEphemeral && !weakCacheEntry.isHeld())) {
                 unlinkWeakEntry(weakCacheEntry);
-                weakCacheEntry.unmount(); // call even if never mounted, to terminate the phaser
                 if (isMounted) {
                   weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));
                 }
+                evicted[0] = weakCacheEntry;
                 return null;
               } else {
                 return weakCacheEntry;
               }
             }
         );
+        unmountEvictedWeakEntry(evicted[0]);
       }
       finally {
         lock.writeLock().unlock();
@@ -625,6 +763,7 @@ public class StorageLocation
   private void unmountReclaimed(ReclaimResult reclaimResult)
   {
     if (reclaimResult != null) {
+      final List<WeakCacheEntry> toUnmount = new ArrayList<>();
       for (WeakCacheEntry removed : reclaimResult.getEvictions()) {
         weakCacheEntries.computeIfAbsent(
             removed.cacheEntry.getId(),
@@ -633,12 +772,15 @@ public class StorageLocation
               weakStats.getAndUpdate(s -> s.evict(removed.cacheEntry.getSize()));
               // .. but make sure the same identifier wasn't moved to a static load before we actually unmount it
               if (!staticCacheEntries.containsKey(cacheEntryIdentifier)) {
-                removed.unmount();
+                toUnmount.add(removed);
                 weakStats.getAndUpdate(WeakStats::unmount);
               }
               return null;
             }
         );
+      }
+      for (WeakCacheEntry removed : toUnmount) {
+        unmountEvictedWeakEntry(removed);
       }
     }
   }
@@ -679,6 +821,16 @@ public class StorageLocation
     weakStats.getAndUpdate(s -> s.load(size));
   }
 
+  /**
+   * Record a single on-demand deep-storage range read: {@code bytes} pulled over the wire in {@code nanos}. One read
+   * may materialize several internal files (whole-container fetch), so this is the request-level signal that
+   * complements the per-file {@link #trackWeakLoad}.
+   */
+  public void trackWeakRangeRead(long bytes, long nanos)
+  {
+    weakStats.getAndUpdate(s -> s.rangeRead(bytes, nanos));
+  }
+
   private void trackWeakHold(WeakCacheEntry entry)
   {
     currHoldCount.getAndIncrement();
@@ -715,11 +867,17 @@ public class StorageLocation
         entry.unmount();
       }
       staticCacheEntries.clear();
-      while (head != null) {
-        head.unmount();
-        head = head.next;
+      final List<WeakCacheEntry> weakToUnmount = new ArrayList<>();
+      for (WeakCacheEntry entry = head; entry != null; entry = entry.next) {
+        weakToUnmount.add(entry);
       }
+      head = null;
+      tail = null;
+      hand = null;
       weakCacheEntries.clear();
+      for (WeakCacheEntry entry : weakToUnmount) {
+        entry.unmount();
+      }
     }
     finally {
       lock.writeLock().unlock();
@@ -1037,6 +1195,16 @@ public class StorageLocation
       return this;
     }
 
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation}. The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public StaticStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
+      return this;
+    }
+
     public StaticStats load(long size)
     {
       loadCount.getAndIncrement();
@@ -1109,6 +1277,9 @@ public class StorageLocation
     private final AtomicLong evictionCount = new AtomicLong(0);
     private final AtomicLong evictionBytes = new AtomicLong(0);
     private final AtomicLong unmountCount = new AtomicLong(0);
+    private final AtomicLong readCount = new AtomicLong(0);
+    private final AtomicLong readBytes = new AtomicLong(0);
+    private final AtomicLong readTimeNanos = new AtomicLong(0);
 
     public WeakStats(AtomicLong sizeUsed, AtomicLong holdCount, AtomicLong holdBytes)
     {
@@ -1128,6 +1299,17 @@ public class StorageLocation
     {
       loadBeginCount.getAndIncrement();
       loadBeginBytes.getAndAdd(size);
+      return this;
+    }
+
+    /**
+     * Correct the reserved (loadBegin) byte total downward by {@code delta} when a reservation is shrunk via
+     * {@link StorageLocation#adjustReservation} (e.g. a partial metadata entry's pessimistic estimate reduced to the
+     * actual header size after mount). The load-begin count is unchanged; only the byte total is corrected.
+     */
+    public WeakStats shrinkLoadBegin(long delta)
+    {
+      loadBeginBytes.getAndAdd(-delta);
       return this;
     }
 
@@ -1154,6 +1336,14 @@ public class StorageLocation
     public WeakStats reject()
     {
       rejectionCount.getAndIncrement();
+      return this;
+    }
+
+    public WeakStats rangeRead(long bytes, long nanos)
+    {
+      readCount.getAndIncrement();
+      readBytes.getAndAdd(bytes);
+      readTimeNanos.getAndAdd(nanos);
       return this;
     }
 
@@ -1227,6 +1417,24 @@ public class StorageLocation
     public long getRejectCount()
     {
       return rejectionCount.get();
+    }
+
+    @Override
+    public long getReadCount()
+    {
+      return readCount.get();
+    }
+
+    @Override
+    public long getReadBytes()
+    {
+      return readBytes.get();
+    }
+
+    @Override
+    public long getReadTimeNanos()
+    {
+      return readTimeNanos.get();
     }
 
     @VisibleForTesting

@@ -41,6 +41,32 @@ Real-time analytics database. Java, Maven, multi-module project.
 - End every file with a newline.
 - Don't format changes unnecessarily.
 
+## Testing
+
+### JUnit 5 test helpers
+
+When adding or migrating tests, reuse these existing test-scope helpers:
+
+- `TemporaryFolderExtension` (`org.apache.druid.testing`) for tests that need a Druid-managed `File` temporary directory:
+
+  ```java
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  ```
+
+  Use `getRoot()`, `newFolder(...)`, or `newFile(...)`. Prefer `TemporaryFolderExtension` over JUnit 5 `@TempDir` or JUnit 4 `TemporaryFolder`. Do not add new `TempFolderOperations` usages; the existing compatibility bridge is only for tests that have not yet migrated.
+
+- `LoggerCaptureExtension` (`org.apache.druid.testing.junit`) for capturing Log4j events. Register it with the target class and use `getLogEvents()`, `clearLogEvents()`, or `awaitLogEvents()` as needed.
+
+## Pull Requests
+
+- Before opening a PR, self-review the complete diff against the target branch. Verify that every change is intentional and in scope, check for correctness and regressions, and run the relevant tests or checks.
+- PR titles targeting `master` must use the Conventional Commits format: `<type>: <description>` or `<type>(<scope>): <description>`.
+- For a breaking change, add `!` immediately before the colon: `<type>!: <description>` or `<type>(<scope>)!: <description>`. A breaking change is backward-incompatible and may require users to update existing code, configuration, or integrations.
+- Accepted types are `backport`, `build`, `ci`, `dev`, `docs`, `feat`, `fix`, `minor`, `perf`, `refactor`, `release`, `revert`, `style`, and `test`.
+- Example: `build: remove redundant license download step`.
+- Follow `.github/pull_request_template.md` when preparing the PR description.
+
 ## Running Tests
 
 Use these flags for faster tests: `-Pskip-static-checks -Dweb.console.skip=true -T1C`

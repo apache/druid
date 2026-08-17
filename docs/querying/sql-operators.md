@@ -32,7 +32,7 @@ sidebar_label: "Operators"
 
 
 :::info
- Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
 

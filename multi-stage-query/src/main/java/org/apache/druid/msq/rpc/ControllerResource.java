@@ -199,8 +199,8 @@ public class ControllerResource
   }
 
   /**
-   * See {@link org.apache.druid.indexing.overlord.RemoteTaskRunner#streamTaskReports} for the client-side code that
-   * calls this API.
+   * See {@link org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner#streamTaskReports} for the client-side code
+   * that calls this API.
    */
   @GET
   @Path("/liveReports")

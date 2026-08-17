@@ -87,8 +87,7 @@ describe('Tutorial: Loading a file', () => {
   });
 });
 
-function validateConnectLocalData(preview: string) {
-  const lines = preview.split('\n');
+function validateConnectLocalData(lines: string[]) {
   expect(lines.length).toBe(500);
   const firstLine = lines[0];
   expect(firstLine).toBe(

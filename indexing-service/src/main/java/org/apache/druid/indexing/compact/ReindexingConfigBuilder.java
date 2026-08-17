@@ -275,6 +275,10 @@ class ReindexingConfigBuilder
       builder.withProjections(dataSchemaRule.getProjections());
     }
 
+    if (dataSchemaRule.getBaseTable() != null) {
+      builder.withBaseTable(dataSchemaRule.getBaseTable());
+    }
+
     if (dataSchemaRule.getQueryGranularity() != null || dataSchemaRule.getRollup() != null) {
       builder.withQueryGranularityAndRollup(
           dataSchemaRule.getQueryGranularity(),

@@ -103,6 +103,11 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return TYPE;
   }
 
+  public PodTemplateSelector getPodTemplateSelector()
+  {
+    return podTemplateSelector;
+  }
+
   /**
    * Create a {@link Job} from a {@link Task}
    *
@@ -235,7 +240,15 @@ public class PodTemplateTaskAdapter implements TaskAdapter
         new EnvVarBuilder()
             .withName(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV)
             .withValue(Boolean.toString(task.getBroadcastDatasourceLoadingSpec().getMode().needsBroadcastSegments()))
-            .build()
+            .build(),
+        // Lets the peon tag its metrics with the template it runs under. Sourced from the annotation
+        // rather than passed by value so it always reflects the template actually applied to the pod.
+        new EnvVarBuilder()
+            .withName(DruidK8sConstants.POD_TEMPLATE_ENV)
+            .withValueFrom(new EnvVarSourceBuilder().withFieldRef(new ObjectFieldSelector(
+                null,
+                StringUtils.format("metadata.annotations['%s']", DruidK8sConstants.TASK_JOB_TEMPLATE)
+            )).build()).build()
     );
     if (!shouldUseDeepStorageForTaskPayload(task)) {
       envVars.add(new EnvVarBuilder()

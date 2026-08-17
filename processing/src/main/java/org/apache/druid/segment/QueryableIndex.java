@@ -25,12 +25,15 @@ import org.apache.druid.segment.column.BaseColumnHolder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.QueryableProjection;
+import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -105,6 +108,42 @@ public interface QueryableIndex extends Closeable, ColumnInspector
 
   @Nullable
   default QueryableIndex getProjectionQueryableIndex(String name)
+  {
+    return null;
+  }
+
+  /**
+   * Returns the {@link ClusteredValueGroupsBaseTableSchema} summary if this index represents a clustered base table, or
+   * {@code null} for a non-clustered segment. Default returns {@code null}; only V10-loaded clustered segments
+   * override.
+   */
+  @Nullable
+  default ClusteredValueGroupsBaseTableSchema getClusteredBaseSummary()
+  {
+    return null;
+  }
+
+  /**
+   * Returns the list of {@link TableClusterGroupSpec} entries on this index, one per cluster group. Empty for a
+   * non-clustered segment. For a clustered segment, this is the same list returned by
+   * {@code getClusteredBaseSummary().getClusterGroups()}, surfaced here so query-time dispatch can enumerate cluster
+   * groups (e.g. via {@code Projections.pruneClusterGroups}).
+   */
+  default List<TableClusterGroupSpec> getClusterGroupSchemas()
+  {
+    return Collections.emptyList();
+  }
+
+  /**
+   * Returns a {@link QueryableIndex} sub-view scoped to a single cluster group's column data.
+   * Default returns {@code null}; only clustered segments override.
+   * <p>
+   * Clustering columns are constant within a group. When {@code withClusteringColumns} is true (query paths) they are
+   * additionally exposed as constant columns so filters and selectors can resolve them; when false
+   * (the merge/persist path) they are omitted (since they are stored as metadata instead of actual columns).
+   */
+  @Nullable
+  default QueryableIndex getClusterGroupQueryableIndex(TableClusterGroupSpec groupSpec, boolean withClusteringColumns)
   {
     return null;
   }

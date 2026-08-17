@@ -23,7 +23,7 @@ title: "Multi-value dimensions"
   -->
 
 
-Apache Druid supports "multi-value" string dimensions. Multi-value string dimensions result from input fields that contain an
+Apache&circledR; Druid supports "multi-value" string dimensions. Multi-value string dimensions result from input fields that contain an
 array of values instead of a single value, such as the `tags` values in the following JSON array example: 
 
 ```
@@ -49,7 +49,7 @@ The following sections describe inserting, filtering, and grouping behavior base
 ## Ingestion
 
 ### Native batch and streaming ingestion
-When using native [batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka](../ingestion/kafka-ingestion.md), the Druid web console data loader can detect multi-value dimensions and configure the `dimensionsSpec` accordingly.
+When using native [batch](../ingestion/native-batch.md) or streaming ingestion such as with [Apache Kafka&circledR;](../ingestion/kafka-ingestion.md), the Druid web console data loader can detect multi-value dimensions and configure the `dimensionsSpec` accordingly.
 
 For TSV or CSV data, you can specify the multi-value delimiters using the `listDelimiter` field in the `inputFormat`. JSON data must be formatted as a JSON array to be ingested as a multi-value dimension. JSON data does not require `inputFormat` configuration.
 

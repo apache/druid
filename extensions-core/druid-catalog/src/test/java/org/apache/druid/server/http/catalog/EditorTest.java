@@ -42,11 +42,11 @@ import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.metadata.TestDerbyConnector;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.apache.druid.metadata.JUnit5TestDerbyConnector;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -54,27 +54,27 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EditorTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public static final JUnit5TestDerbyConnector DERBY_CONNECTOR_RULE = new JUnit5TestDerbyConnector();
 
   private CatalogTests.DbFixture dbFixture;
   private CatalogStorage catalog;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
-    dbFixture = new CatalogTests.DbFixture(derbyConnectorRule);
+    dbFixture = new CatalogTests.DbFixture(DERBY_CONNECTOR_RULE);
     catalog = dbFixture.storage;
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     CatalogTests.tearDown(dbFixture);

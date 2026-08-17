@@ -41,6 +41,7 @@ import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.TestSegmentUtils;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
@@ -49,6 +50,7 @@ import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager.DataSourceState;
@@ -68,7 +70,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,50 +104,21 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     final File segmentCacheDir = temporaryFolder.newFolder();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return segmentCacheDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(segmentCacheDir, null, null)
-        );
-      }
-    };
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(segmentCacheDir)
+        .locations(new StorageLocationConfig(segmentCacheDir, null, null))
+        .build();
 
     final File vsfRoot = temporaryFolder.newFolder();
     final File virtualSegmentCacheDir = new File(vsfRoot, "segmentCache");
     FileUtils.mkdirp(virtualSegmentCacheDir);
     final File vsfInfoDir = new File(vsfRoot, "info");
     FileUtils.mkdirp(vsfInfoDir);
-    final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return vsfInfoDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(virtualSegmentCacheDir, null, null)
-        );
-      }
-
-      @Override
-      public boolean isVirtualStorage()
-      {
-        return true;
-      }
-    };
+    final SegmentLoaderConfig virtualLoaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(vsfInfoDir)
+        .locations(new StorageLocationConfig(virtualSegmentCacheDir, null, null))
+        .virtualStorage(true)
+        .build();
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
@@ -165,6 +137,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     cacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -175,6 +148,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     virtualCacheManager = new SegmentLocalCacheManager(
         virtualStorageLocations,
         virtualLoaderConfig,
+        StorageLoadingThreadPool.createFromConfig(virtualLoaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(virtualStorageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -486,7 +460,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
         )
     );
 
-    final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad);
+    final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad, AcquireMode.FULL);
     AcquireSegmentResult result = action.getSegmentFuture().get();
     Assert.assertNotNull(result);
     Assert.assertEquals(1L, result.getLoadSizeBytes());

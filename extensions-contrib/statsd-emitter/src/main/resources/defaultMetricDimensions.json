@@ -5,6 +5,7 @@
   "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer"},
   "query/node/bytes" : { "dimensions" : ["server"], "type" : "count"},
 
+  "query/segments/count" : { "dimensions" : ["dataSource", "type"], "type" : "count"},
   "query/segment/time" : { "dimensions" : [], "type" : "timer"},
   "query/wait/time" : { "dimensions" : [], "type" : "timer"},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge"},
@@ -55,6 +56,13 @@
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/rows/published": { "dimensions" : ["dataSource"], "type" : "count" },
+
+  "ingest/realtime/segmentUpgrade/persisted" : { "dimensions" : ["dataSource", "interval", "version"], "type" : "count" },
+  "ingest/realtime/segmentUpgrade/notified" : { "dimensions" : ["dataSource", "stream", "taskId", "interval", "version"], "type" : "count" },
+  "ingest/realtime/segmentUpgrade/unmatched" : { "dimensions" : ["dataSource", "stream", "interval", "version"], "type" : "count" },
+  "ingest/realtime/segmentUpgrade/sendFailed" : { "dimensions" : ["dataSource", "stream", "taskId", "interval", "version"], "type" : "count" },
+  "ingest/realtime/segmentUpgrade/announced" : { "dimensions" : ["dataSource", "interval", "version"], "type" : "count" },
+  "ingest/realtime/segmentUpgrade/skipped" : { "dimensions" : ["dataSource", "reason", "interval", "version"], "type" : "count" },
 
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
@@ -173,10 +181,10 @@
   "coordinator/time" : { "dimensions" : [], "type" : "timer"},
   "coordinator/global/time" : { "dimensions" : ["dutyGroup"], "type" : "timer"},
 
-  "tier/required/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
-  "tier/total/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
-  "tier/replication/factor" : { "dimensions" : ["tier"], "type" : "gauge" },
-  "tier/historical/count" : { "dimensions" : ["tier"], "type" : "count" },
+  "tier/required/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
+  "tier/total/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
+  "tier/replication/factor" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
+  "tier/historical/count" : { "dimensions" : ["tier", "tierAlias"], "type" : "count" },
 
   "compact/task/count" : { "dimensions" : [], "type" : "count" },
   "compactTask/maxSlot/count" : { "dimensions" : [], "type" : "count" },

@@ -33,7 +33,6 @@ import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.curator.PotentiallyGzippedCompressionProvider;
-import org.apache.druid.curator.discovery.LatchableServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -85,10 +84,11 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.utils.CloseableUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
@@ -98,6 +98,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -115,7 +116,6 @@ public class OverlordTest
   private GlobalTaskLockbox taskLockbox;
   private TaskStorage taskStorage;
   private TaskActionClientFactory taskActionClientFactory;
-  private CountDownLatch announcementLatch;
   private DruidNode druidNode;
   private OverlordResource overlordResource;
   private Map<String, CountDownLatch> taskCompletionCountDownLatches;
@@ -152,7 +152,7 @@ public class OverlordTest
     CloseableUtils.closeAndWrapExceptions(server);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     req = EasyMock.createMock(HttpServletRequest.class);
@@ -195,7 +195,6 @@ public class OverlordTest
     taskCompletionCountDownLatches = new HashMap<>();
     taskCompletionCountDownLatches.put(taskId0, new CountDownLatch(1));
     taskCompletionCountDownLatches.put(taskId1, new CountDownLatch(1));
-    announcementLatch = new CountDownLatch(1);
     setupServerAndCurator();
     curator.start();
     curator.blockUntilConnected();
@@ -251,9 +250,7 @@ public class OverlordTest
         taskLockbox,
         taskStorage,
         taskActionClientFactory,
-        druidNode,
         taskRunnerFactory,
-        new LatchableServiceAnnouncer(announcementLatch, null),
         new CoordinatorOverlordServiceConfig(null, null),
         serviceEmitter,
         supervisorManager,
@@ -261,26 +258,27 @@ public class OverlordTest
         new TestDruidLeaderSelector(),
         EasyMock.createNiceMock(SegmentAllocationQueue.class),
         EasyMock.createNiceMock(SegmentMetadataCache.class),
-        EasyMock.createNiceMock(CompactionScheduler.class),
-        EasyMock.createNiceMock(ScheduledBatchTaskManager.class),
+        Set.of(
+            EasyMock.createNiceMock(CompactionScheduler.class),
+            EasyMock.createNiceMock(ScheduledBatchTaskManager.class)
+        ),
         new DefaultObjectMapper(),
         new NoopTaskContextEnricher()
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testOverlordRun() throws Exception
   {
     // basic task master lifecycle test
     overlord.start();
-    announcementLatch.await();
     while (!overlord.isLeader()) {
-      // I believe the control will never reach here and thread will never sleep but just to be on safe side
       Thread.sleep(10);
     }
-    Assert.assertEquals(overlord.getCurrentLeader(), druidNode.getHostAndPort());
-    Assert.assertEquals(Optional.absent(), overlord.getRedirectLocation());
+    Assertions.assertEquals(druidNode.getHostAndPort(), overlord.getCurrentLeader());
+    Assertions.assertEquals(Optional.absent(), overlord.getRedirectLocation());
 
     final TaskQueryTool taskQueryTool
         = new TaskQueryTool(taskStorage, taskLockbox, taskMaster, null);
@@ -301,7 +299,7 @@ public class OverlordTest
         new AuthConfig()
     );
     Response response = overlordResource.getLeader();
-    Assert.assertEquals(druidNode.getHostAndPort(), response.getEntity());
+    Assertions.assertEquals(druidNode.getHostAndPort(), response.getEntity());
 
     // BadTask must fail due to null task lock
     waitForTaskStatus(badTaskId, TaskState.FAILED);
@@ -311,25 +309,25 @@ public class OverlordTest
     waitForTaskStatus(goodTaskId, TaskState.SUCCESS);
 
     response = overlordResource.taskPost(task0, req);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("task", taskId0), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(ImmutableMap.of("task", taskId0), response.getEntity());
 
     // Duplicate task - should fail
     response = overlordResource.taskPost(task0, req);
-    Assert.assertEquals(400, response.getStatus());
+    Assertions.assertEquals(400, response.getStatus());
 
     // Task payload for task_0 should be present in taskStorage
     response = overlordResource.getTaskPayload(taskId0);
-    Assert.assertEquals(task0, ((TaskPayloadResponse) response.getEntity()).getPayload());
+    Assertions.assertEquals(task0, ((TaskPayloadResponse) response.getEntity()).getPayload());
 
     // Task not present in taskStorage - should fail
     response = overlordResource.getTaskPayload("whatever");
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
 
     // Task status of the submitted task should be running
     response = overlordResource.getTaskStatus(taskId0);
-    Assert.assertEquals(taskId0, ((TaskStatusResponse) response.getEntity()).getTask());
-    Assert.assertEquals(
+    Assertions.assertEquals(taskId0, ((TaskStatusResponse) response.getEntity()).getTask());
+    Assertions.assertEquals(
         TaskStatus.running(taskId0).getStatusCode(),
         ((TaskStatusResponse) response.getEntity()).getStatus().getStatusCode()
     );
@@ -347,11 +345,11 @@ public class OverlordTest
 
     response = overlordResource.getRunningTasks(null, req);
     // 1 task that was manually inserted should be in running state
-    Assert.assertEquals(1, (((List) response.getEntity()).size()));
+    Assertions.assertEquals(1, (((List) response.getEntity()).size()));
     final TaskStatusPlus taskResponseObject = ((List<TaskStatusPlus>) response
         .getEntity()).get(0);
-    Assert.assertEquals(taskId1, taskResponseObject.getId());
-    Assert.assertEquals(TASK_LOCATION, taskResponseObject.getLocation());
+    Assertions.assertEquals(taskId1, taskResponseObject.getId());
+    Assertions.assertEquals(TASK_LOCATION, taskResponseObject.getLocation());
 
     // Simulate completion of task_1
     taskCompletionCountDownLatches.get(taskId1).countDown();
@@ -360,15 +358,15 @@ public class OverlordTest
 
     // should return number of tasks which are not in running state
     response = overlordResource.getCompleteTasks(null, req);
-    Assert.assertEquals(4, (((List) response.getEntity()).size()));
+    Assertions.assertEquals(4, (((List) response.getEntity()).size()));
 
     response = overlordResource.getCompleteTasks(1, req);
-    Assert.assertEquals(1, (((List) response.getEntity()).size()));
-    Assert.assertEquals(1, taskMaster.getStats().rowCount());
+    Assertions.assertEquals(1, (((List) response.getEntity()).size()));
+    Assertions.assertEquals(1, taskMaster.getStats().rowCount());
 
     overlord.stop();
-    Assert.assertFalse(overlord.isLeader());
-    Assert.assertEquals(0, taskMaster.getStats().rowCount());
+    Assertions.assertFalse(overlord.isLeader());
+    Assertions.assertEquals(0, taskMaster.getStats().rowCount());
 
     EasyMock.verify(taskActionClientFactory);
   }
@@ -388,7 +386,7 @@ public class OverlordTest
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     tearDownServerAndCurator();

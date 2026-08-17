@@ -22,10 +22,14 @@ package org.apache.druid.indexing.common.task;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.actions.TaskActionToolbox;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Collection;
@@ -106,6 +110,23 @@ public class IndexTaskUtils
   }
 
   /**
+   * Emits the metric {@code segment/allocated/count}.
+   */
+  public static void emitSegmentAllocateMetric(SegmentIdWithShardSpec allocatedId, Task task, ServiceEmitter emitter)
+  {
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    if (task instanceof SeekableStreamIndexTask<?, ?, ?>) {
+      metricBuilder.setDimension(
+          DruidMetrics.SUPERVISOR_ID,
+          ((SeekableStreamIndexTask<?, ?, ?>) task).getSupervisorId()
+      );
+    }
+    metricBuilder.setDimension(DruidMetrics.ID, allocatedId.toString());
+    emitter.emit(metricBuilder.setMetric("segment/allocated/count", 1));
+  }
+
+  /**
    * Gets total row count of the given segments. Legacy segments do not have the
    * row count populated in the metadata and thus do not contribute to the row
    * count.
@@ -118,5 +139,21 @@ public class IndexTaskUtils
         .filter(Objects::nonNull)
         .mapToLong(Integer::longValue)
         .sum();
+  }
+
+  /**
+   * Adds the upgraded pending segment's {@code interval} and {@code version} to a metric builder so that every
+   * segment-upgrade metric can be sliced by the specific segment being re-announced. Mirrors
+   * {@code IndexTaskUtils.setSegmentDimensions}, which serves the same purpose for {@code DataSegment}s.
+   */
+  public static ServiceMetricEvent.Builder setPendingSegmentDimensions(
+      ServiceMetricEvent.Builder metricBuilder,
+      PendingSegmentRecord pendingSegmentRecord
+  )
+  {
+    final SegmentIdWithShardSpec id = pendingSegmentRecord.getId();
+    return metricBuilder
+        .setDimension(DruidMetrics.INTERVAL, id.getInterval().toString())
+        .setDimension(DruidMetrics.VERSION, id.getVersion());
   }
 }

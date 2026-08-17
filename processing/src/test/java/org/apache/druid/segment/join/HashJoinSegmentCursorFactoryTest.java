@@ -30,8 +30,12 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.AsyncCursorHolder;
+import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.DeferredCursorFactory;
 import org.apache.druid.segment.ReferenceCountedSegmentProvider;
 import org.apache.druid.segment.TopNOptimizationInspector;
 import org.apache.druid.segment.VirtualColumns;
@@ -213,6 +217,77 @@ public class HashJoinSegmentCursorFactoryTest extends BaseHashJoinSegmentCursorF
             new Object[]{"History of Fourems", "MMMM", "MMMM", "Fourems", 205L}
         )
     );
+  }
+
+  @Test
+  public void test_makeCursorAsync_factToCountryLeft_awaitsBaseThenJoins()
+  {
+    final List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    final JoinFilterPreAnalysis joinFilterPreAnalysis =
+        makeDefaultConfigPreAnalysis(null, joinableClauses, VirtualColumns.EMPTY);
+
+    // joined row count from the synchronous path, to compare the async result against without re-listing every row
+    final int expectedRows;
+    try (CursorHolder syncHolder = new HashJoinSegmentCursorFactory(
+        factSegment.as(CursorFactory.class),
+        null,
+        joinableClauses,
+        joinFilterPreAnalysis
+    ).makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      expectedRows = countRows(syncHolder);
+    }
+    Assert.assertTrue(expectedRows > 0);
+
+    // async path: the left/base holder loads on demand (mimics a partial base segment); build-side joinable is resident
+    final DeferredCursorFactory base = new DeferredCursorFactory(factSegment.as(CursorFactory.class));
+    final AsyncCursorHolder asyncHolder = new HashJoinSegmentCursorFactory(
+        base,
+        null,
+        joinableClauses,
+        joinFilterPreAnalysis
+    ).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+    try {
+      Assert.assertFalse("join holder must wait for the base to complete", asyncHolder.isReady());
+      base.complete();
+      Assert.assertTrue("join holder becomes ready once the base completes", asyncHolder.isReady());
+      try (CursorHolder holder = asyncHolder.release()) {
+        Assert.assertEquals(expectedRows, countRows(holder));
+      }
+    }
+    finally {
+      asyncHolder.close();
+    }
+  }
+
+  @Test
+  public void test_makeCursorAsync_factToCountry_closeBeforeReadyCancelsBase()
+  {
+    final List<JoinableClause> joinableClauses = ImmutableList.of(factToCountryOnIsoCode(JoinType.LEFT));
+    final JoinFilterPreAnalysis joinFilterPreAnalysis =
+        makeDefaultConfigPreAnalysis(null, joinableClauses, VirtualColumns.EMPTY);
+
+    final DeferredCursorFactory base = new DeferredCursorFactory(factSegment.as(CursorFactory.class));
+    final AsyncCursorHolder asyncHolder = new HashJoinSegmentCursorFactory(
+        base,
+        null,
+        joinableClauses,
+        joinFilterPreAnalysis
+    ).makeCursorHolderAsync(CursorBuildSpec.FULL_SCAN);
+
+    Assert.assertFalse(asyncHolder.isReady());
+    asyncHolder.close();
+    Assert.assertTrue("closing the join holder before it's ready cancels the base load", base.canceled.get());
+  }
+
+  private static int countRows(CursorHolder holder)
+  {
+    final Cursor cursor = holder.asCursor();
+    int count = 0;
+    while (!cursor.isDone()) {
+      cursor.advance();
+      count++;
+    }
+    return count;
   }
 
   @Test

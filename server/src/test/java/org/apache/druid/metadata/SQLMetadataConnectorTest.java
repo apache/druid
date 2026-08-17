@@ -337,8 +337,11 @@ public class SQLMetadataConnectorTest
     connector.createSegmentTable(segmentsTable);
     connector.alterSegmentTable();
     connector.getDBI().withHandle(handle -> {
-      handle.execute("DROP INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0");
-      handle.execute("CREATE INDEX IDX_DRUIDTEST_SEGMENTS_USED ON druidTest_segments(used)");
+      handle.execute("DROP INDEX IDX_93A18EE829B37C5F38FC6DAFB070261D88503835");
+      handle.execute(
+          "CREATE INDEX IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE"
+          + " ON druidTest_segments(used,used_status_last_updated,dataSource,id)"
+      );
       return null;
     });
 
@@ -346,7 +349,7 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_DRUIDTEST_SEGMENTS_USED",
+        "IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE",
         "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
         "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
     );
@@ -372,8 +375,11 @@ public class SQLMetadataConnectorTest
     connector.createSegmentTable(segmentsTable);
     connector.alterSegmentTable();
     connector.getDBI().withHandle(handle -> {
-      handle.execute("DROP INDEX IDX_DRUIDTEST_SEGMENTS_USED");
-      handle.execute("CREATE INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0 ON druidTest_segments(used)");
+      handle.execute("DROP INDEX IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE");
+      handle.execute(
+          "CREATE INDEX IDX_93A18EE829B37C5F38FC6DAFB070261D88503835"
+          + " ON druidTest_segments(used,used_status_last_updated,dataSource,id)"
+      );
       return null;
     });
 
@@ -381,7 +387,7 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_93A18EE829B37C5F38FC6DAFB070261D88503835",
         "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
         "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
     );
@@ -405,7 +411,7 @@ public class SQLMetadataConnectorTest
     final String segmentsTable = tablesConfig.getSegmentsTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_93A18EE829B37C5F38FC6DAFB070261D88503835",
         "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
         "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
     );
@@ -431,9 +437,9 @@ public class SQLMetadataConnectorTest
     final String segmentsTable = tablesConfig.getSegmentsTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_DRUIDTEST_SEGMENTS_USED",
         "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
-        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
+        "IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE"
     );
 
     connector.createSegmentTable(segmentsTable);

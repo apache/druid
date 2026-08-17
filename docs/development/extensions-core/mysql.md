@@ -23,7 +23,7 @@ title: "MySQL metadata store"
   -->
 
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../../configuration/extensions.md#loading-extensions) `mysql-metadata-storage` in the extensions load list.
 
 With the MySQL extension, you can use MySQL as a metadata store or ingest from a MySQL database.
 

@@ -23,7 +23,7 @@ title: "Sorting and limiting (groupBy)"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes the native
  language. For information about sorting in SQL, refer to the [SQL documentation](sql.md#order-by).
 :::

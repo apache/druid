@@ -30,6 +30,7 @@ import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.server.SegmentManager;
 
 import javax.annotation.Nullable;
@@ -54,6 +55,11 @@ public interface FrameContext extends Closeable
    * Returns the segment manager for loading and caching segments.
    */
   SegmentManager segmentManager();
+
+  /**
+   * Returns the virtual storage manager for caching files.
+   */
+  VirtualStorageManager virtualStorageManager();
 
   /**
    * Returns the coordinator client for fetching DataSegment metadata when not available locally.

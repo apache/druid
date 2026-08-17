@@ -86,6 +86,32 @@ jobs:
           echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
           ./.github/scripts/collect_jvm_diagnostics &
 
+      - name: Pre-pull Testcontainers images for unit tests
+        if: ${{ contains(inputs.script, 'run_unit-tests') }}
+        run: |
+          set -eu
+          images=(
+            apache/kafka:4.2.0
+            postgres:16-alpine
+            minio/minio:latest
+            hashicorp/consul:1.18
+            tabulario/iceberg-rest:1.6.0
+            localstack/localstack:4.13.1
+            mcr.microsoft.com/azure-storage/azurite:3.35.0
+            osixia/openldap:1.5.0
+            rancher/k3s:v1.35.0-k3s1
+          )
+          for image in "${images[@]}"; do
+            for attempt in 1 2 3; do
+              if docker pull --quiet "$image"; then
+                break
+              fi
+              echo "::warning ::docker pull $image failed (attempt $attempt); retrying in 10s"
+              sleep 10
+            done
+          done
+        timeout-minutes: 10
+
       - name: 'Execute: ${{ inputs.script }}'
         run: ${{ inputs.script }}
         timeout-minutes: 60

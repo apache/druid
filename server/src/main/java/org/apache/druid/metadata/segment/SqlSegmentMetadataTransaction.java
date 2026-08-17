@@ -75,6 +75,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   SqlSegmentMetadataTransaction(
       String dataSource,
       Handle handle,
+      SqlSegmentsMetadataQuery query,
       TransactionStatus transactionStatus,
       SQLMetadataConnector connector,
       MetadataStorageTablesConfig dbTables,
@@ -87,7 +88,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
     this.dbTables = dbTables;
     this.jsonMapper = jsonMapper;
     this.transactionStatus = transactionStatus;
-    this.query = SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper);
+    this.query = query;
   }
 
   @Override

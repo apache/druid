@@ -38,6 +38,8 @@ import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -143,20 +145,27 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexPhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
+import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -209,6 +218,7 @@ import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.test.utils.TestSegmentManager;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
@@ -464,7 +474,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager =
-        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), true);
+        SegmentCacheManagerFactory.createWithOwnedPool(indexIO, objectMapper)
+                                  .manufacturate(newTempFolder("cacheManager"), null, true, false);
 
     testSegmentManager = new TestSegmentManager();
 
@@ -554,6 +565,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
         binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),
         binder -> binder.bind(SegmentManager.class).toInstance(testSegmentManager.getSegmentManager()),
+        binder -> binder.bind(VirtualStorageManager.class).toInstance(
+            new StorageLocationVirtualStorageManager(
+                segmentCacheManager.getLocations(),
+                new LeastBytesUsedStorageLocationSelectorStrategy(segmentCacheManager.getLocations()),
+                segmentCacheManager.getLoadingThreadPool()
+            )
+        ),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
         Modules.override(new MSQSqlModule()).with(
@@ -576,7 +594,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new SegmentWranglerModule(),
         new HllSketchModule(),
         binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1)),
-        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance())
+        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance()),
+        binder -> binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class).in(LazySingleton.class)
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
@@ -777,10 +796,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         {
           if (CursorFactory.class.equals(clazz)) {
             return (T) new QueryableIndexCursorFactory(index);
-          } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+          } else if (RowCountInspector.class.equals(clazz) || PhysicalSegmentColumnInspector.class.equals(clazz)) {
             return (T) new QueryableIndexPhysicalSegmentInspector(index);
           } else if (QueryableIndex.class.equals(clazz)) {
             return (T) index;
+          } else if (Metadata.class.equals(clazz)) {
+            return (T) index.getMetadata();
           }
           return null;
         }
@@ -794,7 +815,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       testSegmentManager.addSegment(dataSegment, segment);
       acquiredSegment = testSegmentManager.getSegment(segmentId);
     }
-    return AdaptedLoadableSegment.create(acquiredSegment, descriptor.getInterval(), null, counters);
+    return AdaptedLoadableSegment.fromUnmanagedSegment(acquiredSegment, descriptor, null, counters);
   }
 
   public SelectTester testSelectQuery()
@@ -841,6 +862,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
         50,
         10_000_000,
         10_000_000
+    );
+  }
+
+  /**
+   * Creates an non-functional {@link VirtualStorageManager} suitable for tests.
+   */
+  public static VirtualStorageManager makeNilVirtualStorageManager()
+  {
+    return new StorageLocationVirtualStorageManager(
+        ImmutableList.of(),
+        new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
+        StorageLoadingThreadPool.none()
     );
   }
 
@@ -1258,6 +1291,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private List<AggregateProjectionMetadata> expectedProjections = null;
 
+    private ClusterGroupTuples expectedClusterGroups = null;
+
     private IngestTester()
     {
       // nothing to do
@@ -1302,6 +1337,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public IngestTester setExpectedProjections(List<AggregateProjectionMetadata> expectedProjections)
     {
       this.expectedProjections = expectedProjections;
+      return this;
+    }
+
+    public IngestTester setExpectedClusterGroups(ClusterGroupTuples expectedClusterGroups)
+    {
+      this.expectedClusterGroups = expectedClusterGroups;
       return this;
     }
 
@@ -1394,7 +1435,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
-          FutureUtils.getUnchecked(segmentCacheManager.acquireSegment(dataSegment).getSegmentFuture(), false);
+          FutureUtils.getUnchecked(
+              segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL).getSegmentFuture(),
+              false
+          );
           final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
           final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 
@@ -1407,14 +1451,22 @@ public class MSQTestBase extends BaseCalciteQueryTest
           // assert query granularity
           Assert.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
-          // assert aggregator factories
+          // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
+          // so treat null as empty
           Assert.assertArrayEquals(
               expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
-              queryableIndex.getMetadata().getAggregators()
+              queryableIndex.getMetadata().getAggregators() == null
+              ? new AggregatorFactory[0]
+              : queryableIndex.getMetadata().getAggregators()
           );
 
           if (expectedProjections != null) {
             Assert.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+          }
+
+          if (expectedClusterGroups != null) {
+            Assert.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
+            Assert.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
           }
 
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
@@ -1753,4 +1805,3 @@ public class MSQTestBase extends BaseCalciteQueryTest
   }
 
 }
-

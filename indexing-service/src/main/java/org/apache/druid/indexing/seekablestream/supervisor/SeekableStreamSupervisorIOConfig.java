@@ -35,6 +35,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 
 public abstract class SeekableStreamSupervisorIOConfig
@@ -316,4 +317,62 @@ public abstract class SeekableStreamSupervisorIOConfig
   {
     return boundedStreamConfig != null;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SeekableStreamSupervisorIOConfig that = (SeekableStreamSupervisorIOConfig) o;
+    // taskCountExplicit and autoScalerEnabled are construction hints, not part of logical identity.
+    return taskCount == that.taskCount
+           && useEarliestSequenceNumber == that.useEarliestSequenceNumber
+           && Objects.equals(stream, that.stream)
+           && Objects.equals(inputFormat, that.inputFormat)
+           && Objects.equals(replicas, that.replicas)
+           && Objects.equals(taskDuration, that.taskDuration)
+           && Objects.equals(startDelay, that.startDelay)
+           && Objects.equals(period, that.period)
+           && Objects.equals(completionTimeout, that.completionTimeout)
+           && Objects.equals(lateMessageRejectionPeriod, that.lateMessageRejectionPeriod)
+           && Objects.equals(earlyMessageRejectionPeriod, that.earlyMessageRejectionPeriod)
+           && Objects.equals(lateMessageRejectionStartDateTime, that.lateMessageRejectionStartDateTime)
+           && Objects.equals(autoScalerConfig, that.autoScalerConfig)
+           && Objects.equals(idleConfig, that.idleConfig)
+           && Objects.equals(stopTaskCount, that.stopTaskCount)
+           && Objects.equals(serverPriorityToReplicas, that.serverPriorityToReplicas)
+           && Objects.equals(boundedStreamConfig, that.boundedStreamConfig)
+           && Objects.equals(lagAggregator, that.lagAggregator);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        stream,
+        inputFormat,
+        replicas,
+        taskCount,
+        taskDuration,
+        startDelay,
+        period,
+        useEarliestSequenceNumber,
+        completionTimeout,
+        lateMessageRejectionPeriod,
+        earlyMessageRejectionPeriod,
+        lateMessageRejectionStartDateTime,
+        autoScalerConfig,
+        idleConfig,
+        stopTaskCount,
+        serverPriorityToReplicas,
+        boundedStreamConfig,
+        lagAggregator
+    );
+  }
+
+  public abstract SupervisorIOConfigBuilder<?, ?> toBuilder();
 }

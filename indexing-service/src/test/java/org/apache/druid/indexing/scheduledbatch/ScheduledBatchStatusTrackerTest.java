@@ -23,17 +23,16 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.query.http.SqlTaskStatus;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ScheduledBatchStatusTrackerTest
 {
@@ -46,7 +45,7 @@ public class ScheduledBatchStatusTrackerTest
 
   private ScheduledBatchStatusTracker statusTracker;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     statusTracker = new ScheduledBatchStatusTracker();
@@ -213,7 +212,7 @@ public class ScheduledBatchStatusTrackerTest
                                                   .map(BatchSupervisorTaskStatus::getTaskStatus)
                                                   .sorted(Comparator.comparing(TaskStatus::getId))
                                                   .collect(Collectors.toList());
-    Assert.assertEquals(
+    assertEquals(
         sortedActualStatues,
         ImmutableList.of(TaskStatus.success(TASK_ID_1), TaskStatus.failure(TASK_ID_2, "Task failed"))
     );

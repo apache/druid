@@ -21,7 +21,6 @@ package org.apache.druid.indexing.seekablestream.supervisor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -60,7 +59,7 @@ import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -88,7 +87,7 @@ public abstract class SeekableStreamSupervisorTestBase
   protected SeekableStreamIndexTaskClientFactory taskClientFactory;
   protected SeekableStreamSupervisorSpec spec;
 
-  @Before
+  @BeforeEach
   public void before() throws Exception
   {
     taskStorage = EasyMock.mock(TaskStorage.class);
@@ -124,7 +123,7 @@ public abstract class SeekableStreamSupervisorTestBase
     }
 
     @Override
-    protected void updatePartitionLagFromStream()
+    public void updatePartitionLagFromStream()
     {
       // do nothing
     }
@@ -205,7 +204,7 @@ public abstract class SeekableStreamSupervisorTestBase
     }
 
     @Override
-    protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
+    public SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
         String stream,
         Map<String, String> map
     )
@@ -216,6 +215,8 @@ public abstract class SeekableStreamSupervisorTestBase
     @Override
     protected OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
     {
+      // Offset ordering intentionally excludes boundary exclusivity, which value equality includes.
+      // codeql[java/inconsistent-compareto-and-equals]
       return new OrderedSequenceNumber<>(seq, isExclusive)
       {
         @Override
@@ -436,6 +437,64 @@ public abstract class SeekableStreamSupervisorTestBase
     {
       return null;
     }
+
+    @Override
+    public SeekableStreamSupervisorSpec createBackfillSpec(
+        String backfillId,
+        BoundedStreamConfig boundedStreamConfig,
+        @Nullable Integer taskCount
+    )
+    {
+      return null;
+    }
+
+    @Override
+    public Builder toBuilder()
+    {
+      return new Builder().supervisor(supervisor).copyFrom(this);
+    }
+
+    static class Builder extends SeekableStreamSupervisorSpec.Builder<Builder>
+    {
+      private SeekableStreamSupervisor supervisor;
+
+      Builder supervisor(SeekableStreamSupervisor supervisor)
+      {
+        this.supervisor = supervisor;
+        return this;
+      }
+
+      @Override
+      protected Builder self()
+      {
+        return this;
+      }
+
+      @Override
+      public TestSeekableStreamSupervisorSpec build()
+      {
+        final SeekableStreamSupervisorIngestionSpec ingestionSchema =
+            new SeekableStreamSupervisorIngestionSpec(dataSchema, ioConfig, tuningConfig)
+            {
+            };
+        return new TestSeekableStreamSupervisorSpec(
+            ingestionSchema,
+            context,
+            suspended,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            supervisor,
+            id
+        );
+      }
+    }
   }
 
   protected static SeekableStreamSupervisorTuningConfig getTuningConfig()
@@ -549,28 +608,19 @@ public abstract class SeekableStreamSupervisorTestBase
       AutoScalerConfig autoScalerConfig
   )
   {
-    return new SeekableStreamSupervisorIOConfig(
-        STREAM,
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        taskCount,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        autoScalerConfig,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream(STREAM)
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(taskCount)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(autoScalerConfig)
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
   }
 
   public static AutoScalerConfig lagBasedAutoScalerConfig(int taskCountMin, int taskCountMax, Integer taskCountStart)

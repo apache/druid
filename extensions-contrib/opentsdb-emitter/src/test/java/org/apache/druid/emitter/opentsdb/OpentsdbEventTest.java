@@ -22,9 +22,9 @@ package org.apache.druid.emitter.opentsdb;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +33,7 @@ public class OpentsdbEventTest
 {
   private ObjectMapper mapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper()));
@@ -49,6 +49,6 @@ public class OpentsdbEventTest
     String opentsdbString = mapper.writeValueAsString(opentsdbEvent);
     OpentsdbEvent expectedOpentsdbEvent = mapper.readerFor(OpentsdbEvent.class)
                                                 .readValue(opentsdbString);
-    Assert.assertEquals(expectedOpentsdbEvent, opentsdbEvent);
+    Assertions.assertEquals(expectedOpentsdbEvent, opentsdbEvent);
   }
 }

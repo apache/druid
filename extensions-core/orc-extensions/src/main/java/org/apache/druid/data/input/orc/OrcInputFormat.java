@@ -36,12 +36,14 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OrcInputFormat extends NestedInputFormat
 {
   static final long SCALE_FACTOR = 8L;
   private final boolean binaryAsString;
   private final Configuration conf;
+  private final AtomicBoolean fileSystemInitialized = new AtomicBoolean(false);
 
   @JsonCreator
   public OrcInputFormat(
@@ -55,19 +57,20 @@ public class OrcInputFormat extends NestedInputFormat
     this.conf = conf;
   }
 
-  private void initialize(Configuration conf)
+  // Init FileSystem once under this class's classloader to avoid concurrent setContextClassLoader races.
+  private void ensureFileSystemInitialized()
   {
-    //Initializing seperately since during eager initialization, resolving
-    //namenode hostname throws an error if nodes are ephemeral
-
-    // Ensure that FileSystem class level initialization happens with correct CL
-    // See https://github.com/apache/druid/issues/1714
-    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    if (!fileSystemInitialized.compareAndSet(false, true)) {
+      return;
+    }
+    final ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
       FileSystem.get(conf);
     }
     catch (IOException ex) {
+      // Reset so a subsequent createReader can retry init instead of skipping it.
+      fileSystemInitialized.set(false);
       throw new RuntimeException(ex);
     }
     finally {
@@ -91,7 +94,7 @@ public class OrcInputFormat extends NestedInputFormat
   @Override
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
-    initialize(conf);
+    ensureFileSystemInitialized();
     return new OrcReader(conf, inputRowSchema, source, temporaryDirectory, getFlattenSpec(), binaryAsString);
   }
 

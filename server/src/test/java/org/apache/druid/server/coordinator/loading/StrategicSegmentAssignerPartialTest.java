@@ -38,11 +38,14 @@ import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ExactProjectionPartialLoadMatcher;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.PartialLoadRule;
+import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.Duration;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -50,8 +53,10 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -59,6 +64,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * through the load queue and reconciles fingerprint state correctly: matching replicas count toward the requirement,
  * stale-fingerprint replicas (and full-load replicas under a partial rule) are treated as "loaded but not satisfying"
  * and follow the load-then-drop swap so the cluster never goes unavailable during reconciliation.
+ * <p>
+ * Also covers the opposite direction, where a segment stops being governed by a partial-load rule and reconciliation
+ * arrives through {@link StrategicSegmentAssigner#replicateSegment}: replicas still announcing a profile are pinned
+ * by a rule that no longer applies and have to be reloaded in place with the plain unwrapped load spec.
  */
 public class StrategicSegmentAssignerPartialTest
 {
@@ -152,13 +161,308 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
-  public void testFullFallbackProfileCountsAsMatching()
+  public void testFullLoadRuleRevertsPartialProfileReplicaInPlace()
   {
-    // s1 announced with a full-fallback profile (historical was asked to partial-load but fell back to full). The
-    // fingerprint matches the rule, so the rule is satisfied; no further action.
+    // The partial-load rule was replaced (or shadowed) by a regular load rule, so reconciliation arrives through
+    // replicateSegment instead of replicateSegmentPartially. s1 is still pinned by the old rule, and it is the only
+    // replica, so replica counts alone say "satisfied" and nothing would ever be queued. The assigner must notice the
+    // announced profile and queue an in-place reload carrying the plain unwrapped segment.
     final DataSegment segment = createSegment();
-    final PartialLoadProfile fullFallback = PartialLoadProfile.forFullFallback(FP_REVENUE, 1024L);
-    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, fullFallback);
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
+    );
+    Assert.assertTrue("in-place reload must be queued on the pinned server", s1.getLoadingSegments().contains(segment));
+    Assert.assertNull(
+        "revert must carry no profile so the historical receives the plain unwrapped load spec",
+        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment)
+    );
+    Assert.assertTrue("the replica is still serving and must not be dropped", s1.getPeon().getSegmentsToDrop().isEmpty());
+  }
+
+  @Test
+  public void testFullLoadRuleLeavesProfilelessReplicaAlone()
+  {
+    // Ordinary full-load replica under a full-load rule: nothing to reconcile, and the tier must still fast-exit.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, null);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
+    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+  }
+
+  @Test
+  public void testFullLoadRuleDoesNotRevertWhenTierWantsNoReplicas()
+  {
+    // The tier is being emptied, so the drop is already on its way and dropping clears the rule on the historical.
+    // Queueing a reload here would be wasted work on a replica that is about to disappear.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 0));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().contains(segment));
+  }
+
+  @Test
+  public void testFullLoadRuleRevertsSurvivorWhileDroppingSurplus()
+  {
+    // Two pinned replicas but the new full-load rule only wants one. The surplus drop is fingerprint-blind so it may
+    // pick either server; whichever survives must still get reverted, and the one being dropped must not also be
+    // asked to reload.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final ServerHolder s2 = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1, s2).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, TIER1, segment.getDataSource()));
+    Assert.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
+    );
+
+    final ServerHolder dropped = s1.getPeon().getSegmentsToDrop().contains(segment) ? s1 : s2;
+    final ServerHolder survivor = dropped == s1 ? s2 : s1;
+    Assert.assertTrue(dropped.getPeon().getSegmentsToDrop().contains(segment));
+    Assert.assertTrue("a server queued for drop must not also be reloaded", dropped.getLoadingSegments().isEmpty());
+    Assert.assertTrue(survivor.getLoadingSegments().contains(segment));
+  }
+
+  @Test
+  public void testFullLoadRuleRevertsPinnedReplicaWhileLoadingMissingOne()
+  {
+    // The new full-load rule wants two replicas and only the pinned one exists. Both things have to happen: a genuine
+    // new replica on the empty server, and a revert of the pinned one. The revert must not be mistaken for the
+    // deficit load, and it must not consume the deficit.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final ServerHolder s2 = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1, s2).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 2));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource()));
+    Assert.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
+    );
+    Assert.assertTrue("deficit must be filled on the empty server", s2.getLoadingSegments().contains(segment));
+    Assert.assertTrue("pinned replica must still be reverted", s1.getLoadingSegments().contains(segment));
+    Assert.assertNull(((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment));
+    Assert.assertNull(((TestLoadQueuePeon) s2.getPeon()).getProfileFor(segment));
+  }
+
+  @Test
+  public void testRevertsRespectTheLoadQueueBudgetAcrossSegments()
+  {
+    // Switching a whole datasource back to a full-load rule means every one of its segments is a revert candidate on
+    // every historical holding it. ServerHolder.startOperation does not enforce maxSegmentsInNodeLoadingQueue on its
+    // own, so without an explicit budget check the reverts for an entire datasource would all be enqueued in a single
+    // coordinator run and flood the peon.
+    final DataSegment segment1 = createSegment(Intervals.of("2024-01-01/2024-01-02"));
+    final DataSegment segment2 = createSegment(Intervals.of("2024-01-02/2024-01-03"));
+    final ServerHolder s1 = createServerWithLoadedAndQueueLimit(TIER1, 1, profileForRevenue(), segment1, segment2);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment1, segment2);
+    params.getSegmentAssigner().replicateSegment(segment1, ImmutableMap.of(TIER1, 1));
+    params.getSegmentAssigner().replicateSegment(segment2, ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(
+        "only one revert fits in this run's queue budget; the rest wait for a later run",
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment1.getDataSource())
+    );
+    Assert.assertEquals(1, s1.getLoadingSegments().size());
+  }
+
+  @Test
+  public void testPendingRevertSurvivesTheNextCoordinatorRun()
+  {
+    // Second run with the revert from the first still sitting in the queue. The server both serves the segment and
+    // has a LOAD queued for it, so counting that LOAD as a replica would put projectedReplicas at 2 against a
+    // requirement of 1. updateReplicasInTier would then read the phantom surplus and cancel the very reload it queued
+    // last run — and since the revert would be requeued at the end of the same run, a backlogged peon could be made
+    // to cancel and requeue forever, never completing the transition.
+    final DataSegment segment = createSegment();
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
+    peon.addInFlightHolder(new SegmentHolder(
+        segment,
+        SegmentAction.LOAD,
+        // The revert carries no profile; that is what tells the historical to release its rule holds.
+        null,
+        Duration.standardSeconds(10),
+        null
+    ));
+    final DruidServer server = createDruidServer(TIER1);
+    // The historical has not finished the reload yet, so it is still announcing the old partial profile.
+    server.addDataSegment(segment, profileForRevenue());
+    final ServerHolder s1 = new ServerHolder(server.toImmutableDruidServer(), peon);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertTrue(
+        "the in-flight revert must still be queued, not cancelled as surplus",
+        s1.getLoadingSegments().contains(segment)
+    );
+    Assert.assertFalse("a pending revert must not be mistaken for a surplus replica", stats.hasStat(Stats.Segments.DROPPED));
+    Assert.assertTrue(s1.getPeon().getSegmentsToDrop().isEmpty());
+    Assert.assertFalse(
+        "the revert is already in flight, so this run has nothing more to queue",
+        stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED)
+    );
+  }
+
+  @Test
+  public void testRevertSkippedWhenLoadQueueIsAlreadyFull()
+  {
+    // The budget is the whole load queue, not just what this run has added to it: a queue already at the limit from a
+    // previous run leaves no room, so nothing is enqueued at all.
+    final DataSegment segment = createSegment();
+    final DataSegment queuedFromPriorRun = createSegment(Intervals.of("2023/2024"));
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
+    peon.addInFlightHolder(new SegmentHolder(
+        queuedFromPriorRun,
+        SegmentAction.LOAD,
+        null,
+        Duration.standardSeconds(10),
+        null
+    ));
+    final DruidServer server = createDruidServer(TIER1);
+    server.addDataSegment(segment, profileForRevenue());
+    final ServerHolder s1 = new ServerHolder(server.toImmutableDruidServer(), peon, false, 1, 1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    Assert.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertFalse(s1.getLoadingSegments().contains(segment));
+  }
+
+  @Test
+  public void testBroadcastRuleRevertsPartialProfileReplicaInPlace()
+  {
+    // Replacing a partial-load rule with a broadcast rule reconciles through broadcastSegment, not replicateSegment.
+    // loadBroadcastSegment returns early for a server that is already serving, so without an explicit revert the old
+    // profile and its rule holds would survive indefinitely.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().broadcastSegment(segment);
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_RULE_REVERTED, TIER1, segment.getDataSource())
+    );
+    Assert.assertTrue(s1.getLoadingSegments().contains(segment));
+    Assert.assertNull(
+        "the broadcast revert must carry no profile, same as on the replication path",
+        ((TestLoadQueuePeon) s1.getPeon()).getProfileFor(segment)
+    );
+    Assert.assertFalse(
+        "an in-place revert is not a new assignment",
+        stats.hasStat(Stats.Segments.ASSIGNED)
+    );
+  }
+
+  @Test
+  public void testBroadcastRuleLeavesProfilelessReplicaAlone()
+  {
+    // The ordinary broadcast no-op must survive: a replica already serving without a profile needs nothing.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, null);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().broadcastSegment(segment);
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.ASSIGNED));
+    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+  }
+
+  @Test
+  public void testBroadcastRuleLoadsMissingReplicaWithoutRevert()
+  {
+    // A broadcast target that does not have the segment at all takes an ordinary assignment, and must not be counted
+    // as a revert: the two branches are mutually exclusive because a freshly queued load stops the server from being
+    // `isServingSegment`.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().broadcastSegment(segment);
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, TIER1, segment.getDataSource()));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertTrue(s1.getLoadingSegments().contains(segment));
+  }
+
+  @Test
+  public void testRevertSkippedOnDecommissioningServer()
+  {
+    // A decommissioning server's replicas are on their way off it, so reloading them just to release rule holds is
+    // wasted work on a server that is trying to shed load.
+    final DataSegment segment = createSegment();
+    final ServerHolder s1 = createDecommissioningServerWithLoaded(TIER1, segment, profileForRevenue());
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner().replicateSegment(segment, ImmutableMap.of(TIER1, 1));
+
+    Assert.assertFalse(params.getCoordinatorStats().hasStat(Stats.Segments.PARTIAL_RULE_REVERTED));
+    Assert.assertTrue(s1.getLoadingSegments().isEmpty());
+  }
+
+  @Test
+  public void testFullFallbackLoadedBytesCountsAsMatching()
+  {
+    // s1 announced with a loaded profile whose loadedBytes equals the full segment size (historical was asked to
+    // partial-load but fell back to full). The fingerprint matches the rule, so the rule is satisfied; no further
+    // action.
+    final DataSegment segment = createSegment();
+    final PartialLoadProfile fullSizeLoaded = PartialLoadProfile.forLoaded(
+        profileForRevenue().wrappedLoadSpec(),
+        FP_REVENUE,
+        segment.getSize()
+    );
+    final ServerHolder s1 = createServerWithLoaded(TIER1, segment, fullSizeLoaded);
     final ServerHolder s2 = createServer(TIER1);
     final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, s1, s2).build();
 
@@ -315,7 +619,7 @@ public class StrategicSegmentAssignerPartialTest
         segment,
         SegmentAction.LOAD,
         staleInFlightProfile,
-        org.joda.time.Duration.standardSeconds(10),
+        Duration.standardSeconds(10),
         null
     ));
     final DruidServer druidServer = createDruidServer(TIER1);
@@ -370,10 +674,11 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
-  public void testForeverPartialLoadRuleEndToEndFullLoadFallback()
+  public void testForeverPartialLoadRuleEndToEndLoadOnDemandFallback()
   {
-    // Matcher does not apply (segment has no overlap); FULL_LOAD onCannotMatch (default) → run() routes through
-    // replicateSegment instead, so the peon must not see a profile and the stat is the regular ASSIGNED.
+    // Matcher does not apply; LOAD_ON_DEMAND onCannotMatch (the default) → run() routes through replicateSegment, so
+    // the peon must not see a profile and the stat is the regular ASSIGNED. A cluster-group matcher supplies the
+    // non-match: projection matchers always apply, falling back to a base-table load.
     final ServerHolder server = createServer(TIER1);
     final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, server).build();
 
@@ -381,8 +686,8 @@ public class StrategicSegmentAssignerPartialTest
     final PartialLoadRule rule = new ForeverPartialLoadRule(
         ImmutableMap.of(TIER1, 1),
         null,
-        new ExactProjectionPartialLoadMatcher(List.of("nonexistent")),
-        CannotMatchBehavior.FULL_LOAD
+        new WildcardClusterGroupPartialLoadMatcher(List.of(ImmutableMap.of("tenant", "acme")), null),
+        CannotMatchBehavior.LOAD_ON_DEMAND
     );
 
     final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
@@ -397,6 +702,150 @@ public class StrategicSegmentAssignerPartialTest
         "Full-load fallback must not thread a profile to the peon",
         ((TestLoadQueuePeon) server.getPeon()).getProfileFor(segment)
     );
+  }
+
+  @Test
+  public void testMoveOfPartialReplicaCarriesProfileToDestination()
+  {
+    // Balancing a partial replica must move the same parts of the segment. Without the profile the destination
+    // downloads the whole segment, and the reconciler then has to replace it with a partial replica on a later run.
+    final DataSegment segment = createSegment();
+    final ServerHolder source = createDecommissioningServerWithLoaded(TIER1, segment, profileForRevenue());
+    final ServerHolder destination = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
+
+    Assert.assertTrue(moved);
+    Assert.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
+    final PartialLoadProfile queued = ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment);
+    Assert.assertNotNull("Move destination should be asked for the same parts the source holds", queued);
+    Assert.assertEquals(FP_REVENUE, queued.fingerprint());
+  }
+
+  @Test
+  public void testMoveOfInFlightPartialLoadCarriesProfileToDestination()
+  {
+    // The source's load has not completed yet, so the move cancels it and loads on the destination instead. The
+    // profile lives on the peon's in-flight holder, and cancelling the operation clears it from the source, so it
+    // has to be read before the cancellation.
+    final DataSegment segment = createSegment();
+    final TestLoadQueuePeon sourcePeon = new TestLoadQueuePeon();
+    sourcePeon.addInFlightHolder(new SegmentHolder(
+        segment,
+        SegmentAction.LOAD,
+        profileForRevenue(),
+        Duration.standardSeconds(10),
+        null
+    ));
+    final ServerHolder source = new ServerHolder(createDruidServer(TIER1).toImmutableDruidServer(), sourcePeon, true);
+    final ServerHolder destination = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
+
+    Assert.assertTrue(moved);
+    final PartialLoadProfile queued = ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment);
+    Assert.assertNotNull("Cancelled in-flight partial load should be reissued to the destination", queued);
+    Assert.assertEquals(FP_REVENUE, queued.fingerprint());
+  }
+
+  @Test
+  public void testMoveOfFullLoadReplicaCarriesNoProfile()
+  {
+    final DataSegment segment = createSegment();
+    final ServerHolder source = createDecommissioningServerWithLoaded(TIER1, segment, null);
+    final ServerHolder destination = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    final boolean moved = params.getSegmentAssigner().moveSegment(segment, source, List.of(destination));
+
+    Assert.assertTrue(moved);
+    Assert.assertEquals(SegmentAction.MOVE_TO, destination.getActionOnSegment(segment));
+    Assert.assertNull(
+        "Moving a regular full-load replica must not thread a profile",
+        ((TestLoadQueuePeon) destination.getPeon()).getProfileFor(segment)
+    );
+  }
+
+  @Test
+  public void testNoExtraReplicaWhileMoveIsInFlight()
+  {
+    // A move queued by a previous run is still in flight: the source is marked to drop (MOVE_FROM) and the
+    // destination has a MOVE_TO carrying the profile cloned from the source. The move is the tier's one replica, so
+    // the reconciler must leave the spare server alone; assigning to it here would make every balancer move churn
+    // an extra load and then a drop.
+    final DataSegment segment = createSegment();
+    final ServerHolder source = moveSourceOf(segment, profileForRevenue());
+    final ServerHolder destination = moveDestinationOf(segment, profileForRevenue().asCloneRequest());
+    final ServerHolder spare = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination, spare).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_ASSIGNED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED));
+    Assert.assertTrue(spare.getLoadingSegments().isEmpty());
+  }
+
+  @Test
+  public void testNoExtraReplicaWhenMoveIsPendingItsDrop()
+  {
+    // During a segment move, after the destination has finished loading and announced the matching fingerprint,
+    // the source is still marked to drop. The destination alone satisfies the replica requirement and no further action
+    // should be taken.
+    final DataSegment segment = createSegment();
+    final ServerHolder source = moveSourceOf(segment, profileForRevenue());
+    final ServerHolder destination = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final ServerHolder spare = createServer(TIER1);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, source, destination, spare).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_ASSIGNED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED));
+    Assert.assertTrue(spare.getLoadingSegments().isEmpty());
+  }
+
+  @Test
+  public void testMoveOfStaleReplicaDoesNotDisturbMatchingReplica()
+  {
+    // A stale replica is being moved (the rule changed after the move was queued) while a matching replica serves
+    // the requirement elsewhere. The move is counted at its destination and by its own fingerprint, so it neither
+    // satisfies nor subtracts from the matching count: nothing to load, and nothing to drop until the move lands.
+    final DataSegment segment = createSegment();
+    final PartialLoadProfile usersProfile = PartialLoadProfile.forRequest(
+        Map.of("type", "partialProjection", "projections", List.of("users"), "fingerprint", FP_USERS),
+        FP_USERS
+    );
+    final ServerHolder source = moveSourceOf(segment, usersProfile);
+    final ServerHolder destination = moveDestinationOf(segment, usersProfile);
+    final ServerHolder matching = createServerWithLoaded(TIER1, segment, profileForRevenue());
+    final ServerHolder spare = createServer(TIER1);
+    final DruidCluster cluster =
+        DruidCluster.builder().addTier(TIER1, source, destination, matching, spare).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_ASSIGNED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assert.assertFalse(stats.hasStat(Stats.Segments.PARTIAL_STALE_DROPPED));
+    Assert.assertTrue(spare.getLoadingSegments().isEmpty());
+    Assert.assertTrue(matching.getPeon().getSegmentsToDrop().isEmpty());
   }
 
   private DruidCoordinatorRuntimeParams makeRuntimeParams(DruidCluster cluster, DataSegment... segments)
@@ -443,15 +892,95 @@ public class StrategicSegmentAssignerPartialTest
     return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon());
   }
 
+  /**
+   * Creates a server that already serves every given segment under {@code profile}, with its load queue capped at
+   * {@code maxSegmentsInLoadQueue} so tests can observe the budget being exhausted.
+   */
+  private ServerHolder createServerWithLoadedAndQueueLimit(
+      String tier,
+      int maxSegmentsInLoadQueue,
+      @Nullable PartialLoadProfile profile,
+      DataSegment... segments
+  )
+  {
+    final DruidServer server = createDruidServer(tier);
+    for (DataSegment segment : segments) {
+      server.addDataSegment(segment, profile);
+    }
+    return new ServerHolder(
+        server.toImmutableDruidServer(),
+        new TestLoadQueuePeon(),
+        false,
+        maxSegmentsInLoadQueue,
+        1
+    );
+  }
+
+  /**
+   * Creates the source server of a move queued by a previous coordinator run: it still serves the segment (under
+   * {@code profile}) and is marked to drop, which the ServerHolder reads back as a MOVE_FROM.
+   */
+  private ServerHolder moveSourceOf(DataSegment segment, @Nullable PartialLoadProfile profile)
+  {
+    final DruidServer server = createDruidServer(TIER1);
+    server.addDataSegment(segment, profile);
+    final MarkToDropPeon peon = new MarkToDropPeon();
+    peon.markSegmentToDrop(segment);
+    return new ServerHolder(server.toImmutableDruidServer(), peon);
+  }
+
+  /**
+   * Creates the destination server of a move queued by a previous coordinator run: a MOVE_TO sits in its queue,
+   * carrying the profile cloned from the move's source.
+   */
+  private ServerHolder moveDestinationOf(DataSegment segment, @Nullable PartialLoadProfile profile)
+  {
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
+    peon.addInFlightHolder(
+        new SegmentHolder(segment, SegmentAction.MOVE_TO, profile, org.joda.time.Duration.standardSeconds(10), null)
+    );
+    return new ServerHolder(createDruidServer(TIER1).toImmutableDruidServer(), peon);
+  }
+
   private ServerHolder createDecommissioningServer(String tier)
   {
     return new ServerHolder(createDruidServer(tier).toImmutableDruidServer(), new TestLoadQueuePeon(), true);
+  }
+
+  /**
+   * Creates a decommissioning server that already serves the given segment, announced with {@code profile} when it is
+   * non-null. Decommissioning keeps the server out of its own move-destination candidates, so the move has exactly
+   * one place to go.
+   */
+  private ServerHolder createDecommissioningServerWithLoaded(
+      String tier,
+      DataSegment segment,
+      @Nullable PartialLoadProfile profile
+  )
+  {
+    final DruidServer server = createDruidServer(tier);
+    server.addDataSegment(segment, profile);
+    return new ServerHolder(server.toImmutableDruidServer(), new TestLoadQueuePeon(), true);
   }
 
   private static DataSegment createSegment()
   {
     return DataSegment
         .builder(SegmentId.of(TestDataSource.WIKI, Intervals.of("2024/2025"), DateTimes.nowUtc().toString(), null))
+        .loadSpec(Map.of("type", "local", "path", "/var/druid/segments/foo"))
+        .dimensions(Collections.emptyList())
+        .metrics(Collections.emptyList())
+        .size(0)
+        .build();
+  }
+
+  /**
+   * A segment over a specific interval, for tests that need several distinct segments of the same datasource.
+   */
+  private static DataSegment createSegment(Interval interval)
+  {
+    return DataSegment
+        .builder(SegmentId.of(TestDataSource.WIKI, interval, "v1", null))
         .loadSpec(Map.of("type", "local", "path", "/var/druid/segments/foo"))
         .dimensions(Collections.emptyList())
         .metrics(Collections.emptyList())
@@ -468,6 +997,33 @@ public class StrategicSegmentAssignerPartialTest
         .projections(projections)
         .size(0)
         .build();
+  }
+
+  /**
+   * Peon that records the segments marked to drop, so that a move source shows up as MOVE_FROM in the
+   * {@link ServerHolder}'s queue the way the real peon reports it.
+   */
+  private static class MarkToDropPeon extends TestLoadQueuePeon
+  {
+    private final Set<DataSegment> markedToDrop = new HashSet<>();
+
+    @Override
+    public void markSegmentToDrop(DataSegment segment)
+    {
+      markedToDrop.add(segment);
+    }
+
+    @Override
+    public void unmarkSegmentToDrop(DataSegment segment)
+    {
+      markedToDrop.remove(segment);
+    }
+
+    @Override
+    public Set<DataSegment> getSegmentsMarkedToDrop()
+    {
+      return markedToDrop;
+    }
   }
 
   private static PartialLoadProfile profileForRevenue()

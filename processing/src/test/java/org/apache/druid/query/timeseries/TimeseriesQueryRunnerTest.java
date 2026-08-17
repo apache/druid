@@ -80,7 +80,9 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -106,7 +108,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
-  @Parameterized.Parameters(name = "{0}:descending={1},vectorize={2}")
+  @Parameterized.Parameters(name = "{0}:descending={1},vectorize={2},useVectorApi={4}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final Iterable<Object[]> baseConstructors = QueryRunnerTestHelper.cartesian(
@@ -124,7 +126,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         // vectorize?
         Arrays.asList(false, true),
         // double vs. float
-        Arrays.asList(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS, QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS)
+        Arrays.asList(QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS, QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS),
+        // useVectorApi? (SIMD aggregators)
+        Arrays.asList(false, true)
     );
 
     // Add vectorization tests for any indexes that support it.
@@ -136,6 +140,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                   QueryRunnerTestHelper.isTestRunnerVectorizable((QueryRunner) constructor[0])
                   && !(boolean) constructor[1] /* descending */;
               final boolean vectorize = (boolean) constructor[2]; /* vectorize */
+              final boolean useVectorApi = (boolean) constructor[4]; /* useVectorApi */
+              if (!vectorize && useVectorApi) {
+                // SIMD path is reachable only when vectorization is on; skip the redundant combo.
+                return false;
+              }
               return !vectorize || canVectorize;
             }
         )
@@ -154,18 +163,37 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   protected final boolean descending;
   protected final boolean vectorize;
   protected final List<AggregatorFactory> aggregatorFactoryList;
+  protected final boolean useVectorApi;
 
   public TimeseriesQueryRunnerTest(
       QueryRunner<Result<TimeseriesResultValue>> runner,
       boolean descending,
       boolean vectorize,
-      List<AggregatorFactory> aggregatorFactoryList
+      List<AggregatorFactory> aggregatorFactoryList,
+      boolean useVectorApi
   )
   {
     this.runner = runner;
     this.descending = descending;
     this.vectorize = vectorize;
     this.aggregatorFactoryList = aggregatorFactoryList;
+    this.useVectorApi = useVectorApi;
+  }
+
+  @Before
+  public void initializeExpressionProcessing()
+  {
+    if (useVectorApi) {
+      ExpressionProcessing.initializeForVectorApiTests();
+    } else {
+      ExpressionProcessing.initializeForTests();
+    }
+  }
+
+  @After
+  public void resetExpressionProcessing()
+  {
+    ExpressionProcessing.initializeForTests();
   }
 
   @Test

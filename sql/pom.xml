@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -214,6 +214,7 @@
     </dependency>
 
     <!-- Tests -->
+    <!-- Required while SegmentMetadataCacheTestBase in the server test-jar still uses JUnit 4 TemporaryFolder. -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
@@ -246,28 +247,13 @@
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-migrationsupport</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.opentest4j</groupId>
       <artifactId>opentest4j</artifactId>
       <version>1.3.0</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>pl.pragmatists</groupId>
-      <artifactId>JUnitParams</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -304,14 +290,10 @@
       <type>test-jar</type>
       <scope>test</scope>
     </dependency>
+    <!-- DruidExceptionMatcher remains unchanged in this PR and is a Hamcrest matcher. -->
     <dependency>
       <groupId>org.hamcrest</groupId>
       <artifactId>hamcrest</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

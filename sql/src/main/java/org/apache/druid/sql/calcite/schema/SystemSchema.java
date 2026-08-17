@@ -93,6 +93,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -312,6 +313,8 @@ public class SystemSchema extends AbstractSchema
    */
   static class SegmentsTable extends AbstractTable implements ProjectableFilterableTable
   {
+    private static final int DATASOURCE_COLUMN = SEGMENTS_SIGNATURE.indexOf("datasource");
+
     private final DruidSchema druidSchema;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
@@ -352,14 +355,23 @@ public class SystemSchema extends AbstractSchema
       // get available segments from druidSchema
       final BrokerSegmentMetadataCache availableMetadataCache = druidSchema.cache();
 
+      // Best-effort push-down of a `datasource` equality/IN filter so we scan only the matching
+      // datasources instead of every segment in the cluster. Null => no usable filter => full scan.
+      // The filters are intentionally left in the list, so Calcite still applies them and correctness
+      // holds even if this extraction is conservative or over-broad.
+      final Set<String> dataSourceFilter = getDataSourceFilter(filters);
+
       // Keep track of which segments we emitted from the publishedSegments iterator, so we don't emit them again
-      // from the availableSegments iterator.
+      // from the availableSegments iterator. When a datasource filter is pushed down we only emit the matching
+      // datasources' segments, so avoid pre-sizing to the whole-cluster segment count (a huge, wasted allocation).
       final Set<SegmentId> segmentsAlreadySeen =
-          Sets.newHashSetWithExpectedSize(availableMetadataCache.getTotalSegments());
+          dataSourceFilter == null
+          ? Sets.newHashSetWithExpectedSize(availableMetadataCache.getTotalSegments())
+          : new HashSet<>();
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator. This may include both published and realtime segments.
-      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments();
+      final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments(dataSourceFilter);
       final FluentIterable<Object[]> publishedSegments = FluentIterable
           .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
           .transform(val -> {
@@ -428,7 +440,7 @@ public class SystemSchema extends AbstractSchema
       // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, all the segments in this loop
       // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> getAuthorizedAvailableSegments(availableMetadataCache.iterateSegmentMetadata(), root))
+          .from(() -> getAuthorizedAvailableSegments(availableMetadataCache.iterateSegmentMetadata(dataSourceFilter), root))
           .transform(val -> {
             final DataSegment segment = val.getSegment();
             if (segmentsAlreadySeen.contains(segment.getId())) {
@@ -515,6 +527,20 @@ public class SystemSchema extends AbstractSchema
           );
 
       return authorizedSegments.iterator();
+    }
+
+    /**
+     * Best-effort extraction of an exact-match {@code datasource} constraint (column
+     * {@link #DATASOURCE_COLUMN}) from the pushed-down filters, so sys.segments can restrict its scan
+     * to the matching datasources rather than materializing every segment in the cluster. Delegates to
+     * {@link SystemSchemaFilters}, which handles {@code datasource = 'x'}, {@code datasource IN (...)},
+     * OR-of-equalities, and nested {@code AND}/{@code OR}. Returns {@code null} when no usable
+     * datasource predicate is present, in which case the previous full-scan behavior is retained.
+     */
+    @Nullable
+    static Set<String> getDataSourceFilter(List<RexNode> filters)
+    {
+      return SystemSchemaFilters.extractColumnValues(filters, DATASOURCE_COLUMN);
     }
 
     private static class PartialSegmentData

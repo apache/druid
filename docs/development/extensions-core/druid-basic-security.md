@@ -23,7 +23,7 @@ title: "Basic Security"
   -->
 
 
-The Basic Security extension for Apache Druid adds:
+The Basic Security extension for Apache&circledR; Druid adds:
 
 - an Authenticator which supports [HTTP Basic authentication](https://en.wikipedia.org/wiki/Basic_access_authentication) using the Druid metadata store or LDAP as its credentials store.
 - an Escalator which determines the authentication scheme for internal Druid processes.

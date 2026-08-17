@@ -45,13 +45,13 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -120,20 +120,20 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     return row;
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   Closer closer;
   ColumnCache theCache;
 
   QueryableIndex index;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     closer = Closer.create();
     index = IndexBuilder.create(TestHelper.makeJsonMapper())
-                        .tmpDir(temporaryFolder.newFolder())
+                        .tmpDir(temporaryFolder)
                         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                         .schema(
                             new IncrementalIndexSchema.Builder()
@@ -151,7 +151,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     theCache = new ColumnCache(index, VirtualColumns.EMPTY, closer);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     closer.close();
@@ -168,11 +168,20 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     );
 
     // cannot make single value selector on multi-value string
-    Assert.assertThrows(ISE.class, () -> factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(MULTI_STRING)));
+    Assertions.assertThrows(ISE.class, () -> factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(MULTI_STRING)));
     // we make nil selectors for number columns though
-    Assert.assertTrue(factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(DOUBLE)) instanceof NilVectorSelector);
-    Assert.assertTrue(factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(FLOAT)) instanceof NilVectorSelector);
-    Assert.assertTrue(factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(LONG)) instanceof NilVectorSelector);
+    Assertions.assertInstanceOf(
+        NilVectorSelector.class,
+        factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(DOUBLE))
+    );
+    Assertions.assertInstanceOf(
+        NilVectorSelector.class,
+        factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(FLOAT))
+    );
+    Assertions.assertInstanceOf(
+        NilVectorSelector.class,
+        factory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(LONG))
+    );
 
     // but we can for real multi-value strings
     SingleValueDimensionVectorSelector vectorSelector = factory.makeSingleValueDimensionSelector(
@@ -184,14 +193,14 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     int rowCounter = 0;
     while (!offset.isDone()) {
       int[] ints = vectorSelector.getRowVector();
-      Assert.assertNotNull(ints);
+      Assertions.assertNotNull(ints);
       for (int i = 0; i < vectorSelector.getCurrentVectorSize(); i++) {
-        Assert.assertEquals(RAW_ROWS.get(rowCounter + i).get(STRING), vectorSelector.lookupName(ints[i]));
+        Assertions.assertEquals(RAW_ROWS.get(rowCounter + i).get(STRING), vectorSelector.lookupName(ints[i]));
       }
 
       Object[] objects = objectSelector.getObjectVector();
       for (int i = 0; i < vectorSelector.getCurrentVectorSize(); i++) {
-        Assert.assertEquals("row " + i, RAW_ROWS.get(rowCounter + i).get(STRING), objects[i]);
+        Assertions.assertEquals(RAW_ROWS.get(rowCounter + i).get(STRING), objects[i], "row " + i);
       }
       rowCounter += objectSelector.getCurrentVectorSize();
       offset.advance();
@@ -209,10 +218,10 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     );
 
     // cannot make these for anything except for multi-value strings
-    Assert.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(STRING)));
-    Assert.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(DOUBLE)));
-    Assert.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(FLOAT)));
-    Assert.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(LONG)));
+    Assertions.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(STRING)));
+    Assertions.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(DOUBLE)));
+    Assertions.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(FLOAT)));
+    Assertions.assertThrows(ISE.class, () -> factory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(LONG)));
 
     // but we can for real multi-value strings
     MultiValueDimensionVectorSelector vectorSelector = factory.makeMultiValueDimensionSelector(
@@ -224,25 +233,25 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     int rowCounter = 0;
     while (!offset.isDone()) {
       IndexedInts[] indexedInts = vectorSelector.getRowVector();
-      Assert.assertNotNull(indexedInts);
+      Assertions.assertNotNull(indexedInts);
       for (int i = 0; i < vectorSelector.getCurrentVectorSize(); i++) {
         IndexedInts currentRow = indexedInts[i];
         if (currentRow.size() == 0) {
-          Assert.assertNull(RAW_ROWS.get(rowCounter + i).get(MULTI_STRING));
+          Assertions.assertNull(RAW_ROWS.get(rowCounter + i).get(MULTI_STRING));
         } else if (currentRow.size() == 1) {
-          Assert.assertEquals(RAW_ROWS.get(rowCounter + i).get(MULTI_STRING), vectorSelector.lookupName(currentRow.get(0)));
+          Assertions.assertEquals(RAW_ROWS.get(rowCounter + i).get(MULTI_STRING), vectorSelector.lookupName(currentRow.get(0)));
         } else {
           // noinspection SSBasedInspection
           for (int j = 0; j < currentRow.size(); j++) {
             List expected = (List) RAW_ROWS.get(rowCounter + i).get(MULTI_STRING);
-            Assert.assertEquals(expected.get(j), vectorSelector.lookupName(currentRow.get(j)));
+            Assertions.assertEquals(expected.get(j), vectorSelector.lookupName(currentRow.get(j)));
           }
         }
       }
 
       Object[] objects = objectSelector.getObjectVector();
       for (int i = 0; i < vectorSelector.getCurrentVectorSize(); i++) {
-        Assert.assertEquals("row " + i, RAW_ROWS.get(rowCounter + i).get(MULTI_STRING), objects[i]);
+        Assertions.assertEquals(RAW_ROWS.get(rowCounter + i).get(MULTI_STRING), objects[i], "row " + i);
       }
       rowCounter += objectSelector.getCurrentVectorSize();
       offset.advance();
@@ -260,8 +269,8 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
     );
 
     // cannot make these for anything except for multi-value strings
-    Assert.assertThrows(UOE.class, () -> factory.makeValueSelector(STRING));
-    Assert.assertThrows(UOE.class, () -> factory.makeValueSelector(MULTI_STRING));
+    Assertions.assertThrows(UOE.class, () -> factory.makeValueSelector(STRING));
+    Assertions.assertThrows(UOE.class, () -> factory.makeValueSelector(MULTI_STRING));
 
     VectorValueSelector doubleSelector = factory.makeValueSelector(DOUBLE);
     VectorValueSelector floatSelector = factory.makeValueSelector(FLOAT);
@@ -274,12 +283,12 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
       for (int i = 0; i < doubleSelector.getCurrentVectorSize(); i++) {
         final Object raw = RAW_ROWS.get(rowCounter + i).get(DOUBLE);
         if (doubleNulls != null && doubleNulls[i]) {
-          Assert.assertNull(raw);
+          Assertions.assertNull(raw);
         } else {
           if (raw == null) {
-            Assert.assertEquals(0.0, doubles[i], 0.0);
+            Assertions.assertEquals(0.0, doubles[i], 0.0);
           } else {
-            Assert.assertEquals((double) raw, doubles[i], 0.0);
+            Assertions.assertEquals((double) raw, doubles[i], 0.0);
           }
         }
       }
@@ -289,12 +298,12 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
       for (int i = 0; i < floatSelector.getCurrentVectorSize(); i++) {
         final Object raw = RAW_ROWS.get(rowCounter + i).get(FLOAT);
         if (floatNulls != null && floatNulls[i]) {
-          Assert.assertNull(raw);
+          Assertions.assertNull(raw);
         } else {
           if (raw == null) {
-            Assert.assertEquals(0.0f, floats[i], 0.0);
+            Assertions.assertEquals(0.0f, floats[i], 0.0);
           } else {
-            Assert.assertEquals((float) raw, floats[i], 0.0);
+            Assertions.assertEquals((float) raw, floats[i], 0.0);
           }
         }
       }
@@ -304,12 +313,12 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
       for (int i = 0; i < longSelector.getCurrentVectorSize(); i++) {
         final Object raw = RAW_ROWS.get(rowCounter + i).get(LONG);
         if (longNulls != null && longNulls[i]) {
-          Assert.assertNull(raw);
+          Assertions.assertNull(raw);
         } else {
           if (raw == null) {
-            Assert.assertEquals(0L, longs[i], 0.0);
+            Assertions.assertEquals(0L, longs[i], 0.0);
           } else {
-            Assert.assertEquals((long) raw, longs[i]);
+            Assertions.assertEquals((long) raw, longs[i]);
           }
         }
       }

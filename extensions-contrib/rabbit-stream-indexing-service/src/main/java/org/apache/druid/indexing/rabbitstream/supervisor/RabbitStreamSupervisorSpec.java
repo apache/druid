@@ -30,6 +30,7 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskClientFactory;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
@@ -156,6 +157,55 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
   }
 
   @Override
+  public RabbitStreamSupervisorSpec createBackfillSpec(
+      String backfillId,
+      BoundedStreamConfig boundedStreamConfig,
+      @Nullable Integer taskCount
+  )
+  {
+    RabbitStreamSupervisorIOConfig ioConfig = getSpec().getIOConfig();
+    RabbitStreamSupervisorIOConfig backfillIoConfig = new RabbitStreamSupervisorIOConfig(
+        ioConfig.getStream(),
+        ioConfig.getUri(),
+        ioConfig.getInputFormat(),
+        ioConfig.getReplicas(),
+        taskCount != null ? taskCount : ioConfig.getTaskCount(),
+        ioConfig.getTaskDuration().toPeriod(),
+        ioConfig.getConsumerProperties(),
+        ioConfig.getAutoScalerConfig(),
+        ioConfig.getPollTimeout(),
+        ioConfig.getStartDelay().toPeriod(),
+        ioConfig.getPeriod().toPeriod(),
+        ioConfig.getCompletionTimeout().toPeriod(),
+        ioConfig.isUseEarliestSequenceNumber(),
+        ioConfig.getLateMessageRejectionPeriod().isPresent() ? ioConfig.getLateMessageRejectionPeriod().get().toPeriod() : null,
+        ioConfig.getEarlyMessageRejectionPeriod().isPresent() ? ioConfig.getEarlyMessageRejectionPeriod().get().toPeriod() : null,
+        ioConfig.getLateMessageRejectionStartDateTime().isPresent() ? ioConfig.getLateMessageRejectionStartDateTime().get() : null,
+        ioConfig.getStopTaskCount(),
+        ioConfig.getServerPriorityToReplicas(),
+        boundedStreamConfig
+    );
+    return new RabbitStreamSupervisorSpec(
+        backfillId,
+        null,
+        getSpec().getDataSchema(),
+        getSpec().getTuningConfig(),
+        backfillIoConfig,
+        getContext(),
+        isSuspended(),
+        taskStorage,
+        taskMaster,
+        indexerMetadataStorageCoordinator,
+        (RabbitStreamIndexTaskClientFactory) indexTaskClientFactory,
+        mapper,
+        emitter,
+        monitorSchedulerConfig,
+        rowIngestionMetersFactory,
+        supervisorStateManagerConfig
+    );
+  }
+
+  @Override
   public String toString()
   {
     return "RabbitStreamSupervisorSpec{" +
@@ -165,5 +215,43 @@ public class RabbitStreamSupervisorSpec extends SeekableStreamSupervisorSpec
         ", context=" + getContext() +
         ", suspend=" + isSuspended() +
         '}';
+  }
+
+  @Override
+  public Builder toBuilder()
+  {
+    return new Builder().copyFrom(this);
+  }
+
+  public static class Builder extends SeekableStreamSupervisorSpec.Builder<Builder>
+  {
+    @Override
+    protected Builder self()
+    {
+      return this;
+    }
+
+    @Override
+    public RabbitStreamSupervisorSpec build()
+    {
+      return new RabbitStreamSupervisorSpec(
+          id,
+          null,
+          dataSchema,
+          (RabbitStreamSupervisorTuningConfig) tuningConfig,
+          (RabbitStreamSupervisorIOConfig) ioConfig,
+          context,
+          suspended,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
+      );
+    }
   }
 }

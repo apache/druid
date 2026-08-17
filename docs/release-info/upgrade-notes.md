@@ -34,7 +34,7 @@ For the full release notes for a specific version, see the [releases page](https
 
 Support for Hadoop-based ingestion has been removed. The feature was deprecated in Druid 32.
 
-Use one of Druid's other supported ingestion methods, such as SQL-based ingestion or MiddleManager-less ingestion using Kubernetes.
+Use one of Druid's other supported ingestion methods, such as SQL-based ingestion or MiddleManager-less ingestion using Kubernetes&circledR;.
 
 [#19109](https://github.com/apache/druid/pull/19109)
 

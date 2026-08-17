@@ -36,8 +36,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -60,8 +60,8 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -74,7 +74,7 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregatorTest
         16
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ArrayOfDoublesSketchToQuantilesSketchPostAggregator{name='a', field=ConstantPostAggregator{name='', constantValue=0}, column=2, k=16}",
         postAgg.toString()
     );
@@ -116,7 +116,7 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregatorTest
     DoublesSketch sketch2 = postAgg2.compute(ImmutableMap.of());
 
     // comparator compares value of getN, which is 1 for sketch1 and 2 for sketch2
-    Assert.assertEquals(-1, comparator.compare(sketch1, sketch2));
+    Assertions.assertEquals(-1, comparator.compare(sketch1, sketch2));
   }
 
   @Test
@@ -149,7 +149,7 @@ public class ArrayOfDoublesSketchToQuantilesSketchPostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

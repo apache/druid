@@ -43,6 +43,8 @@ import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -555,6 +557,46 @@ public class LoadRuleTest
     Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, TestDataSource.WIKI));
     Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T3, TestDataSource.WIKI));
+  }
+
+  /**
+   * Verifies that tier capacity metrics for tiers belonging to an alias are tagged
+   * with the {@link Dimension#TIER_ALIAS} dimension, so they can be aggregated by
+   * alias, while the physical tier dimension is still present.
+   */
+  @Test
+  public void testHistoricalTierAliasesTagsCapacityStatsWithAlias()
+  {
+    // T1 is the virtual alias key; T2 and T3 are the real tiers it expands to
+    final ServerHolder hot1Server = createServer(Tier.T2);
+    final ServerHolder hot2Server = createServer(Tier.T3);
+    DruidCluster cluster = DruidCluster
+        .builder()
+        .addTier(Tier.T2, hot1Server)
+        .addTier(Tier.T3, hot2Server)
+        .build();
+
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
+    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        segment,
+        makeCoordinatorRuntimeParams(
+            cluster,
+            ImmutableMap.of(Tier.T1, Set.of(Tier.T2, Tier.T3)),
+            segment
+        )
+    );
+
+    // Required capacity is reported against the physical tier AND tagged with the alias
+    final RowKey t2WithAlias = RowKey.with(Dimension.TIER, Tier.T2).and(Dimension.TIER_ALIAS, Tier.T1);
+    final RowKey t3WithAlias = RowKey.with(Dimension.TIER, Tier.T3).and(Dimension.TIER_ALIAS, Tier.T1);
+    Assert.assertEquals(segment.getSize(), stats.get(Stats.Tier.REQUIRED_CAPACITY, t2WithAlias));
+    Assert.assertEquals(segment.getSize(), stats.get(Stats.Tier.REQUIRED_CAPACITY, t3WithAlias));
+
+    // The same stat without the alias dimension is a different row and must be absent
+    Assert.assertEquals(0L, stats.get(Stats.Tier.REQUIRED_CAPACITY, RowKey.of(Dimension.TIER, Tier.T2)));
+    Assert.assertEquals(0L, stats.get(Stats.Tier.REQUIRED_CAPACITY, RowKey.of(Dimension.TIER, Tier.T3)));
   }
 
   /**

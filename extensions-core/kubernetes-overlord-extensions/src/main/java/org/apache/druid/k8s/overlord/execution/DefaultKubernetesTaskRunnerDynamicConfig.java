@@ -48,6 +48,7 @@ public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskR
   @Nullable
   @Override
   @JsonProperty
+  @Nullable
   public PodTemplateSelectStrategy getPodTemplateSelectStrategy()
   {
     return podTemplateSelectStrategy;
@@ -56,6 +57,7 @@ public class DefaultKubernetesTaskRunnerDynamicConfig implements KubernetesTaskR
   @Nullable
   @Override
   @JsonProperty
+  @Nullable
   public Integer getCapacity()
   {
     return capacity;

@@ -321,7 +321,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
+  public SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
       String stream,
       Map<String, String> map
   )
@@ -336,7 +336,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected void updatePartitionLagFromStream()
+  public void updatePartitionLagFromStream()
   {
     KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
     // this recordSupplier method is thread safe, so does not need to acquire the recordSupplierLock

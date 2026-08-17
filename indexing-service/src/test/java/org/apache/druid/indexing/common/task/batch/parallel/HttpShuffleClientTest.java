@@ -20,24 +20,26 @@
 package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -56,18 +58,15 @@ public class HttpShuffleClientTest
   private static final int PORT = 1080;
   private static final int PARTITION_ID = 0;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  private File temporaryFolder;
 
   private File segmentFile;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
-    File temp = temporaryFolder.newFile();
+    final File temp = File.createTempFile("junit", null, temporaryFolder);
     try (Writer writer = Files.newBufferedWriter(temp.toPath(), StandardCharsets.UTF_8)) {
       for (int j = 0; j < 10; j++) {
         writer.write(StringUtils.format("let's write some data.\n"));
@@ -81,24 +80,26 @@ public class HttpShuffleClientTest
   public void testFetchSegmentFileWithValidParamsReturningCopiedFileInPartitoinDir() throws IOException
   {
     ShuffleClient shuffleClient = mockClient(0);
-    final File localDir = temporaryFolder.newFolder();
+    final File localDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
     final File fetchedFile = shuffleClient.fetchSegmentFile(
         localDir,
         SUPERVISOR_TASK_ID,
         new TestPartitionLocation()
     );
-    Assert.assertEquals(fetchedFile.getParentFile(), localDir);
+    Assertions.assertEquals(fetchedFile.getParentFile(), localDir);
   }
 
   @Test
   public void testFetchUnknownPartitionThrowingIOExceptionAfterRetries() throws IOException
   {
-    expectedException.expect(IOException.class);
     ShuffleClient shuffleClient = mockClient(HttpShuffleClient.NUM_FETCH_RETRIES + 1);
-    shuffleClient.fetchSegmentFile(
-        temporaryFolder.newFolder(),
-        SUPERVISOR_TASK_ID,
-        new TestPartitionLocation()
+    Assertions.assertThrows(
+        IOException.class,
+        () -> shuffleClient.fetchSegmentFile(
+            FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null),
+            SUPERVISOR_TASK_ID,
+            new TestPartitionLocation()
+        )
     );
   }
 
@@ -106,13 +107,13 @@ public class HttpShuffleClientTest
   public void testFetchSegmentFileWithTransientFailuresReturningCopiedFileInPartitionDir() throws IOException
   {
     ShuffleClient shuffleClient = mockClient(HttpShuffleClient.NUM_FETCH_RETRIES - 1);
-    final File localDir = temporaryFolder.newFolder();
+    final File localDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
     final File fetchedFile = shuffleClient.fetchSegmentFile(
         localDir,
         SUPERVISOR_TASK_ID,
         new TestPartitionLocation()
     );
-    Assert.assertEquals(fetchedFile.getParentFile(), localDir);
+    Assertions.assertEquals(fetchedFile.getParentFile(), localDir);
   }
 
   @Test
@@ -125,7 +126,7 @@ public class HttpShuffleClientTest
       List<Future<File>> futures = new ArrayList<>();
       List<File> localDirs = new ArrayList<>();
       for (int i = 0; i < 2; i++) {
-        localDirs.add(temporaryFolder.newFolder());
+        localDirs.add(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null));
       }
       for (int i = 0; i < 2; i++) {
         final File localDir = localDirs.get(i);
@@ -139,7 +140,7 @@ public class HttpShuffleClientTest
       }
 
       for (int i = 0; i < futures.size(); i++) {
-        Assert.assertEquals(futures.get(i).get().getParentFile(), localDirs.get(i));
+        Assertions.assertEquals(futures.get(i).get().getParentFile(), localDirs.get(i));
       }
     }
     finally {
@@ -157,7 +158,7 @@ public class HttpShuffleClientTest
       List<Future<File>> futures = new ArrayList<>();
       List<File> localDirs = new ArrayList<>();
       for (int i = 0; i < 2; i++) {
-        localDirs.add(temporaryFolder.newFolder());
+        localDirs.add(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null));
       }
       for (int i = 0; i < 2; i++) {
         final File localDir = localDirs.get(i);
@@ -171,7 +172,7 @@ public class HttpShuffleClientTest
       }
 
       for (int i = 0; i < futures.size(); i++) {
-        Assert.assertEquals(futures.get(i).get().getParentFile(), localDirs.get(i));
+        Assertions.assertEquals(futures.get(i).get().getParentFile(), localDirs.get(i));
       }
     }
     finally {
@@ -183,19 +184,26 @@ public class HttpShuffleClientTest
   {
     HttpClient httpClient = EasyMock.strictMock(HttpClient.class);
     if (numFailures == 0) {
-      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.<InputStreamResponseHandler>anyObject()))
               // should return different instances of input stream
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)))
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)));
+              .andReturn(openSegmentFile())
+              .andReturn(openSegmentFile());
     } else {
-      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.anyObject()))
+      EasyMock.expect(httpClient.go(EasyMock.anyObject(), EasyMock.<InputStreamResponseHandler>anyObject()))
               .andReturn(Futures.immediateFailedFuture(new RuntimeException())).times(numFailures)
               // should return different instances of input stream
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)))
-              .andReturn(Futures.immediateFuture(new FileInputStream(segmentFile)));
+              .andReturn(openSegmentFile())
+              .andReturn(openSegmentFile());
     }
     EasyMock.replay(httpClient);
     return new HttpShuffleClient(httpClient);
+  }
+
+  private ListenableFuture<InputStream> openSegmentFile() throws FileNotFoundException
+  {
+    // Ownership passes through HttpShuffleClient to FileUtils.copyLarge, which closes the response stream.
+    // codeql[java/input-resource-leak]
+    return Futures.immediateFuture(new FileInputStream(segmentFile));
   }
 
   private static class TestPartitionLocation extends GenericPartitionLocation

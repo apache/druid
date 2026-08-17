@@ -20,7 +20,9 @@
 package org.apache.druid.storage.s3;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.storage.s3.output.S3OutputConfig;
 
+import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
 /**
@@ -30,10 +32,21 @@ public class S3TransferConfig
   @JsonProperty
   private boolean useTransferManager = true;
 
+  /**
+   * Size of each part of a multipart upload except the last, which S3 requires to be between 5MiB and 5GiB. A value
+   * outside that range is rejected at configuration time rather than surfacing as an {@code EntityTooSmall} or
+   * {@code EntityTooLarge} on every upload.
+   */
   @JsonProperty
-  @Min(1)
+  @Min(S3OutputConfig.S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES)
+  @Max(S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES)
   private long minimumUploadPartSize = 20 * 1024 * 1024L;
 
+  /**
+   * Upload size at or above which multipart is used instead of a single PUT. Unlike {@link #minimumUploadPartSize}
+   * this has no 5MiB floor: S3 exempts the final part of an upload from the minimum, so an upload just over a small
+   * threshold is still valid as a single undersized part.
+   */
   @JsonProperty
   @Min(1)
   private long multipartUploadThreshold = 20 * 1024 * 1024L;

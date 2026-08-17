@@ -23,6 +23,8 @@ import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.Function;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedBinaryOp;
+import org.apache.druid.math.expr.vector.simd.SimdSupportedUnaryOp;
 
 public class VectorMathProcessors
 {
@@ -300,7 +302,7 @@ public class VectorMathProcessors
 
     public Add()
     {
-      super(Long::sum, Double::sum, Double::sum, Double::sum);
+      super(Long::sum, Double::sum, Double::sum, Double::sum, SimdSupportedBinaryOp.ADD);
     }
   }
 
@@ -314,7 +316,8 @@ public class VectorMathProcessors
           (left, right) -> left - right,
           (left, right) -> (double) left - right,
           (left, right) -> left - (double) right,
-          (left, right) -> left - right
+          (left, right) -> left - right,
+          SimdSupportedBinaryOp.SUB
       );
     }
   }
@@ -325,7 +328,13 @@ public class VectorMathProcessors
 
     public Multiply()
     {
-      super(Multiply::multiply, Multiply::multiply, Multiply::multiply, Multiply::multiply);
+      super(
+          Multiply::multiply,
+          Multiply::multiply,
+          Multiply::multiply,
+          Multiply::multiply,
+          SimdSupportedBinaryOp.MUL
+      );
     }
 
     private static long multiply(long x, long y)
@@ -359,7 +368,8 @@ public class VectorMathProcessors
           (left, right) -> left / right,
           (left, right) -> (double) left / right,
           (left, right) -> left / (double) right,
-          (left, right) -> left / right
+          (left, right) -> left / right,
+          SimdSupportedBinaryOp.DIV
       );
     }
   }
@@ -402,7 +412,8 @@ public class VectorMathProcessors
     {
       super(
           input -> -input,
-          input -> -input
+          input -> -input,
+          SimdSupportedUnaryOp.NEG
       );
     }
   }
@@ -533,7 +544,7 @@ public class VectorMathProcessors
 
     public Abs()
     {
-      super(Math::abs, Math::abs);
+      super(Math::abs, Math::abs, SimdSupportedUnaryOp.ABS);
     }
   }
 
@@ -768,7 +779,7 @@ public class VectorMathProcessors
 
     public Sqrt()
     {
-      super(Math::sqrt, Math::sqrt);
+      super(Math::sqrt, Math::sqrt, SimdSupportedUnaryOp.SQRT);
     }
   }
 

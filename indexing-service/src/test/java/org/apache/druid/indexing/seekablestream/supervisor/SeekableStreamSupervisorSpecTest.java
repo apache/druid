@@ -25,9 +25,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpecUpdateAction;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfig;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
@@ -47,24 +48,30 @@ import org.apache.druid.metadata.TestSupervisorSpec;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import static org.junit.Assert.assertThrows;
-
 public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTestBase
 {
+  private static void assertInvalidInputException(DruidException exception, String message)
+  {
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(message, exception.getMessage());
+  }
+
   private SeekableStreamSupervisorIngestionSpec ingestionSchema;
   private DataSchema dataSchema;
   private SeekableStreamSupervisorTuningConfig seekableStreamSupervisorTuningConfig;
@@ -77,7 +84,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   private DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private SupervisorStateManagerConfig supervisorStateManagerConfig;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     ingestionSchema = EasyMock.mock(SeekableStreamSupervisorIngestionSpec.class);
@@ -101,25 +108,25 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   public void testAutoScalerConfig()
   {
     AutoScalerConfig autoScalerConfigEmpty = mapper.convertValue(new HashMap<>(), AutoScalerConfig.class);
-    Assert.assertTrue(autoScalerConfigEmpty instanceof LagBasedAutoScalerConfig);
-    Assert.assertFalse(autoScalerConfigEmpty.getEnableTaskAutoScaler());
+    Assertions.assertTrue(autoScalerConfigEmpty instanceof LagBasedAutoScalerConfig);
+    Assertions.assertFalse(autoScalerConfigEmpty.getEnableTaskAutoScaler());
 
     AutoScalerConfig autoScalerConfigNull = mapper.convertValue(null, AutoScalerConfig.class);
-    Assert.assertNull(autoScalerConfigNull);
+    Assertions.assertNull(autoScalerConfigNull);
 
     AutoScalerConfig autoScalerConfigDefault = mapper.convertValue(
         ImmutableMap.of("autoScalerStrategy", "lagBased"),
         AutoScalerConfig.class
     );
-    Assert.assertTrue(autoScalerConfigDefault instanceof LagBasedAutoScalerConfig);
+    Assertions.assertTrue(autoScalerConfigDefault instanceof LagBasedAutoScalerConfig);
 
     AutoScalerConfig autoScalerConfigValue = mapper.convertValue(
         ImmutableMap.of("lagCollectionIntervalMillis", "1"),
         AutoScalerConfig.class
     );
-    Assert.assertTrue(autoScalerConfigValue instanceof LagBasedAutoScalerConfig);
+    Assertions.assertTrue(autoScalerConfigValue instanceof LagBasedAutoScalerConfig);
     LagBasedAutoScalerConfig lagBasedAutoScalerConfig = (LagBasedAutoScalerConfig) autoScalerConfigValue;
-    Assert.assertEquals(lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), 1);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), 1);
 
     Exception e = null;
     try {
@@ -137,7 +144,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     catch (RuntimeException ex) {
       e = ex;
     }
-    Assert.assertNotNull(e);
+    Assertions.assertNotNull(e);
 
     e = null;
     try {
@@ -150,7 +157,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     catch (RuntimeException ex) {
       e = ex;
     }
-    Assert.assertNotNull(e);
+    Assertions.assertNotNull(e);
   }
 
   @Test
@@ -204,7 +211,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         "id1"
     );
     SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler instanceof LagBasedAutoScaler);
+    Assertions.assertTrue(autoscaler instanceof LagBasedAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
     autoScalerConfig.put("enableTaskAutoScaler", false);
@@ -213,7 +220,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
             .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
     SupervisorTaskAutoScaler autoscaler2 = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler2 instanceof NoopTaskAutoScaler);
+    Assertions.assertTrue(autoscaler2 instanceof NoopTaskAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
     autoScalerConfig.remove("enableTaskAutoScaler");
@@ -222,7 +229,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
             .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
     SupervisorTaskAutoScaler autoscaler3 = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler3 instanceof NoopTaskAutoScaler);
+    Assertions.assertTrue(autoscaler3 instanceof NoopTaskAutoScaler);
 
     EasyMock.reset(seekableStreamSupervisorIOConfig);
     autoScalerConfig.clear();
@@ -230,9 +237,9 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
             .andReturn(mapper.convertValue(autoScalerConfig, AutoScalerConfig.class))
             .anyTimes();
     EasyMock.replay(seekableStreamSupervisorIOConfig);
-    Assert.assertTrue(autoScalerConfig.isEmpty());
+    Assertions.assertTrue(autoScalerConfig.isEmpty());
     SupervisorTaskAutoScaler autoscaler4 = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler4 instanceof NoopTaskAutoScaler);
+    Assertions.assertTrue(autoscaler4 instanceof NoopTaskAutoScaler);
   }
 
   @Test
@@ -282,9 +289,9 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     // When passing a non-SeekableStreamSupervisor, should return NoopTaskAutoScaler
     SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(nonSeekableStreamSupervisor);
-    Assert.assertTrue(
-        "Should return NoopTaskAutoScaler when supervisor is not SeekableStreamSupervisor",
-        autoscaler instanceof NoopTaskAutoScaler
+    Assertions.assertTrue(
+        autoscaler instanceof NoopTaskAutoScaler,
+        "Should return NoopTaskAutoScaler when supervisor is not SeekableStreamSupervisor"
     );
   }
 
@@ -326,9 +333,9 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
 
     // When autoScalerConfig is null, should return NoopTaskAutoScaler
     SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(
-        "Should return NoopTaskAutoScaler when autoScalerConfig is null",
-        autoscaler instanceof NoopTaskAutoScaler
+    Assertions.assertTrue(
+        autoscaler instanceof NoopTaskAutoScaler,
+        "Should return NoopTaskAutoScaler when autoScalerConfig is null"
     );
   }
 
@@ -378,20 +385,20 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         "id1"
     );
     SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor4);
-    Assert.assertTrue(autoscaler instanceof LagBasedAutoScaler);
+    Assertions.assertTrue(autoscaler instanceof LagBasedAutoScaler);
     LagBasedAutoScaler lagBasedAutoScaler = (LagBasedAutoScaler) autoscaler;
     LagBasedAutoScalerConfig lagBasedAutoScalerConfig = lagBasedAutoScaler.getAutoScalerConfig();
-    Assert.assertEquals(lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), 1);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), 600000);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleActionStartDelayMillis(), 300000);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleActionPeriodMillis(), 60000);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleOutThreshold(), 6000000);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleInThreshold(), 1000000);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getTaskCountMax(), 4);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getTaskCountMin(), 1);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleInStep(), 1);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getScaleOutStep(), 2);
-    Assert.assertEquals(lagBasedAutoScalerConfig.getMinTriggerScaleActionFrequencyMillis(), 600000);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getLagCollectionIntervalMillis(), 1);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getLagCollectionRangeMillis(), 600000);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getScaleActionStartDelayMillis(), 300000);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getScaleActionPeriodMillis(), 60000);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getScaleOutThreshold(), 6000000);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getScaleInThreshold(), 1000000);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getTaskCountMax(), 4);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getTaskCountMin(), 1);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getScaleInStep(), 1);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getScaleOutStep(), 2);
+    Assertions.assertEquals(lagBasedAutoScalerConfig.getMinTriggerScaleActionFrequencyMillis(), 600000);
   }
 
   @Test
@@ -400,8 +407,11 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
+    // Use taskCountMax=10 so both the scaler and the supervisor's bounds agree and multiple
+    // scale-out iterations have headroom before hitting max (which is what lets us observe the
+    // "Scale cooldown not elapsed yet" skip reason emitted by the supervisor on later iterations).
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true, 10)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -434,11 +444,11 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
 
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountBeforeScaleOut);
+    Assertions.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(3, taskCountAfterScaleOut);
-    Assert.assertTrue(
+    Assertions.assertEquals(3, taskCountAfterScaleOut);
+    Assertions.assertTrue(
         dynamicActionEmitter
             .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
@@ -457,7 +467,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -490,7 +500,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
     Thread.sleep(1000);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         dynamicActionEmitter
             .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
@@ -510,7 +520,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -543,10 +553,10 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     autoScaler.start();
     supervisor.runInternal();
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountBeforeScaleOut);
+    Assertions.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountAfterScaleOut);
+    Assertions.assertEquals(1, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -559,7 +569,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -589,11 +599,11 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
 
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountBeforeScaleOut);
+    Assertions.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1000);
 
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountAfterScaleOut);
+    Assertions.assertEquals(2, taskCountAfterScaleOut);
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
@@ -606,7 +616,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(false)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -633,7 +643,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     );
 
     // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
-    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
     supervisor.getIoConfig().setTaskCount(2);
 
     supervisor.start();
@@ -641,11 +651,11 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
 
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(2, taskCountBeforeScaleOut);
+    Assertions.assertEquals(2, taskCountBeforeScaleOut);
 
     Thread.sleep(1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountAfterScaleOut);
+    Assertions.assertEquals(1, taskCountAfterScaleOut);
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
     autoScaler.reset();
@@ -655,10 +665,32 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleInThresholdGreaterThanPartitions() throws InterruptedException
   {
+    // Verifies that when the operator misconfigures taskCountMin above partitionCount, the
+    // supervisor's partition-count ceiling brings both bounds down to partitionCount and any
+    // scale action settles at partitionCount.
+    final Map<String, Object> misconfiguredProps = getScaleInProperties();
+    misconfiguredProps.put("taskCountMax", 20);
+    misconfiguredProps.put("taskCountMin", 15);
+    final AutoScalerConfig misconfiguredAutoScalerConfig =
+        mapper.convertValue(misconfiguredProps, AutoScalerConfig.class);
+
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
+    // Use an ioConfig whose autoScalerConfig matches the test's intent (min=15, max=20) so the
+    // supervisor's bounds and the scaler's bounds agree.
+    EasyMock.expect(spec.getIoConfig()).andReturn(new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(misconfiguredAutoScalerConfig)
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build()).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -674,34 +706,30 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.replay(taskMaster);
 
     TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
-    Map<String, Object> modifiedScaleInProps = getScaleInProperties();
-
-    modifiedScaleInProps.put("taskCountMax", 20);
-    modifiedScaleInProps.put("taskCountMin", 15);
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
         mapper.convertValue(
-            modifiedScaleInProps,
+            misconfiguredProps,
             LagBasedAutoScalerConfig.class
         ),
         spec,
         emitter
     );
 
-    // enable autoscaler so that taskcount config will be ignored and the init value of taskCount will use taskCountMin.
-    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    // Initial taskCount comes from the ioConfig's autoScalerConfig.taskCountMin (15) since
+    // taskCount was passed null in the ioConfig above.
+    Assertions.assertEquals(15, (int) supervisor.getIoConfig().getTaskCount());
     supervisor.getIoConfig().setTaskCount(2);
 
-    // When
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
 
-    Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
+    Assertions.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
     Thread.sleep(2000);
-    // Then
-    Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
+    // Supervisor caps min/max at partitionCount=10, so the first scale settles at partitionCount.
+    Assertions.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
 
     emitter.verifyEmitted(SeekableStreamSupervisor.AUTOSCALER_SCALING_TIME_METRIC, 1);
 
@@ -715,8 +743,24 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
+    // taskCountMin=2 so scaler's floored output (1) is below min and triggers the clamp.
+    final Map<String, Object> scaleInProps = getScaleInProperties();
+    scaleInProps.put("taskCountMin", 2);
+    final SeekableStreamSupervisorIOConfig customIoConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(mapper.convertValue(scaleInProps, AutoScalerConfig.class))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
+
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(customIoConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -737,25 +781,26 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       @Override
       public int getActiveTaskGroupsCount()
       {
-        return 1;
+        return 2;
       }
     };
 
     LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
         supervisor,
         mapper.convertValue(
-            getScaleInProperties(),
+            scaleInProps,
             LagBasedAutoScalerConfig.class
         ),
         spec,
         dynamicActionEmitter
     );
+    supervisor.getIoConfig().setTaskCount(2);
     supervisor.start();
     autoScaler.start();
     supervisor.runInternal();
     Thread.sleep(1000);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         dynamicActionEmitter
             .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
@@ -771,33 +816,23 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   @Test
   public void testSeekableStreamSupervisorSpecWithScaleDisable() throws InterruptedException
   {
-    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
+    SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -818,10 +853,10 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     autoScaler.start();
     supervisor.runInternal();
     int taskCountBeforeScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountBeforeScaleOut);
+    Assertions.assertEquals(1, taskCountBeforeScaleOut);
     Thread.sleep(1 * 1000);
     int taskCountAfterScaleOut = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, taskCountAfterScaleOut);
+    Assertions.assertEquals(1, taskCountAfterScaleOut);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -830,30 +865,21 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   @Test
   public void testEnablingIdleBeviourPerSupervisorWithOverlordConfigEnabled()
   {
-    SeekableStreamSupervisorIOConfig seekableStreamSupervisorIOConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        LagAggregator.DEFAULT,
-        null,
-        new IdleConfig(true, null),
-        null,
-        null,
-        null
-    )
-    {
-    };
+    SeekableStreamSupervisorIOConfig ioConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .withIdleConfig(new IdleConfig(true, null))
+        .build();
 
-    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(ioConfig).anyTimes();
     EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
     EasyMock.replay(ingestionSchema);
     spec = new SeekableStreamSupervisorSpec(
@@ -879,9 +905,25 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       }
 
       @Override
-      protected SeekableStreamSupervisorSpec toggleSuspend(boolean suspend)
+      protected SeekableStreamSupervisorSpec toggleSuspend(final boolean suspend)
       {
         return null;
+      }
+
+      @Override
+      public SeekableStreamSupervisorSpec createBackfillSpec(
+          final String backfillId,
+          final BoundedStreamConfig boundedStreamConfig,
+          @Nullable final Integer taskCount
+      )
+      {
+        return null;
+      }
+
+      @Override
+      public Builder<?> toBuilder()
+      {
+        throw new UnsupportedOperationException();
       }
 
       @Override
@@ -897,7 +939,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
       }
     };
 
-    Assert.assertTrue(Objects.requireNonNull(spec.getIoConfig().getIdleConfig()).isEnabled());
+    Assertions.assertTrue(Objects.requireNonNull(spec.getIoConfig().getIdleConfig()).isEnabled());
   }
 
   @Test
@@ -920,7 +962,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         supervisor4,
         "id1"
     );
-    Assert.assertNull(spec.getContextValue("key"));
+    Assertions.assertNull(spec.getContextValue("key"));
   }
 
   @Test
@@ -943,7 +985,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         supervisor4,
         "id1"
     );
-    Assert.assertNull(spec.getContextValue("key_not_exists"));
+    Assertions.assertNull(spec.getContextValue("key_not_exists"));
   }
 
   @Test
@@ -966,7 +1008,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         supervisor4,
         SUPERVISOR
     );
-    Assert.assertEquals(SUPERVISOR, spec.getId());
+    Assertions.assertEquals(SUPERVISOR, spec.getId());
   }
 
   @Test
@@ -989,7 +1031,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         supervisor4,
         SUPERVISOR
     );
-    Assert.assertEquals(SUPERVISOR, spec.getId());
+    Assertions.assertEquals(SUPERVISOR, spec.getId());
   }
 
   @Test
@@ -1012,7 +1054,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         supervisor4,
         "id1"
     );
-    Assert.assertEquals("value", spec.getContextValue("key"));
+    Assertions.assertEquals("value", spec.getContextValue("key"));
   }
 
   @Test
@@ -1051,31 +1093,19 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
         supervisor4,
         "id1"
     );
-    MatcherAssert.assertThat(
-        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpec)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-            "Cannot update supervisor spec since one or both of the specs have not provided an input source stream in the 'ioConfig'."
-        )
+    assertInvalidInputException(
+        Assertions.assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpec)),
+        "Cannot update supervisor spec since one or both of the specs have not provided an input source stream in the 'ioConfig'."
     );
 
 
     TestSupervisorSpec otherSpec = new TestSupervisorSpec("fake", new Object());
-    MatcherAssert.assertThat(
-        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(otherSpec)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-            StringUtils.format(
-                "Cannot update supervisor spec from type[%s] to type[%s]",
-                proposedSpec.getClass().getSimpleName(),
-                otherSpec.getClass().getSimpleName()
-            )
+    assertInvalidInputException(
+        Assertions.assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(otherSpec)),
+        StringUtils.format(
+            "Cannot update supervisor spec from type[%s] to type[%s]",
+            proposedSpec.getClass().getSimpleName(),
+            otherSpec.getClass().getSimpleName()
         )
     );
   }
@@ -1155,19 +1185,13 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     };
 
     // Mismatched stream strings test
-    MatcherAssert.assertThat(
-        assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpecDiffSource)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-            "Update of the input source stream from [source1] to [source2] is not supported for a running supervisor."
-            + "\nTo perform the update safely, follow these steps:"
-            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-            + "\n(2) Create a new supervisor with the new input source stream."
-            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
-        )
+    assertInvalidInputException(
+        Assertions.assertThrows(DruidException.class, () -> originalSpec.validateSpecUpdateTo(proposedSpecDiffSource)),
+        "Update of the input source stream from [source1] to [source2] is not supported for a running supervisor."
+        + "\nTo perform the update safely, follow these steps:"
+        + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+        + "\n(2) Create a new supervisor with the new input source stream."
+        + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
     );
 
     // Happy path test
@@ -1180,7 +1204,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -1224,8 +1248,8 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
     Thread.sleep(1000); // ensure a dynamic allocation notice completes
 
-    Assert.assertEquals(1, supervisor.getIoConfig().getTaskCount());
-    Assert.assertTrue(
+    Assertions.assertEquals(1, supervisor.getIoConfig().getTaskCount());
+    Assertions.assertTrue(
         dynamicActionEmitter
             .getMetricEvents(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC)
             .stream()
@@ -1246,7 +1270,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     // Suspended → DynamicAllocationTasksNotice should return early and not scale
@@ -1281,7 +1305,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     Thread.sleep(1000);
     int after = supervisor.getIoConfig().getTaskCount();
     // No scaling expected because supervisor is suspended
-    Assert.assertEquals(before, after);
+    Assertions.assertEquals(before, after);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1294,7 +1318,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
 
     EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
-    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(1, true)).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(true)).anyTimes();
     EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
     EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -1331,11 +1355,11 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
 
     int before = supervisor.getIoConfig().getTaskCount();
-    Assert.assertEquals(1, before);
+    Assertions.assertEquals(1, before);
     Thread.sleep(1000); // allow one dynamic allocation cycle
     int after = supervisor.getIoConfig().getTaskCount();
     // Even though metadata insert failed, taskCount should still be updated in ioConfig
-    Assert.assertEquals(2, after);
+    Assertions.assertEquals(2, after);
 
     autoScaler.reset();
     autoScaler.stop();
@@ -1386,6 +1410,100 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     assertMergeResult(null, spec(null, 2, 8, null), 2); // taskCountMin from constructor
   }
 
+  @Test
+  public void testRequireRestart_identicalSpecsDoNotRestart()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.NONE, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
+  @Test
+  public void testRequireRestart_taskCountChangeWithAutoscalerDoesNotRestart()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().taskCount(2).build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().taskCount(5).build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.NONE, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
+  @Test
+  public void testRequireRestart_taskCountChangeWithoutAutoscalerRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed = buildSpecWithIoConfig("id", createIOConfig(2, null));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().taskCount(2).build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().taskCount(5).build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
+  @Test
+  public void testRequireRestart_contextChangeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().context(Map.of("k", "v")).build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
+  @Test
+  public void testRequireRestart_suspendedChangeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().suspended(false).build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().suspended(true).build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
+  @Test
+  public void testRequireRestart_dataSchemaChangeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec = seed.toBuilder().dataSchema(getDataSchema("other-datasource")).build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
+  @Test
+  public void testRequireRestart_differentSpecTypeRestarts()
+  {
+    final TestSeekableStreamSupervisorSpec seed =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null)));
+    Assertions.assertEquals(
+        SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS,
+        seed.toBuilder().build().getActionOnUpdateTo(new NoopSupervisorSpec("id", List.of("ds")))
+    );
+  }
+
+  @Test
+  public void testRequireRestart_disablingAutoscalerWithTaskCountChangeRestarts()
+  {
+    // The old spec has autoscaling enabled, so taskCount is neutralized in the comparison. The new
+    // spec disables autoscaling and bumps taskCount; the autoScalerConfig difference must still force
+    // a restart even though the taskCount difference alone would not.
+    final SeekableStreamSupervisorSpec oldSpec =
+        buildSpecWithIoConfig("id", createIOConfig(2, lagBasedAutoScalerConfig(1, 8, null))).toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec =
+        buildSpecWithIoConfig("id", createIOConfig(5, null)).toBuilder().build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
+  @Test
+  public void testRequireRestart_tuningConfigChangeRestarts()
+  {
+    // No autoscaler, so taskCount is not neutralized; only the tuningConfig differs between the specs.
+    final TestSeekableStreamSupervisorSpec seed = buildSpecWithIoConfig("id", createIOConfig(2, null));
+    final SeekableStreamSupervisorSpec oldSpec = seed.toBuilder().build();
+    final SeekableStreamSupervisorSpec newSpec =
+        seed.toBuilder().tuningConfig(EasyMock.mock(SeekableStreamSupervisorTuningConfig.class)).build();
+    Assertions.assertEquals(SupervisorSpecUpdateAction.RESTART_SUPERVISOR_AND_TASKS, oldSpec.getActionOnUpdateTo(newSpec));
+  }
+
   private void assertMergeResult(
       @Nullable TestSeekableStreamSupervisorSpec existingSpec,
       TestSeekableStreamSupervisorSpec newSpec,
@@ -1393,7 +1511,7 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
   )
   {
     newSpec.merge(existingSpec);
-    Assert.assertEquals(expectedTaskCount, newSpec.getIoConfig().getTaskCount());
+    Assertions.assertEquals(expectedTaskCount, newSpec.getIoConfig().getTaskCount());
   }
 
   private TestSeekableStreamSupervisorSpec spec(
@@ -1452,55 +1570,31 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     EasyMock.replay(ingestionSchema);
   }
 
-  private SeekableStreamSupervisorIOConfig getIOConfig(int taskCount, boolean scaleOut)
+  private SeekableStreamSupervisorIOConfig getIOConfig(boolean scaleOut)
   {
-    if (scaleOut) {
-      return new SeekableStreamSupervisorIOConfig(
-          "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-          1,
-          null, // autoscaler uses taskCountStart/taskCountMin for the initial value
-          new Period("PT1H"),
-          new Period("P1D"),
-          new Period("PT30S"),
-          false,
-          new Period("PT30M"),
-          null,
-          null,
-          mapper.convertValue(getScaleOutProperties(2), AutoScalerConfig.class),
-          LagAggregator.DEFAULT,
-          null,
-          null,
-          null,
-          null,
-          null
-      )
-      {
-      };
-    } else {
-      return new SeekableStreamSupervisorIOConfig(
-          "stream",
-          new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-          1,
-          null, // autoscaler uses taskCountStart/taskCountMin for the initial value
-          new Period("PT1H"),
-          new Period("P1D"),
-          new Period("PT30S"),
-          false,
-          new Period("PT30M"),
-          null,
-          null,
-          mapper.convertValue(getScaleInProperties(), AutoScalerConfig.class),
-          LagAggregator.DEFAULT,
-          null,
-          null,
-          null,
-          null,
-          null
-      )
-      {
-      };
-    }
+    return getIOConfig(scaleOut, 2);
+  }
+
+  private SeekableStreamSupervisorIOConfig getIOConfig(boolean scaleOut, int maxTaskCount)
+  {
+    final AutoScalerConfig autoScalerConfig = mapper.convertValue(
+        scaleOut ? getScaleOutProperties(maxTaskCount) : getScaleInProperties(),
+        AutoScalerConfig.class
+    );
+    // taskCount is left unset; with autoscaling enabled the ioConfig derives it from
+    // taskCountStart/taskCountMin.
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withAutoScalerConfig(autoScalerConfig)
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .build();
   }
 
   private static DataSchema getDataSchema()
@@ -1557,28 +1651,19 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     Map<String, Object> endOffsets = ImmutableMap.of("0", 100L);
     BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
 
-    SeekableStreamSupervisorIOConfig boundedIoConfig = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        new JsonInputFormat(new JSONPathSpec(true, ImmutableList.of()), ImmutableMap.of(), false, false, false),
-        1,
-        1,
-        new Period("PT1H"),
-        new Period("P1D"),
-        new Period("PT30S"),
-        false,
-        new Period("PT30M"),
-        null,
-        null,
-        null,
-        LagAggregator.DEFAULT,
-        null,
-        null,
-        null,
-        null,
-        boundedConfig
-    )
-    {
-    };
+    SeekableStreamSupervisorIOConfig boundedIoConfig = new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withInputFormat(new JsonInputFormat(new JSONPathSpec(true, List.of()), Map.of(), false, false, false))
+        .withReplicas(1)
+        .withTaskCount(1)
+        .withTaskDuration(new Period("PT1H"))
+        .withStartDelay(new Period("P1D"))
+        .withSupervisorRunPeriod(new Period("PT30S"))
+        .withUseEarliestSequenceNumber(false)
+        .withCompletionTimeout(new Period("PT30M"))
+        .withLagAggregator(LagAggregator.DEFAULT)
+        .withBoundedStreamConfig(boundedConfig)
+        .build();
 
     EasyMock.expect(spec.getId()).andReturn(SUPERVISOR).anyTimes();
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
@@ -1612,10 +1697,10 @@ public class SeekableStreamSupervisorSpecTest extends SeekableStreamSupervisorTe
     supervisor.runInternal();
 
     // Verify bounded config is properly set
-    Assert.assertTrue(supervisor.getIoConfig().isBounded());
-    Assert.assertNotNull(supervisor.getIoConfig().getBoundedStreamConfig());
-    Assert.assertEquals(startOffsets, supervisor.getIoConfig().getBoundedStreamConfig().getStartSequenceNumbers());
-    Assert.assertEquals(endOffsets, supervisor.getIoConfig().getBoundedStreamConfig().getEndSequenceNumbers());
+    Assertions.assertTrue(supervisor.getIoConfig().isBounded());
+    Assertions.assertNotNull(supervisor.getIoConfig().getBoundedStreamConfig());
+    Assertions.assertEquals(startOffsets, supervisor.getIoConfig().getBoundedStreamConfig().getStartSequenceNumbers());
+    Assertions.assertEquals(endOffsets, supervisor.getIoConfig().getBoundedStreamConfig().getEndSequenceNumbers());
   }
 
 }

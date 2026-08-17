@@ -24,10 +24,10 @@ sidebar_label: JSON-based batch
   -->
 
 :::info
- This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md) engine, see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
+ This page describes JSON-based batch ingestion using [ingestion specs](ingestion-spec.md). For SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md), see [SQL-based ingestion](../multi-stage-query/index.md). Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 :::
 
-Apache Druid supports the following types of JSON-based batch indexing tasks:
+Apache&circledR; Druid supports the following types of JSON-based batch indexing tasks:
 
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
 - Simple task indexing (`index`) that run a single indexing task at a time. Simple task indexing is suitable for development and test environments.
@@ -46,7 +46,7 @@ For related information on batch indexing, see:
 To run either kind of JSON-based batch indexing task, you can:
 
 - Use the **Load Data** UI in the web console to define and submit an ingestion spec.
-- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Tasks API endpoint](../api-reference/tasks-api.md), `/druid/indexer/v1/task`, the Overlord service. Alternatively, you can use the indexing script included with Druid at `bin/post-index-task`.
+- Define an ingestion spec in JSON based upon the [examples](#parallel-indexing-example) and reference topics for batch indexing. Then POST the ingestion spec to the [Tasks API endpoint](../api-reference/tasks-api.md), `/druid/indexer/v1/task`, the Overlord service.
 
 ## Parallel task indexing
 

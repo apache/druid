@@ -21,10 +21,14 @@ package org.apache.druid.msq.indexing.destination;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -90,8 +94,46 @@ public class DataSourceMSQDestinationTest
                                                  .build()
                       )
                   )
+                  .withPrefabValues(
+                      BaseTableProjectionSpec.class,
+                      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                                 .columns(new StringDimensionSchema("tenant"), new LongDimensionSchema("__time"))
+                                                                 .clusteringColumns("tenant")
+                                                                 .build(),
+                      ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                                 .columns(new StringDimensionSchema("region"), new LongDimensionSchema("__time"))
+                                                                 .clusteringColumns("region")
+                                                                 .build()
+                  )
                   .usingGetClass()
                   .verify();
+  }
+
+  @Test
+  public void testSerdeWithBaseTable() throws JsonProcessingException
+  {
+    final ObjectMapper mapper = new DefaultObjectMapper();
+    final DataSourceMSQDestination destination = new DataSourceMSQDestination(
+        "foo",
+        Granularities.DAY,
+        null,
+        null,
+        null,
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+                                                   .columns(
+                                                       new StringDimensionSchema("tenant"),
+                                                       new StringDimensionSchema("region"),
+                                                       new LongDimensionSchema("__time")
+                                                   )
+                                                   .clusteringColumns("tenant")
+                                                   .build(),
+        null,
+        null
+    );
+    final DataSourceMSQDestination roundTrip =
+        mapper.readValue(mapper.writeValueAsString(destination), DataSourceMSQDestination.class);
+    Assert.assertEquals(destination, roundTrip);
+    Assert.assertNotNull(roundTrip.getBaseTable());
   }
 
   @Test

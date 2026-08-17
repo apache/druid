@@ -25,9 +25,8 @@ description: How to generate a query that references externally hosted data
   -->
 
 :::info
- This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
- extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
- ingestion method is right for you.
+ This page describes SQL-based batch ingestion using the [multi-stage query (MSQ) task engine](../multi-stage-query/index.md).
+ Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which ingestion method is right for you.
 :::
 
 This tutorial demonstrates how to generate a query that references externally hosted data using the **Connect external data** wizard.

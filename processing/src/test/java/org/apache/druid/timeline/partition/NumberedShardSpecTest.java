@@ -31,8 +31,8 @@ import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -56,9 +56,9 @@ public class NumberedShardSpecTest
         objectMapper.writeValueAsBytes(new NumberedShardSpec(1, 2)),
         ShardSpec.class
     );
-    Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, spec.getNumCorePartitions());
-    Assert.assertEquals(ShardSpec.Type.NUMBERED, spec.getType());
+    Assertions.assertEquals(1, spec.getPartitionNum());
+    Assertions.assertEquals(2, spec.getNumCorePartitions());
+    Assertions.assertEquals(ShardSpec.Type.NUMBERED, spec.getType());
   }
 
   @Test
@@ -69,8 +69,8 @@ public class NumberedShardSpecTest
         "{\"type\": \"numbered\", \"partitions\": 2, \"partitionNum\": 1}",
         ShardSpec.class
     );
-    Assert.assertEquals(1, spec.getPartitionNum());
-    Assert.assertEquals(2, spec.getNumCorePartitions());
+    Assertions.assertEquals(1, spec.getPartitionNum());
+    Assertions.assertEquals(2, spec.getNumCorePartitions());
   }
 
   @Test
@@ -94,28 +94,28 @@ public class NumberedShardSpecTest
         }
     );
 
-    Assert.assertEquals(0, chunks.get(0).getChunkNumber());
-    Assert.assertEquals(1, chunks.get(1).getChunkNumber());
-    Assert.assertEquals(2, chunks.get(2).getChunkNumber());
+    Assertions.assertEquals(0, chunks.get(0).getChunkNumber());
+    Assertions.assertEquals(1, chunks.get(1).getChunkNumber());
+    Assertions.assertEquals(2, chunks.get(2).getChunkNumber());
 
-    Assert.assertTrue(chunks.get(0).isStart());
-    Assert.assertFalse(chunks.get(1).isStart());
-    Assert.assertFalse(chunks.get(2).isStart());
+    Assertions.assertTrue(chunks.get(0).isStart());
+    Assertions.assertFalse(chunks.get(1).isStart());
+    Assertions.assertFalse(chunks.get(2).isStart());
 
-    Assert.assertFalse(chunks.get(0).isEnd());
-    Assert.assertFalse(chunks.get(1).isEnd());
-    Assert.assertTrue(chunks.get(2).isEnd());
+    Assertions.assertFalse(chunks.get(0).isEnd());
+    Assertions.assertFalse(chunks.get(1).isEnd());
+    Assertions.assertTrue(chunks.get(2).isEnd());
 
-    Assert.assertTrue(chunks.get(0).abuts(chunks.get(1)));
-    Assert.assertTrue(chunks.get(1).abuts(chunks.get(2)));
+    Assertions.assertTrue(chunks.get(0).abuts(chunks.get(1)));
+    Assertions.assertTrue(chunks.get(1).abuts(chunks.get(2)));
 
-    Assert.assertFalse(chunks.get(0).abuts(chunks.get(0)));
-    Assert.assertFalse(chunks.get(0).abuts(chunks.get(2)));
-    Assert.assertFalse(chunks.get(1).abuts(chunks.get(0)));
-    Assert.assertFalse(chunks.get(1).abuts(chunks.get(1)));
-    Assert.assertFalse(chunks.get(2).abuts(chunks.get(0)));
-    Assert.assertFalse(chunks.get(2).abuts(chunks.get(1)));
-    Assert.assertFalse(chunks.get(2).abuts(chunks.get(2)));
+    Assertions.assertFalse(chunks.get(0).abuts(chunks.get(0)));
+    Assertions.assertFalse(chunks.get(0).abuts(chunks.get(2)));
+    Assertions.assertFalse(chunks.get(1).abuts(chunks.get(0)));
+    Assertions.assertFalse(chunks.get(1).abuts(chunks.get(1)));
+    Assertions.assertFalse(chunks.get(2).abuts(chunks.get(0)));
+    Assertions.assertFalse(chunks.get(2).abuts(chunks.get(1)));
+    Assertions.assertFalse(chunks.get(2).abuts(chunks.get(2)));
   }
 
   @Test
@@ -198,10 +198,10 @@ public class NumberedShardSpecTest
   public void testSharePartitionSpace()
   {
     final NumberedShardSpec shardSpec = new NumberedShardSpec(0, 1);
-    Assert.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
-    Assert.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
-    Assert.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
-    Assert.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(NumberedPartialShardSpec.instance()));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(new HashBasedNumberedPartialShardSpec(null, 0, 1, null)));
+    Assertions.assertTrue(shardSpec.sharePartitionSpace(new SingleDimensionPartialShardSpec("dim", 0, null, null, 1)));
+    Assertions.assertFalse(shardSpec.sharePartitionSpace(new NumberedOverwritePartialShardSpec(0, 2, 1)));
   }
 
   private void testVersionedIntervalTimelineBehaviorForNumberedShardSpec(
@@ -223,7 +223,7 @@ public class NumberedShardSpecTest
         actualObjects.add(chunk.getObject());
       }
     }
-    Assert.assertEquals(expectedObjects, actualObjects);
+    Assertions.assertEquals(expectedObjects, actualObjects);
   }
 
   private static final class OvershadowableString implements Overshadowable<OvershadowableString>

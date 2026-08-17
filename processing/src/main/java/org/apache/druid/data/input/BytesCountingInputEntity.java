@@ -57,6 +57,12 @@ public class BytesCountingInputEntity implements InputEntity
     return new BytesCountingInputStream(baseInputEntity.open(), inputStats);
   }
 
+  @Override
+  public InputStream openRaw() throws IOException
+  {
+    return new BytesCountingInputStream(baseInputEntity.openRaw(), inputStats);
+  }
+
   public InputEntity getBaseInputEntity()
   {
     return baseInputEntity;

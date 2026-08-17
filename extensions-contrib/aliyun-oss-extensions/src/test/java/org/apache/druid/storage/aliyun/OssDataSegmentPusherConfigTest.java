@@ -21,8 +21,8 @@ package org.apache.druid.storage.aliyun;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -36,7 +36,7 @@ public class OssDataSegmentPusherConfigTest
     String jsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\"}";
 
     OssStorageConfig config = JSON_MAPPER.readValue(jsonConfig, OssStorageConfig.class);
-    Assert.assertEquals(jsonConfig, JSON_MAPPER.writeValueAsString(config));
+    Assertions.assertEquals(jsonConfig, JSON_MAPPER.writeValueAsString(config));
   }
 
   @Test
@@ -46,6 +46,6 @@ public class OssDataSegmentPusherConfigTest
     String expectedJsonConfig = "{\"bucket\":\"bucket1\",\"prefix\":\"dataSource1\"}";
 
     OssStorageConfig config = JSON_MAPPER.readValue(jsonConfig, OssStorageConfig.class);
-    Assert.assertEquals(expectedJsonConfig, JSON_MAPPER.writeValueAsString(config));
+    Assertions.assertEquals(expectedJsonConfig, JSON_MAPPER.writeValueAsString(config));
   }
 }

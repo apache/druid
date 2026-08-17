@@ -25,17 +25,20 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.collect.Utils;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
+import org.apache.druid.query.aggregation.simd.SimdDoubleMeanVectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -122,7 +125,11 @@ public class DoubleMeanAggregatorFactory extends AggregatorFactory
   @Override
   public VectorAggregator factorizeVector(final VectorColumnSelectorFactory selectorFactory)
   {
-    return new DoubleMeanVectorAggregator(selectorFactory.makeValueSelector(fieldName));
+    final VectorValueSelector selector = selectorFactory.makeValueSelector(fieldName);
+    if (ExpressionProcessing.useVectorApi()) {
+      return new SimdDoubleMeanVectorAggregator(selector);
+    }
+    return new DoubleMeanVectorAggregator(selector);
   }
 
   @Override

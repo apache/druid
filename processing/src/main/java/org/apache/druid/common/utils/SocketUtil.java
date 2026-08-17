@@ -41,7 +41,7 @@ public class SocketUtil
     int currPort = startPort;
 
     while (currPort < 0xffff) {
-      try (ServerSocket socket = new ServerSocket(currPort)) {
+      try (ServerSocket ignoredSocket = new ServerSocket(currPort)) {
         return currPort;
       }
       catch (IOException e) {

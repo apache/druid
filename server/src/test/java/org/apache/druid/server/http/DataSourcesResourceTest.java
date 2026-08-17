@@ -60,6 +60,7 @@ import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
@@ -192,10 +193,10 @@ public class DataSourcesResourceTest
         ImmutableList.of(server)
     ).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
       new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
@@ -207,10 +208,10 @@ public class DataSourcesResourceTest
         ImmutableList.of(server)
     ).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid", null, null)
     ).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
@@ -243,10 +244,10 @@ public class DataSourcesResourceTest
   ).once();
 
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         authenticationResult
     ).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
@@ -258,10 +259,10 @@ public class DataSourcesResourceTest
     ).once();
 
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         authenticationResult
     ).once();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
@@ -319,10 +320,10 @@ public class DataSourcesResourceTest
     EasyMock.expect(server.getDataSource(TestDataSource.KOALA)).andReturn(listDataSources.get(1)).atLeastOnce();
     EasyMock.expect(inventoryView.getInventory()).andReturn(ImmutableList.of(server)).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).once();
-    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
         new AuthenticationResult("druid", "druid", null, null)
     ).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).once();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, true);
     EasyMock.expectLastCall().times(1);
 
@@ -784,7 +785,7 @@ public class DataSourcesResourceTest
         null,
         null,
         new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
-        CannotMatchBehavior.FULL_LOAD
+        CannotMatchBehavior.LOAD_ON_DEMAND
     );
     DataSourcesResource dataSourcesResource =
         new DataSourcesResource(
@@ -822,15 +823,16 @@ public class DataSourcesResourceTest
   @Test
   public void testIsHandOffCompleteWithPartialLoadRuleFallThrough()
   {
-    // A FALL_THROUGH partial rule whose matcher does not resolve on the segment (the projection it asks for is not
-    // present) should not halt the cascade. The next rule (drop) catches the segment, so the response is true.
+    // A FALL_THROUGH partial rule whose matcher does not resolve on the segment should not halt the cascade. The next
+    // rule (drop) catches the segment, so the response is true. The matcher is a cluster-group one because the
+    // segment is not clustered: projection matchers always apply, falling back to a base-table load.
     MetadataRuleManager databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     Interval ruleInterval = Intervals.of("2013-01-01T00:00:00Z/2013-01-03T00:00:00Z");
     Rule partialRule = new IntervalPartialLoadRule(
         ruleInterval,
         null,
         null,
-        new ExactProjectionPartialLoadMatcher(ImmutableList.of("user_daily")),
+        new WildcardClusterGroupPartialLoadMatcher(ImmutableList.of(ImmutableMap.of("tenant", "acme")), null),
         CannotMatchBehavior.FALL_THROUGH
     );
     Rule dropRule = new IntervalDropRule(ruleInterval);

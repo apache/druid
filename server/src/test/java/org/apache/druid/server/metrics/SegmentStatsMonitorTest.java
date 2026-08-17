@@ -52,7 +52,7 @@ public class SegmentStatsMonitorTest
   private SegmentLoadDropHandler segmentLoadDropMgr;
   private ServiceEmitter serviceEmitter;
   private SegmentStatsMonitor monitor;
-  private final SegmentLoaderConfig segmentLoaderConfig = new SegmentLoaderConfig();
+  private final SegmentLoaderConfig segmentLoaderConfig = SegmentLoaderConfig.builder().build();
 
   @Before
   public void setUp()

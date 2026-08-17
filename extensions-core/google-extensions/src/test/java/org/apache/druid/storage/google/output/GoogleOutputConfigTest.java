@@ -21,17 +21,19 @@ package org.apache.druid.storage.google.output;
 
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.io.File;
 
 public class GoogleOutputConfigTest
 {
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private static final String BUCKET = "bucket";
   private static final String PREFIX = "prefix";
@@ -41,9 +43,14 @@ public class GoogleOutputConfigTest
   public void testTooLargeChunkSize()
   {
     HumanReadableBytes chunkSize = new HumanReadableBytes("17MiB");
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
-        () -> new GoogleOutputConfig(BUCKET, PREFIX, temporaryFolder.newFolder(), chunkSize, MAX_RETRY_COUNT)
+        () -> new GoogleOutputConfig(BUCKET, PREFIX, newFolder(temporaryFolder, "junit"), chunkSize, MAX_RETRY_COUNT)
     );
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

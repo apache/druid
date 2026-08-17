@@ -21,10 +21,9 @@ package org.apache.druid.storage.s3;
 
 import com.google.common.io.Files;
 import org.apache.druid.common.aws.FileSessionCredentialsProvider;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsSessionCredentials;
 
@@ -35,23 +34,26 @@ import java.nio.charset.StandardCharsets;
 
 public class TestFileSessionCredentialsProvider
 {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @TempDir
+  public File folder;
 
   @Test
   public void test() throws IOException
   {
-    File file = folder.newFile();
+    File file = File.createTempFile("credentials", ".properties", folder);
     try (BufferedWriter out = Files.newWriter(file, StandardCharsets.UTF_8)) {
       out.write("sessionToken=sessionTokenSample\nsecretKey=secretKeySample\naccessKey=accessKeySample\n");
     }
 
     FileSessionCredentialsProvider provider = new FileSessionCredentialsProvider(file.getAbsolutePath());
     AwsCredentials credentials = provider.resolveCredentials();
-    Assert.assertTrue("Credentials should be session credentials", credentials instanceof AwsSessionCredentials);
+    Assertions.assertTrue(
+        credentials instanceof AwsSessionCredentials,
+        "Credentials should be session credentials"
+    );
     AwsSessionCredentials sessionCredentials = (AwsSessionCredentials) credentials;
-    Assert.assertEquals("sessionTokenSample", sessionCredentials.sessionToken());
-    Assert.assertEquals("accessKeySample", sessionCredentials.accessKeyId());
-    Assert.assertEquals("secretKeySample", sessionCredentials.secretAccessKey());
+    Assertions.assertEquals("sessionTokenSample", sessionCredentials.sessionToken());
+    Assertions.assertEquals("accessKeySample", sessionCredentials.accessKeyId());
+    Assertions.assertEquals("secretKeySample", sessionCredentials.secretAccessKey());
   }
 }

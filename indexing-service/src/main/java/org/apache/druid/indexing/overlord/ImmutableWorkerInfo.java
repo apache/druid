@@ -105,7 +105,8 @@ public class ImmutableWorkerInfo
   }
 
   /**
-   * Helper used by {@link ZkWorker} and {@link org.apache.druid.indexing.overlord.hrtr.WorkerHolder}.
+   * Helper used by {@link org.apache.druid.indexing.overlord.hrtr.WorkerHolder} to build a worker view from a set of
+   * task announcements.
    */
   public static ImmutableWorkerInfo fromWorkerAnnouncements(
       final Worker worker,
@@ -211,7 +212,7 @@ public class ImmutableWorkerInfo
 
   public boolean isValidVersion(String minVersion)
   {
-    return worker.getVersion().compareTo(minVersion) >= 0;
+    return !worker.isDisabled() && worker.getVersion().compareTo(minVersion) >= 0;
   }
 
   public boolean canRunTask(Task task, double parallelIndexTaskSlotRatio)

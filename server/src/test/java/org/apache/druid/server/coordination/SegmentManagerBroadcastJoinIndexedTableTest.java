@@ -55,6 +55,7 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.SegmentizerFactory;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
@@ -128,27 +129,16 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     segmentCacheDir = temporaryFolder.newFolder();
     segmentDeepStorageDir = temporaryFolder.newFolder();
 
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return segmentCacheDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(segmentCacheDir, null, null)
-        );
-      }
-    };
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(segmentCacheDir)
+        .locations(new StorageLocationConfig(segmentCacheDir, null, null))
+        .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
 
     segmentCacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper

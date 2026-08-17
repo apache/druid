@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.overlord.duty;
 
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.LocalTaskActionClient;
+import org.apache.druid.indexing.common.actions.RetrieveUpgradedToSegmentIdsAction;
 import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -47,19 +48,20 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 public class UnusedSegmentsKillerTest
 {
-  @Rule
-  public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
+  private final TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
   private static final List<DataSegment> WIKI_SEGMENTS_1X10D =
       CreateDataSegments.ofDatasource(TestDataSource.WIKI)
@@ -74,16 +76,23 @@ public class UnusedSegmentsKillerTest
   private TestDataSegmentKiller dataSegmentKiller;
   private IndexerMetadataStorageCoordinator storageCoordinator;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
+    taskActionTestKit.before();
     emitter = taskActionTestKit.getServiceEmitter();
     leaderSelector = new TestDruidLeaderSelector();
     dataSegmentKiller = new TestDataSegmentKiller();
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.ZERO, null);
+    killerConfig = new UnusedSegmentKillerConfig(true, zeroBufferPeriod(), null, null);
     killExecutor = new BlockingExecutorService("UnusedSegmentsKillerTest-%s");
     storageCoordinator = taskActionTestKit.getMetadataStorageCoordinator();
     initKiller();
+  }
+
+  @AfterEach
+  public void tearDown()
+  {
+    taskActionTestKit.after();
   }
 
   private void initKiller()
@@ -94,7 +103,7 @@ public class UnusedSegmentsKillerTest
             SegmentMetadataCache.UsageMode.ALWAYS,
             killerConfig
         ),
-        task -> new LocalTaskActionClient(task, taskActionTestKit.getTaskActionToolbox()),
+        taskActionTestKit::createTaskActionClient,
         storageCoordinator,
         leaderSelector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(nameFormat, killExecutor, true),
@@ -102,6 +111,14 @@ public class UnusedSegmentsKillerTest
         taskActionTestKit.getTaskLockbox(),
         taskActionTestKit.getServiceEmitter()
     );
+  }
+
+  private void resetKillQueue()
+  {
+    killer.run();
+
+    // Invoke rebuild of kill queue on the executor thread
+    killExecutor.finishNextPendingTask();
   }
 
   private void finishQueuedKillJobs()
@@ -113,41 +130,41 @@ public class UnusedSegmentsKillerTest
   public void test_getSchedule_returnsOneHourPeriod_ifEnabled()
   {
     final DutySchedule schedule = killer.getSchedule();
-    Assert.assertEquals(Duration.standardHours(1).getMillis(), schedule.getPeriodMillis());
-    Assert.assertEquals(Duration.standardMinutes(15).getMillis(), schedule.getInitialDelayMillis());
+    Assertions.assertEquals(Duration.standardHours(1).getMillis(), schedule.getPeriodMillis());
+    Assertions.assertEquals(Duration.standardMinutes(30).getMillis(), schedule.getInitialDelayMillis());
   }
 
   @Test
   public void test_getSchedule_returnsZeroPeriod_ifDisabled()
   {
-    killerConfig = new UnusedSegmentKillerConfig(false, null, null);
+    killerConfig = new UnusedSegmentKillerConfig(false, null, null, null);
     initKiller();
 
     final DutySchedule schedule = killer.getSchedule();
-    Assert.assertEquals(0, schedule.getPeriodMillis());
-    Assert.assertEquals(0, schedule.getInitialDelayMillis());
+    Assertions.assertEquals(0, schedule.getPeriodMillis());
+    Assertions.assertEquals(0, schedule.getInitialDelayMillis());
   }
 
   @Test
   public void test_run_startsProcessing_ifEnabled()
   {
-    Assert.assertFalse(killExecutor.hasPendingTasks());
-    Assert.assertTrue(killer.isEnabled());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killer.isEnabled());
 
     killer.run();
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
   }
 
   @Test
   public void test_run_isNoop_ifDisabled()
   {
-    killerConfig = new UnusedSegmentKillerConfig(false, null, null);
+    killerConfig = new UnusedSegmentKillerConfig(false, null, null, null);
     initKiller();
 
-    Assert.assertFalse(killer.isEnabled());
+    Assertions.assertFalse(killer.isEnabled());
 
     killer.run();
-    Assert.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
   }
 
   @Test
@@ -161,11 +178,11 @@ public class UnusedSegmentsKillerTest
 
     leaderSelector.stopBeingLeader();
 
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
 
     finishQueuedKillJobs();
     emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS);
-    Assert.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
   }
 
   @Test
@@ -178,7 +195,7 @@ public class UnusedSegmentsKillerTest
 
     // Reset the queue and verify that kill jobs have been added to the queue
     killer.run();
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
     emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS);
 
     finishQueuedKillJobs();
@@ -193,74 +210,104 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10);
     emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
 
-    Assert.assertTrue(
+    Assertions.assertTrue(
         retrieveUnusedSegments(Intervals.ETERNITY).isEmpty()
     );
   }
 
   @Test
-  public void test_maxSegmentsKilledInAnInterval_is_1k()
+  public void test_maxSegmentsKilledInRun_isLimitedByConfig()
   {
+    killerConfig = new UnusedSegmentKillerConfig(true, zeroBufferPeriod(), null, 700);
+    initKiller();
     leaderSelector.becomeLeader();
 
     final List<DataSegment> segments =
         CreateDataSegments.ofDatasource(TestDataSource.WIKI)
-                          .forIntervals(1, Granularities.DAY)
-                          .withNumPartitions(2000)
+                          .forIntervals(10, Granularities.DAY)
+                          .withNumPartitions(100)
                           .eachOfSizeInMb(50);
 
     storageCoordinator.commitSegments(Set.copyOf(segments), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
 
-    Assert.assertEquals(
-        2000,
-        retrieveUnusedSegments(segments.get(0).getInterval()).size()
+    Assertions.assertEquals(
+        1000,
+        retrieveUnusedSegments(Intervals.ETERNITY).size()
     );
 
-    // Reset the kill queue and execute kill tasks
-    killer.run();
+    resetKillQueue();
     finishQueuedKillJobs();
 
-    // Verify that a single kill task has run which killed 1k segments
-    emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 1);
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 1000L);
-
-    Assert.assertEquals(
-        1000,
-        retrieveUnusedSegments(segments.get(0).getInterval()).size()
-    );
+    // Verify that a total of 700 segments were identified for kill
+    emitter.verifySum(UnusedSegmentsKiller.Metric.ELIGIBLE_UNUSED_SEGMENTS, 700L);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 700L);
   }
 
-  @Test(timeout = 20_000L)
+  @Timeout(20)
+  @Test
+  public void test_maxSegmentsKilledByTask_is_10k()
+  {
+    leaderSelector.becomeLeader();
+
+    // Create an interval with 12k killable unused segments
+    final List<DataSegment> segments =
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                          .forIntervals(1, Granularities.DAY)
+                          .withNumPartitions(12_000)
+                          .eachOfSizeInMb(50);
+
+    storageCoordinator.commitSegments(Set.copyOf(segments), null);
+    storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
+
+    Assertions.assertEquals(
+        12_000,
+        retrieveUnusedSegments(Intervals.ETERNITY).size()
+    );
+
+    resetKillQueue();
+    finishQueuedKillJobs();
+
+    // Verify that all the segments in the interval were eligible for kill
+    emitter.verifySum(UnusedSegmentsKiller.Metric.UNUSED_SEGMENT_INTERVALS, 1L);
+    emitter.verifySum(UnusedSegmentsKiller.Metric.ELIGIBLE_UNUSED_SEGMENTS, 12_000L);
+
+    // Verify that 2 tasks were launched to kill the segments
+    emitter.verifySum(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 2L);
+    final List<String> taskIds = emitter.getMetricEvents(TaskMetrics.RUN_DURATION)
+                                        .stream()
+                                        .map(event -> event.getUserDims().get("taskId").toString())
+                                        .toList();
+    Assertions.assertEquals(2, taskIds.size());
+
+    // Verify that the tasks killed 10k and 2k segments respectively
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, Map.of("taskId", taskIds.get(0)), 10_000);
+    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, Map.of("taskId", taskIds.get(1)), 2_000);
+  }
+
+  @Timeout(20)
+  @Test
   public void test_maxIntervalsKilledInADatasource_is_10k()
   {
     leaderSelector.becomeLeader();
 
     final List<DataSegment> segments =
         CreateDataSegments.ofDatasource(TestDataSource.WIKI)
-                          .forIntervals(20_000, Granularities.DAY)
+                          .forIntervals(10_001, Granularities.DAY)
                           .eachOfSizeInMb(50);
 
     storageCoordinator.commitSegments(Set.copyOf(segments), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
 
-    Assert.assertEquals(
-        20_000,
+    Assertions.assertEquals(
+        10_001,
         retrieveUnusedSegments(Intervals.ETERNITY).size()
     );
 
-    // Reset the kill queue and execute kill tasks
-    killer.run();
-    finishQueuedKillJobs();
+    resetKillQueue();
 
-    // Verify that 10k kill tasks have run, each killing a single segment
-    emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 10000);
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10_000L);
-
-    Assert.assertEquals(
-        10_000,
-        retrieveUnusedSegments(Intervals.ETERNITY).size()
-    );
+    emitter.verifySum(UnusedSegmentsKiller.Metric.UNUSED_SEGMENT_INTERVALS, 10_000L);
+    emitter.verifySum(UnusedSegmentsKiller.Metric.ELIGIBLE_UNUSED_SEGMENTS, 10_000L);
   }
 
   @Test
@@ -303,7 +350,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.QUEUE_RESET_TIME, 1);
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 5);
 
-    Assert.assertTrue(killExecutor.hasPendingTasks());
+    Assertions.assertTrue(killExecutor.hasPendingTasks());
 
     // Invoke run again and verify that queue has not been reset
     emitter.flush();
@@ -313,7 +360,7 @@ public class UnusedSegmentsKillerTest
     emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 5);
 
     // All jobs have been processed
-    Assert.assertFalse(killExecutor.hasPendingTasks());
+    Assertions.assertFalse(killExecutor.hasPendingTasks());
   }
 
   @Test
@@ -336,14 +383,14 @@ public class UnusedSegmentsKillerTest
       return Intervals.of(splits[4] + "/" + splits[5]);
     }).collect(Collectors.toList());
 
-    Assert.assertEquals(10, killIntervals.size());
+    Assertions.assertEquals(10, killIntervals.size());
 
     final List<Interval> expectedIntervals =
         WIKI_SEGMENTS_1X10D.stream()
                            .map(DataSegment::getInterval)
                            .sorted(Comparators.intervalsByEndThenStart())
                            .collect(Collectors.toList());
-    Assert.assertEquals(expectedIntervals, killIntervals);
+    Assertions.assertEquals(expectedIntervals, killIntervals);
   }
 
   @Test
@@ -368,9 +415,35 @@ public class UnusedSegmentsKillerTest
   }
 
   @Test
+  public void test_run_isNoop_ifRetrieveUpgradedToSegmentIdsFails()
+  {
+    storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
+    storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
+
+    // Make the retrieveUpgradedFromSegmentIds task action fail
+    taskActionTestKit.registerDelegateForTaskAction(
+        RetrieveUpgradedToSegmentIdsAction.class,
+        () -> {
+          throw new ISE("Failed to fetch children IDs");
+        }
+    );
+
+    leaderSelector.becomeLeader();
+    killer.run();
+
+    // Verify that no unused segment is deleted from metadata store or deep store
+    finishQueuedKillJobs();
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE);
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE);
+
+    // Verify that the task is marked as failed
+    emitter.verifyEmitted("task/run/time", Map.of("taskStatus", "FAILED"), 10);
+  }
+
+  @Test
   public void test_run_doesNotKillSegment_ifUpdatedWithinBufferPeriod()
   {
-    killerConfig = new UnusedSegmentKillerConfig(true, Period.hours(1), null);
+    killerConfig = new UnusedSegmentKillerConfig(true, Period.hours(1), null, null);
     initKiller();
 
     storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
@@ -380,13 +453,12 @@ public class UnusedSegmentsKillerTest
     killer.run();
     finishQueuedKillJobs();
 
-    // Verify that tasks are launched but no segment is killed
-    emitter.verifyValue(UnusedSegmentsKiller.Metric.UNUSED_SEGMENT_INTERVALS, 10L);
-    emitter.verifyEmitted(UnusedSegmentsKiller.Metric.PROCESSED_KILL_JOBS, 10);
-    emitter.verifyEmitted(TaskMetrics.RUN_DURATION, 10);
+    // Verify that no tasks are launched
+    emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.UNUSED_SEGMENT_INTERVALS);
+    emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.ELIGIBLE_UNUSED_SEGMENTS);
 
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 0L);
-    emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 0L);
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE);
+    emitter.verifyNotEmitted(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE);
   }
 
   @Test
@@ -409,7 +481,7 @@ public class UnusedSegmentsKillerTest
   }
 
   @Test
-  public void test_run_skipsLockedIntervals() throws InterruptedException
+  public void test_run_doesNotSkipLockedIntervals() throws InterruptedException
   {
     storageCoordinator.commitSegments(Set.copyOf(WIKI_SEGMENTS_1X10D), null);
     storageCoordinator.markAllSegmentsAsUnused(TestDataSource.WIKI);
@@ -434,10 +506,10 @@ public class UnusedSegmentsKillerTest
       killer.run();
       finishQueuedKillJobs();
 
-      // Verify that unused segments from locked intervals are not killed
-      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 5L);
-      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 5L);
-      emitter.verifySum(UnusedSegmentsKiller.Metric.SKIPPED_INTERVALS, 5L);
+      // Verify that unused segments from locked intervals are also killed
+      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_METADATA_STORE, 10L);
+      emitter.verifySum(TaskMetrics.SEGMENTS_DELETED_FROM_DEEPSTORE, 10L);
+      emitter.verifyNotEmitted(UnusedSegmentsKiller.Metric.SKIPPED_INTERVALS);
     }
     finally {
       taskLockbox.remove(ingestionTask);
@@ -458,5 +530,14 @@ public class UnusedSegmentsKillerTest
         null,
         null
     );
+  }
+
+  /**
+   * Buffer period which ensures that segments are killed as soon as they become unused.
+   */
+  private static Period zeroBufferPeriod()
+  {
+    // Subtract the grace period
+    return Period.ZERO.minus(UnusedSegmentKillerConfig.GRACE_PERIOD);
   }
 }

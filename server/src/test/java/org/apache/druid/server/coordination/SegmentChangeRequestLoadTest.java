@@ -21,10 +21,12 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -142,9 +144,10 @@ public class SegmentChangeRequestLoadTest
   @Test
   public void testForAnnouncementPartialProjectionWrapperProducesFullFallback()
   {
-    // When the segment's loadSpec is a partialProjection wrapper, the announcement stamps the wrapper's fingerprint
-    // and the segment's full size as loadedBytes — coordinator reads this as a full-fallback profile and counts the
-    // replica as matching, avoiding reload thrash on historicals that don't (yet) do real partial loading.
+    // Plain DataSegment carrying a partial-load wrapper (i.e. the historical didn't attach a
+    // DataSegmentAndLoadProfile) is the full-fallback case: the wrapper's fingerprint rides along, but loadedBytes
+    // is the segment's full size. Coordinator reads this as a fallback and counts the replica as matching,
+    // avoiding reload thrash on historicals that don't (yet) do real partial loading.
     Map<String, Object> wrapped = Map.of(
         "type", "partialProjection",
         "delegate", Map.of("type", "local", "path", "/var/druid/segments/foo"),
@@ -160,6 +163,38 @@ public class SegmentChangeRequestLoadTest
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
     Assert.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
     Assert.assertEquals(Long.valueOf(12345L), announcement.getLoadedBytes());
+  }
+
+  @Test
+  public void testForAnnouncementDataSegmentAndLoadProfileReportsProfileLoadedBytes()
+  {
+    // When the historical actually materialized a partial-load footprint, load() returns a DataSegmentAndLoadProfile
+    // carrying a PartialLoadProfile.forLoaded(...) with the realized bytes. forAnnouncement must stamp the profile's
+    // loadedBytes so HttpServerInventoryView detects it and capacity accounting sees the actual on-disk footprint
+    // instead of the full segment size.
+    Map<String, Object> wrapped = Map.of(
+        "type", "partialProjection",
+        "delegate", Map.of("type", "local", "path", "/var/druid/segments/foo"),
+        "projections", List.of("revenue"),
+        "fingerprint", "v1:abcdef0123456789"
+    );
+    DataSegment segment = segmentBuilder("ds", Intervals.of("2024-01-01/2024-02-01"), "v1")
+        .loadSpec(wrapped)
+        .dimensions(List.of("d"))
+        .metrics(List.of("m"))
+        .size(12345)
+        .build();
+    DataSegmentAndLoadProfile wrappedSegment = new DataSegmentAndLoadProfile(
+        segment,
+        PartialLoadProfile.forLoaded(wrapped, "v1:abcdef0123456789", 4321L)
+    );
+    SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(wrappedSegment);
+    Assert.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
+    Assert.assertEquals(
+        "loadedBytes must come from the DataSegmentAndLoadProfile's PartialLoadProfile, not segment.getSize()",
+        Long.valueOf(4321L),
+        announcement.getLoadedBytes()
+    );
   }
 
   @Test

@@ -31,6 +31,7 @@ import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStr
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
@@ -45,7 +46,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -74,22 +74,10 @@ public class SegmentCacheBootstrapperCacheTest
   {
     infoDir = temporaryFolder.newFolder();
     cacheDir = temporaryFolder.newFolder();
-    loaderConfig = new SegmentLoaderConfig()
-    {
-      @Override
-      public File getInfoDir()
-      {
-        return infoDir;
-      }
-
-      @Override
-      public List<StorageLocationConfig> getLocations()
-      {
-        return Collections.singletonList(
-            new StorageLocationConfig(cacheDir, MAX_SIZE, null)
-        );
-      }
-    };
+    loaderConfig = SegmentLoaderConfig.builder()
+        .infoDir(infoDir)
+        .locations(new StorageLocationConfig(cacheDir, MAX_SIZE, null))
+        .build();
 
     objectMapper = TestHelper.makeJsonMapper();
     objectMapper.registerSubtypes(TestSegmentUtils.TestLoadSpec.class);
@@ -99,6 +87,7 @@ public class SegmentCacheBootstrapperCacheTest
     cacheManager = new SegmentLocalCacheManager(
         storageLocations,
         loaderConfig,
+        StorageLoadingThreadPool.createFromConfig(loaderConfig),
         new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
         TestIndex.INDEX_IO,
         objectMapper
@@ -114,11 +103,12 @@ public class SegmentCacheBootstrapperCacheTest
   public void testLoadStartStopWithEmptyLocations() throws IOException
   {
     final List<StorageLocation> emptyLocations = ImmutableList.of();
-    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig();
+    final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder().build();
     segmentManager = new SegmentManager(
         new SegmentLocalCacheManager(
             emptyLocations,
             loaderConfig,
+            StorageLoadingThreadPool.createFromConfig(loaderConfig),
             new LeastBytesUsedStorageLocationSelectorStrategy(emptyLocations),
             TestIndex.INDEX_IO,
             objectMapper

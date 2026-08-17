@@ -26,6 +26,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataManagerV2;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -53,27 +54,27 @@ public class CliOverlordTest
 
 
   @Test
-  public void testGetDefaultMaxConcurrentActions()
+  public void testGetDefaultMaxConcurrentRequests()
   {
     // Small thread count where
-    Assert.assertEquals(8, CliOverlord.getDefaultMaxConcurrentActions(10));
+    Assert.assertEquals(8, ServerConfig.getDefaultMaxConcurrentRequests(10));
     
     // Medium thread count where
-    Assert.assertEquals(21, CliOverlord.getDefaultMaxConcurrentActions(25));
-    Assert.assertEquals(26, CliOverlord.getDefaultMaxConcurrentActions(30));
+    Assert.assertEquals(21, ServerConfig.getDefaultMaxConcurrentRequests(25));
+    Assert.assertEquals(26, ServerConfig.getDefaultMaxConcurrentRequests(30));
 
 
     // Large thread count
-    Assert.assertEquals(46, CliOverlord.getDefaultMaxConcurrentActions(50));
-    Assert.assertEquals(96, CliOverlord.getDefaultMaxConcurrentActions(100));
+    Assert.assertEquals(46, ServerConfig.getDefaultMaxConcurrentRequests(50));
+    Assert.assertEquals(96, ServerConfig.getDefaultMaxConcurrentRequests(100));
     
     // Test edge cases - return atleast 1 thread
-    Assert.assertEquals(1, CliOverlord.getDefaultMaxConcurrentActions(-1));
-    Assert.assertEquals(1, CliOverlord.getDefaultMaxConcurrentActions(0));
+    Assert.assertEquals(1, ServerConfig.getDefaultMaxConcurrentRequests(-1));
+    Assert.assertEquals(1, ServerConfig.getDefaultMaxConcurrentRequests(0));
 
     // Test small clustesr
-    Assert.assertEquals(2, CliOverlord.getDefaultMaxConcurrentActions(3));
-    Assert.assertEquals(3, CliOverlord.getDefaultMaxConcurrentActions(4));
-    Assert.assertEquals(4, CliOverlord.getDefaultMaxConcurrentActions(5));
+    Assert.assertEquals(2, ServerConfig.getDefaultMaxConcurrentRequests(3));
+    Assert.assertEquals(3, ServerConfig.getDefaultMaxConcurrentRequests(4));
+    Assert.assertEquals(4, ServerConfig.getDefaultMaxConcurrentRequests(5));
   }
 }

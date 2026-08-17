@@ -29,16 +29,31 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>38.0.0-SNAPSHOT</version>
+        <version>39.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jclouds.version>2.6.0</jclouds.version>
+        <jclouds.version>2.7.0</jclouds.version>
     </properties>
 
     <dependencies>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-params</artifactId>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <scope>test</scope>
+      </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
             <artifactId>druid-processing</artifactId>
@@ -92,6 +107,21 @@
             <version>${jclouds.version}</version>
         </dependency>
         <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+            <version>4.0.2</version>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.activation</groupId>
+            <artifactId>jakarta.activation-api</artifactId>
+            <version>2.1.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>4.0.5</version>
+        </dependency>
+        <dependency>
             <groupId>org.apache.jclouds.api</groupId>
             <artifactId>openstack-swift</artifactId>
             <version>${jclouds.version}</version>
@@ -142,11 +172,6 @@
 
         <!-- Tests -->
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
             <scope>test</scope>
@@ -161,6 +186,18 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <configuration>
+                    <ignoredUnusedDeclaredDependencies>
+                        <!-- Transitive dependencies explicitly pinned for jclouds Jakarta XML Binding compatibility -->
+                        <ignoredUnusedDeclaredDependency>jakarta.activation:jakarta.activation-api</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>jakarta.xml.bind:jakarta.xml.bind-api</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>org.glassfish.jaxb:jaxb-runtime</ignoredUnusedDeclaredDependency>
+                    </ignoredUnusedDeclaredDependencies>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>

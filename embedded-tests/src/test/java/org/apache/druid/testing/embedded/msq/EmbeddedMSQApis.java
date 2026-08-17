@@ -243,44 +243,61 @@ public class EmbeddedMSQApis
   }
 
   /**
-   * Returns the sum of completed queries across all input channel snapshots from all stages and workers.
+   * Returns the sums of all input channel counters across all workers.
    */
-  public long getQueriesSum(final MSQTaskReportPayload payload)
+  public ChannelSums getInputChannelSums(final MSQTaskReportPayload payload, final int stageNumber)
   {
-    return getAllInputChannelCounters(payload)
-        .stream()
-        .filter(snapshot -> snapshot.getQueries() != null)
-        .mapToLong(snapshot -> Arrays.stream(snapshot.getQueries()).sum())
-        .sum();
+    long rows = 0;
+    long bytes = 0;
+    long files = 0;
+    long totalFiles = 0;
+    long queries = 0;
+    long totalQueries = 0;
+    long loadBytes = 0;
+    long loadFiles = 0;
+    long loadTime = 0;
+    long loadWait = 0;
+
+    for (final ChannelCounters.Snapshot snapshot : getAllInputChannelCounters(payload, stageNumber)) {
+      rows += sum(snapshot.getRows());
+      bytes += sum(snapshot.getBytes());
+      files += sum(snapshot.getFiles());
+      totalFiles += sum(snapshot.getTotalFiles());
+      queries += sum(snapshot.getQueries());
+      totalQueries += sum(snapshot.getTotalQueries());
+      loadBytes += sum(snapshot.getLoadBytes());
+      loadFiles += sum(snapshot.getLoadFiles());
+      loadTime += sum(snapshot.getLoadTime());
+      loadWait += sum(snapshot.getLoadWait());
+    }
+
+    return new ChannelSums(rows, bytes, files, totalFiles, queries, totalQueries, loadBytes, loadFiles, loadTime, loadWait);
   }
 
   /**
-   * Returns the sum of files read across all input channel snapshots from all stages and workers.
+   * Sums the values of a nullable channel counter array, treating {@code null} as empty.
    */
-  public long getFilesSum(final MSQTaskReportPayload payload)
+  private static long sum(@Nullable final long[] values)
   {
-    return getAllInputChannelCounters(payload)
-        .stream()
-        .filter(snapshot -> snapshot.getFiles() != null)
-        .mapToLong(snapshot -> Arrays.stream(snapshot.getFiles()).sum())
-        .sum();
+    return values == null ? 0 : Arrays.stream(values).sum();
   }
 
   /**
-   * Returns all {@link ChannelCounters.Snapshot} from input channels across all stages and workers.
+   * Returns all {@link ChannelCounters.Snapshot} from input channels across all workers for a stage.
    */
-  private List<ChannelCounters.Snapshot> getAllInputChannelCounters(final MSQTaskReportPayload payload)
+  private List<ChannelCounters.Snapshot> getAllInputChannelCounters(
+      final MSQTaskReportPayload payload,
+      final int stageNumber
+  )
   {
-    final Map<Integer, Map<Integer, CounterSnapshots>> countersMap = payload.getCounters().copyMap();
     final List<ChannelCounters.Snapshot> snapshots = new ArrayList<>();
+    final Map<Integer, CounterSnapshots> stageMap = payload.getCounters().snapshotForStage(stageNumber);
 
-    for (final Map.Entry<Integer, Map<Integer, CounterSnapshots>> stageEntry : countersMap.entrySet()) {
-      for (final Map.Entry<Integer, CounterSnapshots> workerEntry : stageEntry.getValue().entrySet()) {
-        for (final Map.Entry<String, QueryCounterSnapshot> counterEntry : workerEntry.getValue().getMap().entrySet()) {
-          if (counterEntry.getKey().startsWith("input")
-              && counterEntry.getValue() instanceof ChannelCounters.Snapshot) {
-            snapshots.add((ChannelCounters.Snapshot) counterEntry.getValue());
-          }
+    for (final Map.Entry<Integer, CounterSnapshots> workerEntry : stageMap.entrySet()) {
+      for (final Map.Entry<String, QueryCounterSnapshot> counterEntry : workerEntry.getValue().getMap().entrySet()) {
+        if (counterEntry.getKey().startsWith("input")
+            && counterEntry.getValue() instanceof ChannelCounters.Snapshot counterSnapshot) {
+          snapshots.add(counterSnapshot);
         }
       }
     }
@@ -296,5 +313,34 @@ public class EmbeddedMSQApis
     catch (JsonProcessingException e) {
       throw DruidException.defensive(e, "Failed to parse query report response[%s]", responseJson);
     }
+  }
+
+  /**
+   * Sums of input channel counters computed by {@link #getInputChannelSums(MSQTaskReportPayload, int)}.
+   *
+   * @param rows         total rows read
+   * @param bytes        total bytes read
+   * @param files        total files read
+   * @param totalFiles   total number of files to read
+   * @param queries      total queries completed
+   * @param totalQueries total number of queries to run
+   * @param loadBytes    total bytes loaded into the virtual storage file cache (VSF)
+   * @param loadFiles    total files loaded into the VSF
+   * @param loadTime     total time (in milliseconds) spent loading files into the VSF
+   * @param loadWait     total time (in milliseconds) spent waiting to load files into the VSF
+   */
+  public record ChannelSums(
+      long rows,
+      long bytes,
+      long files,
+      long totalFiles,
+      long queries,
+      long totalQueries,
+      long loadBytes,
+      long loadFiles,
+      long loadTime,
+      long loadWait
+  )
+  {
   }
 }

@@ -26,7 +26,7 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockExtension;
 import org.easymock.Mock;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -74,13 +74,13 @@ public class RootSchemaProviderTest extends CalciteTestBase
   public void testGetShouldReturnRootSchemaWithProvidedSchemasRegistered()
   {
     DruidSchemaCatalog rootSchema = target.get();
-    Assert.assertEquals("", rootSchema.getRootSchema().getName());
-    Assert.assertFalse(rootSchema.getRootSchema().isCacheEnabled());
+    Assertions.assertEquals("", rootSchema.getRootSchema().getName());
+    Assertions.assertFalse(rootSchema.getRootSchema().isCacheEnabled());
     // metadata schema should not be added
-    Assert.assertEquals(druidSchemas.size(), rootSchema.getSubSchemaNames().size());
+    Assertions.assertEquals(druidSchemas.size(), rootSchema.getSubSchemaNames().size());
 
-    Assert.assertEquals(schema1, rootSchema.getSubSchema(SCHEMA_1).unwrap(schema1.getClass()));
-    Assert.assertEquals(schema2, rootSchema.getSubSchema(SCHEMA_2).unwrap(schema2.getClass()));
+    Assertions.assertEquals(schema1, rootSchema.getSubSchema(SCHEMA_1).unwrap(schema1.getClass()));
+    Assertions.assertEquals(schema2, rootSchema.getSubSchema(SCHEMA_2).unwrap(schema2.getClass()));
   }
 
   @Test

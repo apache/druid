@@ -30,11 +30,9 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -43,10 +41,7 @@ public class ParallelIndexTuningConfigTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setup()
   {
     mapper.registerSubtypes(new NamedType(ParallelIndexTuningConfig.class, "index_parallel"));
@@ -94,50 +89,58 @@ public class ParallelIndexTuningConfigTest
   @Test
   public void testConfigWithBothMaxNumSubTasksAndMaxNumConcurrentSubTasksIsInvalid()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("Can't use both maxNumSubTasks and maxNumConcurrentSubTasks");
     final int maxNumSubTasks = 250;
-    TuningConfigBuilder
-        .forParallelIndexTask()
-        .withMaxNumSubTasks(maxNumSubTasks)
-        .withMaxNumConcurrentSubTasks(maxNumSubTasks)
-        .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> TuningConfigBuilder
+            .forParallelIndexTask()
+            .withMaxNumSubTasks(maxNumSubTasks)
+            .withMaxNumConcurrentSubTasks(maxNumSubTasks)
+            .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Can't use both maxNumSubTasks and maxNumConcurrentSubTasks"));
   }
 
   @Test
   public void testConstructorWithHashedPartitionsSpecAndNonForceGuaranteedRollupFailToCreate()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
-    TuningConfigBuilder
-        .forParallelIndexTask()
-        .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
-        .withForceGuaranteedRollup(false)
-        .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> TuningConfigBuilder
+            .forParallelIndexTask()
+            .withPartitionsSpec(new HashedPartitionsSpec(null, 10, null))
+            .withForceGuaranteedRollup(false)
+            .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("DynamicPartitionsSpec must be used for best-effort rollup"));
   }
 
   @Test
   public void testConstructorWithSingleDimensionPartitionsSpecAndNonForceGuaranteedRollupFailToCreate()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("DynamicPartitionsSpec must be used for best-effort rollup");
-    TuningConfigBuilder
-        .forParallelIndexTask()
-        .withPartitionsSpec(new DimensionRangePartitionsSpec(null, 100, Collections.singletonList("dim1"), false))
-        .withForceGuaranteedRollup(false)
-        .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> TuningConfigBuilder
+            .forParallelIndexTask()
+            .withPartitionsSpec(new DimensionRangePartitionsSpec(null, 100, Collections.singletonList("dim1"), false))
+            .withForceGuaranteedRollup(false)
+            .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("DynamicPartitionsSpec must be used for best-effort rollup"));
   }
 
   @Test
   public void testConstructorWithDynamicPartitionsSpecAndForceGuaranteedRollupFailToCreate()
   {
-    expectedException.expect(IllegalArgumentException.class);
-    expectedException.expectMessage("cannot be used for perfect rollup");
-    TuningConfigBuilder
-        .forParallelIndexTask()
-        .withPartitionsSpec(new DynamicPartitionsSpec(100, null))
-        .withForceGuaranteedRollup(true)
-        .build();
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> TuningConfigBuilder
+            .forParallelIndexTask()
+            .withPartitionsSpec(new DynamicPartitionsSpec(100, null))
+            .withForceGuaranteedRollup(true)
+            .build()
+    );
+    Assertions.assertTrue(exception.getMessage().contains("cannot be used for perfect rollup"));
   }
 
   private void verifyConfigSerde(ParallelIndexTuningConfig tuningConfig) throws IOException
@@ -145,7 +148,7 @@ public class ParallelIndexTuningConfigTest
     final byte[] json = mapper.writeValueAsBytes(tuningConfig);
     final ParallelIndexTuningConfig fromJson =
         (ParallelIndexTuningConfig) mapper.readValue(json, TuningConfig.class);
-    Assert.assertEquals(fromJson, tuningConfig);
+    Assertions.assertEquals(fromJson, tuningConfig);
   }
 
   @Test

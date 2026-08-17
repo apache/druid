@@ -21,13 +21,15 @@ package org.apache.druid.segment.transform;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.Row;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -39,7 +41,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,6 +58,62 @@ public class TransformerTest extends InitializedNullHandlingTest
     final Transformer transformer = new Transformer(new TransformSpec(null, null));
     Assert.assertNull(transformer.transform((InputRow) null));
     Assert.assertNull(transformer.transform((InputRowListPlusRawValues) null));
+  }
+
+  @Test
+  public void testTransformWithoutFilter()
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(new SelectorDimFilter("dim", "keep", null), null)
+    );
+    final InputRow keepRow = makeRow("keep");
+    final InputRow dropRow = makeRow("drop");
+
+    Assert.assertSame(keepRow, transformer.transformWithoutFilter(keepRow));
+    Assert.assertSame(dropRow, transformer.transformWithoutFilter(dropRow));
+    Assert.assertNull(transformer.transformWithoutFilter(null));
+
+    Assert.assertTrue(transformer.hasFilter());
+    Assert.assertTrue(transformer.rowMatchesFilter(keepRow));
+    Assert.assertFalse(transformer.rowMatchesFilter(dropRow));
+    Assert.assertTrue(transformer.rowMatchesFilter(null));
+  }
+
+  @Test
+  public void testTransformingInputEntityReaderCanSkipFilter() throws IOException
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(new SelectorDimFilter("dim", "keep", null), null)
+    );
+    final InputRow dropRow = makeRow("drop");
+    final InputRow keepRow = makeRow("keep");
+    final TransformingInputEntityReader reader = TransformingInputEntityReader.withoutFilter(
+        new TestInputEntityReader(dropRow, keepRow),
+        transformer
+    );
+
+    try (final CloseableIterator<InputRow> iterator = reader.read()) {
+      Assert.assertSame(dropRow, iterator.next());
+      Assert.assertSame(keepRow, iterator.next());
+      Assert.assertFalse(iterator.hasNext());
+    }
+  }
+
+  @Test
+  public void testTransformingInputEntityReaderReturnsNullForFilteredRowsByDefault() throws IOException
+  {
+    final Transformer transformer = new Transformer(
+        new TransformSpec(new SelectorDimFilter("dim", "keep", null), null)
+    );
+    final TransformingInputEntityReader reader = new TransformingInputEntityReader(
+        new TestInputEntityReader(makeRow("drop")),
+        transformer
+    );
+
+    try (final CloseableIterator<InputRow> iterator = reader.read()) {
+      Assert.assertNull(iterator.next());
+      Assert.assertFalse(iterator.hasNext());
+    }
   }
 
   @Test
@@ -458,52 +516,13 @@ public class TransformerTest extends InitializedNullHandlingTest
     Assert.assertEquals(row.getDimension("dim"), dimList);
     Assert.assertEquals(row.getRaw("dim"), dimList);
 
-    final InputRow actualTranformedRow = transformer.transform(new InputRow()
-    {
-      @Override
-      public List<String> getDimensions()
-      {
-        return new ArrayList<>(row.getEvent().keySet());
-      }
-
-      @Override
-      public long getTimestampFromEpoch()
-      {
-        return 0;
-      }
-
-      @Override
-      public DateTime getTimestamp()
-      {
-        return row.getTimestamp();
-      }
-
-      @Override
-      public List<String> getDimension(String dimension)
-      {
-        return row.getDimension(dimension);
-      }
-
-      @Nullable
-      @Override
-      public Object getRaw(String dimension)
-      {
-        return row.getRaw(dimension);
-      }
-
-      @Nullable
-      @Override
-      public Number getMetric(String metric)
-      {
-        return row.getMetric(metric);
-      }
-
-      @Override
-      public int compareTo(Row o)
-      {
-        return row.compareTo(o);
-      }
-    });
+    final InputRow actualTranformedRow = transformer.transform(
+        new MapBasedInputRow(
+            row.getTimestamp(),
+            new ArrayList<>(row.getEvent().keySet()),
+            row.getEvent()
+        )
+    );
     Assert.assertEquals(actualTranformedRow.getDimension("dim"), dimList.subList(0, 5));
     Assert.assertArrayEquals(dimList.subList(0, 5).toArray(), (Object[]) actualTranformedRow.getRaw("dim"));
     Assert.assertEquals(ImmutableList.of("a"), actualTranformedRow.getDimension("dim1"));
@@ -578,5 +597,36 @@ public class TransformerTest extends InitializedNullHandlingTest
     ).assertThrowsAndMatches(
         () -> new ExpressionTransform("__time", "now() + 1000", TestExprMacroTable.INSTANCE)
     );
+  }
+
+  private static InputRow makeRow(final String dim)
+  {
+    return new MapBasedInputRow(
+        DateTimes.nowUtc(),
+        ImmutableList.of("dim"),
+        ImmutableMap.of("dim", dim)
+    );
+  }
+
+  private static class TestInputEntityReader implements InputEntityReader
+  {
+    private final List<InputRow> rows;
+
+    private TestInputEntityReader(final InputRow... rows)
+    {
+      this.rows = Arrays.asList(rows);
+    }
+
+    @Override
+    public CloseableIterator<InputRow> read()
+    {
+      return CloseableIterators.withEmptyBaggage(rows.iterator());
+    }
+
+    @Override
+    public CloseableIterator<InputRowListPlusRawValues> sample()
+    {
+      return CloseableIterators.withEmptyBaggage(ImmutableList.<InputRowListPlusRawValues>of().iterator());
+    }
   }
 }

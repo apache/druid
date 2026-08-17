@@ -49,6 +49,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.ChainedExecutionQueryRunner;
@@ -144,9 +145,11 @@ import org.hamcrest.Description;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -211,6 +214,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private final GroupByQueryConfig config;
   private final boolean vectorize;
   private final GroupByStatsProvider statsProvider;
+  private final boolean useVectorApi;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -433,11 +437,20 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config, BUFFER_POOLS, statsProvider);
       for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory, true)) {
         for (boolean vectorize : ImmutableList.of(false, true)) {
-          final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, runner, vectorize);
+          for (boolean useVectorApi : ImmutableList.of(false, true)) {
+            if (!vectorize && useVectorApi) {
+              // SIMD path is reachable only when vectorization is on; skip the redundant combo.
+              continue;
+            }
+            final String testName = StringUtils.format(
+                "config=%s, runner=%s, vectorize=%s, useVectorApi=%s",
+                config, runner, vectorize, useVectorApi
+            );
 
-          // Add vectorization tests for any indexes that support it.
-          if (!vectorize || (QueryRunnerTestHelper.isTestRunnerVectorizable(runner))) {
-            constructors.add(new Object[]{testName, config, factory, runner, vectorize, statsProvider});
+            // Add vectorization tests for any indexes that support it.
+            if (!vectorize || (QueryRunnerTestHelper.isTestRunnerVectorizable(runner))) {
+              constructors.add(new Object[]{testName, config, factory, runner, vectorize, statsProvider, useVectorApi});
+            }
           }
         }
       }
@@ -468,7 +481,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       GroupByQueryRunnerFactory factory,
       TestQueryRunner runner,
       boolean vectorize,
-      GroupByStatsProvider statsProvider
+      GroupByStatsProvider statsProvider,
+      boolean useVectorApi
   )
   {
     this.config = config;
@@ -477,6 +491,23 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     this.originalRunner = runner;
     this.vectorize = vectorize;
     this.statsProvider = statsProvider;
+    this.useVectorApi = useVectorApi;
+  }
+
+  @Before
+  public void initializeExpressionProcessing()
+  {
+    if (useVectorApi) {
+      ExpressionProcessing.initializeForVectorApiTests();
+    } else {
+      ExpressionProcessing.initializeForTests();
+    }
+  }
+
+  @After
+  public void resetExpressionProcessing()
+  {
+    ExpressionProcessing.initializeForTests();
   }
 
   @Test

@@ -27,13 +27,15 @@ import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.apache.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.apache.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StaticMapCacheGeneratorTest
 {
@@ -43,7 +45,7 @@ public class StaticMapCacheGeneratorTest
   private CacheScheduler scheduler;
   private NamespaceExtractionCacheManager cacheManager;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     lifecycle = new Lifecycle();
@@ -61,7 +63,7 @@ public class StaticMapCacheGeneratorTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     lifecycle.stop();
@@ -74,18 +76,20 @@ public class StaticMapCacheGeneratorTest
     final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
     CacheHandler cache = cacheManager.allocateCache();
     final String version = factory.generateCache(namespace, null, null, cache);
-    Assert.assertNotNull(version);
-    Assert.assertEquals(factory.getVersion(), version);
-    Assert.assertEquals(MAP, cache.getCache());
+    Assertions.assertNotNull(version);
+    Assertions.assertEquals(factory.getVersion(), version);
+    Assertions.assertEquals(MAP, cache.getCache());
 
   }
 
-  @Test(expected = AssertionError.class)
+  @Test
   public void testNonNullLastVersionCausesAssertionError()
   {
-    final StaticMapCacheGenerator factory = new StaticMapCacheGenerator();
-    final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
-    CacheHandler cache = cacheManager.allocateCache();
-    factory.generateCache(namespace, null, factory.getVersion(), cache);
+    assertThrows(AssertionError.class, () -> {
+      final StaticMapCacheGenerator factory = new StaticMapCacheGenerator();
+      final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
+      CacheHandler cache = cacheManager.allocateCache();
+      factory.generateCache(namespace, null, factory.getVersion(), cache);
+    });
   }
 }

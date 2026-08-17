@@ -21,6 +21,7 @@ package org.apache.druid.security.basic.authorization.db.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -43,23 +44,24 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 {
   private static final ObjectMapper MAPPER = TestHelper.JSON_MAPPER;
   private static final String AUTHORIZER_NAME = "test-basic-auth";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   // Mocks
   private Injector injector;
@@ -67,7 +69,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 
   private CoordinatorPollingBasicAuthorizerCacheManager manager;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     EmittingLogger.registerEmitter(new StubServiceEmitter());
@@ -82,7 +84,7 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     final int numRetries = 1;
     manager = new CoordinatorPollingBasicAuthorizerCacheManager(
         injector,
-        new BasicAuthCommonCacheConfig(0L, 1L, temporaryFolder.newFolder().getAbsolutePath(), numRetries),
+        new BasicAuthCommonCacheConfig(0L, 1L, newFolder(temporaryFolder, "junit").getAbsolutePath(), numRetries),
         MAPPER,
         serviceClient
     );
@@ -113,16 +115,18 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     expectHttpRequestAndAnswer("cachedSerializedGroupMappingMap", () -> groupResponseHolder);
 
     // Block the second user request so that it can be interrupted by stop()
-    final AtomicBoolean isInterrupted = new AtomicBoolean(false);
+    final CountDownLatch requestStarted = new CountDownLatch(1);
+    final CountDownLatch requestInterrupted = new CountDownLatch(1);
     expectHttpRequestAndAnswer(
         "cachedSerializedUserMap",
         () -> {
+          requestStarted.countDown();
           try {
             Thread.sleep(10_000);
             return userResponseHolder;
           }
           catch (InterruptedException e) {
-            isInterrupted.set(true);
+            requestInterrupted.countDown();
             throw e;
           }
         }
@@ -132,13 +136,11 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 
     // Start the manager and wait for a while to ensure that polling has started
     manager.start();
-    Thread.sleep(10);
+    Assertions.assertTrue(requestStarted.await(5, TimeUnit.SECONDS));
 
     // Stop the manager and verify that the polling thread has been interrupted
     manager.stop();
-    Thread.sleep(10);
-
-    Assert.assertTrue(isInterrupted.get());
+    Assertions.assertTrue(requestInterrupted.await(5, TimeUnit.SECONDS));
 
     verifyAll();
   }
@@ -161,16 +163,18 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
     expectHttpRequestAndAnswer("cachedSerializedUserMap", () -> userResponseHolder);
 
     // Block the second group request so that it can be interrupted by stop()
-    final AtomicBoolean isInterrupted = new AtomicBoolean(false);
+    final CountDownLatch requestStarted = new CountDownLatch(1);
+    final CountDownLatch requestInterrupted = new CountDownLatch(1);
     expectHttpRequestAndAnswer(
         "cachedSerializedGroupMappingMap",
         () -> {
+          requestStarted.countDown();
           try {
             Thread.sleep(10_000);
             return groupResponseHolder;
           }
           catch (InterruptedException e) {
-            isInterrupted.set(true);
+            requestInterrupted.countDown();
             throw e;
           }
         }
@@ -180,13 +184,11 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
 
     // Start the manager and wait for a while to ensure that polling has started
     manager.start();
-    Thread.sleep(10);
+    Assertions.assertTrue(requestStarted.await(5, TimeUnit.SECONDS));
 
     // Stop the manager and verify that the polling thread has been interrupted
     manager.stop();
-    Thread.sleep(10);
-
-    Assert.assertTrue(isInterrupted.get());
+    Assertions.assertTrue(requestInterrupted.await(5, TimeUnit.SECONDS));
 
     verifyAll();
   }
@@ -213,5 +215,10 @@ public class CoordinatorPollingBasicAuthorizerCacheManagerTest
           }
         }
     );
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

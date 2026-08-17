@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.metadata.PasswordProvider;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
@@ -68,9 +68,9 @@ public class AWSRDSTokenPasswordProviderTest
     );
 
     AWSRDSTokenPasswordProvider awsPwdProvider = (AWSRDSTokenPasswordProvider) pp;
-    Assert.assertEquals("testuser", awsPwdProvider.getUser());
-    Assert.assertEquals("testhost", awsPwdProvider.getHost());
-    Assert.assertEquals(5273, awsPwdProvider.getPort());
-    Assert.assertEquals("testregion", awsPwdProvider.getRegion());
+    Assertions.assertEquals("testuser", awsPwdProvider.getUser());
+    Assertions.assertEquals("testhost", awsPwdProvider.getHost());
+    Assertions.assertEquals(5273, awsPwdProvider.getPort());
+    Assertions.assertEquals("testregion", awsPwdProvider.getRegion());
   }
 }

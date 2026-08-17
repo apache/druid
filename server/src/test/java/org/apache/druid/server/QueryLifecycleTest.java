@@ -59,6 +59,8 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.policy.RestrictAllTablesPolicyEnforcer;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.server.broker.BrokerDynamicConfig;
+import org.apache.druid.server.broker.QueryConfigSnapshot;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
@@ -80,9 +82,7 @@ import org.junit.rules.ExpectedException;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -830,7 +830,7 @@ public class QueryLifecycleTest
   public void testRunSimple_queryBlocklisted()
   {
     // Create a blocklist rule that matches our test query
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "test-rule",
         ImmutableSet.of(DATASOURCE),
         null,
@@ -848,7 +848,6 @@ public class QueryLifecycleTest
     replayAll();
 
     // Create lifecycle with blocklist
-    List<QueryBlocklistRule> queryBlocklist = ImmutableList.of(rule);
     QueryLifecycle lifecycle = new QueryLifecycle(
         conglomerate,
         texasRanger,
@@ -856,11 +855,12 @@ public class QueryLifecycleTest
         emitter,
         requestLogger,
         authzMapper,
-        queryConfig,
         authConfig,
         policyEnforcer,
-        queryBlocklist,
-        Collections.emptyMap(),
+        new QueryConfigSnapshot(
+            ImmutableMap.of(),
+            BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
+        ),
         System.currentTimeMillis(),
         System.nanoTime()
     );
@@ -880,7 +880,7 @@ public class QueryLifecycleTest
   public void testRunSimple_queryNotBlocklisted()
   {
     // Create a blocklist rule that does NOT match our test query
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "test-rule",
         ImmutableSet.of("other_datasource"),
         null,
@@ -900,7 +900,6 @@ public class QueryLifecycleTest
     replayAll();
 
     // Create lifecycle with blocklist
-    List<QueryBlocklistRule> queryBlocklist = ImmutableList.of(rule);
     QueryLifecycle lifecycle = new QueryLifecycle(
         conglomerate,
         texasRanger,
@@ -908,11 +907,12 @@ public class QueryLifecycleTest
         emitter,
         requestLogger,
         authzMapper,
-        queryConfig,
         authConfig,
         policyEnforcer,
-        queryBlocklist,
-        Collections.emptyMap(),
+        new QueryConfigSnapshot(
+            ImmutableMap.of(),
+            BrokerDynamicConfig.builder().withQueryBlocklist(ImmutableList.of(rule)).build()
+        ),
         System.currentTimeMillis(),
         System.nanoTime()
     );

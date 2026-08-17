@@ -242,12 +242,12 @@
   </suppress>
 
   <suppress>
-    <!-- TODO: Fix by updating curator-x-discovery to > 4.2.0 and updating hadoop -->
+    <!-- TODO: Fix by updating ambari-metrics-emitter's transitive hadoop dependency -->
     <notes><![CDATA[
    file name: jackson-mapper-asl-1.9.13.jar
    ]]></notes>
     <packageUrl regex="true">^pkg:maven/org\.codehaus\.jackson/jackson\-mapper\-asl@1.9.13$</packageUrl>
-    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13 ince it is via curator-x-discovery -->
+    <cvssBelow>10</cvssBelow>  <!-- suppress all CVEs for jackson-mapper-asl:1.9.13; pulled in (test scope only) via ambari-metrics-emitter -->
   </suppress>
 
   <suppress>

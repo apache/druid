@@ -19,158 +19,37 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-import com.google.common.collect.Sets;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
+import org.apache.druid.jackson.StrictTypeIdResolver;
 import org.apache.druid.query.Query;
 
-import javax.annotation.Nullable;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
 /**
- * A rule for matching queries against blocklist criteria. A query matches this rule if ALL
- * specified criteria match (AND logic). Null or empty criteria match everything.
+ * A rule that determines whether a query should be blocked. Implementations define their own
+ * matching logic and JSON fields. Use {@link DefaultQueryBlocklistRule} for the standard criteria
+ * (datasources, query types, context).
+ *
+ * <p>Rules with no {@code "type"} field in JSON deserialize as {@link DefaultQueryBlocklistRule}
+ * for backwards compatibility. An explicit but unrecognized {@code "type"} value will fail
+ * deserialization rather than silently falling back to the default — this prevents extension
+ * rules from being misinterpreted when the extension is not loaded. Extensions can register
+ * additional implementations as Jackson subtypes via {@code SimpleModule.registerSubtypes(...)}.
+ *
+ * <p>Implementations must define {@code equals} and {@code hashCode} so that
+ * {@link org.apache.druid.server.broker.BrokerDynamicConfig} can detect changes correctly.
  */
-public class QueryBlocklistRule
+@JsonTypeResolver(StrictTypeIdResolver.Builder.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CUSTOM, property = "type", defaultImpl = DefaultQueryBlocklistRule.class)
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = DefaultQueryBlocklistRule.class, name = "default")
+})
+public interface QueryBlocklistRule
 {
-  private final String ruleName;
-  @Nullable
-  private final Set<String> dataSources;
-  @Nullable
-  private final Set<String> queryTypes;
-  @Nullable
-  private final Map<String, String> contextMatches;
-
-  private final boolean hasDataSourceCriteria;
-  private final boolean hasQueryTypeCriteria;
-  private final boolean hasContextCriteria;
-
-  @JsonCreator
-  public QueryBlocklistRule(
-      @JsonProperty("ruleName") String ruleName,
-      @JsonProperty("dataSources") @Nullable Set<String> dataSources,
-      @JsonProperty("queryTypes") @Nullable Set<String> queryTypes,
-      @JsonProperty("contextMatches") @Nullable Map<String, String> contextMatches
-  )
-  {
-    Preconditions.checkArgument(
-        !Strings.isNullOrEmpty(ruleName),
-        "ruleName must not be null or empty"
-    );
-
-    // At least one criterion must be specified to prevent accidentally blocking all queries
-    this.hasDataSourceCriteria = dataSources != null && !dataSources.isEmpty();
-    this.hasQueryTypeCriteria = queryTypes != null && !queryTypes.isEmpty();
-    this.hasContextCriteria = contextMatches != null && !contextMatches.isEmpty();
-
-    Preconditions.checkArgument(
-        hasDataSourceCriteria || hasQueryTypeCriteria || hasContextCriteria,
-        "At least one criterion (dataSources, queryTypes, or contextMatches) must be specified. "
-        + "A rule with all null/empty criteria would block ALL queries."
-    );
-
-    this.ruleName = ruleName;
-    this.dataSources = dataSources;
-    this.queryTypes = queryTypes;
-    this.contextMatches = contextMatches;
-  }
-
-  @JsonProperty
-  public String getRuleName()
-  {
-    return ruleName;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Set<String> getDataSources()
-  {
-    return dataSources;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Set<String> getQueryTypes()
-  {
-    return queryTypes;
-  }
-
-  @JsonProperty
-  @Nullable
-  public Map<String, String> getContextMatches()
-  {
-    return contextMatches;
-  }
+  String getRuleName();
 
   /**
-   * Returns true if the query matches ALL specified criteria (AND logic).
-   * Null or empty criteria match everything.
-   *
-   * @param query the query to check
-   * @return true if the query matches this rule, false otherwise
+   * Returns true if the query matches this rule and should be blocked.
    */
-  public boolean matches(Query<?> query)
-  {
-    if (hasDataSourceCriteria) {
-      Set<String> queryDatasources = query.getDataSource().getTableNames();
-      if (Sets.intersection(dataSources, queryDatasources).isEmpty()) {
-        return false;
-      }
-    }
-
-    if (hasQueryTypeCriteria) {
-      if (!queryTypes.contains(query.getType())) {
-        return false;
-      }
-    }
-
-    if (hasContextCriteria) {
-      for (Map.Entry<String, String> entry : contextMatches.entrySet()) {
-        Object contextValue = query.getContext().get(entry.getKey());
-        // If the query context doesn't have this key or has a null value, it doesn't match
-        if (contextValue == null || !entry.getValue().equals(String.valueOf(contextValue))) {
-          return false;
-        }
-      }
-    }
-
-    return true;
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    QueryBlocklistRule that = (QueryBlocklistRule) o;
-    return Objects.equals(ruleName, that.ruleName)
-           && Objects.equals(dataSources, that.dataSources)
-           && Objects.equals(queryTypes, that.queryTypes)
-           && Objects.equals(contextMatches, that.contextMatches);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(ruleName, dataSources, queryTypes, contextMatches);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "QueryBlocklistRule{" +
-           "ruleName='" + ruleName + '\'' +
-           ", dataSources=" + dataSources +
-           ", queryTypes=" + queryTypes +
-           ", contextMatches=" + contextMatches +
-           '}';
-  }
+  boolean matches(Query<?> query);
 }

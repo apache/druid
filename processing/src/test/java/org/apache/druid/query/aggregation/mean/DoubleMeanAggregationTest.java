@@ -23,12 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -49,6 +49,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -61,9 +62,13 @@ import java.util.List;
 @RunWith(JUnitParamsRunner.class)
 public class DoubleMeanAggregationTest
 {
-  public Object[] doVectorize()
+  public Object[] doVectorizeAndUseVectorApi()
   {
-    return Lists.newArrayList(true, false).toArray();
+    return new Object[]{
+        new Object[]{false, false},
+        new Object[]{true, false},
+        new Object[]{true, true}
+    };
   }
 
   @Rule
@@ -100,10 +105,19 @@ public class DoubleMeanAggregationTest
     );
   }
 
-  @Test
-  @Parameters(method = "doVectorize")
-  public void testBufferAggretatorUsingGroupByQuery(boolean doVectorize) throws Exception
+  @After
+  public void resetExpressionProcessing()
   {
+    ExpressionProcessing.initializeForTests();
+  }
+
+  @Test
+  @Parameters(method = "doVectorizeAndUseVectorApi")
+  public void testBufferAggretatorUsingGroupByQuery(final boolean doVectorize, final boolean useVectorApi)
+      throws Exception
+  {
+    initializeExpressionProcessing(useVectorApi);
+
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource("test")
         .setGranularity(Granularities.ALL)
@@ -129,9 +143,15 @@ public class DoubleMeanAggregationTest
   }
 
   @Test
-  @Parameters(method = "doVectorize")
-  public void testVectorAggretatorUsingGroupByQueryOnDoubleColumn(boolean doVectorize) throws Exception
+  @Parameters(method = "doVectorizeAndUseVectorApi")
+  public void testVectorAggretatorUsingGroupByQueryOnDoubleColumn(
+      final boolean doVectorize,
+      final boolean useVectorApi
+  )
+      throws Exception
   {
+    initializeExpressionProcessing(useVectorApi);
+
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource("test")
         .setGranularity(Granularities.ALL)
@@ -153,9 +173,14 @@ public class DoubleMeanAggregationTest
   }
 
   @Test
-  @Parameters(method = "doVectorize")
-  public void testVectorAggretatorUsingGroupByQueryOnDoubleColumnOnBiggerSegments(boolean doVectorize) throws Exception
+  @Parameters(method = "doVectorizeAndUseVectorApi")
+  public void testVectorAggretatorUsingGroupByQueryOnDoubleColumnOnBiggerSegments(
+      final boolean doVectorize,
+      final boolean useVectorApi
+  ) throws Exception
   {
+    initializeExpressionProcessing(useVectorApi);
+
     GroupByQuery query = new GroupByQuery.Builder()
         .setDataSource("blah")
         .setGranularity(Granularities.ALL)
@@ -176,9 +201,12 @@ public class DoubleMeanAggregationTest
   }
 
   @Test
-  @Parameters(method = "doVectorize")
-  public void testAggretatorUsingTimeseriesQuery(boolean doVectorize) throws Exception
+  @Parameters(method = "doVectorizeAndUseVectorApi")
+  public void testAggretatorUsingTimeseriesQuery(final boolean doVectorize, final boolean useVectorApi)
+      throws Exception
   {
+    initializeExpressionProcessing(useVectorApi);
+
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
                                   .granularity(Granularities.ALL)
@@ -237,5 +265,14 @@ public class DoubleMeanAggregationTest
 
     DoubleMeanHolder meanHolder = (DoubleMeanHolder) aggregator.get();
     Assert.assertEquals(2.0, meanHolder.mean(), 0.0);
+  }
+
+  private static void initializeExpressionProcessing(final boolean useVectorApi)
+  {
+    if (useVectorApi) {
+      ExpressionProcessing.initializeForVectorApiTests();
+    } else {
+      ExpressionProcessing.initializeForTests();
+    }
   }
 }

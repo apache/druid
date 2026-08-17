@@ -61,6 +61,7 @@ import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.QueryablePeonModule;
+import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.annotations.AttemptId;
@@ -113,8 +114,6 @@ import org.apache.druid.segment.loading.OmniDataSegmentKiller;
 import org.apache.druid.segment.loading.OmniDataSegmentMover;
 import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.ServiceAnnouncingChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.PeonAppenderatorsManager;
 import org.apache.druid.server.DruidNode;
@@ -219,6 +218,7 @@ public class CliPeon extends GuiceRunnable
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new IndexingServiceTaskLogsModule(properties),
+        new RegexEngineModule(),
         new Module()
         {
           @SuppressForbidden(reason = "System#out, System#err")
@@ -419,24 +419,7 @@ public class CliPeon extends GuiceRunnable
 
   static void bindChatHandler(Binder binder)
   {
-    PolyBind.createChoice(
-        binder,
-        "druid.indexer.task.chathandler.type",
-        Key.get(ChatHandlerProvider.class),
-        Key.get(ServiceAnnouncingChatHandlerProvider.class)
-    );
-    final MapBinder<String, ChatHandlerProvider> handlerProviderBinder =
-        PolyBind.optionBinder(binder, Key.get(ChatHandlerProvider.class));
-    handlerProviderBinder
-        .addBinding("announce")
-        .to(ServiceAnnouncingChatHandlerProvider.class)
-        .in(LazySingleton.class);
-    handlerProviderBinder
-        .addBinding("noop")
-        .to(NoopChatHandlerProvider.class)
-        .in(LazySingleton.class);
-    binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
-    binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
+    binder.bind(ChatHandlerProvider.class).in(LazySingleton.class);
   }
 
   static void bindPeonDataSegmentHandlers(Binder binder)
