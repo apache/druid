@@ -63,8 +63,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.SegmentId;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -2233,10 +2231,11 @@ public class MSQWindowTest extends MSQTestBase
                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                 + "order by 1, 2, 3")
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+        .setExpectedExecutionErrorMatcher(exceptionAssertion(
+            ISE.class,
+            message -> message.contains(
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."
+            )
         ))
         .verifyExecutionError();
   }
@@ -2252,10 +2251,11 @@ public class MSQWindowTest extends MSQTestBase
                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                 + "order by 1, 2, 3")
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+        .setExpectedExecutionErrorMatcher(exceptionAssertion(
+            ISE.class,
+            message -> message.contains(
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."
+            )
         ))
         .verifyExecutionError();
   }

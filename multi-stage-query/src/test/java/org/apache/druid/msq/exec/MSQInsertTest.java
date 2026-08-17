@@ -82,8 +82,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -747,10 +745,10 @@ public class MSQInsertTest extends MSQTestBase
                              + "  )\n"
                              + ") PARTITIONED by day")
                      .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                                 "projection[channel_delta_daily] contains aggregator[sum_delta] that is missing required field[delta] in base table")
+                         exceptionAssertion(
+                             ISE.class,
+                             message -> message.contains(
+                                 "projection[channel_delta_daily] contains aggregator[sum_delta] that is missing required field[delta] in base table"
                              )
                          )
                      )
@@ -1417,10 +1415,10 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(localContext)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
+                         ISE.class,
+                         message -> message.contains(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
                          )
                      ))
                      .verifyExecutionError();
@@ -1433,10 +1431,10 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "SET groupByEnableMultiValueUnnesting = false; INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(context)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
+                         ISE.class,
+                         message -> message.contains(
+                             "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
                          )
                      ))
                      .verifyExecutionError();
@@ -1914,10 +1912,9 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedDataSource("foo")
                      .setQueryContext(context)
                      .setExpectedMSQFault(new RowTooLargeFault(500))
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Row too large to add to frame"))
+                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
+                         ISE.class,
+                         message -> message.contains("Row too large to add to frame")
                      ))
                      .verifyExecutionError();
   }

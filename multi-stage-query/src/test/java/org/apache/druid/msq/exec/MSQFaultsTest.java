@@ -54,8 +54,6 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 import org.mockito.ArgumentMatchers;
@@ -653,14 +651,10 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
-                     .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(
-                                 CoreMatchers.containsString(expectedError)
-                             )
-                         )
-                     )
+                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
+                         ISE.class,
+                         message -> message.contains(expectedError)
+                     ))
                      .verifyExecutionError();
   }
 
@@ -701,14 +695,10 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
-                     .setExpectedExecutionErrorMatcher(
-                         CoreMatchers.allOf(
-                             CoreMatchers.instanceOf(ISE.class),
-                             ThrowableMessageMatcher.hasMessage(
-                                 CoreMatchers.containsString(expectedError)
-                             )
-                         )
-                     )
+                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
+                         ISE.class,
+                         message -> message.contains(expectedError)
+                     ))
                      .verifyExecutionError();
   }
 

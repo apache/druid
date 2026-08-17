@@ -51,7 +51,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -391,7 +390,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
         .setQueryContext(REALTIME_QUERY_CTX)
         .setExpectedRowSignature(rowSignature)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.instanceOf(ISE.class))
+        .setExpectedExecutionErrorMatcher(exceptionAssertion(ISE.class))
         .verifyExecutionError();
   }
 }

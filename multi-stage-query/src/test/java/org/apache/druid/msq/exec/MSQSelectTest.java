@@ -90,9 +90,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -2194,10 +2192,10 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select dim3, count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+        .setExpectedExecutionErrorMatcher(exceptionAssertion(
+            ISE.class,
+            message -> message.contains(
+                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
             )
         ))
         .verifyExecutionError();
@@ -2377,11 +2375,10 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(
-                CoreMatchers.containsString(
-                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+        .setExpectedExecutionErrorMatcher(exceptionAssertion(
+            ISE.class,
+            message -> message.contains(
+                "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."
             )
         ))
         .setExpectedMetricDimensions(
@@ -2401,10 +2398,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
         .setQueryContext(context)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."))
+        .setExpectedExecutionErrorMatcher(exceptionAssertion(
+            DruidException.class,
+            message -> message.contains(
+                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."
+            )
         ))
         .verifyExecutionError();
   }
@@ -2806,9 +2804,9 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setQueryContext(timeoutContext)
         .setExpectedMSQFault(CanceledFault.timeout())
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Query timed out"))
+        .setExpectedExecutionErrorMatcher(exceptionAssertion(
+            ISE.class,
+            message -> message.contains("Query timed out")
         ))
         .verifyExecutionError();
   }

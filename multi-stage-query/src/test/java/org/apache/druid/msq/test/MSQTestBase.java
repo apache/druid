@@ -227,11 +227,10 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
@@ -990,6 +989,24 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
+  protected static Consumer<Throwable> exceptionAssertion(final Class<? extends Throwable> expectedType)
+  {
+    return exception -> Assertions.assertInstanceOf(expectedType, exception);
+  }
+
+  protected static Consumer<Throwable> exceptionAssertion(
+      final Class<? extends Throwable> expectedType,
+      final Predicate<String> messagePredicate
+  )
+  {
+    return exception -> {
+      final Throwable typedException = Assertions.assertInstanceOf(expectedType, exception);
+      final String message = typedException.getMessage();
+      Assertions.assertNotNull(message);
+      Assertions.assertTrue(messagePredicate.test(message));
+    };
+  }
+
   public abstract class MSQTester<Builder extends MSQTester<Builder>>
   {
     protected String sql = null;
@@ -1109,9 +1126,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-    public Builder setExpectedValidationErrorMatcher(final Matcher<Throwable> expectedValidationErrorMatcher)
+    public Builder setExpectedValidationErrorMatcher(final Consumer<Throwable> expectedValidationErrorAssertion)
     {
-      this.expectedValidationErrorAssertion = e -> MatcherAssert.assertThat(e, expectedValidationErrorMatcher);
+      this.expectedValidationErrorAssertion = expectedValidationErrorAssertion;
       return asBuilder();
     }
 
@@ -1121,9 +1138,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-    public Builder setExpectedExecutionErrorMatcher(final Matcher<Throwable> expectedExecutionErrorMatcher)
+    public Builder setExpectedExecutionErrorMatcher(final Consumer<Throwable> expectedExecutionErrorAssertion)
     {
-      this.expectedExecutionErrorAssertion = e -> MatcherAssert.assertThat(e, expectedExecutionErrorMatcher);
+      this.expectedExecutionErrorAssertion = expectedExecutionErrorAssertion;
       return asBuilder();
     }
 
