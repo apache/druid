@@ -67,6 +67,7 @@ import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.WeightedQueryLaningStrategy;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -542,7 +543,7 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     Throwable t = Assertions.assertThrows(ProvisionException.class, () -> provider.get().get());
-    org.assertj.core.api.Assertions.assertThat(t.getMessage()).containsSubsequence(
+    AssertionsForClassTypes.assertThat(t.getMessage()).containsSubsequence(
         "Problem parsing object at prefix[druid.query.scheduler]:",
         "problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set"
     );
