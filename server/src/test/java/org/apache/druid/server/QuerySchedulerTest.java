@@ -389,7 +389,7 @@ public class QuerySchedulerTest
         SERVER_CONFIG_WITH_TOTAL
     );
 
-    QueryRunnerFactory factory = QueryStackTests.makeGroupByQueryRunnerFactory(
+    QueryRunnerFactory factory = GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
         new GroupByQueryConfig()
         {
 

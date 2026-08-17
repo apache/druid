@@ -38,6 +38,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
@@ -166,6 +167,15 @@ public class GroupByQueryRunnerTestHelper
         V2_SMALL_BUFFER_CONFIG,
         V2_SMALL_DICTIONARY_CONFIG,
         V2_PARALLEL_COMBINE_CONFIG
+    );
+  }
+
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(final GroupByQueryConfig config)
+  {
+    return makeQueryRunnerFactory(
+        TestHelper.makeSmileMapper(),
+        config,
+        TestGroupByBuffers.createDefault()
     );
   }
 

@@ -465,18 +465,6 @@ public class QueryStackTests
         .build();
   }
 
-  public static GroupByQueryRunnerFactory makeGroupByQueryRunnerFactory(final GroupByQueryConfig config)
-  {
-    return GroupByQueryRunnerTestHelper.makeQueryRunnerFactory(
-        TestHelper.makeSmileMapper(),
-        config,
-        new TestGroupByBuffers(
-            COMPUTE_BUFFER_SIZE,
-            4
-        )
-    );
-  }
-
   public static JoinableFactory makeJoinableFactoryForLookup(
       LookupExtractorFactoryContainerProvider lookupProvider
   )
