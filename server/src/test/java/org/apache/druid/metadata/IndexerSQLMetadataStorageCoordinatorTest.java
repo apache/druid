@@ -3596,7 +3596,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     }
 
     // Verify that the next attempt fails
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(
             DruidException.class,
             () -> allocatePendingSegmentForAppendTask(wiki, firstOfJan23, IdUtils.getRandomId())

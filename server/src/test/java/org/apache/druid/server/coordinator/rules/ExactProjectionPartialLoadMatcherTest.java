@@ -30,7 +30,6 @@ import org.apache.druid.segment.loading.PartialBaseTableLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -126,7 +125,7 @@ public class ExactProjectionPartialLoadMatcherTest
   @Test
   void testConstructorRejectsNullNames()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ExactProjectionPartialLoadMatcher(null)
@@ -138,7 +137,7 @@ public class ExactProjectionPartialLoadMatcherTest
   @Test
   void testConstructorRejectsEmptyNames()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new ExactProjectionPartialLoadMatcher(Collections.emptyList())

@@ -26,7 +26,6 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -147,7 +146,7 @@ public class CoordinatorCompactionResourceTest
     final Object responseEntity = response.getEntity();
     Assert.assertTrue(responseEntity instanceof ErrorResponse);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         ((ErrorResponse) responseEntity).getUnderlyingException(),
         DruidExceptionMatcher.invalidInput().expectMessageIs("No DataSource specified")
     );

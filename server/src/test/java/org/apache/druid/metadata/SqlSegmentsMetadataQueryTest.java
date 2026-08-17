@@ -40,7 +40,6 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -923,7 +922,7 @@ public class SqlSegmentsMetadataQueryTest
     update(sql -> sql.markSegmentsAsUnused(Set.of(segment.getId()), markedAsUnusedAtTime));
 
     // Verify that the mark as used operation fails with a CONFLICT DruidException
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(
             DruidException.class,
             () -> updateWithConfig(sql -> markAsUsedFunction.apply(sql, segment), managerConfig)

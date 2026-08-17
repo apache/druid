@@ -35,6 +35,7 @@ import com.google.inject.Key;
 import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.GuiceInjectors;
@@ -1812,12 +1813,9 @@ public class QueryResourceTest
     Assertions.assertEquals(Status.FORBIDDEN.getStatusCode(), response.getStatus());
     Assertions.assertNotNull(response.getMetadata().getFirst(QueryResource.QUERY_ID_RESPONSE_HEADER));
 
-    assertDruidExceptionMessageContains(
+    DruidExceptionMatcher.assertThat(
         ((ErrorResponse) response.getEntity()).getUnderlyingException(),
-        DruidException.Persona.USER,
-        DruidException.Category.FORBIDDEN,
-        "general",
-        "blocked by rule[block-mmx]"
+        DruidExceptionMatcher.forbidden().expectMessageContains("blocked by rule[block-mmx]")
     );
 
     // Blocked queries are still recorded in metrics and the request log. FORBIDDEN maps to no query counter, the
@@ -2098,19 +2096,6 @@ public class QueryResourceTest
     Assertions.assertEquals(
         message,
         assertDruidException(exception, persona, category, errorCode).getMessage()
-    );
-  }
-
-  private static void assertDruidExceptionMessageContains(
-      Throwable exception,
-      DruidException.Persona persona,
-      DruidException.Category category,
-      String errorCode,
-      String message
-  )
-  {
-    Assertions.assertTrue(
-        assertDruidException(exception, persona, category, errorCode).getMessage().contains(message)
     );
   }
 
