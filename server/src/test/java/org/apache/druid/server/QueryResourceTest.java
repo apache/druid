@@ -100,6 +100,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.http.HttpStatus;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.eclipse.jetty.http.HttpHeader;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
@@ -1726,7 +1727,7 @@ public class QueryResourceTest
         () -> jsonMapper.readValue(baos.toByteArray(), Object.class)
     );
 
-    org.assertj.core.api.Assertions.assertThat(e).hasMessageContaining("expected close marker for Array");
+    AssertionsForClassTypes.assertThat(e).hasMessageContaining("expected close marker for Array");
   }
 
   private void createScheduledQueryResource(
@@ -1959,7 +1960,7 @@ public class QueryResourceTest
     // A QueryException keeps its own status and its legacy response body.
     Assertions.assertNotNull(response);
     Assertions.assertEquals(429, response.getStatus());
-    org.assertj.core.api.Assertions.assertThat(StringUtils.fromUtf8((byte[]) response.getEntity())).contains("too busy");
+    AssertionsForClassTypes.assertThat(StringUtils.fromUtf8((byte[]) response.getEntity())).contains("too busy");
 
     // It now shares the DruidException path, so the failure is recorded server-side and not just returned.
     Assertions.assertEquals(1, failingQueryResource.getFailedQueryCount());
