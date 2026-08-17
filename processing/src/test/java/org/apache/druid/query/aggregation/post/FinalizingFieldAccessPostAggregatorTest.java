@@ -50,7 +50,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Test;
@@ -83,7 +83,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     metricValues.put(aggName, agg.get());
 
     FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
-    JupiterAssertions.assertEquals(3L, postAgg.compute(metricValues));
+    Assertions.assertEquals(3L, postAgg.compute(metricValues));
   }
 
   @Test
@@ -101,12 +101,12 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     );
 
     // Check that the class matches exactly; see https://github.com/apache/druid/issues/6063
-    JupiterAssertions.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
+    Assertions.assertEquals(FinalizingFieldAccessPostAggregator.class, postAgg.getClass());
 
     Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, "test");
 
-    JupiterAssertions.assertEquals(3L, postAgg.compute(metricValues));
+    Assertions.assertEquals(3L, postAgg.compute(metricValues));
     EasyMock.verify(aggFactory);
   }
 
@@ -132,7 +132,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
 
     ArithmeticPostAggregator arithmeticPostAggregator = new ArithmeticPostAggregator("add", "+", postAggsList);
 
-    JupiterAssertions.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
+    Assertions.assertEquals(9.0, arithmeticPostAggregator.compute(metricValues));
     EasyMock.verify();
   }
 
@@ -171,7 +171,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     computedValues.add(postAgg.compute(ImmutableMap.of(aggName, "test_val4")));
 
     Collections.sort(computedValues, postAgg.getComparator());
-    JupiterAssertions.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[0]));
+    Assertions.assertArrayEquals(new Object[]{3L, 10L, 21L, null}, computedValues.toArray(new Object[0]));
     EasyMock.verify();
   }
 
@@ -197,7 +197,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     computedValues.add(postAgg.compute(ImmutableMap.of("joe", "test_val4")));
     Collections.sort(computedValues, postAgg.getComparator());
 
-    JupiterAssertions.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new Object[]{null, "test_val1", "test_val2", "test_val4"},
         computedValues.toArray(new Object[0])
     );
@@ -259,9 +259,9 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
       );
 
       final ResultRow resultRow = seq.toList().get(0);
-      JupiterAssertions.assertEquals("hll_market", 3.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
-      JupiterAssertions.assertEquals("hll_quality", 9.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
-      JupiterAssertions.assertEquals("uniq_add", 12.0, ((Number) resultRow.get(2)).floatValue(), 0.1);
+      Assertions.assertEquals(3.0, ((Number) resultRow.get(0)).floatValue(), 0.1, "hll_market");
+      Assertions.assertEquals(9.0, ((Number) resultRow.get(1)).floatValue(), 0.1, "hll_quality");
+      Assertions.assertEquals(12.0, ((Number) resultRow.get(2)).floatValue(), 0.1, "uniq_add");
     }
   }
 
@@ -273,7 +273,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
         ImmutableMap.of("bar", new CountAggregatorFactory("bar"))
     );
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         original,
         objectMapper.readValue(objectMapper.writeValueAsString(decorated), PostAggregator.class)
     );
@@ -297,7 +297,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
               )
               .build();
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)

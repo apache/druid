@@ -39,7 +39,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -202,11 +202,11 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(0, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(0, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
-    JupiterAssertions.assertEquals(3, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(3, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -231,11 +231,11 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(1, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(1, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
-    JupiterAssertions.assertEquals(2, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(2, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -271,12 +271,12 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // This should be 1 because the broker needs 2 buffers and the queryable node needs one.
-    JupiterAssertions.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -325,12 +325,12 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // This should be 1 because the broker needs 2 buffers and the queryable node needs one.
-    JupiterAssertions.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -354,12 +354,12 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(1, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(1, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 1 for subtotal and 1 for GroupByQueryRunnerFactory#mergeRunners
-    JupiterAssertions.assertEquals(2, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(2, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -383,12 +383,12 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(2, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 2 needed by subtotal and 1 for GroupByQueryRunnerFactory#mergeRunners
-    JupiterAssertions.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(1, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -425,12 +425,12 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(3, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(3, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 2 for subtotal, 1 for nested group by and 1 for GroupByQueryRunnerFactory#mergeRunners
-    JupiterAssertions.assertEquals(0, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(0, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 
   @Test
@@ -471,11 +471,11 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, TIMEOUT))
         .build();
 
-    JupiterAssertions.assertEquals(3, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
+    Assertions.assertEquals(3, GroupByQueryResources.countRequiredMergeBufferNumForToolchestMerge(query));
     GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
 
     // 2 for subtotal, 1 for nested group by and 1 for GroupByQueryRunnerFactory#mergeRunners
-    JupiterAssertions.assertEquals(0, MERGE_BUFFER_POOL.getMinRemainBufferNum());
-    JupiterAssertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
+    Assertions.assertEquals(0, MERGE_BUFFER_POOL.getMinRemainBufferNum());
+    Assertions.assertEquals(4, MERGE_BUFFER_POOL.getPoolSize());
   }
 }

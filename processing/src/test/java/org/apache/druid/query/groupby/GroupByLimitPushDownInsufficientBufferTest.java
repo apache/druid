@@ -74,7 +74,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -266,8 +266,8 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     resourceCloser.register(() -> {
       // Verify that all objects have been returned to the pools.
-      JupiterAssertions.assertEquals(0, mergePool.getOutstandingObjectCount());
-      JupiterAssertions.assertEquals(0, tooSmallMergePool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, mergePool.getOutstandingObjectCount());
+      Assertions.assertEquals(0, tooSmallMergePool.getOutstandingObjectCount());
     });
 
     final GroupByQueryConfig config = new GroupByQueryConfig()
@@ -486,10 +486,10 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         "metA", 150L
     );
 
-    JupiterAssertions.assertEquals(3, results.size());
-    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
-    JupiterAssertions.assertEquals(expectedRow1, results.get(1));
-    JupiterAssertions.assertEquals(expectedRow2, results.get(2));
+    Assertions.assertEquals(3, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(expectedRow1, results.get(1));
+    Assertions.assertEquals(expectedRow2, results.get(2));
   }
 
   @Test
@@ -587,10 +587,10 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         "metA", 190L
     );
 
-    JupiterAssertions.assertEquals(3, results.size());
-    JupiterAssertions.assertEquals(expectedRow0, results.get(0));
-    JupiterAssertions.assertEquals(expectedRow1, results.get(1));
-    JupiterAssertions.assertEquals(expectedRow2, results.get(2));
+    Assertions.assertEquals(3, results.size());
+    Assertions.assertEquals(expectedRow0, results.get(0));
+    Assertions.assertEquals(expectedRow1, results.get(1));
+    Assertions.assertEquals(expectedRow2, results.get(2));
   }
 
   private List<QueryRunner<ResultRow>> getRunner1()

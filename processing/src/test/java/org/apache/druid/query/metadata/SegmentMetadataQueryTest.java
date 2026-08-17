@@ -75,7 +75,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.MatcherAssert;
@@ -346,7 +346,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   {
     List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery)).toList();
 
-    JupiterAssertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
+    Assertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
 
   @Test
@@ -358,7 +358,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     ));
     List<?> results = runner1.run(QueryPlus.wrap(restricted)).toList();
 
-    JupiterAssertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
+    Assertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
 
   @Test
@@ -373,7 +373,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     )));
     List<?> results = runner1.run(QueryPlus.wrap(restricted)).toList();
 
-    JupiterAssertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
+    Assertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
   }
 
   @Test
@@ -1127,20 +1127,20 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     Query query = MAPPER.readValue(queryStr, Query.class);
-    JupiterAssertions.assertTrue(query instanceof SegmentMetadataQuery);
-    JupiterAssertions.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
-    JupiterAssertions.assertEquals(
+    Assertions.assertTrue(query instanceof SegmentMetadataQuery);
+    Assertions.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
+    Assertions.assertEquals(
         Intervals.of("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"),
         query.getIntervals().get(0)
     );
-    JupiterAssertions.assertEquals(expectedAnalysisTypes, ((SegmentMetadataQuery) query).getAnalysisTypes());
-    JupiterAssertions.assertEquals(AggregatorMergeStrategy.STRICT, ((SegmentMetadataQuery) query).getAggregatorMergeStrategy());
+    Assertions.assertEquals(expectedAnalysisTypes, ((SegmentMetadataQuery) query).getAnalysisTypes());
+    Assertions.assertEquals(AggregatorMergeStrategy.STRICT, ((SegmentMetadataQuery) query).getAggregatorMergeStrategy());
 
     // test serialize and deserialize
-    JupiterAssertions.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
+    Assertions.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
 
     // test copy
-    JupiterAssertions.assertEquals(query, Druids.SegmentMetadataQueryBuilder.copy((SegmentMetadataQuery) query).build());
+    Assertions.assertEquals(query, Druids.SegmentMetadataQueryBuilder.copy((SegmentMetadataQuery) query).build());
   }
 
   @Test
@@ -1151,18 +1151,18 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                       + "  \"dataSource\":\"test_ds\"\n"
                       + "}";
     Query query = MAPPER.readValue(queryStr, Query.class);
-    JupiterAssertions.assertTrue(query instanceof SegmentMetadataQuery);
-    JupiterAssertions.assertTrue(query.getDataSource() instanceof TableDataSource);
-    JupiterAssertions.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
-    JupiterAssertions.assertEquals(Intervals.ETERNITY, query.getIntervals().get(0));
-    JupiterAssertions.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
-    JupiterAssertions.assertEquals(AggregatorMergeStrategy.STRICT, ((SegmentMetadataQuery) query).getAggregatorMergeStrategy());
+    Assertions.assertTrue(query instanceof SegmentMetadataQuery);
+    Assertions.assertTrue(query.getDataSource() instanceof TableDataSource);
+    Assertions.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
+    Assertions.assertEquals(Intervals.ETERNITY, query.getIntervals().get(0));
+    Assertions.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
+    Assertions.assertEquals(AggregatorMergeStrategy.STRICT, ((SegmentMetadataQuery) query).getAggregatorMergeStrategy());
 
     // test serialize and deserialize
-    JupiterAssertions.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
+    Assertions.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
 
     // test copy
-    JupiterAssertions.assertEquals(query, Druids.SegmentMetadataQueryBuilder.copy((SegmentMetadataQuery) query).build());
+    Assertions.assertEquals(query, Druids.SegmentMetadataQueryBuilder.copy((SegmentMetadataQuery) query).build());
   }
 
   @Test
@@ -1174,18 +1174,18 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                       + "  \"aggregatorMergeStrategy\":\"latest\"\n"
                       + "}";
     Query query = MAPPER.readValue(queryStr, Query.class);
-    JupiterAssertions.assertTrue(query instanceof SegmentMetadataQuery);
-    JupiterAssertions.assertTrue(query.getDataSource() instanceof TableDataSource);
-    JupiterAssertions.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
-    JupiterAssertions.assertEquals(Intervals.ETERNITY, query.getIntervals().get(0));
-    JupiterAssertions.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
-    JupiterAssertions.assertEquals(AggregatorMergeStrategy.LATEST, ((SegmentMetadataQuery) query).getAggregatorMergeStrategy());
+    Assertions.assertTrue(query instanceof SegmentMetadataQuery);
+    Assertions.assertTrue(query.getDataSource() instanceof TableDataSource);
+    Assertions.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getTableNames()));
+    Assertions.assertEquals(Intervals.ETERNITY, query.getIntervals().get(0));
+    Assertions.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
+    Assertions.assertEquals(AggregatorMergeStrategy.LATEST, ((SegmentMetadataQuery) query).getAggregatorMergeStrategy());
 
     // test serialize and deserialize
-    JupiterAssertions.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
+    Assertions.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
 
     // test copy
-    JupiterAssertions.assertEquals(query, Druids.SegmentMetadataQueryBuilder.copy((SegmentMetadataQuery) query).build());
+    Assertions.assertEquals(query, Druids.SegmentMetadataQueryBuilder.copy((SegmentMetadataQuery) query).build());
   }
 
   @Test
@@ -1198,12 +1198,12 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                       + "  \"aggregatorMergeStrategy\":\"lenient\"\n"
                       + "}";
 
-    ValueInstantiationException exception = JupiterAssertions.assertThrows(
+    ValueInstantiationException exception = Assertions.assertThrows(
         ValueInstantiationException.class,
         () -> MAPPER.readValue(queryStr, Query.class)
     );
 
-    JupiterAssertions.assertTrue(
+    Assertions.assertTrue(
         exception.getCause().getMessage().contains(
             "Both lenientAggregatorMerge [true] and aggregatorMergeStrategy [lenient] parameters cannot be set. Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated."
         )
@@ -1219,9 +1219,9 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                                            .merge(true)
                                            .build();
     /* No interval specified, should use default interval */
-    JupiterAssertions.assertTrue(testQuery.isUsingDefaultInterval());
-    JupiterAssertions.assertEquals(Intervals.ETERNITY, testQuery.getIntervals().get(0));
-    JupiterAssertions.assertEquals(testQuery.getIntervals().size(), 1);
+    Assertions.assertTrue(testQuery.isUsingDefaultInterval());
+    Assertions.assertEquals(Intervals.ETERNITY, testQuery.getIntervals().get(0));
+    Assertions.assertEquals(testQuery.getIntervals().size(), 1);
 
     List<LogicalSegment> testSegments = Arrays.asList(
         new LogicalSegment()
@@ -1377,9 +1377,9 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         }
     );
 
-    JupiterAssertions.assertEquals(filteredSegments.size(), 2);
+    Assertions.assertEquals(filteredSegments.size(), 2);
     for (int i = 0; i < filteredSegments.size(); i++) {
-      JupiterAssertions.assertEquals(expectedSegments.get(i).getInterval(), filteredSegments.get(i).getInterval());
+      Assertions.assertEquals(expectedSegments.get(i).getInterval(), filteredSegments.get(i).getInterval());
     }
 
     /* Test 2 year period filtering */
@@ -1464,9 +1464,9 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         }
     );
 
-    JupiterAssertions.assertEquals(filteredSegments2.size(), 5);
+    Assertions.assertEquals(filteredSegments2.size(), 5);
     for (int i = 0; i < filteredSegments2.size(); i++) {
-      JupiterAssertions.assertEquals(expectedSegments2.get(i).getInterval(), filteredSegments2.get(i).getInterval());
+      Assertions.assertEquals(expectedSegments2.get(i).getInterval(), filteredSegments2.get(i).getInterval());
     }
   }
 
@@ -1493,7 +1493,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                                                                                                                   .computeCacheKey(
                                                                                                                       twoColumnQuery);
 
-    JupiterAssertions.assertFalse(Arrays.equals(oneColumnQueryCacheKey, twoColumnQueryCacheKey));
+    Assertions.assertFalse(Arrays.equals(oneColumnQueryCacheKey, twoColumnQueryCacheKey));
   }
 
   @Test
@@ -1528,10 +1528,10 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysisWCfg1 = EnumSet.of(SegmentMetadataQuery.AnalysisType.CARDINALITY);
     EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysisWCfg2 = EnumSet.of(SegmentMetadataQuery.AnalysisType.MINMAX);
 
-    JupiterAssertions.assertEquals(analysis1, expectedAnalysis1);
-    JupiterAssertions.assertEquals(analysis2, expectedAnalysis2);
-    JupiterAssertions.assertEquals(analysisWCfg1, expectedAnalysisWCfg1);
-    JupiterAssertions.assertEquals(analysisWCfg2, expectedAnalysisWCfg2);
+    Assertions.assertEquals(analysis1, expectedAnalysis1);
+    Assertions.assertEquals(analysis2, expectedAnalysis2);
+    Assertions.assertEquals(analysisWCfg1, expectedAnalysisWCfg1);
+    Assertions.assertEquals(analysisWCfg2, expectedAnalysisWCfg2);
   }
 
   @Test
@@ -1607,7 +1607,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   public void testSegmentMetadataQueryWithInvalidDatasourceTypes()
   {
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 RestrictedDataSource.create(
@@ -1630,7 +1630,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 new UnionDataSource(
@@ -1657,7 +1657,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 new UnionDataSource(
@@ -1685,7 +1685,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 InlineDataSource.fromIterable(
@@ -1709,7 +1709,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 new LookupDataSource("lookyloo"),
@@ -1730,7 +1730,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 JoinDataSource.create(
@@ -1765,7 +1765,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   public void testSegmentMetadataQueryWithAggregatorMergeStrictStrategy()
   {
     // This is the default behavior -- if nothing is specified, the merge strategy is strict.
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         AggregatorMergeStrategy.STRICT,
         new SegmentMetadataQuery(
             new TableDataSource("foo"),
@@ -1780,7 +1780,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ).getAggregatorMergeStrategy()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         AggregatorMergeStrategy.STRICT,
         new SegmentMetadataQuery(
             new TableDataSource("foo"),
@@ -1795,7 +1795,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ).getAggregatorMergeStrategy()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         AggregatorMergeStrategy.STRICT,
         new SegmentMetadataQuery(
             new TableDataSource("foo"),
@@ -1814,7 +1814,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithAggregatorMergeLenientStrategy()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         AggregatorMergeStrategy.LENIENT,
         new SegmentMetadataQuery(
             new TableDataSource("foo"),
@@ -1829,7 +1829,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ).getAggregatorMergeStrategy()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         AggregatorMergeStrategy.LENIENT,
         new SegmentMetadataQuery(
             new TableDataSource("foo"),
@@ -1848,7 +1848,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithAggregatorMergeLatestStrategy()
   {
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         AggregatorMergeStrategy.LATEST,
         new SegmentMetadataQuery(
             new TableDataSource("foo"),
@@ -1868,7 +1868,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   public void testSegmentMetadataQueryWithBothDeprecatedAndNewParameter()
   {
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 new TableDataSource("foo"),
@@ -1889,7 +1889,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 new TableDataSource("foo"),
@@ -1910,7 +1910,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     );
 
     MatcherAssert.assertThat(
-        JupiterAssertions.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
                 new TableDataSource("foo"),

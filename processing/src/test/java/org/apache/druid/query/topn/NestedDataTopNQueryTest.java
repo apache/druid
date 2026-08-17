@@ -39,7 +39,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -167,14 +167,14 @@ public class NestedDataTopNQueryTest extends InitializedNullHandlingTest
 
   private static void verifyResults(List<Object[]> results, List<Object[]> expected)
   {
-    JupiterAssertions.assertEquals(expected.size(), results.size());
+    Assertions.assertEquals(expected.size(), results.size());
 
     for (int i = 0; i < expected.size(); i++) {
       LOG.info("result #%d, %s", i, Arrays.toString(results.get(i)));
-      JupiterAssertions.assertArrayEquals(
-          StringUtils.format("result #%d", i + 1),
+      Assertions.assertArrayEquals(
           expected.get(i),
-          results.get(i)
+          results.get(i),
+          StringUtils.format("result #%d", i + 1)
       );
     }
   }

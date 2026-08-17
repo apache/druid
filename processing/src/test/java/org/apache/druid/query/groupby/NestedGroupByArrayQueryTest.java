@@ -39,7 +39,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -557,21 +557,21 @@ public class NestedGroupByArrayQueryTest
                )
                .collect(Collectors.toList());
     LOG.info("results:\n%s", serdeAndBack.stream().map(ResultRow::toString).collect(Collectors.joining("\n")));
-    JupiterAssertions.assertEquals(expected.size(), serdeAndBack.size());
+    Assertions.assertEquals(expected.size(), serdeAndBack.size());
     for (int i = 0; i < expected.size(); i++) {
       final Object[] resultRow = serdeAndBack.get(i).getArray();
-      JupiterAssertions.assertEquals(expected.get(i).length, resultRow.length);
+      Assertions.assertEquals(expected.get(i).length, resultRow.length);
       for (int j = 0; j < resultRow.length; j++) {
         if (expected.get(i)[j] == null) {
-          JupiterAssertions.assertNull(resultRow[j]);
+          Assertions.assertNull(resultRow[j]);
         } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.DOUBLE)).orElse(false)) {
-          JupiterAssertions.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
+          Assertions.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
         } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.FLOAT)).orElse(false)) {
-          JupiterAssertions.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
+          Assertions.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
         } else if (rowSignature.getColumnType(j).map(t -> t.isArray()).orElse(false)) {
-          JupiterAssertions.assertArrayEquals((Object[]) expected.get(i)[j], (Object[]) resultRow[j]);
+          Assertions.assertArrayEquals((Object[]) expected.get(i)[j], (Object[]) resultRow[j]);
         } else {
-          JupiterAssertions.assertEquals(expected.get(i)[j], resultRow[j]);
+          Assertions.assertEquals(expected.get(i)[j], resultRow[j]);
         }
       }
     }

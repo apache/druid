@@ -46,7 +46,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -213,9 +213,9 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
       if (parallelCombineThreads > 1 && (mergeThreadLocal || temporaryStorage.currentSize() > 0)) {
         // Parallel combiner configured, and expected to actually be used due to thread-local merge (either explicitly
         // configured, or due to spilling).
-        JupiterAssertions.assertTrue(TEST_RESOURCE_HOLDER.taken);
+        Assertions.assertTrue(TEST_RESOURCE_HOLDER.taken);
       } else {
-        JupiterAssertions.assertFalse(TEST_RESOURCE_HOLDER.taken);
+        Assertions.assertFalse(TEST_RESOURCE_HOLDER.taken);
       }
 
       GrouperTestUtil.assertEntriesEquals(expected.iterator(), iterator);
@@ -282,12 +282,12 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         eachFuture.get();
       }
 
-      final QueryTimeoutException e = JupiterAssertions.assertThrows(
+      final QueryTimeoutException e = Assertions.assertThrows(
           QueryTimeoutException.class,
           () -> closer.register(grouper.iterator(true))
       );
 
-      JupiterAssertions.assertEquals("Query timeout", e.getErrorCode());
+      Assertions.assertEquals("Query timeout", e.getErrorCode());
     }
     finally {
       service.shutdownNow();

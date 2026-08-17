@@ -22,7 +22,7 @@ package org.apache.druid.query;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -56,7 +56,7 @@ public class ResultGranularTimestampComparatorTest
     Result<Object> r1 = new Result<>(time, null);
     Result<Object> r2 = new Result<>(time.plusYears(5), null);
 
-    JupiterAssertions.assertEquals(ResultGranularTimestampComparator.create(Granularities.ALL, descending).compare(r1, r2), 0);
+    Assertions.assertEquals(ResultGranularTimestampComparator.create(Granularities.ALL, descending).compare(r1, r2), 0);
   }
 
   @Test
@@ -68,9 +68,9 @@ public class ResultGranularTimestampComparatorTest
     Result<Object> less = new Result<>(time.minusHours(1), null);
 
     Granularity day = Granularities.DAY;
-    JupiterAssertions.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, same), 0);
-    JupiterAssertions.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, greater), descending ? 1 : -1);
-    JupiterAssertions.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, less), descending ? -1 : 1);
+    Assertions.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, same), 0);
+    Assertions.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, greater), descending ? 1 : -1);
+    Assertions.assertEquals(ResultGranularTimestampComparator.create(day, descending).compare(res, less), descending ? -1 : 1);
   }
   
   @Test
@@ -82,8 +82,8 @@ public class ResultGranularTimestampComparatorTest
     Result<Object> less = new Result<>(time.minusHours(1), null);
 
     Granularity hour = Granularities.HOUR;
-    JupiterAssertions.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, same), 0);
-    JupiterAssertions.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, greater), descending ? 1 : -1);
-    JupiterAssertions.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, less), descending ? -1 : 1);
+    Assertions.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, same), 0);
+    Assertions.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, greater), descending ? 1 : -1);
+    Assertions.assertEquals(ResultGranularTimestampComparator.create(hour, descending).compare(res, less), descending ? -1 : 1);
   }
 }

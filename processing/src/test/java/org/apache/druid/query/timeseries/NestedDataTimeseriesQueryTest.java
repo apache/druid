@@ -47,7 +47,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -707,8 +707,8 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
 
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
-        Throwable t = JupiterAssertions.assertThrows(RuntimeException.class, runner::get);
-        JupiterAssertions.assertEquals(
+        Throwable t = Assertions.assertThrows(RuntimeException.class, runner::get);
+        Assertions.assertEquals(
             "org.apache.druid.java.util.common.ISE: Cannot vectorize!",
             t.getMessage()
         );

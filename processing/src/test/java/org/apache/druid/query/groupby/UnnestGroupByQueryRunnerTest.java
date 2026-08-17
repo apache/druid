@@ -58,10 +58,10 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -88,9 +88,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   private final GroupByQueryRunnerFactory factory;
   private final GroupByQueryConfig config;
   private final boolean vectorize;
-
-  @RegisterExtension
-  public final JupiterAssertions.ExceptionExpectation expectedException = new JupiterAssertions.ExceptionExpectation();
 
   @RegisterExtension
   public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
@@ -452,7 +449,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   public void testGroupByOnMissingColumn()
   {
     // Cannot vectorize due to extraction dimension spec.
-    cannotVectorize();
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(UnnestDataSource.create(
@@ -483,6 +479,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, TestIndex.getIncrementalTestIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "missing-column");
 
@@ -493,7 +497,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedColumn()
   {
-    cannotVectorize();
 
     GroupByQuery query = makeQueryBuilder()
         .setDataSource(QueryRunnerTestHelper.UNNEST_DATA_SOURCE)
@@ -562,6 +565,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, TestIndex.getIncrementalTestIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-column");
 
@@ -572,7 +583,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedVirtualColumn()
   {
-    cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -654,6 +664,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, TestIndex.getIncrementalTestIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
 
@@ -664,7 +682,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedVirtualMultiColumn()
   {
-    cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -708,6 +725,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, TestIndex.getIncrementalTestIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-columns");
 
@@ -718,7 +743,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedStringColumnWithNullStuff() throws IOException
   {
-    cannotVectorize();
 
     final String dim = "mvd";
     final DateTime timestamp = DateTimes.nowUtc();
@@ -769,6 +793,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, bob.buildIncrementalIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, bob.buildIncrementalIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-string-nulls");
 
@@ -779,7 +811,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestedStringColumnWithMoreNullStuff() throws IOException
   {
-    cannotVectorize();
 
     final String dim = "mvd";
     final DateTime timestamp = DateTimes.nowUtc();
@@ -842,6 +873,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, bob.buildIncrementalIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, bob.buildIncrementalIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-string-nulls");
 
@@ -855,7 +894,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestEmptyTable()
   {
-    cannotVectorize();
     IndexBuilder bob =
         IndexBuilder.create()
                     .rows(ImmutableList.of());
@@ -881,6 +919,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     List<ResultRow> expectedResults = Collections.emptyList();
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, bob.buildIncrementalIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, bob.buildIncrementalIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-empty");
 
@@ -890,7 +936,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByOnUnnestEmptyRows()
   {
-    cannotVectorize();
     final String dim = "mvd";
     final DateTime timestamp = DateTimes.nowUtc();
     final RowSignature signature = RowSignature.builder()
@@ -942,6 +987,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, timestamp, "v0", null, "rows", 1L)
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, bob.buildIncrementalIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, bob.buildIncrementalIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-empty");
 
@@ -958,7 +1011,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
     // the issue is that the dimension selector handles null differently than if arrays are used from a column value
     // selector. the dimension selector cursor puts nulls in the output to be compatible with implict unnest used by
     // group-by, while the column selector cursor uses array rules
-    cannotVectorize();
 
     final String dim = "mvd";
     final DateTime timestamp = DateTimes.nowUtc();
@@ -1019,6 +1071,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         makeRow(query, timestamp, "v1", "c", "rows", 1L)
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, bob.buildIncrementalIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, bob.buildIncrementalIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "group-by-unnested-string-nulls-double-unnest");
 
@@ -1030,7 +1090,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   public void testGroupByOnUnnestedFilterMatch()
   {
     // testGroupByOnUnnestedColumn but with filter to match single value
-    cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -1066,6 +1125,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, TestIndex.getIncrementalTestIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
 
@@ -1077,7 +1144,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   public void testGroupByOnUnnestedNotFilterMatch()
   {
     // testGroupByOnUnnestedColumn but with negated filter to match everything except 1 value
-    cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -1155,6 +1221,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, TestIndex.getIncrementalTestIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
 
@@ -1166,7 +1240,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   public void testGroupByOnUnnestedNotFilterMatchNonexistentValue()
   {
     // testGroupByOnUnnestedColumn but with negated filter on nonexistent value to still match everything
-    cannotVectorize();
 
     final DataSource unnestDataSource = UnnestDataSource.create(
         new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE),
@@ -1250,6 +1323,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
 
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runQuery(query, TestIndex.getIncrementalTestIndex())
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
     Iterable<ResultRow> results = runQuery(query, TestIndex.getIncrementalTestIndex());
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy-on-unnested-virtual-column");
   }
@@ -1313,11 +1394,4 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
                        .build();
   }
 
-  private void cannotVectorize()
-  {
-    if (vectorize) {
-      expectedException.expect(RuntimeException.class);
-      expectedException.expectMessage("Cannot vectorize!");
-    }
-  }
 }

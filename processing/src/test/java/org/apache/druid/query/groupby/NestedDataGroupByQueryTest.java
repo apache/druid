@@ -47,7 +47,7 @@ import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.virtual.NestedMergeVirtualColumn;
 import org.apache.druid.segment.virtual.NestedObjectVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -811,8 +811,8 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
 
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
-        Throwable t = JupiterAssertions.assertThrows(RuntimeException.class, runner::get);
-        JupiterAssertions.assertEquals(
+        Throwable t = Assertions.assertThrows(RuntimeException.class, runner::get);
+        Assertions.assertEquals(
             "java.util.concurrent.ExecutionException: java.lang.RuntimeException: org.apache.druid.java.util.common.ISE: Cannot vectorize!",
             t.getMessage()
         );
@@ -831,17 +831,17 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   private static void verifyResults(RowSignature rowSignature, List<ResultRow> results, List<Object[]> expected)
   {
     LOG.info("results:\n%s", results);
-    JupiterAssertions.assertEquals(expected.size(), results.size());
+    Assertions.assertEquals(expected.size(), results.size());
     for (int i = 0; i < expected.size(); i++) {
       final Object[] resultRow = results.get(i).getArray();
-      JupiterAssertions.assertEquals(expected.get(i).length, resultRow.length);
+      Assertions.assertEquals(expected.get(i).length, resultRow.length);
       for (int j = 0; j < resultRow.length; j++) {
         if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.DOUBLE)).orElse(false)) {
-          JupiterAssertions.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
+          Assertions.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
         } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.FLOAT)).orElse(false)) {
-          JupiterAssertions.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
+          Assertions.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
         } else {
-          JupiterAssertions.assertEquals(expected.get(i)[j], resultRow[j]);
+          Assertions.assertEquals(expected.get(i)[j], resultRow[j]);
         }
       }
     }

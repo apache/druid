@@ -47,7 +47,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -210,7 +210,7 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
     for (ScanResultValue result : results) {
       totalCount += ((List) result.getEvents()).size();
     }
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         totalCount,
         limit != 0 ? Math.min(limit, V_0112.length + V_0113.length) : V_0112.length + V_0113.length
     );
@@ -237,7 +237,7 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
     for (ScanResultValue result : results) {
       totalCount += ((List) result.getEvents()).size();
     }
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         totalCount,
         Math.max(
             0,

@@ -49,7 +49,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -394,8 +394,8 @@ public class UnnestTopNQueryRunnerTest extends InitializedNullHandlingTest
     assertExpectedResultsWithCustomRunner(expectedResults, query, vcrunner);
     RESOURCE_CLOSER.register(() -> {
       // Verify that all objects have been returned to the pool.
-      JupiterAssertions.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
-      JupiterAssertions.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
+      Assertions.assertEquals(defaultPool.poolSize(), defaultPool.objectsCreatedCount(), "defaultPool objects created");
+      Assertions.assertEquals(customPool.poolSize(), customPool.objectsCreatedCount(), "customPool objects created");
       defaultPool.close();
       customPool.close();
     });

@@ -72,7 +72,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -968,7 +968,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         .setContext(context)
         .build();
 
-    final RuntimeException exception = JupiterAssertions.assertThrows(
+    final RuntimeException exception = Assertions.assertThrows(
         RuntimeException.class,
         () -> helper.runQueryOnSegmentsObjs(
             ImmutableList.of(
@@ -978,7 +978,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             query
         ).toList()
     );
-    JupiterAssertions.assertTrue(
+    Assertions.assertTrue(
         exception.getMessage().contains(
             "Invalid expression: (concat [(cartesian_map ([x, othertags] -> (concat [x, othertags])), [tags, othertags]), tags]);"
             + " [tags] used as both scalar and array variables"
@@ -1008,7 +1008,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         .setContext(context)
         .build();
 
-    final RuntimeException exception = JupiterAssertions.assertThrows(
+    final RuntimeException exception = Assertions.assertThrows(
         RuntimeException.class,
         () -> helper.runQueryOnSegmentsObjs(
             ImmutableList.of(
@@ -1018,7 +1018,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
             query
         ).toList()
     );
-    JupiterAssertions.assertTrue(
+    Assertions.assertTrue(
         exception.getMessage().contains(
             "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]);"
             + " [tags] used as both scalar and array variables"

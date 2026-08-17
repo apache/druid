@@ -33,7 +33,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -115,8 +115,8 @@ public class HyperUniquesAggregationTest
       );
 
       final ResultRow resultRow = seq.toList().get(0);
-      JupiterAssertions.assertEquals("index_hll", 3.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
-      JupiterAssertions.assertEquals("index_unique_count", 3.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
+      Assertions.assertEquals(3.0, ((Number) resultRow.get(0)).floatValue(), 0.1, "index_hll");
+      Assertions.assertEquals(3.0, ((Number) resultRow.get(1)).floatValue(), 0.1, "index_unique_count");
     }
   }
 
@@ -165,8 +165,8 @@ public class HyperUniquesAggregationTest
       );
 
       final ResultRow resultRow = seq.toList().get(0);
-      JupiterAssertions.assertEquals("index_hll", 4.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
-      JupiterAssertions.assertEquals("index_unique_count", 4.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
+      Assertions.assertEquals(4.0, ((Number) resultRow.get(0)).floatValue(), 0.1, "index_hll");
+      Assertions.assertEquals(4.0, ((Number) resultRow.get(1)).floatValue(), 0.1, "index_unique_count");
     }
   }
 }

@@ -39,7 +39,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -89,10 +89,10 @@ public class TimeseriesQueryRunnerBonusTest
 
     results = runTimeseriesCount(oneRowIndex);
 
-    JupiterAssertions.assertEquals("index size", 1, oneRowIndex.numRows());
-    JupiterAssertions.assertEquals("result size", 1, results.size());
-    JupiterAssertions.assertEquals("result timestamp", DateTimes.of("2012-01-01T00:00:00Z"), results.get(0).getTimestamp());
-    JupiterAssertions.assertEquals("result count metric", 1, (long) results.get(0).getValue().getLongMetric("rows"));
+    Assertions.assertEquals(1, oneRowIndex.numRows(), "index size");
+    Assertions.assertEquals(1, results.size(), "result size");
+    Assertions.assertEquals(DateTimes.of("2012-01-01T00:00:00Z"), results.get(0).getTimestamp(), "result timestamp");
+    Assertions.assertEquals(1, (long) results.get(0).getValue().getLongMetric("rows"), "result count metric");
 
     oneRowIndex.add(
         new MapBasedInputRow(
@@ -104,10 +104,10 @@ public class TimeseriesQueryRunnerBonusTest
 
     results = runTimeseriesCount(oneRowIndex);
 
-    JupiterAssertions.assertEquals("index size", 2, oneRowIndex.numRows());
-    JupiterAssertions.assertEquals("result size", 1, results.size());
-    JupiterAssertions.assertEquals("result timestamp", DateTimes.of("2012-01-01T00:00:00Z"), results.get(0).getTimestamp());
-    JupiterAssertions.assertEquals("result count metric", 2, (long) results.get(0).getValue().getLongMetric("rows"));
+    Assertions.assertEquals(2, oneRowIndex.numRows(), "index size");
+    Assertions.assertEquals(1, results.size(), "result size");
+    Assertions.assertEquals(DateTimes.of("2012-01-01T00:00:00Z"), results.get(0).getTimestamp(), "result timestamp");
+    Assertions.assertEquals(2, (long) results.get(0).getValue().getLongMetric("rows"), "result count metric");
   }
 
   private List<Result<TimeseriesResultValue>> runTimeseriesCount(IncrementalIndex index)

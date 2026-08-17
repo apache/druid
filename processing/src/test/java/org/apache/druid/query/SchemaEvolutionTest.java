@@ -49,7 +49,7 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.AfterEach;
@@ -233,13 +233,13 @@ public class SchemaEvolutionTest
         .build();
 
     // index1 has no "uniques" column
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("uniques", 0d)),
         runQuery(query, factory, List.of(index1))
     );
 
     // index1 (no uniques) + index2 and index3 (yes uniques); we should be able to combine
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("uniques", 4.003911343725148d)),
         runQuery(query, factory, List.of(index1, index2, index3))
     );
@@ -270,19 +270,19 @@ public class SchemaEvolutionTest
 
     // Only string(1)
     // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("a", 31L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
         runQuery(query, factory, List.of(index1))
     );
 
     // Only long(2)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("a", 31L, "b", 31.0, "c", 31L, "d", 31.0)),
         runQuery(query, factory, List.of(index2))
     );
 
     // Only float(3)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("a", 31L, "b", THIRTY_ONE_POINT_ONE, "c", 31L, "d", THIRTY_ONE_POINT_ONE)),
         runQuery(query, factory, List.of(index3))
     );
@@ -293,14 +293,14 @@ public class SchemaEvolutionTest
     result.put("b", null);
     result.put("c", null);
     result.put("d", null);
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(result),
         runQuery(query, factory, List.of(index4))
     );
 
     // string(1) + long(2) + float(3) + nonexistent(4)
     // Note: Expressions implicitly cast strings to numbers, leading to the a/b vs c/d difference.
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of(
             "a", 31L * 3,
             "b", THIRTY_ONE_POINT_ONE * 2 + 31,
@@ -311,7 +311,7 @@ public class SchemaEvolutionTest
     );
 
     // long(2) + float(3) + nonexistent(4)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of(
             "a", 31L * 2,
             "b", THIRTY_ONE_POINT_ONE + 31,
@@ -348,25 +348,25 @@ public class SchemaEvolutionTest
         .build();
 
     // Only string(1) -- which we can filter but not aggregate
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
         runQuery(query, factory, List.of(index1))
     );
 
      // Only long(2) -- which we can filter and aggregate
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("a", 19L, "b", 19.0, "c", 2L, "d", 19.0f, "e", 9L)),
         runQuery(query, factory, List.of(index2))
     );
 
     // Only float(3) -- which we can't filter, but can aggregate
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of("a", 19L, "b", 19.1, "c", 2L, "d", 19.1f, "e", 9L)),
         runQuery(query, factory, List.of(index3))
     );
 
     // Only nonexistent(4)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(TestHelper.makeMap(
             "a",
             null,
@@ -383,7 +383,7 @@ public class SchemaEvolutionTest
     );
 
     // string(1) + long(2) + float(3) + nonexistent(4)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         timeseriesResult(Map.of(
             "a", 57L,
             "b", 57.2,

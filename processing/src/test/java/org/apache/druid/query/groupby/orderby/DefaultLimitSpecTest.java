@@ -35,7 +35,7 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -76,7 +76,7 @@ public class DefaultLimitSpecTest
         LimitSpec.class
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new DefaultLimitSpec(null, null),
         spec
     );
@@ -91,7 +91,7 @@ public class DefaultLimitSpecTest
         mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
         LimitSpec.class
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.DESCENDING,
                                                                     StringComparators.NUMERIC
         )), 10),
@@ -109,7 +109,7 @@ public class DefaultLimitSpecTest
         LimitSpec.class
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.DESCENDING,
                                                                     StringComparators.NUMERIC
         )), 10),
@@ -125,7 +125,7 @@ public class DefaultLimitSpecTest
         mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
         LimitSpec.class
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
                                                                     StringComparators.LEXICOGRAPHIC
         )), 10),
@@ -141,7 +141,7 @@ public class DefaultLimitSpecTest
         mapper.writeValueAsString(mapper.readValue(json, LimitSpec.class)),
         LimitSpec.class
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
                                                                     StringComparators.LEXICOGRAPHIC
         )), 10),
@@ -167,7 +167,7 @@ public class DefaultLimitSpecTest
                     .build()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(testRowsWithTimestampList.get(0), testRowsWithTimestampList.get(1)),
         limitFn.apply(Sequences.simple(testRowsWithTimestampList)).toList()
     );
@@ -191,7 +191,7 @@ public class DefaultLimitSpecTest
                     .build()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
         limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
@@ -215,7 +215,7 @@ public class DefaultLimitSpecTest
                     .build()
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(testRowsWithTimestampList.get(2), testRowsWithTimestampList.get(0)),
         limitFn.apply(Sequences.simple(testRowsWithTimestampList)).toList()
     );
@@ -239,7 +239,7 @@ public class DefaultLimitSpecTest
     );
 
     // No sorting, because the limit spec thinks sorting isn't necessary (it expects results naturally ordered on k1)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         testRowsList,
         limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
@@ -264,7 +264,7 @@ public class DefaultLimitSpecTest
     );
 
     // limit spec sorts rows because subtotalsSpec is set. (Otherwise, it wouldn't; see testSortByDimNullSubtotals.)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(0), testRowsList.get(1)),
         limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
@@ -289,7 +289,7 @@ public class DefaultLimitSpecTest
     );
 
     // limit spec sorts rows because subtotalsSpec is set. (Otherwise, it wouldn't; see testSortByDimNullSubtotals.)
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(0), testRowsList.get(1)),
         limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
@@ -314,7 +314,7 @@ public class DefaultLimitSpecTest
 
     // Note: This test encodes the fact that limitSpec sorts numbers like strings; we might want to change this
     // in the future.
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(testRowsList.get(2), testRowsList.get(1)),
         limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
@@ -340,7 +340,7 @@ public class DefaultLimitSpecTest
                     .setGranularity(Granularities.NONE)
                     .build()
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
         limitFn.apply(Sequences.simple(testRowsList)).toList()
     );
@@ -350,7 +350,7 @@ public class DefaultLimitSpecTest
   public void testWithOffsetToLimit()
   {
     final DefaultLimitSpec limitSpec = DefaultLimitSpec.builder().orderBy("abc").limit(1).offset(2).build();
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         DefaultLimitSpec.builder().orderBy("abc").limit(3).build(),
         limitSpec.withOffsetToLimit()
     );
@@ -360,7 +360,7 @@ public class DefaultLimitSpecTest
   public void testWithOffsetToLimitUnlimited()
   {
     final DefaultLimitSpec limitSpec = DefaultLimitSpec.builder().orderBy("abc").offset(2).build();
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         DefaultLimitSpec.builder().orderBy("abc").build(),
         limitSpec.withOffsetToLimit()
     );
@@ -372,11 +372,11 @@ public class DefaultLimitSpecTest
     final DefaultLimitSpec limitSpec =
         DefaultLimitSpec.builder().orderBy("abc").limit(Integer.MAX_VALUE - 1).offset(2).build();
 
-    final IllegalStateException exception = JupiterAssertions.assertThrows(
+    final IllegalStateException exception = Assertions.assertThrows(
         IllegalStateException.class,
         limitSpec::withOffsetToLimit
     );
-    JupiterAssertions.assertTrue(
+    Assertions.assertTrue(
         exception.getMessage().contains("Cannot apply limit[2147483646] with offset[2] due to overflow")
     );
   }
@@ -410,11 +410,11 @@ public class DefaultLimitSpecTest
     );
 
     List<ResultRow> result = limitFn.apply(Sequences.simple(rowsWithNulls)).toList();
-    JupiterAssertions.assertEquals(3, result.size());
+    Assertions.assertEquals(3, result.size());
     // Null should sort first in ascending order
-    JupiterAssertions.assertNull(result.get(0).get(0));
-    JupiterAssertions.assertEquals("a", result.get(1).get(0));
-    JupiterAssertions.assertEquals("b", result.get(2).get(0));
+    Assertions.assertNull(result.get(0).get(0));
+    Assertions.assertEquals("a", result.get(1).get(0));
+    Assertions.assertEquals("b", result.get(2).get(0));
   }
 
   @Test
@@ -443,10 +443,10 @@ public class DefaultLimitSpecTest
     );
 
     List<ResultRow> result = limitFn.apply(Sequences.simple(rowsWithNulls)).toList();
-    JupiterAssertions.assertEquals(3, result.size());
+    Assertions.assertEquals(3, result.size());
     // Null should sort last in descending order
-    JupiterAssertions.assertEquals("b", result.get(0).get(0));
-    JupiterAssertions.assertEquals("a", result.get(1).get(0));
-    JupiterAssertions.assertNull(result.get(2).get(0));
+    Assertions.assertEquals("b", result.get(0).get(0));
+    Assertions.assertEquals("a", result.get(1).get(0));
+    Assertions.assertNull(result.get(2).get(0));
   }
 }

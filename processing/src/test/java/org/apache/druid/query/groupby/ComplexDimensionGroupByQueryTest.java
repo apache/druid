@@ -35,7 +35,7 @@ import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -139,14 +139,14 @@ public class ComplexDimensionGroupByQueryTest
 
     if (vectorize == QueryContexts.Vectorize.FORCE) {
       // Cannot vectorize group by on complex dimension
-      JupiterAssertions.assertThrows(
+      Assertions.assertThrows(
           RuntimeException.class,
           () -> helper.runQueryOnSegmentsObjs(segments, groupQuery).toList()
       );
     } else {
       List<ResultRow> resultRows = helper.runQueryOnSegmentsObjs(segments, groupQuery).toList();
 
-      JupiterAssertions.assertArrayEquals(
+      Assertions.assertArrayEquals(
           new ResultRow[]{
               ResultRow.of(new SerializablePairLongString(1L, "abc"), 4L),
               ResultRow.of(new SerializablePairLongString(1L, "bar"), 1L),

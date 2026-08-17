@@ -29,7 +29,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -65,7 +65,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
     @Test
     public void testKeySize()
     {
-      JupiterAssertions.assertEquals(Byte.BYTES + Long.BYTES, STRATEGY.getGroupingKeySizeBytes());
+      Assertions.assertEquals(Byte.BYTES + Long.BYTES, STRATEGY.getGroupingKeySizeBytes());
     }
 
     @Test
@@ -83,8 +83,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
         int sizeIncrease = STRATEGY.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
         STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
         // There shouldn't be any internal size increase associated with the fixed width types
-        JupiterAssertions.assertEquals(0, sizeIncrease);
-        JupiterAssertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], resultRow.get(0));
+        Assertions.assertEquals(0, sizeIncrease);
+        Assertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], resultRow.get(0));
         cursor.advance();
         ++rowNum;
       }
@@ -100,8 +100,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       int rowNum = 0;
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
-        JupiterAssertions.assertEquals(0, sizeIncrease);
-        JupiterAssertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], valuess[0]);
+        Assertions.assertEquals(0, sizeIncrease);
+        Assertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[0], valuess[0]);
         cursor.advance();
         ++rowNum;
       }
@@ -113,37 +113,37 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       // lhs < rhs
       writeGroupingKeyToBuffer(BUFFER1, 100L);
       writeGroupingKeyToBuffer(BUFFER2, 200L);
-      JupiterAssertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs == rhs
       writeGroupingKeyToBuffer(BUFFER1, 100L);
       writeGroupingKeyToBuffer(BUFFER2, 100L);
-      JupiterAssertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs > rhs
       writeGroupingKeyToBuffer(BUFFER1, 200L);
       writeGroupingKeyToBuffer(BUFFER2, 100L);
-      JupiterAssertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs is null
       writeGroupingKeyToBuffer(BUFFER1, null);
       writeGroupingKeyToBuffer(BUFFER2, 0L);
-      JupiterAssertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // rhs is null
       writeGroupingKeyToBuffer(BUFFER1, 0L);
       writeGroupingKeyToBuffer(BUFFER2, null);
-      JupiterAssertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs and rhs are null
       writeGroupingKeyToBuffer(BUFFER1, null);
       writeGroupingKeyToBuffer(BUFFER2, null);
-      JupiterAssertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // stringComparator is provided, for lexicographic comparator "2" > "100"
       writeGroupingKeyToBuffer(BUFFER1, 2L);
       writeGroupingKeyToBuffer(BUFFER2, 100L);
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
           1,
           STRATEGY.bufferComparator(0, StringComparators.LEXICOGRAPHIC)
                   .compare(BUFFER1, BUFFER2, 0, 0)
@@ -152,7 +152,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       // stringComparator is provided, for alphanumeric comparator number("2") < number("100")
       writeGroupingKeyToBuffer(BUFFER1, 2L);
       writeGroupingKeyToBuffer(BUFFER2, 100L);
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
           -1,
           STRATEGY.bufferComparator(0, StringComparators.ALPHANUMERIC)
                   .compare(BUFFER1, BUFFER2, 0, 0)
@@ -167,15 +167,15 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       Mockito.when(columnValueSelector1.getLong()).thenReturn(key == null ? 0 : key);
       Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
 
-      JupiterAssertions.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
+      Assertions.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
     }
 
     @Test
     public void testMultiValueHandling()
     {
       // Returns false, because fixed width strategy doesn't handle multi-value dimensions, therefore it returns false
-      JupiterAssertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1L, 0, BUFFER1));
-      JupiterAssertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1L, 10, BUFFER1));
+      Assertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1L, 0, BUFFER1));
+      Assertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1L, 10, BUFFER1));
     }
 
     @Test
@@ -187,15 +187,15 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       ResultRow resultRow = ResultRow.create(1);
 
       STRATEGY.initGroupingKeyColumnValue(0, 0, 1001L, BUFFER1, stack);
-      JupiterAssertions.assertEquals(1, stack[0]);
+      Assertions.assertEquals(1, stack[0]);
       STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-      JupiterAssertions.assertEquals(1001L, resultRow.get(0));
+      Assertions.assertEquals(1001L, resultRow.get(0));
 
 
       STRATEGY.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
-      JupiterAssertions.assertEquals(0, stack[0]);
+      Assertions.assertEquals(0, stack[0]);
       STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-      JupiterAssertions.assertEquals(null, resultRow.get(0));
+      Assertions.assertEquals(null, resultRow.get(0));
     }
   }
 
@@ -211,7 +211,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
     @Test
     public void testKeySize()
     {
-      JupiterAssertions.assertEquals(Byte.BYTES + Float.BYTES, STRATEGY.getGroupingKeySizeBytes());
+      Assertions.assertEquals(Byte.BYTES + Float.BYTES, STRATEGY.getGroupingKeySizeBytes());
     }
 
     @Test
@@ -227,8 +227,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
         STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-        JupiterAssertions.assertEquals(0, sizeIncrease);
-        JupiterAssertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], resultRow.get(0));
+        Assertions.assertEquals(0, sizeIncrease);
+        Assertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], resultRow.get(0));
         cursor.advance();
         ++rowNum;
       }
@@ -244,8 +244,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       int rowNum = 0;
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
-        JupiterAssertions.assertEquals(0, sizeIncrease);
-        JupiterAssertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], valuess[0]);
+        Assertions.assertEquals(0, sizeIncrease);
+        Assertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[1], valuess[0]);
         cursor.advance();
         ++rowNum;
       }
@@ -257,37 +257,37 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       // lhs < rhs
       writeGroupingKeyToBuffer(BUFFER1, 100.0F);
       writeGroupingKeyToBuffer(BUFFER2, 200.0F);
-      JupiterAssertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs == rhs
       writeGroupingKeyToBuffer(BUFFER1, 100.0F);
       writeGroupingKeyToBuffer(BUFFER2, 100.0F);
-      JupiterAssertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs > rhs
       writeGroupingKeyToBuffer(BUFFER1, 200.0F);
       writeGroupingKeyToBuffer(BUFFER2, 100.0F);
-      JupiterAssertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs is null
       writeGroupingKeyToBuffer(BUFFER1, null);
       writeGroupingKeyToBuffer(BUFFER2, 0.0F);
-      JupiterAssertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // rhs is null
       writeGroupingKeyToBuffer(BUFFER1, 0.0F);
       writeGroupingKeyToBuffer(BUFFER2, null);
-      JupiterAssertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs and rhs are null
       writeGroupingKeyToBuffer(BUFFER1, null);
       writeGroupingKeyToBuffer(BUFFER2, null);
-      JupiterAssertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // stringComparator is provided, for lexicographic comparator "2.0" > "100.0"
       writeGroupingKeyToBuffer(BUFFER1, 2.0F);
       writeGroupingKeyToBuffer(BUFFER2, 100.0F);
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
           1,
           STRATEGY.bufferComparator(0, StringComparators.LEXICOGRAPHIC)
                   .compare(BUFFER1, BUFFER2, 0, 0)
@@ -296,7 +296,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       // stringComparator is provided, for alphanumeric comparator number("2") < number("100")
       writeGroupingKeyToBuffer(BUFFER1, 2.0F);
       writeGroupingKeyToBuffer(BUFFER2, 100.0F);
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
           -1,
           STRATEGY.bufferComparator(0, StringComparators.ALPHANUMERIC)
                   .compare(BUFFER1, BUFFER2, 0, 0)
@@ -311,15 +311,15 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       Mockito.when(columnValueSelector1.getFloat()).thenReturn(key == null ? 0.0f : key);
       Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
 
-      JupiterAssertions.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
+      Assertions.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
     }
 
     @Test
     public void testMultiValueHandling()
     {
       // Returns false, because fixed width strategy doesn't handle multi-value dimensions, therefore it returns false
-      JupiterAssertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0F, 0, BUFFER1));
-      JupiterAssertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0F, 10, BUFFER1));
+      Assertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0F, 0, BUFFER1));
+      Assertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0F, 10, BUFFER1));
     }
 
     @Test
@@ -331,15 +331,15 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       ResultRow resultRow = ResultRow.create(1);
 
       STRATEGY.initGroupingKeyColumnValue(0, 0, 1001.0F, BUFFER1, stack);
-      JupiterAssertions.assertEquals(1, stack[0]);
+      Assertions.assertEquals(1, stack[0]);
       STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-      JupiterAssertions.assertEquals(1001.0F, resultRow.get(0));
+      Assertions.assertEquals(1001.0F, resultRow.get(0));
 
 
       STRATEGY.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
-      JupiterAssertions.assertEquals(0, stack[0]);
+      Assertions.assertEquals(0, stack[0]);
       STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-      JupiterAssertions.assertEquals(null, resultRow.get(0));
+      Assertions.assertEquals(null, resultRow.get(0));
     }
   }
 
@@ -355,7 +355,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
     @Test
     public void testKeySize()
     {
-      JupiterAssertions.assertEquals(Byte.BYTES + Double.BYTES, STRATEGY.getGroupingKeySizeBytes());
+      Assertions.assertEquals(Byte.BYTES + Double.BYTES, STRATEGY.getGroupingKeySizeBytes());
     }
 
     @Test
@@ -372,8 +372,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.writeToKeyBuffer(0, columnValueSelector, BUFFER1);
         STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-        JupiterAssertions.assertEquals(0, sizeIncrease);
-        JupiterAssertions.assertEquals(
+        Assertions.assertEquals(0, sizeIncrease);
+        Assertions.assertEquals(
             DATASOURCE_ROWS.get(rowNum)[2],
             resultRow.get(0)
         );
@@ -393,8 +393,8 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       int rowNum = 0;
       while (!cursor.isDone()) {
         int sizeIncrease = STRATEGY.initColumnValues(columnValueSelector, 0, valuess);
-        JupiterAssertions.assertEquals(0, sizeIncrease);
-        JupiterAssertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[2], valuess[0]);
+        Assertions.assertEquals(0, sizeIncrease);
+        Assertions.assertEquals(DATASOURCE_ROWS.get(rowNum)[2], valuess[0]);
         cursor.advance();
         ++rowNum;
       }
@@ -406,37 +406,37 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       // lhs < rhs
       writeGroupingKeyToBuffer(BUFFER1, 100.0D);
       writeGroupingKeyToBuffer(BUFFER2, 200.0D);
-      JupiterAssertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs == rhs
       writeGroupingKeyToBuffer(BUFFER1, 100.0D);
       writeGroupingKeyToBuffer(BUFFER2, 100.0D);
-      JupiterAssertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs > rhs
       writeGroupingKeyToBuffer(BUFFER1, 200.0D);
       writeGroupingKeyToBuffer(BUFFER2, 100.0D);
-      JupiterAssertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs is null
       writeGroupingKeyToBuffer(BUFFER1, null);
       writeGroupingKeyToBuffer(BUFFER2, 0.0D);
-      JupiterAssertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(-1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // rhs is null
       writeGroupingKeyToBuffer(BUFFER1, 0.0D);
       writeGroupingKeyToBuffer(BUFFER2, null);
-      JupiterAssertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(1, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // lhs and rhs are null
       writeGroupingKeyToBuffer(BUFFER1, null);
       writeGroupingKeyToBuffer(BUFFER2, null);
-      JupiterAssertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
+      Assertions.assertEquals(0, STRATEGY.bufferComparator(0, null).compare(BUFFER1, BUFFER2, 0, 0));
 
       // stringComparator is provided, for lexicographic comparator "2.0" > "100.0"
       writeGroupingKeyToBuffer(BUFFER1, 2.0D);
       writeGroupingKeyToBuffer(BUFFER2, 100.0D);
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
           1,
           STRATEGY.bufferComparator(0, StringComparators.LEXICOGRAPHIC)
                   .compare(BUFFER1, BUFFER2, 0, 0)
@@ -445,7 +445,7 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       // stringComparator is provided, for alphanumeric comparator number("2.0D") < number("100.0D")
       writeGroupingKeyToBuffer(BUFFER1, 2.0D);
       writeGroupingKeyToBuffer(BUFFER2, 100.0D);
-      JupiterAssertions.assertEquals(
+      Assertions.assertEquals(
           -1,
           STRATEGY.bufferComparator(0, StringComparators.ALPHANUMERIC)
                   .compare(BUFFER1, BUFFER2, 0, 0)
@@ -460,15 +460,15 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       Mockito.when(columnValueSelector1.getDouble()).thenReturn(key == null ? 0.0d : key);
       Mockito.when(columnValueSelector1.isNull()).thenReturn(key == null);
 
-      JupiterAssertions.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
+      Assertions.assertEquals(0, STRATEGY.writeToKeyBuffer(0, columnValueSelector1, buffer));
     }
 
     @Test
     public void testMultiValueHandling()
     {
       // Returns false, because fixed width strategy doesn't handle multi-value dimensions, therefore it returns false
-      JupiterAssertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0D, 0, BUFFER1));
-      JupiterAssertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0D, 10, BUFFER1));
+      Assertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0D, 0, BUFFER1));
+      Assertions.assertFalse(STRATEGY.checkRowIndexAndAddValueToGroupingKey(0, 1.0D, 10, BUFFER1));
     }
 
     @Test
@@ -480,15 +480,15 @@ public class FixedWidthGroupByColumnSelectorStrategyTest extends InitializedNull
       ResultRow resultRow = ResultRow.create(1);
 
       STRATEGY.initGroupingKeyColumnValue(0, 0, 1001.0D, BUFFER1, stack);
-      JupiterAssertions.assertEquals(1, stack[0]);
+      Assertions.assertEquals(1, stack[0]);
       STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-      JupiterAssertions.assertEquals(1001.0D, resultRow.get(0));
+      Assertions.assertEquals(1001.0D, resultRow.get(0));
 
 
       STRATEGY.initGroupingKeyColumnValue(0, 0, null, BUFFER1, stack);
-      JupiterAssertions.assertEquals(0, stack[0]);
+      Assertions.assertEquals(0, stack[0]);
       STRATEGY.processValueFromGroupingKey(groupByColumnSelectorPlus, BUFFER1, resultRow, 0);
-      JupiterAssertions.assertEquals(null, resultRow.get(0));
+      Assertions.assertEquals(null, resultRow.get(0));
     }
   }
 

@@ -100,7 +100,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
@@ -194,8 +194,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
 
     RESOURCE_CLOSER.register(() -> {
       // Verify that all objects have been returned to the pool.
-      JupiterAssertions.assertEquals("defaultPool objects created", defaultPool.poolSize(), defaultPool.objectsCreatedCount());
-      JupiterAssertions.assertEquals("customPool objects created", customPool.poolSize(), customPool.objectsCreatedCount());
+      Assertions.assertEquals(defaultPool.poolSize(), defaultPool.objectsCreatedCount(), "defaultPool objects created");
+      Assertions.assertEquals(customPool.poolSize(), customPool.objectsCreatedCount(), "customPool objects created");
       defaultPool.close();
       customPool.close();
     });
@@ -2220,8 +2220,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     List<Result<TopNResultValue>> list = runWithMerge(query).toList();
-    JupiterAssertions.assertEquals(list.size(), 1);
-    JupiterAssertions.assertEquals("Didn't merge results", list.get(0).getValue().getValue().size(), 1);
+    Assertions.assertEquals(list.size(), 1);
+    Assertions.assertEquals(list.get(0).getValue().getValue().size(), 1, "Didn't merge results");
     TestHelper.assertExpectedResults(expectedResults, list, "Failed to match");
   }
 
@@ -2267,8 +2267,8 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     List<Result<TopNResultValue>> list = runWithMerge(query).toList();
-    JupiterAssertions.assertEquals(list.size(), 1);
-    JupiterAssertions.assertEquals("Didn't merge results", list.get(0).getValue().getValue().size(), 1);
+    Assertions.assertEquals(list.size(), 1);
+    Assertions.assertEquals(list.get(0).getValue().getValue().size(), 1, "Didn't merge results");
     TestHelper.assertExpectedResults(expectedResults, list, "Failed to match");
   }
 
@@ -3779,7 +3779,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
     );
     Sequence<Result<TopNResultValue>> results = runWithMerge(query);
     for (Result<TopNResultValue> result : results.toList()) {
-      JupiterAssertions.assertEquals(result.getValue(), result.getValue()); // TODO: fix this test
+      Assertions.assertEquals(result.getValue(), result.getValue()); // TODO: fix this test
     }
   }
 
@@ -5812,7 +5812,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .build();
 
     // Don't check results, just the fact that the query could complete
-    JupiterAssertions.assertNotNull(runWithMerge(query).toList());
+    Assertions.assertNotNull(runWithMerge(query).toList());
   }
 
   @Test

@@ -41,7 +41,7 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -182,28 +182,28 @@ public class StringColumnAggregationTest
     Sequence<ResultRow> seq = aggregationTestHelper.runQueryOnSegmentsObjs(segments, query);
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
-    JupiterAssertions.assertEquals(numRows, result.getMetric("count").longValue());
+    Assertions.assertEquals(numRows, result.getMetric("count").longValue());
     
-    JupiterAssertions.assertEquals(singleValueSum, result.getMetric("singleDoubleSum").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(multiValueSum, result.getMetric("multiDoubleSum").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(singleValueMax, result.getMetric("singleDoubleMax").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(multiValueMax, result.getMetric("multiDoubleMax").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(singleValueMin, result.getMetric("singleDoubleMin").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(multiValueMin, result.getMetric("multiDoubleMin").doubleValue(), 0.0001d);
+    Assertions.assertEquals(singleValueSum, result.getMetric("singleDoubleSum").doubleValue(), 0.0001d);
+    Assertions.assertEquals(multiValueSum, result.getMetric("multiDoubleSum").doubleValue(), 0.0001d);
+    Assertions.assertEquals(singleValueMax, result.getMetric("singleDoubleMax").doubleValue(), 0.0001d);
+    Assertions.assertEquals(multiValueMax, result.getMetric("multiDoubleMax").doubleValue(), 0.0001d);
+    Assertions.assertEquals(singleValueMin, result.getMetric("singleDoubleMin").doubleValue(), 0.0001d);
+    Assertions.assertEquals(multiValueMin, result.getMetric("multiDoubleMin").doubleValue(), 0.0001d);
 
-    JupiterAssertions.assertEquals(singleValueSum, result.getMetric("singleFloatSum").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(multiValueSum, result.getMetric("multiFloatSum").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(singleValueMax, result.getMetric("singleFloatMax").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(multiValueMax, result.getMetric("multiFloatMax").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(singleValueMin, result.getMetric("singleFloatMin").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(multiValueMin, result.getMetric("multiFloatMin").floatValue(), 0.0001f);
+    Assertions.assertEquals(singleValueSum, result.getMetric("singleFloatSum").floatValue(), 0.0001f);
+    Assertions.assertEquals(multiValueSum, result.getMetric("multiFloatSum").floatValue(), 0.0001f);
+    Assertions.assertEquals(singleValueMax, result.getMetric("singleFloatMax").floatValue(), 0.0001f);
+    Assertions.assertEquals(multiValueMax, result.getMetric("multiFloatMax").floatValue(), 0.0001f);
+    Assertions.assertEquals(singleValueMin, result.getMetric("singleFloatMin").floatValue(), 0.0001f);
+    Assertions.assertEquals(multiValueMin, result.getMetric("multiFloatMin").floatValue(), 0.0001f);
 
-    JupiterAssertions.assertEquals((long) singleValueSum, result.getMetric("singleLongSum").longValue());
-    JupiterAssertions.assertEquals((long) multiValueSum, result.getMetric("multiLongSum").longValue());
-    JupiterAssertions.assertEquals((long) singleValueMax, result.getMetric("singleLongMax").longValue());
-    JupiterAssertions.assertEquals((long) multiValueMax, result.getMetric("multiLongMax").longValue());
-    JupiterAssertions.assertEquals((long) singleValueMin, result.getMetric("singleLongMin").longValue());
-    JupiterAssertions.assertEquals((long) multiValueMin, result.getMetric("multiLongMin").longValue());
+    Assertions.assertEquals((long) singleValueSum, result.getMetric("singleLongSum").longValue());
+    Assertions.assertEquals((long) multiValueSum, result.getMetric("multiLongSum").longValue());
+    Assertions.assertEquals((long) singleValueMax, result.getMetric("singleLongMax").longValue());
+    Assertions.assertEquals((long) multiValueMax, result.getMetric("multiLongMax").longValue());
+    Assertions.assertEquals((long) singleValueMin, result.getMetric("singleLongMin").longValue());
+    Assertions.assertEquals((long) multiValueMin, result.getMetric("multiLongMin").longValue());
   }
 
   @Test
@@ -246,26 +246,26 @@ public class StringColumnAggregationTest
                                         .runQueryOnSegmentsObjs(segments, query);
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
 
-    JupiterAssertions.assertEquals(numRows, result.getLongMetric("count").longValue());
-    JupiterAssertions.assertEquals(singleValueSum, result.getDoubleMetric("singleDoubleSum").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(multiValueSum, result.getDoubleMetric("multiDoubleSum").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(singleValueMax, result.getDoubleMetric("singleDoubleMax").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(multiValueMax, result.getDoubleMetric("multiDoubleMax").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(singleValueMin, result.getDoubleMetric("singleDoubleMin").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(multiValueMin, result.getDoubleMetric("multiDoubleMin").doubleValue(), 0.0001d);
+    Assertions.assertEquals(numRows, result.getLongMetric("count").longValue());
+    Assertions.assertEquals(singleValueSum, result.getDoubleMetric("singleDoubleSum").doubleValue(), 0.0001d);
+    Assertions.assertEquals(multiValueSum, result.getDoubleMetric("multiDoubleSum").doubleValue(), 0.0001d);
+    Assertions.assertEquals(singleValueMax, result.getDoubleMetric("singleDoubleMax").doubleValue(), 0.0001d);
+    Assertions.assertEquals(multiValueMax, result.getDoubleMetric("multiDoubleMax").doubleValue(), 0.0001d);
+    Assertions.assertEquals(singleValueMin, result.getDoubleMetric("singleDoubleMin").doubleValue(), 0.0001d);
+    Assertions.assertEquals(multiValueMin, result.getDoubleMetric("multiDoubleMin").doubleValue(), 0.0001d);
 
-    JupiterAssertions.assertEquals(singleValueSum, result.getFloatMetric("singleFloatSum").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(multiValueSum, result.getFloatMetric("multiFloatSum").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(singleValueMax, result.getFloatMetric("singleFloatMax").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(multiValueMax, result.getFloatMetric("multiFloatMax").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(singleValueMin, result.getFloatMetric("singleFloatMin").floatValue(), 0.0001f);
-    JupiterAssertions.assertEquals(multiValueMin, result.getFloatMetric("multiFloatMin").floatValue(), 0.0001f);
+    Assertions.assertEquals(singleValueSum, result.getFloatMetric("singleFloatSum").floatValue(), 0.0001f);
+    Assertions.assertEquals(multiValueSum, result.getFloatMetric("multiFloatSum").floatValue(), 0.0001f);
+    Assertions.assertEquals(singleValueMax, result.getFloatMetric("singleFloatMax").floatValue(), 0.0001f);
+    Assertions.assertEquals(multiValueMax, result.getFloatMetric("multiFloatMax").floatValue(), 0.0001f);
+    Assertions.assertEquals(singleValueMin, result.getFloatMetric("singleFloatMin").floatValue(), 0.0001f);
+    Assertions.assertEquals(multiValueMin, result.getFloatMetric("multiFloatMin").floatValue(), 0.0001f);
 
-    JupiterAssertions.assertEquals((long) singleValueSum, result.getLongMetric("singleLongSum").longValue());
-    JupiterAssertions.assertEquals((long) multiValueSum, result.getLongMetric("multiLongSum").longValue());
-    JupiterAssertions.assertEquals((long) singleValueMax, result.getLongMetric("singleLongMax").longValue());
-    JupiterAssertions.assertEquals((long) multiValueMax, result.getLongMetric("multiLongMax").longValue());
-    JupiterAssertions.assertEquals((long) singleValueMin, result.getLongMetric("singleLongMin").longValue());
-    JupiterAssertions.assertEquals((long) multiValueMin, result.getLongMetric("multiLongMin").longValue());
+    Assertions.assertEquals((long) singleValueSum, result.getLongMetric("singleLongSum").longValue());
+    Assertions.assertEquals((long) multiValueSum, result.getLongMetric("multiLongSum").longValue());
+    Assertions.assertEquals((long) singleValueMax, result.getLongMetric("singleLongMax").longValue());
+    Assertions.assertEquals((long) multiValueMax, result.getLongMetric("multiLongMax").longValue());
+    Assertions.assertEquals((long) singleValueMin, result.getLongMetric("singleLongMin").longValue());
+    Assertions.assertEquals((long) multiValueMin, result.getLongMetric("multiLongMin").longValue());
   }
 }

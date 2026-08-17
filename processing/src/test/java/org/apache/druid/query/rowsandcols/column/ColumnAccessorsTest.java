@@ -29,9 +29,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.druid.testing.JupiterAssertions.assertEquals;
-import static org.apache.druid.testing.JupiterAssertions.assertFalse;
-import static org.apache.druid.testing.JupiterAssertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ParameterizedClass
 

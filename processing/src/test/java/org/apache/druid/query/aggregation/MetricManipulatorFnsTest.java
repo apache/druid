@@ -23,7 +23,7 @@ import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.TestLongColumnSelector;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -117,12 +117,12 @@ public class MetricManipulatorFnsTest
 
 
     for (Object[] argList : constructorArrays) {
-      JupiterAssertions.assertEquals(
-          StringUtils.format(
+      Assertions.assertEquals(
+          6, argList.length, StringUtils.format(
               "Arglist %s is too short. Expected 6 found %d",
               Arrays.toString(argList),
               argList.length
-          ), 6, argList.length
+          )
       );
     }
     return constructorArrays;
@@ -155,21 +155,21 @@ public class MetricManipulatorFnsTest
   @Test
   public void testIdentity()
   {
-    JupiterAssertions.assertEquals(identity, agg);
-    JupiterAssertions.assertEquals(identity, MetricManipulatorFns.identity().manipulate(aggregatorFactory, agg));
+    Assertions.assertEquals(identity, agg);
+    Assertions.assertEquals(identity, MetricManipulatorFns.identity().manipulate(aggregatorFactory, agg));
   }
 
   @Test
   public void testFinalize()
   {
-    JupiterAssertions.assertEquals(identity, agg);
-    JupiterAssertions.assertEquals(finalize, MetricManipulatorFns.finalizing().manipulate(aggregatorFactory, agg));
+    Assertions.assertEquals(identity, agg);
+    Assertions.assertEquals(finalize, MetricManipulatorFns.finalizing().manipulate(aggregatorFactory, agg));
   }
 
   @Test
   public void testDeserialize()
   {
-    JupiterAssertions.assertEquals(identity, agg);
-    JupiterAssertions.assertEquals(deserForm, MetricManipulatorFns.deserializing().manipulate(aggregatorFactory, serialForm));
+    Assertions.assertEquals(identity, agg);
+    Assertions.assertEquals(deserForm, MetricManipulatorFns.deserializing().manipulate(aggregatorFactory, serialForm));
   }
 }

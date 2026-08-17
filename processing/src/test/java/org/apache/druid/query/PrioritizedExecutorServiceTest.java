@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -177,10 +177,10 @@ public class PrioritizedExecutorServiceTest
     latch.countDown();
     finishLatch.await();
 
-    JupiterAssertions.assertTrue(order.size() == 3);
+    Assertions.assertTrue(order.size() == 3);
 
     List<Integer> expected = ImmutableList.of(2, 0, -1);
-    JupiterAssertions.assertEquals(expected, ImmutableList.copyOf(order));
+    Assertions.assertEquals(expected, ImmutableList.copyOf(order));
   }
 
   @Test
@@ -188,10 +188,10 @@ public class PrioritizedExecutorServiceTest
   {
     final CountDownLatch latch = new CountDownLatch(1);
 
-    JupiterAssertions.assertThrows(
-        "Class does not implemented PrioritizedRunnable",
+    Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> exec.execute(latch::countDown)
+        () -> exec.execute(latch::countDown),
+        "Class does not implemented PrioritizedRunnable"
     );
   }
 
@@ -268,7 +268,7 @@ public class PrioritizedExecutorServiceTest
           futures.add(exec.submit(getCheckingRunnable(i, hasRun)));
           break;
         default:
-          JupiterAssertions.fail("Bad random result");
+          Assertions.fail("Bad random result");
       }
     }
     latch.countDown();
@@ -394,7 +394,7 @@ public class PrioritizedExecutorServiceTest
           throw new RuntimeException(e);
         }
         if (useFifo) {
-          JupiterAssertions.assertEquals(myOrder, hasRun.getAndIncrement());
+          Assertions.assertEquals(myOrder, hasRun.getAndIncrement());
         } else {
           Assumptions.assumeTrue(Integer.compare(myOrder, hasRun.getAndIncrement()) == 0);
         }

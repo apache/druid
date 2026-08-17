@@ -44,7 +44,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.BeforeEach;
@@ -383,7 +383,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
         brokerRunner
     );
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         expectedResults.stream().limit(limit == 0 ? Long.MAX_VALUE : limit).collect(Collectors.toList()),
         results
     );

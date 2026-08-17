@@ -41,7 +41,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -196,10 +196,10 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
       final TimeseriesResultValue result = Iterables.getOnlyElement(seq.toList()).getValue();
 
       // Three input rows rolled up into one, count reflects rollup happened
-      JupiterAssertions.assertEquals(3L, result.getLongMetric("count").longValue());
-      JupiterAssertions.assertEquals(7L, result.getLongMetric("long_sum").longValue());
-      JupiterAssertions.assertEquals(7L, result.getLongMetric("bitwise_or").longValue());
-      JupiterAssertions.assertEquals(3.75, result.getDoubleMetric("double_sum").doubleValue(), 0.0);
+      Assertions.assertEquals(3L, result.getLongMetric("count").longValue());
+      Assertions.assertEquals(7L, result.getLongMetric("long_sum").longValue());
+      Assertions.assertEquals(7L, result.getLongMetric("bitwise_or").longValue());
+      Assertions.assertEquals(3.75, result.getDoubleMetric("double_sum").doubleValue(), 0.0);
     }
   }
 

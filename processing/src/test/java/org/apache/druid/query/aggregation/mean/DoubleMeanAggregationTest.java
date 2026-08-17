@@ -45,7 +45,7 @@ import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
@@ -135,9 +135,9 @@ public class DoubleMeanAggregationTest
     Sequence<ResultRow> seq = groupByQueryTestHelper.runQueryOnSegmentsObjs(segments, query);
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
-    JupiterAssertions.assertEquals(6.2d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(6.2d, result.getMetric("meanOnString").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(4.1333d, result.getMetric("meanOnMultiValue").doubleValue(), 0.0001d);
+    Assertions.assertEquals(6.2d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+    Assertions.assertEquals(6.2d, result.getMetric("meanOnString").doubleValue(), 0.0001d);
+    Assertions.assertEquals(4.1333d, result.getMetric("meanOnMultiValue").doubleValue(), 0.0001d);
   }
 
   @ParameterizedTest
@@ -167,7 +167,7 @@ public class DoubleMeanAggregationTest
     Sequence<ResultRow> seq = groupByQueryTestHelper.runQueryOnSegmentsObjs(segments, query);
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
 
-    JupiterAssertions.assertEquals(6.2d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+    Assertions.assertEquals(6.2d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
   }
 
   @ParameterizedTest
@@ -195,7 +195,7 @@ public class DoubleMeanAggregationTest
 
     Sequence<ResultRow> seq = groupByQueryTestHelper.runQueryOnSegmentsObjs(biggerSegments, query);
     Row result = Iterables.getOnlyElement(seq.toList()).toMapBasedRow(query);
-    JupiterAssertions.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
+    Assertions.assertEquals(51.0d, result.getMetric("meanOnDouble").doubleValue(), 0.0001d);
   }
 
   @ParameterizedTest
@@ -230,9 +230,9 @@ public class DoubleMeanAggregationTest
     Sequence seq = timeseriesQueryTestHelper.runQueryOnSegmentsObjs(segments, query);
     TimeseriesResultValue result = ((Result<TimeseriesResultValue>) Iterables.getOnlyElement(seq.toList())).getValue();
 
-    JupiterAssertions.assertEquals(6.2d, result.getDoubleMetric("meanOnDouble").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(6.2d, result.getDoubleMetric("meanOnString").doubleValue(), 0.0001d);
-    JupiterAssertions.assertEquals(4.1333d, result.getDoubleMetric("meanOnMultiValue").doubleValue(), 0.0001d);
+    Assertions.assertEquals(6.2d, result.getDoubleMetric("meanOnDouble").doubleValue(), 0.0001d);
+    Assertions.assertEquals(6.2d, result.getDoubleMetric("meanOnString").doubleValue(), 0.0001d);
+    Assertions.assertEquals(4.1333d, result.getDoubleMetric("meanOnMultiValue").doubleValue(), 0.0001d);
   }
 
   @Test
@@ -249,20 +249,20 @@ public class DoubleMeanAggregationTest
     DoubleMeanAggregatorFactory aggregatorFactory = new DoubleMeanAggregatorFactory("name", "fieldName");
     AggregatorAndSize aggregatorAndSize = aggregatorFactory.factorizeWithSize(colSelectorFactory);
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         aggregatorFactory.getMaxIntermediateSize(),
         aggregatorAndSize.getInitialSizeBytes()
     );
-    JupiterAssertions.assertTrue(aggregatorAndSize.getAggregator() instanceof DoubleMeanAggregator);
+    Assertions.assertTrue(aggregatorAndSize.getAggregator() instanceof DoubleMeanAggregator);
     Aggregator aggregator = aggregatorAndSize.getAggregator();
     for (int i = 0; i < values.length; ++i) {
       long sizeDelta = aggregator.aggregateWithSize();
-      JupiterAssertions.assertEquals(0L, sizeDelta);
+      Assertions.assertEquals(0L, sizeDelta);
       columnValueSelector.increment();
     }
 
     DoubleMeanHolder meanHolder = (DoubleMeanHolder) aggregator.get();
-    JupiterAssertions.assertEquals(2.0, meanHolder.mean(), 0.0);
+    Assertions.assertEquals(2.0, meanHolder.mean(), 0.0);
   }
 
   private static void initializeExpressionProcessing(final boolean useVectorApi)

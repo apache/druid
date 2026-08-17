@@ -64,7 +64,7 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
@@ -123,11 +123,11 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
           TestHelper.makeJsonMapper().writeValueAsString(hit),
           SearchHit.class
       );
-      JupiterAssertions.assertEquals(hit, read);
+      Assertions.assertEquals(hit, read);
       if (hit.getCount() == null) {
-        JupiterAssertions.assertNull(read.getCount());
+        Assertions.assertNull(read.getCount());
       } else {
-        JupiterAssertions.assertEquals(hit.getCount(), read.getCount());
+        Assertions.assertEquals(hit.getCount(), read.getCount());
       }
     }
   }
@@ -867,7 +867,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<Result<SearchResultValue>> results = runner.run(QueryPlus.wrap(searchQuery)).toList();
     List<SearchHit> copy = new ArrayList<>(expectedResults);
     for (Result<SearchResultValue> result : results) {
-      JupiterAssertions.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
+      Assertions.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), result.getTimestamp());
 
       Iterable<SearchHit> resultValues = result.getValue();
       for (SearchHit resultValue : resultValues) {
@@ -909,6 +909,6 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
         LOG.info(v.toString());
       }
     }
-    JupiterAssertions.fail(errorMsg);
+    Assertions.fail(errorMsg);
   }
 }

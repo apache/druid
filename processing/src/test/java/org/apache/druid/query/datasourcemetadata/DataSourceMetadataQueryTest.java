@@ -46,7 +46,7 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
@@ -72,7 +72,7 @@ public class DataSourceMetadataQueryTest
     String json = JSON_MAPPER.writeValueAsString(query);
     Query<?> serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
-    JupiterAssertions.assertEquals(query, serdeQuery);
+    Assertions.assertEquals(query, serdeQuery);
   }
 
   @Test
@@ -107,13 +107,13 @@ public class DataSourceMetadataQueryTest
     );
 
     final QueryContext queryContext = serdeQuery.context();
-    JupiterAssertions.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
-    JupiterAssertions.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
-    JupiterAssertions.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
-    JupiterAssertions.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY));
-    JupiterAssertions.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
-    JupiterAssertions.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
-    JupiterAssertions.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY, false));
+    Assertions.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
+    Assertions.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY, false));
   }
 
   /**
@@ -161,7 +161,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
     DateTime maxIngestedEventTime = val.getMaxIngestedEventTime();
 
-    JupiterAssertions.assertEquals(timestamp, maxIngestedEventTime);
+    Assertions.assertEquals(timestamp, maxIngestedEventTime);
   }
 
   @Test
@@ -190,7 +190,7 @@ public class DataSourceMetadataQueryTest
     DataSourceMetadataResultValue val = results.iterator().next().getValue();
     DateTime maxIngestedEventTime = val.getMaxIngestedEventTime();
 
-    JupiterAssertions.assertEquals(timestamp, maxIngestedEventTime);
+    Assertions.assertEquals(timestamp, maxIngestedEventTime);
   }
 
   @Test
@@ -275,7 +275,7 @@ public class DataSourceMetadataQueryTest
             )
         );
 
-    JupiterAssertions.assertEquals(segments.size(), 2);
+    Assertions.assertEquals(segments.size(), 2);
     // should only have the latest segments.
     List<LogicalSegment> expected = Arrays.asList(
         new LogicalSegment()
@@ -309,7 +309,7 @@ public class DataSourceMetadataQueryTest
     );
 
     for (int i = 0; i < segments.size(); i++) {
-      JupiterAssertions.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
+      Assertions.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
     }
   }
 
@@ -442,11 +442,11 @@ public class DataSourceMetadataQueryTest
         }
     );
 
-    JupiterAssertions.assertEquals(expected.size(), segments.size());
+    Assertions.assertEquals(expected.size(), segments.size());
 
     for (int i = 0; i < expected.size(); i++) {
-      JupiterAssertions.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
-      JupiterAssertions.assertEquals(expected.get(i).getTrueInterval(), segments.get(i).getTrueInterval());
+      Assertions.assertEquals(expected.get(i).getInterval(), segments.get(i).getInterval());
+      Assertions.assertEquals(expected.get(i).getTrueInterval(), segments.get(i).getTrueInterval());
     }
   }
 
@@ -458,7 +458,7 @@ public class DataSourceMetadataQueryTest
         resultValue,
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.<String, Object>of("maxIngestedEventTime", "2000-01-01T00:00:00.000Z"),
         resultValueMap
     );
@@ -475,7 +475,7 @@ public class DataSourceMetadataQueryTest
         resultValueMap,
         DataSourceMetadataResultValue.class
     );
-    JupiterAssertions.assertEquals(DateTimes.of("2000"), resultValue.getMaxIngestedEventTime());
+    Assertions.assertEquals(DateTimes.of("2000"), resultValue.getMaxIngestedEventTime());
   }
 
 }

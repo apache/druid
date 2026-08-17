@@ -45,7 +45,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -120,7 +120,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
 
     Result<TimeseriesResultValue> fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    JupiterAssertions.assertEquals(result1, fromCacheResult);
+    Assertions.assertEquals(result1, fromCacheResult);
 
     final Result<TimeseriesResultValue> result2 = new Result<>(
         // test timestamps that result in integer size millis
@@ -144,7 +144,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
 
     Result<TimeseriesResultValue> fromResultLevelCacheRes = strategy.pullFromCache(true)
                                                                     .apply(fromResultLevelCacheValue);
-    JupiterAssertions.assertEquals(result2, fromResultLevelCacheRes);
+    Assertions.assertEquals(result2, fromResultLevelCacheRes);
 
     final Result<TimeseriesResultValue> result3 = new Result<>(
         // null timestamp similar to grandTotal
@@ -161,7 +161,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
     );
 
     fromResultLevelCacheRes = strategy.pullFromCache(true).apply(fromResultLevelCacheValue);
-    JupiterAssertions.assertEquals(result3, fromResultLevelCacheRes);
+    Assertions.assertEquals(result3, fromResultLevelCacheRes);
   }
 
   @Test
@@ -194,7 +194,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                          .build();
 
     // Test for https://github.com/apache/druid/issues/4093.
-    JupiterAssertions.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
@@ -267,13 +267,13 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                          )
                                          .build();
 
-    JupiterAssertions.assertTrue(
+    Assertions.assertTrue(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
         )
     );
-    JupiterAssertions.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
@@ -348,13 +348,13 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
                                          .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, true))
                                          .build();
 
-    JupiterAssertions.assertTrue(
+    Assertions.assertTrue(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeCacheKey(query2)
         )
     );
-    JupiterAssertions.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             TOOL_CHEST.getCacheStrategy(query1).computeResultLevelCacheKey(query1),
             TOOL_CHEST.getCacheStrategy(query2).computeResultLevelCacheKey(query2)
@@ -375,7 +375,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
               .postAggregators(QueryRunnerTestHelper.CONSTANT)
               .build();
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("rows", ColumnType.LONG)
@@ -401,7 +401,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
               .context(ImmutableMap.of(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME))
               .build();
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add(TIMESTAMP_RESULT_FIELD_NAME, ColumnType.LONG)
@@ -468,7 +468,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
     resultMap.put("a0", 0L);
     resultMap.put("a1", null);
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         new Result<>(
             DateTimes.of("2000"),
             new TimeseriesResultValue(resultMap)

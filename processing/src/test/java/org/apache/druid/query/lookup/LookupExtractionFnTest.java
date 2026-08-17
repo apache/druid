@@ -28,7 +28,7 @@ import com.google.common.collect.Sets;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.MapLookupExtractor;
-import org.apache.druid.testing.JupiterAssertions;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -102,10 +102,10 @@ public class LookupExtractionFnTest
         false
     );
 
-    JupiterAssertions.assertEquals(lookupExtractionFn1, lookupExtractionFn2);
-    JupiterAssertions.assertEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn2.hashCode());
-    JupiterAssertions.assertNotEquals(lookupExtractionFn1, lookupExtractionFn3);
-    JupiterAssertions.assertNotEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn3.hashCode());
+    Assertions.assertEquals(lookupExtractionFn1, lookupExtractionFn2);
+    Assertions.assertEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn2.hashCode());
+    Assertions.assertNotEquals(lookupExtractionFn1, lookupExtractionFn3);
+    Assertions.assertNotEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn3.hashCode());
   }
 
   @Test
@@ -126,18 +126,18 @@ public class LookupExtractionFnTest
 
     final LookupExtractionFn lookupExtractionFn2 = OBJECT_MAPPER.readValue(str1, LookupExtractionFn.class);
 
-    JupiterAssertions.assertEquals(retainMissing, lookupExtractionFn2.isRetainMissingValue());
-    JupiterAssertions.assertEquals(replaceMissing, lookupExtractionFn2.getReplaceMissingValueWith());
+    Assertions.assertEquals(retainMissing, lookupExtractionFn2.isRetainMissingValue());
+    Assertions.assertEquals(replaceMissing, lookupExtractionFn2.getReplaceMissingValueWith());
 
     if (injective == null) {
-      JupiterAssertions.assertEquals(lookupExtractionFn2.getLookup().isOneToOne(), lookupExtractionFn2.isInjective());
+      Assertions.assertEquals(lookupExtractionFn2.getLookup().isOneToOne(), lookupExtractionFn2.isInjective());
     } else {
-      JupiterAssertions.assertEquals(injective, lookupExtractionFn2.isInjective());
+      Assertions.assertEquals(injective, lookupExtractionFn2.isInjective());
     }
 
-    JupiterAssertions.assertArrayEquals(lookupExtractionFn.getCacheKey(), lookupExtractionFn2.getCacheKey());
+    Assertions.assertArrayEquals(lookupExtractionFn.getCacheKey(), lookupExtractionFn2.getCacheKey());
 
-    JupiterAssertions.assertEquals(
+    Assertions.assertEquals(
         str1,
         OBJECT_MAPPER.writeValueAsString(lookupExtractionFn2)
     );
@@ -180,7 +180,7 @@ public class LookupExtractionFnTest
     );
 
     if (replaceMissing == null || retainMissing) {
-      JupiterAssertions.assertFalse(
+      Assertions.assertFalse(
           Arrays.equals(
               lookupExtractionFn.getCacheKey(),
               new LookupExtractionFn(
@@ -192,7 +192,7 @@ public class LookupExtractionFnTest
               ).getCacheKey()
           )
       );
-      JupiterAssertions.assertFalse(
+      Assertions.assertFalse(
           Arrays.equals(
               lookupExtractionFn.getCacheKey(),
               new LookupExtractionFn(
@@ -205,7 +205,7 @@ public class LookupExtractionFnTest
           )
       );
     }
-    JupiterAssertions.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             lookupExtractionFn.getCacheKey(),
             new LookupExtractionFn(
@@ -217,7 +217,7 @@ public class LookupExtractionFnTest
             ).getCacheKey()
         )
     );
-    JupiterAssertions.assertFalse(
+    Assertions.assertFalse(
         Arrays.equals(
             lookupExtractionFn.getCacheKey(),
             new LookupExtractionFn(
