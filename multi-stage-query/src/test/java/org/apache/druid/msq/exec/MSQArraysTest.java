@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
@@ -135,9 +136,8 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(exceptionAssertion(
-            DruidException.class,
-            message -> message.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[dim3] using type[VARCHAR ARRAY] and arrayIngestMode[array], "
                 + "since the existing type is[VARCHAR]"
             )
@@ -163,9 +163,8 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(exceptionAssertion(
-            DruidException.class,
-            message -> message.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[array], since the "
                 + "existing type is[VARCHAR ARRAY]. Try adjusting your query to make this column an ARRAY instead "
                 + "of VARCHAR."
@@ -192,9 +191,8 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(exceptionAssertion(
-            DruidException.class,
-            message -> message.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[mvd], since the "
                 + "existing type is[VARCHAR ARRAY]. Try setting arrayIngestMode to[array] and adjusting your query to "
                 + "make this column an ARRAY instead of VARCHAR."
@@ -393,7 +391,7 @@ public class MSQArraysTest extends MSQTestBase
                              + ") PARTITIONED BY ALL")
                      .setQueryContext(adjustedContext)
                      .setExpectedExecutionErrorMatcher(
-                         exceptionAssertion(ISE.class, message -> message.contains("Numeric arrays can only be ingested when"))
+                         ThrowableMatcher.of(ISE.class).expectMessageContains("Numeric arrays can only be ingested when")
                      )
                      .verifyExecutionError();
   }

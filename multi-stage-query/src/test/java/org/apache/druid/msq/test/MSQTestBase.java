@@ -46,6 +46,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameChannelSequence;
@@ -230,7 +231,6 @@ import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mockito;
 
@@ -989,24 +989,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
   }
 
-  protected static Consumer<Throwable> exceptionAssertion(final Class<? extends Throwable> expectedType)
-  {
-    return exception -> Assertions.assertInstanceOf(expectedType, exception);
-  }
-
-  protected static Consumer<Throwable> exceptionAssertion(
-      final Class<? extends Throwable> expectedType,
-      final Predicate<String> messagePredicate
-  )
-  {
-    return exception -> {
-      final Throwable typedException = Assertions.assertInstanceOf(expectedType, exception);
-      final String message = typedException.getMessage();
-      Assertions.assertNotNull(message);
-      Assertions.assertTrue(messagePredicate.test(message));
-    };
-  }
-
   public abstract class MSQTester<Builder extends MSQTester<Builder>>
   {
     protected String sql = null;
@@ -1126,6 +1108,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
+    public Builder setExpectedValidationErrorMatcher(final ThrowableMatcher expectedValidationErrorMatcher)
+    {
+      this.expectedValidationErrorAssertion = expectedValidationErrorMatcher::assertThat;
+      return asBuilder();
+    }
+
     public Builder setExpectedValidationErrorMatcher(final Consumer<Throwable> expectedValidationErrorAssertion)
     {
       this.expectedValidationErrorAssertion = expectedValidationErrorAssertion;
@@ -1135,6 +1123,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setExpectedExecutionErrorMatcher(final DruidExceptionMatcher expectedExecutionErrorMatcher)
     {
       this.expectedExecutionErrorAssertion = e -> DruidExceptionMatcher.assertThat(e, expectedExecutionErrorMatcher);
+      return asBuilder();
+    }
+
+    public Builder setExpectedExecutionErrorMatcher(final ThrowableMatcher expectedExecutionErrorMatcher)
+    {
+      this.expectedExecutionErrorAssertion = expectedExecutionErrorMatcher::assertThat;
       return asBuilder();
     }
 

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
@@ -651,10 +652,9 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
-                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
-                         ISE.class,
-                         message -> message.contains(expectedError)
-                     ))
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(expectedError)
+                     )
                      .verifyExecutionError();
   }
 
@@ -695,10 +695,9 @@ public class MSQFaultsTest extends MSQTestBase
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
-                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
-                         ISE.class,
-                         message -> message.contains(expectedError)
-                     ))
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(expectedError)
+                     )
                      .verifyExecutionError();
   }
 

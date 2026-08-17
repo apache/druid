@@ -38,6 +38,7 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -745,11 +746,8 @@ public class MSQInsertTest extends MSQTestBase
                              + "  )\n"
                              + ") PARTITIONED by day")
                      .setExpectedExecutionErrorMatcher(
-                         exceptionAssertion(
-                             ISE.class,
-                             message -> message.contains(
-                                 "projection[channel_delta_daily] contains aggregator[sum_delta] that is missing required field[delta] in base table"
-                             )
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(
+                             "projection[channel_delta_daily] contains aggregator[sum_delta] that is missing required field[delta] in base table"
                          )
                      )
                      .verifyExecutionError();
@@ -1415,12 +1413,11 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(localContext)
-                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
-                         ISE.class,
-                         message -> message.contains(
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(
                              "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
                          )
-                     ))
+                     )
                      .verifyExecutionError();
   }
 
@@ -1431,12 +1428,11 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "SET groupByEnableMultiValueUnnesting = false; INSERT INTO foo1 SELECT dim3, count(*) AS cnt1 FROM foo GROUP BY dim3 PARTITIONED BY ALL TIME")
                      .setQueryContext(context)
-                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
-                         ISE.class,
-                         message -> message.contains(
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains(
                              "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
                          )
-                     ))
+                     )
                      .verifyExecutionError();
   }
 
@@ -1912,10 +1908,9 @@ public class MSQInsertTest extends MSQTestBase
                      .setExpectedDataSource("foo")
                      .setQueryContext(context)
                      .setExpectedMSQFault(new RowTooLargeFault(500))
-                     .setExpectedExecutionErrorMatcher(exceptionAssertion(
-                         ISE.class,
-                         message -> message.contains("Row too large to add to frame")
-                     ))
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains("Row too large to add to frame")
+                     )
                      .verifyExecutionError();
   }
 

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -390,7 +391,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
         .setQueryContext(REALTIME_QUERY_CTX)
         .setExpectedRowSignature(rowSignature)
-        .setExpectedExecutionErrorMatcher(exceptionAssertion(ISE.class))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class))
         .verifyExecutionError();
   }
 }

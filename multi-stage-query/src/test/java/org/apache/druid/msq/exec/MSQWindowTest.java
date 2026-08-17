@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -2231,12 +2232,11 @@ public class MSQWindowTest extends MSQTestBase
                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                 + "order by 1, 2, 3")
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
-        .setExpectedExecutionErrorMatcher(exceptionAssertion(
-            ISE.class,
-            message -> message.contains(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
                 "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."
             )
-        ))
+        )
         .verifyExecutionError();
   }
 
@@ -2251,12 +2251,11 @@ public class MSQWindowTest extends MSQTestBase
                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                 + "order by 1, 2, 3")
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
-        .setExpectedExecutionErrorMatcher(exceptionAssertion(
-            ISE.class,
-            message -> message.contains(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
                 "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."
             )
-        ))
+        )
         .verifyExecutionError();
   }
 }
