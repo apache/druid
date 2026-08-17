@@ -41,7 +41,8 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
@@ -51,6 +52,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@ParameterizedClass
+@MethodSource("data")
 public class CoordinatorServerViewTest
 {
   private static final long AWAIT_SECONDS = 10;
@@ -68,14 +71,14 @@ public class CoordinatorServerViewTest
   private CoordinatorServerView coordinatorServerView;
   private ExecutorService callbackExec;
 
-  private boolean setDruidClientFactory;
+  private final boolean setDruidClientFactory;
 
   public static Object[] data()
   {
     return new Object[]{true, false};
   }
 
-  public void initCoordinatorServerViewTest(boolean setDruidClientFactory)
+  public CoordinatorServerViewTest(boolean setDruidClientFactory)
   {
     this.setDruidClientFactory = setDruidClientFactory;
   }
@@ -86,11 +89,9 @@ public class CoordinatorServerViewTest
     callbackExec = Execs.singleThreaded("CoordinatorServerViewTest-%s");
   }
 
-  @MethodSource("data")
-  @ParameterizedTest
-  public void testSingleServerAddedRemovedSegment(boolean setDruidClientFactory) throws Exception
+  @Test
+  public void testSingleServerAddedRemovedSegment() throws Exception
   {
-    initCoordinatorServerViewTest(setDruidClientFactory);
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(1);
     segmentRemovedLatch = new CountDownLatch(1);
@@ -165,11 +166,9 @@ public class CoordinatorServerViewTest
     Assertions.assertNull(timeline.findChunk(intervals, "v1", partition));
   }
 
-  @MethodSource("data")
-  @ParameterizedTest
-  public void testMultipleServerAddedRemovedSegment(boolean setDruidClientFactory) throws Exception
+  @Test
+  public void testMultipleServerAddedRemovedSegment() throws Exception
   {
-    initCoordinatorServerViewTest(setDruidClientFactory);
     segmentViewInitLatch = new CountDownLatch(1);
     segmentAddedLatch = new CountDownLatch(5);
 

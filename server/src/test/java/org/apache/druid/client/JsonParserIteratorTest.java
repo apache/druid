@@ -39,7 +39,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -146,6 +146,8 @@ public class JsonParserIteratorTest
   }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")
+  @ParameterizedClass(name = "{0}")
+  @MethodSource("constructorFeeder")
   public static class NonQueryInterruptedExceptionRestoreTest
   {
     public static Iterable<Object[]> constructorFeeder()
@@ -160,19 +162,17 @@ public class JsonParserIteratorTest
       );
     }
 
-    private Exception exception;
+    private final Exception exception;
 
-    public void initNonQueryInterruptedExceptionRestoreTest(Exception exception)
+    public NonQueryInterruptedExceptionRestoreTest(Exception exception)
     {
       this.exception = exception;
     }
 
-    @MethodSource("constructorFeeder")
-    @ParameterizedTest(name = "{0}")
-    public void testRestoreException(Exception exception)
+    @Test
+    public void testRestoreException()
     {
       Throwable thrown = org.junit.jupiter.api.Assertions.assertThrows(exception.getClass(), () -> {
-        initNonQueryInterruptedExceptionRestoreTest(exception);
         JsonParserIterator<Object> iterator = new JsonParserIterator<>(
             JAVA_TYPE,
             Futures.immediateFuture(mockErrorResponse(exception)),

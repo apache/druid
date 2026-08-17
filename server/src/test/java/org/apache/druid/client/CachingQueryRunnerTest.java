@@ -72,7 +72,8 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
@@ -89,6 +90,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@ParameterizedClass(name = "numBackgroundThreads={0}")
+@MethodSource("constructorFeeder")
 public class CachingQueryRunnerTest extends InitializedNullHandlingTest
 {
   public static Iterable<Object[]> constructorFeeder()
@@ -119,7 +122,7 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
   private ObjectMapper objectMapper;
   private CachePopulator cachePopulator;
 
-  public void initCachingQueryRunnerTest(int numBackgroundThreads)
+  public CachingQueryRunnerTest(int numBackgroundThreads)
   {
     objectMapper = new DefaultObjectMapper();
 
@@ -135,11 +138,9 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     }
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "numBackgroundThreads={0}")
-  public void testCloseAndPopulate(int numBackgroundThreads) throws Exception
+  @Test
+  public void testCloseAndPopulate() throws Exception
   {
-    initCachingQueryRunnerTest(numBackgroundThreads);
     List<Result> expectedRes = makeTopNResults(false, OBJECTS);
     List<Result> expectedCacheRes = makeTopNResults(true, OBJECTS);
 
@@ -158,11 +159,9 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     testUseCache(expectedCacheRes, builder.build(), toolchest);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "numBackgroundThreads={0}")
-  public void testTimeseries(int numBackgroundThreads) throws Exception
+  @Test
+  public void testTimeseries() throws Exception
   {
-    initCachingQueryRunnerTest(numBackgroundThreads);
     for (boolean descending : new boolean[]{false, true}) {
       TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -207,11 +206,9 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     }
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "numBackgroundThreads={0}")
-  public void testNullCacheKeyPrefix(int numBackgroundThreads)
+  @Test
+  public void testNullCacheKeyPrefix()
   {
-    initCachingQueryRunnerTest(numBackgroundThreads);
     Query query = new TopNQueryBuilder()
         .dataSource("ds")
         .dimension("top_dim")
@@ -232,11 +229,9 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
     EasyMock.verifyUnexpectedCalls(cache);
   }
 
-  @MethodSource("constructorFeeder")
-  @ParameterizedTest(name = "numBackgroundThreads={0}")
-  public void testNullStrategy(int numBackgroundThreads)
+  @Test
+  public void testNullStrategy()
   {
-    initCachingQueryRunnerTest(numBackgroundThreads);
     Query query = new TopNQueryBuilder()
         .dataSource("ds")
         .dimension("top_dim")
