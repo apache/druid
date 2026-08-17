@@ -43,16 +43,15 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.CoreMatchers;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
@@ -71,11 +70,8 @@ public class ReadableByteChunksFrameChannelTest
    */
   public static class NonParameterizedTests extends InitializedNullHandlingTest
   {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
     @Test
     public void testZeroBytes()
@@ -83,14 +79,15 @@ public class ReadableByteChunksFrameChannelTest
       final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false, null);
       channel.doneWriting();
 
-      Assert.assertTrue(channel.canRead());
-      Assert.assertFalse(channel.isFinished());
-      Assert.assertTrue(channel.isErrorOrFinished());
+      Assertions.assertTrue(channel.canRead());
+      Assertions.assertFalse(channel.isFinished());
+      Assertions.assertTrue(channel.isErrorOrFinished());
 
-      expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage("Incomplete or missing frame at end of stream (id = test, position = 0)");
-
-      channel.readFrame();
+      final IllegalStateException exception = Assertions.assertThrows(IllegalStateException.class, channel::readFrame);
+      Assertions.assertEquals(
+          "Incomplete or missing frame at end of stream (id = test, position = 0)",
+          exception.getMessage()
+      );
     }
 
     @Test
@@ -100,14 +97,12 @@ public class ReadableByteChunksFrameChannelTest
       channel.setError(new IllegalArgumentException("test error"));
       channel.doneWriting();
 
-      Assert.assertTrue(channel.canRead());
-      Assert.assertFalse(channel.isFinished());
-      Assert.assertTrue(channel.isErrorOrFinished());
+      Assertions.assertTrue(channel.canRead());
+      Assertions.assertFalse(channel.isFinished());
+      Assertions.assertTrue(channel.isErrorOrFinished());
 
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("test error");
-
-      channel.readFrame();
+      final IllegalArgumentException exception = Assertions.assertThrows(IllegalArgumentException.class, channel::readFrame);
+      Assertions.assertEquals("test error", exception.getMessage());
     }
 
     @Test
@@ -119,15 +114,15 @@ public class ReadableByteChunksFrameChannelTest
       final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false, null);
       channel.addChunk(Files.toByteArray(file));
       channel.doneWriting();
-      Assert.assertEquals(file.length(), channel.getBytesAdded());
+      Assertions.assertEquals(file.length(), channel.getBytesAdded());
 
       while (channel.canRead()) {
-        Assert.assertFalse(channel.isFinished());
-        Assert.assertFalse(channel.isErrorOrFinished());
+        Assertions.assertFalse(channel.isFinished());
+        Assertions.assertFalse(channel.isErrorOrFinished());
         channel.readFrame();
       }
 
-      Assert.assertTrue(channel.isFinished());
+      Assertions.assertTrue(channel.isFinished());
       channel.close();
     }
 
@@ -137,7 +132,7 @@ public class ReadableByteChunksFrameChannelTest
       try (final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false, null)) {
         channel.doneWriting();
 
-        Assert.assertThrows(
+        Assertions.assertThrows(
             ChannelClosedForWritesException.class,
             () -> channel.addChunk(new byte[]{})
         );
@@ -170,25 +165,24 @@ public class ReadableByteChunksFrameChannelTest
       final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false, null);
       channel.addChunk(truncatedFile);
       channel.doneWriting();
-      Assert.assertEquals(truncatedFile.length, channel.getBytesAdded());
+      Assertions.assertEquals(truncatedFile.length, channel.getBytesAdded());
 
-      Assert.assertTrue(channel.canRead());
-      Assert.assertFalse(channel.isFinished());
-      Assert.assertFalse(channel.isErrorOrFinished());
+      Assertions.assertTrue(channel.canRead());
+      Assertions.assertFalse(channel.isFinished());
+      Assertions.assertFalse(channel.isErrorOrFinished());
       channel.readFrame(); // Throw away value.
 
-      Assert.assertTrue(channel.canRead());
-      Assert.assertFalse(channel.isFinished());
-      Assert.assertFalse(channel.isErrorOrFinished());
+      Assertions.assertTrue(channel.canRead());
+      Assertions.assertFalse(channel.isFinished());
+      Assertions.assertFalse(channel.isErrorOrFinished());
       channel.readFrame(); // Throw away value.
 
-      Assert.assertTrue(channel.canRead());
-      Assert.assertFalse(channel.isFinished());
-      Assert.assertTrue(channel.isErrorOrFinished());
+      Assertions.assertTrue(channel.canRead());
+      Assertions.assertFalse(channel.isFinished());
+      Assertions.assertTrue(channel.isErrorOrFinished());
 
-      expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage(CoreMatchers.startsWith("Incomplete or missing frame at end of stream"));
-      channel.readFrame();
+      final IllegalStateException exception = Assertions.assertThrows(IllegalStateException.class, channel::readFrame);
+      Assertions.assertTrue(exception.getMessage().startsWith("Incomplete or missing frame at end of stream"));
     }
 
     @Test
@@ -213,26 +207,26 @@ public class ReadableByteChunksFrameChannelTest
       final byte[] chunk1 = new byte[errorAtBytePosition];
       System.arraycopy(fileBytes, 0, chunk1, 0, chunk1.length);
       channel.addChunk(chunk1);
-      Assert.assertEquals(chunk1.length, channel.getBytesAdded());
+      Assertions.assertEquals(chunk1.length, channel.getBytesAdded());
 
       channel.setError(new ISE("Test error!"));
       channel.doneWriting();
-      Assert.assertEquals(chunk1.length, channel.getBytesAdded());
+      Assertions.assertEquals(chunk1.length, channel.getBytesAdded());
 
-      expectedException.expect(IllegalStateException.class);
-      expectedException.expectMessage("Test error!");
-      channel.readFrame();
+      final IllegalStateException exception = Assertions.assertThrows(IllegalStateException.class, channel::readFrame);
+      Assertions.assertEquals("Test error!", exception.getMessage());
     }
   }
 
   /**
    * Parameterized test cases that use various FrameFiles built from {@link TestIndex#getIncrementalTestIndex()}.
    */
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructorFeeder")
   public static class ParameterizedWithTestIndexTests extends InitializedNullHandlingTest
   {
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
     private final FrameType frameType;
     private final int maxRowsPerFrame;
@@ -252,7 +246,6 @@ public class ReadableByteChunksFrameChannelTest
       this.useLegacyFrameSerialization = useLegacyFrameSerialization;
     }
 
-    @Parameterized.Parameters(name = "frameType = {0}, maxRowsPerFrame = {1}, chunkSize = {2}, useLegacyFrameSerialization = {3}")
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
@@ -330,7 +323,7 @@ public class ReadableByteChunksFrameChannelTest
       ListenableFuture<?> firstBackpressureFuture = null;
 
       long totalSize = 0;
-      Assert.assertEquals(0, channel.getBytesBuffered());
+      Assertions.assertEquals(0, channel.getBytesBuffered());
 
       try (final Chunker chunker = new Chunker(new FileInputStream(file), chunkSize)) {
         byte[] chunk;
@@ -339,23 +332,23 @@ public class ReadableByteChunksFrameChannelTest
           totalSize += chunk.length;
 
           final ListenableFuture<?> backpressureFuture = channel.addChunk(chunk);
-          Assert.assertEquals(channel.getBytesAdded(), totalSize);
+          Assertions.assertEquals(channel.getBytesAdded(), totalSize);
 
           // Minimally-sized channel means backpressure is exerted as soon as a single frame is available.
-          Assert.assertEquals(channel.canRead(), backpressureFuture != null);
+          Assertions.assertEquals(channel.canRead(), backpressureFuture != null);
 
           if (backpressureFuture != null) {
             if (firstBackpressureFuture == null) {
               firstBackpressureFuture = backpressureFuture;
             } else {
-              Assert.assertSame(firstBackpressureFuture, backpressureFuture);
+              Assertions.assertSame(firstBackpressureFuture, backpressureFuture);
             }
           }
         }
 
         // Backpressure should be exerted right now, since this is a minimal channel with at least one full frame in it.
-        Assert.assertNotNull(firstBackpressureFuture);
-        Assert.assertFalse(firstBackpressureFuture.isDone());
+        Assertions.assertNotNull(firstBackpressureFuture);
+        Assertions.assertFalse(firstBackpressureFuture.isDone());
 
         channel.doneWriting();
       }
@@ -395,7 +388,7 @@ public class ReadableByteChunksFrameChannelTest
             }
 
             // After reading everything, backpressure should be off.
-            Assert.assertTrue(backpressureFuture == null || backpressureFuture.isDone());
+            Assertions.assertTrue(backpressureFuture == null || backpressureFuture.isDone());
           } else if (iteration % 11 == 0) {
             if (channel.canRead()) {
               outChannel.writable().write(channel.readFrame());
@@ -411,16 +404,16 @@ public class ReadableByteChunksFrameChannelTest
 
           // Write next chunk.
           final ListenableFuture<?> addVal = channel.addChunk(chunk);
-          Assert.assertEquals(totalSize, channel.getBytesAdded());
+          Assertions.assertEquals(totalSize, channel.getBytesAdded());
 
           // Minimally-sized channel means backpressure is exerted as soon as a single frame is available.
-          Assert.assertEquals(channel.canRead(), addVal != null);
+          Assertions.assertEquals(channel.canRead(), addVal != null);
 
           if (addVal != null) {
             if (backpressureFuture == null) {
               backpressureFuture = addVal;
             } else {
-              Assert.assertSame(backpressureFuture, addVal);
+              Assertions.assertSame(backpressureFuture, addVal);
             }
           }
         }
@@ -477,7 +470,7 @@ public class ReadableByteChunksFrameChannelTest
       while (channel.canRead()) {
         final RowsAndColumns rac = channel.read();
         final Frame frame = rac.as(Frame.class);
-        Assert.assertNotNull("Frame should be retrievable from RAC", frame);
+        Assertions.assertNotNull(frame, "Frame should be retrievable from RAC");
 
         // Read rows from this frame
         final Sequence<List<Object>> frameRows = FrameTestUtil.readRowsFromCursorFactory(
@@ -486,12 +479,12 @@ public class ReadableByteChunksFrameChannelTest
         readRows.addAll(frameRows.toList());
       }
 
-      Assert.assertTrue(channel.isFinished());
+      Assertions.assertTrue(channel.isFinished());
 
       // Verify data integrity
       final List<List<Object>> originalRows =
           FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList();
-      Assert.assertEquals(originalRows, readRows);
+      Assertions.assertEquals(originalRows, readRows);
     }
 
     @Test
@@ -551,12 +544,12 @@ public class ReadableByteChunksFrameChannelTest
         readRows.addAll(frameRows.toList());
       }
 
-      Assert.assertTrue(channel.isFinished());
+      Assertions.assertTrue(channel.isFinished());
 
       // Verify data integrity
       final List<List<Object>> originalRows =
           FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList();
-      Assert.assertEquals(originalRows, readRows);
+      Assertions.assertEquals(originalRows, readRows);
     }
 
     private static class Chunker implements Closeable

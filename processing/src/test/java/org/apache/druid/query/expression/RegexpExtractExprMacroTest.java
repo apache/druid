@@ -25,8 +25,8 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class RegexpExtractExprMacroTest extends MacroTestBase
 {
@@ -38,22 +38,28 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testErrorZeroArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
-    eval("regexp_extract()", InputBindings.nilBindings());
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_extract] requires 2 or 3 arguments",
+        () -> eval("regexp_extract()", InputBindings.nilBindings())
+    );
   }
 
   @Test
   public void testErrorFourArguments()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] requires 2 or 3 arguments");
-    eval("regexp_extract('a', 'b', 'c', 'd')", InputBindings.nilBindings());
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_extract] requires 2 or 3 arguments",
+        () -> eval("regexp_extract('a', 'b', 'c', 'd')", InputBindings.nilBindings())
+    );
   }
 
   @Test
   public void testInvalidRegexpExtractPattern()
   {
     MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () ->
+        Assertions.assertThrows(DruidException.class, () ->
             eval(
                 "regexp_extract('pod-1234-node', '[ab-0-9]')",
                 InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
@@ -73,7 +79,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, 'f(.o)')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals("foo", result.value());
+    Assertions.assertEquals("foo", result.value());
   }
 
   @Test
@@ -83,7 +89,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, 'f(.o)', 0)",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals("foo", result.value());
+    Assertions.assertEquals("foo", result.value());
   }
 
   @Test
@@ -93,20 +99,20 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, 'f(.o)', 1)",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals("oo", result.value());
+    Assertions.assertEquals("oo", result.value());
   }
 
   @Test
   public void testMatchGroup2()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         IndexOutOfBoundsException.class,
         () -> eval(
             "regexp_extract(a, 'f(.o)', 2)",
             InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
         )
     );
-    Assert.assertEquals("No group 2", t.getMessage());
+    Assertions.assertEquals("No group 2", t.getMessage());
   }
 
   @Test
@@ -116,7 +122,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, 'f(.x)')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertNull(result.value());
+    Assertions.assertNull(result.value());
   }
 
   @Test
@@ -126,19 +132,20 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, '.o$')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals("oo", result.value());
+    Assertions.assertEquals("oo", result.value());
   }
 
   @Test
   public void testNullPattern()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-
-    final ExprEval<?> result = eval(
-        "regexp_extract(a, null)",
-        InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_extract] pattern must be a string literal",
+        () -> eval(
+            "regexp_extract(a, null)",
+            InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
+        )
     );
-    Assert.assertNull(result.value());
   }
 
   @Test
@@ -148,36 +155,43 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, '')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals("", result.value());
+    Assertions.assertEquals("", result.value());
   }
 
   @Test
   public void testNumericPattern()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    eval("regexp_extract(a, 1)", InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo"));
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_extract] pattern must be a string literal",
+        () -> eval("regexp_extract(a, 1)", InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo"))
+    );
   }
 
   @Test
   public void testNonLiteralPattern()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    eval("regexp_extract(a, a)", InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo"));
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_extract] pattern must be a string literal",
+        () -> eval("regexp_extract(a, a)", InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo"))
+    );
   }
 
   @Test
   public void testNullPatternOnNull()
   {
-    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-
-    final ExprEval<?> result = eval("regexp_extract(a, null)", InputBindings.nilBindings());
-    Assert.assertNull(result.value());
+    assertException(
+        IllegalArgumentException.class,
+        "Function[regexp_extract] pattern must be a string literal",
+        () -> eval("regexp_extract(a, null)", InputBindings.nilBindings())
+    );
   }
 
   @Test
   public void testEmptyStringPatternOnNull()
   {
     final ExprEval<?> result = eval("regexp_extract(a, '')", InputBindings.nilBindings());
-    Assert.assertNull(result.value());
+    Assertions.assertNull(result.value());
   }
 }
