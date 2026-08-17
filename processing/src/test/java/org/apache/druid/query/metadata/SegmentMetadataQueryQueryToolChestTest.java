@@ -51,9 +51,9 @@ import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -115,7 +115,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     // Test cache key generation
     byte[] expectedKey = {0x04, 0x09, 0x01, 0x0A, 0x00, 0x00, 0x00, 0x03, 0x00, 0x02, 0x04};
     byte[] actualKey = strategy.computeCacheKey(query);
-    Assert.assertArrayEquals(expectedKey, actualKey);
+    Assertions.assertArrayEquals(expectedKey, actualKey);
 
     SegmentAnalysis result = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1)
         .interval(Intervals.of("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z"))
@@ -147,7 +147,7 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     SegmentAnalysis fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
 
-    Assert.assertEquals(result, fromCacheResult);
+    Assertions.assertEquals(result, fromCacheResult);
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
@@ -169,7 +169,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+    Assertions.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
@@ -195,14 +195,14 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .aggregator("baz", new DoubleSumAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+    Assertions.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeAggregatorsOneNullStrict(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    Assume.assumeTrue(aggregatorMergeStrategy == AggregatorMergeStrategy.STRICT);
+    Assumptions.assumeTrue(aggregatorMergeStrategy == AggregatorMergeStrategy.STRICT);
 
     final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
     final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
@@ -212,14 +212,14 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     final SegmentAnalysis expectedNullAggregators = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
-    Assert.assertEquals(expectedNullAggregators, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+    Assertions.assertEquals(expectedNullAggregators, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
   @ParameterizedTest(name = "{index}: with AggregatorMergeStrategy {0}")
   public void testMergeAggregatorsOneNullNotStrict(AggregatorMergeStrategy aggregatorMergeStrategy)
   {
-    Assume.assumeTrue(aggregatorMergeStrategy != AggregatorMergeStrategy.STRICT);
+    Assumptions.assumeTrue(aggregatorMergeStrategy != AggregatorMergeStrategy.STRICT);
 
     final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
     final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2)
@@ -232,7 +232,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("foo", new LongSumAggregatorFactory("foo", "foo"))
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .build();
-    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+    Assertions.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
@@ -244,7 +244,7 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     final SegmentAnalysis expected = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
-    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+    Assertions.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @Test
@@ -263,7 +263,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     // Test strict merge, returns null aggregators as there's a conflict on "bar"
     final SegmentAnalysis expectedStrict = new SegmentAnalysis.Builder(
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged").build();
-    Assert.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.STRICT));
+    Assertions.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, AggregatorMergeStrategy.STRICT));
 
     // Test lenient merge, returns a map with null for "bar" as it has a conflict
     final SegmentAnalysis expectedLenient = new SegmentAnalysis.Builder(
@@ -272,16 +272,16 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", null)
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2));
+    Assertions.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2));
     // Simulate multi-level lenient merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLenient,
         mergeLenient(mergeLenient(analysis1, analysis2), mergeLenient(analysis1, analysis2))
     );
     // Simulate multi-level lenient merge (unmerged first)
-    Assert.assertEquals(expectedLenient, mergeLenient(analysis1, mergeLenient(analysis1, analysis2)));
+    Assertions.assertEquals(expectedLenient, mergeLenient(analysis1, mergeLenient(analysis1, analysis2)));
     // Simulate multi-level lenient merge (unmerged second)
-    Assert.assertEquals(expectedLenient, mergeLenient(mergeLenient(analysis1, analysis2), analysis1));
+    Assertions.assertEquals(expectedLenient, mergeLenient(mergeLenient(analysis1, analysis2), analysis1));
 
     // Test earliest merge, returns a map with "bar" as DoubleSumAggregatorFactory since analysis1 is earlier
     final SegmentAnalysis expectedEarliest = new SegmentAnalysis.Builder(
@@ -290,9 +290,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
+    Assertions.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
     // Simulate multi-level earliest merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedEarliest,
         mergeEarliest(mergeEarliest(analysis1, analysis2), mergeEarliest(analysis1, analysis2))
     );
@@ -304,9 +304,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
+    Assertions.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
     // Simulate multi-level latest merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLatest,
         mergeLatest(mergeLatest(analysis1, analysis2), mergeLatest(analysis1, analysis2))
     );
@@ -326,7 +326,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         .build();
 
     // Test strict merge, returns null aggregators as there's a conflict on "bar"
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new SegmentAnalysis.Builder("dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
             .build(),
         mergeStrict(analysis1, analysis2)
@@ -339,12 +339,12 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", null)
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLenient,
         mergeLenient(analysis1, analysis2)
     );
     // Simulate multi-level lenient merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLenient,
         mergeLenient(
             mergeLenient(analysis1, analysis2),
@@ -359,9 +359,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
+    Assertions.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
     // Simulate multi-level earliest merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedEarliest,
         mergeEarliest(mergeEarliest(analysis1, analysis2), mergeEarliest(analysis1, analysis2))
     );
@@ -373,9 +373,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
+    Assertions.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
     // Simulate multi-level latest merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLatest,
         mergeLatest(mergeLatest(analysis1, analysis2), mergeLatest(analysis1, analysis2))
     );
@@ -400,7 +400,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         .build();
 
     // Test strict merge, returns null aggregators as there's a conflict on "bar"
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new SegmentAnalysis.Builder("dummy_2023-01-01T00:00:00.000Z_2023-01-02T00:00:00.000Z_merged_2")
             .build(),
         mergeStrict(analysis1, analysis2)
@@ -413,9 +413,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", null)
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2));
+    Assertions.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2));
     // Simulate multi-level lenient merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLenient,
         mergeLenient(mergeLenient(analysis1, analysis2), mergeLenient(analysis1, analysis2))
     );
@@ -427,9 +427,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleSumAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
+    Assertions.assertEquals(expectedEarliest, mergeEarliest(analysis1, analysis2));
     // Simulate multi-level earliest merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedEarliest,
         mergeEarliest(mergeEarliest(analysis1, analysis2), mergeEarliest(analysis1, analysis2))
     );
@@ -441,9 +441,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .aggregator("bar", new DoubleMaxAggregatorFactory("bar", "bar"))
         .aggregator("baz", new LongMaxAggregatorFactory("baz", "baz"))
         .build();
-    Assert.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
+    Assertions.assertEquals(expectedLatest, mergeLatest(analysis1, analysis2));
     // Simulate multi-level latest merge
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedLatest,
         mergeLatest(mergeLatest(analysis1, analysis2), mergeLatest(analysis1, analysis2))
     );
@@ -482,8 +482,8 @@ public class SegmentMetadataQueryQueryToolChestTest
             .collect(Collectors.toList())
     );
 
-    Assert.assertEquals(Period.weeks(1), config.getDefaultHistory());
-    Assert.assertEquals(
+    Assertions.assertEquals(Period.weeks(1), config.getDefaultHistory());
+    Assertions.assertEquals(
         ImmutableList.of(
             Intervals.of("2000-01-04/P1D"),
             Intervals.of("2000-01-09/P1D"),
@@ -504,11 +504,11 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis4 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(true).build();
     final SegmentAnalysis analysis5 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).rollup(true).build();
 
-    Assert.assertNull(mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy).isRollup());
-    Assert.assertNull(mergeWithStrategy(analysis1, analysis4, aggregatorMergeStrategy).isRollup());
-    Assert.assertNull(mergeWithStrategy(analysis2, analysis4, aggregatorMergeStrategy).isRollup());
-    Assert.assertFalse(mergeWithStrategy(analysis2, analysis3, aggregatorMergeStrategy).isRollup());
-    Assert.assertTrue(mergeWithStrategy(analysis4, analysis5, aggregatorMergeStrategy).isRollup());
+    Assertions.assertNull(mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy).isRollup());
+    Assertions.assertNull(mergeWithStrategy(analysis1, analysis4, aggregatorMergeStrategy).isRollup());
+    Assertions.assertNull(mergeWithStrategy(analysis2, analysis4, aggregatorMergeStrategy).isRollup());
+    Assertions.assertFalse(mergeWithStrategy(analysis2, analysis3, aggregatorMergeStrategy).isRollup());
+    Assertions.assertTrue(mergeWithStrategy(analysis4, analysis5, aggregatorMergeStrategy).isRollup());
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
@@ -519,7 +519,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
 
     MatcherAssert.assertThat(
-        Assert.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> SegmentMetadataQueryQueryToolChest.mergeAnalyses(
                 null,
@@ -532,7 +532,7 @@ public class SegmentMetadataQueryQueryToolChestTest
     );
 
     MatcherAssert.assertThat(
-        Assert.assertThrows(
+        Assertions.assertThrows(
             DruidException.class,
             () -> SegmentMetadataQueryQueryToolChest.mergeAnalyses(
                 ImmutableSet.of(),
@@ -577,7 +577,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         new TableDataSource("bar")
     ));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedMergedAnalysis,
         SegmentMetadataQueryQueryToolChest.finalizeAnalysis(SegmentMetadataQueryQueryToolChest.mergeAnalyses(
             dataSource1.getTableNames(),
@@ -586,7 +586,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             aggregatorMergeStrategy
         ))
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedMergedAnalysis,
         SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
             SegmentMetadataQueryQueryToolChest.mergeAnalyses(
@@ -606,9 +606,9 @@ public class SegmentMetadataQueryQueryToolChestTest
     final SegmentAnalysis analysis1 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID1).build();
     final SegmentAnalysis analysis2 = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).rollup(false).build();
 
-    Assert.assertEquals(analysis1, mergeWithStrategy(analysis1, null, aggregatorMergeStrategy));
-    Assert.assertEquals(analysis2, mergeWithStrategy(null, analysis2, aggregatorMergeStrategy));
-    Assert.assertNull(
+    Assertions.assertEquals(analysis1, mergeWithStrategy(analysis1, null, aggregatorMergeStrategy));
+    Assertions.assertEquals(analysis2, mergeWithStrategy(null, analysis2, aggregatorMergeStrategy));
+    Assertions.assertNull(
         SegmentMetadataQueryQueryToolChest
             .mergeAnalyses(TEST_DATASOURCE.getTableNames(), null, null, aggregatorMergeStrategy));
   }
@@ -629,7 +629,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
         .build();
-    Assert.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+    Assertions.assertEquals(expected, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   @EnumSource(AggregatorMergeStrategy.class)
@@ -645,9 +645,9 @@ public class SegmentMetadataQueryQueryToolChestTest
         .build();
     final SegmentAnalysis analysis2NullProjection = new SegmentAnalysis.Builder(TEST_SEGMENT_ID2).build();
 
-    Assert.assertNull(mergeWithStrategy(analysis1NullProjection, analysis2, aggregatorMergeStrategy).getProjections());
-    Assert.assertNull(mergeWithStrategy(analysis1, analysis2NullProjection, aggregatorMergeStrategy).getProjections());
-    Assert.assertNull(
+    Assertions.assertNull(mergeWithStrategy(analysis1NullProjection, analysis2, aggregatorMergeStrategy).getProjections());
+    Assertions.assertNull(mergeWithStrategy(analysis1, analysis2NullProjection, aggregatorMergeStrategy).getProjections());
+    Assertions.assertNull(
         mergeWithStrategy(analysis1NullProjection, analysis2NullProjection, aggregatorMergeStrategy).getProjections()
     );
   }
@@ -672,7 +672,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         "dummy_2021-01-01T00:00:00.000Z_2021-01-02T00:00:00.000Z_merged")
         .projection("channel_sum", new AggregateProjectionMetadata(PROJECTION_CHANNEL_ADDED_HOURLY, 300))
         .build();
-    Assert.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
+    Assertions.assertEquals(expectedStrict, mergeWithStrategy(analysis1, analysis2, aggregatorMergeStrategy));
   }
 
   private static SegmentAnalysis mergeWithStrategy(
