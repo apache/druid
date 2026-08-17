@@ -450,7 +450,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   )
   {
     final StringBuilder reason = new StringBuilder(
-        StringUtils.format("interval[%s] overlaps skipOffsetFromLatest[%s]", skipInterval, skipOffset)
+        StringUtils.format("interval[%s] overlaps one of the skip sources: skipOffsetFromLatest[%s]", skipInterval, skipOffset)
     );
     if (!configuredSkipIntervals.isEmpty()) {
       reason.append(", configured skipIntervals").append(configuredSkipIntervals);
@@ -468,7 +468,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     }
     final DateTime alignedStart = segmentGranularity.bucketStart(interval.getStart());
     final DateTime endBucketStart = segmentGranularity.bucketStart(interval.getEnd());
-    final DateTime alignedEnd = endBucketStart.equals(interval.getEnd())
+    final DateTime alignedEnd = endBucketStart.isEqual(interval.getEnd())
                                  ? interval.getEnd()
                                  : segmentGranularity.bucketEnd(interval.getEnd());
     return new Interval(alignedStart, alignedEnd);
