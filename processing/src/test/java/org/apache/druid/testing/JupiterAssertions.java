@@ -374,14 +374,16 @@ public class JupiterAssertions
       );
     }
 
+    /**
+     * Matches JUnit 4 {@code ExpectedException.expectMessage(String)} semantics:
+     * the expected substring is matched against the thrown exception's own message.
+     * Cause matching is a separate JUnit 4 expectation and is intentionally not
+     * included here.
+     */
     private static boolean containsMessage(final Throwable thrown, final String expectedMessage)
     {
-      for (Throwable current = thrown; current != null; current = current.getCause()) {
-        if (current.getMessage() != null && current.getMessage().contains(expectedMessage)) {
-          return true;
-        }
-      }
-      return false;
+      final String message = thrown.getMessage();
+      return message != null && message.contains(expectedMessage);
     }
   }
 }
