@@ -460,12 +460,13 @@ public class QueryResourceTest
     Assertions.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
 
     final ErrorResponse entity = (ErrorResponse) response.getEntity();
-    assertDruidExceptionMessageIs(
+    DruidExceptionMatcher.assertThat(
         entity.getUnderlyingException(),
-        DruidException.Persona.OPERATOR,
-        DruidException.Category.RUNTIME_FAILURE,
-        "general",
-        "failing for coverage!"
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.RUNTIME_FAILURE,
+            "general"
+        ).expectMessageIs("failing for coverage!")
     );
 
     Assertions.assertEquals(1, testRequestLogger.getNativeQuerylogs().size());
@@ -799,12 +800,13 @@ public class QueryResourceTest
     Assertions.assertEquals(Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
 
     final ErrorResponse entity = (ErrorResponse) response.getEntity();
-    assertDruidExceptionMessageIs(
+    DruidExceptionMatcher.assertThat(
         entity.getUnderlyingException(),
-        DruidException.Persona.OPERATOR,
-        DruidException.Category.RUNTIME_FAILURE,
-        "legacyQueryException",
-        "something"
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.RUNTIME_FAILURE,
+            "legacyQueryException"
+        ).expectMessageIs("something")
     );
     emitter.verifyEmitted("query/time", 1);
     Assertions.assertEquals(500, emitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE));
@@ -1207,12 +1209,15 @@ public class QueryResourceTest
     Assertions.assertEquals(QueryTimeoutException.STATUS_CODE, response.getStatus());
 
     ErrorResponse entity = (ErrorResponse) response.getEntity();
-    assertDruidExceptionMessageIs(
+    DruidExceptionMatcher.assertThat(
         entity.getUnderlyingException(),
-        DruidException.Persona.OPERATOR,
-        DruidException.Category.TIMEOUT,
-        "legacyQueryException",
-        "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query."
+        new DruidExceptionMatcher(
+            DruidException.Persona.OPERATOR,
+            DruidException.Category.TIMEOUT,
+            "legacyQueryException"
+        ).expectMessageIs(
+            "Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query."
+        )
     );
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1484,12 +1489,15 @@ public class QueryResourceTest
           QueryCapacityExceededException ex;
 
           final ErrorResponse entity = (ErrorResponse) response.getEntity();
-          assertDruidExceptionMessageIs(
+          DruidExceptionMatcher.assertThat(
               entity.getUnderlyingException(),
-              DruidException.Persona.OPERATOR,
-              DruidException.Category.CAPACITY_EXCEEDED,
-              "legacyQueryException",
-              "Too many concurrent queries, total query capacity of 2 exceeded. Please try your query again later."
+              new DruidExceptionMatcher(
+                  DruidException.Persona.OPERATOR,
+                  DruidException.Category.CAPACITY_EXCEEDED,
+                  "legacyQueryException"
+              ).expectMessageIs(
+                  "Too many concurrent queries, total query capacity of 2 exceeded. Please try your query again later."
+              )
           );
 
           try {
@@ -1555,12 +1563,15 @@ public class QueryResourceTest
           QueryCapacityExceededException ex;
 
           final ErrorResponse entity = (ErrorResponse) response.getEntity();
-          assertDruidExceptionMessageIs(
+          DruidExceptionMatcher.assertThat(
               entity.getUnderlyingException(),
-              DruidException.Persona.OPERATOR,
-              DruidException.Category.CAPACITY_EXCEEDED,
-              "legacyQueryException",
-              "Too many concurrent queries for lane 'low', query capacity of 1 exceeded. Please try your query again later."
+              new DruidExceptionMatcher(
+                  DruidException.Persona.OPERATOR,
+                  DruidException.Category.CAPACITY_EXCEEDED,
+                  "legacyQueryException"
+              ).expectMessageIs(
+                  "Too many concurrent queries for lane 'low', query capacity of 1 exceeded. Please try your query again later."
+              )
           );
 
           try {
@@ -1632,12 +1643,15 @@ public class QueryResourceTest
           QueryCapacityExceededException ex;
 
           final ErrorResponse entity = (ErrorResponse) response.getEntity();
-          assertDruidExceptionMessageIs(
+          DruidExceptionMatcher.assertThat(
               entity.getUnderlyingException(),
-              DruidException.Persona.OPERATOR,
-              DruidException.Category.CAPACITY_EXCEEDED,
-              "legacyQueryException",
-              "Too many concurrent queries for lane 'low', query capacity of 1 exceeded. Please try your query again later."
+              new DruidExceptionMatcher(
+                  DruidException.Persona.OPERATOR,
+                  DruidException.Category.CAPACITY_EXCEEDED,
+                  "legacyQueryException"
+              ).expectMessageIs(
+                  "Too many concurrent queries for lane 'low', query capacity of 1 exceeded. Please try your query again later."
+              )
           );
 
           try {
@@ -1872,12 +1886,13 @@ public class QueryResourceTest
 
     final Object queryId = response.getMetadata().getFirst(QueryResource.QUERY_ID_RESPONSE_HEADER);
     Assertions.assertNotNull(queryId);
-    assertDruidExceptionMessageIs(
+    DruidExceptionMatcher.assertThat(
         ((ErrorResponse) response.getEntity()).getUnderlyingException(),
-        DruidException.Persona.USER,
-        DruidException.Category.RUNTIME_FAILURE,
-        "general",
-        StringUtils.format("sanitized[%s]", queryId)
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.RUNTIME_FAILURE,
+            "general"
+        ).expectMessageIs(StringUtils.format("sanitized[%s]", queryId))
     );
 
     // Sanitization applies to the client response only; the request log keeps the original 403.
@@ -2069,34 +2084,6 @@ public class QueryResourceTest
       }
       return true;
     });
-  }
-
-  private static DruidException assertDruidException(
-      Throwable exception,
-      DruidException.Persona persona,
-      DruidException.Category category,
-      String errorCode
-  )
-  {
-    final DruidException druidException = Assertions.assertInstanceOf(DruidException.class, exception);
-    Assertions.assertEquals(persona, druidException.getTargetPersona());
-    Assertions.assertEquals(category, druidException.getCategory());
-    Assertions.assertEquals(errorCode, druidException.getErrorCode());
-    return druidException;
-  }
-
-  private static void assertDruidExceptionMessageIs(
-      Throwable exception,
-      DruidException.Persona persona,
-      DruidException.Category category,
-      String errorCode,
-      String message
-  )
-  {
-    Assertions.assertEquals(
-        message,
-        assertDruidException(exception, persona, category, errorCode).getMessage()
-    );
   }
 
   private Response expectSynchronousRequestFlow(String simpleTimeseriesQuery) throws IOException
