@@ -45,8 +45,8 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.Assertions;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -123,27 +123,33 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testAscendingScanQueryWithInvalidColumns()
   {
-    Druids.newScanQueryBuilder()
-          .order(Order.ASCENDING)
-          .columns(ImmutableList.of("not time", "also not time"))
-          .dataSource("source")
-          .intervals(intervalSpec)
-          .build();
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            Druids.newScanQueryBuilder()
+                  .order(Order.ASCENDING)
+                  .columns(ImmutableList.of("not time", "also not time"))
+                  .dataSource("source")
+                  .intervals(intervalSpec)
+                  .build()
+    );
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testDescendingScanQueryWithInvalidColumns()
   {
-    Druids.newScanQueryBuilder()
-          .order(Order.DESCENDING)
-          .columns(ImmutableList.of("not time", "also not time"))
-          .dataSource("source")
-          .intervals(intervalSpec)
-          .build();
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () ->
+            Druids.newScanQueryBuilder()
+                  .order(Order.DESCENDING)
+                  .columns(ImmutableList.of("not time", "also not time"))
+                  .dataSource("source")
+                  .intervals(intervalSpec)
+                  .build()
+    );
   }
 
   @Test
@@ -319,7 +325,6 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(ISE.class)
   public void testTimeOrderingWithoutTimeColumn()
   {
     ScanQuery descendingOrderScan = Druids.newScanQueryBuilder()
@@ -337,7 +342,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     ).flatMerge(seq -> seq, descendingOrderScan.getResultOrdering());
 
     // This should throw an ISE
-    List<ScanResultValue> res = borkedSequence.toList();
+    Assertions.assertThrows(ISE.class, borkedSequence::toList);
   }
 
   @Test

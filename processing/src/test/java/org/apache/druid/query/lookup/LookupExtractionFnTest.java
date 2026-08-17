@@ -144,21 +144,25 @@ public class LookupExtractionFnTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testIllegalArgs()
   {
-    if (retainMissing && replaceMissing != null) {
-      @SuppressWarnings("unused") // expected exception
-      final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-          new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
-          retainMissing,
-          replaceMissing,
-          injective,
-          false
-      );
-    } else {
-      throw new IAE("Case not valid");
-    }
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> {
+          if (retainMissing && replaceMissing != null) {
+            @SuppressWarnings("unused") // expected exception
+            final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
+                new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+                retainMissing,
+                replaceMissing,
+                injective,
+                false
+            );
+          } else {
+            throw new IAE("Case not valid");
+          }
+        }
+    );
   }
 
   @Test

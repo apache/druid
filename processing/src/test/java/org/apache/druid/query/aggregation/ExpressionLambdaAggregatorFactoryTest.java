@@ -799,7 +799,6 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(UOE.class)
   public void testAggregateCombinerNotSupportedForNonNumericTypes()
   {
     ExpressionLambdaAggregatorFactory agg = new ExpressionLambdaAggregatorFactory(
@@ -819,11 +818,10 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
         TestExprMacroTable.INSTANCE
     );
 
-    agg.makeAggregateCombiner();
+    Assertions.assertThrows(UOE.class, agg::makeAggregateCombiner);
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(UOE.class)
   public void testAggregateCombinerNotSupportedWhenFoldAndCombineTypesDiffer()
   {
     // fold seed is LONG (intermediate column type), but combine seed is LONG_ARRAY — combining a long segment column
@@ -846,7 +844,7 @@ public class ExpressionLambdaAggregatorFactoryTest extends InitializedNullHandli
     );
 
     Assertions.assertEquals(ColumnType.LONG, agg.getIntermediateType());
-    agg.makeAggregateCombiner();
+    Assertions.assertThrows(UOE.class, agg::makeAggregateCombiner);
   }
 
   @Test

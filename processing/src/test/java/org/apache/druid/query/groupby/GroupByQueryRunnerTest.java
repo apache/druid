@@ -139,12 +139,12 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.Assertions;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -3545,37 +3545,41 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testGroupByWithUniquesAndPostAggWithSameName()
   {
-    GroupByQuery query = makeQueryBuilder()
-        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
-        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new HyperUniquesAggregatorFactory(
-            "quality_uniques",
-            "quality_uniques"
-        ))
-        .setPostAggregatorSpecs(
-            Collections.singletonList(
-                new HyperUniqueFinalizingPostAggregator("quality_uniques", "quality_uniques")
-            )
-        )
-        .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
-        .build();
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> {
+          final GroupByQuery query = makeQueryBuilder()
+              .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+              .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+              .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT, new HyperUniquesAggregatorFactory(
+                  "quality_uniques",
+                  "quality_uniques"
+              ))
+              .setPostAggregatorSpecs(
+                  Collections.singletonList(
+                      new HyperUniqueFinalizingPostAggregator("quality_uniques", "quality_uniques")
+                  )
+              )
+              .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
+              .build();
 
-    List<ResultRow> expectedResults = Collections.singletonList(
-        makeRow(
-            query,
-            "2011-04-01",
-            "rows",
-            26L,
-            "quality_uniques",
-            QueryRunnerTestHelper.UNIQUES_9
-        )
+          final List<ResultRow> expectedResults = Collections.singletonList(
+              makeRow(
+                  query,
+                  "2011-04-01",
+                  "rows",
+                  26L,
+                  "quality_uniques",
+                  QueryRunnerTestHelper.UNIQUES_9
+              )
+          );
+
+          final Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+          TestHelper.assertExpectedObjects(expectedResults, results, "unique-postagg-same-name");
+        }
     );
-
-    Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "unique-postagg-same-name");
   }
 
   @Test
@@ -4413,7 +4417,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void testMergeResultsWithNegativeLimit()
   {
     GroupByQuery.Builder builder = makeQueryBuilder()
@@ -4424,7 +4427,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
         .setLimit(-1);
 
-    builder.build();
+    Assertions.assertThrows(IllegalArgumentException.class, builder::build);
   }
 
   @Test

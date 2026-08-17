@@ -119,11 +119,10 @@ public class SerializablePairLongStringBufferStoreTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(NoSuchElementException.class)
   public void testIteratorEmptyThrows() throws Exception
   {
-    IOIterator<SerializablePairLongString> iterator = bufferStore.iterator();
-    iterator.next();
+    final IOIterator<SerializablePairLongString> iterator = bufferStore.iterator();
+    Assertions.assertThrows(NoSuchElementException.class, iterator::next);
   }
 
   @Test

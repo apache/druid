@@ -39,10 +39,10 @@ import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.jupiter.api.Assertions;
 import org.easymock.Mock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;

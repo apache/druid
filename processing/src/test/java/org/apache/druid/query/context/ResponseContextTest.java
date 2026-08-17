@@ -31,8 +31,8 @@ import org.apache.druid.query.context.ResponseContext.CounterKey;
 import org.apache.druid.query.context.ResponseContext.Key;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.context.ResponseContext.StringKey;
-import org.junit.jupiter.api.Assertions;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -61,24 +61,30 @@ public class ResponseContextTest
       "unregistered-key", true, true);
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void putISETest()
   {
-    ResponseContext.createEmpty().put(UNREGISTERED_KEY, new Object());
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> ResponseContext.createEmpty().put(UNREGISTERED_KEY, new Object())
+    );
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void addISETest()
   {
-    ResponseContext.createEmpty().add(UNREGISTERED_KEY, new Object());
+    Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> ResponseContext.createEmpty().add(UNREGISTERED_KEY, new Object())
+    );
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalArgumentException.class)
   public void registerKeyIAETest()
   {
-    Keys.INSTANCE.registerKey(Keys.NUM_SCANNED_ROWS);
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> Keys.INSTANCE.registerKey(Keys.NUM_SCANNED_ROWS)
+    );
   }
 
   @Test
@@ -210,7 +216,6 @@ public class ResponseContextTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(IllegalStateException.class)
   public void mergeISETest()
   {
     final ResponseContext ctx = new ResponseContext()
@@ -221,7 +226,7 @@ public class ResponseContextTest
         return ImmutableMap.of(UNREGISTERED_KEY, "non-registered-key");
       }
     };
-    ResponseContext.createEmpty().merge(ctx);
+    Assertions.assertThrows(IllegalStateException.class, () -> ResponseContext.createEmpty().merge(ctx));
   }
 
   @Test

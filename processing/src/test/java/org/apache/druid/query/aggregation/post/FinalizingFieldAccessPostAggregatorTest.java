@@ -50,9 +50,9 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.Assertions;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -70,7 +70,6 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
   public final TemporaryFolderExtension tempFoler = new TemporaryFolderExtension();
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(UnsupportedOperationException.class)
   public void testComputeWithoutFinalizing()
   {
     String aggName = "rows";
@@ -83,7 +82,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
     metricValues.put(aggName, agg.get());
 
     FinalizingFieldAccessPostAggregator postAgg = new FinalizingFieldAccessPostAggregator("final_rows", aggName);
-    Assertions.assertEquals(3L, postAgg.compute(metricValues));
+    Assertions.assertThrows(UnsupportedOperationException.class, () -> postAgg.compute(metricValues));
   }
 
   @Test

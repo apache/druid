@@ -53,7 +53,6 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.Assertions;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -63,6 +62,7 @@ import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -299,7 +299,6 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  @org.apache.druid.testing.ExpectThrows(UOE.class)
   @SuppressWarnings("unchecked")
   public void testTimeBoundaryArrayResults()
   {
@@ -309,10 +308,13 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
                                                 .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.initializeMissingSegments();
-    new TimeBoundaryQueryQueryToolChest().resultsAsArrays(
-        timeBoundaryQuery,
-        runner.run(QueryPlus.wrap(timeBoundaryQuery), context)
-    ).toList();
+    Assertions.assertThrows(
+        UOE.class,
+        () -> new TimeBoundaryQueryQueryToolChest().resultsAsArrays(
+            timeBoundaryQuery,
+            runner.run(QueryPlus.wrap(timeBoundaryQuery), context)
+        ).toList()
+    );
   }
 
   @Test

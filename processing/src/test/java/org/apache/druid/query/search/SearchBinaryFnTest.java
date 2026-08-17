@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ordering.StringComparators;
-import org.junit.jupiter.api.Assertions;
 import org.joda.time.DateTime;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
