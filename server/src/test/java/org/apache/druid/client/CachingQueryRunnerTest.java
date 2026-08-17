@@ -72,6 +72,7 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -119,10 +120,17 @@ public class CachingQueryRunnerTest extends InitializedNullHandlingTest
   );
   private static final String CACHE_ID = "segment";
 
+  private final int numBackgroundThreads;
   private ObjectMapper objectMapper;
   private CachePopulator cachePopulator;
 
-  public CachingQueryRunnerTest(int numBackgroundThreads)
+  public CachingQueryRunnerTest(final int numBackgroundThreads)
+  {
+    this.numBackgroundThreads = numBackgroundThreads;
+  }
+
+  @BeforeEach
+  public void setUp()
   {
     objectMapper = new DefaultObjectMapper();
 

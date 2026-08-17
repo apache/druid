@@ -175,25 +175,35 @@ public class GroupByQueryRunnerTestHelper
       final TestGroupByBuffers bufferPools
   )
   {
-    if (bufferPools.getBufferSize() != DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes()) {
+    return makeQueryRunnerFactory(mapper, config, bufferPools, DEFAULT_PROCESSING_CONFIG);
+  }
+
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final ObjectMapper mapper,
+      final GroupByQueryConfig config,
+      final TestGroupByBuffers bufferPools,
+      final DruidProcessingConfig processingConfig
+  )
+  {
+    if (bufferPools.getBufferSize() != processingConfig.intermediateComputeSizeBytes()) {
       throw new ISE(
           "Provided buffer size [%,d] does not match configured size [%,d]",
           bufferPools.getBufferSize(),
-          DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes()
+          processingConfig.intermediateComputeSizeBytes()
       );
     }
-    if (bufferPools.getNumMergeBuffers() != DEFAULT_PROCESSING_CONFIG.getNumMergeBuffers()) {
+    if (bufferPools.getNumMergeBuffers() != processingConfig.getNumMergeBuffers()) {
       throw new ISE(
           "Provided merge buffer count [%,d] does not match configured count [%,d]",
           bufferPools.getNumMergeBuffers(),
-          DEFAULT_PROCESSING_CONFIG.getNumMergeBuffers()
+          processingConfig.getNumMergeBuffers()
       );
     }
     final GroupByStatsProvider statsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
     final GroupingEngine groupingEngine = new GroupingEngine(
-        DEFAULT_PROCESSING_CONFIG,
+        processingConfig,
         Suppliers.ofInstance(config),
         groupByResourcesReservationPool,
         mapper,
