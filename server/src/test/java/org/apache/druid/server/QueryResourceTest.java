@@ -140,8 +140,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 public class QueryResourceTest
 {
   private static final DefaultQueryRunnerFactoryConglomerate CONGLOMERATE = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(
@@ -1713,7 +1711,7 @@ public class QueryResourceTest
         () -> jsonMapper.readValue(baos.toByteArray(), Object.class)
     );
 
-    assertThat(e).hasMessageContaining("expected close marker for Array");
+    org.assertj.core.api.Assertions.assertThat(e).hasMessageContaining("expected close marker for Array");
   }
 
   private void createScheduledQueryResource(
@@ -1948,7 +1946,7 @@ public class QueryResourceTest
     // A QueryException keeps its own status and its legacy response body.
     Assertions.assertNotNull(response);
     Assertions.assertEquals(429, response.getStatus());
-    assertThat(StringUtils.fromUtf8((byte[]) response.getEntity())).contains("too busy");
+    org.assertj.core.api.Assertions.assertThat(StringUtils.fromUtf8((byte[]) response.getEntity())).contains("too busy");
 
     // It now shares the DruidException path, so the failure is recorded server-side and not just returned.
     Assertions.assertEquals(1, failingQueryResource.getFailedQueryCount());

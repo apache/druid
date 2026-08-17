@@ -36,8 +36,6 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTest
 {
   private static Map<String, String> MAP = ImmutableMap.of(
@@ -118,7 +116,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
         EasyMock.verify(manager);
       }
     });
-    assertTrue(exception.getMessage().contains("Lookup [some lookup] not found"));
+    Assertions.assertTrue(exception.getMessage().contains("Lookup [some lookup] not found"));
   }
 
   @Test
@@ -134,7 +132,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
           false
       );
     });
-    assertTrue(exception.getMessage().contains("`lookup` required"));
+    Assertions.assertTrue(exception.getMessage().contains("`lookup` required"));
   }
 
   @Test

@@ -45,8 +45,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.fail;
-
 public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestBase
 {
   private Cache cache;
@@ -290,7 +288,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     );
     try {
       sequence.toList();
-      fail("Expected to throw an exception");
+      Assertions.fail("Expected to throw an exception");
     }
     catch (RuntimeException e) {
       Assertions.assertEquals("Exception for testing", e.getMessage());
@@ -321,7 +319,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Mockito.doAnswer((Answer<Object>) invocation -> {
       List<ReferenceCountingResourceHolder<ByteBuffer>> resource = mergePool.takeBatch(1, 1);
       if (resource.isEmpty()) {
-        fail("Resource should not be empty");
+        Assertions.fail("Resource should not be empty");
       }
       Sequence<Result<TimeseriesResultValue>> realSequence = (Sequence<Result<TimeseriesResultValue>>) invocation.callRealMethod();
       Closer closer = Closer.create();

@@ -37,6 +37,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -49,8 +50,6 @@ import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JsonParserIteratorTest
 {
@@ -84,7 +83,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains("timeout exception conversion test"));
+      Assertions.assertTrue(exception.getMessage().contains("timeout exception conversion test"));
     }
 
     @Test
@@ -101,7 +100,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains("Task was cancelled."));
+      Assertions.assertTrue(exception.getMessage().contains("Task was cancelled."));
     }
 
     @Test
@@ -118,7 +117,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains("interrupted future"));
+      Assertions.assertTrue(exception.getMessage().contains("interrupted future"));
     }
 
     @Test
@@ -142,7 +141,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains("ioexception test"));
+      Assertions.assertTrue(exception.getMessage().contains("ioexception test"));
     }
   }
 
@@ -184,7 +183,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(thrown.getMessage().contains(exception.getMessage()));
+      Assertions.assertTrue(thrown.getMessage().contains(exception.getMessage()));
     }
   }
 
@@ -205,7 +204,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains("query exception test"));
+      Assertions.assertTrue(exception.getMessage().contains("query exception test"));
     }
 
     @Test
@@ -224,7 +223,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains("query exception test"));
+      Assertions.assertTrue(exception.getMessage().contains("query exception test"));
     }
   }
 
@@ -245,7 +244,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains(StringUtils.format("url[%s] timed out", URL)));
+      Assertions.assertTrue(exception.getMessage().contains(StringUtils.format("url[%s] timed out", URL)));
     }
 
     @Test
@@ -272,7 +271,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains(StringUtils.format("url[%s] timed out", URL)));
+      Assertions.assertTrue(exception.getMessage().contains(StringUtils.format("url[%s] timed out", URL)));
     }
 
     @Test
@@ -299,7 +298,7 @@ public class JsonParserIteratorTest
           service.shutdownNow();
         }
       });
-      assertTrue(exception.getMessage().contains("Query [qid] timed out"));
+      Assertions.assertTrue(exception.getMessage().contains("Query [qid] timed out"));
     }
 
     private Query<?> mockQuery(String queryId, long timeoutAt)
@@ -335,7 +334,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains(""));
+      Assertions.assertTrue(exception.getMessage().contains(""));
     }
 
     @Test
@@ -354,7 +353,7 @@ public class JsonParserIteratorTest
         );
         iterator.hasNext();
       });
-      assertTrue(exception.getMessage().contains(errorMessage));
+      Assertions.assertTrue(exception.getMessage().contains(errorMessage));
     }
   }
 

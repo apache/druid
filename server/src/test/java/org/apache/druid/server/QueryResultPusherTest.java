@@ -26,6 +26,7 @@ import org.apache.druid.server.QueryResource.QueryMetricCounter;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.apache.druid.server.QueryResultPusher.Writer;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
@@ -37,8 +38,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueryResultPusherTest
 {
@@ -91,7 +90,7 @@ public class QueryResultPusherTest
       @Override
       public void recordFailure(Exception e, long bytesWritten)
       {
-        assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
+        Assertions.assertTrue(Throwables.getStackTraceAsString(e).contains(embeddedExceptionMessage));
         recordFailureInvoked.set(true);
       }
 
@@ -133,7 +132,7 @@ public class QueryResultPusherTest
 
     pusher.push();
 
-    assertTrue(recordFailureInvoked.get(), "recordFailure(e) should have been invoked!");
+    Assertions.assertTrue(recordFailureInvoked.get(), "recordFailure(e) should have been invoked!");
   }
 
   static class NoopQueryMetricCounter implements QueryMetricCounter

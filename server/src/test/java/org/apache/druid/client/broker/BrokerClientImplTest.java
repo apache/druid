@@ -40,6 +40,7 @@ import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,8 +49,6 @@ import javax.ws.rs.core.MediaType;
 
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BrokerClientImplTest
 {
@@ -90,7 +89,7 @@ public class BrokerClientImplTest
         jsonMapper.writeValueAsBytes(response)
     );
 
-    assertEquals(
+    Assertions.assertEquals(
         jsonMapper.writeValueAsString(response),
         brokerClient.submitNativeQuery(scanQuery).get()
     );
@@ -118,7 +117,7 @@ public class BrokerClientImplTest
         jsonMapper.writeValueAsBytes(taskStatus)
     );
 
-    assertEquals(taskStatus, brokerClient.submitSqlTask(query).get());
+    Assertions.assertEquals(taskStatus, brokerClient.submitSqlTask(query).get());
   }
 
   @Test
@@ -166,7 +165,7 @@ public class BrokerClientImplTest
         jsonMapper.writeValueAsBytes(givenPlans)
     );
 
-    assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(new ExplainPlan(plan, resources, attributes)),
         brokerClient.fetchExplainPlan(query).get()
     );
@@ -185,7 +184,7 @@ public class BrokerClientImplTest
         new byte[0]
     );
 
-    assertEquals(true, brokerClient.updateCoordinatorDynamicConfig(config).get());
+    Assertions.assertEquals(true, brokerClient.updateCoordinatorDynamicConfig(config).get());
   }
 
   @Test
@@ -201,6 +200,6 @@ public class BrokerClientImplTest
         new byte[0]
     );
 
-    assertEquals(true, brokerClient.updateBrokerDynamicConfig(config).get());
+    Assertions.assertEquals(true, brokerClient.updateBrokerDynamicConfig(config).get());
   }
 }

@@ -36,9 +36,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-
 public class LookupSnapshotTakerTest
 {
   private static final String TIER1 = "tier1";
@@ -115,7 +112,7 @@ public class LookupSnapshotTakerTest
       List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
       lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList);
     });
-    assertTrue(exception.getMessage().contains("Exception during serialization of lookups"));
+    Assertions.assertTrue(exception.getMessage().contains("Exception during serialization of lookups"));
   }
 
   @Test

@@ -33,8 +33,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestBase
 {
 
@@ -116,7 +114,7 @@ public class RetryQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestB
         Assertions.assertEquals(1, queryRunner.getTotalNumRetries());
       }
     });
-    assertTrue(exception.getMessage().contains("No results found for segments"));
+    Assertions.assertTrue(exception.getMessage().contains("No results found for segments"));
   }
 
   /**

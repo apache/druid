@@ -85,8 +85,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 @LazySingleton
 public class QueryLifecycleTest
 {
@@ -224,7 +222,7 @@ public class QueryLifecycleTest
       QueryLifecycle lifecycle = createLifecycle();
       lifecycle.runSimple(query, authenticationResult, AuthorizationResult.DENY);
     });
-    assertTrue(exception.getMessage().contains("Unexpected state [UNAUTHORIZED], expecting [AUTHORIZED]"));
+    Assertions.assertTrue(exception.getMessage().contains("Unexpected state [UNAUTHORIZED], expecting [AUTHORIZED]"));
   }
 
   @Test
@@ -381,7 +379,7 @@ public class QueryLifecycleTest
       QueryLifecycle lifecycle = createLifecycle();
       lifecycle.runSimple(query, authenticationResult, authorizationResult);
     });
-    assertTrue(exception.getMessage().contains("Different restrictions on table [some_datasource]: previous policy [RowFilterPolicy{rowFilter=some-column IS NULL}] and new policy [RowFilterPolicy{rowFilter=some-column2 IS NULL}]"));
+    Assertions.assertTrue(exception.getMessage().contains("Different restrictions on table [some_datasource]: previous policy [RowFilterPolicy{rowFilter=some-column IS NULL}] and new policy [RowFilterPolicy{rowFilter=some-column2 IS NULL}]"));
   }
 
   @Test

@@ -112,8 +112,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 /**
  * Tests ClientQuerySegmentWalker.
  *
@@ -815,7 +813,7 @@ public class ClientQuerySegmentWalkerTest
 
       testQuery(query, ImmutableList.of(), ImmutableList.of());
     });
-    assertTrue(exception.getMessage().contains("Cannot handle subquery structure for dataSource"));
+    Assertions.assertTrue(exception.getMessage().contains("Cannot handle subquery structure for dataSource"));
   }
 
   @Test
@@ -843,7 +841,7 @@ public class ClientQuerySegmentWalkerTest
 
       testQuery(query, ImmutableList.of(), ImmutableList.of());
     });
-    assertTrue(exception.getMessage().contains("Cannot issue the query, subqueries generated results beyond maximum[2] rows. Try setting the "
+    Assertions.assertTrue(exception.getMessage().contains("Cannot issue the query, subqueries generated results beyond maximum[2] rows. Try setting the "
         + "'maxSubqueryBytes' in the query context to 'auto' for enabling byte based limit, which chooses an optimal "
         + "limit based on memory size and result's heap usage or manually configure the values of either 'maxSubqueryBytes' "
         + "or 'maxSubqueryRows' in the query context. Manually alter the value carefully as it can cause the broker to go out "
@@ -940,7 +938,7 @@ public class ClientQuerySegmentWalkerTest
 
       testQuery(query, ImmutableList.of(), ImmutableList.of());
     });
-    assertTrue(exception.getMessage().contains("Cannot issue the query, subqueries generated results beyond maximum[1] bytes. Increase the "
+    Assertions.assertTrue(exception.getMessage().contains("Cannot issue the query, subqueries generated results beyond maximum[1] bytes. Increase the "
         + "JVM's memory or set the 'maxSubqueryBytes' in the query context to increase the space "
         + "allocated for subqueries to materialize their results. Manually alter the value carefully as it can cause "
         + "the broker to go out of memory."));
@@ -1329,7 +1327,7 @@ public class ClientQuerySegmentWalkerTest
           ImmutableList.of()
       );
     });
-    assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]"));
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<DOUBLE>]"));
   }
 
   @Test
@@ -1389,7 +1387,7 @@ public class ClientQuerySegmentWalkerTest
           ImmutableList.of()
       );
     });
-    assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<LONG>]"));
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<LONG>]"));
   }
 
   @Test
@@ -1449,7 +1447,7 @@ public class ClientQuerySegmentWalkerTest
           ImmutableList.of()
       );
     });
-    assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<STRING>]"));
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create query type helper from invalid type [ARRAY<STRING>]"));
   }
 
   @Test
@@ -1871,4 +1869,3 @@ public class ClientQuerySegmentWalkerTest
     return timeline;
   }
 }
-

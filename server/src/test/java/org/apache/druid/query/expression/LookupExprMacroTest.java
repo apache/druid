@@ -30,8 +30,6 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class LookupExprMacroTest extends InitializedNullHandlingTest
 {
   private static final Expr.ObjectBinding BINDINGS = InputBindings.forInputSuppliers(
@@ -56,7 +54,7 @@ public class LookupExprMacroTest extends InitializedNullHandlingTest
   {
     Throwable exception = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () ->
       assertExpr("lookup(x, 'lookylook')", null));
-    assertTrue(exception.getMessage().contains("Lookup [lookylook] not found"));
+    Assertions.assertTrue(exception.getMessage().contains("Lookup [lookylook] not found"));
   }
 
   @Test
