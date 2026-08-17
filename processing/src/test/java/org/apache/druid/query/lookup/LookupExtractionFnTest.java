@@ -150,8 +150,7 @@ public class LookupExtractionFnTest
         IllegalArgumentException.class,
         () -> {
           if (retainMissing && replaceMissing != null) {
-            @SuppressWarnings("unused") // expected exception
-            final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
+            new LookupExtractionFn(
                 new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
                 retainMissing,
                 replaceMissing,
