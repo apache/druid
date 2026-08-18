@@ -36,45 +36,41 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.server.DruidNode;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@RunWith(MockitoJUnitRunner.class)
 public class DiscoverySideEffectsProviderTest
 {
   private NodeRole nodeRole;
-  @Mock
   private DruidNode druidNode;
   /**
    * This announcer is mocked to fail if it tries to announce a Druid service that is not discoverable.
    */
-  @Mock
   private DruidNodeAnnouncer discoverableOnlyAnnouncer;
-  @Mock
   private Lifecycle lifecycle;
   private List<Lifecycle.Handler> lifecycleHandlers;
 
   private ServerRunnable.DiscoverySideEffectsProvider target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     nodeRole = NodeRole.HISTORICAL;
+    druidNode = Mockito.mock(DruidNode.class);
+    discoverableOnlyAnnouncer = Mockito.mock(DruidNodeAnnouncer.class);
+    lifecycle = Mockito.mock(Lifecycle.class);
     lifecycleHandlers = new ArrayList<>();
     Mockito.doAnswer((invocation) -> {
       DiscoveryDruidNode discoveryDruidNode = invocation.getArgument(0);
       boolean isAllServicesDiscoverable =
           discoveryDruidNode.getServices().values().stream().allMatch(DruidService::isDiscoverable);
-      Assert.assertTrue(isAllServicesDiscoverable);
+      Assertions.assertTrue(isAllServicesDiscoverable);
       return null;
     }).when(discoverableOnlyAnnouncer).announce(ArgumentMatchers.any(DiscoveryDruidNode.class));
     Mockito
@@ -91,8 +87,8 @@ public class DiscoverySideEffectsProviderTest
         ImmutableList.of(new DiscoverableServiceTestModule(), new UndiscoverableServiceTestModule())
     ).injectMembers(target);
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
-    Assert.assertNotNull(child);
-    Assert.assertEquals(1, lifecycleHandlers.size());
+    Assertions.assertNotNull(child);
+    Assertions.assertEquals(1, lifecycleHandlers.size());
     // Start the lifecycle handler. This will make announcements via the announcer
     lifecycleHandlers.get(0).start();
   }
@@ -102,8 +98,8 @@ public class DiscoverySideEffectsProviderTest
   {
     createInjector(ImmutableList.of()).injectMembers(target);
     ServerRunnable.DiscoverySideEffectsProvider.Child child = target.get();
-    Assert.assertNotNull(child);
-    Assert.assertEquals(1, lifecycleHandlers.size());
+    Assertions.assertNotNull(child);
+    Assertions.assertEquals(1, lifecycleHandlers.size());
     // Start the lifecycle handler. This will make announcements via the announcer
     lifecycleHandlers.get(0).start();
   }

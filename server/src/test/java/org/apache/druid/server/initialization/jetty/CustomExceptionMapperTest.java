@@ -22,26 +22,23 @@ package org.apache.druid.server.initialization.jetty;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.google.common.collect.ImmutableMap;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import javax.ws.rs.core.Response;
 
-@RunWith(MockitoJUnitRunner.class)
 public class CustomExceptionMapperTest
 {
-  @Mock
   private JsonParser jsonParser;
 
   private CustomExceptionMapper customExceptionMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
+    jsonParser = Mockito.mock(JsonParser.class);
     customExceptionMapper = new CustomExceptionMapper();
   }
 
@@ -51,12 +48,12 @@ public class CustomExceptionMapperTest
     final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception");
     final Response response = customExceptionMapper.toResponse(exception);
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof ImmutableMap);
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof ImmutableMap);
 
     final ImmutableMap<Object, Object> map = (ImmutableMap<Object, Object>) response.getEntity();
-    Assert.assertEquals(1, map.size());
-    Assert.assertEquals("Test exception", map.get(CustomExceptionMapper.ERROR_KEY));
+    Assertions.assertEquals(1, map.size());
+    Assertions.assertEquals("Test exception", map.get(CustomExceptionMapper.ERROR_KEY));
   }
 
   @Test
@@ -65,11 +62,11 @@ public class CustomExceptionMapperTest
     final JsonMappingException exception = JsonMappingException.from(jsonParser, "Test exception\nStack trace\nMisc details");
     final Response response = customExceptionMapper.toResponse(exception);
 
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
-    Assert.assertTrue(response.getEntity() instanceof ImmutableMap);
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assertions.assertTrue(response.getEntity() instanceof ImmutableMap);
 
     final ImmutableMap<Object, Object> map = (ImmutableMap<Object, Object>) response.getEntity();
-    Assert.assertEquals(1, map.size());
-    Assert.assertEquals("Test exception", map.get(CustomExceptionMapper.ERROR_KEY));
+    Assertions.assertEquals(1, map.size());
+    Assertions.assertEquals("Test exception", map.get(CustomExceptionMapper.ERROR_KEY));
   }
 }

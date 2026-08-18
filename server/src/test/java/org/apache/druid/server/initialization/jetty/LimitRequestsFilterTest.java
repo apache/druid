@@ -21,7 +21,8 @@ package org.apache.druid.server.initialization.jetty;
 
 import org.apache.druid.java.util.common.ISE;
 import org.easymock.EasyMock;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
@@ -33,7 +34,8 @@ import java.util.concurrent.CountDownLatch;
  */
 public class LimitRequestsFilterTest
 {
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(60)
   public void testSimple() throws Exception
   {
     LimitRequestsFilter filter = new LimitRequestsFilter(2);
