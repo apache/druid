@@ -86,17 +86,24 @@ public class LookupSnapshotTakerTest
   }
 
   @Test
-  public void testIOExceptionDuringLookupPersist()
+  public void testIOExceptionDuringLookupPersist() throws IOException
   {
-    Throwable exception = Assertions.assertThrows(ISE.class, () -> {
-      File directory = temporaryFolder.newFolder();
-      LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
-      File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
-      Assertions.assertFalse(snapshotFile.exists());
-      Assertions.assertTrue(snapshotFile.createNewFile());
-      Assertions.assertTrue(snapshotFile.setReadOnly());
-      Assertions.assertTrue(snapshotFile.getParentFile().setReadOnly());
-      LookupBean lookupBean = new LookupBean(
+    final File directory = temporaryFolder.newFolder();
+    final LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
+    final File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
+    Assertions.assertFalse(snapshotFile.exists());
+    Assertions.assertTrue(snapshotFile.createNewFile());
+    try {
+      Assertions.assertTrue(
+          snapshotFile.setReadOnly(),
+          "test setup must be able to make the snapshot file read-only"
+      );
+      final File snapshotDirectory = snapshotFile.getParentFile();
+      Assertions.assertTrue(
+          snapshotDirectory.setReadOnly(),
+          "test setup must be able to make the snapshot directory read-only"
+      );
+      final LookupBean lookupBean = new LookupBean(
           "name",
           null,
           new LookupExtractorFactoryContainer(
@@ -109,10 +116,20 @@ public class LookupSnapshotTakerTest
               )
           )
       );
-      List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
-      lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList);
-    });
-    Assertions.assertTrue(exception.getMessage().contains("Exception during serialization of lookups"));
+      final List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
+      final Throwable exception = Assertions.assertThrows(
+          ISE.class,
+          () -> lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList)
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Exception during serialization of lookups"));
+    }
+    finally {
+      Assertions.assertTrue(snapshotFile.setWritable(true), "test teardown must restore file write permission");
+      Assertions.assertTrue(
+          snapshotFile.getParentFile().setWritable(true),
+          "test teardown must restore directory write permission"
+      );
+    }
   }
 
   @Test
