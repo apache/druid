@@ -32,9 +32,13 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -67,6 +71,7 @@ public class QueryContexts
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
   public static final String CLONE_QUERY_MODE = "cloneQueryMode";
+  public static final String QUERYABLE_HISTORICAL_TIERS = "queryableHistoricalTiers";
   /**
    * This flag controls whether {@link AggregatorFactory#optimizeForSegment(PerSegmentQueryOptimizationContext)}
    * is used. It is undocumented because its main purpose is to help developers debug issues with the optimizations.
@@ -323,6 +328,30 @@ public class QueryContexts
       return (String) value;
     }
     throw badTypeException(key, "a String", value);
+  }
+
+  @Nullable
+  public static Set<String> getAsStringSet(
+      final String key,
+      final Object value
+  )
+  {
+    if (value == null) {
+      return null;
+    } else if (value instanceof String) {
+      return Collections.singleton((String) value);
+    } else if (value instanceof Collection) {
+      final Set<String> values = new LinkedHashSet<>();
+      for (final Object element : (Collection<?>) value) {
+        if (!(element instanceof String)) {
+          throw badValueException(key, "a collection of Strings", value);
+        }
+        values.add((String) element);
+      }
+      return Collections.unmodifiableSet(values);
+    }
+
+    throw badTypeException(key, "a String or collection of Strings", value);
   }
 
   @Nullable
