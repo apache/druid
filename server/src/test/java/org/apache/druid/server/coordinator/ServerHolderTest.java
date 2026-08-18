@@ -29,8 +29,8 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -115,9 +115,9 @@ public class ServerHolderTest
         new TestLoadQueuePeon()
     );
 
-    Assert.assertEquals(0, h1.compareTo(h2));
-    Assert.assertEquals(1, h3.compareTo(h1));
-    Assert.assertEquals(1, h3.compareTo(h4));
+    Assertions.assertEquals(0, h1.compareTo(h2));
+    Assertions.assertEquals(1, h3.compareTo(h1));
+    Assertions.assertEquals(1, h3.compareTo(h4));
   }
 
   @Test
@@ -173,10 +173,10 @@ public class ServerHolderTest
         new TestLoadQueuePeon()
     );
 
-    Assert.assertEquals(h1, h2);
-    Assert.assertNotEquals(h1, h3);
-    Assert.assertNotEquals(h1, h4);
-    Assert.assertNotEquals(h1, h5);
+    Assertions.assertEquals(h1, h2);
+    Assertions.assertNotEquals(h1, h3);
+    Assertions.assertNotEquals(h1, h4);
+    Assertions.assertNotEquals(h1, h5);
   }
 
   @Test
@@ -191,8 +191,8 @@ public class ServerHolderTest
         ),
         new TestLoadQueuePeon()
     );
-    Assert.assertTrue(h1.isServingSegment(SEGMENTS.get(0)));
-    Assert.assertFalse(h1.isServingSegment(SEGMENTS.get(1)));
-    Assert.assertFalse(h1.isLoadQueueFull());
+    Assertions.assertTrue(h1.isServingSegment(SEGMENTS.get(0)));
+    Assertions.assertFalse(h1.isServingSegment(SEGMENTS.get(1)));
+    Assertions.assertFalse(h1.isLoadQueueFull());
   }
 }

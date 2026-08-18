@@ -30,10 +30,10 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,11 +42,11 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
-@Ignore
-@RunWith(Parameterized.class)
+@Disabled
+@ParameterizedClass
+@MethodSource("factoryClasses")
 public class CostBalancerStrategyBenchmark extends AbstractBenchmark
 {
-  @Parameterized.Parameters
   public static List<CostBalancerStrategy[]> factoryClasses()
   {
     return Arrays.asList(
