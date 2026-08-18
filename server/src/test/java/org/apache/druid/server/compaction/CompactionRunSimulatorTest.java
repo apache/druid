@@ -119,7 +119,7 @@ public class CompactionRunSimulatorTest
                 10,
                 1_000_000_000L,
                 1,
-                "interval[2013-01-10T00:00:00.000Z/2013-01-11T00:00:00.000Z] overlaps one of the skip sources: skipOffsetFromLatest[P1D]"
+                "Skip offset from latest[P1D]"
             )
         ),
         skippedTable.getRows()
@@ -201,7 +201,7 @@ public class CompactionRunSimulatorTest
                 10,
                 1_000_000_000L,
                 1,
-                "interval[2013-01-10T00:00:00.000Z/2013-01-11T00:00:00.000Z] overlaps one of the skip sources: skipOffsetFromLatest[P1D]"
+                "Skip offset from latest[P1D]"
             )
         ),
         skippedTable.getRows()

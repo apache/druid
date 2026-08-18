@@ -368,9 +368,9 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     final Granularity segmentGranularity = config.getSegmentGranularity();
     final DateTime latestDataTimestamp = last.getInterval().getEnd();
     final List<Interval> allSkipIntervals = JodaUtils.condenseIntervals(Iterables.concat(
-        Iterables.transform(skipIntervals, interval -> alignToSegmentGranularity(segmentGranularity, interval)),
-        Iterables.transform(config.getSkipIntervals(), interval -> alignToSegmentGranularity(segmentGranularity, interval)),
-        List.of(alignToSegmentGranularity(segmentGranularity, new Interval(skipOffset, latestDataTimestamp)))
+        Iterables.transform(skipIntervals, this::alignToSegmentGranularity),
+        Iterables.transform(config.getSkipIntervals(), this::alignToSegmentGranularity),
+        List.of(alignToSegmentGranularity(new Interval(skipOffset, latestDataTimestamp)))
     ));
 
     // Collect stats for all skipped segments
@@ -422,11 +422,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
           .map(segment -> segment.getId().getIntervalEnd())
           .max(Comparator.naturalOrder())
           .orElseThrow(AssertionError::new);
+
       final Interval searchInterval = new Interval(searchStart, searchEnd);
       final Interval overlappingSkipInterval = allSkipIntervals.stream()
                                                                 .filter(searchInterval::overlaps)
                                                                 .findFirst()
                                                                 .orElse(null);
+
       // Guardrail check, this should never happen
       if (overlappingSkipInterval != null) {
         log.warn(
@@ -449,20 +451,18 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
       List<Interval> lockedIntervals
   )
   {
-    final StringBuilder reason = new StringBuilder(
-        StringUtils.format("interval[%s] overlaps one of the skip sources: skipOffsetFromLatest[%s]", skipInterval, skipOffset)
-    );
-    if (!configuredSkipIntervals.isEmpty()) {
-      reason.append(", configured skipIntervals").append(configuredSkipIntervals);
+    if (lockedIntervals.stream().anyMatch(skipInterval::overlaps)) {
+      return StringUtils.format("Interval[%s] locked by another task", skipInterval);
+    } else if (configuredSkipIntervals.stream().anyMatch(skipInterval::overlaps)) {
+      return StringUtils.format("Interval[%s] skipped by compaction config", skipInterval);
+    } else {
+      return StringUtils.format("Skip offset from latest[%s]", skipOffset);
     }
-    if (!lockedIntervals.isEmpty()) {
-      reason.append(", locked intervals").append(lockedIntervals);
-    }
-    return reason.toString();
   }
 
-  private static Interval alignToSegmentGranularity(@Nullable Granularity segmentGranularity, Interval interval)
+  private Interval alignToSegmentGranularity(Interval interval)
   {
+    final Granularity segmentGranularity = config.getSegmentGranularity();
     if (segmentGranularity == null) {
       return interval;
     }
