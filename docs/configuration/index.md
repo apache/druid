@@ -1040,7 +1040,9 @@ None of the configs that apply to [auto-kill performed by the Coordinator](../da
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.manager.segments.killUnused.enabled`|Boolean flag to enable auto-kill of eligible unused segments on the Overlord. This feature can be used only when [segment metadata caching](#segment-metadata-cache) is enabled on the Overlord and MUST NOT be enabled if `druid.coordinator.kill.on` is already set to `true` on the Coordinator.|`true`|
-|`druid.manager.segments.killUnused.bufferPeriod`|Period after which a segment marked as unused becomes eligible for auto-kill on the Overlord. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|`P30D` (30 days)|
+|`druid.manager.segments.killUnused.bufferPeriod`|ISO8601 Period after which a segment marked as unused cannot be marked as used anymore and becomes eligible for auto-kill on the Overlord. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|`P30D` (30 days)|
+|`druid.manager.segments.killUnused.dutyPeriod`|ISO8601 Period defining the frequency at which unused segments should be added to the kill queue. If the queue already has some unused segments, new segments are not added. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|`PT1H` (1 hour)|
+|`druid.manager.segments.killUnused.maxSegmentsToKill`|Maximum number of unused segments that can be added to the kill queue in a single cycle. A very large value for this config may cause the metadata store to slow down while fetching unused segments to kill, whereas a very small value would cause the kill operation to be ineffective as it wouldn't be able to catch up with the number of old unused segments in the cluster. This config is effective only if `druid.manager.segments.killUnused.enabled` is set to `true`.|200,000|
 
 #### Overlord dynamic configuration
 
@@ -2256,7 +2258,7 @@ Supported runtime properties:
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.query.groupBy.maxSelectorDictionarySize`|Maximum amount of heap space (approximately) to use for per-segment string dictionaries. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
-|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|100000000|
+|`druid.query.groupBy.maxMergingDictionarySize`|Maximum amount of heap space (approximately) to use for per-query string dictionaries. When the dictionary exceeds this size, a spill to disk will be triggered. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|0 (automatic)|
 |`druid.query.groupBy.maxOnDiskStorage`|Maximum amount of disk space to use, per-query, for spilling result sets to disk when either the merging buffer or the dictionary fills up. Queries that exceed this limit will fail. Set to zero to disable disk spilling.|0 (disabled)|
 |`druid.query.groupBy.maxSpillFileCount`|Maximum number of spill files allowed per GroupBy query. Queries that exceed this limit will fail. See [groupBy memory tuning and resource limits](../querying/groupbyquery.md#memory-tuning-and-resource-limits) for details.|Integer.MAX_VALUE (unlimited)|
 |`druid.query.groupBy.minSpillFileSize`|Minimum number of bytes that must accumulate across pending in-memory spill runs before they are flushed as a single file to disk. Smaller spills are batched in heap memory to avoid creating many tiny files. Higher values reduce file count but increase heap usage.|1048576 (1 MiB)|

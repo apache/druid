@@ -19,9 +19,8 @@
 
 package org.apache.druid.indexing.rabbitstream;
 
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
-
-import javax.validation.constraints.NotNull;
 
 // OrderedSequenceNumber.equals() should be used instead.
 @SuppressWarnings("ComparableImplementedButEqualsNotOverridden")

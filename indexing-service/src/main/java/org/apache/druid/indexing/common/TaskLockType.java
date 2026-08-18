@@ -24,6 +24,7 @@ package org.apache.druid.indexing.common;
  * 2) An appending task may use only EXCLUSIVE, SHARED or APPEND locks
  * 3) A replacing task may use only EXCLUSIVE or REPLACE locks
  * 4) REPLACE and APPEND locks can only be used with timechunk locking
+ * 5) Only kill tasks (task type "kill") may acquire a KILL lock
  */
 public enum TaskLockType
 {
@@ -49,5 +50,12 @@ public enum TaskLockType
    * and with at most one REPLACE lock whose interval encloses that of the APPEND lock.
    * They are incompatible with all other active locks.
    */
-  APPEND
+  APPEND,
+  /**
+   * There can be at most one active KILL lock for a given interval.
+   * It can co-exist with any other active lock type (EXCLUSIVE, SHARED, REPLACE, APPEND),
+   * but not with another KILL lock whose interval overlaps.
+   * Only tasks of type "kill" may acquire a KILL lock.
+   */
+  KILL
 }

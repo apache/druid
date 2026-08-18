@@ -26,7 +26,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -160,7 +160,7 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
         () -> keyReader.trim(key, signature.size() + 1)
     );
 
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Cannot trim")));
+    MatcherAssert.assertThat(e, Matchers.hasProperty("message", CoreMatchers.containsString("Cannot trim")));
   }
 
   @Test

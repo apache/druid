@@ -25,29 +25,24 @@ import com.google.common.io.Files;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-
 public class LookupSnapshotTakerTest
 {
   private static final String TIER1 = "tier1";
   private static final String TIER2 = "tier2";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -55,7 +50,7 @@ public class LookupSnapshotTakerTest
   private LookupSnapshotTaker lookupSnapshotTaker;
   private String basePersistDirectory;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
@@ -86,56 +81,75 @@ public class LookupSnapshotTakerTest
     lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList1);
     List<LookupBean> lookupBeanList2 = Collections.singletonList(lookupBean2);
     lookupSnapshotTaker.takeSnapshot(TIER2, lookupBeanList2);
-    Assert.assertEquals(lookupBeanList1, lookupSnapshotTaker.pullExistingSnapshot(TIER1));
-    Assert.assertEquals(lookupBeanList2, lookupSnapshotTaker.pullExistingSnapshot(TIER2));
+    Assertions.assertEquals(lookupBeanList1, lookupSnapshotTaker.pullExistingSnapshot(TIER1));
+    Assertions.assertEquals(lookupBeanList2, lookupSnapshotTaker.pullExistingSnapshot(TIER2));
   }
 
   @Test
   public void testIOExceptionDuringLookupPersist() throws IOException
   {
-    File directory = temporaryFolder.newFolder();
-    LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
-    File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
-    Assert.assertFalse(snapshotFile.exists());
-    Assert.assertTrue(snapshotFile.createNewFile());
-    Assert.assertTrue(snapshotFile.setReadOnly());
-    Assert.assertTrue(snapshotFile.getParentFile().setReadOnly());
-    LookupBean lookupBean = new LookupBean(
-        "name",
-        null,
-        new LookupExtractorFactoryContainer(
-            "v1",
-            new MapLookupExtractorFactory(
-                ImmutableMap.of(
-                    "key",
-                    "value"
-                ), true
-            )
-        )
-    );
-    List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
-
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage("Exception during serialization of lookups");
-    lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList);
+    final File directory = temporaryFolder.newFolder();
+    final LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
+    final File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
+    Assertions.assertFalse(snapshotFile.exists());
+    Assertions.assertTrue(snapshotFile.createNewFile());
+    try {
+      Assertions.assertTrue(
+          snapshotFile.setReadOnly(),
+          "test setup must be able to make the snapshot file read-only"
+      );
+      final File snapshotDirectory = snapshotFile.getParentFile();
+      Assertions.assertTrue(
+          snapshotDirectory.setReadOnly(),
+          "test setup must be able to make the snapshot directory read-only"
+      );
+      final LookupBean lookupBean = new LookupBean(
+          "name",
+          null,
+          new LookupExtractorFactoryContainer(
+              "v1",
+              new MapLookupExtractorFactory(
+                  ImmutableMap.of(
+                      "key",
+                      "value"
+                  ), true
+              )
+          )
+      );
+      final List<LookupBean> lookupBeanList = Collections.singletonList(lookupBean);
+      final Throwable exception = Assertions.assertThrows(
+          ISE.class,
+          () -> lookupSnapshotTaker.takeSnapshot(TIER1, lookupBeanList)
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Exception during serialization of lookups"));
+    }
+    finally {
+      Assertions.assertTrue(snapshotFile.setWritable(true), "test teardown must restore file write permission");
+      Assertions.assertTrue(
+          snapshotFile.getParentFile().setWritable(true),
+          "test teardown must restore directory write permission"
+      );
+    }
   }
 
   @Test
   public void tesLookupPullingFromEmptyFile() throws IOException
   {
     File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
-    Assert.assertTrue(snapshotFile.createNewFile());
-    Assert.assertEquals(Collections.emptyList(), lookupSnapshotTaker.pullExistingSnapshot(TIER1));
+    Assertions.assertTrue(snapshotFile.createNewFile());
+    Assertions.assertEquals(Collections.emptyList(), lookupSnapshotTaker.pullExistingSnapshot(TIER1));
   }
 
-  @Test(expected = ISE.class)
-  public void tesLookupPullingFromCorruptFile() throws IOException
+  @Test
+  public void tesLookupPullingFromCorruptFile()
   {
-    File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
-    Assert.assertTrue(snapshotFile.createNewFile());
-    byte[] bytes = StringUtils.toUtf8("test corrupt file");
-    Files.write(bytes, snapshotFile);
-    lookupSnapshotTaker.pullExistingSnapshot(TIER1);
+    Assertions.assertThrows(ISE.class, () -> {
+      File snapshotFile = lookupSnapshotTaker.getPersistFile(TIER1);
+      Assertions.assertTrue(snapshotFile.createNewFile());
+      byte[] bytes = StringUtils.toUtf8("test corrupt file");
+      Files.write(bytes, snapshotFile);
+      lookupSnapshotTaker.pullExistingSnapshot(TIER1);
+    });
   }
 
   @Test
@@ -144,6 +158,7 @@ public class LookupSnapshotTakerTest
     File directory = temporaryFolder.newFolder();
     LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
     List<LookupBean> actualList = lookupSnapshotTaker.pullExistingSnapshot(TIER1);
-    Assert.assertEquals(Collections.emptyList(), actualList);
+    Assertions.assertEquals(Collections.emptyList(), actualList);
   }
+
 }

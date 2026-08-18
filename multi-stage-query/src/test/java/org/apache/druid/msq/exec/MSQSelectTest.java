@@ -31,6 +31,7 @@ import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -90,9 +91,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -2194,12 +2193,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select dim3, count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further.")
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Column [dim3] is a multi-value string. Please wrap the column using MV_TO_ARRAY() to proceed further."
             )
-        ))
+        )
         .verifyExecutionError();
   }
 
@@ -2377,13 +2375,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by dim3")
         .setQueryContext(localContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(
-                CoreMatchers.containsString(
-                    "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false.")
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Encountered multi-value dimension [dim3] that cannot be processed with 'groupByEnableMultiValueUnnesting' set to false."
             )
-        ))
+        )
         .setExpectedMetricDimensions(
             Map.of(
                 DruidMetrics.DATASOURCE, "foo",
@@ -2401,11 +2397,11 @@ public class MSQSelectTest extends MSQTestBase
     testSelectQuery()
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
         .setQueryContext(context)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."))
-        ))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessageContains(
+                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."
+            )
+        )
         .verifyExecutionError();
   }
 
@@ -2806,10 +2802,9 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(resultSignature)
         .setQueryContext(timeoutContext)
         .setExpectedMSQFault(CanceledFault.timeout())
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Query timed out"))
-        ))
+        .setExpectedExecutionErrorMatcher(
+            ThrowableMatcher.of(ISE.class).expectMessageContains("Query timed out")
+        )
         .verifyExecutionError();
   }
 

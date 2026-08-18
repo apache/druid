@@ -21,13 +21,12 @@ package org.apache.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.metadata.PasswordProvider;
 import org.joda.time.Period;
 import redis.clients.jedis.Protocol;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 
 public class RedisCacheConfig
 {

@@ -31,12 +31,12 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.RuntimeInfo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -47,8 +47,8 @@ public class DruidServerConfigTest
   private File testSegmentCacheDir1;
   private File testSegmentCacheDir2;
 
-  @Rule
-  public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   public ObjectMapper mapper = new DefaultObjectMapper();
 
@@ -58,11 +58,11 @@ public class DruidServerConfigTest
     binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
   };
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
-    testSegmentCacheDir1 = tmpFolder.newFolder("segment_cache_folder1");
-    testSegmentCacheDir2 = tmpFolder.newFolder("segment_cache_folder2");
+    testSegmentCacheDir1 = temporaryFolder.newFolder("segment_cache_folder1");
+    testSegmentCacheDir2 = temporaryFolder.newFolder("segment_cache_folder2");
   }
 
   @Test
@@ -73,8 +73,8 @@ public class DruidServerConfigTest
     );
     final DruidServerConfig druidServerConfig = injector.getInstance(DruidServerConfig.class);
 
-    Assert.assertNotNull(druidServerConfig);
-    Assert.assertEquals(DruidServerConfig.class, druidServerConfig.getClass());
+    Assertions.assertNotNull(druidServerConfig);
+    Assertions.assertEquals(DruidServerConfig.class, druidServerConfig.getClass());
   }
 
   @Test
@@ -89,7 +89,7 @@ public class DruidServerConfigTest
         new RuntimeInfo(),
         SegmentLoaderConfig.builder().locations(locations).build()
     );
-    Assert.assertEquals(30000000000L, druidServerConfig.getMaxSize());
+    Assertions.assertEquals(30000000000L, druidServerConfig.getMaxSize());
   }
 
   @Test
@@ -105,7 +105,7 @@ public class DruidServerConfigTest
     };
     SegmentLoaderConfig segmentLoaderConfig = SegmentLoaderConfig.builder().virtualStorage(true).build();
     DruidServerConfig druidServerConfig = new DruidServerConfig(runtimeInfo, segmentLoaderConfig);
-    Assert.assertEquals(HumanReadableBytes.parse("45TiB"), druidServerConfig.getMaxSize());
+    Assertions.assertEquals(HumanReadableBytes.parse("45TiB"), druidServerConfig.getMaxSize());
   }
 
   @Test
@@ -143,8 +143,7 @@ public class DruidServerConfigTest
         DruidServerConfig.class
     );
 
-    Assert.assertEquals(serverConfigWithDefaultSize.getMaxSize(), 10000000000L);
-    Assert.assertEquals(serverConfigWithNonDefaultSize.getMaxSize(), 123456L);
+    Assertions.assertEquals(serverConfigWithDefaultSize.getMaxSize(), 10000000000L);
+    Assertions.assertEquals(serverConfigWithNonDefaultSize.getMaxSize(), 123456L);
   }
 }
-

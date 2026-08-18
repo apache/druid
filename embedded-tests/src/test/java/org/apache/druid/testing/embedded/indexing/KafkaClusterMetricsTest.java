@@ -30,6 +30,7 @@ import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.metadata.UnusedSegmentKillerConfig;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.rpc.UpdateResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -105,6 +106,8 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
       }
     };
 
+    final Period killBufferPeriod = Period.millis(100).minus(UnusedSegmentKillerConfig.GRACE_PERIOD);
+
     indexer.setServerMemory(1_000_000_000L)
            .addProperty("druid.segment.handoff.pollDuration", "PT0.1s")
            .addProperty("druid.worker.capacity", "10");
@@ -112,7 +115,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
             .addProperty("druid.manager.segments.useIncrementalCache", "ifSynced")
             .addProperty("druid.manager.segments.pollDuration", "PT0.1s")
             .addProperty("druid.manager.segments.killUnused.enabled", "true")
-            .addProperty("druid.manager.segments.killUnused.bufferPeriod", "PT0.1s")
+            .addProperty("druid.manager.segments.killUnused.bufferPeriod", killBufferPeriod.toString())
             .addProperty("druid.manager.segments.killUnused.dutyPeriod", "PT1s");
     coordinator.addProperty("druid.manager.segments.useIncrementalCache", "ifSynced");
     cluster.addExtension(KafkaIndexTaskModule.class)
@@ -203,7 +206,7 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
   @MethodSource("getCompactionSupervisorTestParams")
   @ParameterizedTest(name = "engine={0}, policy={1}")
   @Timeout(120)
-  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andSkipKillOfUnusedSegments(
+  public void test_ingestClusterMetrics_withConcurrentCompactionSupervisor_andKillUnusedSegments(
       CompactionEngine engine,
       CompactionCandidateSearchPolicy policy
   )
@@ -303,9 +306,16 @@ public class KafkaClusterMetricsTest extends EmbeddedClusterTestBase
         agg -> agg.hasSumAtLeast(1)
     );
 
-    // Verify that the segments are skipped since the interval is still being appended to
+    // Verify that some unused segments have been killed from metadata store
     overlord.latchableEmitter().waitForEventAggregate(
-        event -> event.hasMetricName("segment/kill/skippedIntervals/count")
+        event -> event.hasMetricName("segment/killed/metadataStore/count")
+                      .hasDimension(DruidMetrics.DATASOURCE, dataSource),
+        agg -> agg.hasSumAtLeast(1)
+    );
+
+    // Verify that some segments were not deleted from deep store due to being upgraded
+    overlord.latchableEmitter().waitForEventAggregate(
+        event -> event.hasMetricName("segment/kill/deepStorageSkipped/count")
                       .hasDimension(DruidMetrics.DATASOURCE, dataSource),
         agg -> agg.hasSumAtLeast(1)
     );

@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
@@ -199,7 +198,7 @@ public class PeriodLoadRuleTest
   @Test
   public void testCreatingNegativeTieredReplicants()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, () ->
             new PeriodLoadRule(
                 Period.days(1),
@@ -221,7 +220,7 @@ public class PeriodLoadRuleTest
     Map<String, Integer> tieredReplicants = new HashMap<>();
     tieredReplicants.put("tier", null);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, () ->
             new PeriodLoadRule(
                 Period.days(1),

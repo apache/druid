@@ -17,10 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.query.topn;
+package org.apache.druid.benchmark.query;
 
-import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
-import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -31,13 +29,18 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMinAggregatorFactory;
+import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.query.topn.TopNQueryQueryToolChest;
+import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -46,8 +49,8 @@ import java.util.Map;
 /**
  * Based on TopNQueryRunnerTest
  */
-@Ignore
-public class TopNQueryRunnerBenchmark extends AbstractBenchmark
+@Disabled
+public class TopNQueryRunnerBenchmark
 {
 
   public enum TestCases
@@ -80,7 +83,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
       .build();
   private static final Map<TestCases, QueryRunner> TEST_CASE_MAP = new HashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp()
   {
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
@@ -126,32 +129,27 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
     );
     //Thread.sleep(10000);
   }
-
-  @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
   @Test
   public void testmMapped()
   {
     TEST_CASE_MAP.get(TestCases.mMappedTestIndex).run(QueryPlus.wrap(QUERY));
   }
 
-  @Ignore
-  @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
+  @Disabled
   @Test
   public void testrtIndex()
   {
     TEST_CASE_MAP.get(TestCases.rtIndex).run(QueryPlus.wrap(QUERY));
   }
 
-  @Ignore
-  @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
+  @Disabled
   @Test
   public void testMerged()
   {
     TEST_CASE_MAP.get(TestCases.mergedRealtimeIndex).run(QueryPlus.wrap(QUERY));
   }
 
-  @Ignore
-  @BenchmarkOptions(warmupRounds = 10000, benchmarkRounds = 10000)
+  @Disabled
   @Test
   public void testOffHeap()
   {

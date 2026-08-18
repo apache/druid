@@ -54,16 +54,15 @@ import org.apache.druid.segment.nested.ObjectStorageEncoding;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.migrationsupport.EnableJUnit4MigrationSupport;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -71,15 +70,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@EnableJUnit4MigrationSupport
 public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 {
   private static final Logger LOG = new Logger(NestedDataScanQueryTest.class);
 
   DefaultColumnFormatConfig DEFAULT_FORMAT = new DefaultColumnFormatConfig(null, null, null, null);
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
 
   private final AggregationTestHelper helper;
   private final Closer closer;
@@ -123,7 +121,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   {
     BuiltInTypesModule.registerHandlersAndSerde();
     List<? extends Module> mods = BuiltInTypesModule.getJacksonModulesList();
-    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(mods, tempFolder);
+    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelperWithTemporaryFolderExtension(mods, tempFolder);
     this.closer = Closer.create();
   }
 
@@ -142,8 +140,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
     List<ScanResultValue> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(8, ((List) results.get(0).getEvents()).size());
     logResults(results);
   }
 
@@ -174,8 +172,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 
     List<ScanResultValue> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(8, ((List) results.get(0).getEvents()).size());
     logResults(results);
   }
 
@@ -218,16 +216,16 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
     if (ObjectStorageEncoding.NONE.equals(spec.getObjectStorageEncoding())) {
       // use StructuredData here because it sorts the fields in nest column
-      Assert.assertEquals(
+      Assertions.assertEquals(
           StructuredData.wrap(resultsRealtime.get(0).getEvents()),
           StructuredData.wrap(resultsSegments.get(0).getEvents())
       );
     } else {
-      Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+      Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
     }
   }
 
@@ -251,11 +249,11 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
     List<ScanResultValue> results = seq.toList();
     logResults(results);
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
     if (rollup) {
-      Assert.assertEquals(6, ((List) results.get(0).getEvents()).size());
+      Assertions.assertEquals(6, ((List) results.get(0).getEvents()).size());
     } else {
-      Assert.assertEquals(10, ((List) results.get(0).getEvents()).size());
+      Assertions.assertEquals(10, ((List) results.get(0).getEvents()).size());
     }
   }
 
@@ -288,9 +286,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @Test
@@ -319,9 +317,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @ParameterizedTest(name = "{0}")
@@ -354,8 +352,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segments, scanQuery);
 
     List<ScanResultValue> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(8, ((List) results.get(0).getEvents()).size());
     logResults(results);
   }
 
@@ -375,8 +373,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
     List<ScanResultValue> results = seq.toList();
     logResults(results);
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(80, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(80, ((List) results.get(0).getEvents()).size());
   }
 
   @Test
@@ -395,8 +393,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, queryBuilder().build());
 
     List<ScanResultValue> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(8, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(8, ((List) results.get(0).getEvents()).size());
     logResults(results);
   }
 
@@ -424,8 +422,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
     List<ScanResultValue> results = seq.toList();
     logResults(results);
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(1, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(1, ((List) results.get(0).getEvents()).size());
   }
 
   @ParameterizedTest(name = "{0}")
@@ -455,8 +453,8 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
 
     List<ScanResultValue> results = seq.toList();
     logResults(results);
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(4, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(4, ((List) results.get(0).getEvents()).size());
   }
 
   @Test
@@ -478,9 +476,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @ParameterizedTest(name = "{0}")
@@ -519,9 +517,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @Test
@@ -542,9 +540,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @Test
@@ -565,9 +563,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(
         "["
         + "[978652800000, [A, A], [null, null], [1, 1], [0.1, 0.1], [1, 1], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
         + "[978739200000, [A, A], [null, null], [1, 1], [0.1, 0.1], [1, 1], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
@@ -575,7 +573,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         + "[978912000000, [A, A], [null, null], [1, 1], [0.1, 0.1], [1, 1], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1]]",
         resultsSegments.get(0).getEvents().toString()
     );
-    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+    Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @Test
@@ -597,13 +595,13 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(
         "[[1672531200000, null, null, null, 1, 51, -0.13, 1, [], [51, -35], {a=700, b={x=g, y=1.1, z=[9, null, 9, 9]}, c=null, v=[]}, {x=400, y=[{l=[null], m=100, n=5}, {l=[a, b, c], m=a, n=1}], z={}}, null, [a, b], null, [2, 3], null, [null], null, [1, 0, 1], null, [{x=1}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, , 2, null, 0, b, 1.1, b, 2, b, {a=200, b={x=b, y=1.1, z=[2, 4, 6]}, c=[a, 123], v=[]}, {x=10, y=[{l=[b, b, c], m=b, n=2}, [1, 2, 3]], z={a=[5.5], b=false}}, [a, b, c], [null, b], [2, 3], null, [3.3, 4.4, 5.5], [999.0, null, 5.5], [null, null, 2.2], [1, 1], [null, [null], []], [{x=3}, {x=4}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, a, 1, 1.0, 1, 1, 1, 1, 1, 1, {a=100, b={x=a, y=1.1, z=[1, 2, 3, 4]}, c=[100], v=[]}, {x=1234, y=[{l=[a, b, c], m=a, n=1}, {l=[a, b, c], m=a, n=1}], z={a=[1.1, 2.2, 3.3], b=true}}, [a, b], [a, b], [1, 2, 3], [1, null, 3], [1.1, 2.2, 3.3], [1.1, 2.2, null], [a, 1, 2.2], [1, 0, 1], [[1, 2, null], [3, 4]], [{x=1}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, b, 4, 3.3, 1, 1, null, {}, 4, 1, {a=400, b={x=d, y=1.1, z=[3, 4]}, c={a=1}, v=[]}, {x=1234, z={a=[1.1, 2.2, 3.3], b=true}}, [d, e], [b, b], [1, 4], [1], [2.2, 3.3, 4.0], null, [a, b, c], [null, 0, 1], [[1, 2], [3, 4], [5, 6, 7]], [{x=null}, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, c, null, 4.4, 1, hello, -1000, {}, [], hello, {a=500, b={x=e, z=[1, 2, 3, 4]}, c=hello, v=a}, {x=11, y=[], z={a=[null], b=false}}, null, null, [1, 2, 3], [], [1.1, 2.2, 3.3], null, null, [0], null, [{x=1000}, {y=2000}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, d, 5, 5.9, 0, null, 3.33, a, 6, null, {a=600, b={x=f, y=1.1, z=[6, 7, 8, 9]}, c=12.3, v=b}, null, [a, b], null, null, [null, 2, 9], null, [999.0, 5.5, null], [a, 1, 2.2], [], [[1], [1, 2, null]], [{a=1}, {b=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1], [1672531200000, null, 3, 2.0, null, 3.0, 1.0, 3.3, 3, 3.0, {a=300}, {x=4.4, y=[{l=[], m=100, n=3}, {l=[a]}, {l=[b], n=[]}], z={a=[], b=true}}, [b, c], [d, null, b], [1, 2, 3, 4], [1, 2, 3], [1.1, 3.3], [null, 2.2, null], [1, null, 1], [1, null, 1], [[1], null, [1, 2, 3]], [null, {x=2}], null, hello, 1234, 1.234, {x=1, y=hello, z={a=1.1, b=1234, c=[a, b, c], d=[]}}, [a, b, c], [1, 2, 3], [1.1, 2.2, 3.3], [], {}, [null, null], [{}, {}, {}], [{a=b, x=1, y=1.3}], 1]]",
         resultsSegments.get(0).getEvents().toString()
     );
-    Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+    Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
   }
 
   @ParameterizedTest(name = "{0}")
@@ -645,10 +643,10 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsRealtime = seqRealtime.toList();
     logResults(results);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(4, ((List) results.get(0).getEvents()).size());
-    Assert.assertEquals(results.size(), resultsRealtime.size());
-    Assert.assertEquals(results.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(4, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(results.size(), resultsRealtime.size());
+    Assertions.assertEquals(results.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
   }
 
   @ParameterizedTest(name = "{0}")
@@ -687,10 +685,10 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsRealtime = seqRealtime.toList();
     logResults(results);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(6, ((List) results.get(0).getEvents()).size());
-    Assert.assertEquals(results.size(), resultsRealtime.size());
-    Assert.assertEquals(results.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(6, ((List) results.get(0).getEvents()).size());
+    Assertions.assertEquals(results.size(), resultsRealtime.size());
+    Assertions.assertEquals(results.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
   }
 
   @ParameterizedTest(name = "{0}")
@@ -730,19 +728,19 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     List<ScanResultValue> resultsSegments = seq2.toList();
     logResults(resultsSegments);
     logResults(resultsRealtime);
-    Assert.assertEquals(1, resultsRealtime.size());
-    Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
+    Assertions.assertEquals(1, resultsRealtime.size());
+    Assertions.assertEquals(resultsRealtime.size(), resultsSegments.size());
     if (ObjectStorageEncoding.NONE.equals(spec.getObjectStorageEncoding())) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "[[{x=400, y=[{l=[null], m=100, n=5}, {l=[a, b, c], m=a, n=1}]}]]",
           resultsSegments.get(0).getEvents().toString()
       );
     } else {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "[[{x=400, y=[{l=[null], m=100, n=5}, {l=[a, b, c], m=a, n=1}], z={}}]]",
           resultsSegments.get(0).getEvents().toString()
       );
-      Assert.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
+      Assertions.assertEquals(resultsRealtime.get(0).getEvents().toString(), resultsSegments.get(0).getEvents().toString());
     }
   }
 

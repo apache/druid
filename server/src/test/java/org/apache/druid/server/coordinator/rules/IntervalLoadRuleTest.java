@@ -26,7 +26,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -70,7 +69,7 @@ public class IntervalLoadRuleTest
   @Test
   public void testCreatingNegativeTieredReplicants()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, () ->
             new IntervalLoadRule(
                 Intervals.of("0/3000"),
@@ -91,7 +90,7 @@ public class IntervalLoadRuleTest
     Map<String, Integer> tieredReplicants = new HashMap<>();
     tieredReplicants.put("tier", null);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, () ->
             new IntervalLoadRule(
                 Intervals.of("0/3000"),

@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.indexer.Property;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Objects;
 
