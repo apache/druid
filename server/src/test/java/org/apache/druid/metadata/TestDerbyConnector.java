@@ -29,7 +29,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -117,10 +117,10 @@ public class TestDerbyConnector extends DerbyConnector
     catch (UnableToObtainConnectionException e) {
       SQLException cause = (SQLException) e.getCause();
       // error code "08006" indicates proper shutdown
-      Assert.assertEquals(
-          StringUtils.format("Derby not shutdown: [%s]", cause.toString()),
+      Assertions.assertEquals(
           "08006",
-          cause.getSQLState()
+          cause.getSQLState(),
+          StringUtils.format("Derby not shutdown: [%s]", cause.toString())
       );
     }
   }

@@ -29,8 +29,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Objects;
 
@@ -73,8 +73,8 @@ public class CountersSnapshotTreeTest
     final CounterSnapshotsTree snapshotsTree2 = serializationMapper.readValue(json, CounterSnapshotsTree.class);
     final CounterSnapshotsTree snapshotsTree3 = deserializationMapper.readValue(json, CounterSnapshotsTree.class);
 
-    Assert.assertEquals(snapshotsTree.copyMap(), snapshotsTree2.copyMap());
-    Assert.assertNotEquals(snapshotsTree.copyMap(), snapshotsTree3.copyMap());
+    Assertions.assertEquals(snapshotsTree.copyMap(), snapshotsTree2.copyMap());
+    Assertions.assertNotEquals(snapshotsTree.copyMap(), snapshotsTree3.copyMap());
 
     // Confirm that deserializationMapper reads the TestCounterSnapshot as a NilQueryCounterSnapshot.
     MatcherAssert.assertThat(

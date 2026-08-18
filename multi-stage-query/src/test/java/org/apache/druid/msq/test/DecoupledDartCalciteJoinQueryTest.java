@@ -29,10 +29,10 @@ import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.opentest4j.TestAbortedException;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
 public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQueryTest
@@ -107,7 +107,7 @@ public abstract class DecoupledDartCalciteJoinQueryTest extends CalciteJoinQuery
   @Override
   protected void msqIncompatible()
   {
-    throw new AssumptionViolatedException("Case marked as msqIncompatible; not trying dart right now");
+    throw new TestAbortedException("Case marked as msqIncompatible; not trying dart right now");
   }
 
   @Override

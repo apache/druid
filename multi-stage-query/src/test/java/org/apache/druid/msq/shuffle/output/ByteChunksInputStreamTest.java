@@ -22,8 +22,8 @@ package org.apache.druid.msq.shuffle.output;
 import com.google.common.collect.ImmutableList;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -50,7 +50,7 @@ public class ByteChunksInputStreamTest
         baos.write(c);
       }
 
-      Assert.assertArrayEquals(chunksSubset(0), baos.toByteArray());
+      Assertions.assertArrayEquals(chunksSubset(0), baos.toByteArray());
     }
   }
 
@@ -66,7 +66,7 @@ public class ByteChunksInputStreamTest
         baos.write(c);
       }
 
-      Assert.assertArrayEquals(chunksSubset(1), baos.toByteArray());
+      Assertions.assertArrayEquals(chunksSubset(1), baos.toByteArray());
     }
   }
 
@@ -79,11 +79,11 @@ public class ByteChunksInputStreamTest
 
       int r;
       while ((r = in.read(buf, 1, 1)) != -1) {
-        Assert.assertEquals("InputStream#read bytes read", 1, r);
+        Assertions.assertEquals(1, r, "InputStream#read bytes read");
         baos.write(buf, 1, 1);
       }
 
-      Assert.assertArrayEquals(chunksSubset(0), baos.toByteArray());
+      Assertions.assertArrayEquals(chunksSubset(0), baos.toByteArray());
     }
   }
 
@@ -96,11 +96,11 @@ public class ByteChunksInputStreamTest
 
       int r;
       while ((r = in.read(buf, 1, 1)) != -1) {
-        Assert.assertEquals("InputStream#read bytes read", 1, r);
+        Assertions.assertEquals(1, r, "InputStream#read bytes read");
         baos.write(buf, 1, 1);
       }
 
-      Assert.assertArrayEquals(chunksSubset(1), baos.toByteArray());
+      Assertions.assertArrayEquals(chunksSubset(1), baos.toByteArray());
     }
   }
 
@@ -116,7 +116,7 @@ public class ByteChunksInputStreamTest
         baos.write(buf, 2, r);
       }
 
-      Assert.assertArrayEquals(chunksSubset(0), baos.toByteArray());
+      Assertions.assertArrayEquals(chunksSubset(0), baos.toByteArray());
     }
   }
 
@@ -132,7 +132,7 @@ public class ByteChunksInputStreamTest
         baos.write(buf, 2, r);
       }
 
-      Assert.assertArrayEquals(chunksSubset(1), baos.toByteArray());
+      Assertions.assertArrayEquals(chunksSubset(1), baos.toByteArray());
     }
   }
 

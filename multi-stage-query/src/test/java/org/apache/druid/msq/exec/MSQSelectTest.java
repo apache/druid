@@ -91,7 +91,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -2535,7 +2535,7 @@ public class MSQSelectTest extends MSQTestBase
       result.add(new Object[]{1});
     }
 
-    Assert.assertTrue(result.size() > Limits.MAX_SELECT_RESULT_ROWS);
+    Assertions.assertTrue(result.size() > Limits.MAX_SELECT_RESULT_ROWS);
 
     testSelectQuery()
         .setSql(StringUtils.format(

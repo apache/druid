@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.ByteTracker;
@@ -54,16 +55,16 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
@@ -93,7 +94,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
   private WorkerClient workerClient;
   private ExecutorService exec;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex());
@@ -108,7 +109,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     FRAME_READER = FrameReader.create(cursorFactory.getRowSignature());
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass()
   {
     NIL_FILE_BYTES = null;
@@ -116,7 +117,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     FRAME_READER = null;
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     jsonMapper = new DefaultObjectMapper();
@@ -125,7 +126,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     exec = Execs.singleThreaded(StringUtils.encodeForFormat("exec-for-" + getClass().getName()) + "-%s");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws InterruptedException
   {
     workerServiceClient.verify();
@@ -157,11 +158,11 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     final Future<List<List<Object>>> framesFuture = readChannelAsync(channel);
 
-    Assert.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
-    Assert.assertTrue(workerClient.fetchChannelData(WORKER_ID, stageId, 2, NIL_FILE_BYTES.length, channel).get());
+    Assertions.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
+    Assertions.assertTrue(workerClient.fetchChannelData(WORKER_ID, stageId, 2, NIL_FILE_BYTES.length, channel).get());
     channel.doneWriting(); // Caller is expected to call doneWriting after fetchChannelData returns true.
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         framesFuture.get().size()
     );
@@ -183,7 +184,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     channel.close(); // ReadableFrameChannel's close() method.
 
-    final ExecutionException e = Assert.assertThrows(
+    final ExecutionException e = Assertions.assertThrows(
         ExecutionException.class,
         () -> workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get()
     );
@@ -222,12 +223,12 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     final Future<List<List<Object>>> framesFuture = readChannelAsync(channel);
 
-    Assert.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
-    Assert.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
-    Assert.assertTrue(workerClient.fetchChannelData(WORKER_ID, stageId, 2, NIL_FILE_BYTES.length, channel).get());
+    Assertions.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
+    Assertions.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
+    Assertions.assertTrue(workerClient.fetchChannelData(WORKER_ID, stageId, 2, NIL_FILE_BYTES.length, channel).get());
     channel.doneWriting(); // Caller is expected to call doneWriting after fetchChannelData returns true.
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         0,
         framesFuture.get().size()
     );
@@ -246,18 +247,14 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     final StageId stageId = new StageId("xyz", 1);
     final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
 
-    final ExecutionException e = Assert.assertThrows(
+    final ExecutionException e = Assertions.assertThrows(
         ExecutionException.class,
         () -> workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get()
     );
 
-    MatcherAssert.assertThat(
-        e.getCause(),
-        CoreMatchers.allOf(
-            CoreMatchers.instanceOf(IOException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Some error"))
-        )
-    );
+    ThrowableMatcher.of(IOException.class)
+                   .expectMessageIs("Some error")
+                   .assertThat(e.getCause());
 
     channel.close();
   }
@@ -284,8 +281,8 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
     final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("testChannel", false, null);
     final Future<List<List<Object>>> framesFuture = readChannelAsync(channel);
 
-    Assert.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
-    Assert.assertTrue(workerClient.fetchChannelData(WORKER_ID, stageId, 2, FILE_BYTES.length, channel).get());
+    Assertions.assertFalse(workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get());
+    Assertions.assertTrue(workerClient.fetchChannelData(WORKER_ID, stageId, 2, FILE_BYTES.length, channel).get());
     channel.doneWriting(); // Caller is expected to call doneWriting after fetchChannelData returns true.
 
     FrameTestUtil.assertRowsEqual(

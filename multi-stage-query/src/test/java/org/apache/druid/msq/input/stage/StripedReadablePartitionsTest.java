@@ -28,8 +28,8 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StripedReadablePartitionsTest
 {
@@ -49,7 +49,7 @@ public class StripedReadablePartitionsTest
         CoreMatchers.instanceOf(StripedReadablePartitions.class)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ReadablePartitions.striped(1, 2, 3),
         readablePartitionsFromSet
     );
@@ -59,21 +59,21 @@ public class StripedReadablePartitionsTest
   public void testPartitionNumbers()
   {
     final StripedReadablePartitions partitions = (StripedReadablePartitions) ReadablePartitions.striped(1, 2, 3);
-    Assert.assertEquals(ImmutableSet.of(0, 1, 2), partitions.getPartitionNumbers());
+    Assertions.assertEquals(ImmutableSet.of(0, 1, 2), partitions.getPartitionNumbers());
   }
 
   @Test
   public void testNumWorkers()
   {
     final StripedReadablePartitions partitions = (StripedReadablePartitions) ReadablePartitions.striped(1, 2, 3);
-    Assert.assertEquals(2, partitions.getNumWorkers());
+    Assertions.assertEquals(2, partitions.getNumWorkers());
   }
 
   @Test
   public void testStageNumber()
   {
     final StripedReadablePartitions partitions = (StripedReadablePartitions) ReadablePartitions.striped(1, 2, 3);
-    Assert.assertEquals(1, partitions.getStageNumber());
+    Assertions.assertEquals(1, partitions.getStageNumber());
   }
 
   @Test
@@ -81,7 +81,7 @@ public class StripedReadablePartitionsTest
   {
     final ReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             new StripedReadablePartitions(1, 2, new IntAVLTreeSet(new int[]{0, 2})),
             new StripedReadablePartitions(1, 2, new IntAVLTreeSet(new int[]{1}))
@@ -98,7 +98,7 @@ public class StripedReadablePartitionsTest
 
     final ReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         partitions,
         mapper.readValue(
             mapper.writeValueAsString(partitions),
