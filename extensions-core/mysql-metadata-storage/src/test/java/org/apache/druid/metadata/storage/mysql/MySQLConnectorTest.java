@@ -20,13 +20,13 @@
 package org.apache.druid.metadata.storage.mysql;
 
 import com.google.common.base.Supplier;
-import org.mariadb.jdbc.export.MaxAllowedPacketException;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mariadb.jdbc.export.MaxAllowedPacketException;
 
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
