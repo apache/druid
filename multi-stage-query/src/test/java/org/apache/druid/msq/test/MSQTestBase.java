@@ -454,7 +454,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   @AfterEach
   public void tearDown2()
   {
-    Mockito.framework().clearInlineMocks();
     groupByBuffers.close();
 
     // Wait for workers to exit, so we don't pollute the shared executor for the next test.
