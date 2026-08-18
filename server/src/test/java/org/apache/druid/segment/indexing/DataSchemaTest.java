@@ -518,7 +518,7 @@ class DataSchemaTest extends InitializedNullHandlingTest
         );
       }
       catch (ValueInstantiationException e) {
-        MatcherAssert.assertThat(
+        DruidExceptionMatcher.assertThat(
             entry.getKey(),
             e.getCause(),
             DruidExceptionMatcher.invalidInput().expectMessageIs(

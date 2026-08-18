@@ -111,7 +111,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class SqlStatementResourceTest extends MSQTestBase
 {
@@ -1299,7 +1298,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
   private void assertInvalidFileName(String filename, String errorMessage)
   {
-    assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, () -> SqlStatementResource.validateFilename(filename)),
         DruidExceptionMatcher.invalidInput().expectMessageIs(errorMessage)
     );

@@ -50,7 +50,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.apache.druid.utils.CompressionUtils;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -181,7 +180,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
         TestIndex.INDEX_IO,
         jsonMapper
     );
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(
             DruidException.class,
             () -> manager.getCachedSegments()
@@ -981,7 +980,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
                                                                 .virtualStorageLoadThreads(0)
                                                                 .build();
     final List<StorageLocation> storageLocations = loaderConfig.toStorageLocations();
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(
             DruidException.class,
             () -> new SegmentLocalCacheManager(

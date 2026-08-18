@@ -17,32 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.client.indexing;
+package org.apache.druid.error;
 
-import org.apache.druid.java.util.common.UOE;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-public class SamplerSpecTest
+public class ThrowableMatcherTest
 {
-  private static final SamplerSpec SAMPLER_SPEC = new SamplerSpec()
-  {
-    @Override
-    public SamplerResponse sample()
-    {
-      return null;
-    }
-  };
-
   @Test
-  public void testGetType()
+  public void testAssertThrowsAndMatches()
   {
-    Assertions.assertNull(SAMPLER_SPEC.getType());
-  }
-
-  @Test
-  public void testGetInputSourceResources()
-  {
-    Assertions.assertThrows(UOE.class, SAMPLER_SPEC::getInputSourceResources);
+    ThrowableMatcher.of(IllegalStateException.class)
+                    .expectMessage(message -> message.startsWith("bad state"))
+                    .expectCause(cause -> cause instanceof IllegalArgumentException)
+                    .assertThrowsAndMatches(
+                        () -> {
+                          throw new IllegalStateException("bad state", new IllegalArgumentException());
+                        }
+      );
   }
 }

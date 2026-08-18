@@ -77,7 +77,6 @@ import org.apache.druid.segment.projections.AggregateProjectionSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.LogicalSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -1606,7 +1605,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithInvalidDatasourceTypes()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1629,7 +1628,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
             .expectMessageIs("You do not have permission to run a segmentMetadata query on table[testDatasource].")
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1656,7 +1655,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
             .expectMessageIs("You do not have permission to run a segmentMetadata query on table[testDatasource].")
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1684,7 +1683,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 "Invalid dataSource type [InlineDataSource{signature={column:STRING}}]. SegmentMetadataQuery only supports table or union datasources.")
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1708,7 +1707,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 "Invalid dataSource type [InlineDataSource{signature={column:STRING}}]. SegmentMetadataQuery only supports table or union datasources.")
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1729,7 +1728,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 "Invalid dataSource type [LookupDataSource{lookupName='lookyloo'}]. SegmentMetadataQuery only supports table or union datasources.")
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1867,7 +1866,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithBothDeprecatedAndNewParameter()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1888,7 +1887,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                                  + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.")
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(
@@ -1909,7 +1908,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                                  + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.")
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> new SegmentMetadataQuery(

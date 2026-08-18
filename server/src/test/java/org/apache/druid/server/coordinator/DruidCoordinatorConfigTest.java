@@ -34,7 +34,6 @@ import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -448,7 +447,7 @@ public class DruidCoordinatorConfigTest
     );
 
     final String expectedMessage = StringUtils.format(expectedMessageFormat, args);
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         exception,
         new DruidExceptionMatcher(
             DruidException.Persona.OPERATOR,

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,7 +52,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -391,7 +391,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         )
         .setQueryContext(REALTIME_QUERY_CTX)
         .setExpectedRowSignature(rowSignature)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.instanceOf(ISE.class))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class))
         .verifyExecutionError();
   }
 }

@@ -43,7 +43,6 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -329,7 +328,7 @@ public class IndexerSQLMetadataStorageCoordinatorReadOnlyTest extends IndexerSql
 
   private static void verifyThrowsDefensiveException(ThrowingRunnable runnable)
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, runnable),
         DruidExceptionMatcher.defensive().expectMessageIs(
             "Only Overlord can perform write transactions on segment metadata."

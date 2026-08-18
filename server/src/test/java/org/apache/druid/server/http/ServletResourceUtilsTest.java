@@ -26,7 +26,6 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
-import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -68,7 +67,7 @@ public class ServletResourceUtilsTest
 
     Object entity = response.getEntity();
     Assert.assertTrue(entity instanceof ErrorResponse);
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         ((ErrorResponse) entity).getUnderlyingException(),
         DruidExceptionMatcher.invalidInput().expectMessageIs("Invalid value of [inputKey]")
     );

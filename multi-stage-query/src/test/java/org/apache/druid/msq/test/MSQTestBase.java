@@ -45,6 +45,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameChannelSequence;
@@ -226,7 +228,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.hamcrest.Matcher;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
@@ -250,6 +251,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -260,7 +262,6 @@ import static org.apache.druid.sql.calcite.util.CalciteTests.RESTRICTED_DATASOUR
 import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -1003,9 +1004,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected LookupLoadingSpec expectedLookupLoadingSpec = LookupLoadingSpec.NONE;
-    protected Matcher<Throwable> expectedValidationErrorMatcher = null;
+    protected Consumer<Throwable> expectedValidationErrorAssertion = null;
     protected List<Pair<Predicate<MSQTaskReportPayload>, String>> adhocReportAssertionAndReasons = new ArrayList<>();
-    protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
+    protected Consumer<Throwable> expectedExecutionErrorAssertion = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
     protected MSQSegmentReport expectedSegmentReport = null;
@@ -1101,15 +1102,39 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-    public Builder setExpectedValidationErrorMatcher(Matcher<Throwable> expectedValidationErrorMatcher)
+    public Builder setExpectedValidationErrorMatcher(final DruidExceptionMatcher expectedValidationErrorMatcher)
     {
-      this.expectedValidationErrorMatcher = expectedValidationErrorMatcher;
+      this.expectedValidationErrorAssertion = e -> DruidExceptionMatcher.assertThat(e, expectedValidationErrorMatcher);
       return asBuilder();
     }
 
-    public Builder setExpectedExecutionErrorMatcher(Matcher<Throwable> expectedExecutionErrorMatcher)
+    public Builder setExpectedValidationErrorMatcher(final ThrowableMatcher expectedValidationErrorMatcher)
     {
-      this.expectedExecutionErrorMatcher = expectedExecutionErrorMatcher;
+      this.expectedValidationErrorAssertion = expectedValidationErrorMatcher::assertThat;
+      return asBuilder();
+    }
+
+    public Builder setExpectedValidationErrorMatcher(final Consumer<Throwable> expectedValidationErrorAssertion)
+    {
+      this.expectedValidationErrorAssertion = expectedValidationErrorAssertion;
+      return asBuilder();
+    }
+
+    public Builder setExpectedExecutionErrorMatcher(final DruidExceptionMatcher expectedExecutionErrorMatcher)
+    {
+      this.expectedExecutionErrorAssertion = e -> DruidExceptionMatcher.assertThat(e, expectedExecutionErrorMatcher);
+      return asBuilder();
+    }
+
+    public Builder setExpectedExecutionErrorMatcher(final ThrowableMatcher expectedExecutionErrorMatcher)
+    {
+      this.expectedExecutionErrorAssertion = expectedExecutionErrorMatcher::assertThat;
+      return asBuilder();
+    }
+
+    public Builder setExpectedExecutionErrorMatcher(final Consumer<Throwable> expectedExecutionErrorAssertion)
+    {
+      this.expectedExecutionErrorAssertion = expectedExecutionErrorAssertion;
       return asBuilder();
     }
 
@@ -1176,7 +1201,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public void verifyPlanningErrors()
     {
-      Preconditions.checkArgument(expectedValidationErrorMatcher != null, "Validation error matcher cannot be null");
+      Preconditions.checkArgument(expectedValidationErrorAssertion != null, "Validation error matcher cannot be null");
       Preconditions.checkArgument(sql != null, "Sql cannot be null");
       readyToRun();
 
@@ -1185,7 +1210,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           () -> runMultiStageQuery(sql, queryContext, authenticationResult, dynamicParameters)
       );
 
-      assertThat(e, expectedValidationErrorMatcher);
+      expectedValidationErrorAssertion.accept(e);
     }
 
     protected void verifyMetrics()
@@ -1598,7 +1623,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           "sql and taskSpec both cannot be provided in the same test"
       );
       Preconditions.checkArgument(sql == null || queryContext != null, "queryContext cannot be null");
-      Preconditions.checkArgument(expectedExecutionErrorMatcher != null, "Execution error matcher cannot be null");
+      Preconditions.checkArgument(expectedExecutionErrorAssertion != null, "Execution error matcher cannot be null");
       readyToRun();
       try {
         String controllerId;
@@ -1613,13 +1638,22 @@ public class MSQTestBase extends BaseCalciteQueryTest
         Assert.fail(StringUtils.format("Query did not throw an exception (sql = [%s])", sql));
       }
       catch (Exception e) {
-        assertThat(
+        assertExpectedExecutionError(
             StringUtils.format("Query error did not match expectations (sql = [%s])", sql),
-            e,
-            expectedExecutionErrorMatcher
+            e
         );
       }
       verifyMetrics();
+    }
+
+    private void assertExpectedExecutionError(final String reason, final Throwable e)
+    {
+      try {
+        expectedExecutionErrorAssertion.accept(e);
+      }
+      catch (AssertionError assertionError) {
+        throw new AssertionError(reason + ": " + assertionError.getMessage(), assertionError);
+      }
     }
   }
 
@@ -1753,10 +1787,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         throw new RuntimeException(ex);
       }
       catch (Exception e) {
-        if (expectedExecutionErrorMatcher == null) {
+        if (expectedExecutionErrorAssertion == null) {
           throw new ISE(e, "Query %s failed", sql != null ? sql : taskSpec);
         }
-        assertThat(e, expectedExecutionErrorMatcher);
+        expectedExecutionErrorAssertion.accept(e);
         return null;
       }
     }
@@ -1782,7 +1816,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public void verifyExecutionError()
     {
-      Preconditions.checkArgument(expectedExecutionErrorMatcher != null, "Execution error matcher cannot be null");
+      Preconditions.checkArgument(expectedExecutionErrorAssertion != null, "Execution error matcher cannot be null");
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql != null ? sql : taskSpec);
       }

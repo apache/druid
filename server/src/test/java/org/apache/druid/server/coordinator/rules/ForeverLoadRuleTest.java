@@ -25,7 +25,6 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -51,7 +50,7 @@ public class ForeverLoadRuleTest
   @Test
   public void testCreatingNegativeTieredReplicants()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, () ->
             new ForeverLoadRule(
                 ImmutableMap.of(DruidServer.DEFAULT_TIER, -1),
@@ -80,7 +79,7 @@ public class ForeverLoadRuleTest
     Map<String, Integer> tieredReplicants = new HashMap<>();
     tieredReplicants.put("tier", null);
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(DruidException.class, () ->
             new ForeverLoadRule(
                 tieredReplicants,
