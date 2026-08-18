@@ -1804,7 +1804,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.14.0
+version: 2.14.3
 libraries:
   - joda-time: joda-time
 notices:
