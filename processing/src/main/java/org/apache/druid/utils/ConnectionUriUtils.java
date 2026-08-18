@@ -36,6 +36,14 @@ import java.util.Set;
 public final class ConnectionUriUtils
 {
   private static final String MARIADB_EXTRAS = "nonMappedOptions";
+  private static final Set<String> MARIADB_3X_EXCLUDED_FIELDS = Set.of(
+      "database",
+      "haMode",
+      "$jacocoData",
+      "addresses",
+      "initialUrl",
+      "codecs"
+  );
   // Note: MySQL JDBC connector 8 supports 7 other protocols than just `jdbc:mysql:`
   // (https://dev.mysql.com/doc/connector-j/8.0/en/connector-j-reference-jdbc-url-format.html).
   // We should consider either expanding recognized mysql protocols or restricting allowed protocols to
@@ -79,8 +87,7 @@ public final class ConnectionUriUtils
    * parameter whitelist validation.
    * <p>
    * uris starting with {@link #MYSQL_PREFIX} will first try to use the MySQL Connector/J driver (5.x), then fallback
-   * to MariaDB Connector/J (version 2.x) which also accepts jdbc:mysql uris. This method does not attempt to use
-   * MariaDB Connector/J 3.x alpha driver (at the time of these javadocs, it only handles the jdbc:mariadb prefix)
+   * to MariaDB Connector/J (version 2.x) which also accepts jdbc:mysql uris.
    * <p>
    * uris starting with {@link #POSTGRES_PREFIX} will use the postgresql driver to parse the uri
    * <p>
@@ -129,7 +136,7 @@ public final class ConnectionUriUtils
         }
         catch (ClassNotFoundException notFoundMaria3x) {
           throw new RuntimeException(
-              "Failed to find MariaDB driver class. Please check the MariaDB connector version 2.7.3 is in the classpath",
+              "Failed to find MariaDB driver class. Please check the MariaDB connector is in the classpath",
               notFoundMaria2x
           );
         }
@@ -310,7 +317,7 @@ public final class ConnectionUriUtils
 
     Object defaultConfiguration = buildMethod.invoke(configurationBuilderClass.getConstructor().newInstance());
     for (Field field : fields) {
-      if (field.getName().equals(MARIADB_EXTRAS)) {
+      if (field.getName().equals(MARIADB_EXTRAS) || MARIADB_3X_EXCLUDED_FIELDS.contains(field.getName())) {
         continue;
       }
       try {
