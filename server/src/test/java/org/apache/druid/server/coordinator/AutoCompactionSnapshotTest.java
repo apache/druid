@@ -19,9 +19,13 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.server.compaction.CompactionSkipReason;
+import org.apache.druid.server.compaction.CompactionSkipStatistics;
 import org.apache.druid.server.compaction.CompactionStatistics;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.List;
 
 public class AutoCompactionSnapshotTest
 {
@@ -34,7 +38,14 @@ public class AutoCompactionSnapshotTest
 
     // Increment every stat twice
     for (int i = 0; i < 2; i++) {
-      builder.incrementSkippedStats(CompactionStatistics.create(13, null, 13, 13));
+      builder.incrementSkippedStats(
+          CompactionSkipReason.SKIP_OFFSET,
+          CompactionStatistics.create(6, null, 6, 6)
+      );
+      builder.incrementSkippedStats(
+          CompactionSkipReason.REJECTED_BY_SEARCH_POLICY,
+          CompactionStatistics.create(7, null, 7, 7)
+      );
       builder.incrementWaitingStats(CompactionStatistics.create(13, null, 13, 13));
       builder.incrementCompactedStats(CompactionStatistics.create(13, null, 13, 13));
     }
@@ -51,6 +62,19 @@ public class AutoCompactionSnapshotTest
     Assert.assertEquals(26, actual.getBytesAwaitingCompaction());
     Assert.assertEquals(26, actual.getIntervalCountAwaitingCompaction());
     Assert.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
+    Assert.assertEquals(
+        List.of(
+            CompactionSkipStatistics.of(
+                CompactionSkipReason.SKIP_OFFSET,
+                CompactionStatistics.create(12, null, 12, 12)
+            ),
+            CompactionSkipStatistics.of(
+                CompactionSkipReason.REJECTED_BY_SEARCH_POLICY,
+                CompactionStatistics.create(14, null, 14, 14)
+            )
+        ),
+        actual.getSkippedStatsByReason()
+    );
     Assert.assertEquals(AutoCompactionSnapshot.ScheduleStatus.RUNNING, actual.getScheduleStatus());
     Assert.assertEquals(expectedDataSource, actual.getDataSource());
     Assert.assertEquals(expectedMessage, actual.getMessage());
@@ -67,7 +91,8 @@ public class AutoCompactionSnapshotTest
         26,
         26,
         26,
-        26
+        26,
+        actual.getSkippedStatsByReason()
     );
     Assert.assertEquals(expected, actual);
   }

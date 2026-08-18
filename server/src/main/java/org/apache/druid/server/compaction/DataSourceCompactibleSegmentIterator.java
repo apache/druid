@@ -125,7 +125,10 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
             CompactionCandidate candidatesWithStatus = CompactionCandidate.from(
                 partialEternitySegments,
                 null,
-                CompactionStatus.skipped("Segments have partial-eternity intervals")
+                CompactionStatus.skipped(
+                    CompactionSkipReason.PARTIAL_ETERNITY_INTERVAL,
+                    "Segments have partial-eternity intervals"
+                )
             );
             skippedSegments.add(candidatesWithStatus);
             return;
@@ -388,9 +391,16 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
 
         final CompactionStatus reason;
         if (compactionInterval.overlaps(latestSkipInterval)) {
-          reason = CompactionStatus.skipped("skip offset from latest[%s]", skipOffset);
+          reason = CompactionStatus.skipped(
+              CompactionSkipReason.SKIP_OFFSET,
+              "skip offset from latest[%s]",
+              skipOffset
+          );
         } else {
-          reason = CompactionStatus.skipped("interval locked by another task");
+          reason = CompactionStatus.skipped(
+              CompactionSkipReason.INTERVAL_LOCKED,
+              "interval locked by another task"
+          );
         }
 
         final CompactionCandidate candidatesWithStatus = CompactionCandidate.from(

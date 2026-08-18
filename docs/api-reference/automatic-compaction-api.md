@@ -778,13 +778,21 @@ The `latestStatus` object has the following properties:
 * `scheduleStatus`: Automatic compaction scheduling status. Possible values are `NOT_ENABLED` and `RUNNING`. Returns `RUNNING ` if the datasource has an active automatic compaction configuration submitted. Otherwise, returns `NOT_ENABLED`.
 * `bytesAwaitingCompaction`: Total bytes of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `bytesCompacted`: Total bytes of this datasource that are already compacted with the spec set in the automatic compaction configuration.
-* `bytesSkipped`: Total bytes of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `bytesSkipped`: Total bytes of this datasource that are skipped (not compacted in this run) by the automatic compaction.
 * `segmentCountAwaitingCompaction`: Total number of segments of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `segmentCountCompacted`: Total number of segments of this datasource that are already compacted with the spec set in the automatic compaction configuration.
-* `segmentCountSkipped`: Total number of segments of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `segmentCountSkipped`: Total number of segments of this datasource that are skipped (not compacted in this run) by the automatic compaction.
 * `intervalCountAwaitingCompaction`: Total number of intervals of this datasource waiting to be compacted by the automatic compaction (only consider intervals/segments that are eligible for automatic compaction).
 * `intervalCountCompacted`: Total number of intervals of this datasource that are already compacted with the spec set in the automatic compaction configuration.
-* `intervalCountSkipped`: Total number of intervals of this datasource that are skipped (not eligible for automatic compaction) by the automatic compaction.
+* `intervalCountSkipped`: Total number of intervals of this datasource that are skipped (not compacted in this run) by the automatic compaction.
+* `skippedStatsByReason`: Breakdown of the skipped stats by the reason each interval was skipped. The totals of this list are the `bytesSkipped`, `segmentCountSkipped` and `intervalCountSkipped` fields above. Each entry has:
+  * `reason`: Stable code for why the intervals were not compacted. One of `SKIP_OFFSET`, `INTERVAL_LOCKED`, `TIMELINE_NOT_UPDATED`, `LOCK_ACQUISITION_FAILED`, `REJECTED_BY_SEARCH_POLICY`, `INPUT_SEGMENT_SIZE_EXCEEDED`, `PARTIAL_ETERNITY_INTERVAL` or `INVALID_JOB`. More reasons may be added in future releases.
+  * `category`: How to treat these intervals, so that consumers do not need their own mapping of reasons. One of:
+    * `OUT_OF_SCOPE`: Deliberately excluded by the compaction config, for example by `skipOffsetFromLatest`. These intervals do not count against the datasource being fully compacted.
+    * `TRANSIENT`: Could not be compacted in this run, but is expected to be picked up later with no operator action.
+    * `DEFERRED`: Does not match the compaction config and will keep being passed over until the compaction config or the compaction candidate search policy is changed.
+    * `UNSUPPORTED`: Cannot be compacted as it currently stands, regardless of config.
+  * `bytes`, `segmentCount`, `intervalCount`: Stats for the intervals skipped for this reason.
 
 #### URL
 
@@ -850,7 +858,16 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "segmentCountSkipped": 8,
             "intervalCountAwaitingCompaction": 0,
             "intervalCountCompacted": 0,
-            "intervalCountSkipped": 1
+            "intervalCountSkipped": 1,
+            "skippedStatsByReason": [
+                {
+                    "reason": "SKIP_OFFSET",
+                    "category": "OUT_OF_SCOPE",
+                    "bytes": 64133616,
+                    "segmentCount": 8,
+                    "intervalCount": 1
+                }
+            ]
         },
         {
             "dataSource": "wikipedia_hour",
@@ -863,7 +880,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "segmentCountSkipped": 0,
             "intervalCountAwaitingCompaction": 0,
             "intervalCountCompacted": 1,
-            "intervalCountSkipped": 0
+            "intervalCountSkipped": 0,
+            "skippedStatsByReason": []
         }
     ]
 }
@@ -1525,7 +1543,16 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "segmentCountSkipped": 8,
             "intervalCountAwaitingCompaction": 0,
             "intervalCountCompacted": 0,
-            "intervalCountSkipped": 1
+            "intervalCountSkipped": 1,
+            "skippedStatsByReason": [
+                {
+                    "reason": "SKIP_OFFSET",
+                    "category": "OUT_OF_SCOPE",
+                    "bytes": 64133616,
+                    "segmentCount": 8,
+                    "intervalCount": 1
+                }
+            ]
         },
         {
             "dataSource": "wikipedia_hour",
@@ -1538,7 +1565,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "segmentCountSkipped": 0,
             "intervalCountAwaitingCompaction": 0,
             "intervalCountCompacted": 1,
-            "intervalCountSkipped": 0
+            "intervalCountSkipped": 0,
+            "skippedStatsByReason": []
         }
     ]
 }
@@ -1608,7 +1636,8 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "segmentCountSkipped": 0,
             "intervalCountAwaitingCompaction": 0,
             "intervalCountCompacted": 1,
-            "intervalCountSkipped": 0
+            "intervalCountSkipped": 0,
+            "skippedStatsByReason": []
         }
     ]
 }
