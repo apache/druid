@@ -827,6 +827,107 @@ class PartialSegmentFileMapperV10Test
   }
 
   @Test
+  void testFetchWithPendingInterruptStillMapsContainer() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("interrupted-fetch");
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      // A pending interrupt (canceled query, stage teardown, shutdownNow on the processing pool) must not abort the
+      // container mmap: FileChannel.map is an interruptible channel operation, so without the interrupt parking in
+      // mapUninterruptibly this fails with ClosedByInterruptException.
+      Thread.currentThread().interrupt();
+      try {
+        mapper.fetchFiles(Set.of("5"));
+
+        final ByteBuffer buf = mapper.mapFile("5");
+        Assertions.assertNotNull(buf);
+        Assertions.assertEquals(5, buf.getInt());
+
+        // preserved rather than swallowed, so the caller still unwinds at its next cancellation checkpoint
+        Assertions.assertTrue(Thread.currentThread().isInterrupted());
+      }
+      finally {
+        // don't leak the flag into the mapper close below, or into other tests on this thread
+        Thread.interrupted();
+      }
+    }
+  }
+
+  @Test
+  void testRestoreWithPendingInterruptKeepsHeader() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("interrupted-restore");
+    final File headerFile = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+
+    try (PartialSegmentFileMapperV10 mapper =
+             createMapper(new DirectoryBackedRangeReader(segmentFile.getParentFile()), cacheDir)) {
+      mapper.fetchFiles(Set.of("5"));
+      Assertions.assertEquals(4, mapper.getDownloadedBytes());
+    }
+
+    final CountingRangeReader freshReader = new CountingRangeReader(segmentFile.getParentFile());
+    try {
+      Thread.currentThread().interrupt();
+      try (PartialSegmentFileMapperV10 restored = createMapper(freshReader, cacheDir)) {
+        // The bitmap mmap is interrupt-immune too, so a valid local header is restored as-is rather than mistaken for
+        // a corrupt file, deleted, and re-fetched from deep storage.
+        Assertions.assertTrue(Thread.currentThread().isInterrupted());
+
+        // Clear here rather than in the finally below, so the mapper close at the end of this block runs with the
+        // same clear flag its counterpart in testFetchWithPendingInterruptStillMapsContainer does; the finally is
+        // then only a backstop for a failure before this point.
+        Thread.interrupted();
+
+        Assertions.assertTrue(headerFile.exists());
+        Assertions.assertEquals(0, freshReader.getHeaderReadCount(), "header must not have been re-downloaded");
+        Assertions.assertEquals(4, restored.getDownloadedBytes());
+
+        final ByteBuffer buf = restored.mapFile("5");
+        Assertions.assertNotNull(buf);
+        Assertions.assertEquals(5, buf.getInt());
+      }
+    }
+    finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void testRestoreFailurePropagatesOriginalException() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("restore-failure");
+
+    // Persist a header + bitmap with one file resident, so the restore loop has a container to initialize.
+    try (PartialSegmentFileMapperV10 mapper =
+             createMapper(new DirectoryBackedRangeReader(segmentFile.getParentFile()), cacheDir)) {
+      mapper.fetchFiles(Set.of("5"));
+    }
+
+    // Replace the container file with a directory of the same name: it still passes the repair pre-pass's exists()
+    // check, so the bitmap bit survives, but the restore loop's RandomAccessFile open fails. Doing it this way rather
+    // than with permissions keeps the test deterministic when it runs as root.
+    final File containerFile = new File(cacheDir, StringUtils.format("%s.container.%05d", IndexIO.V10_FILE_NAME, 0));
+    Assertions.assertTrue(containerFile.isFile());
+    Assertions.assertTrue(containerFile.delete());
+    FileUtils.mkdirp(containerFile);
+
+    // createForFile closes the half-built mapper on the way out (releasing the bitmap mmap and any containers already
+    // initialized). The unmap itself isn't observable in-process; what this pins is that the cleanup neither swallows
+    // the failure nor rewraps it into some other type, which is what would hide the real cause from callers.
+    Assertions.assertThrows(
+        IOException.class,
+        () -> createMapper(new DirectoryBackedRangeReader(segmentFile.getParentFile()), cacheDir)
+    );
+  }
+
+  @Test
   void testCreateWithExternals() throws IOException
   {
     final String externalName = "external.segment";
