@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.io.BaseEncoding;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.commons.dbcp2.BasicDataSourceFactory;
@@ -51,12 +52,18 @@ import org.skife.jdbi.v2.util.IntegerMapper;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1052,6 +1059,194 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     if (config.get().isCreateTables()) {
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
+    }
+  }
+
+  @Override
+  public void exportTable(
+      final String tableName,
+      final String outputPath
+  )
+  {
+    exportTable(tableName, outputPath, null);
+  }
+
+  /**
+   * Exports a table to a CSV file, emitting the given columns in the given order.
+   *
+   * @param columns columns to export in the desired order, or null to export all columns in the
+   *                order reported by the database
+   */
+  public void exportTable(
+      final String tableName,
+      final String outputPath,
+      @Nullable final List<String> columns
+  )
+  {
+    exportTableWithJdbc(tableName, outputPath, columns);
+  }
+
+  /**
+   * Returns the columns of the given table, in the order reported by the database.
+   * Returns an empty list if the table does not exist or the metadata cannot be read.
+   *
+   * The lookup is scoped to the schema returned by {@link #getMetadataTableSchema(Connection)}, which is the schema
+   * an unqualified table name resolves to. Rather than passing the table name as a search pattern, in which '_' is a
+   * wildcard and which is case-sensitive while the database folds unquoted identifiers, the returned table names are
+   * compared to the given one ignoring case.
+   */
+  public List<String> getTableColumns(final String tableName)
+  {
+    return getDBI().withHandle(handle -> {
+      final List<String> columns = new ArrayList<>();
+      try {
+        if (tableExists(handle, tableName)) {
+          final Connection conn = handle.getConnection();
+          try (ResultSet rs = conn.getMetaData().getColumns(null, getMetadataTableSchema(conn), null, null)) {
+            while (rs.next()) {
+              if (tableName.equalsIgnoreCase(rs.getString("TABLE_NAME"))) {
+                columns.add(rs.getString("COLUMN_NAME"));
+              }
+            }
+          }
+        }
+      }
+      catch (SQLException e) {
+        log.warn(e, "Could not read columns of table[%s].", tableName);
+      }
+      return columns;
+    });
+  }
+
+  /**
+   * Returns the schema that the Druid metadata tables live in, i.e. the schema that an unqualified
+   * table name in a Druid SQL statement resolves to, or null if the schema is unknown and lookups
+   * should not be scoped to a schema.
+   *
+   * Connectors that scope {@link #tableExists} to a configured schema must override this so that
+   * both lookups agree.
+   */
+  @Nullable
+  protected String getMetadataTableSchema(final Connection connection) throws SQLException
+  {
+    return connection.getSchema();
+  }
+
+  /**
+   * Builds the select list for an export query, quoting each column with the database's
+   * identifier quote string so that reserved words such as "end" are handled correctly.
+   */
+  protected String makeExportSelectList(final Connection conn, final List<String> columns) throws SQLException
+  {
+    final String quote = conn.getMetaData().getIdentifierQuoteString();
+    return columns.stream()
+                  .map(column -> quoteIdentifier(quote, column))
+                  .collect(Collectors.joining(","));
+  }
+
+  /**
+   * Quotes an identifier with the given identifier quote string of the database, doubling any occurrence of the quote
+   * string inside the identifier. Returns the identifier unchanged if the database does not support quoting, which
+   * {@link DatabaseMetaData#getIdentifierQuoteString()} reports as a space.
+   */
+  private static String quoteIdentifier(@Nullable final String quote, final String identifier)
+  {
+    if (quote == null || " ".equals(quote)) {
+      return identifier;
+    }
+    return quote + StringUtils.replace(identifier, quote, quote + quote) + quote;
+  }
+
+  /**
+   * Exports a table to a CSV file using generic JDBC.
+   * Binary columns are hex-encoded and booleans are written as true/false strings.
+   * Subclasses may override {@link #exportTable} with a database-specific implementation
+   * while this method remains available for testing or fallback.
+   *
+   * @param columns columns to export in the desired order, or null to export all columns
+   */
+  protected void exportTableWithJdbc(
+      final String tableName,
+      final String outputPath,
+      @Nullable final List<String> columns
+  )
+  {
+    // Use a transaction so that the connection has autoCommit=false.
+    // PostgreSQL JDBC requires autoCommit=false and a positive fetch size
+    // to use cursor-based streaming instead of buffering the entire ResultSet.
+    retryTransaction(
+        (TransactionCallback<Void>) (handle, status) -> {
+          final Connection conn = handle.getConnection();
+          final String selectList = columns == null || columns.isEmpty() ? "*" : makeExportSelectList(conn, columns);
+          // Qualify the table with the schema that Druid's tables live in, which is not necessarily the schema an
+          // unqualified name resolves to for this connection. The schema is quoted, since it is the name as stored in
+          // the database, while the table name is left unquoted so that it is folded by the database in the same way
+          // as in every other Druid statement.
+          final String schema = getMetadataTableSchema(conn);
+          final String qualifiedTableName =
+              schema == null
+              ? tableName
+              : quoteIdentifier(conn.getMetaData().getIdentifierQuoteString(), schema) + "." + tableName;
+          try (Statement stmt = conn.createStatement()) {
+            // Set the fetch size unconditionally: some drivers use a sentinel value to request streaming, such as
+            // Integer.MIN_VALUE in MySQL, which would be discarded by a positive-value check.
+            stmt.setFetchSize(getStreamingFetchSize());
+            try (ResultSet rs = stmt.executeQuery(
+                StringUtils.format("SELECT %s FROM %s", selectList, qualifiedTableName)
+            );
+                 OutputStreamWriter writer =
+                     new OutputStreamWriter(new FileOutputStream(outputPath), StandardCharsets.UTF_8)) {
+              final int columnCount = rs.getMetaData().getColumnCount();
+              final List<String> values = new ArrayList<>(columnCount);
+              while (rs.next()) {
+                values.clear();
+                for (int i = 1; i <= columnCount; i++) {
+                  values.add(readCsvValue(rs, i));
+                }
+                writer.write(String.join(",", values));
+                writer.write('\n');
+              }
+            }
+          }
+          return null;
+        },
+        QUIET_RETRIES,
+        DEFAULT_MAX_TRIES
+    );
+  }
+
+  /**
+   * Reads the given column of the current row as a CSV field. Binary values are hex-encoded, booleans are written
+   * as true/false and NULLs as empty fields.
+   */
+  private static String readCsvValue(final ResultSet rs, final int column) throws SQLException
+  {
+    final ResultSetMetaData meta = rs.getMetaData();
+    final int type = meta.getColumnType(column);
+    if (type == Types.BINARY || type == Types.VARBINARY || type == Types.LONGVARBINARY || type == Types.BLOB
+        || (type == Types.OTHER && "bytea".equalsIgnoreCase(meta.getColumnTypeName(column)))) {
+      final byte[] bytes = rs.getBytes(column);
+      return bytes == null ? "" : BaseEncoding.base16().encode(bytes);
+    } else if (type == Types.BOOLEAN || type == Types.BIT) {
+      final boolean value = rs.getBoolean(column);
+      return rs.wasNull() ? "" : String.valueOf(value);
+    } else {
+      return csvEscape(rs.getString(column));
+    }
+  }
+
+  /**
+   * Escapes a value for CSV output as per RFC 4180: values containing a comma, double quote or line break are
+   * wrapped in double quotes, with inner double quotes doubled. A null value is written as an empty field.
+   */
+  public static String csvEscape(@Nullable final String value)
+  {
+    if (value == null) {
+      return "";
+    } else if (value.contains(",") || value.contains("\"") || value.contains("\n") || value.contains("\r")) {
+      return "\"" + StringUtils.replace(value, "\"", "\"\"") + "\"";
+    } else {
+      return value;
     }
   }
 

@@ -36,9 +36,10 @@ This tool exports the contents of the following Druid metadata tables:
 Additionally, the tool can rewrite the local deep storage location descriptors in the rows of the segments table
 to point to new deep storage locations (S3, HDFS, and local rewrite paths are supported).
 
+The tool supports exporting from both Derby and PostgreSQL metadata stores.
+
 The tool has the following limitations:
 
-- Only exporting from Derby metadata is currently supported
 - If rewriting load specs for deep storage migration, only migrating from local deep storage is currently supported.
 
 ## `export-metadata` Options
@@ -47,7 +48,7 @@ The `export-metadata` tool provides the following options:
 
 ### Connection Properties
 
-- `--connectURI`: The URI of the Derby database, e.g. `jdbc:derby://localhost:1527/var/druid/metadata.db;create=true`
+- `--connectURI`: The URI of the metadata database, e.g. `jdbc:derby://localhost:1527/var/druid/metadata.db;create=true` for Derby or `jdbc:postgresql://localhost:5432/druid` for PostgreSQL
 - `--user`: Username
 - `--password`: Password
 - `--base`: corresponds to the value of `druid.metadata.storage.tables.base` in the configuration, `druid` by default.
@@ -133,7 +134,9 @@ If the new path  was `/migration/example`, the contents of `/migration/example/`
 
 ## Running the tool
 
-To use the tool, you can run the following from the root of the Druid package:
+To use the tool, you can run the following from the root of the Druid package.
+
+### Exporting from Derby
 
 ```bash
 cd ${DRUID_ROOT}
@@ -141,7 +144,17 @@ mkdir -p /tmp/csv
 java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList=[] org.apache.druid.cli.Main tools export-metadata --connectURI "jdbc:derby://localhost:1527/var/druid/metadata.db;" -o /tmp/csv
 ```
 
-In the example command above:
+### Exporting from PostgreSQL
+
+When exporting from PostgreSQL, you must load the `postgresql-metadata-storage` extension and set the storage type to `postgresql`:
+
+```bash
+cd ${DRUID_ROOT}
+mkdir -p /tmp/csv
+java -classpath "lib/*" -Dlog4j.configurationFile=conf/druid/cluster/_common/log4j2.xml -Ddruid.extensions.directory="extensions" -Ddruid.extensions.loadList='["postgresql-metadata-storage"]' -Ddruid.metadata.storage.type=postgresql org.apache.druid.cli.Main tools export-metadata --connectURI "jdbc:postgresql://localhost:5432/druid" --user druid --password druid -o /tmp/csv
+```
+
+In the example commands above:
 
 - `lib` is the Druid lib directory
 - `extensions` is the Druid extensions directory
@@ -151,7 +164,7 @@ In the example command above:
 
 After running the tool, the output directory will contain `<table-name>_raw.csv` and `<table-name>.csv` files.
 
-The `<table-name>_raw.csv` files are intermediate files used by the tool, containing the table data as exported by Derby without modification.
+The `<table-name>_raw.csv` files are intermediate files used by the tool, containing the table data as exported from the source database without deep-storage rewrites. BLOB columns are hex-encoded and booleans are written as `true`/`false` strings.
 
 The `<table-name>.csv` files are used for import into another database such as MySQL and PostgreSQL and have any configured deep storage location rewrites applied.
 
@@ -159,38 +172,59 @@ Example import commands for Derby, MySQL, and PostgreSQL are shown below.
 
 These example import commands expect `/tmp/csv` and its contents to be accessible from the server. For other options, such as importing from the client filesystem, please refer to the database's documentation.
 
+The segments table is exported in a fixed column order, independent of the physical column order of the source table: `id`, `dataSource`, `created_date`, `start`, `end`, `partitioned`, `version`, `used`, `payload`, followed by whichever of the optional columns `used_status_last_updated`, `indexing_state_fingerprint`, `upgraded_from_segment_id`, `schema_fingerprint`, and `num_rows` exist in the source table, in that order. Adjust the segments column list in the import commands below to contain exactly the columns of the source table: omit any optional column the source table does not have (segments tables from older Druid versions may have only the first nine columns), and add `schema_fingerprint,num_rows` at the end if the source table has them. Apply the same adjustment to the columns declared with `FORCE_NULL` in the PostgreSQL command and to the user variables of the MySQL command.
+
+If the source table does not have `used_status_last_updated` but the target table does, the import fails, because Druid creates that column as `NOT NULL` without a default. Make the column nullable before importing, and give the imported rows a value afterwards:
+
+```sql
+ALTER TABLE druid_segments ALTER COLUMN used_status_last_updated NULL;
+-- run the import command for your database, omitting used_status_last_updated from the column list
+UPDATE druid_segments SET used_status_last_updated = created_date WHERE used_status_last_updated IS NULL;
+ALTER TABLE druid_segments ALTER COLUMN used_status_last_updated NOT NULL;
+```
+
+The `ALTER TABLE` syntax above is for Derby. On PostgreSQL, use `ALTER COLUMN used_status_last_updated DROP NOT NULL` and `SET NOT NULL`; on MySQL, use `MODIFY used_status_last_updated VARCHAR(255) NULL` and `MODIFY used_status_last_updated VARCHAR(255) NOT NULL`.
+
+NULL values are written as empty fields, and each database needs to be told how to import them:
+
+- Derby imports an empty field as NULL, so no extra handling is needed.
+- PostgreSQL `COPY` imports an empty field as an empty string, which fails for non-string columns such as `num_rows`, so the command below declares the nullable columns with `FORCE_NULL`.
+- MySQL `LOAD DATA` imports an empty field as an empty string, and coerces it to `0` for numeric columns such as `num_rows`, so the command below reads the nullable columns into user variables and converts empty values to NULL with `NULLIF`.
+
+The exported CSV follows RFC 4180, in which a backslash is an ordinary character. MySQL `LOAD DATA` treats backslashes as escape characters by default, which would corrupt payloads and segment ids containing them, so the commands below disable this with `ESCAPED BY ''`.
+
 ### Derby
 
 ```sql
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_SEGMENTS','/tmp/csv/druid_segments.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_SEGMENTS','id,dataSource,created_date,start,"end",partitioned,version,used,payload,used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id',null,'/tmp/csv/druid_segments.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_RULES','/tmp/csv/druid_rules.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_RULES','id,dataSource,version,payload',null,'/tmp/csv/druid_rules.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_CONFIG','/tmp/csv/druid_config.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_CONFIG','name,payload',null,'/tmp/csv/druid_config.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_DATASOURCE','/tmp/csv/druid_dataSource.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_DATASOURCE','dataSource,created_date,commit_metadata_payload,commit_metadata_sha1',null,'/tmp/csv/druid_dataSource.csv',',','"',null,0);
 
-CALL SYSCS_UTIL.SYSCS_IMPORT_TABLE (null,'DRUID_SUPERVISORS','/tmp/csv/druid_supervisors.csv',',','"',null,0);
+CALL SYSCS_UTIL.SYSCS_IMPORT_DATA (null,'DRUID_SUPERVISORS','id,spec_id,created_date,payload',null,'/tmp/csv/druid_supervisors.csv',',','"',null,0);
 ```
 
 ### MySQL
 
 ```sql
-LOAD DATA INFILE '/tmp/csv/druid_segments.csv' INTO TABLE druid_segments FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,dataSource,created_date,start,end,partitioned,version,used,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_segments.csv' INTO TABLE druid_segments FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (id,dataSource,created_date,start,end,partitioned,version,used,payload,@used_status_last_updated,@indexing_state_fingerprint,@upgraded_from_segment_id) SET used_status_last_updated=NULLIF(@used_status_last_updated,''), indexing_state_fingerprint=NULLIF(@indexing_state_fingerprint,''), upgraded_from_segment_id=NULLIF(@upgraded_from_segment_id,''); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_rules.csv' INTO TABLE druid_rules FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,dataSource,version,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_rules.csv' INTO TABLE druid_rules FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (id,dataSource,version,payload); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_config.csv' INTO TABLE druid_config FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (name,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_config.csv' INTO TABLE druid_config FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (name,payload); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_dataSource.csv' INTO TABLE druid_dataSource FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (dataSource,created_date,commit_metadata_payload,commit_metadata_sha1); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_dataSource.csv' INTO TABLE druid_dataSource FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (dataSource,created_date,commit_metadata_payload,commit_metadata_sha1); SHOW WARNINGS;
 
-LOAD DATA INFILE '/tmp/csv/druid_supervisors.csv' INTO TABLE druid_supervisors FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' (id,spec_id,created_date,payload); SHOW WARNINGS;
+LOAD DATA INFILE '/tmp/csv/druid_supervisors.csv' INTO TABLE druid_supervisors FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"' ESCAPED BY '' (id,spec_id,created_date,payload); SHOW WARNINGS;
 ```
 
 ### PostgreSQL
 
 ```sql
-COPY druid_segments(id,dataSource,created_date,start,"end",partitioned,version,used,payload) FROM '/tmp/csv/druid_segments.csv' DELIMITER ',' CSV;
+COPY druid_segments(id,dataSource,created_date,start,"end",partitioned,version,used,payload,used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id) FROM '/tmp/csv/druid_segments.csv' WITH (FORMAT csv, FORCE_NULL (used_status_last_updated,indexing_state_fingerprint,upgraded_from_segment_id));
 
 COPY druid_rules(id,dataSource,version,payload) FROM '/tmp/csv/druid_rules.csv' DELIMITER ',' CSV;
 

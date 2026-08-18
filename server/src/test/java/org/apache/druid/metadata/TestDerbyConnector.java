@@ -38,6 +38,7 @@ import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 
+import javax.annotation.Nullable;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -123,6 +124,20 @@ public class TestDerbyConnector extends DerbyConnector
           cause.getSQLState()
       );
     }
+  }
+
+  /**
+   * Calls the generic JDBC exportTable implementation from {@link SQLMetadataConnector},
+   * bypassing Derby's native SYSCS_EXPORT_TABLE override.
+   * This exercises the same code path used by PostgreSQL and other connectors.
+   */
+  public void exportTableGeneric(
+      final String tableName,
+      final String outputPath,
+      @Nullable final List<String> columns
+  )
+  {
+    exportTableWithJdbc(tableName, outputPath, columns);
   }
 
   public static String dbSafeUUID()
