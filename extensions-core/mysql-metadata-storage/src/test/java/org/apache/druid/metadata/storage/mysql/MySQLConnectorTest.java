@@ -191,4 +191,27 @@ public class MySQLConnectorTest
     );
     Assertions.assertEquals("LIMIT 100", connector.limitClause(100));
   }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGetStreamingFetchSize(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+  {
+    final MySQLConnector mysqlConnector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MYSQL_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
+    );
+    final MySQLConnector mariaDbConnector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MARIADB_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
+    );
+
+    Assertions.assertEquals(Integer.MIN_VALUE, mysqlConnector.getStreamingFetchSize());
+    Assertions.assertEquals(1, mariaDbConnector.getStreamingFetchSize());
+  }
 }

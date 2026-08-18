@@ -58,6 +58,7 @@ public class MySQLConnector extends SQLMetadataConnector
 
   @Nullable
   private final Class<?> myTransientExceptionClass;
+  private final boolean mariaDbDriver;
   private final DBI dbi;
 
   @Inject
@@ -72,6 +73,7 @@ public class MySQLConnector extends SQLMetadataConnector
     super(config, dbTables, centralizedDatasourceSchemaConfig);
     log.info("Loading MySQL metadata connector driver %s", driverConfig.getDriverClassName());
     tryLoadDriverClass(driverConfig.getDriverClassName(), true);
+    mariaDbDriver = MySQLConnectorDriverConfig.MARIA_DB_DRIVER.equals(driverConfig.getDriverClassName());
 
     if (driverConfig.getDriverClassName().contains("mysql")) {
       myTransientExceptionClass = tryLoadDriverClass(MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME, false);
@@ -182,6 +184,11 @@ public class MySQLConnector extends SQLMetadataConnector
   @Override
   public int getStreamingFetchSize()
   {
+    if (mariaDbDriver) {
+      // MariaDB Connector/J 2.x converted Integer.MIN_VALUE to 1, while 3.x requires a non-negative fetch size.
+      return 1;
+    }
+
     // this is MySQL's way of indicating you want results streamed back
     // see http://dev.mysql.com/doc/connector-j/5.1/en/connector-j-reference-implementation-notes.html
     return Integer.MIN_VALUE;
