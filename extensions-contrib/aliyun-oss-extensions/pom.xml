@@ -185,7 +185,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
                     <additionalOptions>
-                        <additionalOption>--add-modules=jdk.incubator.vector</additionalOption>
+                        <additionalOption>--add-modules=jdk.incubator.vector,java.compiler</additionalOption>
                         <additionalOption>--add-reads=java.xml.bind=ALL-UNNAMED,java.compiler</additionalOption>
                     </additionalOptions>
                 </configuration>
