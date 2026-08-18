@@ -21,8 +21,8 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -65,7 +65,7 @@ public class SupervisorSpecTest
   public void test()
   {
     DruidExceptionMatcher.assertThat(
-        Assert.assertThrows(DruidException.class, SUPERVISOR_SPEC::getInputSourceResources),
+        Assertions.assertThrows(DruidException.class, SUPERVISOR_SPEC::getInputSourceResources),
         DruidExceptionMatcher.unsupported().expectMessageIs(
             "Supervisor type[abc] does not support input source based security"
         )

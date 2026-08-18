@@ -34,23 +34,25 @@ import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadataManagerTestBase
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     setUp(derbyConnectorRule);
@@ -65,13 +67,14 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     publishSegment(segment2);
   }
 
-  @After
+  @AfterEach
   public void teardown()
   {
     teardownManager();
   }
 
-  @Test(timeout = 60_000)
+  @Test
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
   public void testPollSegmentAndSchema()
   {
     List<SegmentSchemaManager.SegmentSchemaMetadataPlus> list = new ArrayList<>();
@@ -122,36 +125,36 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     sqlSegmentsMetadataManager.start();
     DataSourcesSnapshot dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
-    Assert.assertNull(dataSourcesSnapshot);
-    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
-    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
-    Assert.assertFalse(segmentSchemaCache.isInitialized());
+    Assertions.assertNull(dataSourcesSnapshot);
+    Assertions.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assertions.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+    Assertions.assertFalse(segmentSchemaCache.isInitialized());
 
     sqlSegmentsMetadataManager.startPollingDatabasePeriodically();
-    Assert.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
+    Assertions.assertTrue(sqlSegmentsMetadataManager.isPollingDatabasePeriodically());
     // This call make sure that the first poll is completed
     sqlSegmentsMetadataManager.useLatestSnapshotIfWithinDelay();
-    Assert.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
-    Assert.assertTrue(segmentSchemaCache.isInitialized());
-    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
-    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+    Assertions.assertTrue(sqlSegmentsMetadataManager.getLatestDatabasePoll() instanceof SqlSegmentsMetadataManager.PeriodicDatabasePoll);
+    Assertions.assertTrue(segmentSchemaCache.isInitialized());
+    Assertions.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assertions.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
 
-    Assert.assertEquals(schemaMetadata1, segmentSchemaCache.getSchemaForSegment(segment1.getId()).get());
-    Assert.assertEquals(schemaMetadata2, segmentSchemaCache.getSchemaForSegment(segment2.getId()).get());
+    Assertions.assertEquals(schemaMetadata1, segmentSchemaCache.getSchemaForSegment(segment1.getId()).get());
+    Assertions.assertEquals(schemaMetadata2, segmentSchemaCache.getSchemaForSegment(segment2.getId()).get());
 
     dataSourcesSnapshot = sqlSegmentsMetadataManager.getLatestDataSourcesSnapshot();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("wikipedia"),
         dataSourcesSnapshot.getDataSourcesWithAllUsedSegments()
                            .stream()
                            .map(ImmutableDruidDataSource::getName)
                            .collect(Collectors.toList())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(segment1, segment2),
         ImmutableSet.copyOf(dataSourcesSnapshot.getDataSource("wikipedia").getSegments())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of(segment1, segment2),
         ImmutableSet.copyOf(dataSourcesSnapshot.iterateAllUsedSegmentsInSnapshot())
     );
@@ -206,9 +209,9 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     sqlSegmentsMetadataManager.start();
     sqlSegmentsMetadataManager.poll();
-    Assert.assertTrue(segmentSchemaCache.isInitialized());
-    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
-    Assert.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+    Assertions.assertTrue(segmentSchemaCache.isInitialized());
+    Assertions.assertFalse(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assertions.assertFalse(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
 
     list.clear();
     list.add(
@@ -234,8 +237,8 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
     segmentSchemaManager.persistSchemaAndUpdateSegmentsTable("wikipedia", list, CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
     sqlSegmentsMetadataManager.poll();
-    Assert.assertTrue(segmentSchemaCache.isInitialized());
-    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
-    Assert.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
+    Assertions.assertTrue(segmentSchemaCache.isInitialized());
+    Assertions.assertTrue(segmentSchemaCache.getSchemaForSegment(segment1.getId()).isPresent());
+    Assertions.assertTrue(segmentSchemaCache.getSchemaForSegment(segment2.getId()).isPresent());
   }
 }

@@ -22,27 +22,22 @@ package org.apache.druid.catalog.model;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.catalog.CatalogTest;
 import org.apache.druid.catalog.model.ModelProperties.BooleanPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.IntPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.ListPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ModelProperties.StringPropertyDefn;
 import org.apache.druid.catalog.model.table.ClusterKeySpec;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
-@Category(CatalogTest.class)
+@Tag("CatalogTest")
 public class PropertyDefnTest
 {
   private final ObjectMapper mapper = new ObjectMapper();
@@ -51,67 +46,67 @@ public class PropertyDefnTest
   public void testString()
   {
     StringPropertyDefn prop = new StringPropertyDefn("prop");
-    assertEquals("prop", prop.name());
-    assertEquals("String", prop.typeName());
+    Assertions.assertEquals("prop", prop.name());
+    Assertions.assertEquals("String", prop.typeName());
 
-    assertNull(prop.decode(null, mapper));
-    assertEquals("value", prop.decode("value", mapper));
+    Assertions.assertNull(prop.decode(null, mapper));
+    Assertions.assertEquals("value", prop.decode("value", mapper));
     prop.validate("value", mapper);
 
     // Jackson is permissive in its conversions
-    assertEquals("10", prop.decode(10, mapper));
+    Assertions.assertEquals("10", prop.decode(10, mapper));
     prop.validate(10, mapper);
 
     // But, it does have its limits.
-    assertThrows(Exception.class, () -> prop.decode(Arrays.asList("a", "b"), mapper));
-    assertThrows(Exception.class, () -> prop.validate(Arrays.asList("a", "b"), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode(Arrays.asList("a", "b"), mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.validate(Arrays.asList("a", "b"), mapper));
   }
 
   @Test
   public void testBoolean()
   {
     BooleanPropertyDefn prop = new BooleanPropertyDefn("prop");
-    assertEquals("prop", prop.name());
-    assertEquals("Boolean", prop.typeName());
+    Assertions.assertEquals("prop", prop.name());
+    Assertions.assertEquals("Boolean", prop.typeName());
 
-    assertNull(prop.decode(null, mapper));
-    assertTrue(prop.decode("true", mapper));
-    assertTrue(prop.decode(true, mapper));
-    assertFalse(prop.decode("false", mapper));
-    assertFalse(prop.decode(false, mapper));
-    assertFalse(prop.decode(0, mapper));
-    assertTrue(prop.decode(10, mapper));
+    Assertions.assertNull(prop.decode(null, mapper));
+    Assertions.assertTrue(prop.decode("true", mapper));
+    Assertions.assertTrue(prop.decode(true, mapper));
+    Assertions.assertFalse(prop.decode("false", mapper));
+    Assertions.assertFalse(prop.decode(false, mapper));
+    Assertions.assertFalse(prop.decode(0, mapper));
+    Assertions.assertTrue(prop.decode(10, mapper));
   }
 
   @Test
   public void testInt()
   {
     IntPropertyDefn prop = new IntPropertyDefn("prop");
-    assertEquals("prop", prop.name());
-    assertEquals("Integer", prop.typeName());
+    Assertions.assertEquals("prop", prop.name());
+    Assertions.assertEquals("Integer", prop.typeName());
 
-    assertNull(prop.decode(null, mapper));
-    assertEquals((Integer) 0, prop.decode(0, mapper));
-    assertEquals((Integer) 0, prop.decode("0", mapper));
-    assertEquals((Integer) 10, prop.decode(10, mapper));
-    assertEquals((Integer) 10, prop.decode("10", mapper));
-    assertThrows(Exception.class, () -> prop.decode("foo", mapper));
+    Assertions.assertNull(prop.decode(null, mapper));
+    Assertions.assertEquals((Integer) 0, prop.decode(0, mapper));
+    Assertions.assertEquals((Integer) 0, prop.decode("0", mapper));
+    Assertions.assertEquals((Integer) 10, prop.decode(10, mapper));
+    Assertions.assertEquals((Integer) 10, prop.decode("10", mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
   }
 
   @Test
   public void testStringList()
   {
     StringListPropertyDefn prop = new StringListPropertyDefn("prop");
-    assertEquals("prop", prop.name());
-    assertEquals("string list", prop.typeName());
+    Assertions.assertEquals("prop", prop.name());
+    Assertions.assertEquals("string list", prop.typeName());
 
-    assertNull(prop.decode(null, mapper));
+    Assertions.assertNull(prop.decode(null, mapper));
     prop.validate(null, mapper);
     List<String> value = Arrays.asList("a", "b");
-    assertEquals(value, prop.decode(value, mapper));
+    Assertions.assertEquals(value, prop.decode(value, mapper));
     prop.validate(value, mapper);
-    assertThrows(Exception.class, () -> prop.decode("foo", mapper));
-    assertThrows(Exception.class, () -> prop.validate("foo", mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.validate("foo", mapper));
   }
 
   @Test
@@ -122,10 +117,10 @@ public class PropertyDefnTest
         "cluster key list",
         new TypeReference<>() {}
     );
-    assertEquals("prop", prop.name());
-    assertEquals("cluster key list", prop.typeName());
+    Assertions.assertEquals("prop", prop.name());
+    Assertions.assertEquals("cluster key list", prop.typeName());
 
-    assertNull(prop.decode(null, mapper));
+    Assertions.assertNull(prop.decode(null, mapper));
     List<Map<String, Object>> value = Arrays.asList(
         ImmutableMap.of("column", "a"),
         ImmutableMap.of("column", "b", "desc", true)
@@ -134,7 +129,7 @@ public class PropertyDefnTest
         new ClusterKeySpec("a", false),
         new ClusterKeySpec("b", true)
     );
-    assertEquals(expected, prop.decode(value, mapper));
-    assertThrows(Exception.class, () -> prop.decode("foo", mapper));
+    Assertions.assertEquals(expected, prop.decode(value, mapper));
+    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
   }
 }
