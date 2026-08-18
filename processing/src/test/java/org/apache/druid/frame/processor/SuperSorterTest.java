@@ -73,6 +73,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -84,6 +85,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -116,6 +118,32 @@ public class SuperSorterTest
     public void tearDown()
     {
       exec.getExecutorService().shutdownNow();
+    }
+
+    private static class ListenerDelayingFrameProcessorExecutor extends FrameProcessorExecutor
+    {
+      private int asExecutorCalls;
+      private Runnable pendingListener;
+
+      private ListenerDelayingFrameProcessorExecutor()
+      {
+        super(MoreExecutors.listeningDecorator(Execs.multiThreaded(NUM_THREADS, "super-sorter-test-%d")));
+      }
+
+      @Override
+      public Executor asExecutor(final String cancellationId)
+      {
+        // The worker callback is registered first; delay the output-partitions listener registered by run().
+        if (++asExecutorCalls == 2) {
+          return command -> pendingListener = command;
+        }
+        return super.asExecutor(cancellationId);
+      }
+
+      private void runListener()
+      {
+        pendingListener.run();
+      }
     }
 
     @Test
@@ -160,10 +188,16 @@ public class SuperSorterTest
     @Test
     public void testSingleEmptyInputChannel_immediately_fileStorage() throws Exception
     {
+      exec.getExecutorService().shutdownNow();
+      final ListenerDelayingFrameProcessorExecutor listenerDelayingExec =
+          new ListenerDelayingFrameProcessorExecutor();
+      exec = listenerDelayingExec;
+
       final BlockingQueueFrameChannel inputChannel = BlockingQueueFrameChannel.minimal();
       inputChannel.writable().close();
 
-      final SuperSorterProgressTracker superSorterProgressTracker = new SuperSorterProgressTracker();
+      final SuperSorterProgressTracker superSorterProgressTracker =
+          Mockito.spy(new SuperSorterProgressTracker());
 
       final File tempFolder = temporaryFolder.newFolder();
       final SuperSorter superSorter = new SuperSorter(
@@ -187,10 +221,13 @@ public class SuperSorterTest
 
       final OutputChannels channels = superSorter.run().get();
       Assertions.assertEquals(1, channels.getAllChannels().size());
+      Mockito.verify(superSorterProgressTracker).setTotalMergersForUltimateLevel(1L);
+      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+
+      listenerDelayingExec.runListener();
 
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
       Assertions.assertTrue(channel.isFinished());
-      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
     }
 
