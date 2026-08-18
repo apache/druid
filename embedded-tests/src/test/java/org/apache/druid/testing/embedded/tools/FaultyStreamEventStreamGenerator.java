@@ -142,7 +142,7 @@ public class FaultyStreamEventStreamGenerator extends SyntheticStreamGenerator
       case INVALID_JSON:
         return "{\"broken\": }".getBytes(StandardCharsets.UTF_8);
       case NULL_FIELDS:
-        return "{"
+        return ("{"
                + "\"timestamp\": null,"
                + "\"page\": null,"
                + "\"language\": null,"
@@ -159,15 +159,16 @@ public class FaultyStreamEventStreamGenerator extends SyntheticStreamGenerator
                + "\"added\": null,"
                + "\"deleted\": null,"
                + "\"delta\": null"
-               + "}"
+               + "}")
                .getBytes(StandardCharsets.UTF_8);
       case EMPTY_JSON:
         return "{}".getBytes(StandardCharsets.UTF_8);
       case MULTI_ROW:
-        return "["
+        return ("["
                + "{\"timestamp\":\"2021-01-01T00:00:00Z\",\"page\":\"Multi1\",\"language\":\"en\",\"user\":\"test\",\"unpatrolled\":\"true\",\"newPage\":\"true\",\"robot\":\"false\",\"anonymous\":\"false\",\"namespace\":\"article\",\"continent\":\"North America\",\"country\":\"United States\",\"region\":\"Bay Area\",\"city\":\"San Francisco\",\"added\":1,\"deleted\":0,\"delta\":1},"
                + "{\"timestamp\":\"2021-01-01T00:00:01Z\",\"page\":\"Multi2\",\"language\":\"en\",\"user\":\"test\",\"unpatrolled\":\"true\",\"newPage\":\"true\",\"robot\":\"false\",\"anonymous\":\"false\",\"namespace\":\"article\",\"continent\":\"North America\",\"country\":\"United States\",\"region\":\"Bay Area\",\"city\":\"San Francisco\",\"added\":2,\"deleted\":0,\"delta\":2}"
-               + "]"
+               + "\"]")
+
                .getBytes(StandardCharsets.UTF_8);
       case EMPTY_STRING:
         return "".getBytes(StandardCharsets.UTF_8);
