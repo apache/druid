@@ -1794,7 +1794,7 @@ name: Bean Validation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.2
+version: 3.1.1
 libraries:
   - jakarta.validation: jakarta.validation-api
 
@@ -4007,15 +4007,13 @@ libraries:
 
 ---
 
-name: Expression Language 3.0 API
+name: Jakarta Expression Language API
 license_category: binary
 module: java-core
-license_name: CDDL 1.1
-version: 3.0.0
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
+license_name: Eclipse Public License 2.0
+version: 6.0.1
 libraries:
-  - javax.el: javax.el-api
+  - jakarta.el: jakarta.el-api
 
 ---
 
@@ -5499,14 +5497,14 @@ libraries:
 
 ---
 
-name: jakarta.el
+name: Expressly
 license_category: binary
 module: core
 license_name: Eclipse Public License 2.0
-version: 3.0.4
+version: 6.0.0
 license_file_path: licenses/bin/jakarta.el.EPL2
 libraries:
-  - org.glassfish: jakarta.el
+  - org.glassfish.expressly: expressly
 
 ---
 

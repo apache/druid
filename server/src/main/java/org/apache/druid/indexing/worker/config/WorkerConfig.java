@@ -20,12 +20,12 @@
 package org.apache.druid.indexing.worker.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
 
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
