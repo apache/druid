@@ -33,16 +33,16 @@ public class DruidProcessingModuleTest
   @Test
   public void testMemoryCheckThrowsException()
   {
-    Assertions.assertThrows(ProvisionException.class, () -> {
-      // JDK 9 and above do not support checking for direct memory size
-      // so this test only validates functionality for Java 8.
-      try {
-        JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
-      }
-      catch (UnsupportedOperationException e) {
-        Assumptions.assumeTrue(false, e::getMessage);
-      }
+    // JDK 9 and above do not support checking for direct memory size
+    // so this test only validates functionality for Java 8.
+    try {
+      JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+    }
+    catch (UnsupportedOperationException e) {
+      Assumptions.assumeTrue(false, e::getMessage);
+    }
 
+    Assertions.assertThrows(ProvisionException.class, () -> {
       DruidProcessingModule module = new DruidProcessingModule();
       module.getIntermediateResultsPool(
           new DruidProcessingConfig()
@@ -81,4 +81,3 @@ public class DruidProcessingModuleTest
     module.getIntermediateResultsPool(config, JvmUtils.getRuntimeInfo());
   }
 }
-

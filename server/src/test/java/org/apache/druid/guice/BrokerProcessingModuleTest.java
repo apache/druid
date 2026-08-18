@@ -99,15 +99,16 @@ public class BrokerProcessingModuleTest
   @Test
   public void testMemoryCheckThrowsException()
   {
+    // JDK 9 and above do not support checking for direct memory size
+    // so this test only validates functionality for Java 8.
+    try {
+      JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
+    }
+    catch (UnsupportedOperationException e) {
+      Assumptions.assumeTrue(false, e::getMessage);
+    }
+
     Assertions.assertThrows(ProvisionException.class, () -> {
-      // JDK 9 and above do not support checking for direct memory size
-      // so this test only validates functionality for Java 8.
-      try {
-        JvmUtils.getRuntimeInfo().getDirectMemorySizeBytes();
-      }
-      catch (UnsupportedOperationException e) {
-        Assumptions.assumeTrue(false, e::getMessage);
-      }
       Properties props = new Properties();
       props.setProperty("druid.processing.buffer.sizeBytes", "3GiB");
       Injector injector1 = makeInjector(props);
