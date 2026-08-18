@@ -28,8 +28,9 @@ import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -40,6 +41,21 @@ import java.util.UUID;
  */
 public class ZkPathsConfigTest extends JsonConfigTesterBase<ZkPathsConfig>
 {
+  @BeforeEach
+  public void setUp() throws IllegalAccessException
+  {
+    setup();
+  }
+
+  @Test
+  public void testSimpleInjection()
+      throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
+  {
+    configProvider.inject(testProperties, configurator);
+    validateEntries(configProvider.get());
+    Assertions.assertEquals(propertyValues.size(), assertions);
+  }
+
   @Test
   public void testOverrideBaseOnlyConfig()
       throws IllegalAccessException, NoSuchMethodException, InvocationTargetException, IOException
@@ -58,13 +74,13 @@ public class ZkPathsConfigTest extends JsonConfigTesterBase<ZkPathsConfig>
 
     ZkPathsConfig zkPathsConfigObj = zkPathsConfig.get();
     validateEntries(zkPathsConfigObj);
-    Assert.assertEquals(propertyValues.size(), assertions);
+    Assertions.assertEquals(propertyValues.size(), assertions);
 
     ObjectMapper jsonMapper = injector.getProvider(Key.get(ObjectMapper.class, Json.class)).get();
     String jsonVersion = jsonMapper.writeValueAsString(zkPathsConfigObj);
 
     ZkPathsConfig zkPathsConfigObjDeSer = jsonMapper.readValue(jsonVersion, ZkPathsConfig.class);
 
-    Assert.assertEquals(zkPathsConfigObj, zkPathsConfigObjDeSer);
+    Assertions.assertEquals(zkPathsConfigObj, zkPathsConfigObjDeSer);
   }
 }

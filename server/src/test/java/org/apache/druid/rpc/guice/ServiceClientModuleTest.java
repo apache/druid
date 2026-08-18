@@ -38,37 +38,30 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
-
-import static org.junit.Assert.assertNotNull;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 public class ServiceClientModuleTest
 {
   private Injector injector;
 
-  @Rule
-  public MockitoRule mockitoRule = MockitoJUnit.rule();
-
-  @Mock
   private HttpClient httpClient;
 
-  @Mock
   private DruidNodeDiscoveryProvider discoveryProvider;
 
-  @Mock
   private ServiceLocator serviceLocator;
 
-  @Mock
   private ServiceClientFactory serviceClientFactory;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
+    httpClient = Mockito.mock(HttpClient.class);
+    discoveryProvider = Mockito.mock(DruidNodeDiscoveryProvider.class);
+    serviceLocator = Mockito.mock(ServiceLocator.class);
+    serviceClientFactory = Mockito.mock(ServiceClientFactory.class);
     injector = Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
@@ -88,42 +81,42 @@ public class ServiceClientModuleTest
   @Test
   public void testGetServiceClientFactory()
   {
-    assertNotNull(injector.getInstance(ServiceClientFactory.class));
+    Assertions.assertNotNull(injector.getInstance(ServiceClientFactory.class));
   }
 
   @Test
   public void testGetOverlordClient()
   {
-    assertNotNull(injector.getInstance(OverlordClient.class));
+    Assertions.assertNotNull(injector.getInstance(OverlordClient.class));
   }
 
   @Test
   public void testGetCoordinatorClient()
   {
-    assertNotNull(injector.getInstance(CoordinatorClient.class));
+    Assertions.assertNotNull(injector.getInstance(CoordinatorClient.class));
   }
 
   @Test
   public void testGetBrokerClient()
   {
-    assertNotNull(injector.getInstance(BrokerClient.class));
+    Assertions.assertNotNull(injector.getInstance(BrokerClient.class));
   }
 
   @Test
   public void testGetCoordinatorServiceClient()
   {
-    assertNotNull(injector.getInstance(Key.get(ServiceClient.class, Coordinator.class)));
+    Assertions.assertNotNull(injector.getInstance(Key.get(ServiceClient.class, Coordinator.class)));
   }
 
   @Test
   public void testGetOverlordServiceClient()
   {
-    assertNotNull(injector.getInstance(Key.get(ServiceClient.class, IndexingService.class)));
+    Assertions.assertNotNull(injector.getInstance(Key.get(ServiceClient.class, IndexingService.class)));
   }
 
   @Test
   public void testGetBrokerServiceClient()
   {
-    assertNotNull(injector.getInstance(Key.get(ServiceClient.class, Broker.class)));
+    Assertions.assertNotNull(injector.getInstance(Key.get(ServiceClient.class, Broker.class)));
   }
 }
