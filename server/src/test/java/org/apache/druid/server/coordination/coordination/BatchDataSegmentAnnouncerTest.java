@@ -36,10 +36,11 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -49,6 +50,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 public class BatchDataSegmentAnnouncerTest
 {
@@ -58,7 +60,7 @@ public class BatchDataSegmentAnnouncerTest
   private Set<DataSegment> testSegments;
   private ExecutorService exec;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     announcer = new BatchDataSegmentAnnouncer();
@@ -69,7 +71,7 @@ public class BatchDataSegmentAnnouncerTest
     exec = Execs.multiThreaded(NUM_THREADS, "BatchDataSegmentAnnouncerTest-%d");
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     announcer.stop();
@@ -90,8 +92,8 @@ public class BatchDataSegmentAnnouncerTest
     // announced segments, which at this point is just segmentB.
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot =
         announcer.getSegmentChangesSince(new ChangeRequestHistory.Counter(-1, -1)).get();
-    Assert.assertEquals(1, snapshot.getRequests().size());
-    Assert.assertTrue(snapshot.getRequests().get(0) instanceof SegmentChangeRequestLoad);
+    Assertions.assertEquals(1, snapshot.getRequests().size());
+    Assertions.assertTrue(snapshot.getRequests().get(0) instanceof SegmentChangeRequestLoad);
   }
 
   @Test
@@ -103,9 +105,9 @@ public class BatchDataSegmentAnnouncerTest
 
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot =
         announcer.getSegmentChangesSince(ChangeRequestHistory.Counter.ZERO).get();
-    Assert.assertEquals(segments.size(), snapshot.getRequests().size());
+    Assertions.assertEquals(segments.size(), snapshot.getRequests().size());
     for (DataSegmentChangeRequest request : snapshot.getRequests()) {
-      Assert.assertTrue(request instanceof SegmentChangeRequestLoad);
+      Assertions.assertTrue(request instanceof SegmentChangeRequestLoad);
     }
   }
 
@@ -119,9 +121,9 @@ public class BatchDataSegmentAnnouncerTest
 
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot =
         announcer.getSegmentChangesSince(ChangeRequestHistory.Counter.ZERO).get();
-    Assert.assertEquals(2, snapshot.getRequests().size());
-    Assert.assertTrue(snapshot.getRequests().get(0) instanceof SegmentChangeRequestLoad);
-    Assert.assertTrue(snapshot.getRequests().get(1) instanceof SegmentChangeRequestDrop);
+    Assertions.assertEquals(2, snapshot.getRequests().size());
+    Assertions.assertTrue(snapshot.getRequests().get(0) instanceof SegmentChangeRequestLoad);
+    Assertions.assertTrue(snapshot.getRequests().get(1) instanceof SegmentChangeRequestDrop);
   }
 
   @Test
@@ -134,7 +136,7 @@ public class BatchDataSegmentAnnouncerTest
 
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot =
         announcer.getSegmentChangesSince(ChangeRequestHistory.Counter.ZERO).get();
-    Assert.assertEquals(1, snapshot.getRequests().size());
+    Assertions.assertEquals(1, snapshot.getRequests().size());
   }
 
   @Test
@@ -188,10 +190,10 @@ public class BatchDataSegmentAnnouncerTest
     snapshot = announcer.getSegmentChangesSince(
         new ChangeRequestHistory.Counter(-1, -1)
     ).get();
-    Assert.assertEquals(1, snapshot.getRequests().size());
-    Assert.assertEquals(1, snapshot.getCounter().getCounter());
+    Assertions.assertEquals(1, snapshot.getRequests().size());
+    Assertions.assertEquals(1, snapshot.getCounter().getCounter());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         absoluteSchema1,
         ((SegmentSchemasChangeRequest) snapshot.getRequests().get(0))
             .getSegmentSchemas()
@@ -206,31 +208,32 @@ public class BatchDataSegmentAnnouncerTest
 
     snapshot = announcer.getSegmentChangesSince(snapshot.getCounter()).get();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         deltaSchema,
         ((SegmentSchemasChangeRequest) snapshot.getRequests().get(0))
             .getSegmentSchemas()
             .getSegmentSchemaList()
             .get(0)
     );
-    Assert.assertEquals(1, snapshot.getRequests().size());
-    Assert.assertEquals(2, snapshot.getCounter().getCounter());
+    Assertions.assertEquals(1, snapshot.getRequests().size());
+    Assertions.assertEquals(2, snapshot.getCounter().getCounter());
 
     snapshot = announcer.getSegmentChangesSince(
         new ChangeRequestHistory.Counter(-1, -1)
     ).get();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         absoluteSchema2,
         ((SegmentSchemasChangeRequest) snapshot.getRequests().get(0))
             .getSegmentSchemas()
             .getSegmentSchemaList()
             .get(0)
     );
-    Assert.assertEquals(1, snapshot.getRequests().size());
-    Assert.assertEquals(2, snapshot.getCounter().getCounter());
+    Assertions.assertEquals(1, snapshot.getRequests().size());
+    Assertions.assertEquals(2, snapshot.getCounter().getCounter());
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
   public void testAnnounceSegmentsWithSameSegmentConcurrently() throws ExecutionException, InterruptedException
   {
     final List<Future<?>> futures = new ArrayList<>(NUM_THREADS);
@@ -245,10 +248,11 @@ public class BatchDataSegmentAnnouncerTest
 
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot =
         announcer.getSegmentChangesSince(ChangeRequestHistory.Counter.ZERO).get();
-    Assert.assertEquals(testSegments.size(), snapshot.getRequests().size());
+    Assertions.assertEquals(testSegments.size(), snapshot.getRequests().size());
   }
 
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
   public void testAnnounceSegmentWithSameSegmentConcurrently() throws ExecutionException, InterruptedException
   {
     final List<Future<?>> futures = new ArrayList<>(NUM_THREADS);
@@ -275,7 +279,7 @@ public class BatchDataSegmentAnnouncerTest
 
     ChangeRequestsSnapshot<DataSegmentChangeRequest> snapshot =
         announcer.getSegmentChangesSince(ChangeRequestHistory.Counter.ZERO).get();
-    Assert.assertEquals(4, snapshot.getRequests().size());
+    Assertions.assertEquals(4, snapshot.getRequests().size());
   }
 
   private static DataSegment makeSegment(int offset)

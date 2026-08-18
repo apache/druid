@@ -20,37 +20,34 @@
 package org.apache.druid.server.security;
 
 import com.google.common.collect.ImmutableList;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import java.io.IOException;
 
-@RunWith(MockitoJUnitRunner.class)
 public class AllowHttpMethodsResourceFilterTest
 {
   private static final String METHOD_ALLOWED = "METHOD_ALLOWED";
   private static final String METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED";
 
-  @Mock
   private HttpServletRequest request;
-  @Mock
   private HttpServletResponse response;
-  @Mock
   private FilterChain filterChain;
 
   private AllowHttpMethodsResourceFilter target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
+    request = Mockito.mock(HttpServletRequest.class);
+    response = Mockito.mock(HttpServletResponse.class);
+    filterChain = Mockito.mock(FilterChain.class);
     target = new AllowHttpMethodsResourceFilter(ImmutableList.of(METHOD_ALLOWED));
   }
 

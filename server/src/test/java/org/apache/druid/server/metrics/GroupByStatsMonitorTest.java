@@ -27,10 +27,11 @@ import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryResourceId;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -49,7 +50,7 @@ public class GroupByStatsMonitorTest
   private BlockingPool<ByteBuffer> mergeBufferPool;
   private ExecutorService executorService;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     groupByStatsProvider = new GroupByStatsProvider()
@@ -76,7 +77,7 @@ public class GroupByStatsMonitorTest
     executorService = Executors.newSingleThreadExecutor();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     executorService.shutdown();
@@ -93,7 +94,7 @@ public class GroupByStatsMonitorTest
     // Trigger metric emission
     monitor.doMonitor(emitter);
 
-    Assert.assertEquals(12, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(12, emitter.getNumEmittedEvents());
     emitter.verifyValue("mergeBuffer/pendingRequests", 0L);
     emitter.verifyValue("mergeBuffer/used", 0L);
     emitter.verifyValue("mergeBuffer/queries", 1L);
@@ -155,14 +156,15 @@ public class GroupByStatsMonitorTest
     final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
     boolean ret = monitor.doMonitor(emitter);
-    Assert.assertTrue(ret);
+    Assertions.assertTrue(ret);
 
     List<Number> numbers = emitter.getMetricValues("mergeBuffer/used", Collections.emptyMap());
-    Assert.assertEquals(1, numbers.size());
-    Assert.assertEquals(4, numbers.get(0).intValue());
+    Assertions.assertEquals(1, numbers.size());
+    Assertions.assertEquals(4, numbers.get(0).intValue());
   }
 
-  @Test(timeout = 2_000L)
+  @Test
+  @Timeout(value = 2_000L, unit = TimeUnit.MILLISECONDS)
   public void testMonitoringMergeBuffer_pendingRequests()
   {
     executorService.submit(() -> {
@@ -183,11 +185,11 @@ public class GroupByStatsMonitorTest
       final GroupByStatsMonitor monitor = new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
       final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
       boolean ret = monitor.doMonitor(emitter);
-      Assert.assertTrue(ret);
+      Assertions.assertTrue(ret);
 
       List<Number> numbers = emitter.getMetricValues("mergeBuffer/pendingRequests", Collections.emptyMap());
-      Assert.assertEquals(1, numbers.size());
-      Assert.assertEquals(1, numbers.get(0).intValue());
+      Assertions.assertEquals(1, numbers.size());
+      Assertions.assertEquals(1, numbers.get(0).intValue());
     }
     catch (InterruptedException e) {
       // do nothing
@@ -246,12 +248,12 @@ public class GroupByStatsMonitorTest
   private void verifyMetricValue(StubServiceEmitter emitter, String metricName, Map<String, Object> dimFilters, Number expectedValue)
   {
     final List<ServiceMetricEvent> observedMetricEvents = emitter.getMetricEvents(metricName);
-    Assert.assertEquals(1, observedMetricEvents.size());
+    Assertions.assertEquals(1, observedMetricEvents.size());
     final ServiceMetricEvent event = observedMetricEvents.get(0);
     final EventMap map = event.toMap();
     final boolean matchesDims = dimFilters.entrySet().stream()
                                           .allMatch(e -> Objects.equals(e.getValue(), map.get(e.getKey())));
-    Assert.assertTrue(matchesDims);
-    Assert.assertEquals(expectedValue, event.getValue());
+    Assertions.assertTrue(matchesDims);
+    Assertions.assertEquals(expectedValue, event.getValue());
   }
 }
