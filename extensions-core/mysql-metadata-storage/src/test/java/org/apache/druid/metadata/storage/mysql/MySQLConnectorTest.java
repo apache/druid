@@ -20,6 +20,7 @@
 package org.apache.druid.metadata.storage.mysql;
 
 import com.google.common.base.Supplier;
+import org.mariadb.jdbc.export.MaxAllowedPacketException;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -123,10 +124,14 @@ public class MySQLConnectorTest
         centralizedDatasourceSchemaConfig
     );
 
-    // The test method should return true only for
-    // mariadb.MaxAllowedPacketException or mysql.PacketTooBigException.
-    // Verifying this requires creating a mock Class object, but Class is final
-    // and has only a private constructor. It would be overkill to try to mock it.
+    Assertions.assertTrue(
+        connector.isRootCausePacketTooBigException(new MaxAllowedPacketException("packet too large", false))
+    );
+    Assertions.assertTrue(
+        connector.isRootCausePacketTooBigException(
+            new SQLException("packet too large", new MaxAllowedPacketException("packet too large", false))
+        )
+    );
 
     // Verify some of the false cases
     Assertions.assertFalse(

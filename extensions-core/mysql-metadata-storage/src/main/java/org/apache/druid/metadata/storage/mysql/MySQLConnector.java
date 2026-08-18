@@ -50,6 +50,8 @@ public class MySQLConnector extends SQLMetadataConnector
   private static final String MYSQL_TRANSIENT_EXCEPTION_CLASS_NAME
       = "java.sql.SQLTransientException";
   private static final String MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
+      = "org.mariadb.jdbc.export.MaxAllowedPacketException";
+  private static final String LEGACY_MARIA_DB_PACKET_EXCEPTION_CLASS_NAME
       = "org.mariadb.jdbc.internal.util.exceptions.MaxAllowedPacketException";
   private static final String MYSQL_PACKET_EXCEPTION_CLASS_NAME
       = "com.mysql.jdbc.PacketTooBigException";
@@ -241,6 +243,7 @@ public class MySQLConnector extends SQLMetadataConnector
 
     final String className = t.getClass().getName();
     return MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(className)
+           || LEGACY_MARIA_DB_PACKET_EXCEPTION_CLASS_NAME.equals(className)
            || MYSQL_PACKET_EXCEPTION_CLASS_NAME.equals(className)
            || isRootCausePacketTooBigException(t.getCause());
   }
