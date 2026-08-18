@@ -36,6 +36,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
+import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
@@ -124,6 +126,27 @@ public class S3Utils
       }
     }
   };
+
+  /**
+   * Restores {@code Content-MD5} request checksums on every given builder, for S3-compatible stores that reject the
+   * CRC32 checksums the SDK sends by default since 2.30.0.
+   * <p>
+   * Takes all the builders for one client set rather than one builder per call, so the sync and async clients cannot
+   * end up disagreeing about checksum behavior, and so the switch is logged once per client set.
+   */
+  public static void configureLegacyMd5(
+      final AWSClientConfig clientConfig,
+      final S3BaseClientBuilder<?, ?>... s3ClientBuilders
+  )
+  {
+    if (!clientConfig.isEnableLegacyMd5()) {
+      return;
+    }
+    log.info("Legacy MD5 compatibility mode is enabled for the S3 client.");
+    for (S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
+      s3ClientBuilder.addPlugin(LegacyMd5Plugin.create());
+    }
+  }
 
   /**
    * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
