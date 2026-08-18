@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.guice.SleepModule;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
@@ -485,12 +486,9 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(regularUserVisibleSqlQueryIds.contains(regularUserQueryId));
 
     // Regular user can get only their own query report
-    final RuntimeException e = Assertions.assertThrows(
-        RuntimeException.class,
-        () -> getReportWithClient(adminQueryId, regularUserClient)
-    );
-    Assertions.assertNotNull(e.getMessage());
-    Assertions.assertTrue(e.getMessage().contains("404 Not Found"));
+    ThrowableMatcher.of(RuntimeException.class)
+                    .expectMessageContains("404 Not Found")
+                    .assertThrowsAndMatches(() -> getReportWithClient(adminQueryId, regularUserClient));
     Assertions.assertNotNull(getReportWithClient(regularUserQueryId, regularUserClient));
   }
 
