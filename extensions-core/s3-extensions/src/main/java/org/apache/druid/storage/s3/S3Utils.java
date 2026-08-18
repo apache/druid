@@ -139,12 +139,11 @@ public class S3Utils
       final S3BaseClientBuilder<?, ?>... s3ClientBuilders
   )
   {
-    if (!clientConfig.isEnableLegacyMd5()) {
-      return;
-    }
-    log.info("Legacy MD5 compatibility mode is enabled for the S3 client.");
-    for (S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
-      s3ClientBuilder.addPlugin(LegacyMd5Plugin.create());
+    if (clientConfig.isEnableLegacyMd5()) {
+      log.info("Legacy MD5 compatibility mode is enabled for the S3 client.");
+      for (S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
+        s3ClientBuilder.addPlugin(LegacyMd5Plugin.create());
+      }
     }
   }
 
