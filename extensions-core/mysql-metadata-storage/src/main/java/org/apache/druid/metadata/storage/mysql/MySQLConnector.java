@@ -185,7 +185,9 @@ public class MySQLConnector extends SQLMetadataConnector
   public int getStreamingFetchSize()
   {
     if (mariaDbDriver) {
-      // MariaDB Connector/J 2.x converted Integer.MIN_VALUE to 1, while 3.x requires a non-negative fetch size.
+      // MariaDB Connector/J 2.7.3 had a compatibility branch in
+      // Statement.setFetchSize(Integer.MIN_VALUE) that stored fetchSize=1, while 3.x requires non-negative values.
+      // Source: https://github.com/mariadb-corporation/mariadb-connector-j/blob/2.7.3/src/main/java/org/mariadb/jdbc/MariaDbStatement.java#L1296-L1305
       return 1;
     }
 
