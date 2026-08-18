@@ -51,7 +51,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
         .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -63,7 +63,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
         .column("x", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -74,7 +74,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
         .inputFormat(CSV_FORMAT)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -105,7 +105,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
   {
     InputSourceDefn defn = registry.inputSourceDefnFor(InlineInputSourceDefn.TYPE_KEY);
     TableFunction fn = defn.adHocTableFn();
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
   }
 
   @Test
@@ -115,7 +115,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     TableFunction fn = defn.adHocTableFn();
     Map<String, Object> args = new HashMap<>();
     args.put(InlineInputSourceDefn.DATA_PROPERTY, "a");
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -144,7 +144,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
     Assertions.assertEquals(Collections.singleton(InlineInputSourceDefn.TYPE_KEY), extern.inputSourceTypesSupplier.get());
 
     // Fails if no columns are provided.
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), Collections.emptyList(), mapper));
   }
 
   @Test
@@ -183,7 +183,7 @@ public class InlineInputSourceDefnTest extends BaseExternTableTest
         new ColumnSpec("a", Columns.STRING, null),
         new ColumnSpec("b", Columns.STRING, null)
     );
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), columns, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", new HashMap<>(), columns, mapper));
   }
 
   @Test

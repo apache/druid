@@ -68,7 +68,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -83,7 +83,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -104,7 +104,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -124,7 +124,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .inputFormat(CSV_FORMAT)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -157,7 +157,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://example.com/{}")
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -169,7 +169,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     Map<String, Object> args = new HashMap<>();
     args.put(HttpInputSourceDefn.URIS_PARAMETER, new String[] {"http://foo.com/my.csv"});
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, "bogus");
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
   }
 
   @Test
@@ -181,7 +181,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     Map<String, Object> args = new HashMap<>();
     args.put(HttpInputSourceDefn.URIS_PARAMETER, new String[] {"bogus"});
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
   }
 
   @Test
@@ -204,7 +204,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     validateHappyPath(externSpec, true);
 
     // But, it fails if there are no columns.
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -246,7 +246,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     validateHappyPath(externSpec, true);
 
     // But, it fails columns are provided since the table already has them.
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
   }
 
   @Test
@@ -268,7 +268,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // Not a full table, can't directly convert
     // Convert to an external spec
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
@@ -317,7 +317,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // Not a full table, can't directly convert
     // Convert to an external spec
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
@@ -361,7 +361,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // Convert to an external spec
     ResolvedTable resolved = registry.resolve(table.spec());
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);

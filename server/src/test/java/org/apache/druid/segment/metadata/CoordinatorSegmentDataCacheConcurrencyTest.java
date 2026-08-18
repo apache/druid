@@ -76,7 +76,6 @@ import org.mockito.Mockito;
 import javax.annotation.Nullable;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -118,7 +117,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
   {
     setUpData();
     setUpCommon();
-    tmpDir = newFolder(temporaryFolder, "junit");
+    tmpDir = temporaryFolder.newFolder();
     inventoryView = new TestServerInventoryView();
     serverView = newCoordinatorServerView(inventoryView);
     walker = new TestSegmentMetadataQueryWalker(
@@ -599,19 +598,6 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
       Set<DataSegment> segments = segmentsMap.get(serverKey);
       return segments != null && segments.contains(segment);
     }
-
-    private static File newFolder(File root, String... subDirs) throws IOException
-    {
-      if (subDirs.length == 0) {
-        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
-      }
-      String subFolder = String.join("/", subDirs);
-      File result = new File(root, subFolder);
-      if (!result.mkdirs()) {
-        throw new IOException("Couldn't create folders " + root);
-      }
-      return result;
-    }
   }
 
   private static class TestCoordinatorServerView extends CoordinatorServerView
@@ -631,31 +617,5 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
     {
       return EasyMock.mock(QueryRunner.class);
     }
-
-    private static File newFolder(File root, String... subDirs) throws IOException
-    {
-      if (subDirs.length == 0) {
-        return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
-      }
-      String subFolder = String.join("/", subDirs);
-      File result = new File(root, subFolder);
-      if (!result.mkdirs()) {
-        throw new IOException("Couldn't create folders " + root);
-      }
-      return result;
-    }
-  }
-
-  private static File newFolder(File root, String... subDirs) throws IOException
-  {
-    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
-      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
-    }
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
-    return result;
   }
 }

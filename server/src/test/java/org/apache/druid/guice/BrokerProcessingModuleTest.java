@@ -99,7 +99,7 @@ public class BrokerProcessingModuleTest
   @Test
   public void testMemoryCheckThrowsException()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ProvisionException.class, () -> {
+    Assertions.assertThrows(ProvisionException.class, () -> {
       // JDK 9 and above do not support checking for direct memory size
       // so this test only validates functionality for Java 8.
       try {

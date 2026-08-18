@@ -189,7 +189,7 @@ public class DruidInjectorBuilderTest
           .withEmptyProperties()
           .build()
     );
-    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> builder.addInput("I'm not a module"));
+    Assertions.assertThrows(ISE.class, () -> builder.addInput("I'm not a module"));
   }
 
   @Test
@@ -201,7 +201,7 @@ public class DruidInjectorBuilderTest
           .withEmptyProperties()
           .build()
     );
-    org.junit.jupiter.api.Assertions.assertThrows(ISE.class, () -> builder.addInput(Object.class));
+    Assertions.assertThrows(ISE.class, () -> builder.addInput(Object.class));
   }
 
   @Test
@@ -253,7 +253,7 @@ public class DruidInjectorBuilderTest
         .addInput(MockDruidModule.class)
         .build();
 
-    org.junit.jupiter.api.Assertions.assertThrows(IOException.class, () -> verifyInjector(injector));
+    Assertions.assertThrows(IOException.class, () -> verifyInjector(injector));
   }
 
   @Test
@@ -285,7 +285,7 @@ public class DruidInjectorBuilderTest
         .addModules(new MockGuiceModule(), new MockRoleModule())
         .build();
 
-    org.junit.jupiter.api.Assertions.assertThrows(IOException.class, () -> verifyInjector(injector));
+    Assertions.assertThrows(IOException.class, () -> verifyInjector(injector));
   }
 
   @Test

@@ -88,7 +88,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
 
   private void expectValidationFails(final ResolvedTable table)
   {
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> table.validate());
+    Assertions.assertThrows(IAE.class, () -> table.validate());
   }
 
   private void expectValidationFails(final TableSpec spec)
@@ -108,7 +108,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
   {
     {
       TableSpec spec = new TableSpec(null, ImmutableMap.of(), null);
-      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> registry.resolve(spec));
+      Assertions.assertThrows(IAE.class, () -> registry.resolve(spec));
     }
 
     {
@@ -174,7 +174,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
           columns
       );
       ResolvedTable table = registry.resolve(spec);
-      DruidException e = org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, table::validate);
+      DruidException e = Assertions.assertThrows(DruidException.class, table::validate);
       Assertions.assertTrue(e.getMessage().contains("must also set [sealed] to true"));
     }
 
@@ -191,7 +191,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
           columns
       );
       ResolvedTable table = registry.resolve(spec);
-      org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, table::validate);
+      Assertions.assertThrows(DruidException.class, table::validate);
     }
 
     {
@@ -207,7 +207,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
           columns
       );
       ResolvedTable table = registry.resolve(spec);
-      org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, table::validate);
+      Assertions.assertThrows(DruidException.class, table::validate);
     }
 
     {
@@ -222,7 +222,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
           Collections.singletonList(new ColumnSpec("tenant", Columns.SQL_VARCHAR, null))
       );
       ResolvedTable table = registry.resolve(spec);
-      org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, table::validate);
+      Assertions.assertThrows(DruidException.class, table::validate);
     }
   }
 
@@ -261,10 +261,10 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
     // the sealed schema, and columns computed by a virtual column at ingest time cannot be written directly.
     Assertions.assertSame(facade.column("tenant"), facade.insertColumn("tenant", "druid.tbl"));
     DruidException sealedError =
-        org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, () -> facade.insertColumn("no_such_column", "druid.tbl"));
+        Assertions.assertThrows(DruidException.class, () -> facade.insertColumn("no_such_column", "druid.tbl"));
     Assertions.assertTrue(sealedError.getMessage().contains("not defined in the target table [druid.tbl] strict schema"));
     DruidException computedError =
-        org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, () -> facade.insertColumn("tenant_lower", "druid.tbl"));
+        Assertions.assertThrows(DruidException.class, () -> facade.insertColumn("tenant_lower", "druid.tbl"));
     Assertions.assertTrue(computedError.getMessage().contains("computed by a virtual column at ingest time"));
 
     // An undeclared column of a non-sealed table resolves to null: the caller adds it from the query type.
@@ -302,7 +302,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
   {
     {
       TableSpec spec = new TableSpec("bogus", ImmutableMap.of(), null);
-      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> registry.resolve(spec));
+      Assertions.assertThrows(IAE.class, () -> registry.resolve(spec));
     }
 
     // Segment granularity
@@ -363,7 +363,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
     // Name is required
     {
       ColumnSpec spec = new ColumnSpec(null, null, null);
-      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> spec.validate());
+      Assertions.assertThrows(IAE.class, () -> spec.validate());
     }
     {
       ColumnSpec spec = new ColumnSpec("foo", null, null);
@@ -446,7 +446,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
       TableSpec spec = builder.copy()
           .column("foo", "FOO")
           .buildSpec();
-      DruidException e = org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      DruidException e = Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
       Assertions.assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [FOO]"));
     }
     {
@@ -454,7 +454,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
       TableSpec spec = builder.copy()
           .column("foo", "COMPLEX<json")
           .buildSpec();
-      DruidException e = org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      DruidException e = Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
       Assertions.assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [COMPLEX<json]"));
     }
     {
@@ -462,7 +462,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
       TableSpec spec = builder.copy()
           .column("foo", "ARRAY<FOO>")
           .buildSpec();
-      DruidException e = org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
+      DruidException e = Assertions.assertThrows(DruidException.class, () -> registry.resolve(spec).validate());
       Assertions.assertTrue(e.getMessage().contains("Column [foo] has an unrecognized type [ARRAY<FOO>]"));
     }
     {
@@ -572,7 +572,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
 
   private void assertMergeFails(TableSpec spec, TableSpec update)
   {
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> mergeTables(spec, update));
+    Assertions.assertThrows(IAE.class, () -> mergeTables(spec, update));
   }
 
   @Test

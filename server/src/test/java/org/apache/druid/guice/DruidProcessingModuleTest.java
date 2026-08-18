@@ -22,6 +22,7 @@ package org.apache.druid.guice;
 import com.google.inject.ProvisionException;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 
@@ -32,7 +33,7 @@ public class DruidProcessingModuleTest
   @Test
   public void testMemoryCheckThrowsException()
   {
-    org.junit.jupiter.api.Assertions.assertThrows(ProvisionException.class, () -> {
+    Assertions.assertThrows(ProvisionException.class, () -> {
       // JDK 9 and above do not support checking for direct memory size
       // so this test only validates functionality for Java 8.
       try {

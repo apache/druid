@@ -57,7 +57,7 @@ public class ExternalTableTest extends BaseExternTableTest
     // Empty table: not valid
     TableMetadata table = TableBuilder.external("foo").build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -68,7 +68,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of())
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -79,7 +79,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputSource(ImmutableMap.of("type", "unknown"))
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -103,7 +103,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputFormat(ImmutableMap.of())
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -115,7 +115,7 @@ public class ExternalTableTest extends BaseExternTableTest
         .inputFormat(ImmutableMap.of("type", "unknown"))
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -147,7 +147,7 @@ public class ExternalTableTest extends BaseExternTableTest
           .column("a", badType)
           .build();
       ResolvedTable resolved = registry.resolve(table.spec());
-      DruidException e = org.junit.jupiter.api.Assertions.assertThrows(DruidException.class, () -> resolved.validate());
+      DruidException e = Assertions.assertThrows(DruidException.class, () -> resolved.validate());
       Assertions.assertTrue(
           e.getMessage().contains("Column [a] has an unrecognized type [" + badType + "]"),
           "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage()

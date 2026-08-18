@@ -86,7 +86,7 @@ public class TableMetadataTest
           TableId.of(null, "foo"),
           spec
       );
-      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> table.validate());
+      Assertions.assertThrows(IAE.class, () -> table.validate());
     }
 
     {
@@ -95,7 +95,7 @@ public class TableMetadataTest
           TableId.of(TableId.DRUID_SCHEMA, null),
           spec
       );
-      org.junit.jupiter.api.Assertions.assertThrows(IAE.class, () -> table.validate());
+      Assertions.assertThrows(IAE.class, () -> table.validate());
     }
   }
   @Test

@@ -411,7 +411,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
                    .size(0)
                    .build();
 
-    final File tmpDir = newFolder(temporaryFolder, "junit");
+    final File tmpDir = temporaryFolder.newFolder();
 
     List<InputRow> rows = ImmutableList.of(
         createRow(ImmutableMap.of("t", "2002-01-01", "m1", "1.0", "dim1", "", "dim3", "c1")),
@@ -2575,18 +2575,5 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
     Assertions.assertFalse(failures.isEmpty(), "a wrapped query failure should emit refresh/failed");
     Assertions.assertEquals(1, failures.get(0).intValue());
-  }
-
-  private static File newFolder(File root, String... subDirs) throws IOException
-  {
-    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
-      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
-    }
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
-    return result;
   }
 }

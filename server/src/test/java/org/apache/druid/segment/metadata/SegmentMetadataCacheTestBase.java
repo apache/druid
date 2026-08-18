@@ -48,14 +48,14 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -89,8 +89,8 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   public QueryRunnerFactoryConglomerate conglomerate;
   public Closer resourceCloser;
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   public QueryableIndex index1;
   public QueryableIndex index2;
@@ -113,7 +113,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
 
   public void setUpData() throws Exception
   {
-    final File tmpDir = newFolder(temporaryFolder, "junit");
+    final File tmpDir = temporaryFolder.newFolder();
     index1 = IndexBuilder.create()
                          .tmpDir(new File(tmpDir, "1"))
                          .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
@@ -306,18 +306,5 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
                       .binaryVersion(1)
                       .size(100L)
                       .build();
-  }
-
-  private static File newFolder(File root, String... subDirs) throws IOException
-  {
-    if (subDirs.length == 0 || (subDirs.length == 1 && "junit".equals(subDirs[0]))) {
-      return java.nio.file.Files.createTempDirectory(root.toPath(), "junit").toFile();
-    }
-    String subFolder = String.join("/", subDirs);
-    File result = new File(root, subFolder);
-    if (!result.mkdirs()) {
-      throw new IOException("Couldn't create folders " + root);
-    }
-    return result;
   }
 }

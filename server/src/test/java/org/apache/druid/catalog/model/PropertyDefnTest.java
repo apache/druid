@@ -58,8 +58,8 @@ public class PropertyDefnTest
     prop.validate(10, mapper);
 
     // But, it does have its limits.
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode(Arrays.asList("a", "b"), mapper));
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.validate(Arrays.asList("a", "b"), mapper));
+    Assertions.assertThrows(Exception.class, () -> prop.decode(Arrays.asList("a", "b"), mapper));
+    Assertions.assertThrows(Exception.class, () -> prop.validate(Arrays.asList("a", "b"), mapper));
   }
 
   @Test
@@ -90,7 +90,7 @@ public class PropertyDefnTest
     Assertions.assertEquals((Integer) 0, prop.decode("0", mapper));
     Assertions.assertEquals((Integer) 10, prop.decode(10, mapper));
     Assertions.assertEquals((Integer) 10, prop.decode("10", mapper));
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
+    Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
   }
 
   @Test
@@ -105,8 +105,8 @@ public class PropertyDefnTest
     List<String> value = Arrays.asList("a", "b");
     Assertions.assertEquals(value, prop.decode(value, mapper));
     prop.validate(value, mapper);
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.validate("foo", mapper));
+    Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
+    Assertions.assertThrows(Exception.class, () -> prop.validate("foo", mapper));
   }
 
   @Test
@@ -130,6 +130,6 @@ public class PropertyDefnTest
         new ClusterKeySpec("b", true)
     );
     Assertions.assertEquals(expected, prop.decode(value, mapper));
-    org.junit.jupiter.api.Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
+    Assertions.assertThrows(Exception.class, () -> prop.decode("foo", mapper));
   }
 }
