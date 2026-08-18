@@ -34,6 +34,7 @@ import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -47,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * TODO convert benchmarks to JMH
@@ -130,6 +132,7 @@ public class BalanceSegmentsProfiler
         .builder()
         .withDruidCluster(druidCluster)
         .withUsedSegments(segments)
+        .withRetentionRulesSnapshot(new RetentionRulesSnapshot(Map.of(), manager.getRulesWithDefault("test")))
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
@@ -142,7 +145,7 @@ public class BalanceSegmentsProfiler
         .build();
 
     BalanceSegments tester = new BalanceSegments(Duration.standardMinutes(1));
-    RunRules runner = new RunRules((ds, set) -> set.size(), manager::getRulesWithDefault);
+    RunRules runner = new RunRules((ds, set) -> set.size());
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);
     DruidCoordinatorRuntimeParams assignParams = runner.run(params);

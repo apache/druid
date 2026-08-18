@@ -27,6 +27,7 @@ import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
@@ -51,6 +52,7 @@ public class DruidCoordinatorRuntimeParams
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final DruidCompactionConfig compactionConfig;
   private final SegmentLoadingConfig segmentLoadingConfig;
+  private final RetentionRulesSnapshot retentionRulesSnapshot;
   private final CoordinatorRunStats stats;
   private final BalancerStrategy balancerStrategy;
   private final Set<String> broadcastDatasources;
@@ -63,6 +65,7 @@ public class DruidCoordinatorRuntimeParams
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       DruidCompactionConfig compactionConfig,
       SegmentLoadingConfig segmentLoadingConfig,
+      RetentionRulesSnapshot retentionRulesSnapshot,
       CoordinatorRunStats stats,
       BalancerStrategy balancerStrategy,
       Set<String> broadcastDatasources
@@ -75,6 +78,7 @@ public class DruidCoordinatorRuntimeParams
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.compactionConfig = compactionConfig;
     this.segmentLoadingConfig = segmentLoadingConfig;
+    this.retentionRulesSnapshot = retentionRulesSnapshot;
     this.stats = stats;
     this.balancerStrategy = balancerStrategy;
     this.broadcastDatasources = broadcastDatasources;
@@ -148,6 +152,14 @@ public class DruidCoordinatorRuntimeParams
     return segmentLoadingConfig;
   }
 
+  /**
+   * Retention rules of all datasources, snapshotted at the start of this run.
+   */
+  public RetentionRulesSnapshot getRetentionRulesSnapshot()
+  {
+    return retentionRulesSnapshot;
+  }
+
   public CoordinatorRunStats getCoordinatorStats()
   {
     return stats;
@@ -184,6 +196,7 @@ public class DruidCoordinatorRuntimeParams
         coordinatorDynamicConfig,
         compactionConfig,
         segmentLoadingConfig,
+        retentionRulesSnapshot,
         stats,
         balancerStrategy,
         broadcastDatasources
@@ -200,6 +213,7 @@ public class DruidCoordinatorRuntimeParams
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private DruidCompactionConfig compactionConfig;
     private SegmentLoadingConfig segmentLoadingConfig;
+    private RetentionRulesSnapshot retentionRulesSnapshot;
     private CoordinatorRunStats stats;
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
@@ -208,6 +222,7 @@ public class DruidCoordinatorRuntimeParams
     {
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.compactionConfig = DruidCompactionConfig.empty();
+      this.retentionRulesSnapshot = RetentionRulesSnapshot.empty();
       this.broadcastDatasources = Collections.emptySet();
     }
 
@@ -219,6 +234,7 @@ public class DruidCoordinatorRuntimeParams
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         DruidCompactionConfig compactionConfig,
         SegmentLoadingConfig segmentLoadingConfig,
+        RetentionRulesSnapshot retentionRulesSnapshot,
         CoordinatorRunStats stats,
         BalancerStrategy balancerStrategy,
         Set<String> broadcastDatasources
@@ -231,6 +247,7 @@ public class DruidCoordinatorRuntimeParams
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.compactionConfig = compactionConfig;
       this.segmentLoadingConfig = segmentLoadingConfig;
+      this.retentionRulesSnapshot = retentionRulesSnapshot;
       this.stats = stats;
       this.balancerStrategy = balancerStrategy;
       this.broadcastDatasources = broadcastDatasources;
@@ -252,6 +269,7 @@ public class DruidCoordinatorRuntimeParams
           coordinatorDynamicConfig,
           compactionConfig,
           segmentLoadingConfig,
+          retentionRulesSnapshot,
           stats,
           balancerStrategy,
           broadcastDatasources
@@ -343,6 +361,15 @@ public class DruidCoordinatorRuntimeParams
     public Builder withSegmentLoadingConfig(SegmentLoadingConfig config)
     {
       this.segmentLoadingConfig = config;
+      return this;
+    }
+
+    /**
+     * Sets the snapshot of retention rules to be used by all duties in this run.
+     */
+    public Builder withRetentionRulesSnapshot(RetentionRulesSnapshot retentionRulesSnapshot)
+    {
+      this.retentionRulesSnapshot = retentionRulesSnapshot;
       return this;
     }
 

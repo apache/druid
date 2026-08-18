@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.skife.jdbi.v2.Handle;
@@ -322,6 +323,16 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       retVal.addAll(theRules.get(config.getDefaultRule()));
     }
     return retVal;
+  }
+
+  @Override
+  public RetentionRulesSnapshot getRulesSnapshot()
+  {
+    final ImmutableMap<String, List<Rule>> currentRules = rules.get();
+    return new RetentionRulesSnapshot(
+        currentRules,
+        currentRules.getOrDefault(config.getDefaultRule(), List.of())
+    );
   }
 
   @Override

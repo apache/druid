@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import org.apache.druid.audit.AuditInfo;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 
 import java.util.List;
@@ -40,6 +41,14 @@ public interface MetadataRuleManager
   List<Rule> getRules(String dataSource);
 
   List<Rule> getRulesWithDefault(String dataSource);
+
+  /**
+   * Immutable snapshot of the rules of all datasources. A caller that needs the rules
+   * of more than one datasource, or of the same datasource more than once, must use a
+   * snapshot so that a concurrent rule update cannot change the answer part way
+   * through.
+   */
+  RetentionRulesSnapshot getRulesSnapshot();
 
   boolean overrideRule(String dataSource, List<Rule> rulesConfig, AuditInfo auditInfo);
 

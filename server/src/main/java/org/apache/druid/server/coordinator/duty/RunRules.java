@@ -28,6 +28,7 @@ import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.rules.BroadcastDistributionRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -56,15 +57,10 @@ public class RunRules implements CoordinatorDuty
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
 
   private final MetadataAction.DeleteSegments deleteHandler;
-  private final MetadataAction.GetDatasourceRules ruleHandler;
 
-  public RunRules(
-      MetadataAction.DeleteSegments deleteHandler,
-      MetadataAction.GetDatasourceRules ruleHandler
-  )
+  public RunRules(MetadataAction.DeleteSegments deleteHandler)
   {
     this.deleteHandler = deleteHandler;
-    this.ruleHandler = ruleHandler;
   }
 
   @Override
@@ -83,6 +79,7 @@ public class RunRules implements CoordinatorDuty
     final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
 
     final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
+    final RetentionRulesSnapshot rulesSnapshot = params.getRetentionRulesSnapshot();
 
     final DateTime now = DateTimes.nowUtc();
     final Object2IntOpenHashMap<String> datasourceToSegmentsWithNoRule = new Object2IntOpenHashMap<>();
@@ -95,7 +92,7 @@ public class RunRules implements CoordinatorDuty
       }
 
       // Find and apply matching rule
-      List<Rule> rules = ruleHandler.getRulesWithDefault(segment.getDataSource());
+      List<Rule> rules = rulesSnapshot.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
@@ -115,7 +112,7 @@ public class RunRules implements CoordinatorDuty
     alertForInvalidRules(segmentAssigner);
 
     return params.buildFromExisting()
-                 .withBroadcastDatasources(getBroadcastDatasources(params))
+                 .withBroadcastDatasources(getBroadcastDatasources(params, rulesSnapshot))
                  .build();
   }
 
@@ -159,11 +156,14 @@ public class RunRules implements CoordinatorDuty
     );
   }
 
-  private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)
+  private Set<String> getBroadcastDatasources(
+      DruidCoordinatorRuntimeParams params,
+      RetentionRulesSnapshot rulesSnapshot
+  )
   {
     return params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
                  .map(ImmutableDruidDataSource::getName)
-                 .filter(this::isBroadcastDatasource)
+                 .filter(datasource -> isBroadcastDatasource(datasource, rulesSnapshot))
                  .collect(Collectors.toSet());
   }
 
@@ -175,10 +175,10 @@ public class RunRules implements CoordinatorDuty
    *   <li>Are unloaded if unused, even from realtime servers</li>
    * </ul>
    */
-  private boolean isBroadcastDatasource(String datasource)
+  private boolean isBroadcastDatasource(String datasource, RetentionRulesSnapshot rulesSnapshot)
   {
-    return ruleHandler.getRulesWithDefault(datasource)
-                      .stream()
-                      .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
+    return rulesSnapshot.getRulesWithDefault(datasource)
+                        .stream()
+                        .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

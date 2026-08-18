@@ -40,6 +40,7 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.PeriodPartialLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -206,11 +207,12 @@ public class RunRulesPartialLoadPlacementTest
   private CoordinatorRunStats runRules(DruidCluster cluster, Rule rule, DataSegment... segments)
   {
     final List<Rule> rules = Collections.singletonList(rule);
-    final RunRules ruleRunner = new RunRules((ds, set) -> set.size(), datasource -> rules);
+    final RunRules ruleRunner = new RunRules((ds, set) -> set.size());
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDruidCluster(cluster)
+        .withRetentionRulesSnapshot(new RetentionRulesSnapshot(Map.of(), rules))
         .withUsedSegments(segments)
         .withBalancerStrategy(balancerStrategy)
         .withDynamicConfigs(
