@@ -195,6 +195,8 @@ public class ConnectionUriUtilsTest
     @Test
     public void testMariaDb3xDriver() throws Exception
     {
+      // MariaDB Connector/J 3.x rejects plain jdbc:mysql URLs by default. MYSQL_URI lacks permitMysqlScheme,
+      // so Configuration.parse returns null, which Druid translates to IAE.
       Assertions.assertThrows(IAE.class, () ->
           ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI)
       );
