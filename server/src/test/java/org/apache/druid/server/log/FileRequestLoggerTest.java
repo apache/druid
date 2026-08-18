@@ -119,7 +119,7 @@ public class FileRequestLoggerTest
     Throwable exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
       ObjectMapper objectMapper = new ObjectMapper();
       File logDir = temporaryFolder.newFolder();
-      FileRequestLogger fileRequestLogger = new FileRequestLogger(
+      new FileRequestLogger(
           objectMapper,
           scheduler,
           logDir,

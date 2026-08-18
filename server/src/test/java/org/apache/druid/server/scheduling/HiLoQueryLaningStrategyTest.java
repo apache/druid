@@ -57,7 +57,7 @@ public class HiLoQueryLaningStrategyTest
   public void testMaxPercentageThreadsRequired()
   {
     Throwable exception = Assertions.assertThrows(NullPointerException.class, () -> {
-      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(null);
+      new HiLoQueryLaningStrategy(null);
     });
     Assertions.assertTrue(exception.getMessage().contains("maxLowPercent must be set"));
   }
@@ -66,7 +66,7 @@ public class HiLoQueryLaningStrategyTest
   public void testMaxLowPercentMustBeGreaterThanZero()
   {
     Throwable exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
-      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(-1);
+      new HiLoQueryLaningStrategy(-1);
     });
     Assertions.assertTrue(exception.getMessage().contains("maxLowPercent must be in the range 1 to 100"));
   }
@@ -76,7 +76,7 @@ public class HiLoQueryLaningStrategyTest
   public void testMaxLowPercentMustBeLessThanOrEqual100()
   {
     Throwable exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
-      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(9000);
+      new HiLoQueryLaningStrategy(9000);
     });
     Assertions.assertTrue(exception.getMessage().contains("maxLowPercent must be in the range 1 to 100"));
   }
@@ -85,7 +85,7 @@ public class HiLoQueryLaningStrategyTest
   public void testMaxLowPercentZero()
   {
     Throwable exception = Assertions.assertThrows(IllegalArgumentException.class, () -> {
-      QueryLaningStrategy strategy = new HiLoQueryLaningStrategy(0);
+      new HiLoQueryLaningStrategy(0);
     });
     Assertions.assertTrue(exception.getMessage().contains("maxLowPercent must be in the range 1 to 100"));
   }
