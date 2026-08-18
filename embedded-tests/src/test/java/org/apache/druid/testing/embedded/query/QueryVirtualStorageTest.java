@@ -193,8 +193,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
     LatchableEmitter emitter = historical.latchableEmitter();
     LatchableEmitter coordinatorEmitter = coordinator.latchableEmitter();
 
-    // Wait for any in-flight storage activity to settle before taking our baseline.
+    // VSF_READ_TIME is the final virtual-storage metric emitted by StorageMonitor for each monitor tick. Waiting for
+    // both metrics ensures the complete tick containing the last load-begin event has been processed before flushing.
     emitter.awaitMetricQuiescent(StorageMonitor.VSF_LOAD_BEGIN_COUNT, MONITOR_QUIESCE_TIMEOUT_MILLIS);
+    emitter.awaitMetricQuiescent(StorageMonitor.VSF_READ_TIME, MONITOR_QUIESCE_TIMEOUT_MILLIS);
     emitter.flush();
 
     // run the queries in order
