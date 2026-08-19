@@ -206,10 +206,14 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       }
       return capabilities;
     }
-    catch (Throwable th) {
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(ie);
+    }
+    catch (Exception e) {
       SegmentLoadingCapabilities defaultCapabilities = getDefaultLoadingCapabilities();
       log.makeAlert(
-          th,
+          e,
           "Received error while fetching historical capabilities from Server[%s]. Using default values[%s].",
           serverId,
           defaultCapabilities
