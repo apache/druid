@@ -50,7 +50,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
@@ -64,11 +67,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 
+@ExtendWith(MockitoExtension.class)
 public class CoordinatorCompactionConfigsResourceTest
 {
   private static final double DELTA = 1e-9;
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
 
+  @Mock
   private HttpServletRequest mockHttpServletRequest;
 
   private TestCoordinatorConfigManager configManager;
@@ -77,8 +82,7 @@ public class CoordinatorCompactionConfigsResourceTest
   @BeforeEach
   public void setup()
   {
-    mockHttpServletRequest = Mockito.mock(HttpServletRequest.class);
-    Mockito.when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
+    Mockito.lenient().when(mockHttpServletRequest.getRemoteAddr()).thenReturn("123");
     final AuditManager auditManager = new TestAuditManager();
     configManager = TestCoordinatorConfigManager.create(auditManager);
     resource = new CoordinatorCompactionConfigsResource(configManager);

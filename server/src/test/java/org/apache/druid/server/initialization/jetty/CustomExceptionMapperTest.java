@@ -25,12 +25,16 @@ import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.ws.rs.core.Response;
 
+@ExtendWith(MockitoExtension.class)
 public class CustomExceptionMapperTest
 {
+  @Mock
   private JsonParser jsonParser;
 
   private CustomExceptionMapper customExceptionMapper;
@@ -38,7 +42,6 @@ public class CustomExceptionMapperTest
   @BeforeEach
   public void setUp()
   {
-    jsonParser = Mockito.mock(JsonParser.class);
     customExceptionMapper = new CustomExceptionMapper();
   }
 

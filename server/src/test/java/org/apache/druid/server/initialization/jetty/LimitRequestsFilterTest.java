@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletRequest;
@@ -35,7 +36,7 @@ import java.util.concurrent.CountDownLatch;
 public class LimitRequestsFilterTest
 {
   @Test
-  @Timeout(60)
+  @Timeout(value = 60, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testSimple() throws Exception
   {
     LimitRequestsFilter filter = new LimitRequestsFilter(2);

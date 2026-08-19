@@ -39,20 +39,27 @@ import org.apache.druid.server.DruidNode;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@ExtendWith(MockitoExtension.class)
 public class DiscoverySideEffectsProviderTest
 {
   private NodeRole nodeRole;
+  @Mock
   private DruidNode druidNode;
   /**
    * This announcer is mocked to fail if it tries to announce a Druid service that is not discoverable.
    */
+  @Mock
   private DruidNodeAnnouncer discoverableOnlyAnnouncer;
+  @Mock
   private Lifecycle lifecycle;
   private List<Lifecycle.Handler> lifecycleHandlers;
 
@@ -62,9 +69,6 @@ public class DiscoverySideEffectsProviderTest
   public void setUp()
   {
     nodeRole = NodeRole.HISTORICAL;
-    druidNode = Mockito.mock(DruidNode.class);
-    discoverableOnlyAnnouncer = Mockito.mock(DruidNodeAnnouncer.class);
-    lifecycle = Mockito.mock(Lifecycle.class);
     lifecycleHandlers = new ArrayList<>();
     Mockito.doAnswer((invocation) -> {
       DiscoveryDruidNode discoveryDruidNode = invocation.getArgument(0);

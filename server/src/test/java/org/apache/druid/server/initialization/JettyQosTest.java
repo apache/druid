@@ -52,6 +52,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
@@ -108,7 +109,7 @@ public class JettyQosTest extends BaseJettyTest
   }
 
   @Test
-  @Timeout(120)
+  @Timeout(value = 120, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testQoS() throws Exception
   {
     final int fastThreads = 20;
