@@ -20,8 +20,6 @@
 package org.apache.druid.msq.shuffle.output;
 
 import com.google.common.collect.ImmutableList;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -46,7 +44,7 @@ public class ByteChunksInputStreamTest
 
       int c;
       while ((c = in.read()) != -1) {
-        MatcherAssert.assertThat("InputStream#read contract", c, Matchers.greaterThanOrEqualTo(0));
+        Assertions.assertTrue(c >= 0, "InputStream#read contract");
         baos.write(c);
       }
 
@@ -62,7 +60,7 @@ public class ByteChunksInputStreamTest
 
       int c;
       while ((c = in.read()) != -1) {
-        MatcherAssert.assertThat("InputStream#read contract", c, Matchers.greaterThanOrEqualTo(0));
+        Assertions.assertTrue(c >= 0, "InputStream#read contract");
         baos.write(c);
       }
 

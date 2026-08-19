@@ -30,8 +30,6 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -150,10 +148,9 @@ public class DistinctKeyCollectorTest
           }
 
           Assertions.assertTrue(DistinctKeyCollector.SMALLEST_MAX_BYTES >= collector.getMaxBytes());
-          MatcherAssert.assertThat(
-              testName,
-              (int) collector.estimatedRetainedBytes(),
-              Matchers.lessThanOrEqualTo(DistinctKeyCollector.SMALLEST_MAX_BYTES)
+          Assertions.assertTrue(
+              (int) collector.estimatedRetainedBytes() <= DistinctKeyCollector.SMALLEST_MAX_BYTES,
+              testName
           );
 
           // Don't use verifyCollector, since this collector is downsampled so aggressively that it can't possibly
@@ -252,7 +249,7 @@ public class DistinctKeyCollectorTest
       final NavigableMap<RowKey, List<Integer>> sortedKeyWeights
   )
   {
-    MatcherAssert.assertThat((int) collector.estimatedRetainedBytes(), Matchers.lessThan(collector.getMaxBytes()));
+    Assertions.assertTrue((int) collector.estimatedRetainedBytes() < collector.getMaxBytes());
 
     KeyCollectorTestUtils.verifyCollector(
         collector,

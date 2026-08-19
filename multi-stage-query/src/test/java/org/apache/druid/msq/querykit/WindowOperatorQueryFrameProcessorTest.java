@@ -51,8 +51,6 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -254,10 +252,8 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         RuntimeException.class,
         () -> runProcessor(2, 3)
     );
-    MatcherAssert.assertThat(
-        ((MSQException) e.getCause().getCause()).getFault(),
-        CoreMatchers.instanceOf(TooManyRowsInAWindowFault.class)
-    );
+    final MSQException msqException = Assertions.assertInstanceOf(MSQException.class, e.getCause().getCause());
+    Assertions.assertInstanceOf(TooManyRowsInAWindowFault.class, msqException.getFault());
     Assertions.assertTrue(e.getMessage().contains("TooManyRowsInAWindow: Too many rows in a window (requested = 7, max = 2)"));
   }
 

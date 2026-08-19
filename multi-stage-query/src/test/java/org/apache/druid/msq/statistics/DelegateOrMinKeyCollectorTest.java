@@ -29,8 +29,6 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -57,7 +55,7 @@ public class DelegateOrMinKeyCollectorTest
     Assertions.assertThrows(NoSuchElementException.class, collector::minKey);
     Assertions.assertEquals(0, collector.estimatedRetainedBytes(), 0);
     Assertions.assertEquals(0, collector.estimatedTotalWeight());
-    MatcherAssert.assertThat(collector.getDelegate().get(), CoreMatchers.instanceOf(QuantilesSketchKeyCollector.class));
+    Assertions.assertInstanceOf(QuantilesSketchKeyCollector.class, collector.getDelegate().get());
   }
 
   @Test

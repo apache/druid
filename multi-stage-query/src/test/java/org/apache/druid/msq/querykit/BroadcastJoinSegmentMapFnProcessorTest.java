@@ -56,8 +56,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -197,10 +195,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
         )
     );
 
-    MatcherAssert.assertThat(
-        ((JoinDataSource) inlinedJoinDataSource).getRight(),
-        CoreMatchers.instanceOf(InlineDataSource.class)
-    );
+    Assertions.assertInstanceOf(InlineDataSource.class, ((JoinDataSource) inlinedJoinDataSource).getRight());
 
     Assertions.assertEquals(
         2,

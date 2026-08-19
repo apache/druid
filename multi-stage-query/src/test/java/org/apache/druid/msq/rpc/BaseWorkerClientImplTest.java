@@ -51,8 +51,6 @@ import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CloseableUtils;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.jupiter.api.AfterAll;
@@ -189,10 +187,7 @@ public class BaseWorkerClientImplTest extends InitializedNullHandlingTest
         () -> workerClient.fetchChannelData(WORKER_ID, stageId, 2, 0, channel).get()
     );
 
-    MatcherAssert.assertThat(
-        e.getCause(),
-        CoreMatchers.instanceOf(ChannelClosedForWritesException.class)
-    );
+    Assertions.assertInstanceOf(ChannelClosedForWritesException.class, e.getCause());
   }
 
   @Test

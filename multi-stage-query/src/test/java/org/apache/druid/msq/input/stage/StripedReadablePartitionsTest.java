@@ -26,8 +26,6 @@ import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -44,10 +42,7 @@ public class StripedReadablePartitionsTest
 
     final ReadablePartitions readablePartitionsFromSet = ReadablePartitions.striped(1, workers, 3);
 
-    MatcherAssert.assertThat(
-        readablePartitionsFromSet,
-        CoreMatchers.instanceOf(StripedReadablePartitions.class)
-    );
+    Assertions.assertInstanceOf(StripedReadablePartitions.class, readablePartitionsFromSet);
 
     Assertions.assertEquals(
         ReadablePartitions.striped(1, 2, 3),

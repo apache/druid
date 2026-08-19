@@ -27,8 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.loading.AcquireSegmentResult;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -77,9 +75,9 @@ public class CountersSnapshotTreeTest
     Assertions.assertNotEquals(snapshotsTree.copyMap(), snapshotsTree3.copyMap());
 
     // Confirm that deserializationMapper reads the TestCounterSnapshot as a NilQueryCounterSnapshot.
-    MatcherAssert.assertThat(
-        snapshotsTree3.copyMap().get(1).get(2).getMap().get("ctr"),
-        CoreMatchers.instanceOf(NilQueryCounterSnapshot.class)
+    Assertions.assertInstanceOf(
+        NilQueryCounterSnapshot.class,
+        snapshotsTree3.copyMap().get(1).get(2).getMap().get("ctr")
     );
   }
 

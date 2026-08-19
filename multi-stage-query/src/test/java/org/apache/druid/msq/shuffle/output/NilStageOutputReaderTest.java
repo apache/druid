@@ -26,8 +26,6 @@ import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.file.FrameFile;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -74,7 +72,7 @@ public class NilStageOutputReaderTest extends InitializedNullHandlingTest
       try (final InputStream in = reader.readRemotelyFrom(0).get()) {
         for (int i = 0; i < offset; i++) {
           final int r = in.read();
-          MatcherAssert.assertThat(r, Matchers.greaterThanOrEqualTo(0));
+          Assertions.assertTrue(r >= 0);
           out.write(r);
         }
       }

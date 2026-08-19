@@ -94,7 +94,6 @@ import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.sql.http.SqlResourceQueryResultPusherFactory;
 import org.apache.druid.sql.http.StandardQueryState;
 import org.apache.druid.sql.http.SupportedEnginesResponse;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,8 +119,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Functional test of {@link SqlResource}, {@link DartSqlEngine}, and {@link DartQueryMaker}.
@@ -656,7 +653,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals("InvalidNullByte", e.get("errorCode"));
     Assertions.assertEquals("INVALID_INPUT", e.get("category"));
-    assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
+    Assertions.assertTrue(((String) e.get("errorMessage")).startsWith("InvalidNullByte: "));
   }
 
   @Test
@@ -782,7 +779,7 @@ public class DartSqlResourceTest extends MSQTestBase
         (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
     final MSQErrorReport errorReport = report.getPayload().getStatus().getErrorReport();
     Assertions.assertNotNull(errorReport);
-    assertThat(errorReport.getFault(), CoreMatchers.instanceOf(InvalidNullByteFault.class));
+    Assertions.assertInstanceOf(InvalidNullByteFault.class, errorReport.getFault());
   }
 
   @Test

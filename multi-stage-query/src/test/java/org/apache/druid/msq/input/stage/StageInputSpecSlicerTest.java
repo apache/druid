@@ -25,8 +25,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import org.apache.druid.msq.exec.OutputChannelMode;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -130,6 +128,6 @@ public class StageInputSpecSlicerTest
         () -> slicer.sliceStatic(new StageInputSpec(3), null, 1)
     );
 
-    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("Stage[3] output partitions not available"));
+    Assertions.assertEquals("Stage[3] output partitions not available", e.getMessage());
   }
 }

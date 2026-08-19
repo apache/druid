@@ -43,8 +43,6 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -750,10 +748,9 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
         )
     );
 
-    MatcherAssert.assertThat(
-        StringUtils.format("%s: number of partitions ≤ max", testName),
-        partitions.size(),
-        Matchers.lessThanOrEqualTo(maxPartitionCount)
+    Assertions.assertTrue(
+        partitions.size() <= maxPartitionCount,
+        StringUtils.format("%s: number of partitions ≤ max", testName)
     );
   }
 
@@ -828,10 +825,9 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
 
       // Check that the ends are all after the starts.
       if (partition.getStart() != null && partition.getEnd() != null) {
-        MatcherAssert.assertThat(
-            StringUtils.format("%s: partition %d: start compareTo end", testName, i),
-            comparator.compare(partition.getStart(), partition.getEnd()),
-            Matchers.lessThan(0)
+        Assertions.assertTrue(
+            comparator.compare(partition.getStart(), partition.getEnd()) < 0,
+            StringUtils.format("%s: partition %d: start compareTo end", testName, i)
         );
       }
     }
@@ -900,10 +896,9 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
       final long actualNumberOfRows = rowsPerPartition.get(partition.getStart());
 
       // Reasonable maximum number of rows per partition.
-      MatcherAssert.assertThat(
-          StringUtils.format("%s: partition #%d: number of rows", testName, i),
-          actualNumberOfRows,
-          Matchers.lessThanOrEqualTo((long) ((1 + PARTITION_SIZE_LEEWAY) * expectedPartitionSize))
+      Assertions.assertTrue(
+          actualNumberOfRows <= (long) ((1 + PARTITION_SIZE_LEEWAY) * expectedPartitionSize),
+          StringUtils.format("%s: partition #%d: number of rows", testName, i)
       );
 
       // Reasonable minimum number of rows per partition, for all partitions except the last in a bucket.
@@ -913,10 +908,9 @@ public class ClusterByStatisticsCollectorImplTest extends InitializedNullHandlin
           || !keyReader.trim(partitions.get(i + 1).getStart(), clusterBy.getBucketByCount()).equals(bucketKey);
 
       if (!isLastInBucket) {
-        MatcherAssert.assertThat(
-            StringUtils.format("%s: partition #%d: number of rows", testName, i),
-            actualNumberOfRows,
-            Matchers.greaterThanOrEqualTo((long) ((1 - PARTITION_SIZE_LEEWAY) * expectedPartitionSize))
+        Assertions.assertTrue(
+            actualNumberOfRows >= (long) ((1 - PARTITION_SIZE_LEEWAY) * expectedPartitionSize),
+            StringUtils.format("%s: partition #%d: number of rows", testName, i)
         );
       }
     }

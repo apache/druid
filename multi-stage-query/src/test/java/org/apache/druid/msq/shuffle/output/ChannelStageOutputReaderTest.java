@@ -40,8 +40,6 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CloseableUtils;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -381,7 +379,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
           }
         }
 
-        MatcherAssert.assertThat(numReads, Matchers.greaterThan(1));
+        Assertions.assertTrue(numReads > 1);
       }
 
       final FrameFile frameFile = FrameFile.open(tmpFile, null);
@@ -452,7 +450,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       // Read remotely from offset = 1.
       final InputStream in = FutureUtils.getUnchecked(reader.readRemotelyFrom(1), true);
       final int offset = ByteStreams.toByteArray(in).length;
-      MatcherAssert.assertThat(offset, Matchers.greaterThan(0));
+      Assertions.assertTrue(offset > 0);
 
       // Then read again from offset = 0; should get an error.
       final RuntimeException e = Assertions.assertThrows(
