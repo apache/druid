@@ -981,7 +981,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
     final CountDownLatch atGate = new CountDownLatch(1);
     final CountDownLatch openGate = new CountDownLatch(1);
     try {
-      gatedPool.getExecutorService().submit(() -> {
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedPool.getExecutorService().submit(() -> {
         atGate.countDown();
         return openGate.await(30, TimeUnit.SECONDS);
       });
