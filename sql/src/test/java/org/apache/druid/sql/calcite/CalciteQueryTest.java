@@ -281,6 +281,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInformationSchemaTables_superUser()
   {
+    msqIncompatible();
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         """
@@ -390,6 +391,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testInformationSchemaColumnsOnForbiddenTable_superUser()
   {
+    msqIncompatible();
     testQuery(
         PLANNER_CONFIG_DEFAULT,
         """
