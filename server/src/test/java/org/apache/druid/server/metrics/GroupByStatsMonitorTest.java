@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -164,7 +165,7 @@ public class GroupByStatsMonitorTest
   }
 
   @Test
-  @Timeout(value = 2_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 2_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testMonitoringMergeBuffer_pendingRequests()
   {
     executorService.submit(() -> {

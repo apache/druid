@@ -58,6 +58,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
@@ -128,7 +129,7 @@ public class SegmentManagerThreadSafetyTest
   }
 
   @Test
-  @Timeout(value = 6000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 6000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testLoadSameSegment() throws IOException, ExecutionException, InterruptedException
   {
     final DataSegment segment = createSegment("2019-01-01/2019-01-02");
@@ -152,7 +153,7 @@ public class SegmentManagerThreadSafetyTest
   }
 
   @Test
-  @Timeout(value = 6000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 6000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testLoadMultipleSegments() throws IOException, ExecutionException, InterruptedException
   {
     final List<DataSegment> segments = new ArrayList<>(88);

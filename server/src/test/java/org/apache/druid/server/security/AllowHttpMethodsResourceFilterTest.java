@@ -22,7 +22,12 @@ package org.apache.druid.server.security;
 import com.google.common.collect.ImmutableList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -31,13 +36,18 @@ import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class AllowHttpMethodsResourceFilterTest
 {
   private static final String METHOD_ALLOWED = "METHOD_ALLOWED";
   private static final String METHOD_NOT_ALLOWED = "METHOD_NOT_ALLOWED";
 
+  @Mock
   private HttpServletRequest request;
+  @Mock
   private HttpServletResponse response;
+  @Mock
   private FilterChain filterChain;
 
   private AllowHttpMethodsResourceFilter target;
@@ -45,9 +55,6 @@ public class AllowHttpMethodsResourceFilterTest
   @BeforeEach
   public void setUp()
   {
-    request = Mockito.mock(HttpServletRequest.class);
-    response = Mockito.mock(HttpServletResponse.class);
-    filterChain = Mockito.mock(FilterChain.class);
     target = new AllowHttpMethodsResourceFilter(ImmutableList.of(METHOD_ALLOWED));
   }
 

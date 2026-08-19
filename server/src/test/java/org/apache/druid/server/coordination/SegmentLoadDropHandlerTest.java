@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -187,7 +188,7 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testProcessBatch() throws Exception
   {
     final TestSegmentCacheManager cacheManager = new TestSegmentCacheManager();
@@ -227,7 +228,7 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testProcessBatchDuplicateLoadRequestsWhenFirstRequestFailsSecondRequestShouldSucceed() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);
@@ -263,7 +264,7 @@ public class SegmentLoadDropHandlerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testProcessBatchLoadDropLoadSequenceForSameSegment() throws Exception
   {
     final SegmentManager segmentManager = Mockito.mock(SegmentManager.class);

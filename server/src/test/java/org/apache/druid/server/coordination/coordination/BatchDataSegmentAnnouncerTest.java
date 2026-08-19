@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -233,7 +234,7 @@ public class BatchDataSegmentAnnouncerTest
   }
 
   @Test
-  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testAnnounceSegmentsWithSameSegmentConcurrently() throws ExecutionException, InterruptedException
   {
     final List<Future<?>> futures = new ArrayList<>(NUM_THREADS);
@@ -252,7 +253,7 @@ public class BatchDataSegmentAnnouncerTest
   }
 
   @Test
-  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testAnnounceSegmentWithSameSegmentConcurrently() throws ExecutionException, InterruptedException
   {
     final List<Future<?>> futures = new ArrayList<>(NUM_THREADS);

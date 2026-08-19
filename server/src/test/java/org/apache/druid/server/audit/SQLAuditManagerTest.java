@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
@@ -106,7 +107,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCreateAuditEntry() throws IOException
   {
     final AuditEntry entry = createAuditEntry("key1", "type1", DateTimes.nowUtc());
@@ -131,7 +132,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testFetchAuditHistory()
   {
     final AuditEntry event = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
@@ -150,7 +151,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testFetchAuditHistoryByKeyAndTypeWithLimit()
   {
     final AuditEntry entry1 = createAuditEntry("key1", "type1", DateTimes.nowUtc());
@@ -165,7 +166,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testRemoveAuditLogsOlderThanWithEntryOlderThanTime() throws IOException
   {
     final AuditEntry entry = createAuditEntry("key1", "type1", DateTimes.nowUtc());
@@ -180,7 +181,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testRemoveAuditLogsOlderThanWithEntryNotOlderThanTime() throws IOException
   {
     AuditEntry entry = createAuditEntry("key", "type", DateTimes.nowUtc());
@@ -197,7 +198,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testFetchAuditHistoryByTypeWithLimit()
   {
     final AuditEntry entry1 = createAuditEntry("testKey", "testType", DateTimes.of("2022-01"));
@@ -215,7 +216,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testFetchAuditHistoryLimitBelowZero()
   {
     Assertions.assertThrows(IllegalArgumentException.class, () ->
@@ -223,7 +224,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testFetchAuditHistoryLimitZero()
   {
     Assertions.assertThrows(IllegalArgumentException.class, () ->
@@ -231,7 +232,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCreateAuditEntryWithPayloadOverSkipPayloadLimit() throws IOException
   {
     final SQLAuditManager auditManager = createAuditManager(
@@ -254,7 +255,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCreateAuditEntryWithPayloadUnderSkipPayloadLimit() throws IOException
   {
     SQLAuditManager auditManager = createAuditManager(
@@ -270,7 +271,7 @@ public class SQLAuditManagerTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCreateAuditEntryWithSkipNullsInPayload() throws IOException
   {
     final SQLAuditManager auditManagerSkipNull = createAuditManager(

@@ -21,25 +21,26 @@ package org.apache.druid.server.security;
 
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.function.Function;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class ForbiddenExceptionTest
 {
   private static final String ERROR_MESSAGE_ORIGINAL = "aaaa";
   private static final String ERROR_MESSAGE_TRANSFORMED = "bbbb";
 
+  @Mock
   private Function<String, String> trasformFunction;
-
-  @BeforeEach
-  public void setUp()
-  {
-    trasformFunction = Mockito.mock(Function.class);
-  }
 
   @Test
   public void testSanitizeWithTransformFunctionReturningNull()
