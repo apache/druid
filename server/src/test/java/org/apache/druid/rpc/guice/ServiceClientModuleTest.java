@@ -41,27 +41,33 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.WARN)
 public class ServiceClientModuleTest
 {
   private Injector injector;
 
+  @Mock
   private HttpClient httpClient;
 
+  @Mock
   private DruidNodeDiscoveryProvider discoveryProvider;
 
+  @Mock
   private ServiceLocator serviceLocator;
 
+  @Mock
   private ServiceClientFactory serviceClientFactory;
 
   @BeforeEach
   public void setUp()
   {
-    httpClient = Mockito.mock(HttpClient.class);
-    discoveryProvider = Mockito.mock(DruidNodeDiscoveryProvider.class);
-    serviceLocator = Mockito.mock(ServiceLocator.class);
-    serviceClientFactory = Mockito.mock(ServiceClientFactory.class);
     injector = Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
