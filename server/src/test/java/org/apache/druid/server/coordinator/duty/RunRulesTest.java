@@ -62,6 +62,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -1027,7 +1028,7 @@ public class RunRulesTest
    * Random balancer strategy should not assign anything and not get into loop as there are not enough nodes for replication
    */
   @Test
-  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testTwoNodesOneTierThreeReplicantsRandomStrategyNotEnoughNodes()
   {
     mockEmptyPeon();
@@ -1088,7 +1089,7 @@ public class RunRulesTest
    * Random balancer strategy should select the only node
    */
   @Test
-  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testOneNodesOneTierOneReplicantRandomStrategyEnoughSpace()
   {
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
@@ -1142,7 +1143,7 @@ public class RunRulesTest
    * Random balancer strategy should not assign anything as there is not enough space
    */
   @Test
-  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testOneNodesOneTierOneReplicantRandomStrategyNotEnoughSpace()
   {
     mockEmptyPeon();
