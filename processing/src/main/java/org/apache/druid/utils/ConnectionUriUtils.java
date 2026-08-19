@@ -87,7 +87,7 @@ public final class ConnectionUriUtils
    * parameter whitelist validation.
    * <p>
    * uris starting with {@link #MYSQL_PREFIX} will first try to use the MySQL Connector/J driver (5.x), then fallback
-   * to MariaDB Connector/J (version 2.x) which also accepts jdbc:mysql uris.
+   * to MariaDB Connector/J (version 2.x or 3.x) which also accepts jdbc:mysql uris.
    * <p>
    * uris starting with {@link #POSTGRES_PREFIX} will use the postgresql driver to parse the uri
    * <p>
@@ -108,10 +108,21 @@ public final class ConnectionUriUtils
           return tryParseMariaDb2xConnectionUri(connectionUri);
         }
         catch (ClassNotFoundException notFoundMaria2x) {
-          throw new RuntimeException(
-              "Failed to find MySQL driver class. Please check the MySQL connector version 8.2.0 is in the classpath",
-              notFoundMysql
-          );
+          try {
+            return tryParseMariaDb3xConnectionUri(connectionUri);
+          }
+          catch (ClassNotFoundException notFoundMaria3x) {
+            throw new RuntimeException(
+                "Failed to find MySQL driver class. Please check the MySQL connector version 8.2.0 is in the classpath",
+                notFoundMysql
+            );
+          }
+          catch (IllegalArgumentException iaeMaria3x) {
+            throw iaeMaria3x;
+          }
+          catch (Throwable otherMaria3x) {
+            throw new RuntimeException(otherMaria3x);
+          }
         }
         catch (IllegalArgumentException iaeMaria2x) {
           throw iaeMaria2x;

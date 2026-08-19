@@ -33,6 +33,8 @@ public class ConnectionUriUtilsTest
   public static class ThrowIfURLHasNotAllowedPropertiesTest
   {
     private static final String MYSQL_URI = "jdbc:mysql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
+    private static final String MYSQL_URI_WITH_MARIA_DB_3X_SCHEME =
+        "jdbc:mysql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat&permitMysqlScheme";
     private static final String MARIA_URI = "jdbc:mariadb://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
     private static final String POSTGRES_URI = "jdbc:postgresql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
     private static final String UNKNOWN_URI = "jdbc:druid://localhost:8888/query/v2/sql/avatica?user=druid&password=diurd&keyonly&otherOptions=wat";
@@ -132,6 +134,27 @@ public class ConnectionUriUtilsTest
         Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
         // this would be 9 if didn't fall back to mariadb
         Assertions.assertEquals(4, props.size());
+      }
+    }
+
+    @Test
+    public void testMySqlFallbackMySqlMaria3x()
+    {
+      try (MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class)) {
+        utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME, false))
+             .thenCallRealMethod();
+        utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenCallRealMethod();
+
+        Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME, false);
+        Assertions.assertEquals(
+            ImmutableSet.of("user", "password", "keyonly", "otherOptions", "permitMysqlScheme"),
+            props
+        );
       }
     }
 
