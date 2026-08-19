@@ -58,10 +58,9 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       broadcastStatusByDatasource.put(broadcastDatasource, true);
     }
 
-    final RetentionRulesSnapshot rulesSnapshot = params.getRetentionRulesSnapshot();
     final List<ServerHolder> allServers = params.getDruidCluster().getAllManagedServers();
     int numCancelledLoads = allServers.stream().mapToInt(
-        server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, rulesSnapshot, params)
+        server -> cancelLoadOfUnusedSegments(server, broadcastStatusByDatasource, params)
     ).sum();
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
@@ -114,13 +113,12 @@ public class UnloadUnusedSegments implements CoordinatorDuty
   private int cancelLoadOfUnusedSegments(
       ServerHolder server,
       Map<String, Boolean> broadcastStatusByDatasource,
-      RetentionRulesSnapshot rulesSnapshot,
       DruidCoordinatorRuntimeParams params
   )
   {
     final AtomicInteger cancelledOperations = new AtomicInteger(0);
     server.getQueuedSegments().forEach((segment, action) -> {
-      if (shouldSkipUnload(server, segment.getDataSource(), broadcastStatusByDatasource, rulesSnapshot)) {
+      if (shouldSkipUnload(server, segment.getDataSource(), broadcastStatusByDatasource, params.getRetentionRulesSnapshot())) {
         // do nothing
       } else if (params.isUsedSegment(segment)) {
         // do nothing

@@ -679,12 +679,12 @@ public class LoadRuleTest
         .addTier(Tier.T2, createServer(Tier.T2, segment), createServer(Tier.T2, segment))
         .build();
 
-    // With no alias configured, T1 expands to nothing and no real tier is required to hold the segment
+    // Aliases are configured, but none of them defines T1, so it resolves to no real tier
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
     CoordinatorRunStats stats = runRuleAndGetStats(
         rule,
         segment,
-        makeCoordinatorRuntimeParams(cluster, Map.of(), segment)
+        makeCoordinatorRuntimeParams(cluster, ImmutableMap.of(Tier.T3, Set.of(Tier.T2)), segment)
     );
 
     Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, TestDataSource.WIKI));
