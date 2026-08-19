@@ -340,6 +340,11 @@
       <artifactId>oshi-core</artifactId>
       <version>${oshi.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.github.oshi</groupId>
+      <artifactId>oshi-common</artifactId>
+      <version>${oshi.version}</version>
+    </dependency>
 
     <!-- Tests -->
     <dependency>
