@@ -43,8 +43,13 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.mockito.stubbing.OngoingStubbing;
 
 import javax.annotation.Nullable;
@@ -56,6 +61,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class ServiceClientImplTest
 {
   private static final String SERVICE_NAME = "test-service";
@@ -69,8 +76,10 @@ public class ServiceClientImplTest
 
   private ScheduledExecutorService exec;
 
+  @Mock
   private HttpClient httpClient;
 
+  @Mock
   private ServiceLocator serviceLocator;
 
   private ServiceClient serviceClient;
@@ -78,8 +87,6 @@ public class ServiceClientImplTest
   @BeforeEach
   public void setUp()
   {
-    httpClient = Mockito.mock(HttpClient.class);
-    serviceLocator = Mockito.mock(ServiceLocator.class);
     exec = new NoDelayScheduledExecutorService(Execs.directExecutor());
   }
 

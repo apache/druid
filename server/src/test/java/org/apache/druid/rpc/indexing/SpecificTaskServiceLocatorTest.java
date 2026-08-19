@@ -35,12 +35,19 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class SpecificTaskServiceLocatorTest
 {
   private static final String TASK_ID = "test-task";
@@ -48,7 +55,8 @@ public class SpecificTaskServiceLocatorTest
   private static final ServiceLocation SERVICE_LOCATION1 =
       new ServiceLocation("example.com", -1, 9998, "/druid/worker/v1/chat/test-task");
 
-  private final OverlordClient overlordClient = Mockito.mock(OverlordClient.class);
+  @Mock
+  private OverlordClient overlordClient;
 
   @Test
   public void test_locate_noLocationYet() throws Exception
