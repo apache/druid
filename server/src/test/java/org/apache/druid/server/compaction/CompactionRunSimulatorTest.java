@@ -113,7 +113,14 @@ public class CompactionRunSimulatorTest
     );
     Assert.assertEquals(
         Collections.singletonList(
-            List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
+            List.of(
+                "wiki",
+                Intervals.of("2013-01-10/P1D"),
+                10,
+                1_000_000_000L,
+                1,
+                "Skip offset from latest[P1D]"
+            )
         ),
         skippedTable.getRows()
     );
@@ -188,7 +195,14 @@ public class CompactionRunSimulatorTest
             List.of("wiki", Intervals.of("2013-01-06/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
             List.of("wiki", Intervals.of("2013-01-01/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
             List.of("wiki", Intervals.of("2013-01-09/P1D"), 10, 1_000_000_000L, 1, rejectedMessage),
-            List.of("wiki", Intervals.of("2013-01-10/P1D"), 10, 1_000_000_000L, 1, "skip offset from latest[P1D]")
+            List.of(
+                "wiki",
+                Intervals.of("2013-01-10/P1D"),
+                10,
+                1_000_000_000L,
+                1,
+                "Skip offset from latest[P1D]"
+            )
         ),
         skippedTable.getRows()
     );
