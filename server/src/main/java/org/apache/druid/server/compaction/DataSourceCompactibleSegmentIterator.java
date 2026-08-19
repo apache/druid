@@ -97,7 +97,28 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     this.queue = new PriorityQueue<>(searchPolicy::compareCandidates);
     this.fingerprintMapper = indexingStateFingerprintMapper;
 
-    populateQueue(timeline, skipIntervals);
+    if (skipIntervals.contains(Intervals.ETERNITY) || config.getSkipIntervals().contains(Intervals.ETERNITY)) {
+      skipAllSegments(timeline, skipIntervals);
+    } else {
+      populateQueue(timeline, skipIntervals);
+    }
+  }
+
+  private void skipAllSegments(SegmentTimeline timeline, List<Interval> skipIntervals)
+  {
+    if (timeline == null || timeline.isEmpty()) {
+      return;
+    }
+    final List<DataSegment> allSegments = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE)
+    );
+    if (allSegments.isEmpty()) {
+      return;
+    }
+    final String reason = skipIntervals.contains(Intervals.ETERNITY)
+                           ? StringUtils.format("Interval[%s] locked by another task", Intervals.ETERNITY)
+                           : StringUtils.format("Interval[%s] skipped by compaction config", Intervals.ETERNITY);
+    skippedSegments.add(CompactionCandidate.from(allSegments, null, CompactionStatus.skipped(reason)));
   }
 
   private void populateQueue(SegmentTimeline timeline, List<Interval> skipIntervals)
