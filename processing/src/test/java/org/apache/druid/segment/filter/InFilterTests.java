@@ -52,14 +52,15 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.partition.TypedValueSet;
-import org.junit.Assume;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
+
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;
@@ -207,7 +208,7 @@ public class InFilterTests
     @Test
     public void testMultiValueStringColumn()
     {
-      Assume.assumeFalse(isAutoSchema());
+      Assumptions.assumeFalse(isAutoSchema());
 
       assertFilterMatches(
           inFilter("dim2", ColumnType.STRING, Collections.singletonList(null)),
@@ -356,7 +357,7 @@ public class InFilterTests
       );
 
       // auto schema doesn't have float columns, so these get kind of funny
-      Assume.assumeFalse(isAutoSchema());
+      Assumptions.assumeFalse(isAutoSchema());
       assertFilterMatches(
           inFilter("f0", ColumnType.FLOAT, Arrays.asList(10.1f, 110.0f)),
           ImmutableList.of("b", "d")

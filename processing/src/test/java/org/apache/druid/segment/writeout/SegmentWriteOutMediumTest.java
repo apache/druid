@@ -21,21 +21,21 @@ package org.apache.druid.segment.writeout;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.io.Closer;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class SegmentWriteOutMediumTest
 {
-
-  @Parameterized.Parameters(name = "medium = {0}")
   public static Iterable<?> constructorFeeder()
   {
     return ImmutableList.of(
@@ -45,8 +45,8 @@ public class SegmentWriteOutMediumTest
     );
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   private SegmentWriteOutMediumFactory factory;
   private SegmentWriteOutMedium medium;
@@ -56,7 +56,7 @@ public class SegmentWriteOutMediumTest
     this.factory = factory;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     this.medium = factory.makeSegmentWriteOutMedium(temporaryFolder.newFolder());
@@ -68,14 +68,14 @@ public class SegmentWriteOutMediumTest
     WriteOutBytes bytes1 = medium.makeWriteOutBytes();
     WriteOutBytes bytes2 = medium.makeWriteOutBytes();
 
-    Assert.assertTrue(bytes1.isOpen());
-    Assert.assertTrue(bytes2.isOpen());
+    Assertions.assertTrue(bytes1.isOpen());
+    Assertions.assertTrue(bytes2.isOpen());
 
     Closer closer = medium.getCloser();
     closer.close();
 
-    Assert.assertFalse(bytes1.isOpen());
-    Assert.assertFalse(bytes2.isOpen());
+    Assertions.assertFalse(bytes1.isOpen());
+    Assertions.assertFalse(bytes2.isOpen());
   }
 
   @Test
@@ -84,32 +84,32 @@ public class SegmentWriteOutMediumTest
     WriteOutBytes bytes1 = medium.makeWriteOutBytes();
     WriteOutBytes bytes2 = medium.makeWriteOutBytes();
 
-    Assert.assertTrue(bytes1.isOpen());
-    Assert.assertTrue(bytes2.isOpen());
+    Assertions.assertTrue(bytes1.isOpen());
+    Assertions.assertTrue(bytes2.isOpen());
 
     SegmentWriteOutMedium childMedium = medium.makeChildWriteOutMedium();
-    Assert.assertTrue(childMedium.getClass().equals(medium.getClass()));
+    Assertions.assertTrue(childMedium.getClass().equals(medium.getClass()));
 
     WriteOutBytes bytes3 = childMedium.makeWriteOutBytes();
     WriteOutBytes bytes4 = childMedium.makeWriteOutBytes();
 
-    Assert.assertTrue(bytes3.isOpen());
-    Assert.assertTrue(bytes4.isOpen());
+    Assertions.assertTrue(bytes3.isOpen());
+    Assertions.assertTrue(bytes4.isOpen());
 
     Closer childCloser = childMedium.getCloser();
     childCloser.close();
 
-    Assert.assertFalse(bytes3.isOpen());
-    Assert.assertFalse(bytes4.isOpen());
+    Assertions.assertFalse(bytes3.isOpen());
+    Assertions.assertFalse(bytes4.isOpen());
 
-    Assert.assertTrue(bytes1.isOpen());
-    Assert.assertTrue(bytes2.isOpen());
+    Assertions.assertTrue(bytes1.isOpen());
+    Assertions.assertTrue(bytes2.isOpen());
 
     Closer closer = medium.getCloser();
     closer.close();
 
-    Assert.assertFalse(bytes1.isOpen());
-    Assert.assertFalse(bytes2.isOpen());
+    Assertions.assertFalse(bytes1.isOpen());
+    Assertions.assertFalse(bytes2.isOpen());
   }
 
   @Test
@@ -118,25 +118,25 @@ public class SegmentWriteOutMediumTest
     WriteOutBytes bytes1 = medium.makeWriteOutBytes();
     WriteOutBytes bytes2 = medium.makeWriteOutBytes();
 
-    Assert.assertTrue(bytes1.isOpen());
-    Assert.assertTrue(bytes2.isOpen());
+    Assertions.assertTrue(bytes1.isOpen());
+    Assertions.assertTrue(bytes2.isOpen());
 
     SegmentWriteOutMedium childMedium = medium.makeChildWriteOutMedium();
-    Assert.assertTrue(childMedium.getClass().equals(medium.getClass()));
+    Assertions.assertTrue(childMedium.getClass().equals(medium.getClass()));
 
     WriteOutBytes bytes3 = childMedium.makeWriteOutBytes();
     WriteOutBytes bytes4 = childMedium.makeWriteOutBytes();
 
-    Assert.assertTrue(bytes3.isOpen());
-    Assert.assertTrue(bytes4.isOpen());
+    Assertions.assertTrue(bytes3.isOpen());
+    Assertions.assertTrue(bytes4.isOpen());
 
     Closer closer = medium.getCloser();
     closer.close();
 
-    Assert.assertFalse(bytes1.isOpen());
-    Assert.assertFalse(bytes2.isOpen());
+    Assertions.assertFalse(bytes1.isOpen());
+    Assertions.assertFalse(bytes2.isOpen());
 
-    Assert.assertFalse(bytes3.isOpen());
-    Assert.assertFalse(bytes4.isOpen());
+    Assertions.assertFalse(bytes3.isOpen());
+    Assertions.assertFalse(bytes4.isOpen());
   }
 }

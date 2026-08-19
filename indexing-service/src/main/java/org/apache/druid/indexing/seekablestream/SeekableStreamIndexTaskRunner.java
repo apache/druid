@@ -39,6 +39,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputFormat;
@@ -103,7 +104,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;

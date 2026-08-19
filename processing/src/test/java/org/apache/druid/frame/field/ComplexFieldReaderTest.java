@@ -33,7 +33,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +44,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 
 @ExtendWith(MockitoExtension.class)
@@ -81,7 +82,7 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Expected complex type"))
+        Matchers.hasProperty("message", CoreMatchers.containsString("Expected complex type"))
     );
   }
 
@@ -95,7 +96,7 @@ public class ComplexFieldReaderTest extends InitializedNullHandlingTest
 
     MatcherAssert.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("No serde for complexTypeName[no-serde]"))
+        Matchers.hasProperty("message", CoreMatchers.containsString("No serde for complexTypeName[no-serde]"))
     );
   }
 

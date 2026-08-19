@@ -29,15 +29,16 @@ import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -52,8 +53,8 @@ public class LookupReferencesManagerTest
 {
   private static final String LOOKUP_TIER = "lookupTier";
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
   LookupReferencesManager lookupReferencesManager;
   LookupExtractorFactory lookupExtractorFactory;
   LookupExtractorFactoryContainer container;
@@ -61,7 +62,7 @@ public class LookupReferencesManagerTest
   private CoordinatorClientImpl coordinatorClient;
   private LookupListeningAnnouncerConfig config;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
@@ -102,42 +103,46 @@ public class LookupReferencesManagerTest
     EasyMock.replay(config);
     EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
-    Assert.assertFalse(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
-    Assert.assertNull(lookupReferencesManager.mainThread);
-    Assert.assertNull(lookupReferencesManager.stateRef.get());
+    Assertions.assertFalse(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
+    Assertions.assertNull(lookupReferencesManager.mainThread);
+    Assertions.assertNull(lookupReferencesManager.stateRef.get());
 
     lookupReferencesManager.start();
-    Assert.assertTrue(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
-    Assert.assertTrue(lookupReferencesManager.mainThread.isAlive());
-    Assert.assertNotNull(lookupReferencesManager.stateRef.get());
+    Assertions.assertTrue(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
+    Assertions.assertTrue(lookupReferencesManager.mainThread.isAlive());
+    Assertions.assertNotNull(lookupReferencesManager.stateRef.get());
 
     lookupReferencesManager.stop();
-    Assert.assertFalse(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
-    Assert.assertFalse(lookupReferencesManager.mainThread.isAlive());
+    Assertions.assertFalse(lookupReferencesManager.lifecycleLock.awaitStarted(1, TimeUnit.MICROSECONDS));
+    Assertions.assertFalse(lookupReferencesManager.mainThread.isAlive());
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testGetExceptionWhenClosed()
   {
-    lookupReferencesManager.get("test");
+    Assertions.assertThrows(IllegalStateException.class, () ->
+      lookupReferencesManager.get("test"));
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testAddExceptionWhenClosed()
   {
-    lookupReferencesManager.add("test", EasyMock.createMock(LookupExtractorFactoryContainer.class));
+    Assertions.assertThrows(IllegalStateException.class, () ->
+      lookupReferencesManager.add("test", EasyMock.createMock(LookupExtractorFactoryContainer.class)));
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testRemoveExceptionWhenClosed()
   {
-    lookupReferencesManager.remove("test", null);
+    Assertions.assertThrows(IllegalStateException.class, () ->
+      lookupReferencesManager.remove("test", null));
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testGetAllLookupsStateExceptionWhenClosed()
   {
-    lookupReferencesManager.getAllLookupsState();
+    Assertions.assertThrows(IllegalStateException.class, () ->
+      lookupReferencesManager.getAllLookupsState());
   }
 
   @Test
@@ -156,19 +161,19 @@ public class LookupReferencesManagerTest
     EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
     LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
 
     lookupReferencesManager.add("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
 
     lookupReferencesManager.remove("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
   }
 
   @Test
@@ -188,14 +193,14 @@ public class LookupReferencesManagerTest
     EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
     LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
 
     lookupReferencesManager.add("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
 
     LookupExtractorFactory badLookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(badLookupExtractorFactory.start()).andReturn(false).anyTimes();
@@ -209,12 +214,12 @@ public class LookupReferencesManagerTest
 
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
 
     lookupReferencesManager.remove("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
   }
 
   @Test
@@ -234,14 +239,14 @@ public class LookupReferencesManagerTest
     EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
     LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
 
     lookupReferencesManager.add("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
 
     LookupExtractorFactory badLookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(badLookupExtractorFactory.start()).andReturn(false).anyTimes();
@@ -255,12 +260,12 @@ public class LookupReferencesManagerTest
 
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.of(testContainer), lookupReferencesManager.get("test"));
 
     lookupReferencesManager.remove("test", testContainer);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
   }
 
   @Test
@@ -321,7 +326,7 @@ public class LookupReferencesManagerTest
     EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("notThere"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("notThere"));
   }
 
   @Test
@@ -392,7 +397,7 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.start();
     lookupReferencesManager.add("testName", new LookupExtractorFactoryContainer("1", lookupExtractorFactory1));
     lookupReferencesManager.handlePendingNotices();
-    Assert.assertTrue(lookupReferencesManager.get("testName").isPresent());
+    Assertions.assertTrue(lookupReferencesManager.get("testName").isPresent());
     EasyMock.verify(lookupExtractorFactory1);
   }
 
@@ -432,9 +437,9 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.add("two", container2);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(ImmutableSet.of("one", "two"), lookupReferencesManager.getAllLookupNames());
+    Assertions.assertEquals(ImmutableSet.of("one", "two"), lookupReferencesManager.getAllLookupNames());
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("one", "two"),
         (lookupReferencesManager).getAllLookupNames()
     );
@@ -444,7 +449,7 @@ public class LookupReferencesManagerTest
   public void testGetCanonicalLookupName()
   {
     String lookupName = "lookupName1";
-    Assert.assertEquals(lookupName, lookupReferencesManager.getCanonicalLookupName(lookupName));
+    Assertions.assertEquals(lookupName, lookupReferencesManager.getCanonicalLookupName(lookupName));
   }
 
   @Test
@@ -493,18 +498,19 @@ public class LookupReferencesManagerTest
 
     LookupsState state = lookupReferencesManager.getAllLookupsState();
 
-    Assert.assertEquals(2, state.getCurrent().size());
-    Assert.assertEquals(container1, state.getCurrent().get("one"));
-    Assert.assertEquals(container2, state.getCurrent().get("two"));
+    Assertions.assertEquals(2, state.getCurrent().size());
+    Assertions.assertEquals(container1, state.getCurrent().get("one"));
+    Assertions.assertEquals(container2, state.getCurrent().get("two"));
 
-    Assert.assertEquals(1, state.getToLoad().size());
-    Assert.assertEquals(container3, state.getToLoad().get("three"));
+    Assertions.assertEquals(1, state.getToLoad().size());
+    Assertions.assertEquals(container3, state.getToLoad().get("three"));
 
-    Assert.assertEquals(1, state.getToDrop().size());
-    Assert.assertTrue(state.getToDrop().contains("one"));
+    Assertions.assertEquals(1, state.getToDrop().size());
+    Assertions.assertTrue(state.getToDrop().contains("one"));
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testRealModeWithMainThread() throws Exception
   {
     LookupReferencesManager lookupReferencesManager = new LookupReferencesManager(
@@ -518,14 +524,14 @@ public class LookupReferencesManagerTest
     EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
-    Assert.assertTrue(lookupReferencesManager.mainThread.isAlive());
+    Assertions.assertTrue(lookupReferencesManager.mainThread.isAlive());
 
     LookupExtractorFactory lookupExtractorFactory = EasyMock.createMock(LookupExtractorFactory.class);
     EasyMock.expect(lookupExtractorFactory.start()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.destroy()).andReturn(true).once();
     EasyMock.expect(lookupExtractorFactory.isInitialized()).andReturn(true).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("test"));
 
     LookupExtractorFactoryContainer testContainer = new LookupExtractorFactoryContainer("0", lookupExtractorFactory);
     lookupReferencesManager.add("test", testContainer);
@@ -534,7 +540,7 @@ public class LookupReferencesManagerTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("test", "testMockForRealModeWithMainThread"),
         lookupReferencesManager.getAllLookupNames()
     );
@@ -545,14 +551,14 @@ public class LookupReferencesManagerTest
       Thread.sleep(100);
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("testMockForRealModeWithMainThread"),
         lookupReferencesManager.getAllLookupNames()
     );
 
     lookupReferencesManager.stop();
 
-    Assert.assertFalse(lookupReferencesManager.mainThread.isAlive());
+    Assertions.assertFalse(lookupReferencesManager.mainThread.isAlive());
   }
 
   @Test
@@ -597,9 +603,9 @@ public class LookupReferencesManagerTest
     EasyMock.replay(coordinatorClient);
 
     lookupReferencesManager.start();
-    Assert.assertEquals(Optional.of(container1), lookupReferencesManager.get("testLookup1"));
-    Assert.assertEquals(Optional.of(container2), lookupReferencesManager.get("testLookup2"));
-    Assert.assertEquals(Optional.of(container3), lookupReferencesManager.get("testLookup3"));
+    Assertions.assertEquals(Optional.of(container1), lookupReferencesManager.get("testLookup1"));
+    Assertions.assertEquals(Optional.of(container2), lookupReferencesManager.get("testLookup2"));
+    Assertions.assertEquals(Optional.of(container3), lookupReferencesManager.get("testLookup3"));
 
   }
 
@@ -643,7 +649,7 @@ public class LookupReferencesManagerTest
   {
     Map<String, LookupExtractorFactoryContainer> lookupMap = getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.ALL);
     for (String lookupName : lookupMap.keySet()) {
-      Assert.assertEquals(Optional.of(lookupMap.get(lookupName)), lookupReferencesManager.get(lookupName));
+      Assertions.assertEquals(Optional.of(lookupMap.get(lookupName)), lookupReferencesManager.get(lookupName));
     }
   }
 
@@ -652,7 +658,7 @@ public class LookupReferencesManagerTest
   {
     Map<String, LookupExtractorFactoryContainer> lookupMap = getLookupMapForSelectiveLoadingOfLookups(LookupLoadingSpec.NONE);
     for (String lookupName : lookupMap.keySet()) {
-      Assert.assertFalse(lookupReferencesManager.get(lookupName).isPresent());
+      Assertions.assertFalse(lookupReferencesManager.get(lookupName).isPresent());
     }
   }
 
@@ -663,9 +669,9 @@ public class LookupReferencesManagerTest
         getLookupMapForSelectiveLoadingOfLookups(
             LookupLoadingSpec.loadOnly(ImmutableSet.of("testLookup1", "testLookup2"))
         );
-    Assert.assertEquals(Optional.of(lookupMap.get("testLookup1")), lookupReferencesManager.get("testLookup1"));
-    Assert.assertEquals(Optional.of(lookupMap.get("testLookup2")), lookupReferencesManager.get("testLookup2"));
-    Assert.assertFalse(lookupReferencesManager.get("testLookup3").isPresent());
+    Assertions.assertEquals(Optional.of(lookupMap.get("testLookup1")), lookupReferencesManager.get("testLookup1"));
+    Assertions.assertEquals(Optional.of(lookupMap.get("testLookup2")), lookupReferencesManager.get("testLookup2"));
+    Assertions.assertFalse(lookupReferencesManager.get("testLookup3").isPresent());
   }
 
   @Test
@@ -685,7 +691,7 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.add("testLookup2", container2);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertEquals(Set.of("testLookup1"), lookupReferencesManager.getAllLookupNames());
+    Assertions.assertEquals(Set.of("testLookup1"), lookupReferencesManager.getAllLookupNames());
   }
 
   @Test
@@ -704,7 +710,7 @@ public class LookupReferencesManagerTest
     lookupReferencesManager.add("testLookup", container);
     lookupReferencesManager.handlePendingNotices();
 
-    Assert.assertTrue(lookupReferencesManager.getAllLookupNames().isEmpty());
+    Assertions.assertTrue(lookupReferencesManager.getAllLookupNames().isEmpty());
   }
 
   @Test
@@ -768,7 +774,7 @@ public class LookupReferencesManagerTest
     ).anyTimes();
     EasyMock.replay(coordinatorClient);
     lookupReferencesManager.start();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.of(container),
         lookupReferencesManager.get("testMockForLoadLookupOnCoordinatorFailure")
     );
@@ -798,6 +804,6 @@ public class LookupReferencesManagerTest
 
     EasyMock.expect(coordinatorClient.fetchLookupsForTierSync(LOOKUP_TIER)).andReturn(lookupMap);
     lookupReferencesManager.start();
-    Assert.assertEquals(Optional.empty(), lookupReferencesManager.get("testMockForDisableLookupSync"));
+    Assertions.assertEquals(Optional.empty(), lookupReferencesManager.get("testMockForDisableLookupSync"));
   }
 }

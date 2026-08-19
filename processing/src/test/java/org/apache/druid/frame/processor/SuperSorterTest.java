@@ -61,18 +61,18 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -99,12 +99,12 @@ public class SuperSorterTest
     private static final int NUM_THREADS = 1;
     private static final int FRAME_SIZE = 1_000_000;
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
     private FrameProcessorExecutor exec;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
       exec = new FrameProcessorExecutor(
@@ -112,7 +112,7 @@ public class SuperSorterTest
       );
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
       exec.getExecutorService().shutdownNow();
@@ -149,11 +149,11 @@ public class SuperSorterTest
 
       superSorter.setNoWorkRunnable(() -> outputPartitionsFuture.set(ClusterByPartitions.oneUniversalPartition()));
       final OutputChannels channels = superSorter.run().get();
-      Assert.assertEquals(1, channels.getAllChannels().size());
+      Assertions.assertEquals(1, channels.getAllChannels().size());
 
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
-      Assert.assertTrue(channel.isFinished());
-      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      Assertions.assertTrue(channel.isFinished());
+      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
     }
 
@@ -186,11 +186,11 @@ public class SuperSorterTest
       );
 
       final OutputChannels channels = superSorter.run().get();
-      Assert.assertEquals(1, channels.getAllChannels().size());
+      Assertions.assertEquals(1, channels.getAllChannels().size());
 
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
-      Assert.assertTrue(channel.isFinished());
-      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      Assertions.assertTrue(channel.isFinished());
+      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
     }
 
@@ -223,11 +223,11 @@ public class SuperSorterTest
       );
 
       final OutputChannels channels = superSorter.run().get();
-      Assert.assertEquals(1, channels.getAllChannels().size());
+      Assertions.assertEquals(1, channels.getAllChannels().size());
 
       final ReadableFrameChannel channel = Iterables.getOnlyElement(channels.getAllChannels()).getReadableChannel();
-      Assert.assertTrue(channel.isFinished());
-      Assert.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
+      Assertions.assertTrue(channel.isFinished());
+      Assertions.assertEquals(1.0, superSorterProgressTracker.snapshot().getProgressDigest(), 0.0f);
       channel.close();
     }
   }
@@ -236,7 +236,8 @@ public class SuperSorterTest
    * Parameterized test cases that use {@link TestIndex#getNoRollupIncrementalTestIndex} with various frame sizes,
    * numbers of channels, and worker configurations.
    */
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructorFeeder")
   public static class ParameterizedCasesTest extends InitializedNullHandlingTest
   {
     private static CursorFactory CURSOR_FACTORY;
@@ -248,8 +249,8 @@ public class SuperSorterTest
      */
     private static final Map<ClusterBy, List<List<Object>>> SORTED_TEST_ROWS = new HashMap<>();
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
     private final FrameType outputFrameType;
     private final int maxRowsPerFrame;
@@ -292,18 +293,6 @@ public class SuperSorterTest
       this.limitHint = limitHint;
     }
 
-    @Parameterized.Parameters(
-        name = "outputFrameType = {0}, "
-               + "maxRowsPerFrame = {1}, "
-               + "maxBytesPerFrame = {2}, "
-               + "numChannels = {3}, "
-               + "maxActiveProcessors = {4}, "
-               + "maxChannelsPerProcessor= {5}, "
-               + "numThreads = {6}, "
-               + "isComposedStorage = {7}, "
-               + "partitionsDeferred = {8}, "
-               + "limitHint = {9}"
-    )
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
@@ -371,7 +360,7 @@ public class SuperSorterTest
       return constructors;
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass()
     {
       CURSOR_FACTORY = new QueryableIndexCursorFactory(TestIndex.getNoRollupMMappedTestIndex());
@@ -379,7 +368,7 @@ public class SuperSorterTest
           FrameSequenceBuilder.signatureWithRowNumber(CURSOR_FACTORY.getRowSignature());
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDownClass()
     {
       CURSOR_FACTORY = null;
@@ -387,7 +376,7 @@ public class SuperSorterTest
       SORTED_TEST_ROWS.clear();
     }
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
       exec = new FrameProcessorExecutor(
@@ -395,7 +384,7 @@ public class SuperSorterTest
       );
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception
     {
       if (exec != null) {
@@ -476,8 +465,8 @@ public class SuperSorterTest
       }
 
       final OutputChannels outputChannels = superSorter.run().get();
-      Assert.assertEquals(clusterByPartitions.size(), outputChannels.getAllChannels().size());
-      Assert.assertEquals(Double.valueOf(1.0), superSorterProgressTracker.snapshot().getProgressDigest());
+      Assertions.assertEquals(clusterByPartitions.size(), outputChannels.getAllChannels().size());
+      Assertions.assertEquals(Double.valueOf(1.0), superSorterProgressTracker.snapshot().getProgressDigest());
 
       final int[] clusterByColumns = clusterBy.getColumns().stream().mapToInt(
           part -> signature.indexOf(part.columnName())
@@ -505,7 +494,7 @@ public class SuperSorterTest
 
               if (!(partition.getStart() == null || keyComparator.compare(key, partition.getStart()) >= 0)) {
                 // Defer formatting of error message until it's actually needed
-                Assert.fail(
+                Assertions.fail(
                     StringUtils.format(
                         "Key %s >= partition %,d start %s",
                         keyReader.read(key),
@@ -516,7 +505,7 @@ public class SuperSorterTest
               }
 
               if (!(partition.getEnd() == null || keyComparator.compare(key, partition.getEnd()) < 0)) {
-                Assert.fail(
+                Assertions.fail(
                     StringUtils.format(
                         "Key %s < partition %,d end %s",
                         keyReader.read(key),
@@ -616,7 +605,7 @@ public class SuperSorterTest
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
       verifySuperSorter(clusterBy, partitions);
     }
@@ -656,7 +645,7 @@ public class SuperSorterTest
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
       verifySuperSorter(clusterBy, partitions);
     }
@@ -695,7 +684,7 @@ public class SuperSorterTest
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
       verifySuperSorter(clusterBy, partitions);
     }
@@ -734,7 +723,7 @@ public class SuperSorterTest
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
       verifySuperSorter(clusterBy, partitions);
     }
@@ -773,7 +762,7 @@ public class SuperSorterTest
           )
       );
 
-      Assert.assertEquals(4, partitions.size());
+      Assertions.assertEquals(4, partitions.size());
 
       verifySuperSorter(clusterBy, partitions);
     }
@@ -831,7 +820,8 @@ public class SuperSorterTest
   /**
    * Parameterized test cases for the combiner functionality.
    */
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructorFeeder")
   public static class CombinerTest extends InitializedNullHandlingTest
   {
     private static final int FRAME_SIZE = 1_000_000;
@@ -849,7 +839,6 @@ public class SuperSorterTest
     private static final RowSignature SORTABLE_SIGNATURE =
         FrameWriters.sortableSignature(SIGNATURE, CLUSTER_BY.getColumns());
 
-    @Parameterized.Parameters(name = "maxRowsPerFrame = {0}, maxChannelsPerMerger = {1}")
     public static Iterable<Object[]> constructorFeeder()
     {
       final List<Object[]> constructors = new ArrayList<>();
@@ -861,8 +850,8 @@ public class SuperSorterTest
       return constructors;
     }
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
     private final int maxRowsPerFrame;
     private final int maxChannelsPerMerger;
@@ -874,7 +863,7 @@ public class SuperSorterTest
       this.maxChannelsPerMerger = maxChannelsPerMerger;
     }
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
       exec = new FrameProcessorExecutor(
@@ -882,7 +871,7 @@ public class SuperSorterTest
       );
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
       exec.getExecutorService().shutdownNow();
@@ -910,7 +899,7 @@ public class SuperSorterTest
           SuperSorter.UNLIMITED
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("a", 11L),
               ImmutableList.of("b", 22L),
@@ -941,7 +930,7 @@ public class SuperSorterTest
           SuperSorter.UNLIMITED
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("a", 10L),
               ImmutableList.of("b", 10L)
@@ -985,7 +974,7 @@ public class SuperSorterTest
           SuperSorter.UNLIMITED
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("a", 11L),
               ImmutableList.of("b", 22L),
@@ -1018,7 +1007,7 @@ public class SuperSorterTest
       );
 
       // 5 channels * (1 + 2 + 3) = 30
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(ImmutableList.of("x", 30L)),
           rows
       );
@@ -1046,17 +1035,17 @@ public class SuperSorterTest
             limit
         );
 
-        Assert.assertEquals(
-            StringUtils.format("limit[%d]: expected exactly %d row(s), got %d", limit, limit, rows.size()),
+        Assertions.assertEquals(
             limit,
-            rows.size()
+            rows.size(),
+            StringUtils.format("limit[%d]: expected exactly %d row(s), got %d", limit, limit, rows.size())
         );
-        Assert.assertEquals(ImmutableList.of("a", 11L), rows.get(0));
+        Assertions.assertEquals(ImmutableList.of("a", 11L), rows.get(0));
         if (limit >= 2) {
-          Assert.assertEquals(ImmutableList.of("b", 22L), rows.get(1));
+          Assertions.assertEquals(ImmutableList.of("b", 22L), rows.get(1));
         }
         if (limit >= 3) {
-          Assert.assertEquals(ImmutableList.of("c", 33L), rows.get(2));
+          Assertions.assertEquals(ImmutableList.of("c", 33L), rows.get(2));
         }
       }
     }
@@ -1084,7 +1073,7 @@ public class SuperSorterTest
       );
 
       // All rows combine to one; rowLimit = 1 is satisfied.
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(ImmutableList.of("x", 6L)),
           rows
       );
@@ -1110,7 +1099,7 @@ public class SuperSorterTest
           SuperSorter.UNLIMITED
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of("a", 3L),
               ImmutableList.of("b", 7L)
@@ -1137,7 +1126,7 @@ public class SuperSorterTest
           SuperSorter.UNLIMITED
       );
 
-      Assert.assertEquals(ImmutableList.of(), rows);
+      Assertions.assertEquals(ImmutableList.of(), rows);
     }
 
     /**
@@ -1175,7 +1164,7 @@ public class SuperSorterTest
           SuperSorter.UNLIMITED
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableList.of(
               ImmutableList.of(1L, 110L),
               ImmutableList.of(2L, 220L),

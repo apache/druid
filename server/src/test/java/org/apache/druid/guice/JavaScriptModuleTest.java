@@ -22,12 +22,12 @@ package org.apache.druid.guice;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.js.JavaScriptConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Properties;
 
 public class JavaScriptModuleTest

@@ -25,6 +25,8 @@ import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import com.google.inject.Scopes;
 import com.google.inject.name.Names;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.selector.ConnectionCountServerSelectorStrategy;
 import org.apache.druid.client.selector.CustomTierSelectorStrategy;
@@ -44,8 +46,6 @@ import org.apache.druid.jackson.JacksonModule;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;

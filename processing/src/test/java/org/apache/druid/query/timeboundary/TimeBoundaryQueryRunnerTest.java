@@ -62,10 +62,10 @@ import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,10 +76,10 @@ import java.util.Map;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
@@ -193,18 +193,18 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
                                                 .dataSource("testing")
                                                 .filters("quality", "automotive")
                                                 .build();
-    Assert.assertTrue(timeBoundaryQuery.hasFilters());
+    Assertions.assertTrue(timeBoundaryQuery.hasFilters());
     List<Result<TimeBoundaryResultValue>> results =
         customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
 
-    Assert.assertTrue(Iterables.size(results) > 0);
+    Assertions.assertTrue(Iterables.size(results) > 0);
 
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(DateTimes.of("2011-01-13T00:00:00.000Z"), minTime);
-    Assert.assertEquals(DateTimes.of("2011-01-16T00:00:00.000Z"), maxTime);
+    Assertions.assertEquals(DateTimes.of("2011-01-13T00:00:00.000Z"), minTime);
+    Assertions.assertEquals(DateTimes.of("2011-01-16T00:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -224,14 +224,14 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     List<Result<TimeBoundaryResultValue>> results =
         customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
 
-    Assert.assertTrue(Iterables.size(results) > 0);
+    Assertions.assertTrue(Iterables.size(results) > 0);
 
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(DateTimes.of("2011-01-15T00:00:00.000Z"), minTime);
-    Assert.assertEquals(DateTimes.of("2011-01-15T01:00:00.000Z"), maxTime);
+    Assertions.assertEquals(DateTimes.of("2011-01-15T00:00:00.000Z"), minTime);
+    Assertions.assertEquals(DateTimes.of("2011-01-15T01:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -243,11 +243,11 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
                                                 .dataSource("testing")
                                                 .filters("quality", "foobar") // foobar dimension does not exist
                                                 .build();
-    Assert.assertTrue(timeBoundaryQuery.hasFilters());
+    Assertions.assertTrue(timeBoundaryQuery.hasFilters());
     List<Result<TimeBoundaryResultValue>> results =
         customRunner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
 
-    Assert.assertTrue(Iterables.size(results) == 0);
+    Assertions.assertTrue(Iterables.size(results) == 0);
   }
 
   @Test
@@ -257,14 +257,14 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
                                                 .dataSource("testing")
                                                 .build();
-    Assert.assertFalse(timeBoundaryQuery.hasFilters());
+    Assertions.assertFalse(timeBoundaryQuery.hasFilters());
     Iterable<Result<TimeBoundaryResultValue>> results = runner.run(QueryPlus.wrap(timeBoundaryQuery)).toList();
     TimeBoundaryResultValue val = results.iterator().next().getValue();
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), minTime);
-    Assert.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), maxTime);
+    Assertions.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), minTime);
+    Assertions.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -280,7 +280,7 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
               .dataSource(inlineDataSource)
               .build();
 
-    Assert.assertFalse(timeBoundaryQuery.hasFilters());
+    Assertions.assertFalse(timeBoundaryQuery.hasFilters());
     final QueryRunner<Result<TimeBoundaryResultValue>> theRunner =
         new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER).createRunner(
             new RowBasedSegment<>(
@@ -294,11 +294,11 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(DateTimes.of("2000-01-02"), minTime);
-    Assert.assertEquals(DateTimes.of("2000-01-02"), maxTime);
+    Assertions.assertEquals(DateTimes.of("2000-01-02"), minTime);
+    Assertions.assertEquals(DateTimes.of("2000-01-02"), maxTime);
   }
 
-  @Test(expected = UOE.class)
+  @Test
   @SuppressWarnings("unchecked")
   public void testTimeBoundaryArrayResults()
   {
@@ -308,10 +308,13 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
                                                 .build();
     ResponseContext context = ConcurrentResponseContext.createEmpty();
     context.initializeMissingSegments();
-    new TimeBoundaryQueryQueryToolChest().resultsAsArrays(
-        timeBoundaryQuery,
-        runner.run(QueryPlus.wrap(timeBoundaryQuery), context)
-    ).toList();
+    Assertions.assertThrows(
+        UOE.class,
+        () -> new TimeBoundaryQueryQueryToolChest().resultsAsArrays(
+            timeBoundaryQuery,
+            runner.run(QueryPlus.wrap(timeBoundaryQuery), context)
+        ).toList()
+    );
   }
 
   @Test
@@ -329,8 +332,8 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertNull(minTime);
-    Assert.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), maxTime);
+    Assertions.assertNull(minTime);
+    Assertions.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -349,8 +352,8 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     ).toList();
 
     Long maxTimeMillis = (Long) maxTime.get(0)[0];
-    Assert.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), new DateTime(maxTimeMillis, DateTimeZone.UTC));
-    Assert.assertEquals(1, maxTime.size());
+    Assertions.assertEquals(DateTimes.of("2011-04-15T00:00:00.000Z"), new DateTime(maxTimeMillis, DateTimeZone.UTC));
+    Assertions.assertEquals(1, maxTime.size());
   }
 
   @Test
@@ -368,8 +371,8 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     DateTime minTime = val.getMinTime();
     DateTime maxTime = val.getMaxTime();
 
-    Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), minTime);
-    Assert.assertNull(maxTime);
+    Assertions.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), minTime);
+    Assertions.assertNull(maxTime);
   }
 
   @Test
@@ -388,8 +391,8 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     ).toList();
 
     Long minTimeMillis = (Long) minTime.get(0)[0];
-    Assert.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), new DateTime(minTimeMillis, DateTimeZone.UTC));
-    Assert.assertEquals(1, minTime.size());
+    Assertions.assertEquals(DateTimes.of("2011-01-12T00:00:00.000Z"), new DateTime(minTimeMillis, DateTimeZone.UTC));
+    Assertions.assertEquals(1, minTime.size());
   }
 
   @Test
@@ -419,7 +422,7 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
-    Assert.assertTrue(actual.iterator().next().getValue().getMaxTime().equals(DateTimes.of("2012-02-01")));
+    Assertions.assertTrue(actual.iterator().next().getValue().getMaxTime().equals(DateTimes.of("2012-02-01")));
   }
 
   @Test
@@ -430,6 +433,6 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
     TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
-    Assert.assertFalse(actual.iterator().hasNext());
+    Assertions.assertFalse(actual.iterator().hasNext());
   }
 }

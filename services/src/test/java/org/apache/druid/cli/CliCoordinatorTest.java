@@ -24,6 +24,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
@@ -32,8 +34,6 @@ import org.apache.druid.server.initialization.jetty.JettyBindings;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Arrays;
 import java.util.Properties;
 import java.util.Set;

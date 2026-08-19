@@ -37,10 +37,8 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -54,9 +52,6 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
   static final int KEY_BASE = 100000;
   static final int NUM_ROWS = 1000;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testLimitAndBufferSwapping()
   {
@@ -65,7 +60,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < NUM_ROWS; i++) {
-      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i + KEY_BASE)).isOk(), String.valueOf(i + KEY_BASE));
     }
     // With Nullability enabled
     // bucket size is hash(int) + key(int) + aggs(2 longs + 1 bytes for Long Agg nullability) + heap offset(int) = 29 bytes
@@ -77,19 +72,19 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     // Subsequent buffer swaps occur after every 68 buckets, since we keep 100 buckets due to the limit
     // With 1000 keys inserted, this results in one swap at the first 169 buckets, then 12 swaps afterwards.
     // After the last swap, we have 100 keys + 16 new keys inserted.
-    Assert.assertEquals(13, grouper.getGrowthCount());
-    Assert.assertEquals(116, grouper.getSize());
-    Assert.assertEquals(337, grouper.getBuckets());
-    Assert.assertEquals(168, grouper.getMaxSize());
+    Assertions.assertEquals(13, grouper.getGrowthCount());
+    Assertions.assertEquals(116, grouper.getSize());
+    Assertions.assertEquals(337, grouper.getBuckets());
+    Assertions.assertEquals(168, grouper.getMaxSize());
 
-    Assert.assertEquals(100, grouper.getLimit());
+    Assertions.assertEquals(100, grouper.getLimit());
 
     // Aggregate slightly different row
     // Since these keys are smaller, they will evict the previous 100 top entries
     // First 100 of these new rows will be the expected results.
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
     for (int i = 0; i < NUM_ROWS; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
     }
 
     // With Nullable Aggregator
@@ -97,30 +92,34 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     // previous size is 116, so next swap occurs after 52 rows
     // after that, there are 1000 - 52 = 948 rows, 948 / 68 = 13 additional swaps after the first,
     // with 64 keys being added after the final swap.
-    Assert.assertEquals(27, grouper.getGrowthCount());
-    Assert.assertEquals(164, grouper.getSize());
-    Assert.assertEquals(337, grouper.getBuckets());
-    Assert.assertEquals(168, grouper.getMaxSize());
+    Assertions.assertEquals(27, grouper.getGrowthCount());
+    Assertions.assertEquals(164, grouper.getSize());
+    Assertions.assertEquals(337, grouper.getBuckets());
+    Assertions.assertEquals(168, grouper.getMaxSize());
 
-    Assert.assertEquals(100, grouper.getLimit());
+    Assertions.assertEquals(100, grouper.getLimit());
 
     final List<Pair<Integer, List<Object>>> expected = new ArrayList<>();
     for (int i = 0; i < LIMIT; i++) {
       expected.add(Pair.of(i, ImmutableList.of(11L, 1L)));
     }
 
-    Assert.assertEquals(expected, entriesToList(grouper.iterator(true)));
+    Assertions.assertEquals(expected, entriesToList(grouper.iterator(true)));
     // iterate again, even though the min-max offset heap has been destroyed, it is replaced with a reverse sorted array
-    Assert.assertEquals(expected, entriesToList(grouper.iterator(true)));
+    Assertions.assertEquals(expected, entriesToList(grouper.iterator(true)));
   }
 
   @Test
   public void testBufferTooSmall()
   {
-    expectedException.expect(IAE.class);
-    expectedException.expectMessage("LimitedBufferHashGrouper initialized with insufficient buffer capacity");
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    makeGrouper(columnSelectorFactory, 10);
+    final IAE exception = Assertions.assertThrows(
+        IAE.class,
+        () -> makeGrouper(columnSelectorFactory, 10)
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains("LimitedBufferHashGrouper initialized with insufficient buffer capacity")
+    );
   }
 
   @Test
@@ -131,57 +130,65 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
     for (int i = 0; i < NUM_ROWS; i++) {
-      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i + KEY_BASE)).isOk(), String.valueOf(i + KEY_BASE));
     }
 
     // With minimum buffer size, after the first swap, every new key added will result in a swap
-    Assert.assertEquals(899, grouper.getGrowthCount());
-    Assert.assertEquals(101, grouper.getSize());
-    Assert.assertEquals(202, grouper.getBuckets());
-    Assert.assertEquals(101, grouper.getMaxSize());
-    Assert.assertEquals(100, grouper.getLimit());
+    Assertions.assertEquals(899, grouper.getGrowthCount());
+    Assertions.assertEquals(101, grouper.getSize());
+    Assertions.assertEquals(202, grouper.getBuckets());
+    Assertions.assertEquals(101, grouper.getMaxSize());
+    Assertions.assertEquals(100, grouper.getLimit());
 
     // Aggregate slightly different row
     // Since these keys are smaller, they will evict the previous 100 top entries
     // First 100 of these new rows will be the expected results.
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 11L)));
     for (int i = 0; i < NUM_ROWS; i++) {
-      Assert.assertTrue(String.valueOf(i), grouper.aggregate(new IntKey(i)).isOk());
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk(), String.valueOf(i));
     }
-    Assert.assertEquals(1899, grouper.getGrowthCount());
-    Assert.assertEquals(101, grouper.getSize());
-    Assert.assertEquals(202, grouper.getBuckets());
-    Assert.assertEquals(101, grouper.getMaxSize());
-    Assert.assertEquals(100, grouper.getLimit());
+    Assertions.assertEquals(1899, grouper.getGrowthCount());
+    Assertions.assertEquals(101, grouper.getSize());
+    Assertions.assertEquals(202, grouper.getBuckets());
+    Assertions.assertEquals(101, grouper.getMaxSize());
+    Assertions.assertEquals(100, grouper.getLimit());
 
     final List<Pair<Integer, List<Object>>> expected = new ArrayList<>();
     for (int i = 0; i < LIMIT; i++) {
       expected.add(Pair.of(i, ImmutableList.of(11L, 1L)));
     }
 
-    Assert.assertEquals(expected, entriesToList(grouper.iterator(true)));
+    Assertions.assertEquals(expected, entriesToList(grouper.iterator(true)));
     // iterate again, even though the min-max offset heap has been destroyed, it is replaced with a reverse sorted array
-    Assert.assertEquals(expected, entriesToList(grouper.iterator(true)));
+    Assertions.assertEquals(expected, entriesToList(grouper.iterator(true)));
   }
 
   @Test
   public void testAggregateAfterIterated()
   {
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("attempted to add offset after grouper was iterated");
+    final IllegalStateException exception = Assertions.assertThrows(
+        IllegalStateException.class,
+        () -> {
+          final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+          final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 12120);
 
-    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
-    final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 12120);
+          columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+          for (int i = 0; i < NUM_ROWS; i++) {
+            Assertions.assertTrue(
+                grouper.aggregate(new IntKey(i + KEY_BASE)).isOk(),
+                String.valueOf(i + KEY_BASE)
+            );
+          }
+          final List<Grouper.Entry<IntKey>> iterated = Lists.newArrayList(grouper.iterator(true));
+          Assertions.assertEquals(LIMIT, iterated.size());
 
-    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
-    for (int i = 0; i < NUM_ROWS; i++) {
-      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
-    }
-    List<Grouper.Entry<IntKey>> iterated = Lists.newArrayList(grouper.iterator(true));
-    Assert.assertEquals(LIMIT, iterated.size());
-
-    // an attempt to aggregate with a new key will explode after the grouper has been iterated
-    grouper.aggregate(new IntKey(KEY_BASE + NUM_ROWS + 1));
+          // an attempt to aggregate with a new key will explode after the grouper has been iterated
+          grouper.aggregate(new IntKey(KEY_BASE + NUM_ROWS + 1));
+        }
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains("attempted to add offset after grouper was iterated")
+    );
   }
 
   @Test
@@ -198,9 +205,9 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
       // limited grouper iterator will always sort by keys in ascending order, even if the heap was sorted by values
       // so, we aggregate with keys and values both descending so that the results are not re-ordered by key
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", NUM_ROWS - i + KEY_BASE)));
-      Assert.assertTrue(
-          String.valueOf(NUM_ROWS - i + KEY_BASE),
-          grouper.aggregate(new IntKey(NUM_ROWS - i + KEY_BASE)).isOk()
+      Assertions.assertTrue(
+          grouper.aggregate(new IntKey(NUM_ROWS - i + KEY_BASE)).isOk(),
+          String.valueOf(NUM_ROWS - i + KEY_BASE)
       );
     }
 
@@ -209,11 +216,11 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     int i = 0;
     while (iterator.hasNext()) {
       final Grouper.Entry<IntKey> entry = iterator.next();
-      Assert.assertEquals(KEY_BASE + i + 1L, entry.getValues()[0]);
+      Assertions.assertEquals(KEY_BASE + i + 1L, entry.getValues()[0]);
       i++;
     }
 
-    Assert.assertEquals(LIMIT, i);
+    Assertions.assertEquals(LIMIT, i);
   }
 
   @Test
@@ -230,7 +237,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
       // limited grouper iterator will always sort by keys in ascending order, even if the heap was sorted by values
       // so, we aggregate with keys and values both ascending so that the results are not re-ordered by key
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", i + 1)));
-      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i + KEY_BASE)).isOk(), String.valueOf(i + KEY_BASE));
     }
 
     final CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true);
@@ -238,7 +245,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     int i = 0;
     while (iterator.hasNext()) {
       final Grouper.Entry<IntKey> entry = iterator.next();
-      Assert.assertEquals((long) NUM_ROWS - i, entry.getValues()[0]);
+      Assertions.assertEquals((long) NUM_ROWS - i, entry.getValues()[0]);
       i++;
     }
   }
@@ -257,9 +264,9 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
       // limited grouper iterator will always sort by keys in ascending order, even if the heap was sorted by values
       // so, we aggregate with keys and values both descending so that the results are not re-ordered by key
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", NUM_ROWS - i)));
-      Assert.assertTrue(
-          String.valueOf(NUM_ROWS - i + KEY_BASE),
-          grouper.aggregate(new IntKey(NUM_ROWS - i + KEY_BASE)).isOk()
+      Assertions.assertTrue(
+          grouper.aggregate(new IntKey(NUM_ROWS - i + KEY_BASE)).isOk(),
+          String.valueOf(NUM_ROWS - i + KEY_BASE)
       );
     }
 
@@ -268,11 +275,11 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     int i = 0;
     while (iterator.hasNext()) {
       final Grouper.Entry<IntKey> entry = iterator.next();
-      Assert.assertEquals(i + 1L, entry.getValues()[0]);
+      Assertions.assertEquals(i + 1L, entry.getValues()[0]);
       i++;
     }
 
-    Assert.assertEquals(LIMIT, i);
+    Assertions.assertEquals(LIMIT, i);
   }
 
   @Test
@@ -289,9 +296,9 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
       // limited grouper iterator will always sort by keys in ascending order, even if the heap was sorted by values
       // so, we aggregate with keys descending and values asending so that the results are not re-ordered by key
       columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", i + 1)));
-      Assert.assertTrue(
-          String.valueOf(NUM_ROWS - i + KEY_BASE),
-          grouper.aggregate(new IntKey(NUM_ROWS - i + KEY_BASE)).isOk()
+      Assertions.assertTrue(
+          grouper.aggregate(new IntKey(NUM_ROWS - i + KEY_BASE)).isOk(),
+          String.valueOf(NUM_ROWS - i + KEY_BASE)
       );
     }
 
@@ -300,11 +307,11 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     int i = 0;
     while (iterator.hasNext()) {
       final Grouper.Entry<IntKey> entry = iterator.next();
-      Assert.assertEquals((long) NUM_ROWS - i, entry.getValues()[0]);
+      Assertions.assertEquals((long) NUM_ROWS - i, entry.getValues()[0]);
       i++;
     }
 
-    Assert.assertEquals(LIMIT, i);
+    Assertions.assertEquals(LIMIT, i);
   }
 
   @Test
@@ -313,22 +320,22 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 20000);
 
-    Assert.assertEquals(0L, grouper.getMaxMergeBufferUsedBytes());
+    Assertions.assertEquals(0L, grouper.getMaxMergeBufferUsedBytes());
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
 
-    Assert.assertTrue(String.valueOf(KEY_BASE), grouper.aggregate(new IntKey(KEY_BASE)).isOk());
+    Assertions.assertTrue(grouper.aggregate(new IntKey(KEY_BASE)).isOk(), String.valueOf(KEY_BASE));
     final long usagePerEntry = grouper.getMaxMergeBufferUsedBytes();
 
     grouper.reset();
-    Assert.assertEquals(0, grouper.getSize());
-    Assert.assertEquals(usagePerEntry, grouper.getMaxMergeBufferUsedBytes());
+    Assertions.assertEquals(0, grouper.getSize());
+    Assertions.assertEquals(usagePerEntry, grouper.getMaxMergeBufferUsedBytes());
 
     // Add 10 entries after reset
     for (int i = 0; i < 10; i++) {
-      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i + KEY_BASE)).isOk(), String.valueOf(i + KEY_BASE));
     }
 
-    Assert.assertEquals(10 * usagePerEntry, grouper.getMaxMergeBufferUsedBytes());
+    Assertions.assertEquals(10 * usagePerEntry, grouper.getMaxMergeBufferUsedBytes());
   }
 
   @Test
@@ -341,17 +348,17 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
 
     // Calculate usage per entry from first entry
-    Assert.assertTrue(String.valueOf(KEY_BASE), grouper.aggregate(new IntKey(KEY_BASE)).isOk());
+    Assertions.assertTrue(grouper.aggregate(new IntKey(KEY_BASE)).isOk(), String.valueOf(KEY_BASE));
     final long usagePerEntry = grouper.getMaxMergeBufferUsedBytes();
 
     // This results in 13 swaps and final size of 116 (100 keys + 16 new keys after last swap)
     for (int i = 1; i < NUM_ROWS; i++) {
-      Assert.assertTrue(String.valueOf(i + KEY_BASE), grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i + KEY_BASE)).isOk(), String.valueOf(i + KEY_BASE));
     }
 
-    Assert.assertEquals(13, grouper.getGrowthCount());
-    Assert.assertEquals(116, grouper.getSize());
-    Assert.assertEquals(168, grouper.getMaxSize());
+    Assertions.assertEquals(13, grouper.getGrowthCount());
+    Assertions.assertEquals(116, grouper.getSize());
+    Assertions.assertEquals(168, grouper.getMaxSize());
 
     final long bucketSizeWithHash = usagePerEntry - Integer.BYTES;
     final long hashTablePeak = grouper.getMaxSize() * bucketSizeWithHash;
@@ -360,7 +367,7 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     // Peak usage is the sum of hash table peak and heap peak, which peak at different sizes...
     final long expectedPeakUsage = hashTablePeak + heapPeak;
 
-    Assert.assertEquals(expectedPeakUsage, grouper.getMaxMergeBufferUsedBytes());
+    Assertions.assertEquals(expectedPeakUsage, grouper.getMaxMergeBufferUsedBytes());
   }
 
   private static LimitedBufferHashGrouper<IntKey> makeGrouper(

@@ -44,9 +44,9 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.partition.TypedValueSet;
-import org.junit.Assume;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -651,7 +651,7 @@ public class EqualityFilterTests
     @Test
     public void testArrays()
     {
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
       /*
           dim0 .. arrayString               arrayLong             arrayDouble
           "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
@@ -912,7 +912,7 @@ public class EqualityFilterTests
 
        */
       // only auto well supports variant types
-      Assume.assumeTrue(isAutoSchema());
+      Assumptions.assumeTrue(isAutoSchema());
       assertFilterMatches(
           new EqualityFilter(
               "variant",
@@ -1007,7 +1007,7 @@ public class EqualityFilterTests
     public void testNestedColumnEquality()
     {
       // nested column mirrors the top level columns, so these cases are copied from other tests
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
 
       assertFilterMatches(
           new EqualityFilter("nested.s0", ColumnType.STRING, "", null),
@@ -1351,7 +1351,7 @@ public class EqualityFilterTests
     @Test
     public void testArraysAsMvds()
     {
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
       /*
           dim0 .. arrayString               arrayLong             arrayDouble
           "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]

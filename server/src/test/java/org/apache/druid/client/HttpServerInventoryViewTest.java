@@ -53,10 +53,11 @@ import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorSer
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -68,6 +69,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class HttpServerInventoryViewTest
@@ -97,7 +99,7 @@ public class HttpServerInventoryViewTest
 
   private AtomicBoolean inventoryInitialized;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     serviceEmitter = new StubServiceEmitter("test", "localhost");
@@ -123,7 +125,7 @@ public class HttpServerInventoryViewTest
     );
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(druidNodeDiscoveryProvider);
@@ -136,14 +138,14 @@ public class HttpServerInventoryViewTest
   public void testInitHappensAfterNodeViewInit()
   {
     httpServerInventoryView.start();
-    Assert.assertTrue(httpServerInventoryView.isStarted());
-    Assert.assertFalse(inventoryInitialized.get());
+    Assertions.assertTrue(httpServerInventoryView.isStarted());
+    Assertions.assertFalse(inventoryInitialized.get());
 
     druidNodeDiscovery.markNodeViewInitialized();
-    Assert.assertFalse(inventoryInitialized.get());
+    Assertions.assertFalse(inventoryInitialized.get());
 
     execHelper.finishInventoryInitialization();
-    Assert.assertTrue(inventoryInitialized.get());
+    Assertions.assertTrue(inventoryInitialized.get());
 
     httpServerInventoryView.stop();
   }
@@ -152,10 +154,10 @@ public class HttpServerInventoryViewTest
   public void testStopShutsDownExecutors()
   {
     httpServerInventoryView.start();
-    Assert.assertFalse(execHelper.syncExecutor.isShutdown());
+    Assertions.assertFalse(execHelper.syncExecutor.isShutdown());
 
     httpServerInventoryView.stop();
-    Assert.assertTrue(execHelper.syncExecutor.isShutdown());
+    Assertions.assertTrue(execHelper.syncExecutor.isShutdown());
   }
 
   @Test
@@ -170,9 +172,9 @@ public class HttpServerInventoryViewTest
     final DruidServer server = druidNode.toDruidServer();
 
     Collection<DruidServer> inventory = httpServerInventoryView.getInventory();
-    Assert.assertEquals(1, inventory.size());
-    Assert.assertTrue(inventory.contains(server));
-    Assert.assertTrue(addedServers.contains(server.getMetadata()));
+    Assertions.assertEquals(1, inventory.size());
+    Assertions.assertTrue(inventory.contains(server));
+    Assertions.assertTrue(addedServers.contains(server.getMetadata()));
 
     execHelper.emitMetrics();
     serviceEmitter.verifyValue(METRIC_SUCCESS, 1);
@@ -185,9 +187,9 @@ public class HttpServerInventoryViewTest
     execHelper.sendSyncRequestAndHandleResponse();
 
     DruidServer inventoryValue = httpServerInventoryView.getInventoryValue(server.getName());
-    Assert.assertNotNull(inventoryValue);
-    Assert.assertEquals(1, inventoryValue.getTotalSegments());
-    Assert.assertNotNull(inventoryValue.getSegment(segment.getId()));
+    Assertions.assertNotNull(inventoryValue);
+    Assertions.assertEquals(1, inventoryValue.getTotalSegments());
+    Assertions.assertNotNull(inventoryValue.getSegment(segment.getId()));
 
     httpServerInventoryView.stop();
   }
@@ -205,7 +207,7 @@ public class HttpServerInventoryViewTest
 
     druidNodeDiscovery.removeNodesAndNotifyListeners(druidNode);
 
-    Assert.assertNull(httpServerInventoryView.getInventoryValue(server.getName()));
+    Assertions.assertNull(httpServerInventoryView.getInventoryValue(server.getName()));
 
     execHelper.emitMetrics();
     serviceEmitter.verifyNotEmitted(METRIC_SUCCESS);
@@ -225,12 +227,13 @@ public class HttpServerInventoryViewTest
         .addNodeAndNotifyListeners("localhost");
     final DruidServer server = druidNode.toDruidServer();
 
-    Assert.assertTrue(addedServers.contains(server.getMetadata()));
+    Assertions.assertTrue(addedServers.contains(server.getMetadata()));
 
     httpServerInventoryView.stop();
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testSyncSegmentLoadAndDrop()
   {
     httpServerInventoryView.start();
@@ -241,7 +244,7 @@ public class HttpServerInventoryViewTest
         .addNodeAndNotifyListeners("localhost");
     final DruidServer server = druidNode.toDruidServer();
 
-    Assert.assertTrue(addedServers.contains(server.getMetadata()));
+    Assertions.assertTrue(addedServers.contains(server.getMetadata()));
 
     final DataSegment[] segments =
         CreateDataSegments.ofDatasource("wiki")
@@ -254,7 +257,7 @@ public class HttpServerInventoryViewTest
         snapshotOf(new SegmentChangeRequestLoad(segments[0]))
     );
     execHelper.sendSyncRequestAndHandleResponse();
-    Assert.assertTrue(isAddedToView(server, segments[0]));
+    Assertions.assertTrue(isAddedToView(server, segments[0]));
 
     // Request 2: Drop S1, Load S2, S3
     resetForNextSyncRequest();
@@ -266,9 +269,9 @@ public class HttpServerInventoryViewTest
         )
     );
     execHelper.sendSyncRequestAndHandleResponse();
-    Assert.assertTrue(isRemovedFromView(server, segments[0]));
-    Assert.assertTrue(isAddedToView(server, segments[1]));
-    Assert.assertTrue(isAddedToView(server, segments[2]));
+    Assertions.assertTrue(isRemovedFromView(server, segments[0]));
+    Assertions.assertTrue(isAddedToView(server, segments[1]));
+    Assertions.assertTrue(isAddedToView(server, segments[2]));
 
     // Request 3: reset the counter
     resetForNextSyncRequest();
@@ -281,8 +284,8 @@ public class HttpServerInventoryViewTest
         )
     );
     execHelper.sendSyncRequestAndHandleResponse();
-    Assert.assertTrue(segmentsAddedToView.isEmpty());
-    Assert.assertTrue(segmentsRemovedFromView.isEmpty());
+    Assertions.assertTrue(segmentsAddedToView.isEmpty());
+    Assertions.assertTrue(segmentsRemovedFromView.isEmpty());
 
     // Request 4: Load S3, S4
     resetForNextSyncRequest();
@@ -293,14 +296,14 @@ public class HttpServerInventoryViewTest
         )
     );
     execHelper.sendSyncRequestAndHandleResponse();
-    Assert.assertTrue(isRemovedFromView(server, segments[1]));
-    Assert.assertTrue(isAddedToView(server, segments[3]));
+    Assertions.assertTrue(isRemovedFromView(server, segments[1]));
+    Assertions.assertTrue(isAddedToView(server, segments[3]));
 
     DruidServer inventoryValue = httpServerInventoryView.getInventoryValue(server.getName());
-    Assert.assertNotNull(inventoryValue);
-    Assert.assertEquals(2, inventoryValue.getTotalSegments());
-    Assert.assertNotNull(inventoryValue.getSegment(segments[2].getId()));
-    Assert.assertNotNull(inventoryValue.getSegment(segments[3].getId()));
+    Assertions.assertNotNull(inventoryValue);
+    Assertions.assertEquals(2, inventoryValue.getTotalSegments());
+    Assertions.assertNotNull(inventoryValue.getSegment(segments[2].getId()));
+    Assertions.assertNotNull(inventoryValue.getSegment(segments[3].getId()));
 
     // Verify node removal
     druidNodeDiscovery.removeNodesAndNotifyListeners(druidNode);
@@ -326,8 +329,8 @@ public class HttpServerInventoryViewTest
         )
     );
 
-    Assert.assertTrue(removedServers.contains(server.getMetadata()));
-    Assert.assertNull(httpServerInventoryView.getInventoryValue(server.getName()));
+    Assertions.assertTrue(removedServers.contains(server.getMetadata()));
+    Assertions.assertNull(httpServerInventoryView.getInventoryValue(server.getName()));
 
     httpServerInventoryView.stop();
   }
@@ -340,7 +343,7 @@ public class HttpServerInventoryViewTest
     execHelper.finishInventoryInitialization();
 
     final DiscoveryDruidNode druidNode = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
-    Assert.assertTrue(addedServers.contains(druidNode.toDruidServer().getMetadata()));
+    Assertions.assertTrue(addedServers.contains(druidNode.toDruidServer().getMetadata()));
 
     httpClient.failToSendNextRequestWith(new ISE("Could not send request to server"));
     execHelper.sendSyncRequest();
@@ -384,16 +387,16 @@ public class HttpServerInventoryViewTest
     execHelper.finishInventoryInitialization();
 
     final DiscoveryDruidNode druidNode = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
-    Assert.assertTrue(addedServers.contains(druidNode.toDruidServer().getMetadata()));
+    Assertions.assertTrue(addedServers.contains(druidNode.toDruidServer().getMetadata()));
 
     serviceEmitter.flush();
     httpClient.completeNextRequestWith(InvalidInput.exception("failure on server"));
     execHelper.sendSyncRequestAndHandleResponse();
 
     List<AlertEvent> alerts = serviceEmitter.getAlerts();
-    Assert.assertEquals(1, alerts.size());
+    Assertions.assertEquals(1, alerts.size());
     AlertEvent alert = alerts.get(0);
-    Assert.assertTrue(alert.getDescription().contains("Sync failed for server"));
+    Assertions.assertTrue(alert.getDescription().contains("Sync failed for server"));
 
     serviceEmitter.flush();
     execHelper.emitMetrics();
@@ -402,7 +405,8 @@ public class HttpServerInventoryViewTest
     httpServerInventoryView.stop();
   }
 
-  @Test(timeout = 60_000)
+  @Test
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
   public void testInitWaitsForServerToSync()
   {
     httpServerInventoryView.start();
@@ -410,7 +414,7 @@ public class HttpServerInventoryViewTest
     final DiscoveryDruidNode druidNode = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
     final DruidServer server = druidNode.toDruidServer();
 
-    Assert.assertTrue(addedServers.contains(server.getMetadata()));
+    Assertions.assertTrue(addedServers.contains(server.getMetadata()));
 
     ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
 
@@ -419,7 +423,7 @@ public class HttpServerInventoryViewTest
 
       // Wait to ensure that init thread is in progress and waiting
       Thread.sleep(1000);
-      Assert.assertFalse(inventoryInitialized.get());
+      Assertions.assertFalse(inventoryInitialized.get());
 
       // Finish sync of server
       httpClient.completeNextRequestWith(snapshotOf());
@@ -427,7 +431,7 @@ public class HttpServerInventoryViewTest
 
       // Wait for 10 seconds to ensure that init thread knows about server sync
       Thread.sleep(10_000);
-      Assert.assertTrue(inventoryInitialized.get());
+      Assertions.assertTrue(inventoryInitialized.get());
     }
     catch (InterruptedException e) {
       throw new ISE(e, "Interrupted");
@@ -437,13 +441,14 @@ public class HttpServerInventoryViewTest
     }
   }
 
-  @Test(timeout = 60_000)
+  @Test
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
   public void testInitDoesNotWaitForRemovedServerToSync()
   {
     httpServerInventoryView.start();
     druidNodeDiscovery.markNodeViewInitialized();
     DiscoveryDruidNode node = druidNodeDiscovery.addNodeAndNotifyListeners("localhost");
-    Assert.assertTrue(addedServers.contains(node.toDruidServer().getMetadata()));
+    Assertions.assertTrue(addedServers.contains(node.toDruidServer().getMetadata()));
 
     ExecutorService initExecutor = Execs.singleThreaded(EXEC_NAME_PREFIX + "-init");
 
@@ -452,14 +457,14 @@ public class HttpServerInventoryViewTest
 
       // Wait to ensure that init thread is in progress and waiting
       Thread.sleep(1000);
-      Assert.assertFalse(inventoryInitialized.get());
+      Assertions.assertFalse(inventoryInitialized.get());
 
       // Remove the node from discovery
       druidNodeDiscovery.removeNodesAndNotifyListeners(node);
 
       // Wait for 10 seconds to ensure that init thread knows about server removal
       Thread.sleep(10_000);
-      Assert.assertTrue(inventoryInitialized.get());
+      Assertions.assertTrue(inventoryInitialized.get());
     }
     catch (InterruptedException e) {
       throw new ISE(e, "Interrupted");
