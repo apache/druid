@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -278,7 +279,7 @@ public class SegmentBalancingTest extends CoordinatorSimulationBaseTest
   }
 
   @Test
-  @Timeout(value = 60000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testMaxSegmentsAreMovedWhenClusterIsSkewed()
   {
     // Add 10 historicals of size 1 TB each

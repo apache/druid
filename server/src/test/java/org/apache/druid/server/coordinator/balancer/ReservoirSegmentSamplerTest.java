@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -288,7 +289,7 @@ public class ReservoirSegmentSamplerTest
   }
 
   @Test
-  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testNumberOfSamplingsRequiredToPickAllSegments()
   {
     // The number of sampling iterations required for each sample percentage

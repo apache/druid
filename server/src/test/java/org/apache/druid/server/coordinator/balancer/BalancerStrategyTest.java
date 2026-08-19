@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -105,7 +106,7 @@ public class BalancerStrategyTest
   }
 
   @Test
-  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void findNewSegmentHomeReplicatorNotEnoughNodesForReplication()
   {
     final ServerHolder serverHolder1 = new ServerHolder(

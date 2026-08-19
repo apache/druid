@@ -80,6 +80,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -201,7 +202,7 @@ public class DruidCoordinatorTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorRun() throws Exception
   {
     String dataSource = "dataSource1";
@@ -313,7 +314,7 @@ public class DruidCoordinatorTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorTieredRun() throws Exception
   {
     final String dataSource = "dataSource", hotTierName = "hot", coldTierName = "cold";
@@ -378,7 +379,7 @@ public class DruidCoordinatorTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testComputeUnderReplicationCountsPerDataSourcePerTierForSegmentsWithBroadcastRule() throws Exception
   {
     final String dataSource = "dataSource";
@@ -618,7 +619,7 @@ public class DruidCoordinatorTest
   }
 
   @Test
-  @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorCustomDutyGroupsRunAsExpected() throws Exception
   {
     // Some nessesary setup to start the Coordinator
@@ -717,7 +718,7 @@ public class DruidCoordinatorTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorRun_queryFromDeepStorage() throws Exception
   {
     String dataSource = "dataSource1";
