@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -386,6 +388,82 @@ public class EmbeddedDimensionValueSetShardSpecTest extends EmbeddedClusterTestB
     // Strict correctness: the RIGHT rows survive, not just the right count.
     assertValues(Set.of("val_0", "val_1"), "SELECT \"%s\" FROM %s WHERE %s = 1", COL_VALUE, dataSource, colCode);
     assertValues(Set.of("val_4", "val_5"), "SELECT \"%s\" FROM %s WHERE %s = 3", COL_VALUE, dataSource, colCode);
+  }
+
+  /**
+   * A FLOAT or DOUBLE tracked dimension is NOT stamped in {@code dimensionColumnTypes} (only LONG is): "1.0" vs "1"
+   * does not stringify identically across ingest and query, so numeric-value pruning is unsafe and disabled. The
+   * dimension is still recorded, so queries stay correct — this test asserts both.
+   */
+  @Test
+  public void test_floatAndDoubleDimensions_notStampedButQueriesCorrect()
+  {
+    final String colFloat = "f";  // FloatDimensionSchema
+    final String colDouble = "d";  // DoubleDimensionSchema
+    final String topic = dataSource + "_topic";
+    kafkaServer.createTopicWithPartitions(topic, 1);
+
+    final List<ProducerRecord<byte[], byte[]>> records = new ArrayList<>();
+    records.add(record(topic, "%s,1.5,2.5,val_0", DateTimes.of("2025-01-01T01:00:00")));
+    records.add(record(topic, "%s,1.5,2.5,val_1", DateTimes.of("2025-01-02T01:00:00")));
+    records.add(record(topic, "%s,3.5,4.5,val_2", DateTimes.of("2025-01-03T01:00:00")));
+    kafkaServer.produceRecordsToTopic(records);
+
+    final KafkaSupervisorSpec spec = new KafkaSupervisorSpecBuilder()
+        .withContext(Collections.singletonMap(Tasks.USE_CONCURRENT_LOCKS, true))
+        .withDataSchema(
+            schema -> schema
+                .withTimestamp(new TimestampSpec(COL_TIMESTAMP, null, null))
+                .withDimensions(
+                    DimensionsSpec.builder()
+                                  .setDimensions(List.of(
+                                      new FloatDimensionSchema(colFloat),
+                                      new DoubleDimensionSchema(colDouble),
+                                      new StringDimensionSchema(COL_VALUE)
+                                  ))
+                                  .build()
+                )
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+        )
+        .withTuningConfig(
+            t -> t.withMaxRowsPerSegment(1000)
+                  .withReleaseLocksOnHandoff(true)
+                  .withStreamingPartitionsSpec(new DimensionValueSetPartitionsSpec(List.of(colFloat, colDouble)))
+        )
+        .withIoConfig(
+            ioConfig -> ioConfig
+                .withInputFormat(new CsvInputFormat(
+                    List.of(COL_TIMESTAMP, colFloat, colDouble, COL_VALUE), null, null, false, 0, false))
+                .withConsumerProperties(kafkaServer.consumerProperties())
+                .withTaskDuration(Period.millis(500))
+                .withStartDelay(Period.millis(10))
+                .withSupervisorRunPeriod(Period.millis(500))
+                .withCompletionTimeout(Period.seconds(5))
+                .withUseEarliestSequenceNumber(true)
+        )
+        .withId(dataSource + "_supe")
+        .build(dataSource, topic);
+
+    cluster.callApi().postSupervisor(spec);
+    awaitRowsProcessed(3);
+    suspendAndAwaitHandoff(spec, 1);
+
+    verifyAllSegmentsHaveDimensionValueSetShardSpec(dataSource);
+
+    // Neither FLOAT nor DOUBLE is stamped: dimensionColumnTypes is empty, so the numeric-value channel never prunes.
+    for (Map<String, Object> shardSpec : getShardSpecs(dataSource)) {
+      @SuppressWarnings("unchecked")
+      final Map<String, Object> columnTypes = (Map<String, Object>) shardSpec.get("dimensionColumnTypes");
+      Assertions.assertTrue(
+          columnTypes == null || columnTypes.isEmpty(),
+          "FLOAT/DOUBLE dims must not be stamped in dimensionColumnTypes: " + shardSpec
+      );
+    }
+
+    // Queries remain correct (no wrong pruning).
+    Assertions.assertEquals("2", cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s = 1.5", dataSource, colFloat));
+    Assertions.assertEquals("1", cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s = 4.5", dataSource, colDouble));
+    Assertions.assertEquals("0", cluster.runSql("SELECT COUNT(*) FROM %s WHERE %s = 9.9", dataSource, colDouble));
   }
 
   @Test

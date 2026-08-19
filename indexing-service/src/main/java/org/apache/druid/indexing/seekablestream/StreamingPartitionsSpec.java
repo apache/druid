@@ -62,4 +62,15 @@ public interface StreamingPartitionsSpec
    */
   @Nullable
   StreamingShardSpecCollector createCollector(@Nullable DimensionsSpec dimensionsSpec);
+
+  /**
+   * @deprecated use {@link #createCollector(DimensionsSpec)}; retained for source compatibility with callers that
+   * predate the schema-aware overload.
+   */
+  @Deprecated
+  @Nullable
+  default StreamingShardSpecCollector createCollector()
+  {
+    return createCollector(null);
+  }
 }

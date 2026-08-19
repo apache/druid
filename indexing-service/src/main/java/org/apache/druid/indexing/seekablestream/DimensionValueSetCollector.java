@@ -50,6 +50,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>A {@code null} element denotes an observed null/missing value (kept distinct from {@code ""}) so that
  * {@code IS NULL} queries are not pruned.
  *
+ * <p>Only {@code STRING} and {@code LONG} dimensions are supported: string values are recorded verbatim, LONG values
+ * are canonicalized for typed numeric pruning. Other types (e.g. {@code FLOAT}/{@code DOUBLE}) are recorded as strings
+ * and stamped no type, so they participate only in exact string-set/null pruning, not numeric-domain pruning.
+ *
  * <p>Thread-safety follows the {@link StreamingShardSpecCollector} contract:
  * {@link #observedPartitionDimValuesBySegment} is a
  * {@link ConcurrentHashMap} keyed by {@link SegmentId} whose value sets are {@link Collections#synchronizedSet} written

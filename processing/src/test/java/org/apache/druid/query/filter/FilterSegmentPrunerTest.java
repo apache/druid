@@ -38,7 +38,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -398,6 +400,28 @@ class FilterSegmentPrunerTest
     final FilterSegmentPruner pruner =
         new FilterSegmentPruner(new EqualityFilter("id", ColumnType.LONG, 3L, null), null, null);
     Assertions.assertTrue(pruner.include(seg));
+  }
+
+  @Test
+  void testPruneDimValueSetIsNull()
+  {
+    // IS NULL reaches the LONG-stamped dim through possibleInDomain's null channel (it yields no typed value set):
+    // prune a segment that observed no null, keep one that did.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment noNull = makeDataSegment(
+        interval,
+        new DimensionValueSetShardSpec(0, 1, Map.of("id", List.of("1", "2")), Map.of("id", ColumnType.LONG))
+    );
+    final Map<String, List<String>> withNullValues = new HashMap<>();
+    withNullValues.put("id", Arrays.asList("1", null));
+    final DataSegment withNull = makeDataSegment(
+        interval,
+        new DimensionValueSetShardSpec(0, 1, withNullValues, Map.of("id", ColumnType.LONG))
+    );
+
+    final FilterSegmentPruner pruner = new FilterSegmentPruner(NullFilter.forColumn("id"), null, null);
+    Assertions.assertFalse(pruner.include(noNull));
+    Assertions.assertTrue(pruner.include(withNull));
   }
 
   private ShardSpec makeRange(
