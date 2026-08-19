@@ -2198,7 +2198,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     schema.onLeaderStart();
     schema.awaitInitialization();
 
-    latch.await(1, TimeUnit.SECONDS);
+    Assert.assertTrue(latch.await(1, TimeUnit.SECONDS));
     Assert.assertEquals(0, latch.getCount());
   }
 
