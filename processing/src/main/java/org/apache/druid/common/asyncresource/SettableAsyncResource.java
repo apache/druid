@@ -33,7 +33,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
@@ -171,7 +170,7 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
    * {@link #addReadyCallback(Runnable)}. Afterwards, {@link #close()} will no longer call the canceler from
    * {@link #setCanceler(Runnable)}.
    *
-   * <p>If the resource was already closed, the error is logged and otherwise dropped, and the callbacks that
+   * <p>If the resource was already closed, the error is logged at debug and otherwise dropped, and the callbacks that
    * {@link #close()} dropped do not fire.
    *
    * <p>Throws {@link DruidException} if this resource was already completed from a prior call to this method or
@@ -318,12 +317,8 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
 
     if (!didSet && value.isError()) {
       // Nothing will ever surface this error: get() on a closed resource throws "Closed" and the callbacks are gone,
-      // so log it rather than let a failure that lost a race with close() vanish
-      if (value.error() instanceof CancellationException) {
-        LOG.debug(value.error(), "Resource canceled by close().");
-      } else {
-        LOG.warn(value.error(), "Resource failed after close().");
-      }
+      // so debug log it rather than let a failure that lost a race with close() vanish.
+      LOG.debug(value.error(), "Resource failed after close().");
     }
 
     fireCallbacks(callbacksToFire);

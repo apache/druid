@@ -34,7 +34,9 @@ import java.util.concurrent.TimeoutException;
  * be used for resources that do not need cleanup or are not acquired asynchronously, but it is most useful when
  * both are true. The wrapper generally owns the resource lifecycle; see "to consume a resource" below for details.
  *
- * <p>To produce a resource, generally you should create and populate {@link SettableAsyncResource}.
+ * <p>To produce a resource, generally you should create and populate {@link SettableAsyncResource}: complete it
+ * exactly once with {@link SettableAsyncResource#set} or {@link SettableAsyncResource#setException}, and leave
+ * {@link #close()} to the consumer, which owns the resource and may close it to cancel acquisition early.
  *
  * <p>To consume a resource, use {@link #addReadyCallback(Runnable)}, {@link #await()}, or {@link #await(long)}
  * to wait for the resource to become ready. Then use {@link #get()} to retrieve the resource. When you are done
@@ -106,6 +108,9 @@ public interface AsyncResource<T> extends Closeable
    * call {@link #close()}.
    *
    * <p>Throws {@link DruidException} if {@link #close()} has been called prior to this method.
+   *
+   * <p>Must not be used when another thread may {@link #close()} this resource: a close does not wake an awaiting
+   * thread, so this method would block forever.
    */
   default T await() throws InterruptedException
   {
@@ -120,6 +125,9 @@ public interface AsyncResource<T> extends Closeable
    * or if waiting times out; callers must still call {@link #close()}.
    *
    * <p>Throws {@link DruidException} if {@link #close()} has been called prior to this method.
+   *
+   * <p>Must not be used when another thread may {@link #close()} this resource: a close does not wake an awaiting
+   * thread, so this method would wait out the full timeout.
    */
   default T await(long timeoutMillis) throws InterruptedException, TimeoutException
   {
