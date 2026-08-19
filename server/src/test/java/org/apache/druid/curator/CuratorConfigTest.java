@@ -20,29 +20,11 @@
 package org.apache.druid.curator;
 
 import org.apache.druid.guice.JsonConfigTesterBase;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import java.lang.reflect.InvocationTargetException;
+import org.junit.Assert;
+import org.junit.Test;
 
 public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
 {
-  @BeforeEach
-  public void setUp() throws IllegalAccessException
-  {
-    setup();
-  }
-
-  @Test
-  public void testSimpleInjection()
-      throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
-  {
-    configProvider.inject(testProperties, configurator);
-    validateEntries(configProvider.get());
-    Assertions.assertEquals(propertyValues.size(), assertions);
-  }
-
   @Test
   public void testSerde()
   {
@@ -55,22 +37,22 @@ public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
     CuratorConfig config = configProvider.get();
-    Assertions.assertEquals("fooHost", config.getZkHosts());
-    Assertions.assertEquals(true, config.getEnableAcl());
-    Assertions.assertEquals("test-zk-user", config.getZkUser());
-    Assertions.assertEquals("test-zk-pwd", config.getZkPwd());
-    Assertions.assertEquals("auth", config.getAuthScheme());
-    Assertions.assertEquals(20, config.getMaxZkRetries());
+    Assert.assertEquals("fooHost", config.getZkHosts());
+    Assert.assertEquals(true, config.getEnableAcl());
+    Assert.assertEquals("test-zk-user", config.getZkUser());
+    Assert.assertEquals("test-zk-pwd", config.getZkPwd());
+    Assert.assertEquals("auth", config.getAuthScheme());
+    Assert.assertEquals(20, config.getMaxZkRetries());
   }
 
   @Test
   public void testCreate()
   {
     CuratorConfig config = CuratorConfig.create("foo:2181,bar:2181");
-    Assertions.assertEquals("foo:2181,bar:2181", config.getZkHosts());
-    Assertions.assertEquals(false, config.getEnableAcl());
-    Assertions.assertNull(config.getZkUser());
-    Assertions.assertEquals("digest", config.getAuthScheme());
-    Assertions.assertEquals(29, config.getMaxZkRetries());
+    Assert.assertEquals("foo:2181,bar:2181", config.getZkHosts());
+    Assert.assertEquals(false, config.getEnableAcl());
+    Assert.assertNull(config.getZkUser());
+    Assert.assertEquals("digest", config.getAuthScheme());
+    Assert.assertEquals(29, config.getMaxZkRetries());
   }
 }
