@@ -762,13 +762,16 @@ name: Apache Commons DBCP
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.11.0
+version: 2.14.0
 libraries:
   - org.apache.commons: commons-dbcp2
 notices:
   - commons-dbcp2: |
       Apache Commons DBCP
-      Copyright 2001-2014 The Apache Software Foundation
+      Copyright 2001-2025 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
@@ -823,6 +826,23 @@ notices:
       Doug Lea with assistance from members of JCP JSR-166 Expert Group and released
       to the public domain, as explained at
       http://creativecommons.org/licenses/publicdomain
+
+---
+
+name: Apache Commons Pool
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.13.0
+libraries:
+  - org.apache.commons: commons-pool2
+notices:
+  - commons-pool2: |
+      Apache Commons Pool
+      Copyright 2001-2025 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
