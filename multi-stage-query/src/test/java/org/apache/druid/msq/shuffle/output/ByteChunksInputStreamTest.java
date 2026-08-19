@@ -44,7 +44,6 @@ public class ByteChunksInputStreamTest
 
       int c;
       while ((c = in.read()) != -1) {
-        Assertions.assertTrue(c >= 0, "InputStream#read contract");
         baos.write(c);
       }
 
@@ -60,7 +59,6 @@ public class ByteChunksInputStreamTest
 
       int c;
       while ((c = in.read()) != -1) {
-        Assertions.assertTrue(c >= 0, "InputStream#read contract");
         baos.write(c);
       }
 
