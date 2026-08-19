@@ -610,37 +610,24 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
   )
   {
     final long timeout = 30_000;
-    final long deadline = System.currentTimeMillis() + timeout;
-
-    while (System.currentTimeMillis() < deadline) {
-      final List<GetQueryReportResponse> reports = new ArrayList<>(targetBrokers.length);
-      boolean allReportsCompleted = true;
-
-      for (final EmbeddedBroker targetBroker : targetBrokers) {
-        final GetQueryReportResponse report = msqApis.getDartQueryReport(sqlQueryId, targetBroker);
-        if (report == null
-            || !(report.getQueryInfo() instanceof DartQueryInfo queryInfo)
-            || queryInfo.getDurationMs() == null) {
-          allReportsCompleted = false;
-          break;
-        }
-        reports.add(report);
-      }
-
-      if (allReportsCompleted) {
-        return reports;
-      }
-
-      try {
-        Thread.sleep(100);
-      }
-      catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new RuntimeException(e);
-      }
-    }
-
-    throw new ISE("Timed out after[%,d] ms waiting for completed reports", timeout);
+    return cluster.callApi()
+                  .waitForResult(
+                      () -> {
+                        final List<GetQueryReportResponse> reports = new ArrayList<>(targetBrokers.length);
+                        for (final EmbeddedBroker targetBroker : targetBrokers) {
+                          reports.add(msqApis.getDartQueryReport(sqlQueryId, targetBroker));
+                        }
+                        return reports;
+                      },
+                      reports -> reports.stream().allMatch(
+                          report -> report != null
+                                    && report.getQueryInfo() instanceof DartQueryInfo queryInfo
+                                    && queryInfo.getDurationMs() != null
+                      )
+                  )
+                  .withTimeoutMillis(timeout)
+                  .withRetryMillis(100)
+                  .go();
   }
 
   /**
