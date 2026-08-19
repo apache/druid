@@ -133,7 +133,8 @@ public interface AsyncResource<T> extends Closeable
 
   /**
    * Closes the resource if it is ready, and has not been released by {@link SettableAsyncResource#release()}.
-   * If acquisition is still in progress, it is canceled if possible.
+   * If acquisition is still in progress, it is canceled if possible and any pending
+   * {@link #addReadyCallback(Runnable)} callbacks are dropped without ever firing.
    *
    * <p>Despite {@link Closeable} requiring this method to be idempotent, it is not necessarily
    * going to be idempotent. Do not close more than once.
