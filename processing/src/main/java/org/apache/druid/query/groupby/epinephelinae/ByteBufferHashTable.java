@@ -90,6 +90,21 @@ public class ByteBufferHashTable
   // Tracks maximum bytes used for the entire lifecycle of this hash table.
   protected long maxMergeBufferUsedBytes;
 
+  // Peak {@code size / terminalRegrowthThreshold} over this table's lifetime, in [0.0, 1.0], where
+  // {@code terminalRegrowthThreshold} is the FIXED bucket-count ceiling of the last growth level (see
+  // {@link #getSpillRegrowthThreshold()}). Because the denominator is fixed and {@code size} only grows (and is
+  // preserved across rehash), this rises smoothly from 0 toward 1 as the table fills, landing on exactly 1.0 at the
+  // real spill trigger — unlike dividing by the CURRENT level's threshold, which resets to ~0.5 on every doubling and
+  // pins the lifetime max near {@code (N-1)/N} regardless of how much headroom remains. Preserved across
+  // {@link #reset()} so a grouper that spilled retains the 1.0 peak even after {@code size} returns to 0.
+  protected double maxSpillProximity;
+
+  // Cached denominator for {@link #maxSpillProximity}: the regrowthThreshold at the terminal (final) growth level.
+  // Zero means "not yet computed"; {@link #maxSizeForBuckets} is always >= 1 so zero is a safe sentinel. Depends only
+  // on final geometry ({@link #tableArenaSize}, {@link #bucketSizeWithHash}, {@link #initialBuckets},
+  // {@link #maxLoadFactor}), so it is computed once and reused.
+  private int spillRegrowthThreshold;
+
   public ByteBufferHashTable(
       float maxLoadFactor,
       int initialBuckets,
@@ -109,6 +124,8 @@ public class ByteBufferHashTable
     this.tableArenaSize = buffer.capacity();
     this.bucketUpdateHandler = bucketUpdateHandler;
     this.maxMergeBufferUsedBytes = 0;
+    this.maxSpillProximity = 0.0;
+    this.spillRegrowthThreshold = 0;
   }
 
   public void reset()
@@ -290,6 +307,14 @@ public class ByteBufferHashTable
       }
     }
 
+    if (bucket < 0) {
+      // This is the caller's spill trigger: no bucket could be allocated even after attempting to grow. Pin the
+      // proximity peak to exactly 1.0 here so callers see "at the spill point" even in the rare case a rejection
+      // happens before {@code size} reaches the terminal threshold (e.g. a full-probe wraparound). See
+      // {@link #maxSpillProximity}.
+      maxSpillProximity = 1.0;
+    }
+
     return bucket;
   }
 
@@ -443,16 +468,159 @@ public class ByteBufferHashTable
 
   /**
    * To maintain an accurate tracking of the maximum bytes used per query, this function is to be called immediately
-   * whenever either of {@link #size} or {@link #bucketSizeWithHash} is changed.
+   * whenever either of {@link #size} or {@link #bucketSizeWithHash} is changed. Also updates {@link #maxSpillProximity}
+   * on every size mutation, so the peak {@code size / terminalRegrowthThreshold} ratio is tracked without the caller
+   * having to remember to observe it. Preserving the peak across resets is what lets a grouper that already spilled
+   * report proximity 1.0 even though {@code size} is currently 0.
+   *
+   * <p>The denominator is the TERMINAL-level regrowth threshold ({@link #getSpillRegrowthThreshold()}), not the
+   * current growth level's. Dividing by the current level's threshold produces a sawtooth: it resets to ~0.5 on every
+   * doubling and climbs back to ~1.0 before the next, so the lifetime max pins near {@code (N-1)/N} for the highest
+   * level reached — regardless of how many doublings of headroom remain before the real spill. Because
+   * {@code maxSizeForBuckets} is linear in bucket count and {@code size} only grows (preserved across rehash), a fixed
+   * terminal denominator makes the ratio monotonic in {@code size}: it rises smoothly 0→1 and lands on exactly 1.0 at
+   * the true spill trigger.</p>
+   *
+   * <p>The ratio is captured strictly while {@code size < regrowthThreshold} (the current level's). At intermediate
+   * growth boundaries {@code size} hits {@code regrowthThreshold} transiently and is skipped here; the arena still has
+   * room to grow, so the next mutation triggers {@link #adjustTableWhenFull()} and recording resumes against the fixed
+   * terminal denominator. At the TERMINAL growth level, guarded by {@link #isTerminalTableLevel()}, no further growth
+   * is possible, so parking at {@code size == regrowthThreshold} IS the spill point and 1.0 is recorded (this equals
+   * {@code size / terminalRegrowthThreshold} there, since the two thresholds coincide). The other definitive spill
+   * trigger, where 1.0 is also pinned, is in {@link #findBucketWithAutoGrowth} when a bucket rejection actually
+   * occurs.</p>
    */
   protected void updateMaxMergeBufferUsedBytes()
   {
     maxMergeBufferUsedBytes = Math.max(maxMergeBufferUsedBytes, (long) size * bucketSizeWithHash);
+    if (!recordsFillProximity()) {
+      // This table trims-and-swaps to stay in memory rather than spilling to disk (the alternating limit-pushdown
+      // table). Its active sub-buffer fills to regrowthThreshold on every swap, so the fill ratio would saturate near
+      // 1.0 without the table ever approaching a spill. Suppress fill-proximity recording entirely; the only genuine
+      // spill signal for such a table is an explicit bucket rejection in findBucketWithAutoGrowth, which pins 1.0 there
+      // unconditionally.
+      return;
+    }
+    final int denominator = getSpillRegrowthThreshold();
+    if (denominator <= 0) {
+      return;
+    }
+    if (size < regrowthThreshold) {
+      // Clamped defensively; size < regrowthThreshold <= terminalRegrowthThreshold keeps this strictly below 1.0.
+      final double ratio = Math.min(1.0, (double) size / denominator);
+      if (ratio > maxSpillProximity) {
+        maxSpillProximity = ratio;
+      }
+    } else if (isTerminalTableLevel()) {
+      // Table is at the load-factor limit and no further growth is possible: functionally the spill point.
+      maxSpillProximity = 1.0;
+    }
+  }
+
+  /**
+   * The denominator for {@link #maxSpillProximity}: the {@code regrowthThreshold} at the terminal growth level — the
+   * bucket-count ceiling at which {@link #findBucketWithAutoGrowth} can no longer allocate a new bucket and the caller
+   * spills. Computed once from the table's fixed geometry (see {@link #computeSpillRegrowthThreshold()}) and cached.
+   */
+  protected final int getSpillRegrowthThreshold()
+  {
+    if (spillRegrowthThreshold == 0) {
+      spillRegrowthThreshold = computeSpillRegrowthThreshold();
+    }
+    return spillRegrowthThreshold;
+  }
+
+  /**
+   * Computes the terminal-level {@code regrowthThreshold} by replaying the arena geometry of {@link #reset()} and
+   * {@link #adjustTableWhenFull()} — without allocating any buffers. The table starts at some bucket count and grows
+   * by doubling upward through the arena; when there is no more room upward it wraps to {@code tableStart == 0} and
+   * consumes the whole lower region as its final level. This method walks that same sequence to the terminal level
+   * and returns {@link #maxSizeForBuckets} of the terminal bucket count. Overridden by fixed-size variants (e.g. the
+   * alternating heap-trim table) whose regrowth threshold never changes.
+   */
+  protected int computeSpillRegrowthThreshold()
+  {
+    int buckets = Math.min(tableArenaSize / bucketSizeWithHash, initialBuckets);
+    int start = tableArenaSize - buckets * bucketSizeWithHash;
+
+    // Replay reset()'s initial placement: walk the smallest table down so successive doublings stack above it.
+    int nextBuckets = buckets * 2;
+    while (true) {
+      final long nextBucketsSize = (long) nextBuckets * bucketSizeWithHash;
+      if (nextBucketsSize > Integer.MAX_VALUE) {
+        break;
+      }
+      final int nextTableStart = start - nextBuckets * bucketSizeWithHash;
+      if (nextTableStart > tableArenaSize / 2) {
+        start = nextTableStart;
+        nextBuckets = nextBuckets * 2;
+      } else {
+        break;
+      }
+    }
+    if (start < tableArenaSize / 2) {
+      start = 0;
+    }
+
+    // Replay adjustTableWhenFull()'s growth until the terminal level (start == 0) is reached.
+    while (start != 0) {
+      if (((long) buckets * 3 * bucketSizeWithHash) > (long) tableArenaSize - start) {
+        // Not enough room to grow upward: wrap to zero and consume the whole lower region.
+        buckets = start / bucketSizeWithHash;
+        start = 0;
+      } else {
+        // tableBuffer.limit() == buckets * bucketSizeWithHash for the current level.
+        start = start + buckets * bucketSizeWithHash;
+        buckets = buckets * 2;
+      }
+    }
+    return maxSizeForBuckets(buckets);
+  }
+
+  /**
+   * True when the current table level cannot be enlarged any further. Base implementation: {@link #tableStart} has
+   * reached the front of the arena, matching {@link #adjustTableWhenFull()}'s early-return. Overridden by
+   * hash-table variants (e.g. the alternating heap-trim variant in {@code LimitedBufferHashGrouper}) whose
+   * "table full" event is NOT a spill trigger — those return false so proximity is only pinned via the explicit
+   * spill path in {@link #findBucketWithAutoGrowth}.
+   */
+  protected boolean isTerminalTableLevel()
+  {
+    return tableStart == 0;
+  }
+
+  /**
+   * Whether this table's fill ratio ({@code size / terminalRegrowthThreshold}) is a meaningful proximity-to-spill
+   * signal. True for the base grow-by-doubling table, which spills to disk once it can no longer grow. Overridden to
+   * false by variants that trim-and-swap to stay in memory (the alternating limit-pushdown table): their active
+   * sub-buffer fills to {@code regrowthThreshold} on every swap, so the ratio would saturate near 1.0 for any
+   * high-cardinality limit-pushdown query even though no spill is approaching. For those tables only an explicit bucket
+   * rejection in {@link #findBucketWithAutoGrowth} — the real, and only, spill trigger — sets proximity to 1.0.
+   */
+  protected boolean recordsFillProximity()
+  {
+    return true;
   }
 
   public long getMaxMergeBufferUsedBytes()
   {
     return maxMergeBufferUsedBytes;
+  }
+
+  /**
+   * Peak {@code size / terminalRegrowthThreshold} observed over this table's lifetime, in [0.0, 1.0], where the
+   * denominator is the FIXED terminal-level bucket-count ceiling (see {@link #getSpillRegrowthThreshold()}). This means
+   * the value is the fraction of the way to the real spill trigger: it rises monotonically with {@code size} and equals
+   * 1.0 exactly at the spill point (either {@code size} reaching the terminal threshold, or a new-bucket rejection in
+   * {@link #findBucketWithAutoGrowth}). It is bucket-count based, so independent of bucket width, offset-list overhead,
+   * and integer truncation in the arena-size calculation. Preserved across {@link #reset()} so a grouper that already
+   * spilled retains the 1.0 peak even after {@code size} returns to 0. Ordinary table growth (when
+   * {@link #adjustTableWhenFull()} enlarges {@code regrowthThreshold} instead of triggering a spill) does not push this
+   * to 1.0.
+   */
+  public double getMaxSpillProximity()
+  {
+    return maxSpillProximity;
   }
 
   public interface BucketUpdateHandler
