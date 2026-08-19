@@ -1887,7 +1887,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.0.10
+version: 1.6.2
 libraries:
   - net.thisptr: jackson-jq
 
@@ -3730,7 +3730,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.50
+version: 1.0.63
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3742,7 +3742,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.1.34
+version: 2.2.6
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
