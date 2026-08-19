@@ -1505,7 +1505,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.16.Final
+version: 4.2.17.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2703,7 +2703,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.11.1
+version: 1.11.2
 libraries:
   - at.yawk.lz4: lz4-java
 
@@ -3757,7 +3757,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.5.7-7
+version: 1.5.7-13
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
