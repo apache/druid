@@ -125,7 +125,7 @@
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
         <aws.sdk.v1.version>1.12.797</aws.sdk.v1.version>
-        <aws.sdk.v2.version>2.52.0</aws.sdk.v2.version>
+        <aws.sdk.v2.version>2.53.1</aws.sdk.v2.version>
         <caffeine.version>3.2.4</caffeine.version>
         <jacoco.version>0.8.14</jacoco.version>
         <testcontainers.version>2.0.5</testcontainers.version>
