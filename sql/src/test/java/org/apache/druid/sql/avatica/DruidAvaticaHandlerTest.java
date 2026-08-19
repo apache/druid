@@ -95,10 +95,8 @@ import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -138,6 +136,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Tests the Avatica-based JDBC implementation using JSON serialization. See
@@ -1729,11 +1729,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           }
         }
     );
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Object '" + CalciteTests.FORBIDDEN_DATASOURCE + "' not found")
-        )
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.containsString("Object '" + CalciteTests.FORBIDDEN_DATASOURCE + "' not found")
     );
   }
 

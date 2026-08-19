@@ -30,8 +30,6 @@ import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -39,6 +37,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
@@ -403,9 +402,9 @@ public class DruidPlannerResourceAnalyzeTest extends BaseCalciteQueryTest
             .run()
     );
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Table [forbiddenDatasource] not found"))
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.containsString("Table [forbiddenDatasource] not found")
     );
 
     // The superuser can see it.
