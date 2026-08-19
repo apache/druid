@@ -59,6 +59,7 @@ import org.apache.druid.server.coordinator.rules.ExactProjectionPartialLoadMatch
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalPartialLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
 import org.apache.druid.server.security.Access;
@@ -672,8 +673,8 @@ public class DataSourcesResourceTest
         );
 
     // test dropped
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(loadRule, dropRule))
+    EasyMock.expect(databaseRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(loadRule, dropRule))
             .once();
     EasyMock.replay(databaseRuleManager);
 
@@ -685,8 +686,8 @@ public class DataSourcesResourceTest
 
     // test isn't dropped and no timeline found
     EasyMock.reset(databaseRuleManager);
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(loadRule, dropRule))
+    EasyMock.expect(databaseRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(loadRule, dropRule))
             .once();
     EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
             .andReturn(null)
@@ -717,8 +718,8 @@ public class DataSourcesResourceTest
       }
     };
     EasyMock.reset(inventoryView, databaseRuleManager);
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(loadRule, dropRule))
+    EasyMock.expect(databaseRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(loadRule, dropRule))
             .once();
     EasyMock.expect(inventoryView.getTimeline(new TableDataSource(TestDataSource.WIKI)))
             .andReturn(timeline)
@@ -755,8 +756,8 @@ public class DataSourcesResourceTest
             null,
             auditManager
         );
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(partialRule))
+    EasyMock.expect(databaseRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(partialRule))
             .once();
     EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))
@@ -800,8 +801,8 @@ public class DataSourcesResourceTest
     String interval = "2013-01-01T01:00:00Z/2013-01-01T02:00:00Z";
     DataSegment segment = buildHandoffSegment(TestDataSource.WIKI, Intervals.of(interval), "v1", 1);
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(partialRule))
+    EasyMock.expect(databaseRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(partialRule))
             .once();
     EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of()))
@@ -858,8 +859,8 @@ public class DataSourcesResourceTest
         ImmutableList.of("other_daily")
     );
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(partialRule, dropRule))
+    EasyMock.expect(databaseRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(partialRule, dropRule))
             .once();
     EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment)))
@@ -907,8 +908,8 @@ public class DataSourcesResourceTest
         ImmutableList.of("user_daily")
     );
 
-    EasyMock.expect(databaseRuleManager.getRulesWithDefault(TestDataSource.WIKI))
-            .andReturn(ImmutableList.of(partialRule, dropRule))
+    EasyMock.expect(databaseRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(partialRule, dropRule))
             .once();
     EasyMock.expect(segmentsMetadataManager.getRecentDataSourcesSnapshot())
             .andReturn(DataSourcesSnapshot.fromUsedSegments(ImmutableList.of(segment)))
@@ -922,6 +923,14 @@ public class DataSourcesResourceTest
     Assert.assertFalse((boolean) response.getEntity());
 
     EasyMock.verify(inventoryView, databaseRuleManager, segmentsMetadataManager);
+  }
+
+  /**
+   * Snapshot in which the given rules apply to every datasource.
+   */
+  private static RetentionRulesSnapshot clusterDefaultRules(Rule... rules)
+  {
+    return new RetentionRulesSnapshot(Map.of(), List.of(rules));
   }
 
   private static DataSegment buildHandoffSegment(String dataSource, Interval interval, String version, int partitionNumber)

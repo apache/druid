@@ -24,7 +24,6 @@ import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  */
@@ -36,17 +35,11 @@ public interface MetadataRuleManager
 
   void poll();
 
-  Map<String, List<Rule>> getAllRules();
-
-  List<Rule> getRules(String dataSource);
-
-  List<Rule> getRulesWithDefault(String dataSource);
-
   /**
-   * Immutable snapshot of the rules of all datasources. A caller that needs the rules
-   * of more than one datasource, or of the same datasource more than once, must use a
-   * snapshot so that a concurrent rule update cannot change the answer part way
-   * through.
+   * Current snapshot of the rules of all datasources.
+   * <p>
+   * Using a single snapshot while performing an operation (such as a Coordinator duty run) allows the steps within the
+   * operation to remain consistent with each other, even if the rules are updated concurrently.
    */
   RetentionRulesSnapshot getRulesSnapshot();
 

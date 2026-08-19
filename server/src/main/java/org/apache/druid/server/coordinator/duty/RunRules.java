@@ -112,7 +112,7 @@ public class RunRules implements CoordinatorDuty
     alertForInvalidRules(segmentAssigner);
 
     return params.buildFromExisting()
-                 .withBroadcastDatasources(getBroadcastDatasources(params, rulesSnapshot))
+                 .withBroadcastDatasources(getBroadcastDatasources(params))
                  .build();
   }
 
@@ -156,14 +156,11 @@ public class RunRules implements CoordinatorDuty
     );
   }
 
-  private Set<String> getBroadcastDatasources(
-      DruidCoordinatorRuntimeParams params,
-      RetentionRulesSnapshot rulesSnapshot
-  )
+  private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)
   {
     return params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
                  .map(ImmutableDruidDataSource::getName)
-                 .filter(datasource -> isBroadcastDatasource(datasource, rulesSnapshot))
+                 .filter(datasource -> isBroadcastDatasource(datasource, params.getRetentionRulesSnapshot()))
                  .collect(Collectors.toSet());
   }
 

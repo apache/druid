@@ -66,7 +66,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
     int numQueuedDrops = allServers.stream().mapToInt(
-        server -> dropUnusedSegments(server, params, stats, broadcastStatusByDatasource, rulesSnapshot)
+        server -> dropUnusedSegments(server, params, stats, broadcastStatusByDatasource)
     ).sum();
 
     if (numCancelledLoads > 0 || numQueuedDrops > 0) {
@@ -80,14 +80,13 @@ public class UnloadUnusedSegments implements CoordinatorDuty
       ServerHolder serverHolder,
       DruidCoordinatorRuntimeParams params,
       CoordinatorRunStats stats,
-      Map<String, Boolean> broadcastStatusByDatasource,
-      RetentionRulesSnapshot rulesSnapshot
+      Map<String, Boolean> broadcastStatusByDatasource
   )
   {
     final AtomicInteger numQueuedDrops = new AtomicInteger(0);
     final ImmutableDruidServer server = serverHolder.getServer();
     for (ImmutableDruidDataSource dataSource : server.getDataSources()) {
-      if (shouldSkipUnload(serverHolder, dataSource.getName(), broadcastStatusByDatasource, rulesSnapshot)) {
+      if (shouldSkipUnload(serverHolder, dataSource.getName(), broadcastStatusByDatasource, params.getRetentionRulesSnapshot())) {
         continue;
       }
 

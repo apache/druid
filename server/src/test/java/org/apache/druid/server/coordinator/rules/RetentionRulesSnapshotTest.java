@@ -25,6 +25,7 @@ import org.apache.druid.segment.TestDataSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +80,24 @@ class RetentionRulesSnapshotTest
         rules.getRulesWithDefault(TestDataSource.WIKI)
     );
     Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getRulesWithDefault(TestDataSource.KOALA));
+  }
+
+  @Test
+  void testSnapshotIsUnaffectedByLaterChangesToSourceRuleList()
+  {
+    final List<Rule> wikiRules = new ArrayList<>(List.of(DATASOURCE_RULE));
+    final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(
+        Map.of(TestDataSource.WIKI, wikiRules),
+        List.of(DEFAULT_RULE)
+    );
+
+    wikiRules.clear();
+
+    Assertions.assertEquals(List.of(DATASOURCE_RULE), rules.getRules(TestDataSource.WIKI));
+    Assertions.assertEquals(
+        List.of(DATASOURCE_RULE, DEFAULT_RULE),
+        rules.getRulesWithDefault(TestDataSource.WIKI)
+    );
   }
 
   @Test

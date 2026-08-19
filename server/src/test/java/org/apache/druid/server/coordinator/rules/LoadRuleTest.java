@@ -669,6 +669,48 @@ public class LoadRuleTest
     Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, TestDataSource.WIKI));
   }
 
+  @Test
+  public void test_allReplicasAreDropped_ifAliasTierIsUnresolved()
+  {
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
+
+    DruidCluster cluster = DruidCluster
+        .builder()
+        .addTier(Tier.T2, createServer(Tier.T2, segment), createServer(Tier.T2, segment))
+        .build();
+
+    // With no alias configured, T1 expands to nothing and no real tier is required to hold the segment
+    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        segment,
+        makeCoordinatorRuntimeParams(cluster, Map.of(), segment)
+    );
+
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, TestDataSource.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
+  }
+
+  @Test
+  public void test_onlySurplusIsDropped_ifAliasTierIsResolved()
+  {
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
+
+    DruidCluster cluster = DruidCluster
+        .builder()
+        .addTier(Tier.T2, createServer(Tier.T2, segment), createServer(Tier.T2, segment))
+        .build();
+
+    LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
+    CoordinatorRunStats stats = runRuleAndGetStats(
+        rule,
+        segment,
+        makeCoordinatorRuntimeParams(cluster, ImmutableMap.of(Tier.T1, Set.of(Tier.T2)), segment)
+    );
+
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, TestDataSource.WIKI));
+  }
+
   private DruidCoordinatorRuntimeParams makeCoordinatorRuntimeParams(
       DruidCluster druidCluster,
       Map<String, Set<String>> historicalTierAliases,

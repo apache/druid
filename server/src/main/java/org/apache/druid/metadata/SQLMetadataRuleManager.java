@@ -49,7 +49,6 @@ import org.skife.jdbi.v2.Update;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -130,7 +129,11 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   private final MetadataRuleManagerConfig config;
   private final MetadataStorageTablesConfig dbTables;
   private final IDBI dbi;
-  private final AtomicReference<ImmutableMap<String, List<Rule>>> rules;
+  /**
+   * Snapshot of the rules read by the latest successful {@link #poll()}. Rebuilt only on
+   * poll so that every reader shares the same instance.
+   */
+  private final AtomicReference<RetentionRulesSnapshot> rulesSnapshot;
   private final AuditManager auditManager;
 
   private final Object lock = new Object();
@@ -175,7 +178,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         "If specified, 'druid.manager.rules.defaultRule' must have a non-empty value."
     );
 
-    this.rules = new AtomicReference<>(ImmutableMap.of());
+    this.rulesSnapshot = new AtomicReference<>(RetentionRulesSnapshot.empty());
   }
 
   @Override
@@ -224,7 +227,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       if (currentStartOrder == -1) {
         return;
       }
-      rules.set(ImmutableMap.of());
+      rulesSnapshot.set(RetentionRulesSnapshot.empty());
       currentStartOrder = -1;
       // This call cancels the periodic poll() task, scheduled in start().
       exec.shutdownNow();
@@ -280,7 +283,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       final int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
       log.info("Polled and found [%d] rule(s) for [%d] datasource(s).", newRuleCount, newRules.size());
 
-      rules.set(newRules);
+      rulesSnapshot.set(
+          new RetentionRulesSnapshot(newRules, newRules.getOrDefault(config.getDefaultRule(), List.of()))
+      );
       failStartTimeMs = 0;
     }
     catch (Exception e) {
@@ -299,40 +304,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   }
 
   @Override
-  public Map<String, List<Rule>> getAllRules()
-  {
-    return rules.get();
-  }
-
-  @Override
-  public List<Rule> getRules(final String dataSource)
-  {
-    List<Rule> retVal = rules.get().get(dataSource);
-    return retVal == null ? new ArrayList<>() : retVal;
-  }
-
-  @Override
-  public List<Rule> getRulesWithDefault(final String dataSource)
-  {
-    List<Rule> retVal = new ArrayList<>();
-    Map<String, List<Rule>> theRules = rules.get();
-    if (theRules.get(dataSource) != null) {
-      retVal.addAll(theRules.get(dataSource));
-    }
-    if (theRules.get(config.getDefaultRule()) != null) {
-      retVal.addAll(theRules.get(config.getDefaultRule()));
-    }
-    return retVal;
-  }
-
-  @Override
   public RetentionRulesSnapshot getRulesSnapshot()
   {
-    final ImmutableMap<String, List<Rule>> currentRules = rules.get();
-    return new RetentionRulesSnapshot(
-        currentRules,
-        currentRules.getOrDefault(config.getDefaultRule(), List.of())
-    );
+    return rulesSnapshot.get();
   }
 
   @Override
@@ -347,7 +321,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     final String ruleString;
     try {
       ruleString = jsonMapper.writeValueAsString(newRules);
-      if (ruleString.equals(jsonMapper.writeValueAsString(rules.get().get(dataSource)))) {
+      // Deliberately a nullable lookup: an unknown datasource must not compare equal to an
+      // empty rule list, otherwise setting empty rules on it would silently be a no-op.
+      if (ruleString.equals(jsonMapper.writeValueAsString(rulesSnapshot.get().getAllRules().get(dataSource)))) {
         log.info("Retention rules unchanged for datasource[%s] with rules[%s]", dataSource, ruleString);
         return true;
       }

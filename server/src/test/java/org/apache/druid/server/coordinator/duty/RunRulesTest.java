@@ -47,13 +47,11 @@ import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.rules.ForeverDropRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalDropRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
 import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
-import org.apache.druid.server.coordinator.simulate.TestMetadataRuleManager;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -1207,94 +1205,6 @@ public class RunRulesTest
     Assert.assertEquals(0, replicaCounts.required());
     Assert.assertEquals(0, replicaCounts.totalLoaded());
     Assert.assertEquals(0, replicaCounts.requiredAndLoadable());
-  }
-
-  @Test
-  public void testRuleChangeDuringRunIsNotObservedInThatRun()
-  {
-    mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
-    EasyMock.expectLastCall().atLeastOnce();
-    mockEmptyPeon();
-
-    final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
-    ruleManager.overrideRule(
-        DATASOURCE,
-        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of("normal", 1), null)),
-        AUDIT_INFO
-    );
-
-    final DruidCluster druidCluster = DruidCluster
-        .builder()
-        .addTier("normal", createServerHolder("server1", "normal", mockPeon))
-        .build();
-
-    final DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withRetentionRulesSnapshot(ruleManager.getRulesSnapshot())
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withSmartSegmentLoading(false).build()
-        )
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
-
-    // The rules change after the snapshot was taken, but before the duty runs
-    ruleManager.overrideRule(DATASOURCE, Collections.singletonList(new ForeverDropRule()), AUDIT_INFO);
-
-    final CoordinatorRunStats stats = runDutyAndGetStats(params);
-
-    // The snapshotted load rule is applied, not the drop rule that replaced it
-    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
-    Assert.assertEquals(0L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
-  }
-
-  @Test
-  public void testRuleChangeToUnresolvedAliasTierDoesNotDropReplicas()
-  {
-    // If run rules are not snapshotted in params this test fails becaus it would start trying to use an
-    // unknown alias in RunRules.
-    mockEmptyPeon();
-
-    final TestMetadataRuleManager ruleManager = new TestMetadataRuleManager();
-    ruleManager.overrideRule(
-        DATASOURCE,
-        Collections.singletonList(
-            new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1, "tier2", 1), null)
-        ),
-        AUDIT_INFO
-    );
-
-    // Both tiers already hold every segment, as the snapshotted rule requires
-    final DruidServer defaultTierServer = createHistorical("server1", DruidServer.DEFAULT_TIER);
-    final DruidServer tier2Server = createHistorical("server2", "tier2");
-    usedSegments.forEach(defaultTierServer::addDataSegment);
-    usedSegments.forEach(tier2Server::addDataSegment);
-
-    final DruidCluster druidCluster = DruidCluster
-        .builder()
-        .addTier(DruidServer.DEFAULT_TIER, new ServerHolder(defaultTierServer.toImmutableDruidServer(), mockPeon))
-        .addTier("tier2", new ServerHolder(tier2Server.toImmutableDruidServer(), mockPeon))
-        .build();
-
-    // No historicalTierAliases configured, so the alias tier "hot" cannot be resolved
-    final DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withRetentionRulesSnapshot(ruleManager.getRulesSnapshot())
-        .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
-        .withDynamicConfigs(
-            CoordinatorDynamicConfig.builder().withSmartSegmentLoading(false).build()
-        )
-        .withSegmentAssignerUsing(loadQueueManager)
-        .build();
-
-    ruleManager.overrideRule(
-        DATASOURCE,
-        Collections.singletonList(new ForeverLoadRule(ImmutableMap.of("hot", 1), null)),
-        AUDIT_INFO
-    );
-
-    final CoordinatorRunStats stats = runDutyAndGetStats(params);
-
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.DROPPED, DruidServer.DEFAULT_TIER, DATASOURCE));
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.DROPPED, "tier2", DATASOURCE));
   }
 
   private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)

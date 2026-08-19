@@ -281,7 +281,7 @@ public class UnloadUnusedSegmentsTest
   }
 
   @Test
-  public void test_broadcastStatusComesFromRulesSnapshot()
+  public void test_broadcastSegmentsAreDropped_ifSnapshotHasNoBroadcastRule()
   {
     mockAllServers();
 

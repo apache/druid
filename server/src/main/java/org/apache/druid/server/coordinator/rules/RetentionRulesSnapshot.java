@@ -27,26 +27,20 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Immutable snapshot of the retention rules of every datasource, taken once at the
- * start of a coordinator run and carried in
- * {@link org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams}.
- * <p>
- * Duties must read rules from this snapshot rather than from
- * {@link org.apache.druid.metadata.MetadataRuleManager} directly. That manager swaps
- * its entire rule map as soon as a rule update is submitted, so a duty reading it
- * per segment can apply the old rules to some segments and the new rules to others
- * within a single run. The new rules are then evaluated against values the run has
- * already snapshotted from {@link org.apache.druid.server.coordinator.CoordinatorDynamicConfig},
- * notably {@code historicalTierAliases}: a rule naming a virtual tier is meaningful
- * only together with the alias config that resolves it, and a rule resolving to no
- * tier at all makes every existing replica look unwanted.
+ * Immutable snapshot of the retention rules of every datasource.
  */
 public class RetentionRulesSnapshot
 {
   private static final RetentionRulesSnapshot EMPTY = new RetentionRulesSnapshot(Map.of(), List.of());
 
   /**
-   * Rules of each datasource, already concatenated with {@link #clusterDefaultRules}.
+   * Override rules of each datasource, not including {@link #clusterDefaultRules}.
+   */
+  private final Map<String, List<Rule>> datasourceToRules;
+  /**
+   * Override rules of each datasource, already concatenated with {@link #clusterDefaultRules}.
+   * Contains an entry only for datasources that have override rules, so that datasources
+   * without overrides can share the {@link #clusterDefaultRules} instance.
    */
   private final Map<String, List<Rule>> datasourceToRulesWithDefault;
   private final List<Rule> clusterDefaultRules;
@@ -66,19 +60,45 @@ public class RetentionRulesSnapshot
   {
     this.clusterDefaultRules = List.copyOf(clusterDefaultRules);
 
+    // Copy the rule lists as well as the map spine, so that a caller still holding one of
+    // the source lists cannot mutate this snapshot.
+    final Map<String, List<Rule>> rules = Maps.newHashMapWithExpectedSize(datasourceToRules.size());
     final Map<String, List<Rule>> rulesWithDefault = Maps.newHashMapWithExpectedSize(datasourceToRules.size());
-    datasourceToRules.forEach((datasource, rules) -> {
-      final List<Rule> combined = new ArrayList<>(rules.size() + this.clusterDefaultRules.size());
-      combined.addAll(rules);
-      combined.addAll(this.clusterDefaultRules);
-      rulesWithDefault.put(datasource, Collections.unmodifiableList(combined));
+    datasourceToRules.forEach((datasource, overrideRules) -> {
+      rules.put(datasource, List.copyOf(overrideRules));
+      if (!overrideRules.isEmpty()) {
+        final List<Rule> combinedRules = new ArrayList<>(overrideRules.size() + this.clusterDefaultRules.size());
+        combinedRules.addAll(overrideRules);
+        combinedRules.addAll(this.clusterDefaultRules);
+        rulesWithDefault.put(datasource, Collections.unmodifiableList(combinedRules));
+      }
     });
+    this.datasourceToRules = Map.copyOf(rules);
     this.datasourceToRulesWithDefault = Map.copyOf(rulesWithDefault);
   }
 
   /**
-   * Rules of the given datasource followed by the cluster default rules, or just the
-   * cluster defaults if the datasource has no rules of its own.
+   * Return all rules that exist in the cluster.
+   */
+  public Map<String, List<Rule>> getAllRules()
+  {
+    return datasourceToRules;
+  }
+
+  /**
+   * Override rules configured for this datasource, excluding the cluster defaults.
+   * <p>
+   * No cluster defaults are appended, so a datasource with no overrides returns an empty
+   * list. Use {@link #getRulesWithDefault} to get the rules that actually apply to its segments.
+   */
+  public List<Rule> getRules(String datasource)
+  {
+    return datasourceToRules.getOrDefault(datasource, List.of());
+  }
+
+  /**
+   * All retention rules applicable to segments of this datasource.
+   * The returned list contains the override rules specified for the datasource followed by the cluster default rules.
    */
   public List<Rule> getRulesWithDefault(String datasource)
   {
