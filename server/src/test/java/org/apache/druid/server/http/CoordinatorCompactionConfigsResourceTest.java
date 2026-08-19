@@ -54,6 +54,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
@@ -68,6 +70,7 @@ import java.util.Map;
 import java.util.function.UnaryOperator;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class CoordinatorCompactionConfigsResourceTest
 {
   private static final double DELTA = 1e-9;
