@@ -70,6 +70,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
@@ -228,7 +229,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
    * processing. All these calls must return without heavy contention.
    */
   @Test
-  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testSegmentMetadataRefreshAndInventoryViewAddSegmentAndBrokerServerViewGetTimeline()
       throws InterruptedException, ExecutionException, TimeoutException
   {
@@ -345,7 +346,7 @@ public class CoordinatorSegmentDataCacheConcurrencyTest extends SegmentMetadataC
    * must return without heavy contention.
    */
   @Test
-  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 30000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testSegmentMetadataRefreshAndDruidSchemaGetSegmentMetadata()
       throws InterruptedException, ExecutionException, TimeoutException
   {

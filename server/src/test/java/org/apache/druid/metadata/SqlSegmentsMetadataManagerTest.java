@@ -43,6 +43,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Set;
@@ -180,7 +181,7 @@ public class SqlSegmentsMetadataManagerTest extends SqlSegmentsMetadataManagerTe
   }
 
   @Test
-  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testPollPeriodicallyAndOnDemandInterleave() throws Exception
   {
     publishWikiSegments();

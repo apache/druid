@@ -57,6 +57,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.nio.charset.StandardCharsets;
@@ -266,7 +267,7 @@ public class HeapMemorySegmentMetadataCacheTest
   }
 
   @Test
-  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testReadCacheForDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
   {
     setupTargetWithCaching(SegmentMetadataCache.UsageMode.ALWAYS);

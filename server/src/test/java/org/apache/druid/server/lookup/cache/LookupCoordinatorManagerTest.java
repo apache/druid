@@ -48,6 +48,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import javax.ws.rs.core.Response;
 
@@ -1151,7 +1152,7 @@ public class LookupCoordinatorManagerTest
 
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testLookupManagementLoop() throws Exception
   {
     Map<String, LookupExtractorFactoryMapContainer> lookup1 = ImmutableMap.of(

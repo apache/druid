@@ -31,22 +31,25 @@ import org.apache.druid.initialization.Initialization;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Properties;
 
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class BrokerProcessingModuleTest
 {
   private Injector injector;
   private BrokerProcessingModule target;
-  private AutoCloseable mocks;
   @Mock
   private CacheConfig cacheConfig;
   @Mock
@@ -55,15 +58,8 @@ public class BrokerProcessingModuleTest
   @BeforeEach
   public void setUp()
   {
-    mocks = MockitoAnnotations.openMocks(this);
     target = new BrokerProcessingModule();
     injector = makeInjector(new Properties());
-  }
-
-  @AfterEach
-  public void tearDown() throws Exception
-  {
-    mocks.close();
   }
 
   @Test

@@ -37,16 +37,20 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.STRICT_STUBS)
 public class StorageNodeModuleTest
 {
   private static final boolean INJECT_SERVER_TYPE_CONFIG = true;
@@ -61,24 +65,16 @@ public class StorageNodeModuleTest
   private StorageLocationConfig storageLocation;
 
   private StorageNodeModule target;
-  private AutoCloseable mocks;
 
   @BeforeEach
   public void setUp()
   {
-    mocks = MockitoAnnotations.openMocks(this);
     self = new DruidNode("test", "test-host", true, 80, 443, false, true);
     serverTypeConfig = new ServerTypeConfig(ServerType.HISTORICAL);
 
-    Mockito.when(segmentLoaderConfig.getLocations()).thenReturn(Collections.singletonList(storageLocation));
+    Mockito.lenient().when(segmentLoaderConfig.getLocations()).thenReturn(Collections.singletonList(storageLocation));
 
     target = new StorageNodeModule();
-  }
-
-  @AfterEach
-  public void tearDown() throws Exception
-  {
-    mocks.close();
   }
 
   @Test
