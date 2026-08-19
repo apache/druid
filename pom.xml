@@ -131,7 +131,7 @@
         <testcontainers.version>2.0.5</testcontainers.version>
         <hibernate-validator.version>9.1.3.Final</hibernate-validator.version>
         <httpclient.version>4.5.14</httpclient.version>
-        <okhttp.version>5.4.0</okhttp.version>
+        <okhttp.version>5.5.0</okhttp.version>
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.6</zookeeper.version>
         <checkerframework.version>4.2.2</checkerframework.version>
