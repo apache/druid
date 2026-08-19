@@ -35,6 +35,7 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.JedisCluster;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 
 public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
@@ -65,7 +66,10 @@ public class RedisClusterCacheTest extends CacheTestBase<RedisClusterCache>
     ServiceOptions options = ServiceOptions.defaultOptions().withClusterModeEnabled();
     server = RedisServer.newRedisServer().setOptions(options).start();
     HostAndPort hostAndPort = new HostAndPort(server.getHost(), server.getBindPort());
-    JedisCluster cluster = new JedisCluster(hostAndPort);
+    JedisCluster cluster = new JedisCluster(
+        Collections.singleton(hostAndPort),
+        RedisCacheFactory.buildClientConfig(cacheConfig, cacheConfig.getDatabase())
+    );
     cache = new RedisClusterCache(cluster, cacheConfig);
   }
 

@@ -110,6 +110,7 @@ public class RedisCacheFactory
         .socketTimeoutMillis(config.getTimeout().getMillisecondsAsInt())
         .password(config.getPassword() == null ? null : config.getPassword().getPassword())
         .database(database)
+        .serverDefaultProtocol()
         .ssl(config.getEnableTls());
 
     if (config.getEnableTls()) {
