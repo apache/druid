@@ -151,7 +151,8 @@ public class SegmentLoadQueueManager
                 && !peonA.getSegmentsToDrop().contains(segment)
                 && (taskMaster.isHttpLoading()
                     || serverInventoryView.isSegmentLoadedByServer(serverNameB, segment))) {
-              peonA.unmarkSegmentToDrop(segment);
+              // dropSegment retires the MOVE_FROM mark atomically with queueing the DROP; unmarking here first would
+              // leave a window in which the segment is in neither collection. See apache/druid#18764.
               peonA.dropSegment(segment, moveFinishCallback);
             } else {
               moveFinishCallback.execute(success);

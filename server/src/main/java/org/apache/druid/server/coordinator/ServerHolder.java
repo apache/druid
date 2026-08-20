@@ -23,6 +23,7 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
+import org.apache.druid.server.coordinator.loading.LoadQueueSnapshot;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentHolder;
@@ -32,6 +33,7 @@ import org.apache.druid.timeline.SegmentId;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -77,6 +79,13 @@ public class ServerHolder implements Comparable<ServerHolder>
    * Do not remove entries on load/drop success or failure during the run.
    */
   private final Map<DataSegment, SegmentAction> queuedSegments = new HashMap<>();
+
+  /**
+   * The {@link SegmentAction#MOVE_FROM} entries of {@link #queuedSegments}, kept as their own set so that
+   * {@link org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategy} need not take the peon's lock
+   * once per candidate server per segment.
+   */
+  private final Set<DataSegment> movingFromSegments = new HashSet<>();
 
   /**
    * Tracks the {@link PartialLoadProfile} for in-flight load operations on this server. Populated from the peon's
@@ -132,6 +141,34 @@ public class ServerHolder implements Comparable<ServerHolder>
       int maxLifetimeInQueue
   )
   {
+    this(
+        server,
+        peon,
+        // No inventory snapshot to reconcile against here; production goes through the overload below.
+        new LoadQueueSnapshot(peon.getSegmentsInQueue(), peon.getSegmentsMarkedToDrop()),
+        isDecommissioning,
+        isUnmanaged,
+        maxSegmentsInLoadQueue,
+        maxLifetimeInQueue
+    );
+  }
+
+  /**
+   * Creates a new ServerHolder from a pre-captured {@link LoadQueueSnapshot} rather than reading the peon directly,
+   * so that the queue and the server's segment set stay mutually consistent. See apache/druid#18764.
+   *
+   * @param queueSnapshot Atomically captured pending work for this server.
+   */
+  public ServerHolder(
+      ImmutableDruidServer server,
+      LoadQueuePeon peon,
+      LoadQueueSnapshot queueSnapshot,
+      boolean isDecommissioning,
+      boolean isUnmanaged,
+      int maxSegmentsInLoadQueue,
+      int maxLifetimeInQueue
+  )
+  {
     this.server = server;
     this.peon = peon;
     this.isDecommissioning = isDecommissioning;
@@ -144,13 +181,14 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     final AtomicInteger movingSegmentCount = new AtomicInteger();
     final AtomicInteger loadingReplicaCount = new AtomicInteger();
-    initializeQueuedSegments(movingSegmentCount, loadingReplicaCount);
+    initializeQueuedSegments(queueSnapshot, movingSegmentCount, loadingReplicaCount);
 
     this.movingSegmentCount = movingSegmentCount.get();
     this.loadingReplicaCount = loadingReplicaCount.get();
   }
 
   private void initializeQueuedSegments(
+      LoadQueueSnapshot queueSnapshot,
       AtomicInteger movingSegmentCount,
       AtomicInteger loadingReplicaCount
   )
@@ -160,7 +198,12 @@ public class ServerHolder implements Comparable<ServerHolder>
     }
 
     final List<SegmentHolder> expiredSegments = new ArrayList<>();
-    for (SegmentHolder holder : peon.getSegmentsInQueue()) {
+    for (SegmentHolder holder : queueSnapshot.getSegmentsInQueue()) {
+      // HttpLoadQueuePeon already collapses a segment to one holder; this guards other snapshot sources that do not.
+      if (queuedSegments.containsKey(holder.getSegment())) {
+        continue;
+      }
+
       int runsInQueue = holder.incrementAndGetRunsInQueue();
       if (runsInQueue > maxLifetimeInQueue) {
         expiredSegments.add(holder);
@@ -180,8 +223,11 @@ public class ServerHolder implements Comparable<ServerHolder>
       }
     }
 
-    for (DataSegment segment : peon.getSegmentsMarkedToDrop()) {
-      addToQueuedSegments(segment, SegmentAction.MOVE_FROM);
+    for (DataSegment segment : queueSnapshot.getSegmentsMarkedToDrop()) {
+      // A MOVE_FROM that has already graduated to a queued DROP appears in both halves; the DROP is the later state.
+      if (!queuedSegments.containsKey(segment)) {
+        addToQueuedSegments(segment, SegmentAction.MOVE_FROM);
+      }
     }
 
     if (!expiredSegments.isEmpty()) {
@@ -200,6 +246,17 @@ public class ServerHolder implements Comparable<ServerHolder>
   public ImmutableDruidServer getServer()
   {
     return server;
+  }
+
+  /**
+   * Segments this server is expected to drop once their move completes: those the snapshot arrived with, plus any
+   * move started during this run.
+   *
+   * @see LoadQueuePeon#getSegmentsMarkedToDrop()
+   */
+  public Set<DataSegment> getSegmentsMarkedToDrop()
+  {
+    return Collections.unmodifiableSet(movingFromSegments);
   }
 
   public LoadQueuePeon getPeon()
@@ -505,6 +562,9 @@ public class ServerHolder implements Comparable<ServerHolder>
   private void addToQueuedSegments(DataSegment segment, SegmentAction action)
   {
     queuedSegments.put(segment, action);
+    if (action == SegmentAction.MOVE_FROM) {
+      movingFromSegments.add(segment);
+    }
 
     // Add to projected if load is started, remove from projected if drop has started
     if (action.isLoad()) {
@@ -523,6 +583,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   private void removeFromQueuedSegments(DataSegment segment, SegmentAction action)
   {
     queuedSegments.remove(segment);
+    movingFromSegments.remove(segment);
 
     if (action.isLoad()) {
       projectedSegmentCounts.removeSegment(segment);

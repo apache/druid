@@ -28,7 +28,6 @@ import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
-import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.discovery.DruidLeaderSelector;
@@ -870,7 +869,7 @@ public class DruidCoordinatorTest
     EasyMock.expect(loadQueueTaskMaster.getAllPeons()).andReturn(peonMap).anyTimes();
 
     EasyMock.expect(loadQueueTaskMaster.getPeonForServer(EasyMock.anyObject())).andAnswer(
-        () -> peonMap.get(((ImmutableDruidServer) EasyMock.getCurrentArgument(0)).getName())
+        () -> peonMap.get((String) EasyMock.getCurrentArgument(0))
     ).anyTimes();
   }
   

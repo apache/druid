@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.loading;
 
+import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
@@ -47,6 +48,29 @@ public interface LoadQueuePeon
   void unmarkSegmentToDrop(DataSegment segmentToLoad);
 
   Set<DataSegment> getSegmentsMarkedToDrop();
+
+  /**
+   * Captures {@link #getSegmentsInQueue()} and {@link #getSegmentsMarkedToDrop()} atomically. The default
+   * implementation is not atomic and exists only for simple test peons.
+   *
+   * @see LoadQueueSnapshot
+   */
+  default LoadQueueSnapshot getQueueSnapshot()
+  {
+    return new LoadQueueSnapshot(getSegmentsInQueue(), getSegmentsMarkedToDrop());
+  }
+
+  /**
+   * Captures the queue as of {@code inventory}, retiring operations that {@code inventory} already reflects. A server
+   * acknowledges a request long before the Coordinator's inventory view syncs, so acknowledged operations must keep
+   * being reported as pending until then, or the replica briefly appears in neither. See apache/druid#18764.
+   *
+   * @param inventory Segment set for this server, as the caller will use it.
+   */
+  default LoadQueueSnapshot getQueueSnapshot(ImmutableDruidServer inventory)
+  {
+    return getQueueSnapshot();
+  }
 
   void loadSegment(DataSegment segment, SegmentAction action, LoadPeonCallback callback);
 
