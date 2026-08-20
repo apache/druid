@@ -174,7 +174,7 @@ public class ServerConfig
 
   @JsonProperty
   @NotNull
-  private Period gracefulShutdownTimeout = Period.ZERO;
+  private Period gracefulShutdownTimeout = Period.seconds(30);
 
   @JsonProperty
   @NotNull

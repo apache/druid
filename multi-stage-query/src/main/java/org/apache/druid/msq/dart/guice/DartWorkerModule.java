@@ -64,9 +64,11 @@ import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import java.io.File;
+import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
@@ -127,7 +129,8 @@ public class DartWorkerModule implements DruidModule
         final DruidProcessingConfig processingConfig,
         @Dart final ResourcePermissionMapper permissionMapper,
         final MemoryIntrospector memoryIntrospector,
-        final AuthorizerMapper authorizerMapper
+        final AuthorizerMapper authorizerMapper,
+        final ServerConfig serverConfig
     )
     {
       final ExecutorService exec = Execs.multiThreaded(memoryIntrospector.numTasksInJvm(), "dart-worker-%s");
@@ -139,7 +142,9 @@ public class DartWorkerModule implements DruidModule
           discoveryProvider,
           permissionMapper,
           authorizerMapper,
-          baseTempDir
+          serverConfig,
+          baseTempDir,
+          Clock.systemUTC()
       );
     }
 
