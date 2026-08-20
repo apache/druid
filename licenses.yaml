@@ -1880,6 +1880,8 @@ license_name: Apache License version 2.0
 version: 5.19.1
 libraries:
   - net.java.dev.jna: jna
+  - net.java.dev.jna: jna-jpms
+  - net.java.dev.jna: jna-platform-jpms
 
 ---
 
@@ -2706,9 +2708,10 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 6.9.1
+version: 7.4.4
 libraries:
   - com.github.oshi: oshi-core
+  - com.github.oshi: oshi-common
 license_file_path: licenses/bin/oshi.MIT
 
 ---
