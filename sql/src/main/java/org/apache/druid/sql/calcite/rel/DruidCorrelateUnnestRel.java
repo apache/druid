@@ -50,6 +50,7 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -282,21 +283,29 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
       final Filter whereFilter = newLeftDruidRel.getPartialDruidQuery().getWhereFilter();
       final RowSignature leftSignature = DruidRels.dataSourceSignature(newLeftDruidRel);
       if (whereFilter == null) {
-        if (computeLeftRequiresSubquery(newLeftDruidRel)) {
+        if (updatedLeftQuery.getQuery() instanceof GroupByQuery) {
+          // Left side has grouping: use the full query as a subquery.
+          leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
+        } else if (computeLeftRequiresSubquery(newLeftDruidRel)) {
           // Left side is doing more than simple scan: generate a subquery.
           leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
         } else {
           leftDataSource1 = updatedLeftQuery.getDataSource();
         }
       } else {
-        final DimFilter dimFilter = Filtration.create(DruidQuery.getDimFilter(
-                                                  getPlannerContext(),
-                                                  leftSignature,
-                                                  null,
-                                                  whereFilter
-                                              ))
-                                              .optimizeFilterOnly(leftSignature).getDimFilter();
-        leftDataSource1 = FilteredDataSource.create(updatedLeftQuery.getDataSource(), dimFilter);
+        if (updatedLeftQuery.getQuery() instanceof GroupByQuery) {
+          // Left side has grouping: use the full query as a subquery (the filter is already part of the query).
+          leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
+        } else {
+          final DimFilter dimFilter = Filtration.create(DruidQuery.getDimFilter(
+                                                    getPlannerContext(),
+                                                    leftSignature,
+                                                    null,
+                                                    whereFilter
+                                                ))
+                                                .optimizeFilterOnly(leftSignature).getDimFilter();
+          leftDataSource1 = FilteredDataSource.create(updatedLeftQuery.getDataSource(), dimFilter);
+        }
       }
     } else {
       leftDataSource1 = new QueryDataSource(updatedLeftQuery.getQuery());
