@@ -197,10 +197,11 @@ public interface ColumnarFloats extends Closeable
           ColumnarFloats.this.get(floatVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
-          if (offsets[offsets.length - 1] < offsetMark) {
+          final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
+          if (maxOffset < offsetMark) {
             nullIterator = nullValueBitmap.peekableIterator();
           }
-          offsetMark = offsets[offsets.length - 1];
+          offsetMark = maxOffset;
           ColumnarFloats.this.get(floatVector, offsets, offset.getCurrentVectorSize());
         }
 

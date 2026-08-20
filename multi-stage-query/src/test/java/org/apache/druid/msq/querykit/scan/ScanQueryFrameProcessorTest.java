@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit.scan;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -39,11 +40,14 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.querykit.ReadableInput;
 import org.apache.druid.msq.querykit.SegmentReferenceHolder;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
@@ -74,7 +78,6 @@ import org.junit.jupiter.api.Assertions;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -105,74 +108,47 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
               .columns(cursorFactory.getRowSignature().getColumnNames())
               .build();
 
-    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
-
-    // Limit output frames to 1 row to ensure we test edge cases
-    final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
-        FrameWriters.makeFrameWriterFactory(
-            FrameType.latestRowBased(),
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-            cursorFactory.getRowSignature(),
-            Collections.emptyList(),
-            false
-        ),
-        1
-    );
-
-    final ReferenceCountedSegmentProvider segmentReferenceProvider =
-        new ReferenceCountedSegmentProvider(new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")));
-    Assertions.assertEquals(0, segmentReferenceProvider.getNumReferences());
-    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
-        query,
-        null,
-        new DefaultObjectMapper(),
-        ReadableInput.segment(
-            new SegmentReferenceHolder(
-                new SegmentReference(
-                    SegmentId.dummy("test").toDescriptor(),
-                    segmentReferenceProvider.acquireReference(),
-                    null
-                ),
-                null
-            )
-        ),
-        SegmentMapFunction.IDENTITY,
-        new ResourceHolder<>()
-        {
-          @Override
-          public WritableFrameChannel get()
-          {
-            return outputChannel.writable();
-          }
-
-          @Override
-          public void close()
-          {
-            try {
-              outputChannel.writable().close();
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          }
-        },
-        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
-    );
-
-    ListenableFuture<Object> retVal = exec.runFully(processor, null);
-
-    final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
-        outputChannel.readable(),
-        FrameReader.create(cursorFactory.getRowSignature())
-    );
-
     FrameTestUtil.assertRowsEqual(
         FrameTestUtil.readRowsFromCursorFactory(cursorFactory, cursorFactory.getRowSignature(), false),
-        rowsFromProcessor
+        Sequences.simple(runScanOverSegment(queryableIndex, query))
     );
+  }
 
-    Assert.assertEquals(Unit.instance(), retVal.get());
-    Assertions.assertEquals(0, segmentReferenceProvider.getNumReferences()); // Segment reference was closed
+  /**
+   * Verifies that a time-descending scan produces the same rows whether or not vectorization is used.
+   */
+  @Test
+  public void test_runWithSegments_descendingMatchesNonVectorized() throws Exception
+  {
+    final QueryableIndex queryableIndex = TestIndex.getMMappedTestIndex();
+
+    final Druids.ScanQueryBuilder baseBuilder =
+        Druids.newScanQueryBuilder()
+              .dataSource("test")
+              .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000-01-01T00Z/2030-01-01T00Z"))))
+              .columns("__time", "market", "quality", "index")
+              .order(Order.DESCENDING);
+
+    final ScanQuery nonVectorizedQuery =
+        baseBuilder.context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, "false")).build();
+    final ScanQuery vectorizedQuery =
+        baseBuilder.context(ImmutableMap.of(QueryContexts.VECTORIZE_KEY, "force", QueryContexts.VECTOR_SIZE_KEY, 7))
+                   .build();
+
+    final List<List<Object>> nonVectorizedRows = runScanOverSegment(queryableIndex, nonVectorizedQuery);
+    final List<List<Object>> vectorizedRows = runScanOverSegment(queryableIndex, vectorizedQuery);
+
+    // The vectorized descending scan must match the non-vectorized descending scan exactly.
+    Assert.assertFalse(vectorizedRows.isEmpty());
+    Assert.assertEquals(nonVectorizedRows, vectorizedRows);
+
+    // Sanity check: __time (column 0) is non-increasing.
+    long previousTime = Long.MAX_VALUE;
+    for (final List<Object> row : vectorizedRows) {
+      final long time = ((Number) row.getFirst()).longValue();
+      Assert.assertTrue("descending __time", time <= previousTime);
+      previousTime = time;
+    }
   }
 
   @Test
@@ -231,25 +207,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         new DefaultObjectMapper(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), 0, 0),
         SegmentMapFunction.IDENTITY,
-        new ResourceHolder<>()
-        {
-          @Override
-          public WritableFrameChannel get()
-          {
-            return outputChannel.writable();
-          }
-
-          @Override
-          public void close()
-          {
-            try {
-              outputChannel.writable().close();
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          }
-        },
+        ResourceHolder.fromCloseable(outputChannel.writable()),
         new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
     );
 
@@ -399,25 +357,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
             )
         ),
         SegmentMapFunction.IDENTITY,
-        new ResourceHolder<>()
-        {
-          @Override
-          public WritableFrameChannel get()
-          {
-            return outputChannel.writable();
-          }
-
-          @Override
-          public void close()
-          {
-            try {
-              outputChannel.writable().close();
-            }
-            catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          }
-        },
+        ResourceHolder.fromCloseable(outputChannel.writable()),
         new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
     );
 
@@ -442,5 +382,58 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     );
 
     Assert.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
+  }
+
+  private List<List<Object>> runScanOverSegment(final QueryableIndex queryableIndex, final ScanQuery query)
+      throws Exception
+  {
+    final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
+    final RowSignature signature = cursorFactory.getRowSignature();
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+
+    // Limit output frames to 1 row to ensure we test edge cases
+    final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
+        FrameWriters.makeFrameWriterFactory(
+            FrameType.latestRowBased(),
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            signature,
+            Collections.emptyList(),
+            false
+        ),
+        1
+    );
+
+    final ReferenceCountedSegmentProvider segmentReferenceProvider =
+        new ReferenceCountedSegmentProvider(new QueryableIndexSegment(queryableIndex, SegmentId.dummy("test")));
+    final ScanQueryFrameProcessor processor = new ScanQueryFrameProcessor(
+        query,
+        null,
+        new DefaultObjectMapper(),
+        ReadableInput.segment(
+            new SegmentReferenceHolder(
+                new SegmentReference(
+                    SegmentId.dummy("test").toDescriptor(),
+                    segmentReferenceProvider.acquireReference(),
+                    null
+                ),
+                null
+            )
+        ),
+        SegmentMapFunction.IDENTITY,
+        ResourceHolder.fromCloseable(outputChannel.writable()),
+        new ReferenceCountingResourceHolder<>(frameWriterFactory, () -> {})
+    );
+
+    final ListenableFuture<Object> retVal = exec.runFully(processor, null);
+
+    final List<List<Object>> rows = FrameTestUtil.readRowsFromFrameChannel(
+        outputChannel.readable(),
+        FrameReader.create(signature)
+    ).toList();
+
+    Assert.assertEquals(Unit.instance(), retVal.get());
+    Assertions.assertEquals(0, segmentReferenceProvider.getNumReferences()); // Segment reference was closed
+    return rows;
   }
 }
