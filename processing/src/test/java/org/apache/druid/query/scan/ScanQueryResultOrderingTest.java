@@ -48,8 +48,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
@@ -66,8 +65,6 @@ import java.util.stream.IntStream;
  * <p>
  * Ensures that we have run-to-run stability of result order, which is important for offset-based pagination.
  */
-@ParameterizedClass
-@MethodSource("constructorFeeder")
 public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
 {
   private static final String DATASOURCE = "datasource";
@@ -137,10 +134,10 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
       )
   );
 
-  private final List<Integer> segmentToServerMap;
-  private final int limit;
-  private final int batchSize;
-  private final int maxRowsQueuedForOrdering;
+  private List<Integer> segmentToServerMap;
+  private int limit;
+  private int batchSize;
+  private int maxRowsQueuedForOrdering;
 
   private ScanQueryRunnerFactory queryRunnerFactory;
   private List<QueryRunner<ScanResultValue>> segmentRunners;
@@ -175,19 +172,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
     ).stream().map(args -> args.toArray(new Object[0])).collect(Collectors.toList());
   }
 
-  public ScanQueryResultOrderingTest(
-      final List<Integer> segmentToServerMap,
-      final int limit,
-      final int batchSize,
-      final int maxRowsQueuedForOrdering
-  )
-  {
-    this.segmentToServerMap = segmentToServerMap;
-    this.limit = limit;
-    this.batchSize = batchSize;
-    this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
-  }
-
   @BeforeEach
   public void setUp()
   {
@@ -200,8 +184,20 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
     segmentRunners = SEGMENTS.stream().map(queryRunnerFactory::createRunner).collect(Collectors.toList());
   }
 
-  @Test
-  public void testOrderNone()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testOrderNone(
+      final List<Integer> segmentToServerMap,
+      final int limit,
+      final int batchSize,
+      final int maxRowsQueuedForOrdering
+  )
+  {
+    configure(segmentToServerMap, limit, batchSize, maxRowsQueuedForOrdering);
+    runTestOrderNone();
+  }
+
+  private void runTestOrderNone()
   {
     assertResultsEquals(
         Druids.newScanQueryBuilder()
@@ -234,8 +230,20 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testOrderTimeAscending()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testOrderTimeAscending(
+      final List<Integer> segmentToServerMap,
+      final int limit,
+      final int batchSize,
+      final int maxRowsQueuedForOrdering
+  )
+  {
+    configure(segmentToServerMap, limit, batchSize, maxRowsQueuedForOrdering);
+    runTestOrderTimeAscending();
+  }
+
+  private void runTestOrderTimeAscending()
   {
     assertResultsEquals(
         Druids.newScanQueryBuilder()
@@ -268,8 +276,20 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testOrderTimeDescending()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testOrderTimeDescending(
+      final List<Integer> segmentToServerMap,
+      final int limit,
+      final int batchSize,
+      final int maxRowsQueuedForOrdering
+  )
+  {
+    configure(segmentToServerMap, limit, batchSize, maxRowsQueuedForOrdering);
+    runTestOrderTimeDescending();
+  }
+
+  private void runTestOrderTimeDescending()
   {
     assertResultsEquals(
         Druids.newScanQueryBuilder()
@@ -300,6 +320,19 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
             101
         )
     );
+  }
+
+  private void configure(
+      final List<Integer> segmentToServerMap,
+      final int limit,
+      final int batchSize,
+      final int maxRowsQueuedForOrdering
+  )
+  {
+    this.segmentToServerMap = segmentToServerMap;
+    this.limit = limit;
+    this.batchSize = batchSize;
+    this.maxRowsQueuedForOrdering = maxRowsQueuedForOrdering;
   }
 
   private void assertResultsEquals(final ScanQuery query, final List<Integer> expectedResults)
