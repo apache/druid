@@ -232,7 +232,7 @@ public abstract class CoordinatorSimulationBaseTest implements
     static final String SUCCESS_ACTIONS = "segment/loadQueue/success";
     static final String CANCELLED_ACTIONS = "segment/loadQueue/cancelled";
 
-    static final String OVERSHADOWED_COUNT = "segment/overshadowed/count";
+    static final String OVERSHADOWED_COUNT = "segment/overShadowed/count";
   }
 
   static class Segments
