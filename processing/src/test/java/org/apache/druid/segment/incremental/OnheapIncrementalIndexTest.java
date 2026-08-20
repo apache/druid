@@ -40,8 +40,8 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,7 +55,7 @@ public class OnheapIncrementalIndexTest
   public void testSpecSerde() throws JsonProcessingException
   {
     OnheapIncrementalIndex.Spec spec = new OnheapIncrementalIndex.Spec(true);
-    Assert.assertEquals(spec, MAPPER.readValue(MAPPER.writeValueAsString(spec), OnheapIncrementalIndex.Spec.class));
+    Assertions.assertEquals(spec, MAPPER.readValue(MAPPER.writeValueAsString(spec), OnheapIncrementalIndex.Spec.class));
   }
 
   @Test
@@ -85,7 +85,7 @@ public class OnheapIncrementalIndexTest
                                                                        .withProjections(List.of(projectionSpec))
                                                                        .build())
                                          .buildIncrementalIndex();
-    Assert.assertNotNull(index.getProjection("proj"));
+    Assertions.assertNotNull(index.getProjection("proj"));
   }
 
   @Test
@@ -96,7 +96,7 @@ public class OnheapIncrementalIndexTest
     AggregatorFactory aggregatorFactory = new DoubleSumAggregatorFactory("double", "double");
     AggregateProjectionSpec.Builder bob = new AggregateProjectionSpec.Builder().aggregators(aggregatorFactory);
     // act & assert
-    DruidException e = Assert.assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> IndexBuilder.create()
                           .schema(IncrementalIndexSchema.builder()
@@ -112,8 +112,8 @@ public class OnheapIncrementalIndexTest
                                                         .build())
                           .buildIncrementalIndex()
     );
-    Assert.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
-    Assert.assertEquals("duplicate projection[proj]", e.getMessage());
+    Assertions.assertEquals(DruidException.Category.DEFENSIVE, e.getCategory());
+    Assertions.assertEquals("duplicate projection[proj]", e.getMessage());
   }
 
   @Test
@@ -127,7 +127,7 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testBadProjectionMismatchedDimensionTypes()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () ->
             IndexBuilder.create()
@@ -153,7 +153,7 @@ public class OnheapIncrementalIndexTest
                                                   .build()
                         ).buildIncrementalIndex()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "projection[mismatched dims] contains dimension[string] with different type[LONG] than type[STRING] in base table",
         t.getMessage()
     );
@@ -162,7 +162,7 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testBadProjectionDimensionNoVirtualColumnOrBaseTable()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () ->
             IndexBuilder.create()
@@ -199,7 +199,7 @@ public class OnheapIncrementalIndexTest
                                                   .build()
                         ).buildIncrementalIndex()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "projection[sad grouping column] contains dimension[missing] that is not present on the base table or a virtual column",
         t.getMessage()
     );
@@ -208,7 +208,7 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testBadProjectionVirtualColumnNoDimension()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () ->
             IndexBuilder.create()
@@ -244,7 +244,7 @@ public class OnheapIncrementalIndexTest
                                                   .build()
                         ).buildIncrementalIndex()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "projection[sad virtual column] contains virtual column[v0] that references an input[double] which is not a dimension in the base table",
         t.getMessage()
     );
@@ -253,7 +253,7 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testBadProjectionRollupMismatchedAggType()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () ->
             IndexBuilder.create()
@@ -290,7 +290,7 @@ public class OnheapIncrementalIndexTest
                                                   .build()
                         ).buildIncrementalIndex()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "projection[mismatched agg] contains aggregator[sum_double] that is not the 'combining' aggregator of base table aggregator[sum_double]",
         t.getMessage()
     );
@@ -299,7 +299,7 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testBadProjectionRollupBadAggInput()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () ->
             IndexBuilder.create()
@@ -340,7 +340,7 @@ public class OnheapIncrementalIndexTest
                                                   .build()
                         ).buildIncrementalIndex()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "projection[renamed agg] contains aggregator[sum_double] that references aggregator[double] in base table but this is not supported, projection aggregators which reference base table aggregates must be 'combining' aggregators with the same name as the base table column",
         t.getMessage()
     );
@@ -349,7 +349,7 @@ public class OnheapIncrementalIndexTest
   @Test
   public void testBadProjectionVirtualColumnAggInput()
   {
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () ->
             IndexBuilder.create()
@@ -391,7 +391,7 @@ public class OnheapIncrementalIndexTest
                                                   .build()
                         ).buildIncrementalIndex()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "projection[sad agg virtual column] contains aggregator[v0_sum] that is has required field[v0] which is a virtual column, this is not yet supported",
         t.getMessage()
     );
@@ -442,13 +442,13 @@ public class OnheapIncrementalIndexTest
             )
         )
     );
-    Assert.assertTrue(addResult.isRowAdded());
+    Assertions.assertTrue(addResult.isRowAdded());
 
     final Map<String, Object> rowMap = new LinkedHashMap<>();
     rowMap.put("string", "hello");
     rowMap.put("long", 10L);
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> index.add(
             new MapBasedInputRow(
@@ -459,7 +459,7 @@ public class OnheapIncrementalIndexTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot add row[{timestamp="
         + outOfRangeTimestamp
         + ", event={string=hello, long=10}, dimensions=[string, long]}] because it is below the minTimestamp["
@@ -487,7 +487,7 @@ public class OnheapIncrementalIndexTest
                                                                         .build())
                                           .buildIncrementalIndex();
 
-    t = Assert.assertThrows(
+    t = Assertions.assertThrows(
         DruidException.class,
         () -> index2.add(
             new MapBasedInputRow(
@@ -498,7 +498,7 @@ public class OnheapIncrementalIndexTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "Cannot add row[{timestamp="
         + minTimestamp
         + ", event={string=hello, long=10}, dimensions=[string, long]}] to projection[proj] because projection effective timestamp["

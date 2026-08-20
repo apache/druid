@@ -25,6 +25,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -36,8 +38,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;

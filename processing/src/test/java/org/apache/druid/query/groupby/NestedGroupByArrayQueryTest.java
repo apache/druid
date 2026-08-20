@@ -39,14 +39,14 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -57,28 +57,30 @@ import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class NestedGroupByArrayQueryTest
 {
   private static final Logger LOG = new Logger(NestedDataGroupByQueryTest.class);
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
 
   private final Closer closer;
   private final QueryContexts.Vectorize vectorize;
   private final AggregationTestHelper helper;
-  private final BiFunction<TemporaryFolder, Closer, List<Segment>> segmentsGenerator;
+  private final BiFunction<TemporaryFolderExtension, Closer, List<Segment>> segmentsGenerator;
 
   public NestedGroupByArrayQueryTest(
       GroupByQueryConfig config,
-      BiFunction<TemporaryFolder, Closer, List<Segment>> segmentGenerator,
+      BiFunction<TemporaryFolderExtension, Closer, List<Segment>> segmentGenerator,
       String vectorize
   )
   {
     BuiltInTypesModule.registerHandlersAndSerde();
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
-    this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
         BuiltInTypesModule.getJacksonModulesList(),
         config,
         tempFolder
@@ -94,16 +96,14 @@ public class NestedGroupByArrayQueryTest
         QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize.toString()
     );
   }
-
-  @Parameterized.Parameters(name = "config = {0}, segments = {1}, vectorize = {2}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
-    final List<BiFunction<TemporaryFolder, Closer, List<Segment>>> segmentsGenerators =
-        NestedDataTestUtils.getSegmentGenerators(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
+    final List<BiFunction<TemporaryFolderExtension, Closer, List<Segment>>> segmentsGenerators =
+        NestedDataTestUtils.getSegmentGeneratorsWithTempDir(NestedDataTestUtils.ARRAY_TYPES_DATA_FILE);
 
     for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
-      for (BiFunction<TemporaryFolder, Closer, List<Segment>> generatorFn : segmentsGenerators) {
+      for (BiFunction<TemporaryFolderExtension, Closer, List<Segment>> generatorFn : segmentsGenerators) {
         // skip force because arrays don't really support vectorize engine, but we want the coverage for once they do...
         for (String vectorize : new String[]{"false", "true"}) {
           constructors.add(new Object[]{config, generatorFn, vectorize});
@@ -113,12 +113,12 @@ public class NestedGroupByArrayQueryTest
     return constructors;
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     closer.close();
@@ -557,21 +557,21 @@ public class NestedGroupByArrayQueryTest
                )
                .collect(Collectors.toList());
     LOG.info("results:\n%s", serdeAndBack.stream().map(ResultRow::toString).collect(Collectors.joining("\n")));
-    Assert.assertEquals(expected.size(), serdeAndBack.size());
+    Assertions.assertEquals(expected.size(), serdeAndBack.size());
     for (int i = 0; i < expected.size(); i++) {
       final Object[] resultRow = serdeAndBack.get(i).getArray();
-      Assert.assertEquals(expected.get(i).length, resultRow.length);
+      Assertions.assertEquals(expected.get(i).length, resultRow.length);
       for (int j = 0; j < resultRow.length; j++) {
         if (expected.get(i)[j] == null) {
-          Assert.assertNull(resultRow[j]);
+          Assertions.assertNull(resultRow[j]);
         } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.DOUBLE)).orElse(false)) {
-          Assert.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
+          Assertions.assertEquals((Double) expected.get(i)[j], (Double) resultRow[j], 0.01);
         } else if (rowSignature.getColumnType(j).map(t -> t.is(ValueType.FLOAT)).orElse(false)) {
-          Assert.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
+          Assertions.assertEquals((Float) expected.get(i)[j], (Float) resultRow[j], 0.01);
         } else if (rowSignature.getColumnType(j).map(t -> t.isArray()).orElse(false)) {
-          Assert.assertArrayEquals((Object[]) expected.get(i)[j], (Object[]) resultRow[j]);
+          Assertions.assertArrayEquals((Object[]) expected.get(i)[j], (Object[]) resultRow[j]);
         } else {
-          Assert.assertEquals(expected.get(i)[j], resultRow[j]);
+          Assertions.assertEquals(expected.get(i)[j], resultRow[j]);
         }
       }
     }

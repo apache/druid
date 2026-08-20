@@ -20,10 +20,8 @@
 package org.apache.druid.segment;
 
 import com.google.common.util.concurrent.Runnables;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
@@ -37,9 +35,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class CloserRuleTest
 {
-  @Rule
-  public final ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testCloses() throws Throwable
   {
@@ -56,7 +51,7 @@ public class CloserRuleTest
         }
     );
     run(closer, Runnables.doNothing());
-    Assert.assertTrue(closed.get());
+    Assertions.assertTrue(closed.get());
   }
 
   @Test
@@ -88,10 +83,10 @@ public class CloserRuleTest
     catch (Exception e) {
       ex = e;
     }
-    Assert.assertTrue(closed.get());
-    Assert.assertNotNull(ex);
-    Assert.assertTrue(ex instanceof ArithmeticException);
-    Assert.assertEquals(msg, ex.getMessage());
+    Assertions.assertTrue(closed.get());
+    Assertions.assertNotNull(ex);
+    Assertions.assertTrue(ex instanceof ArithmeticException);
+    Assertions.assertEquals(msg, ex.getMessage());
   }
 
 
@@ -138,10 +133,10 @@ public class CloserRuleTest
     catch (Throwable e) {
       ex = e;
     }
-    Assert.assertEquals(arithmeticException, ex);
-    Assert.assertNotNull(ex);
-    Assert.assertNotNull(ex.getSuppressed());
-    Assert.assertEquals(suppressed, ex.getSuppressed()[0]);
+    Assertions.assertEquals(arithmeticException, ex);
+    Assertions.assertNotNull(ex);
+    Assertions.assertNotNull(ex.getSuppressed());
+    Assertions.assertEquals(suppressed, ex.getSuppressed()[0]);
   }
 
   @Test
@@ -167,7 +162,7 @@ public class CloserRuleTest
     catch (Throwable throwable) {
       ex = throwable;
     }
-    Assert.assertEquals(ioException, ex);
+    Assertions.assertEquals(ioException, ex);
   }
 
 
@@ -263,12 +258,12 @@ public class CloserRuleTest
     catch (Throwable throwable) {
       ex = throwable;
     }
-    Assert.assertNotNull(ex);
-    Assert.assertEquals(ioExceptions.size(), counter.get());
-    Assert.assertEquals(2, ex.getSuppressed().length);
+    Assertions.assertNotNull(ex);
+    Assertions.assertEquals(ioExceptions.size(), counter.get());
+    Assertions.assertEquals(2, ex.getSuppressed().length);
   }
 
-  private void run(CloserRule closer, final Runnable runnable) throws Throwable
+  private void run(final CloserRule closer, final Runnable runnable) throws Throwable
   {
     closer.apply(
         new Statement()

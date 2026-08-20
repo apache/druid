@@ -60,15 +60,16 @@ import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,7 +84,8 @@ import java.util.stream.Collectors;
 /**
  * Tests that exercise {@link FrameWriter} implementations.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class FrameWriterTest extends InitializedNullHandlingTest
 {
 
@@ -116,7 +118,6 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     this.allocator = ArenaMemoryAllocator.createOnHeap(DEFAULT_ALLOCATOR_CAPACITY);
   }
 
-  @Parameterized.Parameters(name = "inputFrameType = {0}, outputFrameType = {1}, sorted = {2}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -140,7 +141,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
@@ -212,14 +213,14 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     capabilitiesAdjustFn = capabilities -> capabilities.setHasMultipleValues(ColumnCapabilities.Capable.FALSE);
 
     if (outputFrameType.isColumnar()) {
-      final IllegalStateException e = Assert.assertThrows(
+      final IllegalStateException e = Assertions.assertThrows(
           IllegalStateException.class,
           () -> testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE)
       );
 
       MatcherAssert.assertThat(
           e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Encountered unexpected multi-value row"))
+          Matchers.hasProperty("message", CoreMatchers.startsWith("Encountered unexpected multi-value row"))
       );
     } else {
       testWithDataset(FrameWriterTestData.TEST_STRINGS_MULTI_VALUE);
@@ -318,7 +319,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
 
         try {
           final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, sortColumns);
-          Assert.assertEquals(rowSequence.toList().size(), (int) writeResult.rhs);
+          Assertions.assertEquals(rowSequence.toList().size(), (int) writeResult.rhs);
           verifyFrame(sortIfNeeded(rowSequence, signature, sortColumns), writeResult.lhs, signature);
         }
         catch (AssertionError e) {
@@ -343,7 +344,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   {
     // Test every possible capacity for the latest row-based frame format, up to the amount required to write all
     // items from every list.
-    Assume.assumeTrue(inputFrameType == null && outputFrameType == FrameType.latestRowBased());
+    Assumptions.assumeTrue(inputFrameType == null && outputFrameType == FrameType.latestRowBased());
     final RowSignature signature = makeSignature(FrameWriterTestData.DATASETS);
     final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS, 3);
     final int totalRows = rowSequence.toList().size();
@@ -391,7 +392,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
 
     // We expect that at some point in this test, a partial frame would have been written. If not: that's strange
     // and may mean the test isn't testing the right thing.
-    Assert.assertTrue("did write a partial frame", didWritePartial);
+    Assertions.assertTrue(didWritePartial, "did write a partial frame");
   }
 
   /**
@@ -481,7 +482,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     final Sequence<List<Object>> rowSequence = rows(data);
     final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
 
-    Assert.assertEquals(data.size(), (int) writeResult.rhs);
+    Assertions.assertEquals(data.size(), (int) writeResult.rhs);
     verifyFrame(rows(dataset.getData(sortedness)), writeResult.lhs, signature);
   }
 
@@ -495,7 +496,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     final Sequence<List<Object>> rowSequence = rows(data);
     final Pair<Frame, Integer> writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
 
-    Assert.assertEquals(data.size(), (int) writeResult.rhs);
+    Assertions.assertEquals(data.size(), (int) writeResult.rhs);
     verifyFrame(rows(readDataset.getData(sortedness)), writeResult.lhs, signature);
   }
 

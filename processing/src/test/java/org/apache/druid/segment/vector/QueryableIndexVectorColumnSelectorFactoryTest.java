@@ -21,7 +21,6 @@ package org.apache.druid.segment.vector;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
-import junitparams.converters.Nullable;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -50,6 +49,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import javax.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;

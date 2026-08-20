@@ -184,6 +184,42 @@ public class HdfsDataSegmentKillerTest
   }
 
   @Test
+  public void testKillLz4Segment() throws Exception
+  {
+    final File testRoot = FileUtils.createTempDir();
+    final Configuration config = new Configuration();
+    final HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(
+        config,
+        new HdfsDataSegmentPusherConfig()
+        {
+          @Override
+          public String getStorageDirectory()
+          {
+            return testRoot.getAbsolutePath();
+          }
+        }
+    );
+
+    final FileSystem fs = FileSystem.get(config);
+    final Path versionDir = new Path(testRoot.getAbsolutePath(), "dataSource/interval/v1");
+    final Path segmentPath = new Path(versionDir, "3_index.lz4");
+    try {
+      Assertions.assertTrue(fs.mkdirs(versionDir));
+      fs.createNewFile(segmentPath);
+
+      killer.kill(getSegmentWithPath(segmentPath.toString()));
+
+      Assertions.assertFalse(fs.exists(segmentPath));
+      Assertions.assertFalse(fs.exists(versionDir));
+      Assertions.assertFalse(fs.exists(versionDir.getParent()));
+      Assertions.assertTrue(fs.exists(new Path(testRoot.getAbsolutePath(), "dataSource")));
+    }
+    finally {
+      fs.delete(new Path(testRoot.getAbsolutePath()), true);
+    }
+  }
+
+  @Test
   public void testKillNonExistingSegment() throws Exception
   {
     Configuration config = new Configuration();

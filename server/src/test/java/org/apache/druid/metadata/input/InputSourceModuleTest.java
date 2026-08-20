@@ -29,6 +29,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
@@ -40,8 +42,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.List;
 import java.util.Properties;
 import java.util.stream.Collectors;

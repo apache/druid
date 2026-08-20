@@ -37,7 +37,6 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -80,6 +79,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         derbyConnector,
         new TestDruidLeaderSelector(),
         NoopSegmentMetadataCache.instance(),
+        new SegmentsMetadataManagerConfig(null, null, null),
         NoopServiceEmitter.instance()
     )
     {
@@ -404,7 +404,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         retrieveAllUsedSegments(TestDataSource.WIKI)
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(
             DruidException.class,
             () -> storageCoordinator.markNonOvershadowedSegmentsAsUsed("wrongDataSource", segmentIds)
@@ -430,7 +430,7 @@ public class IndexerSQLMetadataStorageCoordinatorMarkUsedTest extends IndexerSql
         retrieveAllUsedSegments(TestDataSource.WIKI)
     );
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assert.assertThrows(
             DruidException.class,
             () -> storageCoordinator.markNonOvershadowedSegmentsAsUsed(TestDataSource.KOALA, segmentIds)

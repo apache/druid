@@ -23,8 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.LagBasedAutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class LagBasedAutoScalerConfigTest
 {
@@ -55,26 +55,26 @@ public class LagBasedAutoScalerConfigTest
         null
     );
 
-    Assert.assertFalse(config.getEnableTaskAutoScaler());
-    Assert.assertEquals(30000, config.getLagCollectionIntervalMillis());
-    Assert.assertEquals(600000, config.getLagCollectionRangeMillis());
-    Assert.assertEquals(300000, config.getScaleActionStartDelayMillis());
-    Assert.assertEquals(60000, config.getScaleActionPeriodMillis());
-    Assert.assertEquals(6000000, config.getScaleOutThreshold());
-    Assert.assertEquals(1000000, config.getScaleInThreshold());
-    Assert.assertEquals(0.3, config.getTriggerScaleOutFractionThreshold(), 0.00001);
-    Assert.assertEquals(0.9, config.getTriggerScaleInFractionThreshold(), 0.00001);
-    Assert.assertEquals(1, config.getScaleInStep());
-    Assert.assertEquals(2, config.getScaleOutStep());
-    Assert.assertEquals(600000, config.getMinTriggerScaleActionFrequencyMillis());
+    Assertions.assertFalse(config.getEnableTaskAutoScaler());
+    Assertions.assertEquals(30000, config.getLagCollectionIntervalMillis());
+    Assertions.assertEquals(600000, config.getLagCollectionRangeMillis());
+    Assertions.assertEquals(300000, config.getScaleActionStartDelayMillis());
+    Assertions.assertEquals(60000, config.getScaleActionPeriodMillis());
+    Assertions.assertEquals(6000000, config.getScaleOutThreshold());
+    Assertions.assertEquals(1000000, config.getScaleInThreshold());
+    Assertions.assertEquals(0.3, config.getTriggerScaleOutFractionThreshold(), 0.00001);
+    Assertions.assertEquals(0.9, config.getTriggerScaleInFractionThreshold(), 0.00001);
+    Assertions.assertEquals(1, config.getScaleInStep());
+    Assertions.assertEquals(2, config.getScaleOutStep());
+    Assertions.assertEquals(600000, config.getMinTriggerScaleActionFrequencyMillis());
     // When minScaleUpDelay/minScaleDownDelay are not set, they fall back to minTriggerScaleActionFrequencyMillis
-    Assert.assertEquals(Duration.millis(600000), config.getMinScaleUpDelay());
-    Assert.assertEquals(Duration.millis(600000), config.getMinScaleDownDelay());
-    Assert.assertNull(config.getLagAggregate());
-    Assert.assertNull(config.getStopTaskCountRatio());
-    Assert.assertEquals(0, config.getTaskCountMax());
-    Assert.assertEquals(0, config.getTaskCountMin());
-    Assert.assertNull(config.getTaskCountStart());
+    Assertions.assertEquals(Duration.millis(600000), config.getMinScaleUpDelay());
+    Assertions.assertEquals(Duration.millis(600000), config.getMinScaleDownDelay());
+    Assertions.assertNull(config.getLagAggregate());
+    Assertions.assertNull(config.getStopTaskCountRatio());
+    Assertions.assertEquals(0, config.getTaskCountMax());
+    Assertions.assertEquals(0, config.getTaskCountMin());
+    Assertions.assertNull(config.getTaskCountStart());
   }
 
   @Test
@@ -107,14 +107,14 @@ public class LagBasedAutoScalerConfigTest
         ), LagBasedAutoScalerConfig.class
     );
 
-    Assert.assertEquals(config1, config2);
+    Assertions.assertEquals(config1, config2);
   }
 
   @Test
   public void testEnabledTaskCountChecks()
   {
     // Should throw if taskCountMax or taskCountMin is missing
-    RuntimeException ex1 = Assert.assertThrows(
+    RuntimeException ex1 = Assertions.assertThrows(
         RuntimeException.class,
         () ->
             new LagBasedAutoScalerConfig(
@@ -139,10 +139,10 @@ public class LagBasedAutoScalerConfigTest
                 null
             )
     );
-    Assert.assertTrue(ex1.getMessage().contains("taskCountMax or taskCountMin can't be null"));
+    Assertions.assertTrue(ex1.getMessage().contains("taskCountMax or taskCountMin can't be null"));
 
     // Should throw if taskCountMax < taskCountMin
-    RuntimeException ex2 = Assert.assertThrows(
+    RuntimeException ex2 = Assertions.assertThrows(
         RuntimeException.class,
         () ->
             new LagBasedAutoScalerConfig(
@@ -167,10 +167,10 @@ public class LagBasedAutoScalerConfigTest
                 null
             )
     );
-    Assert.assertTrue(ex2.getMessage().contains("taskCountMax can't lower than taskCountMin"));
+    Assertions.assertTrue(ex2.getMessage().contains("taskCountMax can't lower than taskCountMin"));
 
     // Should throw if taskCountStart out of range
-    RuntimeException ex3 = Assert.assertThrows(
+    RuntimeException ex3 = Assertions.assertThrows(
         RuntimeException.class,
         () ->
             new LagBasedAutoScalerConfig(
@@ -195,14 +195,14 @@ public class LagBasedAutoScalerConfigTest
                 null
             )
     );
-    Assert.assertTrue(ex3.getMessage().contains("taskCountMin <= taskCountStart <= taskCountMax"));
+    Assertions.assertTrue(ex3.getMessage().contains("taskCountMin <= taskCountStart <= taskCountMax"));
   }
 
   @Test
   public void testStopTaskCountRatioBounds()
   {
     // Fail if stopTaskCountRatio = 0
-    IllegalArgumentException ex1 = Assert.assertThrows(
+    IllegalArgumentException ex1 = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new LagBasedAutoScalerConfig(
             null,
@@ -226,10 +226,10 @@ public class LagBasedAutoScalerConfigTest
             0.0
         )
     );
-    Assert.assertTrue(ex1.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
+    Assertions.assertTrue(ex1.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
 
     // Fail if stopTaskCountRatio < 0
-    IllegalArgumentException ex2 = Assert.assertThrows(
+    IllegalArgumentException ex2 = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new LagBasedAutoScalerConfig(
             null,
@@ -252,10 +252,10 @@ public class LagBasedAutoScalerConfigTest
             -0.1
         )
     );
-    Assert.assertTrue(ex2.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
+    Assertions.assertTrue(ex2.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
 
     // Fail if stopTaskCountRatio > 1.0
-    IllegalArgumentException ex3 = Assert.assertThrows(
+    IllegalArgumentException ex3 = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new LagBasedAutoScalerConfig(
             null,
@@ -279,7 +279,7 @@ public class LagBasedAutoScalerConfigTest
             1.1
         )
     );
-    Assert.assertTrue(ex3.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
+    Assertions.assertTrue(ex3.getMessage().contains("0.0 < stopTaskCountRatio <= 1.0"));
 
     // Should succeed for a valid value
     LagBasedAutoScalerConfig config = new LagBasedAutoScalerConfig(
@@ -303,7 +303,7 @@ public class LagBasedAutoScalerConfigTest
         null,
         0.5
     );
-    Assert.assertEquals(Double.valueOf(0.5), config.getStopTaskCountRatio());
+    Assertions.assertEquals(Double.valueOf(0.5), config.getStopTaskCountRatio());
   }
 
   @Test
@@ -331,9 +331,9 @@ public class LagBasedAutoScalerConfigTest
         null,
         null
     );
-    Assert.assertEquals(60000L, baseOnly.getMinTriggerScaleActionFrequencyMillis());
-    Assert.assertEquals(Duration.millis(60000), baseOnly.getMinScaleUpDelay());
-    Assert.assertEquals(Duration.millis(60000), baseOnly.getMinScaleDownDelay());
+    Assertions.assertEquals(60000L, baseOnly.getMinTriggerScaleActionFrequencyMillis());
+    Assertions.assertEquals(Duration.millis(60000), baseOnly.getMinScaleUpDelay());
+    Assertions.assertEquals(Duration.millis(60000), baseOnly.getMinScaleDownDelay());
 
     // Only minScaleUpDelay set
     LagBasedAutoScalerConfig upOnly = new LagBasedAutoScalerConfig(
@@ -357,8 +357,8 @@ public class LagBasedAutoScalerConfigTest
         null,
         null
     );
-    Assert.assertEquals(Duration.millis(15000), upOnly.getMinScaleUpDelay());
-    Assert.assertEquals(Duration.millis(60000), upOnly.getMinScaleDownDelay());
+    Assertions.assertEquals(Duration.millis(15000), upOnly.getMinScaleUpDelay());
+    Assertions.assertEquals(Duration.millis(60000), upOnly.getMinScaleDownDelay());
 
     // Only minScaleDownDelay set
     LagBasedAutoScalerConfig downOnly = new LagBasedAutoScalerConfig(
@@ -382,8 +382,8 @@ public class LagBasedAutoScalerConfigTest
         null,
         null
     );
-    Assert.assertEquals(Duration.millis(60000), downOnly.getMinScaleUpDelay());
-    Assert.assertEquals(Duration.millis(30000), downOnly.getMinScaleDownDelay());
+    Assertions.assertEquals(Duration.millis(60000), downOnly.getMinScaleUpDelay());
+    Assertions.assertEquals(Duration.millis(30000), downOnly.getMinScaleDownDelay());
 
     // Both set: serde roundtrip preserves values
     LagBasedAutoScalerConfig bothSet = new LagBasedAutoScalerConfig(
@@ -407,13 +407,13 @@ public class LagBasedAutoScalerConfigTest
         null,
         null
     );
-    Assert.assertEquals(Duration.millis(15000), bothSet.getMinScaleUpDelay());
-    Assert.assertEquals(Duration.millis(30000), bothSet.getMinScaleDownDelay());
+    Assertions.assertEquals(Duration.millis(15000), bothSet.getMinScaleUpDelay());
+    Assertions.assertEquals(Duration.millis(30000), bothSet.getMinScaleDownDelay());
     LagBasedAutoScalerConfig roundTripped = OBJECT_MAPPER.readValue(
         OBJECT_MAPPER.writeValueAsString(bothSet),
         LagBasedAutoScalerConfig.class
     );
-    Assert.assertEquals(bothSet, roundTripped);
+    Assertions.assertEquals(bothSet, roundTripped);
   }
 
   @Test
@@ -424,9 +424,9 @@ public class LagBasedAutoScalerConfigTest
     // both getMinScaleUpDelay() and getMinScaleDownDelay() should fall back to it.
     String json = "{\"taskCountMax\":10,\"taskCountMin\":1,\"minTriggerScaleActionFrequencyMillis\":45000}";
     LagBasedAutoScalerConfig config = OBJECT_MAPPER.readValue(json, LagBasedAutoScalerConfig.class);
-    Assert.assertEquals(45000L, config.getMinTriggerScaleActionFrequencyMillis());
-    Assert.assertEquals(Duration.millis(45000), config.getMinScaleUpDelay());
-    Assert.assertEquals(Duration.millis(45000), config.getMinScaleDownDelay());
+    Assertions.assertEquals(45000L, config.getMinTriggerScaleActionFrequencyMillis());
+    Assertions.assertEquals(Duration.millis(45000), config.getMinScaleUpDelay());
+    Assertions.assertEquals(Duration.millis(45000), config.getMinScaleDownDelay());
 
     // JSON with minTriggerScaleActionFrequencyMillis and only minScaleUpDelay:
     // getMinScaleUpDelay() should return the explicit value; getMinScaleDownDelay() falls back.
@@ -434,8 +434,8 @@ public class LagBasedAutoScalerConfigTest
                         + "\"minTriggerScaleActionFrequencyMillis\":45000,"
                         + "\"minScaleUpDelay\":\"PT10S\"}";
     LagBasedAutoScalerConfig configUpOnly = OBJECT_MAPPER.readValue(jsonUpOnly, LagBasedAutoScalerConfig.class);
-    Assert.assertEquals(Duration.standardSeconds(10), configUpOnly.getMinScaleUpDelay());
-    Assert.assertEquals(Duration.millis(45000), configUpOnly.getMinScaleDownDelay());
+    Assertions.assertEquals(Duration.standardSeconds(10), configUpOnly.getMinScaleUpDelay());
+    Assertions.assertEquals(Duration.millis(45000), configUpOnly.getMinScaleDownDelay());
   }
 
   @Test
@@ -451,9 +451,9 @@ public class LagBasedAutoScalerConfigTest
           "{\"taskCountMax\":10,\"taskCountMin\":1}",
           LagBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(defaultMinTriggerMillis, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.millis(defaultMinTriggerMillis), config.getMinScaleUpDelay());
-      Assert.assertEquals(Duration.millis(defaultMinTriggerMillis), config.getMinScaleDownDelay());
+      Assertions.assertEquals(defaultMinTriggerMillis, config.getMinTriggerScaleActionFrequencyMillis());
+      Assertions.assertEquals(Duration.millis(defaultMinTriggerMillis), config.getMinScaleUpDelay());
+      Assertions.assertEquals(Duration.millis(defaultMinTriggerMillis), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
 
@@ -464,9 +464,9 @@ public class LagBasedAutoScalerConfigTest
           "{\"taskCountMax\":10,\"taskCountMin\":1,\"minTriggerScaleActionFrequencyMillis\":900000}",
           LagBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.millis(900_000), config.getMinScaleUpDelay());
-      Assert.assertEquals(Duration.millis(900_000), config.getMinScaleDownDelay());
+      Assertions.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
+      Assertions.assertEquals(Duration.millis(900_000), config.getMinScaleUpDelay());
+      Assertions.assertEquals(Duration.millis(900_000), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
 
@@ -477,9 +477,9 @@ public class LagBasedAutoScalerConfigTest
           + "\"minScaleUpDelay\":\"PT2M\",\"minScaleDownDelay\":\"PT15M\"}",
           LagBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(defaultMinTriggerMillis, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
-      Assert.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
+      Assertions.assertEquals(defaultMinTriggerMillis, config.getMinTriggerScaleActionFrequencyMillis());
+      Assertions.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
+      Assertions.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
 
@@ -492,9 +492,9 @@ public class LagBasedAutoScalerConfigTest
           + "\"minScaleUpDelay\":\"PT2M\",\"minScaleDownDelay\":\"PT15M\"}",
           LagBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
-      Assert.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
+      Assertions.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
+      Assertions.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
+      Assertions.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
 
@@ -506,9 +506,9 @@ public class LagBasedAutoScalerConfigTest
           + "\"minScaleUpDelay\":\"PT2M\"}",
           LagBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
-      Assert.assertEquals(Duration.millis(900_000), config.getMinScaleDownDelay());
+      Assertions.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
+      Assertions.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
+      Assertions.assertEquals(Duration.millis(900_000), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
 
@@ -520,9 +520,9 @@ public class LagBasedAutoScalerConfigTest
           + "\"minScaleDownDelay\":\"PT15M\"}",
           LagBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.millis(900_000), config.getMinScaleUpDelay());
-      Assert.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
+      Assertions.assertEquals(900_000L, config.getMinTriggerScaleActionFrequencyMillis());
+      Assertions.assertEquals(Duration.millis(900_000), config.getMinScaleUpDelay());
+      Assertions.assertEquals(Duration.standardMinutes(15), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
 
@@ -533,9 +533,9 @@ public class LagBasedAutoScalerConfigTest
           "{\"taskCountMax\":10,\"taskCountMin\":1,\"minScaleUpDelay\":\"PT2M\"}",
           LagBasedAutoScalerConfig.class
       );
-      Assert.assertEquals(defaultMinTriggerMillis, config.getMinTriggerScaleActionFrequencyMillis());
-      Assert.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
-      Assert.assertEquals(Duration.millis(defaultMinTriggerMillis), config.getMinScaleDownDelay());
+      Assertions.assertEquals(defaultMinTriggerMillis, config.getMinTriggerScaleActionFrequencyMillis());
+      Assertions.assertEquals(Duration.standardMinutes(2), config.getMinScaleUpDelay());
+      Assertions.assertEquals(Duration.millis(defaultMinTriggerMillis), config.getMinScaleDownDelay());
       assertRoundTrips(config);
     }
   }
@@ -546,7 +546,7 @@ public class LagBasedAutoScalerConfigTest
         OBJECT_MAPPER.writeValueAsString(config),
         LagBasedAutoScalerConfig.class
     );
-    Assert.assertEquals(config, roundTripped);
+    Assertions.assertEquals(config, roundTripped);
   }
 
   @Test
@@ -595,7 +595,7 @@ public class LagBasedAutoScalerConfigTest
         0.5
     );
 
-    Assert.assertNotEquals(config1, config2);
-    Assert.assertNotEquals(config1.hashCode(), config2.hashCode());
+    Assertions.assertNotEquals(config1, config2);
+    Assertions.assertNotEquals(config1.hashCode(), config2.hashCode());
   }
 }

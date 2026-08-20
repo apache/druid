@@ -22,6 +22,7 @@ package org.apache.druid.segment.virtual;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -45,12 +46,11 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
 import java.util.List;
@@ -86,27 +86,24 @@ public class VectorizedVirtualColumnTest
       "false"
   );
 
-  @Rule
-  public final TemporaryFolder tmpFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public final TemporaryFolderExtension tmpFolder = new TemporaryFolderExtension();
 
   private AggregationTestHelper groupByTestHelper;
   private AggregationTestHelper timeseriesTestHelper;
   private List<Segment> segments = null;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
-    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
         Collections.emptyList(),
         new GroupByQueryConfig(),
-        tmpFolder
+        tmpFolder.getRoot()
     );
-    timeseriesTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
+    timeseriesTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         Collections.emptyList(),
-        tmpFolder
+        tmpFolder.getRoot()
     );
     QueryableIndexSegment queryableIndexSegment = new QueryableIndexSegment(
         TestIndex.getMMappedTestIndex(),
@@ -131,12 +128,13 @@ public class VectorizedVirtualColumnTest
   public void testGroupByMultiValueString()
   {
     // cannot currently group by string columns that might be multi valued
-    cannotVectorize();
-    testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ColumnType.STRING)
-                    .setDictionaryEncoded(true)
-                    .setDictionaryValuesUnique(true)
-                    .setHasMultipleValues(true)
+    assertException(
+        "Cannot vectorize!",
+        () -> testGroupBy(new ColumnCapabilitiesImpl()
+                              .setType(ColumnType.STRING)
+                              .setDictionaryEncoded(true)
+                              .setDictionaryValuesUnique(true)
+                              .setHasMultipleValues(true))
     );
   }
 
@@ -144,11 +142,12 @@ public class VectorizedVirtualColumnTest
   public void testGroupByMultiValueStringUnknown()
   {
     // cannot currently group by string columns that might be multi valued
-    cannotVectorize();
-    testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ColumnType.STRING)
-                    .setDictionaryEncoded(true)
-                    .setDictionaryValuesUnique(true)
+    assertException(
+        "Cannot vectorize!",
+        () -> testGroupBy(new ColumnCapabilitiesImpl()
+                              .setType(ColumnType.STRING)
+                              .setDictionaryEncoded(true)
+                              .setDictionaryValuesUnique(true))
     );
   }
 
@@ -167,12 +166,13 @@ public class VectorizedVirtualColumnTest
   public void testGroupByMultiValueStringNotDictionaryEncoded()
   {
     // cannot currently group by string columns that might be multi valued
-    cannotVectorize();
-    testGroupBy(new ColumnCapabilitiesImpl()
-                    .setType(ColumnType.STRING)
-                    .setDictionaryEncoded(false)
-                    .setDictionaryValuesUnique(false)
-                    .setHasMultipleValues(true)
+    assertException(
+        "Cannot vectorize!",
+        () -> testGroupBy(new ColumnCapabilitiesImpl()
+                              .setType(ColumnType.STRING)
+                              .setDictionaryEncoded(false)
+                              .setDictionaryValuesUnique(false)
+                              .setHasMultipleValues(true))
     );
   }
 
@@ -269,22 +269,26 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testTimeseriesForceContextCannotVectorize()
   {
-    cannotVectorize();
-    testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_VECTORIZE_FORCE,
-        false
+    assertException(
+        "Cannot vectorize!",
+        () -> testTimeseries(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_VECTORIZE_FORCE,
+            false
+        )
     );
   }
 
   @Test
   public void testTimeseriesForceVirtualContextCannotVectorize()
   {
-    cannotVectorize();
-    testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
-        false
+    assertException(
+        "Cannot vectorize!",
+        () -> testTimeseries(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
+            false
+        )
     );
   }
 
@@ -301,22 +305,26 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testTimeseriesContradictionVectorizeFalseVirtualForce()
   {
-    expectNonvectorized();
-    testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
-        true
+    assertException(
+        AlwaysTwoVectorizedVirtualColumn.DONT_CALL_THIS,
+        () -> testTimeseries(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
+            true
+        )
     );
   }
 
   @Test
   public void testTimeseriesContradictionVectorizeForceVirtualFalse()
   {
-    cannotVectorize();
-    testTimeseries(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
-        true
+    assertException(
+        "Cannot vectorize!",
+        () -> testTimeseries(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
+            true
+        )
     );
   }
 
@@ -349,59 +357,69 @@ public class VectorizedVirtualColumnTest
   @Test
   public void testGroupByForceContextCannotVectorize()
   {
-    cannotVectorize();
-    testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_VECTORIZE_FORCE,
-        false
+    assertException(
+        "Cannot vectorize!",
+        () -> testGroupBy(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_VECTORIZE_FORCE,
+            false
+        )
     );
   }
 
   @Test
   public void testGroupByForceVirtualContextCannotVectorize()
   {
-    cannotVectorize();
-    testGroupBy(
-        new ColumnCapabilitiesImpl()
-            .setType(ColumnType.STRING)
-            .setDictionaryEncoded(true)
-            .setDictionaryValuesUnique(true)
-            .setHasMultipleValues(false),
-        CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
-        false
+    assertException(
+        "Cannot vectorize!",
+        () -> testGroupBy(
+            new ColumnCapabilitiesImpl()
+                .setType(ColumnType.STRING)
+                .setDictionaryEncoded(true)
+                .setDictionaryValuesUnique(true)
+                .setHasMultipleValues(false),
+            CONTEXT_VECTORIZE_TRUE_VIRTUAL_FORCE,
+            false
+        )
     );
   }
 
   @Test
   public void testGroupByTrueVirtualContextCannotVectorize()
   {
-    expectNonvectorized();
-    testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_USE_DEFAULTS,
-        false
+    assertException(
+        AlwaysTwoVectorizedVirtualColumn.DONT_CALL_THIS,
+        () -> testGroupBy(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_USE_DEFAULTS,
+            false
+        )
     );
   }
 
   @Test
   public void testGroupByContradictionVectorizeFalseVirtualForce()
   {
-    expectNonvectorized();
-    testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
-        true
+    assertException(
+        AlwaysTwoVectorizedVirtualColumn.DONT_CALL_THIS,
+        () -> testGroupBy(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_CONTRADICTION_VECTORIZE_FALSE_VIRTUAL_FORCE,
+            true
+        )
     );
   }
 
   @Test
   public void testGroupByContradictionVectorizeForceVirtualFalse()
   {
-    cannotVectorize();
-    testGroupBy(
-        ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
-        CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
-        true
+    assertException(
+        "Cannot vectorize!",
+        () -> testGroupBy(
+            ColumnCapabilitiesImpl.createSimpleNumericColumnCapabilities(ColumnType.FLOAT),
+            CONTEXT_CONTRADICTION_VECTORIZE_FORCE_VIRTUAL_FALSE,
+            true
+        )
     );
   }
 
@@ -611,15 +629,10 @@ public class VectorizedVirtualColumnTest
     }
   }
 
-  private void expectNonvectorized()
+  private void assertException(final String message, final Runnable action)
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(AlwaysTwoVectorizedVirtualColumn.DONT_CALL_THIS);
-  }
-
-  private void cannotVectorize()
-  {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage("Cannot vectorize!");
+    ExceptionMatcher.of(RuntimeException.class)
+                    .expectMessageContains(message)
+                    .assertThrowsAndMatches(action::run);
   }
 }

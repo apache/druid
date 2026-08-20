@@ -98,6 +98,7 @@ import org.apache.druid.testing.embedded.tools.JsonEventSerializer;
 import org.apache.druid.testing.embedded.tools.StreamGenerator;
 import org.apache.druid.testing.embedded.tools.WikipediaStreamEventStreamGenerator;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
 import org.hamcrest.Matcher;
 import org.hamcrest.MatcherAssert;
@@ -116,6 +117,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -420,19 +422,12 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .indexSpecRules(List.of(indexSpecRule))
         .build();
 
-    CascadingReindexingTemplate cascadingReindexingTemplate = new CascadingReindexingTemplate(
-        dataSource,
-        null,
-        null,
-        ruleProvider,
-        null,
-        null,
-        null,
-        Granularities.HOUR,
-        new DynamicPartitionsSpec(null, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate cascadingReindexingTemplate = CascadingReindexingTemplate.builder()
+        .forDataSource(dataSource)
+        .withRuleProvider(ruleProvider)
+        .withDefaultSegmentGranularity(Granularities.HOUR)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
     runCompactionWithSpec(cascadingReindexingTemplate);
     waitForAllCompactionTasksToFinish();
     cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
@@ -441,6 +436,75 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(5, getNumSegmentsWith(Granularities.HOUR));
     Assertions.assertEquals(4, getNumSegmentsWith(Granularities.DAY));
     verifyEventCountOlderThan(Period.days(7), "item", "hat", 0);
+  }
+
+  @Test
+  public void test_cascadingCompactionTemplate_skipIntervalsExcludeConfiguredWindow()
+  {
+    // Configure cluster with MSQ engine
+    final UpdateResponse updateResponse = cluster.callApi().onLeaderOverlord(
+        o -> o.updateClusterCompactionConfig(
+            new ClusterCompactionConfig(1.0, 100, null, true, CompactionEngine.MSQ, false)
+        )
+    );
+    Assertions.assertTrue(updateResponse.isSuccess());
+
+    DateTime now = DateTimes.nowUtc();
+
+    // Both windows are older than the 1-day partitioning rule threshold below, so the rule would
+    // normally apply to both. skipIntervals is the only thing that should stop compactedWindow's
+    // sibling, skippedWindow, from being compacted.
+    Interval compactedWindow = new Interval(now.minusDays(31), now.minusDays(14));
+    Interval skippedWindow = new Interval(now.minusDays(3), now.minusDays(2));
+
+    String compactedWindowEvents = generateEventsInInterval(compactedWindow, 7, Duration.ofHours(25).toMillis());
+    String skippedWindowEvents = generateEventsInInterval(skippedWindow, 5, Duration.ofMinutes(90).toMillis());
+
+    runIngestionAtGranularity("FIFTEEN_MINUTE", compactedWindowEvents + "\n" + skippedWindowEvents);
+
+    final Set<SegmentId> segmentIdsInSkippedWindowBeforeCompaction = getSegmentIdsOverlapping(skippedWindow);
+    Assertions.assertFalse(segmentIdsInSkippedWindowBeforeCompaction.isEmpty());
+
+    ReindexingPartitioningRule hourRule = new ReindexingPartitioningRule(
+        "hourRule",
+        "Compact to HOUR granularity for data older than 1 day",
+        Period.days(1),
+        Granularities.HOUR,
+        new DynamicPartitionsSpec(null, null),
+        null
+    );
+
+    InlineReindexingRuleProvider ruleProvider = InlineReindexingRuleProvider
+        .builder()
+        .partitioningRules(List.of(hourRule))
+        .build();
+
+    CascadingReindexingTemplate cascadingReindexingTemplate = CascadingReindexingTemplate.builder()
+        .forDataSource(dataSource)
+        .withRuleProvider(ruleProvider)
+        .withSkipIntervals(List.of(skippedWindow))
+        .withDefaultSegmentGranularity(Granularities.HOUR)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
+    runCompactionWithSpec(cascadingReindexingTemplate);
+    waitForAllCompactionTasksToFinish();
+    cluster.callApi().waitForAllSegmentsToBeAvailable(dataSource, coordinator, broker);
+
+    // Sanity check that the supervisor actually ran compaction on the non-skipped window, so this
+    // test would fail if the supervisor skipped everything rather than just the configured window.
+    Assertions.assertTrue(
+        allSegmentsOverlappingAreAlignedTo(compactedWindow, Granularities.HOUR),
+        "expected segments in the non-skipped window to be aligned to HOUR granularity after compaction"
+    );
+
+    // If compaction had touched skippedWindow, it would replace the original segments with new
+    // ones (new version and/or interval). Identical segment IDs before and after prove the
+    // configured skipIntervals window was never compacted.
+    Assertions.assertEquals(
+        segmentIdsInSkippedWindowBeforeCompaction,
+        getSegmentIdsOverlapping(skippedWindow),
+        "segments in the configured skipIntervals window should be untouched by compaction"
+    );
   }
 
   @Test
@@ -491,21 +555,14 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         virtualColumns
     );
 
-    CascadingReindexingTemplate cascadingTemplate = new CascadingReindexingTemplate(
-        dataSource,
-        null,
-        null,
-        InlineReindexingRuleProvider.builder()
+    CascadingReindexingTemplate cascadingTemplate = CascadingReindexingTemplate.builder()
+        .forDataSource(dataSource)
+        .withRuleProvider(InlineReindexingRuleProvider.builder()
                                     .deletionRules(List.of(deletionRule))
-                                    .build(),
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(null, null),
-        null,
-        null
-    );
+                                    .build())
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
 
     runCompactionWithSpec(cascadingTemplate);
 
@@ -1214,6 +1271,31 @@ public class CompactionSupervisorTest extends EmbeddedClusterTestBase
         .filter(segment -> !segment.isTombstone())
         .filter(segment -> granularity.isAligned(segment.getInterval()))
         .count();
+  }
+
+  private Set<SegmentId> getSegmentIdsOverlapping(Interval interval)
+  {
+    return overlord
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+        .stream()
+        .filter(segment -> !segment.isTombstone())
+        .filter(segment -> interval.overlaps(segment.getInterval()))
+        .map(DataSegment::getId)
+        .collect(Collectors.toSet());
+  }
+
+  private boolean allSegmentsOverlappingAreAlignedTo(Interval interval, Granularity granularity)
+  {
+    return overlord
+        .bindings()
+        .segmentsMetadataStorage()
+        .retrieveAllUsedSegments(dataSource, Segments.ONLY_VISIBLE)
+        .stream()
+        .filter(segment -> !segment.isTombstone())
+        .filter(segment -> interval.overlaps(segment.getInterval()))
+        .allMatch(segment -> granularity.isAligned(segment.getInterval()));
   }
 
   private void runIngestionAtGranularity(
