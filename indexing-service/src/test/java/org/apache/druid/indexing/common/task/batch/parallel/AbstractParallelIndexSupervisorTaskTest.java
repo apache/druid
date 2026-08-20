@@ -265,6 +265,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                               .withPartitionsSpec(partitionsSpec)
                               .withForceGuaranteedRollup(forceGuaranteedRollup)
                               .withMaxNumConcurrentSubTasks(maxNumConcurrentSubTasks)
+                              .withTaskStatusCheckPeriodMs(maxNumConcurrentSubTasks == 1 ? 100L : null)
                               .withMaxParseExceptions(5)
                               .build();
   }
