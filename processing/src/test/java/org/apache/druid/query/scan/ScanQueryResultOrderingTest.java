@@ -240,11 +240,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
   )
   {
     configure(segmentToServerMap, limit, batchSize, maxRowsQueuedForOrdering);
-    runTestOrderTimeAscending();
-  }
-
-  private void runTestOrderTimeAscending()
-  {
     assertResultsEquals(
         Druids.newScanQueryBuilder()
               .dataSource("ds")
@@ -286,11 +281,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
   )
   {
     configure(segmentToServerMap, limit, batchSize, maxRowsQueuedForOrdering);
-    runTestOrderTimeDescending();
-  }
-
-  private void runTestOrderTimeDescending()
-  {
     assertResultsEquals(
         Druids.newScanQueryBuilder()
               .dataSource("ds")
