@@ -134,18 +134,13 @@ public class DruidSchemaInternRowSignatureBenchmark
       return Sequences.simple(
           Lists.transform(
               Lists.newArrayList(segments),
-              (segment) -> new SegmentAnalysis(
-                  segment.toString(),
-                  ImmutableList.of(segment.getInterval()),
-                  columnToAnalysisMap,
-                  40,
-                  40,
-                  null,
-                  null,
-                  null,
-                  null,
-                  false
-              )
+              (segment) -> new SegmentAnalysis.Builder(segment)
+                  .interval(segment.getInterval())
+                  .columns(columnToAnalysisMap)
+                  .size(40)
+                  .numRows(40)
+                  .rollup(false)
+                  .build()
           )
       );
     }

@@ -391,6 +391,7 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     this.bitmapLock = new ReentrantLock();
   }
 
+  @Override
   public SegmentFileMetadata getSegmentFileMetadata()
   {
     return metadata;
