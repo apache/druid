@@ -777,7 +777,7 @@
     <dependency>
       <groupId>com.aliyun.oss</groupId>
       <artifactId>aliyun-sdk-oss</artifactId>
-      <version>3.11.3</version>
+      <version>3.18.5</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
