@@ -259,13 +259,13 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
 
-    // taskDuration of 10s gives enough time to auto-scaler to fetch task metrics
+    // Keep task duration short so all generated segments can be published promptly while the auto-scaler observes them.
     final SupervisorSpec supervisor = createKafkaSupervisor(kafkaServer)
         .withTuningConfig(t -> t.withMaxRowsPerSegment(maxRowsPerSegment))
         .withIoConfig(
             ioConfig -> ioConfig
                 .withTaskCount(1)
-                .withTaskDuration(Period.seconds(10))
+                .withTaskDuration(Period.seconds(1))
                 .withSupervisorRunPeriod(Period.millis(10))
                 .withAutoScalerConfig(autoScalerConfig)
         )
