@@ -194,11 +194,6 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
   )
   {
     configure(segmentToServerMap, limit, batchSize, maxRowsQueuedForOrdering);
-    runTestOrderNone();
-  }
-
-  private void runTestOrderNone()
-  {
     assertResultsEquals(
         Druids.newScanQueryBuilder()
               .dataSource("ds")
