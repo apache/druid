@@ -57,6 +57,17 @@ public interface TaskCountStatsProvider
   Map<RowKey, Long> getWaitingTaskCount();
 
   /**
+   * Return the number of current running tasks grouped by workerCategory, then by datasource and task type.
+   * The outer key is the worker category string; the inner map mirrors the structure of
+   * {@link #getRunningTaskCount()}. Returns null if the underlying implementation does not support
+   * per-category grouping (e.g., when not using a worker-pool-based task runner).
+   */
+  default Map<String, Map<RowKey, Long>> getRunningTaskCountByCategory()
+  {
+    return null;
+  }
+
+  /**
    * Collects all task level stats. This method deprecates the other task stats
    * methods such as {@link #getPendingTaskCount()}, {@link #getWaitingTaskCount()}
    * and will replace them in a future release.

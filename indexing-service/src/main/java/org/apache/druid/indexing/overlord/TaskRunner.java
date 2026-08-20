@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
@@ -111,6 +112,10 @@ public interface TaskRunner
     return null;
   }
 
+  default Map<String, Collection<? extends TaskRunnerWorkItem>> getRunningTasksByCategory()
+  {
+    return Collections.emptyMap();
+  }
   default TaskLocation getTaskLocation(String taskId)
   {
     return TaskLocation.unknown();
