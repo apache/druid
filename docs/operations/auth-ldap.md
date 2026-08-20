@@ -23,7 +23,7 @@ sidebar_label: "LDAP auth"
   ~ under the License.
   -->
 
-You can use [Lightweight Directory Access Protocol (LDAP)](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol) to secure access to Apache Druid. This topic describes how to set up Druid authentication and authorization with LDAP and LDAP over TLS (LDAPS). The examples on this page show the configuration for an Active Directory LDAP system.
+You can use [Lightweight Directory Access Protocol (LDAP)](https://en.wikipedia.org/wiki/Lightweight_Directory_Access_Protocol) to secure access to Apache&circledR; Druid. This topic describes how to set up Druid authentication and authorization with LDAP and LDAP over TLS (LDAPS). The examples on this page show the configuration for an Active Directory LDAP system.
 
 The first step is to enable LDAP authentication and authorization for Druid. You then map an LDAP group to Druid roles and assign permissions to those roles. After you've completed this configuration you can optionally choose to enable LDAPS to make LDAP traffic confidential and secure.
 

@@ -22,13 +22,13 @@ package org.apache.druid.k8s.overlord;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.apache.commons.lang3.ObjectUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import java.util.List;
 import java.util.Map;
 
@@ -152,6 +152,10 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   @JsonProperty
   private Period k8sSharedInformerResyncPeriod = new Period("PT5M");
 
+  @JsonProperty
+  // Allow per-task pod template selection via the task context.
+  private boolean allowTaskPodTemplateSelection = false;
+
   public KubernetesTaskRunnerStaticConfig()
   {
   }
@@ -179,7 +183,8 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
       Integer capacity,
       Period taskJoinTimeout,
       boolean useK8sSharedInformers,
-      Period k8sSharedInformerResyncPeriod
+      Period k8sSharedInformerResyncPeriod,
+      boolean allowTaskPodTemplateSelection
   )
   {
     this.namespace = namespace;
@@ -264,6 +269,10 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
     this.k8sSharedInformerResyncPeriod = ObjectUtils.getIfNull(
         k8sSharedInformerResyncPeriod,
         this.k8sSharedInformerResyncPeriod
+    );
+    this.allowTaskPodTemplateSelection = ObjectUtils.getIfNull(
+        allowTaskPodTemplateSelection,
+        this.allowTaskPodTemplateSelection
     );
   }
 
@@ -405,5 +414,11 @@ public class KubernetesTaskRunnerStaticConfig implements KubernetesTaskRunnerCon
   public Period getK8sSharedInformerResyncPeriod()
   {
     return k8sSharedInformerResyncPeriod;
+  }
+
+  @Override
+  public boolean isAllowTaskPodTemplateSelection()
+  {
+    return allowTaskPodTemplateSelection;
   }
 }

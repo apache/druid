@@ -422,7 +422,6 @@ public class PodTemplateTaskAdapterTest
     );
 
     Task task = EasyMock.mock(Task.class);
-    EasyMock.expect(task.supportsQueries()).andReturn(true);
     EasyMock.expect(task.getType()).andReturn("queryable").anyTimes();
     EasyMock.expect(task.getId()).andReturn("id").anyTimes();
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
@@ -456,7 +455,6 @@ public class PodTemplateTaskAdapterTest
     );
 
     Task task = EasyMock.mock(Task.class);
-    EasyMock.expect(task.supportsQueries()).andReturn(true);
     EasyMock.expect(task.getType()).andReturn("queryable").anyTimes();
     EasyMock.expect(task.getId()).andReturn("id").anyTimes();
     EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();

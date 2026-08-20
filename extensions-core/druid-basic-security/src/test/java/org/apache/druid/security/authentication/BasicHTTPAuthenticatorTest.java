@@ -34,7 +34,7 @@ import org.apache.druid.security.basic.authentication.validator.CredentialsValid
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.easymock.EasyMock;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;

@@ -131,6 +131,13 @@ public abstract class SimpleLongAggregatorFactory extends NullableNumericAggrega
   }
 
   @Override
+  @Nullable
+  protected String getInputColumn()
+  {
+    return expression == null ? fieldName : null;
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     return object;

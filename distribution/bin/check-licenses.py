@@ -299,6 +299,9 @@ def build_compatible_license_names():
     compatible_licenses['Mozilla Public License Version 2.0'] = 'Mozilla Public License Version 2.0'
     compatible_licenses['Mozilla Public License, Version 2.0'] = 'Mozilla Public License Version 2.0'
 
+    compatible_licenses['MPL 1.1'] = 'MPL 1.1'
+    compatible_licenses['Mozilla Public License 1.1'] = 'MPL 1.1'
+
     compatible_licenses['Creative Commons Attribution 2.5'] = 'Creative Commons Attribution 2.5'
 
     compatible_licenses['Creative Commons CC0'] = 'Creative Commons CC0'

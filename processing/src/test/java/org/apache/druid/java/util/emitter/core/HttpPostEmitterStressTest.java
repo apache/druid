@@ -27,8 +27,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.asynchttpclient.ListenableFuture;
 import org.asynchttpclient.Request;
 import org.asynchttpclient.Response;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -178,7 +178,7 @@ public class HttpPostEmitterStressTest
 
       for (int i = 0; i < 1000; i++) {
         emitter.emit(bigEvent);
-        Assert.assertTrue(emitter.getLargeEventsToEmit() <= 11);
+        Assertions.assertTrue(emitter.getLargeEventsToEmit() <= 11);
       }
 
       emitter.flush();
@@ -233,8 +233,8 @@ public class HttpPostEmitterStressTest
 
             emitter.emit(smallEvent);
 
-            Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
-            Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+            Assertions.assertTrue(emitter.getTotalFailedBuffers() <= 10);
+            Assertions.assertTrue(emitter.getBuffersToEmit() <= 12);
           }
           threadsCompleted.countDown();
         }
@@ -248,8 +248,8 @@ public class HttpPostEmitterStressTest
 
             emitter.emit(bigEvent);
 
-            Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
-            Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+            Assertions.assertTrue(emitter.getTotalFailedBuffers() <= 10);
+            Assertions.assertTrue(emitter.getBuffersToEmit() <= 12);
           }
           threadsCompleted.countDown();
         }

@@ -33,10 +33,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.SingleDimensionShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +49,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "{0}, maxNumConcurrentSubTasks={1}")
+@MethodSource("constructorFeeder")
 public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiPhaseParallelIndexingTest
 {
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "auto", null);
@@ -66,7 +67,6 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2020-01-01/P1M");
 
-  @Parameterized.Parameters(name = "{0}, maxNumConcurrentSubTasks={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
@@ -87,7 +87,7 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
   @Test
   public void testLessPartitionsThanBuckets() throws IOException
   {
-    final File inputDir = temporaryFolder.newFolder();
+    final File inputDir = createTempDir();
     for (int i = 0; i < 2; i++) {
       try (final Writer writer =
                Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
@@ -120,19 +120,19 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
             TaskState.SUCCESS
         ).getSegments()
     );
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
     final DataSegment segment = segments.get(0);
-    Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
+    Assertions.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
     final SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segment.getShardSpec();
-    Assert.assertEquals(1, shardSpec.getNumCorePartitions());
-    Assert.assertEquals(0, shardSpec.getPartitionNum());
-    Assert.assertEquals(partitionDimensions, shardSpec.getDimensions());
+    Assertions.assertEquals(1, shardSpec.getNumCorePartitions());
+    Assertions.assertEquals(0, shardSpec.getPartitionNum());
+    Assertions.assertEquals(partitionDimensions, shardSpec.getDimensions());
   }
 
   @Test
   public void testEqualNumberOfPartitionsToBuckets() throws IOException
   {
-    final File inputDir = temporaryFolder.newFolder();
+    final File inputDir = createTempDir();
     for (int i = 0; i < 10; i++) {
       try (final Writer writer =
                Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
@@ -158,13 +158,13 @@ public class RangePartitionAdjustingCorePartitionSizeTest extends AbstractMultiP
         maxNumConcurrentSubTasks,
         TaskState.SUCCESS
     ).getSegments();
-    Assert.assertEquals(5, segments.size());
+    Assertions.assertEquals(5, segments.size());
     segments.forEach(segment -> {
-      Assert.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
+      Assertions.assertSame(SingleDimensionShardSpec.class, segment.getShardSpec().getClass());
       final SingleDimensionShardSpec shardSpec = (SingleDimensionShardSpec) segment.getShardSpec();
-      Assert.assertEquals(5, shardSpec.getNumCorePartitions());
-      Assert.assertTrue(shardSpec.getPartitionNum() < shardSpec.getNumCorePartitions());
-      Assert.assertEquals(partitionDimensions, shardSpec.getDimensions());
+      Assertions.assertEquals(5, shardSpec.getNumCorePartitions());
+      Assertions.assertTrue(shardSpec.getPartitionNum() < shardSpec.getNumCorePartitions());
+      Assertions.assertEquals(partitionDimensions, shardSpec.getDimensions());
     });
   }
 }

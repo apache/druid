@@ -63,6 +63,8 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
 
   @Nullable
   private ByteBufferWriter<ImmutableRTree> spatialWriter;
+  @Nullable
+  private final StringColumnFormatSpec columnFormatSpec;
 
   /**
    * @param dimensionName         column name
@@ -76,6 +78,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
    * @param progress              hook to update status of what this merger is doing during segment persist and merging
    * @param closer                resource closer if this merger needs to attach any closables that should be cleaned up
    *                              when the segment is finished writing
+   * @param columnFormatSpec      string column format spec to persist in segment metadata
    */
   public StringDimensionMergerV9(
       String dimensionName,
@@ -85,10 +88,12 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
       File segmentBaseDir,
-      Closer closer
+      Closer closer,
+      @Nullable StringColumnFormatSpec columnFormatSpec
   )
   {
     super(dimensionName, outputName, indexSpec, segmentWriteOutMedium, capabilities, progress, segmentBaseDir, closer);
+    this.columnFormatSpec = columnFormatSpec;
   }
 
   @Override
@@ -156,7 +161,8 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
         .withBitmapSerdeFactory(bitmapSerdeFactory)
         .withBitmapIndex(bitmapWriter)
         .withSpatialIndex(spatialWriter)
-        .withByteOrder(IndexIO.BYTE_ORDER);
+        .withByteOrder(IndexIO.BYTE_ORDER)
+        .withColumnFormatSpec(columnFormatSpec);
 
     if (writeDictionary) {
       partBuilder = partBuilder.withDictionary(dictionaryWriter);

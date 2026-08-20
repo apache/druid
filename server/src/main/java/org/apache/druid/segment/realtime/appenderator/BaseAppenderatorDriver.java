@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -566,7 +567,7 @@ public abstract class BaseAppenderatorDriver implements Closeable
               metadata == null ? null : ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
               segmentsAndCommitMetadata.getSegmentSchemaMapping(),
               segmentsAndCommitMetadata.getUpgradedSegments()
-          );
+          ).withWasPublished(segmentsAndCommitMetadata.wasPublished());
         },
         MoreExecutors.directExecutor()
     );
@@ -632,23 +633,30 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     segmentsAndCommitMetadata.getSegmentSchemaMapping()
                 );
                 if (publishResult.isSuccess()) {
+                  // Reconcile to the published shard specs (publishSegments may annotate them, e.g. DimensionValueSetShardSpec
+                  //  so logging/handoff reports the real spec, not the pre-publish one.
+                  final SegmentsAndCommitMetadata publishedMetadata =
+                      segmentsAndCommitMetadata.withPublishedSegments(publishResult.getSegments());
+
                   log.info(
                       "Published [%d] segments with commit metadata[%s].",
-                      segmentsAndCommitMetadata.getSegments().size(),
+                      publishedMetadata.getSegments().size(),
                       callerMetadata
                   );
-                  log.infoSegments(segmentsAndCommitMetadata.getSegments(), "Published segments");
+                  log.infoSegments(publishedMetadata.getSegments(), "Published segments");
 
                   // Log segments upgraded as a result of a concurrent replace
                   final Set<DataSegment> upgradedSegments = new HashSet<>(publishResult.getSegments());
-                  segmentsAndCommitMetadata.getSegments().forEach(upgradedSegments::remove);
+                  publishedMetadata.getSegments().forEach(upgradedSegments::remove);
                   if (!upgradedSegments.isEmpty()) {
                     log.info("Published [%d] upgraded segments.", upgradedSegments.size());
                     log.infoSegments(upgradedSegments, "Upgraded segments");
                   }
 
-                  log.info("Published segment schemas[%s].", segmentsAndCommitMetadata.getSegmentSchemaMapping());
-                  return segmentsAndCommitMetadata.withUpgradedSegments(upgradedSegments);
+                  log.info("Published segment schemas[%s].", publishedMetadata.getSegmentSchemaMapping());
+                  return publishedMetadata
+                      .withUpgradedSegments(upgradedSegments)
+                      .withWasPublished(true);
                 } else {
                   // Publishing didn't affirmatively succeed. However, segments
                   // with these IDs may have already been published:
@@ -680,8 +688,8 @@ public abstract class BaseAppenderatorDriver implements Closeable
                     // Clean up pushed segments if they are physically disjoint from the published ones (this means
                     // they were probably pushed by a replica, and with the unique paths option).
                     final boolean physicallyDisjoint = Sets.intersection(
-                        publishedSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet()),
-                        ourSegments.stream().map(DataSegment::getLoadSpec).collect(Collectors.toSet())
+                        getLoadSpecs("published", publishedSegments),
+                        getLoadSpecs("ours", ourSegments)
                     ).isEmpty();
 
                     if (physicallyDisjoint) {
@@ -754,6 +762,26 @@ public abstract class BaseAppenderatorDriver implements Closeable
   public void close()
   {
     executor.shutdownNow();
+  }
+
+  /**
+   * Returns a Set of {@link DataSegment#getLoadSpec()} from the provided segments. Throws if any loadspecs
+   * are null, which may indicate that they were incorrectly pruned by {@link DataSegment#retainOnlyDetails(Set)}.
+   *
+   * @param label label for the error message, if it fires
+   * @param dataSegments the segments
+   */
+  private static Set<Map<String, Object>> getLoadSpecs(String label, Iterable<DataSegment> dataSegments)
+  {
+    final Set<Map<String, Object>> loadSpecs = new HashSet<>();
+    for (final DataSegment segment : dataSegments) {
+      final Map<String, Object> loadSpec = segment.getLoadSpec();
+      if (loadSpec == null) {
+        throw DruidException.defensive("Segment[%s] (%s) missing loadSpec", segment.getId(), label);
+      }
+      loadSpecs.add(loadSpec);
+    }
+    return loadSpecs;
   }
 
   /**

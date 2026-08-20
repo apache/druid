@@ -28,6 +28,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.DefaultServerHolderModule;
 import org.apache.druid.guice.GuiceInjectors;
@@ -65,8 +67,6 @@ import org.junit.rules.ExpectedException;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;

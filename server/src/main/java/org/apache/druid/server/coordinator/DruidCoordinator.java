@@ -35,10 +35,8 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
@@ -54,7 +52,6 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionRunSimulator;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
@@ -89,6 +86,7 @@ import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
+import org.apache.druid.server.coordinator.loading.SegmentStatsSnapshot;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
@@ -132,8 +130,6 @@ public class DruidCoordinator
   private final List<DutiesRunnable> dutiesRunnables = new ArrayList<>();
   private final LoadQueueTaskMaster taskMaster;
   private final SegmentLoadQueueManager loadQueueManager;
-  private final ServiceAnnouncer serviceAnnouncer;
-  private final DruidNode self;
   private final CoordinatorCustomDutyGroups customDutyGroups;
   private final BalancerStrategyFactory balancerStrategyFactory;
   private final LookupCoordinatorManager lookupCoordinatorManager;
@@ -183,8 +179,6 @@ public class DruidCoordinator
       OverlordClient overlordClient,
       LoadQueueTaskMaster taskMaster,
       SegmentLoadQueueManager loadQueueManager,
-      ServiceAnnouncer serviceAnnouncer,
-      @Self DruidNode self,
       CoordinatorCustomDutyGroups customDutyGroups,
       LookupCoordinatorManager lookupCoordinatorManager,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
@@ -202,8 +196,6 @@ public class DruidCoordinator
     this.emitter = emitter;
     this.overlordClient = overlordClient;
     this.taskMaster = taskMaster;
-    this.serviceAnnouncer = serviceAnnouncer;
-    this.self = self;
     this.customDutyGroups = customDutyGroups;
 
     this.executorFactory = scheduledExecutorFactory;
@@ -256,12 +248,10 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && (replicaCount.totalLoaded() > 0 || replicaCount.required() == 0)) {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 0);
-      } else {
-        datasourceToUnavailableSegments.addTo(segment.getDataSource(), 1);
-      }
+      datasourceToUnavailableSegments.addTo(
+          segment.getDataSource(),
+          segmentReplicationStatus.isUnavailable(segment.getId()) ? 1 : 0
+      );
     }
 
     return datasourceToUnavailableSegments;
@@ -277,8 +267,7 @@ public class DruidCoordinator
 
     final Iterable<DataSegment> dataSegments = metadataManager.iterateAllUsedSegments();
     for (DataSegment segment : dataSegments) {
-      SegmentReplicaCount replicaCount = segmentReplicationStatus.getReplicaCountsInCluster(segment.getId());
-      if (replicaCount != null && replicaCount.totalLoaded() == 0 && replicaCount.required() == 0) {
+      if (segmentReplicationStatus.isDeepStorageOnly(segment.getId())) {
         datasourceToDeepStorageOnlySegments.addTo(segment.getDataSource(), 1);
       }
     }
@@ -449,7 +438,6 @@ public class DruidCoordinator
       metadataManager.onLeaderStart();
       taskMaster.onLeaderStart();
       lookupCoordinatorManager.start();
-      serviceAnnouncer.announce(self);
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.onLeaderStart();
       }
@@ -538,7 +526,6 @@ public class DruidCoordinator
       taskMaster.onLeaderStop();
       coordinatorDynamicConfigSyncer.onLeaderStop();
       brokerDynamicConfigSyncer.onLeaderStop();
-      serviceAnnouncer.unannounce(self);
       lookupCoordinatorManager.stop();
       metadataManager.onLeaderStop();
       stopAllDutyGroups();
@@ -795,9 +782,11 @@ public class DruidCoordinator
     {
       broadcastSegments = params.getBroadcastSegments();
       segmentReplicationStatus = params.getSegmentReplicationStatus();
+
       if (coordinatorSegmentMetadataCache != null) {
         coordinatorSegmentMetadataCache.updateSegmentReplicationStatus(segmentReplicationStatus);
       }
+
       return params;
     }
   }
@@ -812,25 +801,28 @@ public class DruidCoordinator
     {
       // Collect stats for unavailable and under-replicated segments
       final CoordinatorRunStats stats = params.getCoordinatorStats();
-      getDatasourceToUnavailableSegmentCount().forEach(
-          (dataSource, numUnavailable) -> stats.add(
-              Stats.Segments.UNAVAILABLE,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numUnavailable
+
+      // Compute unavailable, under-replicated, deep-storage only counts in a single pass
+      final SegmentStatsSnapshot snapshot =
+          segmentReplicationStatus == null
+          ? SegmentStatsSnapshot.empty()
+          : segmentReplicationStatus.computeSegmentStats(metadataManager.iterateAllUsedSegments(), true);
+
+      snapshot.getDatasourceToUnavailableCount().forEach(
+          (datasource, count) ->
+              stats.add(Stats.Segments.UNAVAILABLE, RowKey.of(Dimension.DATASOURCE, datasource), count)
+      );
+
+      snapshot.getTierToDatasourceToUnderReplicatedCount().forEach(
+          (tier, datasourceToCount) -> datasourceToCount.forEach(
+              (datasource, count) ->
+                  stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, datasource, count)
           )
       );
-      getTierToDatasourceToUnderReplicatedCount(false).forEach(
-          (tier, countsPerDatasource) -> countsPerDatasource.forEach(
-              (dataSource, underReplicatedCount) ->
-                  stats.addToSegmentStat(Stats.Segments.UNDER_REPLICATED, tier, dataSource, underReplicatedCount)
-          )
-      );
-      getDatasourceToDeepStorageQueryOnlySegmentCount().forEach(
-          (dataSource, numDeepStorageOnly) -> stats.add(
-              Stats.Segments.DEEP_STORAGE_ONLY,
-              RowKey.of(Dimension.DATASOURCE, dataSource),
-              numDeepStorageOnly
-          )
+
+      snapshot.getDatasourceToDeepStorageOnlyCount().forEach(
+          (datasource, count) ->
+              stats.add(Stats.Segments.DEEP_STORAGE_ONLY, RowKey.of(Dimension.DATASOURCE, datasource), count)
       );
 
       return params;

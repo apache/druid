@@ -30,7 +30,8 @@ import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import javax.annotation.Nullable;
 
 /**
- * The {@link org.apache.druid.indexing.overlord.RemoteTaskRunner} uses this class to select a worker to assign tasks to.
+ * The {@link org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunner} uses this class to select a worker to assign
+ * tasks to.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = EqualDistributionWorkerSelectStrategy.class)
 @JsonSubTypes(value = {

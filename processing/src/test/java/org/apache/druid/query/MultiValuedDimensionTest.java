@@ -73,13 +73,12 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,10 +93,10 @@ import java.util.Map;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 {
-  @Parameterized.Parameters(name = "groupby: {0} forceHashAggregation: {2} ({1})")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -124,12 +123,9 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   private final GroupByQueryConfig config;
   private final ImmutableMap<String, Object> context;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, boolean forceHashAggregation)
   {
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
         ImmutableList.of(),
         config,
         null
@@ -140,7 +136,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     this.context = ImmutableMap.of("forceHashAggregation", forceHashAggregation);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     incrementalIndex = new OnheapIncrementalIndex.Builder()
@@ -221,7 +217,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     queryableIndexNullSampler = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDirNullSampler);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     helper.close();
@@ -953,11 +949,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
   @Test
   public void testGroupByExpressionMultiConflicting()
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "Invalid expression: (concat [(cartesian_map ([x, othertags] -> (concat [x, othertags])), [tags, othertags]), tags]); [tags] used as both scalar and array variables"
-    );
-    GroupByQuery query = GroupByQuery
+    final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
@@ -976,23 +968,28 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         .setContext(context)
         .build();
 
-    helper.runQueryOnSegmentsObjs(
-        ImmutableList.of(
-            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
-            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
-        ),
-        query
-    ).toList();
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> helper.runQueryOnSegmentsObjs(
+            ImmutableList.of(
+                new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+                new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+            ),
+            query
+        ).toList()
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Invalid expression: (concat [(cartesian_map ([x, othertags] -> (concat [x, othertags])), [tags, othertags]), tags]);"
+            + " [tags] used as both scalar and array variables"
+        )
+    );
   }
 
   @Test
   public void testGroupByExpressionMultiConflictingAlso()
   {
-    expectedException.expect(RuntimeException.class);
-    expectedException.expectMessage(
-        "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]); [tags] used as both scalar and array variables"
-    );
-    GroupByQuery query = GroupByQuery
+    final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
@@ -1011,13 +1008,22 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
         .setContext(context)
         .build();
 
-    helper.runQueryOnSegmentsObjs(
-        ImmutableList.of(
-            new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
-            new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
-        ),
-        query
-    ).toList();
+    final RuntimeException exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> helper.runQueryOnSegmentsObjs(
+            ImmutableList.of(
+                new QueryableIndexSegment(queryableIndex, SegmentId.dummy("sid1")),
+                new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("sid2"))
+            ),
+            query
+        ).toList()
+    );
+    Assertions.assertTrue(
+        exception.getMessage().contains(
+            "Invalid expression: (array_concat [tags, (array_append [othertags, tags])]);"
+            + " [tags] used as both scalar and array variables"
+        )
+    );
   }
 
   @Test
@@ -1187,7 +1193,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
     }
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception
   {
     queryableIndex.close();

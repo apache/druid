@@ -49,6 +49,7 @@ import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -62,7 +63,20 @@ import java.util.Map;
  */
 public class TestHttpClient implements HttpClient
 {
-  private static final TrafficCop NOOP_TRAFFIC_COP = checkNum -> 0L;
+  public static final TrafficCop NOOP_TRAFFIC_COP = new TrafficCop()
+  {
+    @Override
+    public long resume(long chunkNum)
+    {
+      return 0;
+    }
+
+    @Override
+    public void abort()
+    {
+
+    }
+  };
   private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
   private final Map<URL, SimpleServerManager> servers = new HashMap<>();

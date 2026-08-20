@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.DefaultPasswordProvider;
@@ -43,6 +44,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class ExternalTableTest extends BaseExternTableTest
 {
@@ -130,6 +132,28 @@ public class ExternalTableTest extends BaseExternTableTest
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
+  }
+
+  @Test
+  public void testValidateUnrecognizedColumnType()
+  {
+    // A declared column type must parse to a Druid type: an unrecognized type would otherwise silently become
+    // STRING when the columns are converted to the input row signature.
+    CsvInputFormat format = new CsvInputFormat(
+        Collections.singletonList("a"), ";", false, false, 0, null);
+    for (String badType : new String[]{"FOO", "COMPLEX<json"}) {
+      TableMetadata table = TableBuilder.external("foo")
+          .inputSource(toMap(new InlineInputSource("a\n")))
+          .inputFormat(formatToMap(format))
+          .column("a", badType)
+          .build();
+      ResolvedTable resolved = registry.resolve(table.spec());
+      DruidException e = assertThrows(DruidException.class, () -> resolved.validate());
+      assertTrue(
+          "expected unrecognized-type error for [" + badType + "] but got: " + e.getMessage(),
+          e.getMessage().contains("Column [a] has an unrecognized type [" + badType + "]")
+      );
+    }
   }
 
   /**

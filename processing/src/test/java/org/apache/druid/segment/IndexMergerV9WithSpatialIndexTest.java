@@ -51,9 +51,9 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -67,7 +67,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTest
 {
 
@@ -81,7 +82,6 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
 
   private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
 
-  @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
     List<Object[]> argumentArrays = new ArrayList<>();

@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
@@ -46,11 +47,11 @@ import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -64,8 +65,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class TaskLockBoxConcurrencyTest
 {
-  @Rule
-  public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
+  private final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
   private final ObjectMapper objectMapper = new DefaultObjectMapper();
   private ExecutorService service;
@@ -73,9 +73,10 @@ public class TaskLockBoxConcurrencyTest
   private GlobalTaskLockbox lockbox;
   private SegmentSchemaManager segmentSchemaManager;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
+    derby.before();
     final TestDerbyConnector derbyConnector = derby.getConnector();
     derbyConnector.createTaskTables();
     derbyConnector.createPendingSegmentsTable();
@@ -101,6 +102,7 @@ public class TaskLockBoxConcurrencyTest
                 derbyConnector,
                 new TestDruidLeaderSelector(),
                 NoopSegmentMetadataCache.instance(),
+                new SegmentsMetadataManagerConfig(null, null, null),
                 NoopServiceEmitter.instance()
             ),
             objectMapper,
@@ -115,10 +117,15 @@ public class TaskLockBoxConcurrencyTest
     service = Execs.multiThreaded(2, "TaskLockBoxConcurrencyTest-%d");
   }
 
-  @After
+  @AfterEach
   public void teardown()
   {
-    service.shutdownNow();
+    try {
+      service.shutdownNow();
+    }
+    finally {
+      derby.after();
+    }
   }
 
   private LockResult tryTimeChunkLock(TaskLockType lockType, Task task, Interval interval)
@@ -132,7 +139,8 @@ public class TaskLockBoxConcurrencyTest
     return lockbox.lock(task, new TimeChunkLockRequest(lockType, task, interval, null));
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testDoInCriticalSectionWithDifferentTasks()
       throws ExecutionException, InterruptedException
   {
@@ -150,8 +158,8 @@ public class TaskLockBoxConcurrencyTest
     // lowPriorityTask acquires a lock first and increases the int of intSupplier in the critical section
     final Future<Integer> lowPriorityFuture = service.submit(() -> {
       final LockResult result = tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
-      Assert.assertTrue(result.isOk());
-      Assert.assertFalse(result.isRevoked());
+      Assertions.assertTrue(result.isOk());
+      Assertions.assertFalse(result.isRevoked());
 
       return lockbox.doInCriticalSection(
           lowPriorityTask,
@@ -167,7 +175,7 @@ public class TaskLockBoxConcurrencyTest
               )
               .onInvalidLocks(
                   () -> {
-                    Assert.fail();
+                    Assertions.fail();
                     return null;
                   }
               )
@@ -180,8 +188,8 @@ public class TaskLockBoxConcurrencyTest
     final Future<Integer> highPriorityFuture = service.submit(() -> {
       latch.await();
       final LockResult result = acquireTimeChunkLock(TaskLockType.EXCLUSIVE, highPriorityTask, interval);
-      Assert.assertTrue(result.isOk());
-      Assert.assertFalse(result.isRevoked());
+      Assertions.assertTrue(result.isOk());
+      Assertions.assertFalse(result.isRevoked());
 
       return lockbox.doInCriticalSection(
           highPriorityTask,
@@ -196,7 +204,7 @@ public class TaskLockBoxConcurrencyTest
               )
               .onInvalidLocks(
                   () -> {
-                    Assert.fail();
+                    Assertions.fail();
                     return null;
                   }
               )
@@ -204,16 +212,17 @@ public class TaskLockBoxConcurrencyTest
       );
     });
 
-    Assert.assertEquals(1, lowPriorityFuture.get().intValue());
-    Assert.assertEquals(2, highPriorityFuture.get().intValue());
+    Assertions.assertEquals(1, lowPriorityFuture.get().intValue());
+    Assertions.assertEquals(2, highPriorityFuture.get().intValue());
 
     // the lock for lowPriorityTask must be revoked by the highPriorityTask after its work is done in critical section
     final LockResult result = tryTimeChunkLock(TaskLockType.EXCLUSIVE, lowPriorityTask, interval);
-    Assert.assertFalse(result.isOk());
-    Assert.assertTrue(result.isRevoked());
+    Assertions.assertFalse(result.isOk());
+    Assertions.assertTrue(result.isRevoked());
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testDoInCriticalSectionWithOverlappedIntervals() throws Exception
   {
     final List<Interval> intervals = ImmutableList.of(
@@ -227,7 +236,7 @@ public class TaskLockBoxConcurrencyTest
 
     for (Interval interval : intervals) {
       final LockResult result = tryTimeChunkLock(TaskLockType.EXCLUSIVE, task, interval);
-      Assert.assertTrue(result.isOk());
+      Assertions.assertTrue(result.isOk());
     }
 
     final SettableSupplier<Integer> intSupplier = new SettableSupplier<>(0);
@@ -247,7 +256,7 @@ public class TaskLockBoxConcurrencyTest
             )
             .onInvalidLocks(
                 () -> {
-                  Assert.fail();
+                  Assertions.fail();
                   return null;
                 }
             )
@@ -269,7 +278,7 @@ public class TaskLockBoxConcurrencyTest
               )
               .onInvalidLocks(
                   () -> {
-                    Assert.fail();
+                    Assertions.fail();
                     return null;
                   }
               )
@@ -277,11 +286,12 @@ public class TaskLockBoxConcurrencyTest
       );
     });
 
-    Assert.assertEquals(1, future1.get().intValue());
-    Assert.assertEquals(2, future2.get().intValue());
+    Assertions.assertEquals(1, future1.get().intValue());
+    Assertions.assertEquals(2, future2.get().intValue());
   }
 
-  @Test(timeout = 60_000L)
+  @Timeout(60)
+  @Test
   public void testConcurrentRemoveAndAllocateSegmentsForSameTask() throws Exception
   {
     final Task task = NoopTask.create();
@@ -367,12 +377,12 @@ public class TaskLockBoxConcurrencyTest
           false
       );
       SegmentAllocateResult result2 = results2.get(0);
-      Assert.assertNull("Subsequent allocation after removal must fail", result2.getSegmentId());
-      Assert.assertFalse(result2.isSuccess());
-      Assert.assertTrue(result2.getErrorMessage().contains("Unable to grant lock to inactive Task"));
+      Assertions.assertNull(result2.getSegmentId(), "Subsequent allocation after removal must fail");
+      Assertions.assertFalse(result2.isSuccess());
+      Assertions.assertTrue(result2.getErrorMessage().contains("Unable to grant lock to inactive Task"));
     } else {
-      Assert.assertTrue(result.getErrorMessage().contains("Unable to grant lock to inactive Task"));
+      Assertions.assertTrue(result.getErrorMessage().contains("Unable to grant lock to inactive Task"));
     }
-    Assert.assertTrue(lockbox.getAllLocks().isEmpty());
+    Assertions.assertTrue(lockbox.getAllLocks().isEmpty());
   }
 }

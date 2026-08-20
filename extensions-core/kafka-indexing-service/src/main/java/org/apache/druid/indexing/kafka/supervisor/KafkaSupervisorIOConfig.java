@@ -26,6 +26,7 @@ import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
@@ -36,6 +37,7 @@ import org.joda.time.Period;
 
 import javax.annotation.Nullable;
 import java.util.Map;
+import java.util.Objects;
 
 public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
 {
@@ -78,7 +80,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("idleConfig") IdleConfig idleConfig,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
       @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics,
-      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas
+      @Nullable @JsonProperty("serverPriorityToReplicas") Map<Integer, Integer> serverPriorityToReplicas,
+      @Nullable @JsonProperty("boundedStreamConfig") BoundedStreamConfig boundedStreamConfig
   )
   {
     super(
@@ -98,7 +101,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
         lateMessageRejectionStartDateTime,
         idleConfig,
         stopTaskCount,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        boundedStreamConfig
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -207,6 +211,44 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       );
     }
     return topic != null ? topic : topicPattern;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    KafkaSupervisorIOConfig that = (KafkaSupervisorIOConfig) o;
+    return pollTimeout == that.pollTimeout
+           && emitTimeLagMetrics == that.emitTimeLagMetrics
+           && Objects.equals(consumerProperties, that.consumerProperties)
+           && Objects.equals(configOverrides, that.configOverrides)
+           && Objects.equals(topic, that.topic)
+           && Objects.equals(topicPattern, that.topicPattern);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        super.hashCode(),
+        consumerProperties,
+        pollTimeout,
+        configOverrides,
+        topic,
+        topicPattern,
+        emitTimeLagMetrics
+    );
+  }
+
+  @Override
+  public KafkaIOConfigBuilder toBuilder()
+  {
+    return new KafkaIOConfigBuilder().copyFrom(this);
   }
 
 }

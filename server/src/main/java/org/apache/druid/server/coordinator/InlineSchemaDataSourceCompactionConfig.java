@@ -24,11 +24,14 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.BaseTableProjectionSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -49,12 +52,13 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   }
 
   /**
-   * The number of input segments is limited because the byte size of a serialized task spec is limited by
-   * org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig.maxZnodeBytes.
+   * The number of input segments is limited because the byte size of a serialized task spec is bounded by the
+   * maximum payload size accepted by the task runner.
    */
   @Nullable
   private final Integer maxRowsPerSegment;
   private final Period skipOffsetFromLatest;
+  private final List<Interval> skipIntervals;
   @Nullable
   private final UserCompactionTaskQueryTuningConfig tuningConfig;
   @Nullable
@@ -67,6 +71,8 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   private final CompactionTransformSpec transformSpec;
   @Nullable
   private final List<AggregateProjectionSpec> projections;
+  @Nullable
+  private final BaseTableProjectionSpec baseTable;
   @Nullable
   private final UserCompactionTaskIOConfig ioConfig;
   @Nullable
@@ -81,11 +87,13 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
       @JsonProperty("inputSegmentSizeBytes") @Nullable Long inputSegmentSizeBytes,
       @JsonProperty("maxRowsPerSegment") @Deprecated @Nullable Integer maxRowsPerSegment,
       @JsonProperty("skipOffsetFromLatest") @Nullable Period skipOffsetFromLatest,
+      @JsonProperty("skipIntervals") @Nullable List<Interval> skipIntervals,
       @JsonProperty("tuningConfig") @Nullable UserCompactionTaskQueryTuningConfig tuningConfig,
       @JsonProperty("granularitySpec") @Nullable UserCompactionTaskGranularityConfig granularitySpec,
       @JsonProperty("dimensionsSpec") @Nullable UserCompactionTaskDimensionsConfig dimensionsSpec,
       @JsonProperty("metricsSpec") @Nullable AggregatorFactory[] metricsSpec,
       @JsonProperty("transformSpec") @Nullable CompactionTransformSpec transformSpec,
+      @JsonProperty("baseTable") @Nullable BaseTableProjectionSpec baseTable,
       @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @JsonProperty("ioConfig") @Nullable UserCompactionTaskIOConfig ioConfig,
       @JsonProperty("engine") @Nullable CompactionEngine engine,
@@ -101,6 +109,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
                                  : inputSegmentSizeBytes;
     this.maxRowsPerSegment = maxRowsPerSegment;
     this.skipOffsetFromLatest = skipOffsetFromLatest == null ? DEFAULT_SKIP_OFFSET_FROM_LATEST : skipOffsetFromLatest;
+    this.skipIntervals = Configs.valueOrDefault(skipIntervals, List.of());
     this.tuningConfig = tuningConfig;
     this.ioConfig = ioConfig;
     this.granularitySpec = granularitySpec;
@@ -108,6 +117,7 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     this.dimensionsSpec = dimensionsSpec;
     this.transformSpec = transformSpec;
     this.projections = projections;
+    this.baseTable = baseTable;
     this.taskContext = taskContext;
     this.engine = engine;
   }
@@ -147,6 +157,13 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   public Period getSkipOffsetFromLatest()
   {
     return skipOffsetFromLatest;
+  }
+
+  @JsonProperty
+  @Override
+  public List<Interval> getSkipIntervals()
+  {
+    return skipIntervals;
   }
 
   @JsonProperty
@@ -208,6 +225,14 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
   @JsonProperty
   @Nullable
   @Override
+  public BaseTableProjectionSpec getBaseTable()
+  {
+    return baseTable;
+  }
+
+  @JsonProperty
+  @Nullable
+  @Override
   public Map<String, Object> getTaskContext()
   {
     return taskContext;
@@ -250,12 +275,14 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
            Objects.equals(dataSource, that.dataSource) &&
            Objects.equals(maxRowsPerSegment, that.maxRowsPerSegment) &&
            Objects.equals(skipOffsetFromLatest, that.skipOffsetFromLatest) &&
+           Objects.equals(skipIntervals, that.skipIntervals) &&
            Objects.equals(tuningConfig, that.tuningConfig) &&
            Objects.equals(granularitySpec, that.granularitySpec) &&
            Objects.equals(dimensionsSpec, that.dimensionsSpec) &&
            Arrays.equals(metricsSpec, that.metricsSpec) &&
            Objects.equals(transformSpec, that.transformSpec) &&
            Objects.equals(projections, that.projections) &&
+           Objects.equals(baseTable, that.baseTable) &&
            Objects.equals(ioConfig, that.ioConfig) &&
            this.engine == that.engine &&
            Objects.equals(taskContext, that.taskContext);
@@ -270,11 +297,13 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
         inputSegmentSizeBytes,
         maxRowsPerSegment,
         skipOffsetFromLatest,
+        skipIntervals,
         tuningConfig,
         granularitySpec,
         dimensionsSpec,
         transformSpec,
         projections,
+        baseTable,
         ioConfig,
         taskContext,
         engine
@@ -295,12 +324,14 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
         .withInputSegmentSizeBytes(this.inputSegmentSizeBytes)
         .withMaxRowsPerSegment(this.maxRowsPerSegment)
         .withSkipOffsetFromLatest(this.skipOffsetFromLatest)
+        .withSkipIntervals(this.skipIntervals)
         .withTuningConfig(this.tuningConfig)
         .withGranularitySpec(this.granularitySpec)
         .withDimensionsSpec(this.dimensionsSpec)
         .withMetricsSpec(this.metricsSpec)
         .withTransformSpec(this.transformSpec)
         .withProjections(this.projections)
+        .withBaseTable(this.baseTable)
         .withIoConfig(this.ioConfig)
         .withEngine(this.engine)
         .withTaskContext(this.taskContext);
@@ -313,12 +344,14 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     private Long inputSegmentSizeBytes;
     private Integer maxRowsPerSegment;
     private Period skipOffsetFromLatest;
+    private List<Interval> skipIntervals;
     private UserCompactionTaskQueryTuningConfig tuningConfig;
     private UserCompactionTaskGranularityConfig granularitySpec;
     private UserCompactionTaskDimensionsConfig dimensionsSpec;
     private AggregatorFactory[] metricsSpec;
     private CompactionTransformSpec transformSpec;
     private List<AggregateProjectionSpec> projections;
+    private BaseTableProjectionSpec baseTable;
     private UserCompactionTaskIOConfig ioConfig;
     private CompactionEngine engine;
     private Map<String, Object> taskContext;
@@ -331,11 +364,13 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
           inputSegmentSizeBytes,
           maxRowsPerSegment,
           skipOffsetFromLatest,
+          skipIntervals,
           tuningConfig,
           granularitySpec,
           dimensionsSpec,
           metricsSpec,
           transformSpec,
+          baseTable,
           projections,
           ioConfig,
           engine,
@@ -371,6 +406,12 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     public Builder withSkipOffsetFromLatest(Period skipOffsetFromLatest)
     {
       this.skipOffsetFromLatest = skipOffsetFromLatest;
+      return this;
+    }
+
+    public Builder withSkipIntervals(List<Interval> skipIntervals)
+    {
+      this.skipIntervals = skipIntervals;
       return this;
     }
 
@@ -443,6 +484,12 @@ public class InlineSchemaDataSourceCompactionConfig implements DataSourceCompact
     public Builder withProjections(List<AggregateProjectionSpec> projections)
     {
       this.projections = projections;
+      return this;
+    }
+
+    public Builder withBaseTable(BaseTableProjectionSpec baseTable)
+    {
+      this.baseTable = baseTable;
       return this;
     }
 

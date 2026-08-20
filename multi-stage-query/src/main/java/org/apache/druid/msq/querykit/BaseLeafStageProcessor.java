@@ -51,11 +51,11 @@ import org.apache.druid.msq.input.external.ExternalInputSlice;
 import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.filter.SegmentPruner;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.segment.SegmentMapFunction;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -100,13 +100,12 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     final ReadableInputQueue baseInputQueue = makeBaseInputQueue(context.workOrder().getInputs(), context);
     final int totalProcessors = baseInputQueue.remaining();
 
-    if (totalProcessors == 0) {
-      return stageRunner.run(new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none()));
-    }
-
     final int outstandingProcessors;
 
-    if (hasParquet(inputSlices)) {
+    if (totalProcessors == 0) {
+      // No processors to run, but still acquire 1 slice so processingBouncer() works in stageRunner.run().
+      outstandingProcessors = 1;
+    } else if (hasParquet(inputSlices)) {
       // This is a workaround for memory use in ParquetFileReader, which loads up an entire row group into memory as
       // part of its normal operation. Row groups can be quite large (like, 1GB large) so this is a major source of
       // unaccounted-for memory use during ingestion and query of external data. We are trying to prevent memory
@@ -114,6 +113,14 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
       outstandingProcessors = 1;
     } else {
       outstandingProcessors = Math.min(totalProcessors, context.threadCount());
+    }
+
+    if (usesProcessingBuffers()) {
+      frameContext.acquireProcessingBuffers(outstandingProcessors);
+    }
+
+    if (totalProcessors == 0) {
+      return stageRunner.run(new ProcessorsAndChannels<>(ProcessorManagers.none(), OutputChannels.none()));
     }
 
     final Queue<FrameWriterFactory> frameWriterFactoryQueue = new ArrayDeque<>(outstandingProcessors);
@@ -257,6 +264,23 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     return slices;
   }
 
+
+  /**
+   * Create the {@link ReadableInputQueue} for this stage's base inputs. Override to change how the queue acquires
+   * segments: the default acquires them fully up front ({@link AcquireMode#FULL}), which is safe for any processor.
+   * Leaf processors that read segments through the async cursor API
+   * ({@link org.apache.druid.segment.CursorFactory#makeCursorHolderAsync}) can override to {@link AcquireMode#PARTIAL}
+   * so only the columns a query actually touches are downloaded.
+   */
+  protected ReadableInputQueue makeReadableInputQueue(
+      final StandardPartitionReader partitionReader,
+      final List<PhysicalInputSlice> slices,
+      final int loadahead
+  )
+  {
+    return new ReadableInputQueue(partitionReader, slices, loadahead, AcquireMode.FULL);
+  }
+
   /**
    * Read base inputs, where "base" is meant in the same sense as in {@link ExecutionVertex}: the primary datasource
    * that drives query processing.
@@ -287,12 +311,10 @@ public abstract class BaseLeafStageProcessor extends BasicStageProcessor
     }
 
     final List<PhysicalInputSlice> filteredSlices = filterBaseInput(physicalInputSlices);
-    final Integer segmentLoadAheadCount =
-        MultiStageQueryContext.getSegmentLoadAheadCount(context.workOrder().getWorkerContext());
-    return new ReadableInputQueue(
+    return makeReadableInputQueue(
         new StandardPartitionReader(context),
         filteredSlices,
-        segmentLoadAheadCount != null ? segmentLoadAheadCount : context.threadCount()
+        context.segmentLoadAheadCount()
     );
   }
 

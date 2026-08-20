@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.timeline.DataSegment;
@@ -135,9 +136,13 @@ public class S3DataSegmentPusher implements DataSegmentPusher
       }
     }
 
+    final int binaryVersion = SegmentUtils.getVersionFromDir(indexFilesDir);
+    // V10 unzipped is rangeable: a single druid.segment with a range-readable header. V9 unzipped is a directory of
+    // separate smoosh files the range-read path can't consume.
+    final boolean rangeable = binaryVersion == IndexIO.V10_VERSION;
     return baseSegment.withSize(size)
-                      .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                      .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+                      .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path, rangeable))
+                      .withBinaryVersion(binaryVersion);
   }
 
   @Override
@@ -162,6 +167,26 @@ public class S3DataSegmentPusher implements DataSegmentPusher
         key,
         "S3Schema",
         "s3n"
+    );
+  }
+
+  /**
+   * Variant that stamps {@link S3LoadSpec#RANGEABLE} so {@link S3LoadSpec#openRangeReader()} can decide range-read
+   * eligibility. Used by the unzipped push path where the binary version is known at write time.
+   */
+  private Map<String, Object> makeLoadSpec(String bucket, String key, boolean rangeable)
+  {
+    return ImmutableMap.of(
+        "type",
+        "s3_zip",
+        "bucket",
+        bucket,
+        "key",
+        key,
+        "S3Schema",
+        "s3n",
+        S3LoadSpec.RANGEABLE,
+        rangeable
     );
   }
 

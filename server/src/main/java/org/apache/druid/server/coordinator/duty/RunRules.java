@@ -86,6 +86,7 @@ public class RunRules implements CoordinatorDuty
 
     final DateTime now = DateTimes.nowUtc();
     final Object2IntOpenHashMap<String> datasourceToSegmentsWithNoRule = new Object2IntOpenHashMap<>();
+
     for (DataSegment segment : usedSegments) {
       // Do not apply rules on overshadowed segments as they will be
       // marked unused and eventually unloaded from all historicals

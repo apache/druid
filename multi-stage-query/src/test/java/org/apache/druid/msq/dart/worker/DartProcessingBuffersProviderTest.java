@@ -44,7 +44,7 @@ import static org.mockito.Mockito.when;
 @RunWith(MockitoJUnitRunner.class)
 public class DartProcessingBuffersProviderTest
 {
-  private static final int PROCESSING_THREADS = 2;
+  private static final int PROCESSING_THREADS = 4;
   private static final long TIMEOUT_MILLIS = 1000L;
   private static final int BUFFER_SIZE = 1024;
 
@@ -77,14 +77,106 @@ public class DartProcessingBuffersProviderTest
   }
 
   @Test
-  public void test_acquire_poolSizeTwo()
+  public void test_acquire_singleSliceUsesFullChunk()
   {
-    // Setup mock to return a buffer
+    // With poolSize=1 and one merge buffer of BUFFER_SIZE, the chunk is BUFFER_SIZE.
+    // Requesting 1 slice should give a single buffer of full chunk size and a Bouncer of 1.
     when(mockBufferHolder.get()).thenReturn(testBuffer);
     when(mockMergeBufferPool.takeBatch(eq(1), eq(TIMEOUT_MILLIS)))
         .thenReturn(List.of(mockBufferHolder));
 
-    // Test successful acquisition
+    final ResourceHolder<ProcessingBuffersSet> result = provider.acquire(1, TIMEOUT_MILLIS);
+    try {
+      final ResourceHolder<ProcessingBuffers> holder = result.get().acquire(1);
+      try {
+        final ProcessingBuffers buffers = holder.get();
+        Assert.assertEquals(1, buffers.getBouncer().getMaxCount());
+
+        final ResourceHolder<ByteBuffer> sliceHolder = buffers.getBufferPool().take();
+        Assert.assertEquals(BUFFER_SIZE, sliceHolder.get().capacity());
+        sliceHolder.close();
+      }
+      finally {
+        holder.close();
+      }
+    }
+    finally {
+      result.close();
+    }
+  }
+
+  @Test
+  public void test_acquire_processingThreadsSlices()
+  {
+    // Requesting PROCESSING_THREADS slices yields the maximum slicing: each slice is BUFFER_SIZE/PROCESSING_THREADS.
+    when(mockBufferHolder.get()).thenReturn(testBuffer);
+    when(mockMergeBufferPool.takeBatch(eq(1), eq(TIMEOUT_MILLIS)))
+        .thenReturn(List.of(mockBufferHolder));
+
+    final ResourceHolder<ProcessingBuffersSet> result = provider.acquire(1, TIMEOUT_MILLIS);
+    try {
+      final ResourceHolder<ProcessingBuffers> holder = result.get().acquire(PROCESSING_THREADS);
+      try {
+        final ProcessingBuffers buffers = holder.get();
+        Assert.assertEquals(PROCESSING_THREADS, buffers.getBouncer().getMaxCount());
+
+        final List<ResourceHolder<ByteBuffer>> sliceHolders = new ArrayList<>();
+        try {
+          for (int i = 0; i < PROCESSING_THREADS; i++) {
+            final ResourceHolder<ByteBuffer> sliceHolder = buffers.getBufferPool().take();
+            Assert.assertEquals(BUFFER_SIZE / PROCESSING_THREADS, sliceHolder.get().capacity());
+            sliceHolders.add(sliceHolder);
+          }
+        }
+        finally {
+          for (final ResourceHolder<ByteBuffer> sh : sliceHolders) {
+            sh.close();
+          }
+        }
+      }
+      finally {
+        holder.close();
+      }
+    }
+    finally {
+      result.close();
+    }
+  }
+
+  @Test
+  public void test_acquire_resliceAfterRelease()
+  {
+    // Acquire with N=2, release, then re-acquire with N=4. The chunk should be re-sliced.
+    when(mockBufferHolder.get()).thenReturn(testBuffer);
+    when(mockMergeBufferPool.takeBatch(eq(1), eq(TIMEOUT_MILLIS)))
+        .thenReturn(List.of(mockBufferHolder));
+
+    final ResourceHolder<ProcessingBuffersSet> result = provider.acquire(1, TIMEOUT_MILLIS);
+    try {
+      // First acquisition with 2 slices.
+      final ResourceHolder<ProcessingBuffers> holder1 = result.get().acquire(2);
+      Assert.assertEquals(2, holder1.get().getBouncer().getMaxCount());
+      Assert.assertEquals(BUFFER_SIZE / 2, holder1.get().getBufferPool().take().get().capacity());
+      holder1.close();
+
+      // Second acquisition with 4 slices — same chunk, different slicing.
+      final ResourceHolder<ProcessingBuffers> holder2 = result.get().acquire(4);
+      Assert.assertEquals(4, holder2.get().getBouncer().getMaxCount());
+      Assert.assertEquals(BUFFER_SIZE / 4, holder2.get().getBufferPool().take().get().capacity());
+      holder2.close();
+    }
+    finally {
+      result.close();
+    }
+  }
+
+  @Test
+  public void test_acquire_poolSizeTwo()
+  {
+    when(mockBufferHolder.get()).thenReturn(testBuffer);
+    when(mockMergeBufferPool.takeBatch(eq(1), eq(TIMEOUT_MILLIS)))
+        .thenReturn(List.of(mockBufferHolder));
+
     final int poolSize = 2;
     final ResourceHolder<ProcessingBuffersSet> result = provider.acquire(poolSize, TIMEOUT_MILLIS);
 
@@ -92,33 +184,28 @@ public class DartProcessingBuffersProviderTest
     final ProcessingBuffersSet buffersSet = result.get();
     Assert.assertNotNull(buffersSet);
 
-    // Verify we can acquire buffers from the set
+    // Each slot's chunk has capacity BUFFER_SIZE/poolSize. Requesting PROCESSING_THREADS slices yields slices
+    // of size (BUFFER_SIZE/poolSize)/PROCESSING_THREADS.
     for (int i = 0; i < poolSize; i++) {
-      final ResourceHolder<ProcessingBuffers> buffersHolder = buffersSet.acquire();
-      Assert.assertNotNull(buffersHolder);
+      final ResourceHolder<ProcessingBuffers> buffersHolder = buffersSet.acquire(PROCESSING_THREADS);
+      try {
+        final ProcessingBuffers buffers = buffersHolder.get();
+        Assert.assertEquals(PROCESSING_THREADS, buffers.getBouncer().getMaxCount());
 
-      final ProcessingBuffers buffers = buffersHolder.get();
-      Assert.assertNotNull(buffers);
-      Assert.assertNotNull(buffers.getBufferPool());
-      Assert.assertNotNull(buffers.getBouncer());
-
-      // The bouncer should have the correct max count (PROCESSING_THREADS)
-      Assert.assertEquals(PROCESSING_THREADS, buffers.getBouncer().getMaxCount());
-
-      // Verify that we can get processing threads number of buffers
-      final List<ResourceHolder<ByteBuffer>> resourceHolders = new ArrayList<>();
-      for (int j = 0; j < PROCESSING_THREADS; j++) {
-        final ResourceHolder<ByteBuffer> bufferResource = buffers.getBufferPool().take();
-        Assert.assertNotNull(bufferResource);
-        Assert.assertNotNull(bufferResource.get());
-        resourceHolders.add(bufferResource);
+        final int expectedSliceSize = BUFFER_SIZE / poolSize / PROCESSING_THREADS;
+        final List<ResourceHolder<ByteBuffer>> resourceHolders = new ArrayList<>();
+        for (int j = 0; j < PROCESSING_THREADS; j++) {
+          final ResourceHolder<ByteBuffer> sliceHolder = buffers.getBufferPool().take();
+          Assert.assertEquals(expectedSliceSize, sliceHolder.get().capacity());
+          resourceHolders.add(sliceHolder);
+        }
+        for (final ResourceHolder<ByteBuffer> resourceHolder : resourceHolders) {
+          resourceHolder.close();
+        }
       }
-
-      for (final ResourceHolder<ByteBuffer> resourceHolder : resourceHolders) {
-        resourceHolder.close();
+      finally {
+        buffersHolder.close();
       }
-
-      buffersHolder.close(); // Return to pool
     }
 
     result.close();
@@ -127,7 +214,6 @@ public class DartProcessingBuffersProviderTest
   @Test
   public void test_acquire_timeout()
   {
-    // Setup mock pool to return empty list (as happens during a timeout)
     when(mockMergeBufferPool.takeBatch(eq(1), eq(TIMEOUT_MILLIS)))
         .thenReturn(Collections.emptyList());
 

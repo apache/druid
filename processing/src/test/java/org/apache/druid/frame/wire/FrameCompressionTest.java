@@ -22,8 +22,8 @@ package org.apache.druid.frame.wire;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -38,14 +38,14 @@ public class FrameCompressionTest
   {
     // Verify buffer size is at least envelope size plus some room for data.
     final int size = FrameCompression.compressionBufferSize(100);
-    Assert.assertTrue(size >= FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE + 100);
+    Assertions.assertTrue(size >= FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE + 100);
   }
 
   @Test
   public void test_compressionBufferSize_zero()
   {
     final int size = FrameCompression.compressionBufferSize(0);
-    Assert.assertTrue(size >= FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE);
+    Assertions.assertTrue(size >= FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE);
   }
 
   @Test
@@ -56,13 +56,13 @@ public class FrameCompressionTest
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
     final ByteBuffer compressed = FrameCompression.compress(dataBuffer, compressionBuffer);
-    Assert.assertEquals(0, compressed.position());
-    Assert.assertTrue(compressed.limit() > 0);
+    Assertions.assertEquals(0, compressed.position());
+    Assertions.assertTrue(compressed.limit() > 0);
 
     final Memory compressedMemory = Memory.wrap(compressed);
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
-    Assert.assertArrayEquals(data, decompressed);
+    Assertions.assertArrayEquals(data, decompressed);
   }
 
   @Test
@@ -73,13 +73,13 @@ public class FrameCompressionTest
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
     final ByteBuffer compressed = FrameCompression.compress(dataBuffer, compressionBuffer);
-    Assert.assertEquals(0, compressed.position());
-    Assert.assertTrue(compressed.limit() > 0);
+    Assertions.assertEquals(0, compressed.position());
+    Assertions.assertTrue(compressed.limit() > 0);
 
     final Memory compressedMemory = Memory.wrap(compressed);
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
-    Assert.assertArrayEquals(data, decompressed);
+    Assertions.assertArrayEquals(data, decompressed);
   }
 
   @Test
@@ -93,13 +93,13 @@ public class FrameCompressionTest
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
     final ByteBuffer compressed = FrameCompression.compress(dataBuffer, compressionBuffer);
-    Assert.assertEquals(0, compressed.position());
-    Assert.assertTrue(compressed.limit() > 0);
+    Assertions.assertEquals(0, compressed.position());
+    Assertions.assertTrue(compressed.limit() > 0);
 
     final Memory compressedMemory = Memory.wrap(compressed);
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
-    Assert.assertArrayEquals(data, decompressed);
+    Assertions.assertArrayEquals(data, decompressed);
   }
 
   @Test
@@ -113,15 +113,15 @@ public class FrameCompressionTest
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
     final ByteBuffer compressed = FrameCompression.compress(dataBuffer, compressionBuffer);
-    Assert.assertEquals(0, compressed.position());
-    Assert.assertTrue(compressed.limit() > 0);
+    Assertions.assertEquals(0, compressed.position());
+    Assertions.assertTrue(compressed.limit() > 0);
     // Compressed data should be much smaller than original for highly compressible data.
-    Assert.assertTrue(compressed.limit() < data.length);
+    Assertions.assertTrue(compressed.limit() < data.length);
 
     final Memory compressedMemory = Memory.wrap(compressed);
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
-    Assert.assertArrayEquals(data, decompressed);
+    Assertions.assertArrayEquals(data, decompressed);
   }
 
   @Test
@@ -132,13 +132,13 @@ public class FrameCompressionTest
     final ByteBuffer compressionBuffer = ByteBuffer.allocate(FrameCompression.compressionBufferSize(data.length));
 
     final ByteBuffer compressed = FrameCompression.compress(dataMemory, data.length, compressionBuffer);
-    Assert.assertEquals(0, compressed.position());
-    Assert.assertTrue(compressed.limit() > 0);
+    Assertions.assertEquals(0, compressed.position());
+    Assertions.assertTrue(compressed.limit() > 0);
 
     final Memory compressedMemory = Memory.wrap(compressed);
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
-    Assert.assertArrayEquals(data, decompressed);
+    Assertions.assertArrayEquals(data, decompressed);
   }
 
   @Test
@@ -159,7 +159,7 @@ public class FrameCompressionTest
     final Memory compressedMemory = Memory.wrap(compressed);
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
-    Assert.assertArrayEquals(expected, decompressed);
+    Assertions.assertArrayEquals(expected, decompressed);
   }
 
   @Test
@@ -169,10 +169,10 @@ public class FrameCompressionTest
     final ByteBuffer dataBuffer = ByteBuffer.wrap(data);
     final ByteBuffer tooSmallBuffer = ByteBuffer.allocate(10);
 
-    final ISE exception = Assert.assertThrows(ISE.class, () ->
+    final ISE exception = Assertions.assertThrows(ISE.class, () ->
         FrameCompression.compress(dataBuffer, tooSmallBuffer)
     );
-    Assert.assertTrue(exception.getMessage().contains("Compression buffer too small"));
+    Assertions.assertTrue(exception.getMessage().contains("Compression buffer too small"));
   }
 
   @Test
@@ -181,10 +181,10 @@ public class FrameCompressionTest
     final ByteBuffer tooShort = ByteBuffer.allocate(FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE - 1);
     final Memory memory = Memory.wrap(tooShort);
 
-    final ISE exception = Assert.assertThrows(ISE.class, () ->
+    final ISE exception = Assertions.assertThrows(ISE.class, () ->
         FrameCompression.decompress(memory, 0, tooShort.capacity())
     );
-    Assert.assertTrue(exception.getMessage().contains("Region too short"));
+    Assertions.assertTrue(exception.getMessage().contains("Region too short"));
   }
 
   @Test
@@ -193,10 +193,10 @@ public class FrameCompressionTest
     final ByteBuffer buffer = ByteBuffer.allocate(100);
     final Memory memory = Memory.wrap(buffer);
 
-    final ISE exception = Assert.assertThrows(ISE.class, () ->
+    final ISE exception = Assertions.assertThrows(ISE.class, () ->
         FrameCompression.decompress(memory, 50, 100)
     );
-    Assert.assertTrue(exception.getMessage().contains("out of bounds"));
+    Assertions.assertTrue(exception.getMessage().contains("out of bounds"));
   }
 
   @Test
@@ -217,10 +217,10 @@ public class FrameCompressionTest
 
     final Memory corruptedMemory = Memory.wrap(corruptedData);
 
-    final ISE exception = Assert.assertThrows(ISE.class, () ->
+    final ISE exception = Assertions.assertThrows(ISE.class, () ->
         FrameCompression.decompress(corruptedMemory, 0, compressedLength)
     );
-    Assert.assertTrue(exception.getMessage().contains("Checksum mismatch"));
+    Assertions.assertTrue(exception.getMessage().contains("Checksum mismatch"));
   }
 
   @Test
@@ -242,7 +242,7 @@ public class FrameCompressionTest
     final Memory memory = Memory.wrap(paddedBuffer);
     final byte[] decompressed = FrameCompression.decompress(memory, offset, compressedLength);
 
-    Assert.assertArrayEquals(data, decompressed);
+    Assertions.assertArrayEquals(data, decompressed);
   }
 
   @Test
@@ -265,7 +265,7 @@ public class FrameCompressionTest
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
     final byte[] expected = Arrays.copyOfRange(fullData, 50, 150);
-    Assert.assertArrayEquals(expected, decompressed);
+    Assertions.assertArrayEquals(expected, decompressed);
   }
 
   @Test
@@ -273,11 +273,11 @@ public class FrameCompressionTest
   {
     // Verify constants are as expected per the javadoc.
     // Header: 1 byte compression type + 8 bytes compressed length + 8 bytes uncompressed length = 17 bytes
-    Assert.assertEquals(17, FrameCompression.COMPRESSED_DATA_HEADER_SIZE);
+    Assertions.assertEquals(17, FrameCompression.COMPRESSED_DATA_HEADER_SIZE);
     // Trailer: 8 bytes checksum
-    Assert.assertEquals(8, FrameCompression.COMPRESSED_DATA_TRAILER_SIZE);
+    Assertions.assertEquals(8, FrameCompression.COMPRESSED_DATA_TRAILER_SIZE);
     // Envelope: header + trailer
-    Assert.assertEquals(25, FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE);
+    Assertions.assertEquals(25, FrameCompression.COMPRESSED_DATA_ENVELOPE_SIZE);
   }
 
   @Test
@@ -291,12 +291,12 @@ public class FrameCompressionTest
     final ByteBuffer compressionBuffer = ByteBuffer.allocateDirect(FrameCompression.compressionBufferSize(data.length));
 
     final ByteBuffer compressed = FrameCompression.compress(directDataBuffer, compressionBuffer);
-    Assert.assertEquals(0, compressed.position());
-    Assert.assertTrue(compressed.limit() > 0);
+    Assertions.assertEquals(0, compressed.position());
+    Assertions.assertTrue(compressed.limit() > 0);
 
     final Memory compressedMemory = Memory.wrap(compressed);
     final byte[] decompressed = FrameCompression.decompress(compressedMemory, 0, compressed.limit());
 
-    Assert.assertArrayEquals(data, decompressed);
+    Assertions.assertArrayEquals(data, decompressed);
   }
 }

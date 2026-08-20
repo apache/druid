@@ -68,6 +68,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -242,7 +243,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       }
       this.authorizerMapper = toolbox.getAuthorizerMapper();
 
-      toolbox.getChatHandlerProvider().register(getId(), this, false);
+      toolbox.getChatHandlerProvider().register(getId(), this);
 
       rowIngestionMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
       parseExceptionHandler = new ParseExceptionHandler(
@@ -310,7 +311,8 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals
+        intervals,
+        SegmentDetail.none()
     );
   }
 

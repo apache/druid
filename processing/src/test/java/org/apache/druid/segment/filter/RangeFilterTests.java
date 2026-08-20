@@ -35,8 +35,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -46,23 +44,30 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class RangeFilterTests
 {
-  @RunWith(Parameterized.class)
+  @ParameterizedClass
+  @MethodSource("constructors")
   public static class RangeFilterTest extends BaseFilterTest
   {
+    public static Stream<Object[]> constructors()
+    {
+      return BaseFilterTest.makeConstructors().stream();
+    }
+
     private static final List<InputRow> ROWS =
         ImmutableList.<InputRow>builder()
                      .addAll(DEFAULT_ROWS)
@@ -125,7 +130,7 @@ public class RangeFilterTests
       super(testName, ROWS, indexBuilder, finisher, cnf, optimize);
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDown() throws Exception
     {
       BaseFilterTest.tearDown(RangeFilterTest.class.getName());
@@ -893,7 +898,7 @@ public class RangeFilterTests
       );
 
       // bail out, auto ingests arrays instead of mvds and this virtual column is for mvd stuff
-      Assume.assumeFalse(isAutoSchema());
+      Assumptions.assumeFalse(isAutoSchema());
 
       assertFilterMatchesSkipVectorize(
           new RangeFilter("allow-dim2", ColumnType.STRING, "a", "c", false, false, null),
@@ -929,7 +934,7 @@ public class RangeFilterTests
     {
       // only auto schema supports array columns currently, this means the match value will need to be coerceable to
       // the column value type...
-      Assume.assumeTrue(isAutoSchema());
+      Assumptions.assumeTrue(isAutoSchema());
 
       /*  dim0 .. arrayString               arrayLong             arrayDouble
           "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
@@ -1276,7 +1281,7 @@ public class RangeFilterTests
     {
       // only auto schema supports array columns currently, this means the match value will need to be coerceable to
       // the column value type...
-      Assume.assumeTrue(isAutoSchema());
+      Assumptions.assumeTrue(isAutoSchema());
 
       /*  dim0 .. arrayLong
           "0", .. [1L, 2L, 3L],
@@ -1463,7 +1468,7 @@ public class RangeFilterTests
       "6", .. null
       "7", .. null
        */
-      Assume.assumeTrue(isAutoSchema());
+      Assumptions.assumeTrue(isAutoSchema());
       assertFilterMatches(
           new RangeFilter(
               "variant",
@@ -1521,7 +1526,7 @@ public class RangeFilterTests
     public void testNested()
     {
       // nested column mirrors the top level columns, so these cases are copied from other tests
-      Assume.assumeTrue(canTestArrayColumns());
+      Assumptions.assumeTrue(canTestArrayColumns());
       assertFilterMatches(
           new RangeFilter("nested.d0", ColumnType.DOUBLE, 120.0, 120.03, false, false, null),
           ImmutableList.of("3")
@@ -1716,15 +1721,15 @@ public class RangeFilterTests
       ObjectMapper mapper = new DefaultObjectMapper();
       RangeFilter filter = new RangeFilter("x", ColumnType.STRING, "abc", "xyz", true, true, null);
       String s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
 
       filter = new RangeFilter("x", ColumnType.STRING, "abc", "xyz", false, false, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
 
       filter = new RangeFilter("x", ColumnType.LONG, 100L, null, true, false, null);
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
 
       filter = new RangeFilter(
           "x",
@@ -1736,7 +1741,7 @@ public class RangeFilterTests
           null
       );
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
 
       filter = new RangeFilter(
           "x",
@@ -1748,7 +1753,7 @@ public class RangeFilterTests
           null
       );
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
 
       filter = new RangeFilter(
           "x",
@@ -1760,7 +1765,7 @@ public class RangeFilterTests
           null
       );
       s = mapper.writeValueAsString(filter);
-      Assert.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
+      Assertions.assertEquals(filter, mapper.readValue(s, RangeFilter.class));
     }
 
     @Test
@@ -1779,30 +1784,30 @@ public class RangeFilterTests
           true,
           new FilterTuning(true, null, null)
       );
-      Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
-      Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+      Assertions.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
+      Assertions.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       f1 = new RangeFilter("x", ColumnType.LONG, 100L, 300L, true, true, null);
       f1_2 = new RangeFilter("x", ColumnType.LONG, 100, 300, true, true, null);
       f2 = new RangeFilter("x", ColumnType.LONG, 100L, 300L, false, true, null);
       f2_2 = new RangeFilter("x", ColumnType.LONG, 101L, 300L, true, true, null);
       f3 = new RangeFilter("x", ColumnType.LONG, 100L, 300L, true, true, new FilterTuning(true, null, null));
-      Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
-      Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+      Assertions.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
+      Assertions.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       f1 = new RangeFilter("x", ColumnType.DOUBLE, -1.1, 1.1, true, true, null);
       f1_2 = new RangeFilter("x", ColumnType.DOUBLE, -1.1, 1.1, true, true, null);
       f2 = new RangeFilter("x", ColumnType.DOUBLE, -1.1, 1.1, false, true, null);
       f2_2 = new RangeFilter("x", ColumnType.DOUBLE, -1.1000000001, 1.1, true, true, null);
       f3 = new RangeFilter("x", ColumnType.DOUBLE, -1.1, 1.1, true, true, new FilterTuning(true, null, null));
-      Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
-      Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+      Assertions.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
+      Assertions.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       f1 = new RangeFilter(
           "x",
@@ -1849,10 +1854,10 @@ public class RangeFilterTests
           true,
           new FilterTuning(true, null, null)
       );
-      Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
-      Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+      Assertions.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
+      Assertions.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       f1 = new RangeFilter(
           "x",
@@ -1899,10 +1904,10 @@ public class RangeFilterTests
           true,
           new FilterTuning(true, null, null)
       );
-      Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
-      Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+      Assertions.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
+      Assertions.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
       f1 = new RangeFilter(
           "x",
@@ -1949,10 +1954,10 @@ public class RangeFilterTests
           true,
           new FilterTuning(true, null, null)
       );
-      Assert.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
-      Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
-      Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
+      Assertions.assertArrayEquals(f1.getCacheKey(), f1_2.getCacheKey());
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
+      Assertions.assertFalse(Arrays.equals(f1.getCacheKey(), f2_2.getCacheKey()));
+      Assertions.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
     }
 
     @Test
@@ -1960,18 +1965,18 @@ public class RangeFilterTests
     {
       RangeFilter filter = new RangeFilter("dim0", ColumnType.STRING, "abc", "def", false, false, null);
       RangeFilter filter2 = new RangeFilter("dim1", ColumnType.STRING, "abc", "def", false, false, null);
-      Assert.assertTrue(filter.supportsRequiredColumnRewrite());
-      Assert.assertTrue(filter2.supportsRequiredColumnRewrite());
+      Assertions.assertTrue(filter.supportsRequiredColumnRewrite());
+      Assertions.assertTrue(filter2.supportsRequiredColumnRewrite());
 
       Filter rewrittenFilter = filter.rewriteRequiredColumns(ImmutableMap.of("dim0", "dim1"));
-      Assert.assertEquals(filter2, rewrittenFilter);
+      Assertions.assertEquals(filter2, rewrittenFilter);
 
-      Throwable t = Assert.assertThrows(
+      Throwable t = Assertions.assertThrows(
           IAE.class,
           () -> filter.rewriteRequiredColumns(ImmutableMap.of("invalidName", "dim1"))
       );
 
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Received a non-applicable rewrite: {invalidName=dim1}, filter's dimension: dim0",
           t.getMessage()
       );
@@ -1980,45 +1985,45 @@ public class RangeFilterTests
     @Test
     public void testNumericMatchBadParameters()
     {
-      Throwable t = Assert.assertThrows(
+      Throwable t = Assertions.assertThrows(
           DruidException.class,
           () -> new RangeFilter(null, ColumnType.DOUBLE, "1234", "", false, false, null)
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Invalid range filter, column cannot be null",
           t.getMessage()
       );
-      t = Assert.assertThrows(
+      t = Assertions.assertThrows(
           DruidException.class,
           () -> new RangeFilter("dim0", null, "1234", "", false, false, null)
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Invalid range filter on column [dim0], matchValueType cannot be null",
           t.getMessage()
       );
-      t = Assert.assertThrows(
+      t = Assertions.assertThrows(
           DruidException.class,
           () -> new RangeFilter("dim0", ColumnType.DOUBLE, null, null, false, false, null)
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Invalid range filter on column [dim0], lower and upper cannot be null at the same time",
           t.getMessage()
       );
 
-      t = Assert.assertThrows(
+      t = Assertions.assertThrows(
           DruidException.class,
           () -> new RangeFilter("dim0", ColumnType.DOUBLE, "1234", "", false, false, null)
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Invalid range filter on column [dim0], upper bound [] cannot be parsed as specified match value type [DOUBLE]",
           t.getMessage()
       );
 
-      t = Assert.assertThrows(
+      t = Assertions.assertThrows(
           DruidException.class,
           () -> new RangeFilter("dim0", ColumnType.DOUBLE, "abc", "1234", false, false, null)
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           "Invalid range filter on column [dim0], lower bound [abc] cannot be parsed as specified match value type [DOUBLE]",
           t.getMessage()
       );
@@ -2032,15 +2037,19 @@ public class RangeFilterTests
 
       RangeSet<String> set = TreeRangeSet.create();
       set.add(Range.range("abc", BoundType.OPEN, "xyz", BoundType.OPEN));
-      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
-      Assert.assertNull(filter.getDimensionRangeSet("y"));
+      Assertions.assertEquals(set, filter.getDimensionRangeSet("x"));
+      Assertions.assertNull(filter.getDimensionRangeSet("y"));
 
-      ExprEval<?> evalLower = ExprEval.ofType(ExpressionType.STRING_ARRAY, new Object[]{"abc", "def"});
-      filter = new RangeFilter("x", ColumnType.STRING_ARRAY, evalLower.value(), null, true, false, null);
-      set = TreeRangeSet.create();
-      set.add(Range.greaterThan(Arrays.deepToString(evalLower.asArray())));
-      Assert.assertEquals(set, filter.getDimensionRangeSet("x"));
-      Assert.assertNull(filter.getDimensionRangeSet("y"));
+      // Non-STRING match value types must not return a RangeSet.
+      Assertions.assertNull(
+          new RangeFilter("x", ColumnType.LONG, 80L, null, false, false, null).getDimensionRangeSet("x")
+      );
+      Assertions.assertNull(
+          new RangeFilter("x", ColumnType.DOUBLE, 1.5, 2.5, false, false, null).getDimensionRangeSet("x")
+      );
+      Assertions.assertNull(
+          new RangeFilter("x", ColumnType.FLOAT, null, 7.5f, false, true, null).getDimensionRangeSet("x")
+      );
     }
 
     @Test

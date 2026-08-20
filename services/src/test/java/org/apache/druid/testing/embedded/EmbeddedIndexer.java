@@ -39,6 +39,8 @@ public class EmbeddedIndexer extends EmbeddedDruidServer<EmbeddedIndexer>
   {
     // Don't sync lookups as cluster might not have a Coordinator
     addProperty("druid.lookup.enableLookupSyncOnStartup", "false");
+    // Keep all task output in the indexer process log, so the main embedded test log file contains all information
+    addProperty("druid.worker.useSeparateTaskLogFiles", "false");
   }
 
   @Override

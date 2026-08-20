@@ -23,7 +23,7 @@ sidebar_label: Source input formats
   ~ under the License.
   -->
 
-Apache Druid can ingest denormalized data in JSON, CSV, or a delimited form such as TSV, or any custom format. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest any other delimited data.
+Apache&circledR; Druid can ingest denormalized data in JSON, CSV, or a delimited form such as TSV, or any custom format. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest any other delimited data.
 We welcome any contributions to new formats.
 
 This page lists all default and core extension data formats supported by Druid.
@@ -72,6 +72,74 @@ Besides text formats, Druid also supports binary formats such as [Orc](#orc) and
 
 Druid supports custom text data formats and can use the Regex input format to parse them. However, be aware doing this to
 parse data is less efficient than writing a native Java `InputFormat` extension, or using an external stream processor. We welcome contributions of new input formats.
+
+## Regex engine configuration
+
+The `regex` input format supports configurable regex engines using the runtime property:
+
+```properties
+druid.regex.engine=JAVA
+```
+
+Supported values:
+
+| Value    | Description                                                              |
+|----------|--------------------------------------------------------------------------|
+| `JAVA`   | Uses Java's built-in `java.util.regex.Pattern` engine.                   |
+| `RE2J`   | Uses `Google's RE2/J` regex engine with linear-time matching guarantees. |
+
+Default value:
+
+```properties
+druid.regex.engine=JAVA
+```
+
+### RE2/J engine
+
+Setting:
+
+```properties
+druid.regex.engine=RE2J
+```
+
+enables the RE2/J regex engine for ingestion task `regex` input formats.
+
+RE2/J helps protect against catastrophic backtracking and Regular Expression Denial of Service (ReDoS) attacks by guaranteeing linear-time regex evaluation.
+
+### Compatibility differences
+
+RE2/J does not support all Java regex features.
+
+Unsupported or partially supported features include:
+- back references
+- look behind assertions
+- some advanced backtracking behavior
+
+Patterns using unsupported constructs will fail during regex compilation.
+
+### Example of catastrophic backtracking
+
+The following Java regex may cause catastrophic backtracking:
+
+```regex
+^(.*a){20}$
+```
+
+against input such as:
+
+```text
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaX
+```
+
+Using `RE2J` avoids this issue.
+
+### Performance considerations
+
+- `JAVA` may support more advanced regex syntax and behavior.
+- `RE2J` provides safer and more predictable runtime characteristics.
+- For trusted internal ingestion specs, `JAVA` may be preferred for compatibility.
+- For externally supplied regex patterns, `RE2J` is recommended.
+
 
 ## Input format
 
@@ -564,7 +632,7 @@ For example:
 ### Kafka
 
 The `kafka` input format lets you parse the Kafka metadata fields in addition to the Kafka payload value contents.
-It should only be used when ingesting from Apache Kafka.
+It should only be used when ingesting from Apache Kafka. 
 
 The `kafka` input format wraps around the payload parsing input format and augments the data it outputs with the Kafka event timestamp, topic name, event headers, and the key field that itself can be parsed using any available input format.
 
@@ -583,6 +651,8 @@ Configure the Kafka `inputFormat` as follows:
 | `headerFormat` | Object | Specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the `encoding` type in `KafkaStringHeaderFormat` to match your custom implementation. See [Header format](#header-format) for supported encoding formats.| no ||
 | `keyFormat` | [InputFormat](#input-format) | The [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. If your key values are simple strings, you can use the `tsv` format to parse them. Note that for `tsv`,`csv`, and `regex` formats, you need to provide a `columns` array to make a valid input format. Only the first one is used, and its name will be ignored in favor of `keyColumnName`. | no ||
 | `keyColumnName` | String | The name of the column for the Kafka key.| no |`kafka.key`|
+| `partitionColumnName` | String | The name of the column for the Kafka partition number. | no | `kafka.partition` |
+| `offsetColumnName` | String | The name of the column for the Kafka record offset. Ingesting this column enables filtering by offset in `transformSpec`, which is useful for recovering data from a specific offset range. | no | `kafka.offset` |
 
 #### Header format
 
@@ -604,6 +674,8 @@ For example, consider the following structure for a Kafka message that represent
 
 - **Kafka timestamp**: `1680795276351`
 - **Kafka topic**: `wiki-edits`
+- **Kafka partition**: `0`
+- **Kafka offset**: `12345`
 - **Kafka headers**:
   - `env=development`
   - `zone=z1`
@@ -632,6 +704,8 @@ You would configure it as follows:
       "columns": ["x"]
     },
     "keyColumnName": "kafka.key",
+    "partitionColumnName": "kafka.partition",
+    "offsetColumnName": "kafka.offset"
   }
 }
 ```
@@ -649,7 +723,9 @@ You would parse the example message as follows:
   "kafka.topic": "wiki-edits",
   "kafka.header.env": "development",
   "kafka.header.zone": "z1",
-  "kafka.key": "wiki-edit"
+  "kafka.key": "wiki-edit",
+  "kafka.partition": 0,
+  "kafka.offset": 12345
 }
 ```
 
@@ -734,6 +810,8 @@ After Druid ingests the data, you can query the Kafka metadata columns as follow
 SELECT
   "kafka.header.env",
   "kafka.key",
+  "kafka.partition",
+  "kafka.offset",
   "kafka.timestamp",
   "kafka.topic"
 FROM "wikiticker"
@@ -741,9 +819,9 @@ FROM "wikiticker"
 
 This query returns:
 
-| `kafka.header.env` | `kafka.key` | `kafka.timestamp` | `kafka.topic` |
-|--------------------|-----------|---------------|---------------|
-| `development`      | `wiki-edit` | `1680795276351` | `wiki-edits`  |
+| `kafka.header.env` | `kafka.key` | `kafka.partition` | `kafka.offset` | `kafka.timestamp` | `kafka.topic` |
+|--------------------|-----------|-------------------|----------------|---------------|---------------|
+| `development`      |`wiki-edit`|`0`|`12345`| `1680795276351`| `wiki-edits`  |
 
 ### Kinesis
 

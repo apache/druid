@@ -27,40 +27,11 @@ public class ZkPathsConfig
   @JsonProperty
   private String base = "druid";
   @JsonProperty
-  private String propertiesPath;
-  @JsonProperty
-  private String announcementsPath;
-  @JsonProperty
-  private String liveSegmentsPath;
-  @JsonProperty
   private String coordinatorPath;
-  @JsonProperty
-  private String connectorPath;
 
   public String getBase()
   {
     return base;
-  }
-
-  public String getPropertiesPath()
-  {
-    return (null == propertiesPath) ? defaultPath("properties") : propertiesPath;
-  }
-
-  public String getAnnouncementsPath()
-  {
-    return (null == announcementsPath) ? defaultPath("announcements") : announcementsPath;
-  }
-
-  /**
-   * Path to announce served segments on.
-   *
-   * @deprecated Use HTTP-based segment discovery instead.
-   */
-  @Deprecated
-  public String getLiveSegmentsPath()
-  {
-    return (null == liveSegmentsPath) ? defaultPath("segments") : liveSegmentsPath;
   }
 
   public String getCoordinatorPath()
@@ -71,11 +42,6 @@ public class ZkPathsConfig
   public String getOverlordPath()
   {
     return defaultPath("overlord");
-  }
-
-  public String getConnectorPath()
-  {
-    return (null == connectorPath) ? defaultPath("connector") : connectorPath;
   }
 
   public String getInternalDiscoveryPath()
@@ -101,26 +67,15 @@ public class ZkPathsConfig
       return false;
     }
     ZkPathsConfig otherConfig = (ZkPathsConfig) other;
-    if (this.getBase().equals(otherConfig.getBase()) &&
-        this.getAnnouncementsPath().equals(otherConfig.getAnnouncementsPath()) &&
-        this.getConnectorPath().equals(otherConfig.getConnectorPath()) &&
-        this.getLiveSegmentsPath().equals(otherConfig.getLiveSegmentsPath()) &&
-        this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath()) &&
-        this.getPropertiesPath().equals(otherConfig.getPropertiesPath())) {
-      return true;
-    }
-    return false;
+    return this.getBase().equals(otherConfig.getBase()) &&
+        this.getCoordinatorPath().equals(otherConfig.getCoordinatorPath());
   }
 
   @Override
   public int hashCode()
   {
     int result = base != null ? base.hashCode() : 0;
-    result = 31 * result + (propertiesPath != null ? propertiesPath.hashCode() : 0);
-    result = 31 * result + (announcementsPath != null ? announcementsPath.hashCode() : 0);
-    result = 31 * result + (liveSegmentsPath != null ? liveSegmentsPath.hashCode() : 0);
     result = 31 * result + (coordinatorPath != null ? coordinatorPath.hashCode() : 0);
-    result = 31 * result + (connectorPath != null ? connectorPath.hashCode() : 0);
     return result;
   }
 }

@@ -27,11 +27,14 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.NullableNumericAggregatorFactory;
 import org.apache.druid.query.aggregation.SimpleDoubleBufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.SpecializationService;
 import org.apache.druid.query.monomorphicprocessing.SpecializationState;
 import org.apache.druid.query.monomorphicprocessing.StringRuntimeShape;
+import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.FilteredOffset;
@@ -259,7 +262,10 @@ public class PooledTopNAlgorithm
       int numBytesPerRecord = 0;
 
       for (int i = 0; i < query.getAggregatorSpecs().size(); ++i) {
-        aggregatorSizes[i] = query.getAggregatorSpecs().get(i).getMaxIntermediateSizeWithNulls();
+        aggregatorSizes[i] = getMaxIntermediateSizeWithNullsForPooledTopN(
+            cursor.getColumnSelectorFactory(),
+            query.getAggregatorSpecs().get(i)
+        );
         numBytesPerRecord += aggregatorSizes[i];
       }
 
@@ -329,7 +335,39 @@ public class PooledTopNAlgorithm
   @Override
   protected BufferAggregator[] makeDimValAggregateStore(PooledTopNParams params)
   {
-    return makeBufferAggregators(params.getCursor(), query.getAggregatorSpecs());
+    return makeBufferAggregatorsForPooledTopN(params.getCursor(), query.getAggregatorSpecs());
+  }
+
+  static int getMaxIntermediateSizeWithNullsForPooledTopN(
+      ColumnInspector columnInspector,
+      AggregatorFactory aggregatorFactory
+  )
+  {
+    if (aggregatorFactory instanceof NullableNumericAggregatorFactory) {
+      return ((NullableNumericAggregatorFactory<?>) aggregatorFactory).getMaxIntermediateSizeWithNullsForPooledTopN(
+          columnInspector
+      );
+    }
+    return aggregatorFactory.getMaxIntermediateSizeWithNulls();
+  }
+
+  private static BufferAggregator[] makeBufferAggregatorsForPooledTopN(
+      Cursor cursor,
+      List<AggregatorFactory> aggregatorSpecs
+  )
+  {
+    BufferAggregator[] aggregators = new BufferAggregator[aggregatorSpecs.size()];
+    int aggregatorIndex = 0;
+    for (AggregatorFactory spec : aggregatorSpecs) {
+      if (spec instanceof NullableNumericAggregatorFactory) {
+        aggregators[aggregatorIndex] =
+            ((NullableNumericAggregatorFactory<?>) spec).factorizeBufferedForPooledTopN(cursor.getColumnSelectorFactory());
+      } else {
+        aggregators[aggregatorIndex] = spec.factorizeBuffered(cursor.getColumnSelectorFactory());
+      }
+      ++aggregatorIndex;
+    }
+    return aggregators;
   }
 
   @Override

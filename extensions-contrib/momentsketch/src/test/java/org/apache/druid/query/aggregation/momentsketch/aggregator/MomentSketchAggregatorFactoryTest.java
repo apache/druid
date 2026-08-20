@@ -30,8 +30,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class MomentSketchAggregatorFactoryTest
 {
@@ -48,7 +48,7 @@ public class MomentSketchAggregatorFactoryTest
         MomentSketchAggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, other);
+    Assertions.assertEquals(factory, other);
   }
 
   @Test
@@ -72,7 +72,7 @@ public class MomentSketchAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)
@@ -93,14 +93,14 @@ public class MomentSketchAggregatorFactoryTest
     MomentSketchAggregatorFactory sketchAggFactory = new MomentSketchAggregatorFactory(
         "name", "fieldName", 128, true
     );
-    Assert.assertEquals(sketchAggFactory, sketchAggFactory.withName("name"));
-    Assert.assertEquals("newTest", sketchAggFactory.withName("newTest").getName());
+    Assertions.assertEquals(sketchAggFactory, sketchAggFactory.withName("name"));
+    Assertions.assertEquals("newTest", sketchAggFactory.withName("newTest").getName());
 
 
     MomentSketchMergeAggregatorFactory sketchMergeAggregatorFactory = new MomentSketchMergeAggregatorFactory(
         "name", 128, true
     );
-    Assert.assertEquals(sketchMergeAggregatorFactory, sketchMergeAggregatorFactory.withName("name"));
-    Assert.assertEquals("newTest", sketchMergeAggregatorFactory.withName("newTest").getName());
+    Assertions.assertEquals(sketchMergeAggregatorFactory, sketchMergeAggregatorFactory.withName("name"));
+    Assertions.assertEquals("newTest", sketchMergeAggregatorFactory.withName("newTest").getName());
   }
 }

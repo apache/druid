@@ -317,14 +317,14 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     final ControllerHolder holder = controllerHolder;
     if (holder != null) {
-      holder.cancel(CancellationReason.TASK_SHUTDOWN);
+      holder.cancel(CancellationReason.TASK_SHUTDOWN, null);
     }
   }
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
   }
 
   @Nullable

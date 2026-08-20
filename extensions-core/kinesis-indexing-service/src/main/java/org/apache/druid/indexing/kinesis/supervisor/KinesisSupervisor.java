@@ -133,6 +133,9 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     return new KinesisIndexTaskIOConfig(
         groupId,
         baseSequenceName,
+        null,
+        null,
+        null,
         new SeekableStreamStartSequenceNumbers<>(
             ioConfig.getStream(),
             startPartitions,
@@ -147,7 +150,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         ioConfig.getFetchDelayMillis(),
         ioConfig.getAwsAssumedRoleArn(),
         ioConfig.getAwsExternalId(),
-        ioConfig.getTaskDuration().getStandardMinutes()
+        ioConfig.getTaskDuration().getStandardMinutes(),
+        ioConfig.getBoundedStreamConfig()  // Pass through bounded config
     );
   }
 
@@ -317,7 +321,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
+  public SeekableStreamDataSourceMetadata<String, String> createDataSourceMetaDataForReset(
       String stream,
       Map<String, String> map
   )
@@ -332,7 +336,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
-  protected void updatePartitionLagFromStream()
+  public void updatePartitionLagFromStream()
   {
     KinesisRecordSupplier supplier = (KinesisRecordSupplier) recordSupplier;
     // this recordSupplier method is thread safe, so does not need to acquire the recordSupplierLock
@@ -382,9 +386,35 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   }
 
   @Override
+  protected boolean isOffsetAtOrBeyond(String current, String target)
+  {
+    return KinesisSequenceNumber.of(current).compareTo(KinesisSequenceNumber.of(target)) >= 0;
+  }
+
+  @Override
+  protected String createPartitionIdFromString(String partitionIdString)
+  {
+    // Kinesis uses String as partition ID, so just return the string as-is
+    return partitionIdString;
+  }
+
+  @Override
+  protected String createSequenceOffsetFromObject(Object offsetObj)
+  {
+    // Kinesis uses String as sequence offset
+    return offsetObj.toString();
+  }
+
+  @Override
   protected boolean useExclusiveStartSequenceNumberForNonFirstSequence()
   {
     return true;
+  }
+
+  @Override
+  protected boolean isEndOffsetExclusive()
+  {
+    return false;
   }
 
   // Unlike the Kafka Indexing Service,

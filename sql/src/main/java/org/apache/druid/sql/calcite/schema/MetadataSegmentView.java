@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterators;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.inject.Inject;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
@@ -49,7 +50,10 @@ import org.apache.druid.timeline.SegmentStatusInCluster;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
+
 import java.util.Iterator;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -185,12 +189,26 @@ public class MetadataSegmentView
    */
   Iterator<SegmentStatusInCluster> getSegments()
   {
+    return getSegments(null);
+  }
+
+  /**
+   * Returns published (and, with centralized schema, realtime) segment metadata, optionally
+   * restricted to {@code dataSources}.
+   */
+  Iterator<SegmentStatusInCluster> getSegments(@Nullable Set<String> dataSources)
+  {
+    final Iterator<SegmentStatusInCluster> base;
     if (isCacheEnabled) {
       Uninterruptibles.awaitUninterruptibly(cachePopulated);
-      return publishedSegments.iterator();
+      base = publishedSegments.iterator();
     } else {
-      return fetchSegmentMetadataFromCoordinator();
+      // Cache disabled: the Coordinator returns all used segments; filter client-side to preserve semantics.
+      base = fetchSegmentMetadataFromCoordinator();
     }
+    return dataSources == null
+           ? base
+           : Iterators.filter(base, s -> dataSources.contains(s.getDataSegment().getDataSource()));
   }
 
   // Note that coordinator must be up to get segments

@@ -359,6 +359,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                handle,
                                                derbyConnector,
                                                tablesConfig,
+                                               new SegmentsMetadataManagerConfig(null, null, null),
                                                mapper
                                            )
                                            .retrieveUnusedSegments(
@@ -385,10 +386,11 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       MetadataStorageTablesConfig tablesConfig
   )
   {
+    final SegmentsMetadataManagerConfig managerConfig = new SegmentsMetadataManagerConfig(null, null, null);
     return derbyConnector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegmentPlus> iterator =
-                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, mapper)
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, managerConfig, mapper)
                                            .retrieveUnusedSegmentsPlus(
                                                TestDataSource.WIKI,
                                                intervals,

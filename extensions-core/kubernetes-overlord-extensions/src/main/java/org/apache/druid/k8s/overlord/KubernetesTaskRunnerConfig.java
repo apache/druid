@@ -19,10 +19,9 @@
 
 package org.apache.druid.k8s.overlord;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.joda.time.Period;
-
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 
 import java.util.List;
 import java.util.Map;
@@ -91,6 +90,12 @@ public interface KubernetesTaskRunnerConfig
    */
   Period getK8sSharedInformerResyncPeriod();
 
+  /**
+   * Whether tasks may select a configured pod template via the {@code DruidK8sConstants.TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY}
+   * task context key, overriding the configured {@code PodTemplateSelectStrategy}.
+   */
+  boolean isAllowTaskPodTemplateSelection();
+
   static Builder builder()
   {
     return new Builder();
@@ -121,6 +126,7 @@ public interface KubernetesTaskRunnerConfig
     private Period logSaveTimeout;
     private boolean useK8sSharedInformers;
     private Period k8sSharedInformerResyncPeriod;
+    private boolean allowTaskPodTemplateSelection;
 
     public Builder()
     {
@@ -265,6 +271,12 @@ public interface KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withAllowTaskPodTemplateSelection(boolean allowTaskPodTemplateSelection)
+    {
+      this.allowTaskPodTemplateSelection = allowTaskPodTemplateSelection;
+      return this;
+    }
+
     public KubernetesTaskRunnerStaticConfig build()
     {
       return new KubernetesTaskRunnerStaticConfig(
@@ -290,7 +302,8 @@ public interface KubernetesTaskRunnerConfig
           this.capacity,
           this.taskJoinTimeout,
           this.useK8sSharedInformers,
-          this.k8sSharedInformerResyncPeriod
+          this.k8sSharedInformerResyncPeriod,
+          this.allowTaskPodTemplateSelection
       );
     }
   }

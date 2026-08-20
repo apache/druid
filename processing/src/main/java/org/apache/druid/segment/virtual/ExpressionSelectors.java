@@ -163,8 +163,8 @@ public class ExpressionSelectors
     }
     final Expr.ObjectBinding bindings = createBindings(columnSelectorFactory, plan);
 
-    // Optimization for constant expressions
-    if (bindings.equals(InputBindings.nilBindings())) {
+    // Optimization for constant expressions (but not non-deterministic ones like now())
+    if (bindings.equals(InputBindings.nilBindings()) && !plan.getAnalysis().isNonDeterministic()) {
       return new ConstantExprEvalSelector(plan.getExpression().eval(bindings));
     }
 

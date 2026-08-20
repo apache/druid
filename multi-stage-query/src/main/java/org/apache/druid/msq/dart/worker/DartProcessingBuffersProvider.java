@@ -23,6 +23,7 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.QueueNonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
@@ -39,7 +40,7 @@ import java.util.concurrent.BlockingQueue;
 
 /**
  * Production implementation of {@link ProcessingBuffersProvider} that uses the merge buffer pool. Each call
- * to {@link #acquire(int)} acquires one merge buffer and slices it up.
+ * to {@link #acquire(int, long)} acquires one merge buffer and slices it up.
  */
 public class DartProcessingBuffersProvider implements ProcessingBuffersProvider
 {
@@ -67,27 +68,59 @@ public class DartProcessingBuffersProvider implements ProcessingBuffersProvider
     final ReferenceCountingResourceHolder<ByteBuffer> bufferHolder = batch.get(0);
     try {
       final ByteBuffer buffer = bufferHolder.get().duplicate();
-      final int sliceSize = buffer.capacity() / poolSize / processingThreads;
-      final List<ProcessingBuffers> pool = new ArrayList<>(poolSize);
+      final int chunkSize = buffer.capacity() / poolSize;
+      final List<ProcessingBuffersSet.Slot> slots = new ArrayList<>(poolSize);
 
       for (int i = 0; i < poolSize; i++) {
-        final BlockingQueue<ByteBuffer> queue = new ArrayBlockingQueue<>(processingThreads);
-        for (int j = 0; j < processingThreads; j++) {
-          final int sliceNum = i * processingThreads + j;
-          buffer.position(sliceSize * sliceNum).limit(sliceSize * (sliceNum + 1));
-          queue.add(buffer.slice());
-        }
-        final ProcessingBuffers buffers = new ProcessingBuffers(
-            new QueueNonBlockingPool<>(queue),
-            new Bouncer(processingThreads)
-        );
-        pool.add(buffers);
+        buffer.position(chunkSize * i).limit(chunkSize * (i + 1));
+        slots.add(new LazySlot(buffer.slice(), processingThreads));
       }
 
-      return new ReferenceCountingResourceHolder<>(new ProcessingBuffersSet(pool), bufferHolder);
+      return new ReferenceCountingResourceHolder<>(new ProcessingBuffersSet(slots), bufferHolder);
     }
     catch (Throwable e) {
       throw CloseableUtils.closeAndWrapInCatch(e, bufferHolder);
+    }
+  }
+
+  /**
+   * Lazy slot that holds one chunk of the shared merge buffer and slices it on demand to match the stage's
+   * actual concurrent-processor count.
+   */
+  static final class LazySlot implements ProcessingBuffersSet.Slot
+  {
+    private final ByteBuffer chunk;
+    private final int maxSlices;
+
+    LazySlot(final ByteBuffer chunk, final int maxSlices)
+    {
+      this.chunk = chunk;
+      this.maxSlices = maxSlices;
+    }
+
+    @Override
+    public ProcessingBuffers acquire(final int requestedSlices)
+    {
+      if (requestedSlices > maxSlices) {
+        throw DruidException.defensive(
+            "requestedSlices[%d] too large for maxSlices[%d]",
+            requestedSlices,
+            maxSlices
+        );
+      }
+
+      if (requestedSlices < 1) {
+        throw DruidException.defensive("requestedSlices[%d] must be positive", requestedSlices);
+      }
+
+      final int sliceSize = chunk.capacity() / requestedSlices;
+      final BlockingQueue<ByteBuffer> queue = new ArrayBlockingQueue<>(requestedSlices);
+      final ByteBuffer working = chunk.duplicate();
+      for (int j = 0; j < requestedSlices; j++) {
+        working.position(sliceSize * j).limit(sliceSize * (j + 1));
+        queue.add(working.slice());
+      }
+      return new ProcessingBuffers(new QueueNonBlockingPool<>(queue), new Bouncer(requestedSlices));
     }
   }
 }

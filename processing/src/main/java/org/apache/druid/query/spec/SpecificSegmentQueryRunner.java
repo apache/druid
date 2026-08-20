@@ -48,6 +48,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
 
   @VisibleForTesting
   static final String CTX_SET_THREAD_NAME = "setProcessingThreadNames";
+  static final boolean DEFAULT_SET_THREAD_NAME_ENABLED = false;
 
   public SpecificSegmentQueryRunner(
       QueryRunner<T> base,
@@ -68,7 +69,7 @@ public class SpecificSegmentQueryRunner<T> implements QueryRunner<T>
         )
     );
 
-    final boolean setName = input.getQuery().context().getBoolean(CTX_SET_THREAD_NAME, true);
+    final boolean setName = input.getQuery().context().getBoolean(CTX_SET_THREAD_NAME, DEFAULT_SET_THREAD_NAME_ENABLED);
 
     final Query<T> query = queryPlus.getQuery();
 

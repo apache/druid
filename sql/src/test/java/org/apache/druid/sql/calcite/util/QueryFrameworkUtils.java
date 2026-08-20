@@ -360,7 +360,7 @@ public class QueryFrameworkUtils
     public DirectStatement directStatement(SqlQueryPlus sqlRequest)
     {
       // override direct statement creation to allow calcite tests to test multi-part set statements
-      return new DirectStatement(toolbox, sqlRequest)
+      return new DirectStatement(toolbox, sqlRequest, null)
       {
         @Override
         protected DruidPlanner createPlanner()
@@ -380,7 +380,7 @@ public class QueryFrameworkUtils
     @Override
     public PreparedStatement preparedStatement(SqlQueryPlus sqlRequest)
     {
-      return new PreparedStatement(toolbox, sqlRequest)
+      return new PreparedStatement(toolbox, sqlRequest, null)
       {
         @Override
         protected DruidPlanner getPlanner()
@@ -396,7 +396,7 @@ public class QueryFrameworkUtils
         }
 
         @Override
-        public DirectStatement execute(List<TypedValue> parameters)
+        public DirectStatement execute(List<TypedValue> parameters, String remoteAddress)
         {
           return directStatement(queryPlus.withParameters(parameters));
         }

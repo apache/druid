@@ -28,7 +28,7 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
@@ -38,6 +38,8 @@
     <maven.build.cache.input.4>assets</maven.build.cache.input.4>
     <maven.build.cache.input.5>e2e-tests</maven.build.cache.input.5>
     <maven.build.cache.input.6>typings</maven.build.cache.input.6>
+    <!-- Compile-only cache hits cannot currently resolve this module for downstream reactor modules. -->
+    <maven.build.cache.cacheCompile>false</maven.build.cache.cacheCompile>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
     <node.version>v20.9.0</node.version>
@@ -49,7 +51,7 @@
       <extension>
         <groupId>org.apache.maven.extensions</groupId>
         <artifactId>maven-build-cache-extension</artifactId>
-        <version>1.2.0</version>
+        <version>1.2.3</version>
       </extension>
     </extensions>
     <plugins>

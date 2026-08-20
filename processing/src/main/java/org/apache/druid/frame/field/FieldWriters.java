@@ -93,6 +93,9 @@ public class FieldWriters
             return makeFloatArrayWriter(columnSelectorFactory, columnName, frameType);
           case DOUBLE:
             return makeDoubleArrayWriter(columnSelectorFactory, columnName, frameType);
+          case ARRAY:
+          case COMPLEX:
+            throw new UnsupportedColumnTypeException(columnName, columnType);
         }
       default:
         throw new UnsupportedColumnTypeException(columnName, columnType);

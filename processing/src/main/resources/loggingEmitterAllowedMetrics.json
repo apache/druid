@@ -134,6 +134,7 @@
     "query/node/bytes": [],
     "query/node/time": [],
     "query/node/ttfb": [],
+    "query/segments/count": [],
     "query/segment/time": [],
     "query/segmentAndCache/time": [],
     "query/success/count": [],

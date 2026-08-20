@@ -34,6 +34,7 @@ import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -51,8 +52,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -61,7 +61,6 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -381,7 +380,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
             .run()
     );
-    assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(Access.DEFAULT_ERROR_MESSAGE)));
+    Assertions.assertEquals(Access.DEFAULT_ERROR_MESSAGE, e.getMessage());
   }
 
   @Test
@@ -455,6 +454,74 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
+        .verify();
+  }
+
+  /**
+   * The COMPLEX type prefix in an EXTEND clause matches case-insensitively (like all other type names) and is
+   * normalized to the canonical form; the complex type name inside the brackets keeps its casing.
+   */
+  @Test
+  public void testHttpJsonLowercaseComplexTypePrefix()
+  {
+    final ExternalDataSource httpDataSource = new ExternalDataSource(
+        new HttpInputSource(
+            Collections.singletonList(toURI("http://foo.com/bar.json")),
+            "bob",
+            new DefaultPasswordProvider("secret"),
+            SystemFields.none(),
+            null,
+            new HttpInputSourceConfig(null, null)
+        ),
+        new JsonInputFormat(null, null, null, null, null),
+        RowSignature.builder()
+                    .add("x", ColumnType.STRING)
+                    .add("z", ColumnType.NESTED_DATA)
+                    .build()
+        );
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+            "                 password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.json'],\n" +
+             "                format => 'json'))\n" +
+             "     EXTEND (x VARCHAR, z TYPE('complex<json>'))\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectTarget("dst", httpDataSource.getSignature())
+        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectQuery(
+            newScanQueryBuilder()
+                .dataSource(httpDataSource)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("x", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.ofComplex("json"))
+                .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
+                .build()
+         )
+        .verify();
+  }
+
+  /**
+   * A malformed complex type in an EXTEND clause (missing the closing bracket) is rejected rather than silently
+   * resolving to a different type.
+   */
+  @Test
+  public void testHttpJsonMalformedComplexTypeRejected()
+  {
+    testIngestionQuery()
+        .sql("INSERT INTO dst SELECT *\n" +
+             "FROM TABLE(http(userName => 'bob',\n" +
+            "                 password => 'secret',\n" +
+             "                uris => ARRAY['http://foo.com/bar.json'],\n" +
+             "                format => 'json'))\n" +
+             "     EXTEND (x VARCHAR, z TYPE('complex<json'))\n" +
+             "PARTITIONED BY ALL TIME")
+        .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(DruidException.class, e);
+          Assertions.assertTrue(e.getMessage().contains("Column [z] has an unsupported type"));
+        })
         .verify();
   }
 

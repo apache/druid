@@ -19,7 +19,6 @@
 
 package org.apache.druid.server;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DirectDruidClient;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Queries;
@@ -29,6 +28,8 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.initialization.ServerConfig;
+
+import java.util.Map;
 
 /**
  * Use this QueryRunner to set and verify Query contexts.
@@ -70,15 +71,25 @@ public class SetAndVerifyContextQueryRunner<T> implements QueryRunner<T>
     );
     // DirectDruidClient.QUERY_FAIL_TIME is used by DirectDruidClient and JsonParserIterator to determine when to
     // fail with a timeout exception
-    final long failTime;
     final QueryContext context = newQuery.context();
+    final long existingFailTime = context.getLong(DirectDruidClient.QUERY_FAIL_TIME, -1L);
+    long computedFailTime;
     if (context.hasTimeout()) {
-      failTime = this.startTimeMillis + context.getTimeout();
+      computedFailTime = this.startTimeMillis + context.getTimeout();
     } else {
-      failTime = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
+      computedFailTime = this.startTimeMillis + serverConfig.getMaxQueryTimeout();
     }
+    // Clamp overflow
+    if (computedFailTime <= 0) {
+      computedFailTime = Long.MAX_VALUE;
+    }
+    // Never extend an existing deadline. This prevents nested native queries and queued historicals
+    // from pushing the effective timeout past the original deadline.
+    final long failTime = (existingFailTime >= 0)
+        ? Math.min(existingFailTime, computedFailTime)
+        : computedFailTime;
     return newQuery.withOverriddenContext(
-        ImmutableMap.of(DirectDruidClient.QUERY_FAIL_TIME, failTime > 0 ? failTime : Long.MAX_VALUE)
+        Map.of(DirectDruidClient.QUERY_FAIL_TIME, failTime)
     );
   }
 }

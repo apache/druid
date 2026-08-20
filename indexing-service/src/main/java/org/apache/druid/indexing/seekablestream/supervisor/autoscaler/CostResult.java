@@ -21,10 +21,16 @@ package org.apache.druid.indexing.seekablestream.supervisor.autoscaler;
 
 /**
  * Holds the result of a cost computation from {@link WeightedCostFunction#computeCost}.
- * All costs are measured in seconds.
+ * Lag cost is based on recovery time; idle cost is based on the weighted idle-ratio penalty.
  */
 public class CostResult
 {
+  static final CostResult INFINITE_COST = new CostResult(
+      Double.POSITIVE_INFINITY,
+      Double.POSITIVE_INFINITY,
+      Double.POSITIVE_INFINITY
+  );
+
   private final double totalCost;
   private final double lagCost;
   private final double idleCost;
@@ -32,7 +38,7 @@ public class CostResult
   /**
    * @param totalCost the weighted sum of lagCost and idleCost
    * @param lagCost   the weighted cost representing expected time (seconds) to recover current lag
-   * @param idleCost  the weighted cost representing total compute time (seconds) wasted being idle per task duration
+   * @param idleCost  the weighted cost representing the predicted idle-ratio penalty
    */
   public CostResult(double totalCost, double lagCost, double idleCost)
   {

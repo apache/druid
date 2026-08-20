@@ -64,14 +64,17 @@ public interface Segment extends Closeable
    * @return instance of clazz, or null if the interface is not supported by this segment, one of the following:
    * <ul>
    *   <li> {@link CursorFactory}, to make cursors to run queries. Never null.</li>
-   *   <li> {@link QueryableIndex}, index object, if this is a memory-mapped regular segment.
-   *   <li> {@link IndexedTable}, table object, if this is a joinable indexed table.
-   *   <li> {@link TimeBoundaryInspector}, inspector for min/max timestamps, if supported by this segment.
-   *   <li> {@link PhysicalSegmentInspector}, inspector for physical segment details, if supported by this segment.
-   *   <li> {@link MaxIngestedEventTimeInspector}, inspector for {@link DataSourceMetadataResultValue#getMaxIngestedEventTime()}
-   *   <li> {@link TopNOptimizationInspector}, inspector containing information for topN specific optimizations
-   *   <li> {@link CloseableShapeshifter}, stepping stone to {@link org.apache.druid.query.rowsandcols.RowsAndColumns}.
-   *   <li> {@link BypassRestrictedSegment}, a policy-aware segment, converted from a policy-enforced segment.
+   *   <li> {@link QueryableIndex}, index object, if this is a memory-mapped regular segment.</li>
+   *   <li> {@link IndexedTable}, table object, if this is a joinable indexed table.</li>
+   *   <li> {@link TimeBoundaryInspector}, inspector for min/max timestamps.</li>
+   *   <li> {@link PhysicalSegmentInspector}, deprecated, superseded by {@link RowCountInspector}, {@link PhysicalSegmentColumnInspector}, and {@link Metadata}.</li>
+   *   <li> {@link RowCountInspector}, inspector for number of rows.</li>
+   *   <li> {@link Metadata}, segment metadata.</li>
+   *   <li> {@link PhysicalSegmentColumnInspector}, inspector for physical segment column details.</li>
+   *   <li> {@link MaxIngestedEventTimeInspector}, inspector for {@link DataSourceMetadataResultValue#getMaxIngestedEventTime()}.</li>
+   *   <li> {@link TopNOptimizationInspector}, inspector containing information for topN specific optimizations.</li>
+   *   <li> {@link CloseableShapeshifter}, stepping stone to {@link org.apache.druid.query.rowsandcols.RowsAndColumns}.</li>
+   *   <li> {@link BypassRestrictedSegment}, a policy-aware segment, converted from a policy-enforced segment.</li>
    * </ul>
    */
   @SuppressWarnings({"unused", "unchecked"})

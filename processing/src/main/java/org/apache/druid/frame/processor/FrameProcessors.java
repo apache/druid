@@ -77,8 +77,8 @@ public class FrameProcessors
       {
         if (cleanedUp.compareAndSet(false, true)) {
           //noinspection EmptyTryBlock
-          try (Closeable ignore1 = baggage;
-               Closeable ignore2 = processor::cleanup) {
+          try (Closeable ignoredBaggage = baggage;
+               Closeable ignoredCleanup = processor::cleanup) {
             // piggy-back try-with-resources semantics
           }
         }

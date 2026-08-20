@@ -851,6 +851,36 @@ public class HeapMemorySegmentMetadataCacheTest
     );
   }
 
+  @Test
+  public void testSync_reflectsWriteThroughInsertInSnapshot()
+  {
+    setupAndSyncCache();
+
+    final DataSegmentPlus segment =
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI).updatedNow().markUsed().asPlus();
+
+    // Simulate a write-through transaction: the segment is written to BOTH the
+    // metadata store and the datasource cache, so the next sync's store diff finds
+    // nothing to refresh for this datasource (DB and cache already agree).
+    insertSegmentsInMetadataStore(Set.of(segment));
+    cache.writeCacheForDataSource(
+        TestDataSource.WIKI,
+        wikiCache -> wikiCache.insertSegments(Set.of(segment))
+    );
+
+    syncCache();
+
+    // The published snapshot must still include the write-through segment, even
+    // though the incremental rebuild saw no metadata-store change for WIKI.
+    Assert.assertNotNull(cache.getDataSourcesSnapshot().getDataSource(TestDataSource.WIKI));
+    Assert.assertTrue(
+        cache.getDataSourcesSnapshot()
+             .getDataSource(TestDataSource.WIKI)
+             .getSegments()
+             .contains(segment.getDataSegment())
+    );
+  }
+
   private void insertSegmentsInMetadataStore(Set<DataSegmentPlus> segments)
   {
     IndexerSqlMetadataStorageCoordinatorTestBase

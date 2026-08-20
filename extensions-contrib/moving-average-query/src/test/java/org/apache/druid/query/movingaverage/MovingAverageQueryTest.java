@@ -70,21 +70,21 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.join.MapJoinableFactory;
 import org.apache.druid.server.ClientQuerySegmentWalker;
-import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
+import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
+import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.utils.JvmUtils;
-import org.hamcrest.core.IsInstanceOf;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -101,9 +101,17 @@ import java.util.concurrent.ForkJoinPool;
 /**
  * Base class for implementing MovingAverageQuery tests
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "{0}")
+@MethodSource("data")
 public class MovingAverageQueryTest extends InitializedNullHandlingTest
 {
+  private static final QueryScheduler NOOP_SCHEDULER = new QueryScheduler(
+      0,
+      ManualQueryPrioritizationStrategy.INSTANCE,
+      NoQueryLaningStrategy.INSTANCE,
+      new ServerConfig()
+  );
+
   private final ObjectMapper jsonMapper;
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final RetryQueryRunnerConfig retryConfig;
@@ -114,15 +122,19 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
 
   private final TestConfig config;
 
-  @Parameters(name = "{0}")
   public static Iterable<String[]> data() throws IOException
   {
-    BufferedReader testReader = new BufferedReader(
-        new InputStreamReader(MovingAverageQueryTest.class.getResourceAsStream("/queryTests"), StandardCharsets.UTF_8));
     List<String[]> tests = new ArrayList<>();
 
-    for (String line = testReader.readLine(); line != null; line = testReader.readLine()) {
-      tests.add(new String[]{line});
+    try (final BufferedReader testReader = new BufferedReader(
+        new InputStreamReader(
+            MovingAverageQueryTest.class.getResourceAsStream("/queryTests"),
+            StandardCharsets.UTF_8
+        )
+    )) {
+      for (String line = testReader.readLine(); line != null; line = testReader.readLine()) {
+        tests.add(new String[]{line});
+      }
     }
 
     return tests;
@@ -171,9 +183,10 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     retryConfig = injector.getInstance(RetryQueryRunnerConfig.class);
     serverConfig = injector.getInstance(ServerConfig.class);
 
-    InputStream is = getClass().getResourceAsStream("/queryTests/" + yamlFile);
     ObjectMapper reader = new ObjectMapper(new YAMLFactory());
-    config = reader.readValue(is, TestConfig.class);
+    try (final InputStream is = getClass().getResourceAsStream("/queryTests/" + yamlFile)) {
+      config = reader.readValue(is, TestConfig.class);
+    }
   }
 
   /**
@@ -303,11 +316,11 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
   public void testQuery() throws IOException
   {
     Query<?> query = jsonMapper.readValue(getQueryString(), Query.class);
-    Assert.assertThat(query, IsInstanceOf.instanceOf(getExpectedQueryType()));
+    Assertions.assertInstanceOf(getExpectedQueryType(), query);
 
     List<MapBasedRow> expectedResults = jsonMapper.readValue(getExpectedResultString(), getExpectedResultType());
-    Assert.assertNotNull(expectedResults);
-    Assert.assertThat(expectedResults, IsInstanceOf.instanceOf(List.class));
+    Assertions.assertNotNull(expectedResults);
+    Assertions.assertInstanceOf(List.class, expectedResults);
 
     DruidHttpClientConfig httpClientConfig = new DruidHttpClientConfig()
     {
@@ -364,7 +377,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         httpClientConfig,
         new BrokerParallelMergeConfig(),
         ForkJoinPool.commonPool(),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
+        NOOP_SCHEDULER,
         new NoopServiceEmitter()
     );
 
@@ -395,6 +408,6 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     expectedResults = consistentTypeCasting(expectedResults);
     actualResults = consistentTypeCasting(actualResults);
 
-    Assert.assertEquals(expectedResults, actualResults);
+    Assertions.assertEquals(expectedResults, actualResults);
   }
 }

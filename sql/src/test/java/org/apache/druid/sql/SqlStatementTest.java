@@ -54,6 +54,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement.ResultSet;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -64,17 +65,17 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.servlet.http.HttpServletRequest;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -82,19 +83,19 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.druid.sql.calcite.BaseCalciteQueryTest.assertResultsEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SqlStatementTest
 {
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static SpecificSegmentsQuerySegmentWalker walker;
   private static Closer resourceCloser;
-  @ClassRule
-  public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public static File temporaryFolder;
   private ListeningExecutorService executorService;
   private final DefaultQueryConfig defaultQueryConfig = new DefaultQueryConfig(
       ImmutableMap.of("DEFAULT_KEY", "DEFAULT_VALUE"));
@@ -102,8 +103,8 @@ public class SqlStatementTest
   private PolicyEnforcer policyEnforcer;
   private SqlStatementFactory sqlStatementFactory;
 
-  @BeforeClass
-  public static void setUpClass() throws Exception
+  @BeforeAll
+  public static void setUpClass()
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
@@ -125,17 +126,17 @@ public class SqlStatementTest
       }
     };
 
-    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder.newFolder(), scheduler);
+    walker = CalciteTests.createMockWalker(conglomerate, temporaryFolder, scheduler);
     resourceCloser.register(walker);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws IOException
   {
     resourceCloser.close();
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
@@ -144,7 +145,7 @@ public class SqlStatementTest
     this.sqlStatementFactory = buildSqlStatementFactory();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     executorService.shutdownNow();
@@ -161,11 +162,11 @@ public class SqlStatementTest
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH))
             .andReturn(null)
             .anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
-            .andReturn(null)
-            .anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .anyTimes();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED))
+            .andReturn(null)
             .anyTimes();
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, ok);
     EasyMock.expectLastCall().anyTimes();
@@ -254,11 +255,11 @@ public class SqlStatementTest
     );
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     ResultSet resultSet = stmt.plan();
-    DruidException e = Assert.assertThrows(DruidException.class, () -> resultSet.run());
+    DruidException e = Assertions.assertThrows(DruidException.class, () -> resultSet.run());
 
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
+    Assertions.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
   }
 
   @Test
@@ -292,7 +293,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -355,7 +356,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -390,11 +391,11 @@ public class SqlStatementTest
         request(true)
     );
     ResultSet resultSet = stmt.plan();
-    DruidException e = Assert.assertThrows(DruidException.class, () -> resultSet.run());
+    DruidException e = Assertions.assertThrows(DruidException.class, () -> resultSet.run());
 
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
+    Assertions.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
   }
 
   @Test
@@ -436,7 +437,7 @@ public class SqlStatementTest
     // JDBC supports a prepare once, execute many model
     for (int i = 0; i < 3; i++) {
       List<Object[]> results = stmt
-          .execute(Collections.emptyList())
+          .execute(Collections.emptyList(), null)
           .execute()
           .getResults()
           .toList();
@@ -459,7 +460,7 @@ public class SqlStatementTest
       fail();
     }
     catch (DruidException e) {
-      MatcherAssert.assertThat(
+      BaseCalciteQueryTest.assertDruidException(
           e,
           DruidExceptionMatcher
               .invalidSqlInput()
@@ -495,11 +496,11 @@ public class SqlStatementTest
         CalciteTests.REGULAR_USER_AUTH_RESULT
     );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
-    DruidException e = Assert.assertThrows(DruidException.class, () -> stmt.execute(Collections.emptyList()).execute());
+    DruidException e = Assertions.assertThrows(DruidException.class, () -> stmt.execute(Collections.emptyList(), null).execute());
 
-    Assert.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
-    Assert.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
-    Assert.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
+    Assertions.assertEquals(DruidException.Category.FORBIDDEN, e.getCategory());
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals("Failed security validation with dataSource [foo]", e.getMessage());
   }
 
   @Test
@@ -512,7 +513,7 @@ public class SqlStatementTest
         CalciteTests.REGULAR_USER_AUTH_RESULT
     );
     PreparedStatement stmt = sqlStatementFactory.preparedStatement(sqlReq);
-    List<Object[]> results = stmt.execute(Collections.emptyList()).execute().getResults().toList();
+    List<Object[]> results = stmt.execute(Collections.emptyList(), null).execute().getResults().toList();
 
     ImmutableList<Object[]> expectedResults = ImmutableList.of(new Object[]{1L});
     assertResultsEquals("SELECT COUNT(*) AS cnt FROM druid.restrictedDatasource_m1_is_6", expectedResults, results);
@@ -532,7 +533,7 @@ public class SqlStatementTest
     DirectStatement stmt = sqlStatementFactory.directStatement(sqlReq);
     Map<String, Object> context = stmt.context();
     // should contain only query id, not bySegment since it is not valid for SQL
-    Assert.assertEquals(Collections.singleton(QueryContexts.CTX_SQL_QUERY_ID), context.keySet());
+    Assertions.assertEquals(Collections.singleton(QueryContexts.CTX_SQL_QUERY_ID), context.keySet());
   }
 
   private SqlStatementFactory buildSqlStatementFactory()

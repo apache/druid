@@ -181,6 +181,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         private final AtomicLong channelSuspendedTime = new AtomicLong(0);
         private final BlockingQueue<InputStreamHolder> queue = new LinkedBlockingQueue<>();
         private final AtomicBoolean done = new AtomicBoolean(false);
+        // Set when the consumer closes the result stream early (see the SequenceInputStream.close() override in
+        // handleResponse). Once set, incoming chunks are dropped rather than buffered.
+        private final AtomicBoolean discard = new AtomicBoolean(false);
+        private final AtomicBoolean nodeMetricsEmitted = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
 
@@ -201,6 +205,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
          */
         private boolean enqueue(ChannelBuffer buffer, long chunkNum) throws InterruptedException
         {
+          // If the consumer has abandoned the response (see the SequenceInputStream.close() override below), drop the
+          // chunk instead of buffering it, and keep reads flowing (continueReading = true) so we never suspend the
+          // channel while it is being wound down.
+          if (discard.get()) {
+            return true;
+          }
           // Increment queuedByteCount before queueing the object, so queuedByteCount is at least as high as
           // the actual number of queued bytes at any particular time.
           final InputStreamHolder holder = InputStreamHolder.fromChannelBuffer(buffer, chunkNum);
@@ -281,6 +291,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                     @Override
                     public boolean hasMoreElements()
                     {
+                      // If the consumer abandoned the stream (close() ran), report end-of-stream. After discard is set
+                      // enqueue() drops every chunk, so a further read would otherwise block in dequeue() until the
+                      // query timeout and then throw a misleading QueryTimeoutException.
+                      if (discard.get()) {
+                        return false;
+                      }
                       if (fail.get() != null) {
                         throw new RE(fail.get());
                       }
@@ -309,7 +325,33 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                       }
                     }
                   }
-              ),
+              )
+              {
+                /**
+                 * Closing this stream means the caller no longer needs the response. The default
+                 * {@link SequenceInputStream#close()} would drain the entire remaining response off the wire first
+                 * we want to avoid. Instead, abandon the response and force-close the connection
+                 */
+                @Override
+                public void close()
+                {
+                  final TrafficCop trafficCop;
+                  synchronized (done) {
+                    if (done.get()) {
+                      return;
+                    }
+                    // Stop buffering further chunks (see enqueue()) and drop anything already buffered so the
+                    // underlying Netty ChannelBuffers can be released.
+                    discard.set(true);
+                    queue.clear();
+                    trafficCop = trafficCopRef.get();
+                  }
+                  if (trafficCop == null) {
+                    return;
+                  }
+                  trafficCop.abort();
+                }
+              },
               continueReading
           );
         }
@@ -359,15 +401,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               // Floating math; division by zero will yield Inf, not exception
               totalByteCount.get() / (0.001 * nodeTimeMs)
           );
-          QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
-          responseMetrics.reportNodeTime(nodeTimeNs);
-          responseMetrics.reportNodeBytes(totalByteCount.get());
-
-          if (usingBackpressure) {
-            responseMetrics.reportBackPressureTime(channelSuspendedTime.get());
-          }
-
-          responseMetrics.emit(emitter);
+          emitNodeMetrics(nodeTimeNs);
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
@@ -400,6 +434,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
         private void setupResponseReadFailure(String msg, Throwable th)
         {
+          emitNodeMetrics(System.nanoTime() - requestStartTimeNs);
           fail.set(msg);
           queue.clear();
           queue.offer(
@@ -420,6 +455,21 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                   0
               )
           );
+        }
+
+        // Emit exactly once, regardless of whether we reach this via done() or setupResponseReadFailure().
+        private void emitNodeMetrics(long nodeTimeNs)
+        {
+          if (!nodeMetricsEmitted.compareAndSet(false, true)) {
+            return;
+          }
+          QueryMetrics<? super Query<T>> responseMetrics = acquireResponseMetrics();
+          responseMetrics.reportNodeTime(nodeTimeNs);
+          responseMetrics.reportNodeBytes(totalByteCount.get());
+          if (usingBackpressure) {
+            responseMetrics.reportBackPressureTime(channelSuspendedTime.get());
+          }
+          responseMetrics.emit(emitter);
         }
 
         // Returns remaining timeout or throws exception if timeout already elapsed.

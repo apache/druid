@@ -77,8 +77,58 @@ public class UnnestCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
+    final UnnestFilterSplit filterSplit = computeFilterSplit(spec);
+    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());
+
+    final Closer closer = Closer.create();
+    // base holder is built lazily on first asCursor()/getOrdering() and registered for close at that point
+    final Supplier<CursorHolder> baseHolderSupplier = Suppliers.memoize(
+        () -> closer.register(baseCursorFactory.makeCursorHolder(unnestBuildSpec))
+    );
+    return unnestCursorHolder(spec, filterSplit, closer, baseHolderSupplier);
+  }
+
+  @Override
+  public AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    final UnnestFilterSplit filterSplit = computeFilterSplit(spec);
+    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(spec, unnestColumn, filterSplit.getBaseTableFilter());
+
+    // Build the base-table holder asynchronously (a partial base segment downloads its required columns here), then
+    // wrap the ready holder in the unnest holder. Closing the returned holder before it's ready cancels the base load.
+    final AsyncCursorHolder baseAsync = baseCursorFactory.makeCursorHolderAsync(unnestBuildSpec);
+    final AsyncCursorHolder asyncHolder = new AsyncCursorHolder(baseAsync::close);
+    baseAsync.addReadyCallback(() -> {
+      final CursorHolder unnestHolder;
+      try {
+        // release() transfers ownership of the base holder to us (and surfaces a base-load failure as its cause); from
+        // here the unnest holder owns closing it. Construction below can't throw, so the catch only fires on a base
+        // failure or a cancel race (baseAsync already closed), neither of which leaves a base holder to leak.
+        final CursorHolder baseHolder = baseAsync.release();
+        final Closer closer = Closer.create();
+        closer.register(baseHolder);
+        unnestHolder = unnestCursorHolder(spec, filterSplit, closer, Suppliers.ofInstance(baseHolder));
+      }
+      catch (Throwable t) {
+        asyncHolder.setException(t);
+        return;
+      }
+      if (!asyncHolder.set(unnestHolder)) {
+        // awaiter closed the wrapper while we were producing the holder; close it so the base holder doesn't leak
+        unnestHolder.close();
+      }
+    });
+    return asyncHolder;
+  }
+
+  /**
+   * Split the spec's filters into base-table and post-unnest filters (see
+   * {@link #computeBaseAndPostUnnestFilters}). Cheap and metadata-only; shared by the sync and async holder paths.
+   */
+  private UnnestFilterSplit computeFilterSplit(CursorBuildSpec spec)
+  {
     final String input = getUnnestInputIfDirectAccess(unnestColumn);
-    final UnnestFilterSplit filterSplit = computeBaseAndPostUnnestFilters(
+    return computeBaseAndPostUnnestFilters(
         spec.getFilter(),
         filter != null ? filter.toFilter() : null,
         spec.getVirtualColumns(),
@@ -86,23 +136,26 @@ public class UnnestCursorFactory implements CursorFactory
         input,
         input == null ? null : spec.getVirtualColumns().getColumnCapabilitiesWithFallback(baseCursorFactory, input)
     );
-    final CursorBuildSpec unnestBuildSpec = transformCursorBuildSpec(
-        spec,
-        unnestColumn,
-        filterSplit.getBaseTableFilter()
-    );
+  }
 
+  /**
+   * Build the unnest {@link CursorHolder} on top of a base-table holder. {@code baseHolderSupplier} provides the base
+   * holder: the sync path builds it lazily on first use and registers it with {@code closer}, while the async path
+   * supplies an already-materialized holder pre-registered with {@code closer}.
+   */
+  private CursorHolder unnestCursorHolder(
+      CursorBuildSpec spec,
+      UnnestFilterSplit filterSplit,
+      Closer closer,
+      Supplier<CursorHolder> baseHolderSupplier
+  )
+  {
     return new CursorHolder()
     {
-      final Closer closer = Closer.create();
-      final Supplier<CursorHolder> cursorHolderSupplier = Suppliers.memoize(
-          () -> closer.register(baseCursorFactory.makeCursorHolder(unnestBuildSpec))
-      );
-
       @Override
       public Cursor asCursor()
       {
-        final Cursor cursor = cursorHolderSupplier.get().asCursor();
+        final Cursor cursor = baseHolderSupplier.get().asCursor();
         if (cursor == null) {
           return null;
         }
@@ -135,7 +188,7 @@ public class UnnestCursorFactory implements CursorFactory
       @Override
       public List<OrderBy> getOrdering()
       {
-        return computeOrdering(cursorHolderSupplier.get().getOrdering());
+        return computeOrdering(baseHolderSupplier.get().getOrdering());
       }
 
       @Override

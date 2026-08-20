@@ -31,9 +31,9 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,7 +66,7 @@ public class SinglePhaseSubTaskSpecTest
 
   private ObjectMapper mapper;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     mapper = new TestUtils().getTestObjectMapper();
@@ -78,7 +78,7 @@ public class SinglePhaseSubTaskSpecTest
     final SinglePhaseSubTask expected = SPEC.newSubTask(0);
     final byte[] json = mapper.writeValueAsBytes(expected);
     final Map<String, Object> actual = mapper.readValue(json, Map.class);
-    Assert.assertEquals(SinglePhaseSubTask.TYPE, actual.get("type"));
+    Assertions.assertEquals(SinglePhaseSubTask.TYPE, actual.get("type"));
   }
 
   @Test
@@ -87,8 +87,8 @@ public class SinglePhaseSubTaskSpecTest
     final SinglePhaseSubTask expected = SPEC.newSubTaskWithBackwardCompatibleType(0);
     final byte[] json = mapper.writeValueAsBytes(expected);
     final Map<String, Object> actual = mapper.readValue(json, Map.class);
-    Assert.assertEquals(SinglePhaseSubTask.OLD_TYPE_NAME, actual.get("type"));
-    Assert.assertEquals(
+    Assertions.assertEquals(SinglePhaseSubTask.OLD_TYPE_NAME, actual.get("type"));
+    Assertions.assertEquals(
         Collections.singleton(
             new ResourceAction(new Resource(
                 LocalInputSource.TYPE_KEY,

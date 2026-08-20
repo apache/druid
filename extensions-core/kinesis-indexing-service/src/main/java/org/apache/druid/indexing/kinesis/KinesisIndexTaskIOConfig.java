@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -79,7 +80,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
-      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes
+      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes,
+      @JsonProperty("boundedStreamConfig") @Nullable BoundedStreamConfig boundedStreamConfig
   )
   {
     super(
@@ -91,7 +93,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        boundedStreamConfig
     );
     Preconditions.checkArgument(
         getEndSequenceNumbers().getPartitionSequenceNumberMap()
@@ -139,7 +142,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         fetchDelayMillis,
         awsAssumedRoleArn,
         awsExternalId,
-        refreshRejectionPeriodsInMinutes
+        refreshRejectionPeriodsInMinutes,
+        null  // boundedStreamConfig
     );
   }
 

@@ -535,6 +535,39 @@ public class NewestSegmentFirstPolicyTest
   }
 
   @Test
+  public void testConfiguredSkipIntervalsAreHonoredWithNoExternalSkipIntervals()
+  {
+    final SegmentTimeline timeline = createTimeline(
+        createSegments().forIntervals(4, Granularities.DAY)
+                        .startingAt("2017-12-01")
+                        .withNumPartitions(1)
+    );
+
+    final CompactionSegmentIterator iterator = createIterator(
+        configBuilder()
+            .withSkipIntervals(List.of(Intervals.of("2017-12-02/2017-12-03")))
+            .build(),
+        timeline
+    );
+
+    final List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-01/2017-12-02"), Partitions.ONLY_COMPLETE)
+    );
+    expectedSegmentsToCompact.addAll(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-12-03/2017-12-05"), Partitions.ONLY_COMPLETE)
+    );
+
+    Assert.assertTrue(iterator.hasNext());
+    final Set<DataSegment> observedSegmentsToCompact = Streams.sequentialStreamFrom(iterator)
+                                                              .flatMap(s -> s.getSegments().stream())
+                                                              .collect(Collectors.toSet());
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        observedSegmentsToCompact
+    );
+  }
+
+  @Test
   public void testHoleInSearchInterval()
   {
     final Period segmentPeriod = Period.hours(1);
@@ -747,11 +780,21 @@ public class NewestSegmentFirstPolicyTest
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .startingAt("2017-10-01")
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
             .withNumPartitions(4),
         createSegments()
             .startingAt("2017-10-02")
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
             .withNumPartitions(4)
     );
 
@@ -773,15 +816,15 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState = new CompactionState(
-        partitionsSpec,
-        null,
-        null,
-        null,
-        indexSpec,
-        mapper.convertValue(ImmutableMap.of("segmentGranularity", "day"), GranularitySpec.class),
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(partitionsSpec)
+                       .indexSpec(indexSpec)
+                       .granularitySpec(mapper.convertValue(
+                           ImmutableMap.of("segmentGranularity", "day"),
+                           GranularitySpec.class
+                       ))
+                       .build();
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .forIntervals(2, Granularities.DAY)
@@ -808,15 +851,11 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState = new CompactionState(
-        partitionsSpec,
-        null,
-        null,
-        null,
-        indexSpec,
-        null,
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(partitionsSpec)
+                       .indexSpec(indexSpec)
+                       .build();
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .forIntervals(2, Granularities.DAY)
@@ -856,15 +895,15 @@ public class NewestSegmentFirstPolicyTest
         null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
-    final CompactionState compactionState = new CompactionState(
-        partitionsSpec,
-        null,
-        null,
-        null,
-        indexSpec,
-        mapper.convertValue(ImmutableMap.of("segmentGranularity", "day"), GranularitySpec.class),
-        null
-    );
+    final CompactionState compactionState =
+        CompactionState.builder()
+                       .partitionsSpec(partitionsSpec)
+                       .indexSpec(indexSpec)
+                       .granularitySpec(mapper.convertValue(
+                           ImmutableMap.of("segmentGranularity", "day"),
+                           GranularitySpec.class
+                       ))
+                       .build();
     final SegmentTimeline timeline = createTimeline(
         createSegments()
             .forIntervals(2, Granularities.DAY)
@@ -909,7 +948,12 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Duration of new segmentGranularity is the same as before (P1D),
@@ -959,7 +1003,12 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Duration of new segmentGranularity is the same as before (P1D), but we changed the origin in the autocompaction spec
@@ -1011,41 +1060,35 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-01")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                new UniformGranularitySpec(null, null, false, null),
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(new UniformGranularitySpec(null, null, false, null))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                new UniformGranularitySpec(null, null, true, null),
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(new UniformGranularitySpec(null, null, true, null))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-03")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                new UniformGranularitySpec(null, null, false, null),
-                null
-            ))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(new UniformGranularitySpec(null, null, false, null))
+                               .build()
+            )
     );
 
     // Auto compaction config sets rollup=true
@@ -1100,47 +1143,41 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-01")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                mapper.convertValue(
-                    ImmutableMap.of("queryGranularity", "day"),
-                    GranularitySpec.class
-                ),
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(mapper.convertValue(
+                                   ImmutableMap.of("queryGranularity", "day"),
+                                   GranularitySpec.class
+                               ))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                mapper.convertValue(
-                    ImmutableMap.of("queryGranularity", "minute"),
-                    GranularitySpec.class
-                ),
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(mapper.convertValue(
+                                   ImmutableMap.of("queryGranularity", "minute"),
+                                   GranularitySpec.class
+                               ))
+                               .build()
+            ),
         createSegments()
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-03")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                null,
-                null,
-                null,
-                indexSpec,
-                mapper.convertValue(ImmutableMap.of(), GranularitySpec.class),
-                null
-            ))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .granularitySpec(mapper.convertValue(ImmutableMap.of(), GranularitySpec.class))
+                               .build()
+            )
     );
 
     // Auto compaction config sets queryGranularity=MINUTE
@@ -1196,49 +1233,45 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                        "bar",
-                        "foo"
-                    ))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "bar",
+                                   "foo"
+                               ))))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("foo"))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "foo"))))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-03")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(
-                partitionsSpec,
-                DimensionsSpec.EMPTY,
-                null,
-                null,
-                indexSpec,
-                null,
-                null
-            )),
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(DimensionsSpec.EMPTY)
+                               .indexSpec(indexSpec)
+                               .build()
+            ),
         createSegments()
             .startingAt("2017-10-04")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Auto compaction config sets Dimensions=["foo"]
@@ -1317,39 +1350,31 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                        "dim2",
-                        "dim4",
-                        "dim3",
-                        "dim1"
-                    ))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "dim2",
+                                   "dim4",
+                                   "dim3",
+                                   "dim1"
+                               ))))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                        "dim2",
-                        "dim4",
-                        "dim1",
-                        "dim3"
-                    ))),
-                    null,
-                    null,
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .dimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                   "dim2",
+                                   "dim4",
+                                   "dim1",
+                                   "dim3"
+                               ))))
+                               .indexSpec(indexSpec)
+                               .build()
             )
     );
 
@@ -1425,48 +1450,47 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null), null),
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .transformSpec(new CompactionTransformSpec(
+                                   new SelectorDimFilter("dim1", "foo", null),
+                                   null
+                               ))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    null,
-                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null), null),
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .transformSpec(new CompactionTransformSpec(
+                                   new SelectorDimFilter("dim1", "bar", null),
+                                   null
+                               ))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-03")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    null,
-                    new CompactionTransformSpec(null, null),
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .transformSpec(new CompactionTransformSpec(null, null))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-04")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Auto compaction config sets filter=SelectorDimFilter("dim1", "bar", null)
@@ -1547,51 +1571,44 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    List.of(new CountAggregatorFactory("cnt")),
-                    null,
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .metricsSpec(List.of(new CountAggregatorFactory("cnt")))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-02")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    List.of(
-                        new CountAggregatorFactory("cnt"),
-                        new LongSumAggregatorFactory("val", "val")
-                    ),
-                    null,
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .metricsSpec(List.of(
+                                   new CountAggregatorFactory("cnt"),
+                                   new LongSumAggregatorFactory("val", "val")
+                               ))
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-03")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(
-                    partitionsSpec,
-                    null,
-                    List.of(),
-                    null,
-                    indexSpec,
-                    null,
-                    null
-                )
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .metricsSpec(List.of())
+                               .indexSpec(indexSpec)
+                               .build()
             ),
         createSegments()
             .startingAt("2017-10-04")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, indexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(indexSpec)
+                               .build()
+            )
     );
 
     // Auto compaction config sets metricsSpec={CountAggregatorFactory("cnt"), LongSumAggregatorFactory("val", "val")}
@@ -1695,7 +1712,12 @@ public class NewestSegmentFirstPolicyTest
             .forIntervals(1, Granularities.DAY)
             .startingAt("2017-10-02")
             .withNumPartitions(4)
-            .withCompactionState(new CompactionState(partitionsSpec, null, null, null, newIndexSpec, null, null))
+            .withCompactionState(
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(newIndexSpec)
+                               .build()
+            )
     );
 
     // Duration of new segmentGranularity is the same as before (P1D)
@@ -1740,7 +1762,10 @@ public class NewestSegmentFirstPolicyTest
             .startingAt("2017-10-01")
             .withNumPartitions(4)
             .withCompactionState(
-                new CompactionState(partitionsSpec, null, null, null, IndexSpec.getDefault(), null, null)
+                CompactionState.builder()
+                               .partitionsSpec(partitionsSpec)
+                               .indexSpec(IndexSpec.getDefault())
+                               .build()
             )
     );
 

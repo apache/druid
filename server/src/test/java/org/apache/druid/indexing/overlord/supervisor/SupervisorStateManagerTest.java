@@ -66,4 +66,76 @@ public class SupervisorStateManagerTest
     Assert.assertTrue(stateManagerConfig.isIdleConfigEnabled());
     Assert.assertEquals(60000, stateManagerConfig.getInactiveAfterMillis());
   }
+
+  @Test
+  public void testStoppingStateIsTerminal()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    // Start in PENDING state
+    Assert.assertEquals(SupervisorStateManager.BasicState.PENDING, supervisorStateManager.getSupervisorState());
+
+    // Transition to STOPPING
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.STOPPING);
+    Assert.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+
+    // Attempt to transition out of STOPPING should be ignored
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
+    Assert.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
+    Assert.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+
+    // Cannot transition to COMPLETED from STOPPING
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+    Assert.assertEquals(SupervisorStateManager.BasicState.STOPPING, supervisorStateManager.getSupervisorState());
+  }
+
+  @Test
+  public void testCompletedStateIsHealthy()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+
+    Assert.assertTrue(supervisorStateManager.isHealthy());
+    Assert.assertEquals(SupervisorStateManager.BasicState.COMPLETED, supervisorStateManager.getSupervisorState());
+  }
+
+  @Test
+  public void testCompletedStateIsNotFirstRunOnly()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+
+    Assert.assertFalse(SupervisorStateManager.BasicState.COMPLETED.isFirstRunOnly());
+  }
+
+  @Test
+  public void testMarkRunFinished_completedStateSkipsHealthyCheck()
+  {
+    stateManagerConfig = new SupervisorStateManagerConfig();
+    SupervisorStateManager supervisorStateManager = new SupervisorStateManager(
+        stateManagerConfig,
+        false
+    );
+
+    supervisorStateManager.maybeSetState(SupervisorStateManager.BasicState.COMPLETED);
+    supervisorStateManager.markRunFinished();
+
+    Assert.assertEquals(SupervisorStateManager.BasicState.COMPLETED, supervisorStateManager.getSupervisorState());
+  }
 }

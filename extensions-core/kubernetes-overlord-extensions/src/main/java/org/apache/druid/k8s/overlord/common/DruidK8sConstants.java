@@ -35,6 +35,8 @@ public class DruidK8sConstants
   public static final String DEFAULT_JAVA_HEAP_SIZE = "1G";
   public static final String TLS_ENABLED = "tls.enabled";
   public static final String TASK_JSON_ENV = "TASK_JSON";
+  public static final String POD_TEMPLATE_ENV = "DRUID_POD_TEMPLATE";
+  public static final String POD_TEMPLATE_DIMENSION = "podTemplate";
   public static final String TASK_DIR_ENV = "TASK_DIR";
   public static final String TASK_ID_ENV = "TASK_ID";
   public static final String LOAD_BROADCAST_DATASOURCE_MODE_ENV = "LOAD_BROADCAST_DATASOURCE_MODE";
@@ -46,6 +48,7 @@ public class DruidK8sConstants
   public static final String OVERLORD_NAMESPACE_KEY = "druid.overlord.namespace";
   public static final String DRUID_LABEL_PREFIX = "druid.";
   public static final String BASE_TEMPLATE_NAME = "base";
+  public static final String TASK_CONTEXT_POD_TEMPLATE_SELECTION_KEY = "podTemplateSelectionKey";
   public static final long MAX_ENV_VARIABLE_KBS = 130048; // 127 KB
 
   public static final ImmutableList<String> BLACKLISTED_PEON_POD_ERROR_MESSAGES = ImmutableList.of(

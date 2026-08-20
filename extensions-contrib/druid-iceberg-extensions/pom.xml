@@ -29,16 +29,31 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <iceberg.core.version>1.10.0</iceberg.core.version>
+    <hive-storage-api.version>2.8.1</hive-storage-api.version>
     <hive.version>3.1.3</hive.version>
   </properties>
   <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
@@ -285,6 +300,13 @@
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>glue</artifactId>
       <version>${aws.sdk.v2.version}</version>
+    </dependency>
+    <!-- Iceberg AWS still loads the Apache 4 client reflectively. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>apache-client</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>runtime</scope>
     </dependency>
     <!-- software/amazon/awssdk/services/sts/model/Tag needed for GlueCatalog initialize -->
     <dependency>
@@ -607,6 +629,14 @@
       </exclusions>
     </dependency>
 
+    <!-- Hive 3.1.3 calls APIs that were removed from Hive Storage API 4.x. -->
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-storage-api</artifactId>
+      <version>${hive-storage-api.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
@@ -774,11 +804,6 @@
       <scope>test</scope>
     </dependency>
 
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>nl.jqno.equalsverifier</groupId>
       <artifactId>equalsverifier</artifactId>

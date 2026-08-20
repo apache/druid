@@ -47,8 +47,8 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -90,7 +90,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
     String json = JSON_MAPPER.writeValueAsString(query);
     Query serdeQuery = JSON_MAPPER.readValue(json, Query.class);
 
-    Assert.assertEquals(query, serdeQuery);
+    Assertions.assertEquals(query, serdeQuery);
   }
 
   @Test
@@ -117,7 +117,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         )
         .build();
 
-    Assert.assertEquals(ImmutableSet.of("__time", "quality", "other", "index"), query.getRequiredColumns());
+    Assertions.assertEquals(ImmutableSet.of("__time", "quality", "other", "index"), query.getRequiredColumns());
   }
 
   @Test
@@ -138,7 +138,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         ResultRow.of(1, 1f, "a", new Object[]{"1", "2"}),
         ResultRow.of(1L, 1d, "b", new Object[]{"3"})
     );
-    Assert.assertEquals(-1, compare);
+    Assertions.assertEquals(-1, compare);
   }
 
   @Test
@@ -163,7 +163,7 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         .setGranularity(Granularities.DAY)
         .build();
     ExecutionVertex ev = ExecutionVertex.of(query);
-    Assert.assertEquals(innerQuerySegmentSpec, ev.getEffectiveQuerySegmentSpec());
+    Assertions.assertEquals(innerQuerySegmentSpec, ev.getEffectiveQuerySegmentSpec());
   }
 
   @Test
@@ -203,11 +203,11 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         .build();
 
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
-    Assert.assertEquals(ImmutableList.of("quality", "market", "v0"), buildSpec.getGroupingColumns());
-    Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
-    Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
-    Assert.assertEquals(List.of(), buildSpec.getPreferredOrdering());
+    Assertions.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
+    Assertions.assertEquals(ImmutableList.of("quality", "market", "v0"), buildSpec.getGroupingColumns());
+    Assertions.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
+    Assertions.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+    Assertions.assertEquals(List.of(), buildSpec.getPreferredOrdering());
   }
 
   @Test
@@ -247,20 +247,20 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         .build();
 
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
-    Assert.assertEquals(
+    Assertions.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
+    Assertions.assertEquals(
         ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME, "quality", "market", "v0"),
         buildSpec.getGroupingColumns()
     );
-    Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
-    Assert.assertEquals(
+    Assertions.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
+    Assertions.assertEquals(
         VirtualColumns.create(
             Granularities.toVirtualColumn(query.getGranularity(), Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME),
             virtualColumns.getVirtualColumns()[0]
         ),
         buildSpec.getVirtualColumns()
     );
-    Assert.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
+    Assertions.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
   }
 
   @Test
@@ -301,20 +301,20 @@ public class GroupByQueryTest extends InitializedNullHandlingTest
         .build();
 
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
-    Assert.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
-    Assert.assertEquals(
+    Assertions.assertEquals(QueryRunnerTestHelper.FIRST_TO_THIRD.getIntervals().get(0), buildSpec.getInterval());
+    Assertions.assertEquals(
         ImmutableList.of(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME + "0", "quality", "market", "v0"),
         buildSpec.getGroupingColumns()
     );
-    Assert.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
-    Assert.assertEquals(
+    Assertions.assertEquals(ImmutableList.of(QueryRunnerTestHelper.ROWS_COUNT, longSum), buildSpec.getAggregators());
+    Assertions.assertEquals(
         VirtualColumns.create(
             Granularities.toVirtualColumn(query.getGranularity(), Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME + "0"),
             virtualColumns.getVirtualColumns()[0]
         ),
         buildSpec.getVirtualColumns()
     );
-    Assert.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
+    Assertions.assertEquals(Cursors.ascendingTimeOrder(), buildSpec.getPreferredOrdering());
   }
 
   @Test

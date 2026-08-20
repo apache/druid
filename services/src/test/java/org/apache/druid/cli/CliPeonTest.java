@@ -26,6 +26,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Scopes;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -83,8 +85,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -105,7 +105,7 @@ public class CliPeonTest
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
   private final CompactionTask.Builder compactBuilder =
-      new CompactionTask.Builder("test_ds", new SegmentCacheManagerFactory(TestIndex.INDEX_IO, mapper))
+      new CompactionTask.Builder("test_ds", SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, mapper))
       .id("compact_test_taskid")
       .inputSpec(new CompactionIntervalSpec(Intervals.of("2020/2021"), null));
 
@@ -478,7 +478,8 @@ public class CliPeonTest
           DateTimes.nowUtc().minusDays(2),
           DateTimes.nowUtc(),
           new CsvInputFormat(null, null, true, null, 0, null),
-          Duration.standardHours(2).getStandardMinutes()
+          Duration.standardHours(2).getStandardMinutes(),
+          null
       );
     }
   }

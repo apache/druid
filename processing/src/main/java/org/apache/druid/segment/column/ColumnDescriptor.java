@@ -78,6 +78,25 @@ public class ColumnDescriptor implements Serializer
     return parts;
   }
 
+  /**
+   * Derive the {@link ColumnType} for this column from the part serdes, without deserializing column data. This is
+   * useful for answering schema queries from metadata alone.
+   * <p>
+   * Part serdes that carry additional type information (such as complex type names or array element types) provide it
+   * via {@link ColumnPartSerde#getColumnType()}. If no part serde provides a type, falls back to a simple
+   * {@link ColumnType} from {@link #getValueType()}.
+   */
+  public ColumnType toColumnType()
+  {
+    for (ColumnPartSerde part : parts) {
+      final ColumnType type = part.getColumnType();
+      if (type != null) {
+        return type;
+      }
+    }
+    return new ColumnType(valueType, null, null);
+  }
+
   @Override
   public long getSerializedSize() throws IOException
   {

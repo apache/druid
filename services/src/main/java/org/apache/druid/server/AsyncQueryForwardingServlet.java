@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.calcite.avatica.remote.ProtobufTranslation;
@@ -67,6 +66,7 @@ import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.client.Result;
 import org.eclipse.jetty.ee8.proxy.AsyncProxyServlet;
+import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 
@@ -387,7 +387,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     final String errorMessage = exceptionToReport.getMessage() == null
                                 ? "no error message" : exceptionToReport.getMessage();
 
-    AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
+    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
 
     if (isNativeQuery) {
       requestLogger.logNativeQuery(
@@ -395,7 +395,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
+              buildRequestLogQueryStats(false, httpStatusCode, authenticationResult.getIdentity(), null, errorMessage)
           )
       );
     } else {
@@ -405,7 +405,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
               null,
               DateTimes.nowUtc(),
               request.getRemoteAddr(),
-              new QueryStats(ImmutableMap.of("success", false, "exception", errorMessage, "identity", authenticationResult.getIdentity()))
+              buildRequestLogQueryStats(false, httpStatusCode, authenticationResult.getIdentity(), null, errorMessage)
           )
       );
     }
@@ -416,6 +416,38 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
     objectMapper.writeValue(
         response.getOutputStream(),
         serverConfig.getErrorResponseTransformStrategy().transformIfNeeded(exceptionToReport)
+    );
+  }
+
+  /**
+   * Builds the {@link QueryStats} recorded in router request logs. Success paths pass {@code queryTimeMs};
+   * failure paths pass {@code exceptionMessage}. Exactly one of the two is non-null at every call site.
+   */
+  private static QueryStats buildRequestLogQueryStats(
+      boolean success,
+      int statusCode,
+      String identity,
+      @Nullable Long queryTimeMs,
+      @Nullable String exceptionMessage
+  )
+  {
+    if (exceptionMessage != null) {
+      return new QueryStats(
+          Map.of(
+              "success", success,
+              DruidMetrics.STATUS_CODE, statusCode,
+              "exception", exceptionMessage,
+              "identity", identity
+          )
+      );
+    }
+    return new QueryStats(
+        Map.of(
+            "query/time", queryTimeMs,
+            "success", success,
+            DruidMetrics.STATUS_CODE, statusCode,
+            "identity", identity
+        )
     );
   }
 
@@ -596,8 +628,27 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       Response serverResponse
   )
   {
+    // Response context is JSON rather than a comma-separated header value, so copy it verbatim instead of allowing
+    // Jetty's generic proxy header handling to parse it as a list.
+    final HttpField responseContext = serverResponse.getHeaders().getField(QueryResource.HEADER_RESPONSE_CONTEXT);
+    if (responseContext != null) {
+      proxyResponse.setHeader(responseContext.getName(), responseContext.getValue());
+    }
     StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
+  }
+
+  @Override
+  protected HttpField filterServerResponseHeader(
+      HttpServletRequest clientRequest,
+      Response serverResponse,
+      HttpField field
+  )
+  {
+    if (QueryResource.HEADER_RESPONSE_CONTEXT.equalsIgnoreCase(field.getName())) {
+      return null;
+    }
+    return super.filterServerResponseHeader(clientRequest, serverResponse, field);
   }
 
   @VisibleForTesting
@@ -770,7 +821,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
         failedQueryCount.incrementAndGet();
       }
 
-      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+      final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
 
       // As router is simply a proxy, we don't make an effort to construct the error code from the exception ourselves.
       // We rely on broker to set this for us if the error occurs downstream.
@@ -788,15 +839,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                     sqlQuery.getContext(),
                     DateTimes.nowUtc(),
                     req.getRemoteAddr(),
-                    new QueryStats(
-                        ImmutableMap.of(
-                            "query/time",
-                            TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
-                            "success",
-                            success,
-                            "identity",
-                            authenticationResult.getIdentity()
-                        )
+                    buildRequestLogQueryStats(
+                        success,
+                        statusCode,
+                        authenticationResult.getIdentity(),
+                        TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
+                        null
                     )
                 )
             );
@@ -815,15 +863,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 query,
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
-                new QueryStats(
-                    ImmutableMap.of(
-                        "query/time",
-                        TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
-                        "success",
-                        success,
-                        "identity",
-                        authenticationResult.getIdentity()
-                    )
+                buildRequestLogQueryStats(
+                    success,
+                    statusCode,
+                    authenticationResult.getIdentity(),
+                    TimeUnit.NANOSECONDS.toMillis(requestTimeNs),
+                    null
                 )
             )
         );
@@ -863,7 +908,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
       // We rely on broker to set this for us if the error occurs downstream. 
       // Otherwise, if there's a router/client error, we log this as an unknown error.
       final int statusCode = determineStatusCode(false, response.getStatus());
-      AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+      final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
       emitQueryTime(requestTimeNs, false, sqlQueryId, queryId, statusCode, authenticationResult);
 
       //noinspection VariableNotUsedInsideIf
@@ -877,15 +922,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                     sqlQuery.getContext(),
                     DateTimes.nowUtc(),
                     req.getRemoteAddr(),
-                    new QueryStats(
-                        ImmutableMap.of(
-                            "success",
-                            false,
-                            "exception",
-                            errorMessage == null ? "no message" : errorMessage,
-                            "identity",
-                            authenticationResult.getIdentity()
-                        )
+                    buildRequestLogQueryStats(
+                        false,
+                        statusCode,
+                        authenticationResult.getIdentity(),
+                        null,
+                        errorMessage == null ? "no message" : errorMessage
                     )
                 )
             );
@@ -909,15 +951,12 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet implements Qu
                 query,
                 DateTimes.nowUtc(),
                 req.getRemoteAddr(),
-                new QueryStats(
-                    ImmutableMap.of(
-                        "success",
-                        false,
-                        "exception",
-                        errorMessage == null ? "no message" : errorMessage,
-                        "identity",
-                        authenticationResult.getIdentity()
-                    )
+                buildRequestLogQueryStats(
+                    false,
+                    statusCode,
+                    authenticationResult.getIdentity(),
+                    null,
+                    errorMessage == null ? "no message" : errorMessage
                 )
             )
         );

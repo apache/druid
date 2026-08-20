@@ -19,11 +19,14 @@
 
 package org.apache.druid.storage.s3;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.common.aws.AWSClientConfig;
+import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
@@ -31,8 +34,11 @@ import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
+import javax.crypto.AEADBadTagException;
+import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -43,7 +49,7 @@ public class S3UtilsTest
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -52,14 +58,32 @@ public class S3UtilsTest
             },
             maxRetries
         ));
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithSslExceptionWrappingAeadBadTag()
+  {
+    // Transient TLS "Tag mismatch!" should be retried, not treated as terminal. See issue #19616.
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    Assertions.assertThrows(
+        SSLException.class,
+        () -> S3Utils.retryS3Operation(
+            () -> {
+              count.incrementAndGet();
+              throw new SSLException("Tag mismatch!", new AEADBadTagException("Tag mismatch!"));
+            },
+            maxRetries
+        ));
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
   public void testRetryWith4XXErrors()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -75,7 +99,7 @@ public class S3UtilsTest
             },
             3
         ));
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
@@ -97,7 +121,7 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -105,7 +129,7 @@ public class S3UtilsTest
   {
     final int maxRetries = 3;
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -122,7 +146,7 @@ public class S3UtilsTest
             maxRetries
         )
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -145,7 +169,32 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
+  }
+
+  @Test
+  public void testRetryWithAsyncCredentialProviderChainException() throws Exception
+  {
+    final int maxRetries = 3;
+    final AtomicInteger count = new AtomicInteger();
+    S3Utils.retryS3Operation(
+        () -> {
+          if (count.incrementAndGet() >= maxRetries) {
+            return "hey";
+          } else {
+            throw new CompletionException(
+                SdkClientException.builder()
+                                  .message(
+                                      "Unable to load credentials from any of the providers in the chain "
+                                      + "AwsCredentialsProviderChain"
+                                  )
+                                  .build()
+            );
+          }
+        },
+        maxRetries
+    );
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -167,7 +216,7 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
@@ -189,14 +238,14 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
   }
 
   @Test
   public void testNoRetryWithS3InternalErrorNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         Exception.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -210,14 +259,14 @@ public class S3UtilsTest
             3
         )
     );
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
   public void testNoRetryWithS3SlowDownNon200Status()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         Exception.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -231,14 +280,14 @@ public class S3UtilsTest
             3
         )
     );
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
   public void testRetryWithS3Status200ButDifferentError()
   {
     final AtomicInteger count = new AtomicInteger();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         Exception.class,
         () -> S3Utils.retryS3Operation(
             () -> {
@@ -252,7 +301,7 @@ public class S3UtilsTest
             3
         )
     );
-    Assert.assertEquals(1, count.get());
+    Assertions.assertEquals(1, count.get());
   }
 
   @Test
@@ -301,12 +350,12 @@ public class S3UtilsTest
     // First request should have both keys
     List<String> firstKeys = capturedRequests.getValues().get(0).delete().objects()
                                  .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
-    Assert.assertEquals(List.of("a", "b"), firstKeys);
+    Assertions.assertEquals(List.of("a", "b"), firstKeys);
 
     // Second request should only have the failed key
     List<String> secondKeys = capturedRequests.getValues().get(1).delete().objects()
                                   .stream().map(ObjectIdentifier::key).collect(Collectors.toList());
-    Assert.assertEquals(List.of("b"), secondKeys);
+    Assertions.assertEquals(List.of("b"), secondKeys);
   }
 
   @Test
@@ -323,12 +372,12 @@ public class S3UtilsTest
     EasyMock.replay(s3Client);
 
     List<ObjectIdentifier> keys = List.of(ObjectIdentifier.builder().key("a").build());
-    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+    S3MultiObjectDeleteException thrown = Assertions.assertThrows(
         S3MultiObjectDeleteException.class,
         () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 2)
     );
-    Assert.assertEquals(1, thrown.getErrors().size());
-    Assert.assertEquals("a", thrown.getErrors().get(0).key());
+    Assertions.assertEquals(1, thrown.getErrors().size());
+    Assertions.assertEquals("a", thrown.getErrors().get(0).key());
     EasyMock.verify(s3Client);
   }
 
@@ -354,12 +403,12 @@ public class S3UtilsTest
         ObjectIdentifier.builder().key("a").build(),
         ObjectIdentifier.builder().key("b").build()
     );
-    S3MultiObjectDeleteException thrown = Assert.assertThrows(
+    S3MultiObjectDeleteException thrown = Assertions.assertThrows(
         S3MultiObjectDeleteException.class,
         () -> S3Utils.deleteBucketKeys(s3Client, "bucket", keys, 1)
     );
-    Assert.assertEquals(1, thrown.getErrors().size());
-    Assert.assertEquals("b", thrown.getErrors().get(0).key());
+    Assertions.assertEquals(1, thrown.getErrors().size());
+    Assertions.assertEquals("b", thrown.getErrors().get(0).key());
     EasyMock.verify(s3Client);
   }
 
@@ -380,6 +429,44 @@ public class S3UtilsTest
         },
         maxRetries
     );
-    Assert.assertEquals(maxRetries, count.get());
+    Assertions.assertEquals(maxRetries, count.get());
+  }
+
+  private static final ObjectMapper JSON = new ObjectMapper();
+
+  private static AWSEndpointConfig endpointWith(String json) throws IOException
+  {
+    return JSON.readValue(json, AWSEndpointConfig.class);
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    Assertions.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpEndpointReturnsFalse() throws IOException
+  {
+    Assertions.assertFalse(S3Utils.useHttps(null, endpointWith("{\"url\":\"http://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigHttpsEndpointReturnsTrue() throws IOException
+  {
+    Assertions.assertTrue(S3Utils.useHttps(null, endpointWith("{\"url\":\"https://s3.example.com\"}")));
+  }
+
+  @Test
+  public void testUseHttpsNullClientConfigNullEndpointUrlReturnsTrue() throws IOException
+  {
+    Assertions.assertTrue(S3Utils.useHttps(null, new AWSEndpointConfig()));
+  }
+
+  @Test
+  public void testUseHttpsDefaultClientConfigSchemelessEndpointReturnsTrue() throws IOException
+  {
+    // Sanity check: default AWSClientConfig protocol is "https"; schemeless URL inherits "https".
+    Assertions.assertTrue(S3Utils.useHttps(new AWSClientConfig(), endpointWith("{\"url\":\"s3.example.com\"}")));
   }
 }

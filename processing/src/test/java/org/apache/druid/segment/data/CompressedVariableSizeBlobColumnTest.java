@@ -25,10 +25,9 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,17 +40,19 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CompressedVariableSizeBlobColumnTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   @Test
   public void testSomeValues() throws IOException
   {
     // value sizes increase until they span at least 3 pages of compressed buffers
-    final File tmpFile = tempFolder.newFolder();
+    final File tmpFile = new File(tempFolder, "dir1");
+    tmpFile.mkdir();
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = tempFolder.newFolder();
+    final File tmpFile2 = new File(tempFolder, "dir2");
+    tmpFile2.mkdir();
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 
@@ -95,14 +96,14 @@ public class CompressedVariableSizeBlobColumnTest
       ByteBuffer value = column.get(row);
       byte[] bytes = new byte[value.remaining()];
       value.get(bytes);
-      Assert.assertArrayEquals("Row " + row, values.get(row), bytes);
+      Assertions.assertArrayEquals(values.get(row), bytes, "Row " + row);
     }
     for (int rando = 0; rando < numWritten; rando++) {
       int row = ThreadLocalRandom.current().nextInt(0, numWritten - 1);
       ByteBuffer value = column.get(row);
       byte[] bytes = new byte[value.remaining()];
       value.get(bytes);
-      Assert.assertArrayEquals("Row " + row, values.get(row), bytes);
+      Assertions.assertArrayEquals(values.get(row), bytes, "Row " + row);
     }
     column.close();
     fileMapper.close();
@@ -112,10 +113,12 @@ public class CompressedVariableSizeBlobColumnTest
   public void testSomeValuesByteBuffers() throws IOException
   {
     // value sizes increase until they span at least 3 pages of compressed buffers
-    final File tmpFile = tempFolder.newFolder();
+    final File tmpFile = new File(tempFolder, "dir1");
+    tmpFile.mkdir();
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = tempFolder.newFolder();
+    final File tmpFile2 = new File(tempFolder, "dir2");
+    tmpFile2.mkdir();
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 
@@ -159,14 +162,14 @@ public class CompressedVariableSizeBlobColumnTest
       ByteBuffer value = column.get(row);
       byte[] bytes = new byte[value.remaining()];
       value.get(bytes);
-      Assert.assertArrayEquals("Row " + row, values.get(row), bytes);
+      Assertions.assertArrayEquals(values.get(row), bytes, "Row " + row);
     }
     for (int rando = 0; rando < numWritten; rando++) {
       int row = ThreadLocalRandom.current().nextInt(0, numWritten - 1);
       ByteBuffer value = column.get(row);
       byte[] bytes = new byte[value.remaining()];
       value.get(bytes);
-      Assert.assertArrayEquals("Row " + row, values.get(row), bytes);
+      Assertions.assertArrayEquals(values.get(row), bytes, "Row " + row);
     }
     column.close();
     fileMapper.close();
@@ -175,10 +178,12 @@ public class CompressedVariableSizeBlobColumnTest
   @Test
   public void testSomeValuesByteBuffersBigEndian() throws IOException
   {
-    final File tmpFile = tempFolder.newFolder();
+    final File tmpFile = new File(tempFolder, "dir1");
+    tmpFile.mkdir();
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = tempFolder.newFolder();
+    final File tmpFile2 = new File(tempFolder, "dir2");
+    tmpFile2.mkdir();
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 
@@ -223,12 +228,12 @@ public class CompressedVariableSizeBlobColumnTest
     ).get();
     for (int row = 0; row < numWritten; row++) {
       ByteBuffer value = column.get(row);
-      Assert.assertEquals("Row " + row, values.get(row).longValue(), value.getLong());
+      Assertions.assertEquals(values.get(row).longValue(), value.getLong(), "Row " + row);
     }
     for (int rando = 0; rando < numWritten; rando++) {
       int row = ThreadLocalRandom.current().nextInt(0, numWritten - 1);
       ByteBuffer value = column.get(row);
-      Assert.assertEquals("Row " + row, values.get(row).longValue(), value.getLong());
+      Assertions.assertEquals(values.get(row).longValue(), value.getLong(), "Row " + row);
     }
     column.close();
     fileMapper.close();
@@ -238,10 +243,12 @@ public class CompressedVariableSizeBlobColumnTest
   public void testLongs() throws IOException
   {
     // value sizes increase until they span at least 3 pages of compressed buffers
-    final File tmpFile = tempFolder.newFolder();
+    final File tmpFile = new File(tempFolder, "dir1");
+    tmpFile.mkdir();
     final FileSmoosher smoosher = new FileSmoosher(tmpFile);
 
-    final File tmpFile2 = tempFolder.newFolder();
+    final File tmpFile2 = new File(tempFolder, "dir2");
+    tmpFile2.mkdir();
     final SegmentWriteOutMedium writeOutMedium =
         TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
 
@@ -277,22 +284,22 @@ public class CompressedVariableSizeBlobColumnTest
     CompressedLongsReader reader = CompressedLongsReader.fromByteBuffer(base, ByteOrder.nativeOrder()).get();
     for (int row = 0; row < numWritten; row++) {
       long l = reader.get(row);
-      Assert.assertEquals("Row " + row, values.get(row).longValue(), l);
+      Assertions.assertEquals(values.get(row).longValue(), l, "Row " + row);
     }
 
     // test random access pt 1
     int random = 0;
-    Assert.assertEquals("Row " + random, values.get(random).longValue(), reader.get(random));
+    Assertions.assertEquals(values.get(random).longValue(), reader.get(random), "Row " + random);
     random = 2_000_000;
-    Assert.assertEquals("Row " + random, values.get(random).longValue(), reader.get(random));
+    Assertions.assertEquals(values.get(random).longValue(), reader.get(random), "Row " + random);
     random = 1_000_000;
-    Assert.assertEquals("Row " + random, values.get(random).longValue(), reader.get(random));
+    Assertions.assertEquals(values.get(random).longValue(), reader.get(random), "Row " + random);
 
     // test random access pt 2
     for (int rando = 0; rando < numWritten; rando++) {
       int row = ThreadLocalRandom.current().nextInt(0, numWritten - 1);
       long l = reader.get(row);
-      Assert.assertEquals("Row " + row, values.get(row).longValue(), l);
+      Assertions.assertEquals(values.get(row).longValue(), l, "Row " + row);
     }
 
     reader.close();

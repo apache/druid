@@ -31,7 +31,7 @@ This mode is recommended if you intend to use the indexing service as the single
 
 ## Configuration
 
-For Apache Druid Overlord service configuration, see [Overlord Configuration](../configuration/index.md#overlord).
+For Apache&circledR; Druid Overlord service configuration, see [Overlord Configuration](../configuration/index.md#overlord).
 
 For basic tuning guidance for the Overlord service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#overlord).
 

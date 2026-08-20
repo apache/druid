@@ -20,12 +20,19 @@
 package org.apache.druid.query.metadata;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.ClusteredValueGroupsBaseTableProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -65,14 +72,15 @@ import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -88,8 +96,8 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
   private static final EnumSet<SegmentMetadataQuery.AnalysisType> EMPTY_ANALYSES =
       EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class);
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   @Test
   public void testIncrementalWorks()
@@ -105,14 +113,14 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
         analyses
     );
 
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
 
     final SegmentAnalysis analysis = results.get(0);
-    Assert.assertEquals(SegmentId.dummy("ds").toString(), analysis.getId());
+    Assertions.assertEquals(SegmentId.dummy("ds").toString(), analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         TestIndex.COLUMNS.length + 3,
         columns.size()
     ); // All columns including time and empty/null column
@@ -121,43 +129,55 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     // This helps DruidSchema keep things in the proper order when it does SegmentMetadata queries.
     final List<Map.Entry<String, ColumnAnalysis>> entriesInOrder = new ArrayList<>(columns.entrySet());
 
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
-    Assert.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
+    Assertions.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
+    Assertions.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
 
     // Start from 1: skipping __time
     for (int i = 0; i < TestIndex.DIMENSION_SCHEMAS.size(); i++) {
       final DimensionSchema schema = TestIndex.DIMENSION_SCHEMAS.get(i);
       final Map.Entry<String, ColumnAnalysis> analysisEntry = entriesInOrder.get(i + 1 /* skip __time */);
       final String dimension = schema.getName();
-      Assert.assertEquals(dimension, analysisEntry.getKey());
+      Assertions.assertEquals(dimension, analysisEntry.getKey());
       final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
       final boolean isString = schema.getColumnType().is(ValueType.STRING);
 
-      Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
-      Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
+      Assertions.assertEquals(
+          schema.getColumnType().toString(),
+          columnAnalysis.getTypeSignature().asTypeString(),
+          dimension
+      );
+      Assertions.assertEquals(0, columnAnalysis.getSize(), dimension);
       if (isString) {
         if (analyses == null) {
-          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+          Assertions.assertTrue(columnAnalysis.getCardinality() > 0, dimension);
         } else {
-          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          Assertions.assertEquals(0, columnAnalysis.getCardinality().longValue(), dimension);
         }
       } else {
-        Assert.assertNull(dimension, columnAnalysis.getCardinality());
+        Assertions.assertNull(columnAnalysis.getCardinality(), dimension);
       }
     }
 
     for (String metric : TestIndex.DOUBLE_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
-      Assert.assertEquals(metric, ValueType.DOUBLE.name(), columnAnalysis.getType());
-      Assert.assertEquals(metric, 0, columnAnalysis.getSize());
-      Assert.assertNull(metric, columnAnalysis.getCardinality());
+      Assertions.assertEquals(
+          ValueType.DOUBLE.name(),
+          columnAnalysis.getTypeSignature().asTypeString(),
+          metric
+      );
+      Assertions.assertEquals(0, columnAnalysis.getSize(), metric);
+      Assertions.assertNull(columnAnalysis.getCardinality(), metric);
     }
 
     for (String metric : TestIndex.FLOAT_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
-      Assert.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
-      Assert.assertEquals(metric, 0, columnAnalysis.getSize());
-      Assert.assertNull(metric, columnAnalysis.getCardinality());
+      Assertions.assertEquals(
+          ValueType.FLOAT.name(),
+          columnAnalysis.getTypeSignature().asTypeString(),
+          metric
+      );
+      Assertions.assertEquals(0, columnAnalysis.getSize(), metric);
+      Assertions.assertNull(columnAnalysis.getCardinality(), metric);
     }
   }
 
@@ -175,54 +195,66 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
         analyses
     );
 
-    Assert.assertEquals(1, results.size());
+    Assertions.assertEquals(1, results.size());
 
     final SegmentAnalysis analysis = results.get(0);
-    Assert.assertEquals(SegmentId.dummy("test_1").toString(), analysis.getId());
+    Assertions.assertEquals(SegmentId.dummy("test_1").toString(), analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
     // Verify key order is the same as the underlying segment.
     // This helps DruidSchema keep things in the proper order when it does SegmentMetadata queries.
     final List<Map.Entry<String, ColumnAnalysis>> entriesInOrder = new ArrayList<>(columns.entrySet());
 
-    Assert.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
-    Assert.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
+    Assertions.assertEquals(ColumnHolder.TIME_COLUMN_NAME, entriesInOrder.get(0).getKey());
+    Assertions.assertEquals(ColumnType.LONG, entriesInOrder.get(0).getValue().getTypeSignature());
 
     // Start from 1: skipping __time
     for (int i = 0; i < TestIndex.DIMENSION_SCHEMAS.size(); i++) {
       final DimensionSchema schema = TestIndex.DIMENSION_SCHEMAS.get(i);
       final Map.Entry<String, ColumnAnalysis> analysisEntry = entriesInOrder.get(i + 1 /* skip __time */);
       final String dimension = schema.getName();
-      Assert.assertEquals(dimension, analysisEntry.getKey());
+      Assertions.assertEquals(dimension, analysisEntry.getKey());
       final ColumnAnalysis columnAnalysis = analysisEntry.getValue();
       final boolean isString = schema.getColumnType().is(ValueType.STRING);
-      Assert.assertEquals(dimension, schema.getColumnType().toString(), columnAnalysis.getType());
-      Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
+      Assertions.assertEquals(
+          schema.getColumnType().toString(),
+          columnAnalysis.getTypeSignature().asTypeString(),
+          dimension
+      );
+      Assertions.assertEquals(0, columnAnalysis.getSize(), dimension);
 
       if (isString) {
         if (analyses == null) {
-          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+          Assertions.assertTrue(columnAnalysis.getCardinality() > 0, dimension);
         } else {
-          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          Assertions.assertEquals(0, columnAnalysis.getCardinality().longValue(), dimension);
         }
       } else {
-        Assert.assertNull(dimension, columnAnalysis.getCardinality());
+        Assertions.assertNull(columnAnalysis.getCardinality(), dimension);
       }
     }
 
     for (String metric : TestIndex.DOUBLE_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
 
-      Assert.assertEquals(metric, ValueType.DOUBLE.name(), columnAnalysis.getType());
-      Assert.assertEquals(metric, 0, columnAnalysis.getSize());
-      Assert.assertNull(metric, columnAnalysis.getCardinality());
+      Assertions.assertEquals(
+          ValueType.DOUBLE.name(),
+          columnAnalysis.getTypeSignature().asTypeString(),
+          metric
+      );
+      Assertions.assertEquals(0, columnAnalysis.getSize(), metric);
+      Assertions.assertNull(columnAnalysis.getCardinality(), metric);
     }
 
     for (String metric : TestIndex.FLOAT_METRICS) {
       final ColumnAnalysis columnAnalysis = columns.get(metric);
-      Assert.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
-      Assert.assertEquals(metric, 0, columnAnalysis.getSize());
-      Assert.assertNull(metric, columnAnalysis.getCardinality());
+      Assertions.assertEquals(
+          ValueType.FLOAT.name(),
+          columnAnalysis.getTypeSignature().asTypeString(),
+          metric
+      );
+      Assertions.assertEquals(0, columnAnalysis.getSize(), metric);
+      Assertions.assertNull(columnAnalysis.getCardinality(), metric);
     }
   }
 
@@ -324,9 +356,12 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       IncrementalIndexSegment segment = new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("ds"));
       Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
       ColumnAnalysis columnAnalysis = analyses.get(invalid_aggregator);
-      Assert.assertFalse(columnAnalysis.isError());
-      Assert.assertEquals("invalid_complex_column_type", columnAnalysis.getType());
-      Assert.assertEquals(ColumnType.ofComplex("invalid_complex_column_type"), columnAnalysis.getTypeSignature());
+      Assertions.assertFalse(columnAnalysis.isError());
+      Assertions.assertEquals(
+          "invalid_complex_column_type",
+          columnAnalysis.getTypeSignature().getComplexTypeName()
+      );
+      Assertions.assertEquals(ColumnType.ofComplex("invalid_complex_column_type"), columnAnalysis.getTypeSignature());
     }
 
     // Persist the index.
@@ -347,8 +382,8 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       );
       Map<String, ColumnAnalysis> analyses = analyzer.analyze(segment);
       ColumnAnalysis invalidColumnAnalysis = analyses.get(invalid_aggregator);
-      Assert.assertTrue(invalidColumnAnalysis.isError());
-      Assert.assertEquals("error:unknown_complex_invalid_complex_column_type", invalidColumnAnalysis.getErrorMessage());
+      Assertions.assertTrue(invalidColumnAnalysis.isError());
+      Assertions.assertEquals("error:unknown_complex_invalid_complex_column_type", invalidColumnAnalysis.getErrorMessage());
 
       // Run a segment metadata query also to verify it doesn't break
       final List<SegmentAnalysis> results = getSegmentAnalysises(
@@ -356,7 +391,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
           EnumSet.of(SegmentMetadataQuery.AnalysisType.SIZE)
       );
       for (SegmentAnalysis result : results) {
-        Assert.assertTrue(result.getColumns().get(invalid_aggregator).isError());
+        Assertions.assertTrue(result.getColumns().get(invalid_aggregator).isError());
       }
     }
   }
@@ -385,8 +420,8 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     SegmentAnalyzer analyzer = new SegmentAnalyzer(EMPTY_ANALYSES);
     Map<String, ColumnAnalysis> analysis = analyzer.analyze(s);
-    Assert.assertEquals(ColumnType.STRING, analysis.get("x").getTypeSignature());
-    Assert.assertFalse(analysis.get("x").isError());
+    Assertions.assertEquals(ColumnType.STRING, analysis.get("x").getTypeSignature());
+    Assertions.assertFalse(analysis.get("x").isError());
   }
 
   @Test
@@ -413,8 +448,77 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     SegmentAnalyzer analyzer = new SegmentAnalyzer(EMPTY_ANALYSES);
     Map<String, ColumnAnalysis> analysis = analyzer.analyze(s);
-    Assert.assertEquals(ColumnType.STRING, analysis.get("x").getTypeSignature());
-    Assert.assertFalse(analysis.get("x").isError());
+    Assertions.assertEquals(ColumnType.STRING, analysis.get("x").getTypeSignature());
+    Assertions.assertFalse(analysis.get("x").isError());
+  }
+
+  @Test
+  public void testAnalysisClusteredSegmentReportsCorrectTypesNoErrors() throws IOException
+  {
+    // A clustered segment has empty top-level columns (data lives in per-group sub-indexes). SegmentAnalyzer must
+    // still report the correct logical column types and NOT mark every column as error("unknown_type"), otherwise
+    // the broker's SQL schema for a clustered datasource would be broken.
+    final QueryableIndex clusteredIndex = buildClusteredSegment();
+    final Segment segment = new QueryableIndexSegment(clusteredIndex, SegmentId.dummy("clustered"));
+
+    // Request the full stat set to also exercise the cursor-based STRING path + clustered-aware inspector.
+    final SegmentAnalyzer analyzer = new SegmentAnalyzer(
+        EnumSet.of(
+            SegmentMetadataQuery.AnalysisType.SIZE,
+            SegmentMetadataQuery.AnalysisType.CARDINALITY,
+            SegmentMetadataQuery.AnalysisType.MINMAX
+        )
+    );
+    final Map<String, ColumnAnalysis> analysis = analyzer.analyze(segment);
+
+    // Clustering column (constant per group) + non-clustering dim + __time all present with right types.
+    Assertions.assertEquals(ColumnType.STRING, analysis.get("tenant").getTypeSignature());
+    Assertions.assertFalse(analysis.get("tenant").isError(), "tenant should not be an error");
+    Assertions.assertEquals(ColumnType.STRING, analysis.get("region").getTypeSignature());
+    Assertions.assertFalse(analysis.get("region").isError(), "region should not be an error");
+    Assertions.assertEquals(ColumnType.LONG, analysis.get(ColumnHolder.TIME_COLUMN_NAME).getTypeSignature());
+  }
+
+  private QueryableIndex buildClusteredSegment() throws IOException
+  {
+    final TimestampSpec timestampSpec = new TimestampSpec("ts", "millis", null);
+    final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
+        ClusteredValueGroupsBaseTableProjectionSpec.builder()
+            .columns(
+                new StringDimensionSchema("tenant"),
+                new StringDimensionSchema("region"),
+                new LongDimensionSchema("__time")
+            )
+            .clusteringColumns("tenant")
+            .build();
+    final IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+        .withMinTimestamp(DateTimes.of("2011-01-01").getMillis())
+        .withTimestampSpec(timestampSpec)
+        .withQueryGranularity(Granularities.NONE)
+        .withDimensionsSpec(clusterSpec.getDimensionsSpec())
+        .withRollup(false)
+        .withClusterSpec(clusterSpec)
+        .build();
+    final long t = DateTimes.of("2011-01-01").getMillis();
+    final IndexBuilder bob = IndexBuilder.create()
+                                         .useV10()
+                                         .tmpDir(temporaryFolder.newFolder())
+                                         .schema(schema)
+                                         .rows(List.of(
+                                             clusterRow(t, "acme", "us-east-1"),
+                                             clusterRow(t + 1, "acme", "us-west-2"),
+                                             clusterRow(t + 2, "globex", "eu-west-1")
+                                         ));
+    return bob.buildMMappedIndex(Intervals.of("2011/2012"));
+  }
+
+  private static InputRow clusterRow(long ts, String tenant, String region)
+  {
+    final Map<String, Object> event = new java.util.HashMap<>();
+    event.put("ts", ts);
+    event.put("tenant", tenant);
+    event.put("region", region);
+    return new MapBasedInputRow(ts, List.of("tenant", "region"), event);
   }
 
   @Test
@@ -422,6 +526,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
   {
     QueryableIndex mockIndex = EasyMock.createMock(QueryableIndex.class);
     EasyMock.expect(mockIndex.getNumRows()).andReturn(100).atLeastOnce();
+    EasyMock.expect(mockIndex.getClusteredBaseSummary()).andReturn(null).anyTimes();
     EasyMock.expect(mockIndex.getColumnNames()).andReturn(Collections.singletonList("x")).atLeastOnce();
     EasyMock.expect(mockIndex.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
@@ -447,9 +552,9 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
 
     SegmentAnalyzer analyzer = new SegmentAnalyzer(EMPTY_ANALYSES);
     Map<String, ColumnAnalysis> analysis = analyzer.analyze(s);
-    Assert.assertEquals(ColumnType.UNKNOWN_COMPLEX, analysis.get("x").getTypeSignature());
-    Assert.assertTrue(analysis.get("x").isError());
-    Assert.assertTrue(analysis.get("x").getErrorMessage().contains("is not a [org.apache.druid.segment.column.ComplexColumn]"));
+    Assertions.assertEquals(ColumnType.UNKNOWN_COMPLEX, analysis.get("x").getTypeSignature());
+    Assertions.assertTrue(analysis.get("x").isError());
+    Assertions.assertTrue(analysis.get("x").getErrorMessage().contains("is not a [org.apache.druid.segment.column.ComplexColumn]"));
 
     EasyMock.verify(mockIndex, holder, dictionaryEncodedColumn);
   }

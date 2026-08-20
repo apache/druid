@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,7 +34,7 @@ public class HttpLoadQueuePeonConfigTest
   {
     final ObjectMapper jsonMapper = new ObjectMapper();
 
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Throwables.getRootCause(
             Assert.assertThrows(ValueInstantiationException.class, () ->
                 jsonMapper.readValue("{\"batchSize\":0}", HttpLoadQueuePeonConfig.class)

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
 
@@ -66,6 +68,12 @@ public class ComplexColumnPartSerde implements ColumnPartSerde
   public String getTypeName()
   {
     return typeName;
+  }
+
+  @Override
+  public ColumnType getColumnType()
+  {
+    return new ColumnType(ValueType.COMPLEX, typeName, null);
   }
 
   @Override

@@ -19,6 +19,7 @@
 
 package org.apache.druid.emitter.opentelemetry;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.api.trace.StatusCode;
@@ -35,9 +36,9 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -75,7 +76,7 @@ public class OpenTelemetryEmitterTest
   private NoopExporter noopExporter;
   private OpenTelemetryEmitter emitter;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     noopExporter = new NoopExporter();
@@ -87,6 +88,41 @@ public class OpenTelemetryEmitterTest
                                     .setPropagators(ContextPropagators.create(W3CTraceContextPropagator.getInstance()))
                                     .build();
     emitter = new OpenTelemetryEmitter(openTelemetry);
+  }
+
+  @Test
+  public void testModuleCreatesEmitter()
+  {
+    final String previousTracesExporter = System.getProperty("otel.traces.exporter");
+    final String previousMetricsExporter = System.getProperty("otel.metrics.exporter");
+    final String previousLogsExporter = System.getProperty("otel.logs.exporter");
+    System.setProperty("otel.traces.exporter", "none");
+    System.setProperty("otel.metrics.exporter", "none");
+    System.setProperty("otel.logs.exporter", "none");
+
+    try {
+      Assertions.assertNotNull(
+          new OpenTelemetryEmitterModule()
+              .getEmitter(new OpenTelemetryEmitterConfig(), new ObjectMapper())
+      );
+    }
+    finally {
+      if (previousTracesExporter == null) {
+        System.clearProperty("otel.traces.exporter");
+      } else {
+        System.setProperty("otel.traces.exporter", previousTracesExporter);
+      }
+      if (previousMetricsExporter == null) {
+        System.clearProperty("otel.metrics.exporter");
+      } else {
+        System.setProperty("otel.metrics.exporter", previousMetricsExporter);
+      }
+      if (previousLogsExporter == null) {
+        System.clearProperty("otel.logs.exporter");
+      } else {
+        System.setProperty("otel.logs.exporter", previousLogsExporter);
+      }
+    }
   }
 
   // Check that we don't call "emitQueryTimeEvent" method for event that is not instance of ServiceMetricEvent
@@ -110,7 +146,7 @@ public class OpenTelemetryEmitterTest
         };
 
     emitter.emit(notServiceMetricEvent);
-    Assert.assertNull(noopExporter.spanDataCollection);
+    Assertions.assertNull(noopExporter.spanDataCollection);
   }
 
   // Check that we don't call "emitQueryTimeEvent" method for ServiceMetricEvent that is not "query/time" type
@@ -122,7 +158,7 @@ public class OpenTelemetryEmitterTest
                                         .build("broker", "brokerHost1");
 
     emitter.emit(notQueryTimeMetric);
-    Assert.assertNull(noopExporter.spanDataCollection);
+    Assertions.assertNull(noopExporter.spanDataCollection);
   }
 
   @Test
@@ -146,13 +182,13 @@ public class OpenTelemetryEmitterTest
 
     emitter.emit(queryTimeMetric);
 
-    Assert.assertEquals(1, noopExporter.spanDataCollection.size());
+    Assertions.assertEquals(1, noopExporter.spanDataCollection.size());
 
     SpanData actualSpanData = noopExporter.spanDataCollection.iterator().next();
-    Assert.assertEquals(serviceName, actualSpanData.getName());
-    Assert.assertEquals((createdTime.getMillis() - metricValue) * 1_000_000, actualSpanData.getStartEpochNanos());
-    Assert.assertEquals(expectedParentTraceId, actualSpanData.getParentSpanContext().getTraceId());
-    Assert.assertEquals(expectedParentSpanId, actualSpanData.getParentSpanContext().getSpanId());
+    Assertions.assertEquals(serviceName, actualSpanData.getName());
+    Assertions.assertEquals((createdTime.getMillis() - metricValue) * 1_000_000, actualSpanData.getStartEpochNanos());
+    Assertions.assertEquals(expectedParentTraceId, actualSpanData.getParentSpanContext().getTraceId());
+    Assertions.assertEquals(expectedParentSpanId, actualSpanData.getParentSpanContext().getSpanId());
   }
 
   @Test
@@ -171,8 +207,8 @@ public class OpenTelemetryEmitterTest
     emitter.emit(queryTimeMetricWithAttributes);
 
     SpanData actualSpanData = noopExporter.spanDataCollection.iterator().next();
-    Assert.assertEquals(1, actualSpanData.getAttributes().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, actualSpanData.getAttributes().size());
+    Assertions.assertEquals(
         expectedAttributeValue,
         actualSpanData.getAttributes().get(AttributeKey.stringKey(expectedAttributeKey))
     );
@@ -192,7 +228,7 @@ public class OpenTelemetryEmitterTest
     emitter.emit(queryTimeMetric);
 
     SpanData actualSpanData = noopExporter.spanDataCollection.iterator().next();
-    Assert.assertEquals(0, actualSpanData.getAttributes().size());
+    Assertions.assertEquals(0, actualSpanData.getAttributes().size());
   }
 
   @Test
@@ -206,7 +242,7 @@ public class OpenTelemetryEmitterTest
     emitter.emit(queryTimeMetric);
 
     SpanData actualSpanData = noopExporter.spanDataCollection.iterator().next();
-    Assert.assertEquals(StatusCode.OK, actualSpanData.getStatus().getStatusCode());
+    Assertions.assertEquals(StatusCode.OK, actualSpanData.getStatus().getStatusCode());
   }
 
   @Test
@@ -220,6 +256,6 @@ public class OpenTelemetryEmitterTest
     emitter.emit(queryTimeMetric);
 
     SpanData actualSpanData = noopExporter.spanDataCollection.iterator().next();
-    Assert.assertEquals(StatusCode.ERROR, actualSpanData.getStatus().getStatusCode());
+    Assertions.assertEquals(StatusCode.ERROR, actualSpanData.getStatus().getStatusCode());
   }
 }

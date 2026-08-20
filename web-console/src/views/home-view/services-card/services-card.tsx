@@ -22,6 +22,7 @@ import { PluralPairIfNeeded } from '../../../components';
 import { getConsoleViewIcon } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
+import { Api } from '../../../singletons';
 import { getApiArray, lookupBy, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
@@ -60,16 +61,25 @@ export const ServicesCard = React.memo(function ServicesCard(props: ServicesCard
           x => x.count,
         );
       } else if (capabilities.hasCoordinatorAccess()) {
-        const services = await getApiArray('/druid/coordinator/v1/servers?simple', signal);
-
-        const middleManager = capabilities.hasOverlordAccess()
-          ? await getApiArray('/druid/indexer/v1/workers', signal)
-          : [];
+        // /druid/coordinator/v1/cluster is discovery-backed and reports every node role
+        // (the same source sys.servers uses), so the fallback matches the SQL branch.
+        // /druid/coordinator/v1/servers?simple is segment-inventory-backed and only sees
+        // historical, indexer-executor (peon), and any broker that holds broadcast segments,
+        // so it is only used here to surface the peon count, which the cluster endpoint
+        // does not return.
+        const clusterResp = await Api.instance.get('/druid/coordinator/v1/cluster', { signal });
+        const cluster: Record<string, unknown[]> = clusterResp.data || {};
+        const segmentServers = await getApiArray('/druid/coordinator/v1/servers?simple', signal);
 
         return {
-          historical: services.filter((s: any) => s.type === 'historical').length,
-          middle_manager: middleManager.length,
-          peon: services.filter((s: any) => s.type === 'indexer-executor').length,
+          coordinator: (cluster.coordinator || []).length,
+          overlord: (cluster.overlord || []).length,
+          router: (cluster.router || []).length,
+          broker: (cluster.broker || []).length,
+          historical: (cluster.historical || []).length,
+          middle_manager: (cluster.middleManager || []).length,
+          indexer: (cluster.indexer || []).length,
+          peon: segmentServers.filter((s: any) => s.type === 'indexer-executor').length,
         };
       } else {
         throw new Error(`must have SQL or coordinator access`);

@@ -481,25 +481,19 @@ public class SqlIndexingStateStorageTest
         new CountAggregatorFactory("count")
     );
 
-    CompactionState state1 = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        DimensionsSpec.EMPTY,
-        metrics1,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state1 = CompactionState.builder()
+                                            .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                                            .dimensionsSpec(DimensionsSpec.EMPTY)
+                                            .metricsSpec(metrics1)
+                                            .indexSpec(IndexSpec.getDefault())
+                                            .build();
 
-    CompactionState state2 = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        DimensionsSpec.EMPTY,
-        metrics2,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state2 = CompactionState.builder()
+                                            .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                                            .dimensionsSpec(DimensionsSpec.EMPTY)
+                                            .metricsSpec(metrics2)
+                                            .indexSpec(IndexSpec.getDefault())
+                                            .build();
 
     String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", state1);
     String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", state2);
@@ -522,25 +516,19 @@ public class SqlIndexingStateStorageTest
         DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim3", "dim2", "dim1"))
     );
 
-    CompactionState state1 = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        dimensions1,
-        Collections.singletonList(new CountAggregatorFactory("count")),
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state1 = CompactionState.builder()
+                                            .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                                            .dimensionsSpec(dimensions1)
+                                            .metricsSpec(Collections.singletonList(new CountAggregatorFactory("count")))
+                                            .indexSpec(IndexSpec.getDefault())
+                                            .build();
 
-    CompactionState state2 = new CompactionState(
-        new DynamicPartitionsSpec(null, null),
-        dimensions2,
-        Collections.singletonList(new CountAggregatorFactory("count")),
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state2 = CompactionState.builder()
+                                            .partitionsSpec(new DynamicPartitionsSpec(null, null))
+                                            .dimensionsSpec(dimensions2)
+                                            .metricsSpec(Collections.singletonList(new CountAggregatorFactory("count")))
+                                            .indexSpec(IndexSpec.getDefault())
+                                            .build();
 
     String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", state1);
     String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", state2);
@@ -555,25 +543,23 @@ public class SqlIndexingStateStorageTest
   @Test
   public void testGenerateIndexingStateFingerprint_differentPartitionsSpec()
   {
-    CompactionState state1 = new CompactionState(
-        new DynamicPartitionsSpec(5000000, null),
-        DimensionsSpec.EMPTY,
-        Collections.singletonList(new CountAggregatorFactory("count")),
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state1 = CompactionState.builder()
+                                            .partitionsSpec(new DynamicPartitionsSpec(5000000, null))
+                                            .dimensionsSpec(DimensionsSpec.EMPTY)
+                                            .metricsSpec(Collections.singletonList(new CountAggregatorFactory("count")))
+                                            .indexSpec(IndexSpec.getDefault())
+                                            .build();
 
-    CompactionState state2 = new CompactionState(
-        new HashedPartitionsSpec(null, 2, Collections.singletonList("dim1")),
-        DimensionsSpec.EMPTY,
-        Collections.singletonList(new CountAggregatorFactory("count")),
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    CompactionState state2 = CompactionState.builder()
+                                            .partitionsSpec(new HashedPartitionsSpec(
+                                                null,
+                                                2,
+                                                Collections.singletonList("dim1")
+                                            ))
+                                            .dimensionsSpec(DimensionsSpec.EMPTY)
+                                            .metricsSpec(Collections.singletonList(new CountAggregatorFactory("count")))
+                                            .indexSpec(IndexSpec.getDefault())
+                                            .build();
 
     String fingerprint1 = fingerprintMapper.generateFingerprint("test-ds", state1);
     String fingerprint2 = fingerprintMapper.generateFingerprint("test-ds", state2);
@@ -587,27 +573,19 @@ public class SqlIndexingStateStorageTest
 
   private CompactionState createBasicIndexingState()
   {
-    return new CompactionState(
-        new DynamicPartitionsSpec(5000000, null),
-        DimensionsSpec.EMPTY,
-        Collections.singletonList(new CountAggregatorFactory("count")),
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(5000000, null))
+                          .dimensionsSpec(DimensionsSpec.EMPTY)
+                          .metricsSpec(Collections.singletonList(new CountAggregatorFactory("count")))
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 
   private CompactionState createTestIndexingState()
   {
-    return new CompactionState(
-        new DynamicPartitionsSpec(100, null),
-        null,
-        null,
-        null,
-        IndexSpec.getDefault(),
-        null,
-        null
-    );
+    return CompactionState.builder()
+                          .partitionsSpec(new DynamicPartitionsSpec(100, null))
+                          .indexSpec(IndexSpec.getDefault())
+                          .build();
   }
 }

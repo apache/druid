@@ -38,11 +38,15 @@ import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.coordinator.CoordinatorClient;
+import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.FrameChannelSequence;
@@ -143,20 +147,27 @@ import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentColumnInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexPhysicalSegmentInspector;
+import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.LocalLoadSpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
+import org.apache.druid.segment.loading.StorageLoadingThreadPool;
+import org.apache.druid.segment.loading.external.StorageLocationVirtualStorageManager;
+import org.apache.druid.segment.loading.external.VirtualStorageManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
@@ -209,6 +220,7 @@ import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnector;
 import org.apache.druid.test.utils.TestSegmentManager;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.PruneLoadSpec;
@@ -216,7 +228,6 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
-import org.hamcrest.Matcher;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
@@ -240,6 +251,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -250,7 +262,6 @@ import static org.apache.druid.sql.calcite.util.CalciteTests.RESTRICTED_DATASOUR
 import static org.apache.druid.sql.calcite.util.CalciteTests.WIKIPEDIA;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS1;
 import static org.apache.druid.sql.calcite.util.TestDataBuilder.ROWS2;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -464,7 +475,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     indexIO = new IndexIO(objectMapper, ColumnConfig.DEFAULT);
 
     segmentCacheManager =
-        new SegmentCacheManagerFactory(indexIO, objectMapper).manufacturate(newTempFolder("cacheManager"), true);
+        SegmentCacheManagerFactory.createWithOwnedPool(indexIO, objectMapper)
+                                  .manufacturate(newTempFolder("cacheManager"), null, true, false);
 
     testSegmentManager = new TestSegmentManager();
 
@@ -554,6 +566,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
         // Requirement of WorkerMemoryParameters.createProductionInstanceForWorker(injector)
         binder -> binder.bind(AppenderatorsManager.class).toProvider(() -> null),
         binder -> binder.bind(SegmentManager.class).toInstance(testSegmentManager.getSegmentManager()),
+        binder -> binder.bind(VirtualStorageManager.class).toInstance(
+            new StorageLocationVirtualStorageManager(
+                segmentCacheManager.getLocations(),
+                new LeastBytesUsedStorageLocationSelectorStrategy(segmentCacheManager.getLocations()),
+                segmentCacheManager.getLoadingThreadPool()
+            )
+        ),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
         Modules.override(new MSQSqlModule()).with(
@@ -576,7 +595,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
         new SegmentWranglerModule(),
         new HllSketchModule(),
         binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1)),
-        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance())
+        binder -> binder.bind(PolicyEnforcer.class).toInstance(NoopPolicyEnforcer.instance()),
+        binder -> binder.bind(CoordinatorClient.class).to(NoopCoordinatorClient.class).in(LazySingleton.class)
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
@@ -777,10 +797,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
         {
           if (CursorFactory.class.equals(clazz)) {
             return (T) new QueryableIndexCursorFactory(index);
-          } else if (PhysicalSegmentInspector.class.equals(clazz)) {
+          } else if (RowCountInspector.class.equals(clazz) || PhysicalSegmentColumnInspector.class.equals(clazz)) {
             return (T) new QueryableIndexPhysicalSegmentInspector(index);
           } else if (QueryableIndex.class.equals(clazz)) {
             return (T) index;
+          } else if (Metadata.class.equals(clazz)) {
+            return (T) index.getMetadata();
           }
           return null;
         }
@@ -794,7 +816,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       testSegmentManager.addSegment(dataSegment, segment);
       acquiredSegment = testSegmentManager.getSegment(segmentId);
     }
-    return AdaptedLoadableSegment.create(acquiredSegment, descriptor.getInterval(), null, counters);
+    return AdaptedLoadableSegment.fromUnmanagedSegment(acquiredSegment, descriptor, null, counters);
   }
 
   public SelectTester testSelectQuery()
@@ -841,6 +863,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
         50,
         10_000_000,
         10_000_000
+    );
+  }
+
+  /**
+   * Creates an non-functional {@link VirtualStorageManager} suitable for tests.
+   */
+  public static VirtualStorageManager makeNilVirtualStorageManager()
+  {
+    return new StorageLocationVirtualStorageManager(
+        ImmutableList.of(),
+        new LeastBytesUsedStorageLocationSelectorStrategy(ImmutableList.of()),
+        StorageLoadingThreadPool.none()
     );
   }
 
@@ -970,9 +1004,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected Set<Interval> expectedTombstoneIntervals = null;
     protected List<Object[]> expectedResultRows = null;
     protected LookupLoadingSpec expectedLookupLoadingSpec = LookupLoadingSpec.NONE;
-    protected Matcher<Throwable> expectedValidationErrorMatcher = null;
+    protected Consumer<Throwable> expectedValidationErrorAssertion = null;
     protected List<Pair<Predicate<MSQTaskReportPayload>, String>> adhocReportAssertionAndReasons = new ArrayList<>();
-    protected Matcher<Throwable> expectedExecutionErrorMatcher = null;
+    protected Consumer<Throwable> expectedExecutionErrorAssertion = null;
     protected MSQFault expectedMSQFault = null;
     protected Class<? extends MSQFault> expectedMSQFaultClass = null;
     protected MSQSegmentReport expectedSegmentReport = null;
@@ -1068,15 +1102,39 @@ public class MSQTestBase extends BaseCalciteQueryTest
       return asBuilder();
     }
 
-    public Builder setExpectedValidationErrorMatcher(Matcher<Throwable> expectedValidationErrorMatcher)
+    public Builder setExpectedValidationErrorMatcher(final DruidExceptionMatcher expectedValidationErrorMatcher)
     {
-      this.expectedValidationErrorMatcher = expectedValidationErrorMatcher;
+      this.expectedValidationErrorAssertion = e -> DruidExceptionMatcher.assertThat(e, expectedValidationErrorMatcher);
       return asBuilder();
     }
 
-    public Builder setExpectedExecutionErrorMatcher(Matcher<Throwable> expectedExecutionErrorMatcher)
+    public Builder setExpectedValidationErrorMatcher(final ThrowableMatcher expectedValidationErrorMatcher)
     {
-      this.expectedExecutionErrorMatcher = expectedExecutionErrorMatcher;
+      this.expectedValidationErrorAssertion = expectedValidationErrorMatcher::assertThat;
+      return asBuilder();
+    }
+
+    public Builder setExpectedValidationErrorMatcher(final Consumer<Throwable> expectedValidationErrorAssertion)
+    {
+      this.expectedValidationErrorAssertion = expectedValidationErrorAssertion;
+      return asBuilder();
+    }
+
+    public Builder setExpectedExecutionErrorMatcher(final DruidExceptionMatcher expectedExecutionErrorMatcher)
+    {
+      this.expectedExecutionErrorAssertion = e -> DruidExceptionMatcher.assertThat(e, expectedExecutionErrorMatcher);
+      return asBuilder();
+    }
+
+    public Builder setExpectedExecutionErrorMatcher(final ThrowableMatcher expectedExecutionErrorMatcher)
+    {
+      this.expectedExecutionErrorAssertion = expectedExecutionErrorMatcher::assertThat;
+      return asBuilder();
+    }
+
+    public Builder setExpectedExecutionErrorMatcher(final Consumer<Throwable> expectedExecutionErrorAssertion)
+    {
+      this.expectedExecutionErrorAssertion = expectedExecutionErrorAssertion;
       return asBuilder();
     }
 
@@ -1143,7 +1201,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public void verifyPlanningErrors()
     {
-      Preconditions.checkArgument(expectedValidationErrorMatcher != null, "Validation error matcher cannot be null");
+      Preconditions.checkArgument(expectedValidationErrorAssertion != null, "Validation error matcher cannot be null");
       Preconditions.checkArgument(sql != null, "Sql cannot be null");
       readyToRun();
 
@@ -1152,7 +1210,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           () -> runMultiStageQuery(sql, queryContext, authenticationResult, dynamicParameters)
       );
 
-      assertThat(e, expectedValidationErrorMatcher);
+      expectedValidationErrorAssertion.accept(e);
     }
 
     protected void verifyMetrics()
@@ -1258,6 +1316,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     private List<AggregateProjectionMetadata> expectedProjections = null;
 
+    private ClusterGroupTuples expectedClusterGroups = null;
+
     private IngestTester()
     {
       // nothing to do
@@ -1302,6 +1362,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public IngestTester setExpectedProjections(List<AggregateProjectionMetadata> expectedProjections)
     {
       this.expectedProjections = expectedProjections;
+      return this;
+    }
+
+    public IngestTester setExpectedClusterGroups(ClusterGroupTuples expectedClusterGroups)
+    {
+      this.expectedClusterGroups = expectedClusterGroups;
       return this;
     }
 
@@ -1394,7 +1460,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
                 dataSegment.getDataSource()
             );
           }
-          FutureUtils.getUnchecked(segmentCacheManager.acquireSegment(dataSegment).getSegmentFuture(), false);
+          FutureUtils.getUnchecked(
+              segmentCacheManager.acquireSegment(dataSegment, AcquireMode.FULL).getSegmentFuture(),
+              false
+          );
           final QueryableIndex queryableIndex = indexIO.loadIndex(segmentCacheManager.getSegmentFiles(dataSegment));
           final CursorFactory cursorFactory = new QueryableIndexCursorFactory(queryableIndex);
 
@@ -1407,14 +1476,22 @@ public class MSQTestBase extends BaseCalciteQueryTest
           // assert query granularity
           Assert.assertEquals(expectedQueryGranularity, queryableIndex.getMetadata().getQueryGranularity());
 
-          // assert aggregator factories
+          // assert aggregator factories; clustered base table segments have no aggregator metadata (never rollup),
+          // so treat null as empty
           Assert.assertArrayEquals(
               expectedAggregatorFactories.toArray(new AggregatorFactory[0]),
-              queryableIndex.getMetadata().getAggregators()
+              queryableIndex.getMetadata().getAggregators() == null
+              ? new AggregatorFactory[0]
+              : queryableIndex.getMetadata().getAggregators()
           );
 
           if (expectedProjections != null) {
             Assert.assertEquals(expectedProjections, queryableIndex.getMetadata().getProjections());
+          }
+
+          if (expectedClusterGroups != null) {
+            Assert.assertEquals(expectedClusterGroups, dataSegment.getClusterGroups());
+            Assert.assertNotNull(queryableIndex.getMetadata().getClusteredBaseTable());
           }
 
           for (List<Object> row : FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList()) {
@@ -1546,7 +1623,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           "sql and taskSpec both cannot be provided in the same test"
       );
       Preconditions.checkArgument(sql == null || queryContext != null, "queryContext cannot be null");
-      Preconditions.checkArgument(expectedExecutionErrorMatcher != null, "Execution error matcher cannot be null");
+      Preconditions.checkArgument(expectedExecutionErrorAssertion != null, "Execution error matcher cannot be null");
       readyToRun();
       try {
         String controllerId;
@@ -1561,13 +1638,22 @@ public class MSQTestBase extends BaseCalciteQueryTest
         Assert.fail(StringUtils.format("Query did not throw an exception (sql = [%s])", sql));
       }
       catch (Exception e) {
-        assertThat(
+        assertExpectedExecutionError(
             StringUtils.format("Query error did not match expectations (sql = [%s])", sql),
-            e,
-            expectedExecutionErrorMatcher
+            e
         );
       }
       verifyMetrics();
+    }
+
+    private void assertExpectedExecutionError(final String reason, final Throwable e)
+    {
+      try {
+        expectedExecutionErrorAssertion.accept(e);
+      }
+      catch (AssertionError assertionError) {
+        throw new AssertionError(reason + ": " + assertionError.getMessage(), assertionError);
+      }
     }
   }
 
@@ -1701,10 +1787,10 @@ public class MSQTestBase extends BaseCalciteQueryTest
         throw new RuntimeException(ex);
       }
       catch (Exception e) {
-        if (expectedExecutionErrorMatcher == null) {
+        if (expectedExecutionErrorAssertion == null) {
           throw new ISE(e, "Query %s failed", sql != null ? sql : taskSpec);
         }
-        assertThat(e, expectedExecutionErrorMatcher);
+        expectedExecutionErrorAssertion.accept(e);
         return null;
       }
     }
@@ -1730,7 +1816,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public void verifyExecutionError()
     {
-      Preconditions.checkArgument(expectedExecutionErrorMatcher != null, "Execution error matcher cannot be null");
+      Preconditions.checkArgument(expectedExecutionErrorAssertion != null, "Execution error matcher cannot be null");
       if (runQueryWithResult() != null) {
         throw new ISE("Query %s did not throw an exception", sql != null ? sql : taskSpec);
       }
@@ -1753,4 +1839,3 @@ public class MSQTestBase extends BaseCalciteQueryTest
   }
 
 }
-

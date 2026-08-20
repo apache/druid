@@ -28,9 +28,9 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.core.Emitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -57,14 +57,14 @@ public class PrometheusEmitterTest
                                                  .setDimension("server", "druid-data01.vpc.region")
                                                  .setMetric("segment/loadQueue/count", 10)
                                                  .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
-    Assert.assertEquals("historical", build.getService());
-    Assert.assertEquals("druid.test.cn", build.getHost());
-    Assert.assertFalse(build.getUserDims().isEmpty());
+    Assertions.assertEquals("historical", build.getService());
+    Assertions.assertEquals("druid.test.cn", build.getHost());
+    Assertions.assertFalse(build.getUserDims().isEmpty());
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
         "druid_segment_loadqueue_count", new String[]{"druid_service", "server"}, new String[]{"historical", "druid_data01_vpc_region"}
     );
-    Assert.assertEquals(10, count.intValue());
+    Assertions.assertEquals(10, count.intValue());
   }
 
   @Test
@@ -77,14 +77,14 @@ public class PrometheusEmitterTest
             .setDimension("server", "druid-data01.vpc.region")
             .setMetric("segment/loadQueue/count", 10)
             .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
-    Assert.assertEquals("historical", build.getService());
-    Assert.assertEquals("druid.test.cn", build.getHost());
-    Assert.assertFalse(build.getUserDims().isEmpty());
+    Assertions.assertEquals("historical", build.getService());
+    Assertions.assertEquals("druid.test.cn", build.getHost());
+    Assertions.assertFalse(build.getUserDims().isEmpty());
     emitter.emit(build);
     Double count = CollectorRegistry.defaultRegistry.getSampleValue(
             "druid_segment_loadqueue_count", new String[]{"druid_service", "host_name", "server"}, new String[]{"historical", "druid.test.cn", "druid_data01_vpc_region"}
     );
-    Assert.assertEquals(10, count.intValue());
+    Assertions.assertEquals(10, count.intValue());
   }
 
   @Test
@@ -105,7 +105,7 @@ public class PrometheusEmitterTest
         new String[]{"labelName", "server"},
         new String[]{"labelValue", "druid_data01_vpc_region"}
     );
-    Assert.assertEquals(10, count.intValue());
+    Assertions.assertEquals(10, count.intValue());
   }
 
   @Test
@@ -126,7 +126,7 @@ public class PrometheusEmitterTest
         new String[]{"druid_service", "labelName", "server"},
         new String[]{"historical", "labelValue", "druid_data01_vpc_region"}
     );
-    Assert.assertEquals(10, count.intValue());
+    Assertions.assertEquals(10, count.intValue());
   }
 
   @Test
@@ -146,7 +146,7 @@ public class PrometheusEmitterTest
         new String[]{"druid_service", "server"},
         new String[]{"historical", "druid_data01_vpc_region"}
     );
-    Assert.assertEquals(10, count.intValue());
+    Assertions.assertEquals(10, count.intValue());
   }
 
   @Test
@@ -168,7 +168,7 @@ public class PrometheusEmitterTest
         new String[]{"druid_service", "labelName1", "labelName2", "server"},
         new String[]{"historical", "labelValue1", "labelValue2", "druid_data01_vpc_region"}
     );
-    Assert.assertEquals(10, count.intValue());
+    Assertions.assertEquals(10, count.intValue());
   }
 
   @Test
@@ -191,9 +191,9 @@ public class PrometheusEmitterTest
         new String[]{"historical", "druid_data01_vpc_region"}
     );
     // Check that the extraLabel did not override the service label
-    Assert.assertEquals(10, count.intValue());
+    Assertions.assertEquals(10, count.intValue());
     // Check that the extraLabel is not present in the CollectorRegistry
-    Assert.assertNull(CollectorRegistry.defaultRegistry.getSampleValue(
+    Assertions.assertNull(CollectorRegistry.defaultRegistry.getSampleValue(
         "druid_segment_loadqueue_count",
         new String[]{"druid_service", "server"},
         new String[]{"historical", "collisionLabelValue"}
@@ -213,10 +213,10 @@ public class PrometheusEmitterTest
             .build(ImmutableMap.of("service", "overlord", "host", "druid.test.cn"));
     emitter.emit(build);
     double assertEpsilon = 0.0001;
-    Assert.assertEquals(0.0, CollectorRegistry.defaultRegistry.getSampleValue(
+    Assertions.assertEquals(0.0, CollectorRegistry.defaultRegistry.getSampleValue(
             "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.1"}
     ), assertEpsilon);
-    Assert.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
+    Assertions.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
             "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.5"}
     ), assertEpsilon);
   }
@@ -227,15 +227,15 @@ public class PrometheusEmitterTest
     PrometheusEmitterConfig exportEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.exporter, "namespace1", null, 0, null, true, true, 60, null, false, null);
     PrometheusEmitter exportEmitter = new PrometheusEmitter(exportEmitterConfig);
     exportEmitter.start();
-    Assert.assertNotNull(exportEmitter.getServer());
-    Assert.assertTrue(exportEmitter.getServer() instanceof HTTPServer);
+    Assertions.assertNotNull(exportEmitter.getServer());
+    Assertions.assertTrue(exportEmitter.getServer() instanceof HTTPServer);
     exportEmitter.close();
 
     PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace2", null, 0, "pushgateway", true, true, 60, null, false, null);
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
-    Assert.assertNotNull(pushEmitter.getPushGateway());
-    Assert.assertTrue(pushEmitter.getPushGateway() instanceof PushGateway);
+    Assertions.assertNotNull(pushEmitter.getPushGateway());
+    Assertions.assertTrue(pushEmitter.getPushGateway() instanceof PushGateway);
     pushEmitter.close();
   }
 
@@ -276,8 +276,7 @@ public class PrometheusEmitterTest
         null
     );
 
-    Assert.assertThrows(
-        "For `pushgateway` strategy, pushGatewayAddress must be specified.",
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new PrometheusEmitterConfig(
             PrometheusEmitterConfig.Strategy.pushgateway,
@@ -291,7 +290,8 @@ public class PrometheusEmitterTest
             null,
             false,
             null
-        )
+        ),
+        "For `pushgateway` strategy, pushGatewayAddress must be specified."
     );
   }
 
@@ -301,7 +301,7 @@ public class PrometheusEmitterTest
     PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace4", null, 0, "http://pushgateway", true, true, 60, null, false, null);
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
-    Assert.assertNotNull(pushEmitter.getPushGateway());
+    Assertions.assertNotNull(pushEmitter.getPushGateway());
   }
 
   @Test
@@ -310,14 +310,13 @@ public class PrometheusEmitterTest
     PrometheusEmitterConfig pushEmitterConfig = new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, "namespace5", null, 0, "https://pushgateway", true, true, 60, null, false, null);
     PrometheusEmitter pushEmitter = new PrometheusEmitter(pushEmitterConfig);
     pushEmitter.start();
-    Assert.assertNotNull(pushEmitter.getPushGateway());
+    Assertions.assertNotNull(pushEmitter.getPushGateway());
   }
 
   @Test
   public void testEmitterConfig()
   {
-    Assert.assertThrows(
-        "For `exporter` strategy, port must be specified.",
+    Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new PrometheusEmitterConfig(
             PrometheusEmitterConfig.Strategy.exporter,
@@ -331,7 +330,8 @@ public class PrometheusEmitterTest
             null,
             false,
             null
-        )
+        ),
+        "For `exporter` strategy, port must be specified."
     );
 
     // For pushgateway strategy, port can be null
@@ -448,17 +448,17 @@ public class PrometheusEmitterTest
     Map<String, DimensionsAndCollector> registeredMetrics = emitter.getMetrics().getRegisteredMetrics();
     DimensionsAndCollector testMetric = registeredMetrics.get("segment/loadQueue/count");
 
-    Assert.assertNotNull("Test metric should be registered", testMetric);
-    Assert.assertFalse(
-        "Metric should not be expired initially",
-        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+    Assertions.assertNotNull(testMetric, "Test metric should be registered");
+    Assertions.assertFalse(
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1")),
+        "Metric should not be expired initially"
     );
-    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
+    Assertions.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
 
     // Wait for the metric to expire (ttl + 1 second buffer)
     Thread.sleep(TimeUnit.SECONDS.toMillis(flushPeriod) + 1000);
     exec.submit(emitter::cleanUpStaleMetrics).get();
-    Assert.assertEquals(0, testMetric.getCollector().collect().get(0).samples.size());
+    Assertions.assertEquals(0, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
   }
 
@@ -481,26 +481,26 @@ public class PrometheusEmitterTest
     Map<String, DimensionsAndCollector> registeredMetrics = emitter.getMetrics().getRegisteredMetrics();
     DimensionsAndCollector testMetric = registeredMetrics.get("segment/loadQueue/count");
 
-    Assert.assertNotNull(
-        "Test metric should be registered",
-        testMetric
+    Assertions.assertNotNull(
+        testMetric,
+        "Test metric should be registered"
     );
-    Assert.assertFalse(
-        "Metric should not be expired initially",
-        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+    Assertions.assertFalse(
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1")),
+        "Metric should not be expired initially"
     );
-    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
+    Assertions.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
 
     // Wait for a little, but not long enough for the metric to expire
     long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
     Thread.sleep(waitTime);
 
-    Assert.assertFalse(
-        "Metric should not be expired",
-        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+    Assertions.assertFalse(
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1")),
+        "Metric should not be expired"
     );
     exec.submit(emitter::cleanUpStaleMetrics).get();
-    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
+    Assertions.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
   }
 
@@ -528,35 +528,35 @@ public class PrometheusEmitterTest
     Map<String, DimensionsAndCollector> registeredMetrics = emitter.getMetrics().getRegisteredMetrics();
     DimensionsAndCollector testMetric = registeredMetrics.get("segment/loadQueue/count");
 
-    Assert.assertNotNull(
-        "Test metric should be registered",
-        testMetric
+    Assertions.assertNotNull(
+        testMetric,
+        "Test metric should be registered"
     );
-    Assert.assertFalse(
-        "Metric should not be expired initially",
-        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+    Assertions.assertFalse(
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1")),
+        "Metric should not be expired initially"
     );
-    Assert.assertFalse(
-        "Metric should not be expired initially",
-        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
+    Assertions.assertFalse(
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2")),
+        "Metric should not be expired initially"
     );
     exec.submit(emitter::cleanUpStaleMetrics).get();
-    Assert.assertEquals(2, testMetric.getCollector().collect().get(0).samples.size());
+    Assertions.assertEquals(2, testMetric.getCollector().collect().get(0).samples.size());
 
     // Wait for a little, but not long enough for the metric to expire
     long waitTime = TimeUnit.SECONDS.toMillis(flushPeriod) / 5;
     Thread.sleep(waitTime);
 
-    Assert.assertFalse(
-        "Metric should not be expired",
-        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1"))
+    Assertions.assertFalse(
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical1")),
+        "Metric should not be expired"
     );
-    Assert.assertFalse(
-        "Metric should not be expired",
-        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2"))
+    Assertions.assertFalse(
+        testMetric.shouldRemoveIfExpired(Arrays.asList("historical", "druid.test.cn", "historical2")),
+        "Metric should not be expired"
     );
     exec.submit(emitter::cleanUpStaleMetrics).get();
-    Assert.assertEquals(2, testMetric.getCollector().collect().get(0).samples.size());
+    Assertions.assertEquals(2, testMetric.getCollector().collect().get(0).samples.size());
     // Reset update time only for event2
     emitter.emit(event2);
 
@@ -564,7 +564,7 @@ public class PrometheusEmitterTest
     Thread.sleep(waitTime * 4);
 
     exec.submit(emitter::cleanUpStaleMetrics).get();
-    Assert.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
+    Assertions.assertEquals(1, testMetric.getCollector().collect().get(0).samples.size());
     emitter.close();
   }
 
@@ -581,14 +581,14 @@ public class PrometheusEmitterTest
             .build(ImmutableMap.of("service", "historical", "host", "druid.test.cn"));
     emitter.emit(event);
     DimensionsAndCollector metric = emitter.getMetrics().getRegisteredMetrics().get("segment/loadQueue/count");
-    Assert.assertEquals(0, metric.getLabelValuesToStopwatch().size());
+    Assertions.assertEquals(0, metric.getLabelValuesToStopwatch().size());
     emitter.close();
     CollectorRegistry.defaultRegistry.clear();
 
     emitter = new PrometheusEmitter(flushPeriodSet);
     emitter.emit(event);
     metric = emitter.getMetrics().getRegisteredMetrics().get("segment/loadQueue/count");
-    Assert.assertEquals(1, metric.getLabelValuesToStopwatch().size());
+    Assertions.assertEquals(1, metric.getLabelValuesToStopwatch().size());
     emitter.close();
   }
 
@@ -605,7 +605,7 @@ public class PrometheusEmitterTest
     emitter.close();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     CollectorRegistry.defaultRegistry.clear();

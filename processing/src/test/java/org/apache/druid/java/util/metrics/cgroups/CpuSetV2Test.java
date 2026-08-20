@@ -19,11 +19,10 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
@@ -33,18 +32,20 @@ import java.nio.file.Paths;
 
 public class CpuSetV2Test
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private File cgroupDir;
   private File procDir;
   private CgroupDiscoverer discoverer;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolder.newFolder();
-    procDir = temporaryFolder.newFolder();
+    cgroupDir = new File(temporaryFolder, "cgroup");
+    cgroupDir.mkdir();
+    procDir = new File(temporaryFolder, "proc");
+    procDir.mkdir();
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
   }
@@ -74,10 +75,10 @@ public class CpuSetV2Test
     int[] expectedMems = {0, 1};
     int[] expectedEffectiveMems = {0};
 
-    Assert.assertArrayEquals("CPU set should be parsed correctly", expectedCpus, metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Effective CPU set should be parsed correctly", expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Memory set should be parsed correctly", expectedMems, metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Effective memory set should be parsed correctly", expectedEffectiveMems, metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(expectedCpus, metrics.getCpuSetCpus(), "CPU set should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus(), "Effective CPU set should be parsed correctly");
+    Assertions.assertArrayEquals(expectedMems, metrics.getCpuSetMems(), "Memory set should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveMems, metrics.getEffectiveCpuSetMems(), "Effective memory set should be parsed correctly");
   }
 
   @Test
@@ -107,10 +108,10 @@ public class CpuSetV2Test
     // 0 should be [0]
     int[] expectedEffectiveMems = {0};
 
-    Assert.assertArrayEquals("Complex CPU ranges should be parsed correctly", expectedCpus, metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Complex effective CPU ranges should be parsed correctly", expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Complex memory ranges should be parsed correctly", expectedMems, metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Single memory node should be parsed correctly", expectedEffectiveMems, metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(expectedCpus, metrics.getCpuSetCpus(), "Complex CPU ranges should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus(), "Complex effective CPU ranges should be parsed correctly");
+    Assertions.assertArrayEquals(expectedMems, metrics.getCpuSetMems(), "Complex memory ranges should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveMems, metrics.getEffectiveCpuSetMems(), "Single memory node should be parsed correctly");
   }
 
   @Test
@@ -132,10 +133,10 @@ public class CpuSetV2Test
     CpuSet.CpuSetMetric metrics = cpuSetV2.snapshot();
 
     // Empty files should result in empty arrays
-    Assert.assertArrayEquals("Empty CPU file should result in empty array", new int[0], metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Empty effective CPU file should result in empty array", new int[0], metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Empty memory file should result in empty array", new int[0], metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Empty effective memory file should result in empty array", new int[0], metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(new int[0], metrics.getCpuSetCpus(), "Empty CPU file should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getEffectiveCpuSetCpus(), "Empty effective CPU file should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getCpuSetMems(), "Empty memory file should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getEffectiveCpuSetMems(), "Empty effective memory file should result in empty array");
   }
 
   @Test
@@ -148,10 +149,10 @@ public class CpuSetV2Test
     CpuSet.CpuSetMetric metrics = cpuSetV2.snapshot();
 
     // Missing files should result in empty arrays
-    Assert.assertArrayEquals("Missing CPU file should result in empty array", new int[0], metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Missing effective CPU file should result in empty array", new int[0], metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Missing memory file should result in empty array", new int[0], metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Missing effective memory file should result in empty array", new int[0], metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(new int[0], metrics.getCpuSetCpus(), "Missing CPU file should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getEffectiveCpuSetCpus(), "Missing effective CPU file should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getCpuSetMems(), "Missing memory file should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getEffectiveCpuSetMems(), "Missing effective memory file should result in empty array");
   }
 
   @Test
@@ -173,10 +174,10 @@ public class CpuSetV2Test
     CpuSet.CpuSetMetric metrics = cpuSetV2.snapshot();
 
     // Invalid data should be handled gracefully and result in empty arrays
-    Assert.assertArrayEquals("Invalid CPU data should result in empty array", new int[0], metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Invalid effective CPU data should result in empty array", new int[0], metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Invalid memory data should result in empty array", new int[0], metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Invalid effective memory data should result in empty array", new int[0], metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(new int[0], metrics.getCpuSetCpus(), "Invalid CPU data should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getEffectiveCpuSetCpus(), "Invalid effective CPU data should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getCpuSetMems(), "Invalid memory data should result in empty array");
+    Assertions.assertArrayEquals(new int[0], metrics.getEffectiveCpuSetMems(), "Invalid effective memory data should result in empty array");
   }
 
   @Test
@@ -204,10 +205,10 @@ public class CpuSetV2Test
     int[] expectedMems = {0};
     int[] expectedEffectiveMems = {0};
 
-    Assert.assertArrayEquals("Should parse only valid CPU parts", expectedCpus, metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Should parse only valid effective CPU parts", expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Valid memory data should parse correctly", expectedMems, metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Valid effective memory data should parse correctly", expectedEffectiveMems, metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(expectedCpus, metrics.getCpuSetCpus(), "Should parse only valid CPU parts");
+    Assertions.assertArrayEquals(expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus(), "Should parse only valid effective CPU parts");
+    Assertions.assertArrayEquals(expectedMems, metrics.getCpuSetMems(), "Valid memory data should parse correctly");
+    Assertions.assertArrayEquals(expectedEffectiveMems, metrics.getEffectiveCpuSetMems(), "Valid effective memory data should parse correctly");
   }
 
   @Test
@@ -228,10 +229,10 @@ public class CpuSetV2Test
     CpuSetV2 cpuSetV2 = new CpuSetV2(discoverer);
     CpuSet.CpuSetMetric metrics = cpuSetV2.snapshot();
 
-    Assert.assertArrayEquals("Single CPU should be parsed", new int[]{5}, metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Single effective CPU should be parsed", new int[]{3}, metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Single memory node should be parsed", new int[]{1}, metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Single effective memory node should be parsed", new int[]{0}, metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(new int[]{5}, metrics.getCpuSetCpus(), "Single CPU should be parsed");
+    Assertions.assertArrayEquals(new int[]{3}, metrics.getEffectiveCpuSetCpus(), "Single effective CPU should be parsed");
+    Assertions.assertArrayEquals(new int[]{1}, metrics.getCpuSetMems(), "Single memory node should be parsed");
+    Assertions.assertArrayEquals(new int[]{0}, metrics.getEffectiveCpuSetMems(), "Single effective memory node should be parsed");
   }
 
   @Test
@@ -257,10 +258,10 @@ public class CpuSetV2Test
     int[] expectedMems = {0, 1, 2, 3};
     int[] expectedEffectiveMems = {1, 2};
 
-    Assert.assertArrayEquals("Large CPU range should be parsed correctly", expectedCpus, metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Large effective CPU range should be parsed correctly", expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Large memory range should be parsed correctly", expectedMems, metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Large effective memory range should be parsed correctly", expectedEffectiveMems, metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(expectedCpus, metrics.getCpuSetCpus(), "Large CPU range should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus(), "Large effective CPU range should be parsed correctly");
+    Assertions.assertArrayEquals(expectedMems, metrics.getCpuSetMems(), "Large memory range should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveMems, metrics.getEffectiveCpuSetMems(), "Large effective memory range should be parsed correctly");
   }
 
   @Test
@@ -286,10 +287,9 @@ public class CpuSetV2Test
     int[] expectedMems = {0};
     int[] expectedEffectiveMems = {0};
 
-    Assert.assertArrayEquals("CPU data with whitespace should be parsed correctly", expectedCpus, metrics.getCpuSetCpus());
-    Assert.assertArrayEquals("Effective CPU data with whitespace should be parsed correctly", expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus());
-    Assert.assertArrayEquals("Memory data with whitespace should be parsed correctly", expectedMems, metrics.getCpuSetMems());
-    Assert.assertArrayEquals("Effective memory data should be parsed correctly", expectedEffectiveMems, metrics.getEffectiveCpuSetMems());
+    Assertions.assertArrayEquals(expectedCpus, metrics.getCpuSetCpus(), "CPU data with whitespace should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveCpus, metrics.getEffectiveCpuSetCpus(), "Effective CPU data with whitespace should be parsed correctly");
+    Assertions.assertArrayEquals(expectedMems, metrics.getCpuSetMems(), "Memory data with whitespace should be parsed correctly");
+    Assertions.assertArrayEquals(expectedEffectiveMems, metrics.getEffectiveCpuSetMems(), "Effective memory data should be parsed correctly");
   }
-
 }

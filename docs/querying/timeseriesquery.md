@@ -24,7 +24,7 @@ sidebar_label: "Timeseries"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes a query
  type in the native language. For information about when Druid SQL will use this query type, refer to the
  [SQL documentation](sql-translation.md#query-types).
@@ -74,7 +74,7 @@ There are 7 main parts to a timeseries query:
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "timeseries"; this is the first thing Apache Druid looks at to figure out how to interpret the query|yes|
+|queryType|This String should always be "timeseries"; this is the first thing Apache&circledR; Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
 |descending|Whether to make descending ordered result. Default is `false`(ascending).|no|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|

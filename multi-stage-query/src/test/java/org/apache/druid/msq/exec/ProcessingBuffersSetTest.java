@@ -22,19 +22,13 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.utils.CloseableUtils;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.List;
-import java.util.NoSuchElementException;
 
 public class ProcessingBuffersSetTest
 {
@@ -43,7 +37,7 @@ public class ProcessingBuffersSetTest
   {
     final DruidException e = Assert.assertThrows(
         DruidException.class,
-        ProcessingBuffersSet.EMPTY::acquire
+        () -> ProcessingBuffersSet.EMPTY.acquire(1)
     );
 
     Assert.assertEquals("Processing buffers not available", e.getMessage());
@@ -66,9 +60,9 @@ public class ProcessingBuffersSetTest
     final ProcessingBuffersSet buffersSet = ProcessingBuffersSet.fromCollection(bufferLists);
 
     // Should be able to acquire all three
-    final ResourceHolder<ProcessingBuffers> holder1 = buffersSet.acquire();
-    final ResourceHolder<ProcessingBuffers> holder2 = buffersSet.acquire();
-    final ResourceHolder<ProcessingBuffers> holder3 = buffersSet.acquire();
+    final ResourceHolder<ProcessingBuffers> holder1 = buffersSet.acquire(1);
+    final ResourceHolder<ProcessingBuffers> holder2 = buffersSet.acquire(1);
+    final ResourceHolder<ProcessingBuffers> holder3 = buffersSet.acquire(1);
 
     Assert.assertNotNull(holder1.get());
     Assert.assertNotNull(holder2.get());
@@ -86,64 +80,4 @@ public class ProcessingBuffersSetTest
     CloseableUtils.closeAll(holder1, holder2, holder3);
   }
 
-  @Test
-  public void test_nilResourceHolder()
-  {
-    final ProcessingBuffersSet.NilResourceHolder<Object> nilHolder = new ProcessingBuffersSet.NilResourceHolder<>();
-
-    final DruidException e = Assert.assertThrows(
-        DruidException.class,
-        nilHolder::get
-    );
-
-    Assert.assertEquals("Unexpected call to get()", e.getMessage());
-
-    nilHolder.close(); // Should do nothing
-  }
-
-  @Test
-  public void test_acquireForStage_usesProcessingBuffersFalse()
-  {
-    // Create a mock StageDefinition and StageProcessor
-    final StageDefinition stageDef = Mockito.mock(StageDefinition.class);
-    final StageProcessor<?, ?> stageProcessor = Mockito.mock(StageProcessor.class);
-
-    // Configure mocks: processor factory does not use processing buffers
-    Mockito.when(stageDef.getProcessor()).thenReturn(stageProcessor);
-    Mockito.when(stageProcessor.usesProcessingBuffers()).thenReturn(false);
-
-    // Create a ProcessingBuffersSet
-    final ProcessingBuffersSet buffersSet =
-        ProcessingBuffersSet.fromCollection(
-            Collections.singletonList(
-                Collections.singletonList(ByteBuffer.allocate(1024))));
-
-    // Acquire for stage
-    final ResourceHolder<ProcessingBuffers> holder = buffersSet.acquireForStage(stageDef);
-    MatcherAssert.assertThat(holder, CoreMatchers.instanceOf(ProcessingBuffersSet.NilResourceHolder.class));
-  }
-
-  @Test
-  public void test_acquireForStage_usesProcessingBuffersTrue()
-  {
-    // Create a mock StageDefinition and StageProcessor
-    final StageDefinition stageDef = Mockito.mock(StageDefinition.class);
-    final StageProcessor<?, ?> stageProcessor = Mockito.mock(StageProcessor.class);
-
-    // Configure mocks: processor factory does use processing buffers
-    Mockito.when(stageDef.getProcessor()).thenReturn(stageProcessor);
-    Mockito.when(stageProcessor.usesProcessingBuffers()).thenReturn(true);
-
-    // Create a ProcessingBuffersSet
-    final ProcessingBuffersSet buffersSet =
-        ProcessingBuffersSet.fromCollection(
-            Collections.singletonList(
-                Collections.singletonList(ByteBuffer.allocate(1024))));
-
-    // Acquire for stage
-    final ResourceHolder<ProcessingBuffers> holder = buffersSet.acquireForStage(stageDef);
-    final ProcessingBuffers buffers = holder.get();
-    Assert.assertEquals(1024, buffers.getBufferPool().take().get().capacity());
-    Assert.assertThrows(NoSuchElementException.class, () -> buffers.getBufferPool().take());
-  }
 }

@@ -25,15 +25,27 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
+
+import javax.annotation.Nullable;
 
 public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<String, String>
 {
   @JsonCreator
   public KinesisDataSourceMetadata(
-      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, String> kinesisPartitions
+      @JsonProperty("partitions") SeekableStreamSequenceNumbers<String, String> kinesisPartitions,
+      @JsonProperty("boundedStreamConfig") @Nullable BoundedStreamConfig boundedStreamConfig
   )
   {
-    super(kinesisPartitions);
+    super(kinesisPartitions, boundedStreamConfig);
+  }
+
+  // Backward compatibility constructor
+  public KinesisDataSourceMetadata(
+      SeekableStreamSequenceNumbers<String, String> kinesisPartitions
+  )
+  {
+    this(kinesisPartitions, null);
   }
 
   @Override
@@ -54,6 +66,6 @@ public class KinesisDataSourceMetadata extends SeekableStreamDataSourceMetadata<
       SeekableStreamSequenceNumbers<String, String> seekableStreamSequenceNumbers
   )
   {
-    return new KinesisDataSourceMetadata(seekableStreamSequenceNumbers);
+    return new KinesisDataSourceMetadata(seekableStreamSequenceNumbers, getBoundedStreamConfig());
   }
 }
