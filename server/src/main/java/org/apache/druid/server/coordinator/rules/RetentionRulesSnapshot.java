@@ -31,16 +31,26 @@ import java.util.Map;
  */
 public class RetentionRulesSnapshot
 {
-  private static final RetentionRulesSnapshot EMPTY = new RetentionRulesSnapshot(Map.of(), List.of());
+  /**
+   * Conventional value of {@code druid.manager.rules.defaultRule}, used only by
+   * {@link #withClusterDefaults}. Real snapshots take the configured name from their caller,
+   * as an operator may have changed it.
+   */
+  private static final String DEFAULT_DATASOURCE_NAME = "_default";
+
+  // The default datasource name is immaterial when there are no rules to look it up in
+  private static final RetentionRulesSnapshot EMPTY = new RetentionRulesSnapshot(Map.of(), "");
 
   /**
-   * Override rules of each datasource, not including {@link #clusterDefaultRules}.
+   * Rules of each datasource exactly as configured, i.e. no entry has {@link #clusterDefaultRules}
+   * appended to it. The cluster defaults are still present as the entry for the default datasource
+   * ({@code druid.manager.rules.defaultRule}), which is where {@link #clusterDefaultRules} comes from.
    */
   private final Map<String, List<Rule>> datasourceToRules;
   /**
    * Override rules of each datasource, already concatenated with {@link #clusterDefaultRules}.
-   * Contains an entry only for datasources that have override rules, so that datasources
-   * without overrides can share the {@link #clusterDefaultRules} instance.
+   * Contains an entry only for datasources that have override rules and are not the default
+   * datasource itself, so that everything else can share the {@link #clusterDefaultRules} instance.
    */
   private final Map<String, List<Rule>> datasourceToRulesWithDefault;
   private final List<Rule> clusterDefaultRules;
@@ -51,14 +61,28 @@ public class RetentionRulesSnapshot
   }
 
   /**
-   * @param datasourceToRules   Rules configured for each datasource, not including the
-   *                            cluster defaults.
-   * @param clusterDefaultRules Rules configured for the default datasource. These apply
-   *                            to every datasource after its own rules.
+   * Snapshot in which the given rules are the cluster defaults and no datasource has
+   * override rules, so that they apply to every datasource.
    */
-  public RetentionRulesSnapshot(Map<String, List<Rule>> datasourceToRules, List<Rule> clusterDefaultRules)
+  public static RetentionRulesSnapshot withClusterDefaults(List<Rule> clusterDefaultRules)
   {
-    this.clusterDefaultRules = List.copyOf(clusterDefaultRules);
+    return new RetentionRulesSnapshot(
+        Map.of(DEFAULT_DATASOURCE_NAME, clusterDefaultRules),
+        DEFAULT_DATASOURCE_NAME
+    );
+  }
+
+  /**
+   * @param datasourceToRules     Rules configured for each datasource, including the entry for
+   *                              {@code defaultDatasourceName}.
+   * @param defaultDatasourceName Name of the datasource whose rules serve as the cluster
+   *                              defaults, i.e. {@code druid.manager.rules.defaultRule}. The
+   *                              cluster defaults are empty if it has no entry in
+   *                              {@code datasourceToRules}.
+   */
+  public RetentionRulesSnapshot(Map<String, List<Rule>> datasourceToRules, String defaultDatasourceName)
+  {
+    this.clusterDefaultRules = List.copyOf(datasourceToRules.getOrDefault(defaultDatasourceName, List.of()));
 
     // Copy the rule lists as well as the map spine, so that a caller still holding one of
     // the source lists cannot mutate this snapshot.
@@ -66,7 +90,8 @@ public class RetentionRulesSnapshot
     final Map<String, List<Rule>> rulesWithDefault = Maps.newHashMapWithExpectedSize(datasourceToRules.size());
     datasourceToRules.forEach((datasource, overrideRules) -> {
       rules.put(datasource, List.copyOf(overrideRules));
-      if (!overrideRules.isEmpty()) {
+      // The default datasource is skipped so that its own rules are not appended to themselves.
+      if (!overrideRules.isEmpty() && !datasource.equals(defaultDatasourceName)) {
         final List<Rule> combinedRules = new ArrayList<>(overrideRules.size() + this.clusterDefaultRules.size());
         combinedRules.addAll(overrideRules);
         combinedRules.addAll(this.clusterDefaultRules);
@@ -89,9 +114,9 @@ public class RetentionRulesSnapshot
    * Override rules configured for this datasource, excluding the cluster defaults.
    * <p>
    * No cluster defaults are appended, so a datasource with no overrides returns an empty
-   * list. Use {@link #getRulesWithDefault} to get the rules that actually apply to its segments.
+   * list. Use {@link #getEffectiveRules} to get the rules that actually apply to its segments.
    */
-  public List<Rule> getRules(String datasource)
+  public List<Rule> getOverrideRules(String datasource)
   {
     return datasourceToRules.getOrDefault(datasource, List.of());
   }
@@ -100,7 +125,7 @@ public class RetentionRulesSnapshot
    * All retention rules applicable to segments of this datasource.
    * The returned list contains the override rules specified for the datasource followed by the cluster default rules.
    */
-  public List<Rule> getRulesWithDefault(String datasource)
+  public List<Rule> getEffectiveRules(String datasource)
   {
     return datasourceToRulesWithDefault.getOrDefault(datasource, clusterDefaultRules);
   }

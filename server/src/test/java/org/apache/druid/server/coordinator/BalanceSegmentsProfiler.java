@@ -47,7 +47,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * TODO convert benchmarks to JMH
@@ -124,7 +123,7 @@ public class BalanceSegmentsProfiler
         .builder()
         .withDruidCluster(druidCluster)
         .withUsedSegments(segments)
-        .withRetentionRulesSnapshot(new RetentionRulesSnapshot(Map.of(), rules))
+        .withRetentionRulesSnapshot(RetentionRulesSnapshot.withClusterDefaults(rules))
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()

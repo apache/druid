@@ -283,9 +283,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       final int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
       log.info("Polled and found [%d] rule(s) for [%d] datasource(s).", newRuleCount, newRules.size());
 
-      rulesSnapshot.set(
-          new RetentionRulesSnapshot(newRules, newRules.getOrDefault(config.getDefaultRule(), List.of()))
-      );
+      rulesSnapshot.set(new RetentionRulesSnapshot(newRules, config.getDefaultRule()));
       failStartTimeMs = 0;
     }
     catch (Exception e) {
@@ -321,8 +319,8 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     final String ruleString;
     try {
       ruleString = jsonMapper.writeValueAsString(newRules);
-      // Deliberately a nullable lookup: an unknown datasource must not compare equal to an
-      // empty rule list, otherwise setting empty rules on it would silently be a no-op.
+      // uses getAllRules over getOverrideRules to allow proper audit trail when setting explicit [] override rules for
+      // a datasource with no existing overrides.
       if (ruleString.equals(jsonMapper.writeValueAsString(rulesSnapshot.get().getAllRules().get(dataSource)))) {
         log.info("Retention rules unchanged for datasource[%s] with rules[%s]", dataSource, ruleString);
         return true;

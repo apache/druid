@@ -843,7 +843,7 @@ public class DruidCoordinatorTest
    */
   private static RetentionRulesSnapshot clusterDefaultRules(Rule... rules)
   {
-    return new RetentionRulesSnapshot(Map.of(), List.of(rules));
+    return RetentionRulesSnapshot.withClusterDefaults(List.of(rules));
   }
 
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)

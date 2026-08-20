@@ -157,7 +157,7 @@ public class UnloadUnusedSegments implements CoordinatorDuty
    */
   private boolean isBroadcastDatasource(String datasource, RetentionRulesSnapshot rulesSnapshot)
   {
-    return rulesSnapshot.getRulesWithDefault(datasource)
+    return rulesSnapshot.getEffectiveRules(datasource)
                         .stream()
                         .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }

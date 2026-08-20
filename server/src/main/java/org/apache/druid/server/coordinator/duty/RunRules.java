@@ -92,7 +92,7 @@ public class RunRules implements CoordinatorDuty
       }
 
       // Find and apply matching rule
-      List<Rule> rules = rulesSnapshot.getRulesWithDefault(segment.getDataSource());
+      List<Rule> rules = rulesSnapshot.getEffectiveRules(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
@@ -174,7 +174,7 @@ public class RunRules implements CoordinatorDuty
    */
   private boolean isBroadcastDatasource(String datasource, RetentionRulesSnapshot rulesSnapshot)
   {
-    return rulesSnapshot.getRulesWithDefault(datasource)
+    return rulesSnapshot.getEffectiveRules(datasource)
                         .stream()
                         .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }

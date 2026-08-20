@@ -289,8 +289,7 @@ public class UnloadUnusedSegmentsTest
 
     // The snapshot loads broadcastDatasource like any other datasource rather than
     // broadcasting it, so the realtime server must be skipped for it
-    final RetentionRulesSnapshot rulesWithoutBroadcast = new RetentionRulesSnapshot(
-        Map.of(),
+    final RetentionRulesSnapshot rulesWithoutBroadcast = RetentionRulesSnapshot.withClusterDefaults(
         List.of(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1, "tier2", 1), null))
     );
 
@@ -354,7 +353,8 @@ public class UnloadUnusedSegmentsTest
             "datasource2", loadOnBothTiers,
             "broadcastDatasource", Collections.singletonList(new ForeverBroadcastDistributionRule())
         ),
-        List.of()
+        // Has no entry above, so every datasource is governed solely by its own rules
+        "unusedDefaultDatasource"
     );
   }
 }

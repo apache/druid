@@ -212,7 +212,7 @@ public class RunRulesPartialLoadPlacementTest
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDruidCluster(cluster)
-        .withRetentionRulesSnapshot(new RetentionRulesSnapshot(Map.of(), rules))
+        .withRetentionRulesSnapshot(RetentionRulesSnapshot.withClusterDefaults(rules))
         .withUsedSegments(segments)
         .withBalancerStrategy(balancerStrategy)
         .withDynamicConfigs(

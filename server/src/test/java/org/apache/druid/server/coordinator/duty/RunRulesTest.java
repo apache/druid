@@ -69,7 +69,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -121,7 +120,7 @@ public class RunRulesTest
    */
   private void setRetentionRules(Rule... rules)
   {
-    rulesSnapshot = new RetentionRulesSnapshot(Map.of(), List.of(rules));
+    rulesSnapshot = RetentionRulesSnapshot.withClusterDefaults(List.of(rules));
   }
 
   /**

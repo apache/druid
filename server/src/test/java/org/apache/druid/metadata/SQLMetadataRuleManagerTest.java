@@ -137,11 +137,11 @@ public class SQLMetadataRuleManagerTest
     // A datasource with rules of its own gets them ahead of the cluster defaults
     Assert.assertEquals(
         ImmutableList.builder().addAll(wikiRules).addAll(defaultRules).build(),
-        snapshot.getRulesWithDefault(TestDataSource.WIKI)
+        snapshot.getEffectiveRules(TestDataSource.WIKI)
     );
 
     // A datasource with no rules of its own gets only the cluster defaults
-    Assert.assertEquals(defaultRules, snapshot.getRulesWithDefault(TestDataSource.KOALA));
+    Assert.assertEquals(defaultRules, snapshot.getEffectiveRules(TestDataSource.KOALA));
   }
 
   @Test
@@ -170,8 +170,8 @@ public class SQLMetadataRuleManagerTest
     ruleManager.overrideRule(TestDataSource.WIKI, updatedRules, createAuditInfo("override rule"));
 
     // The manager has picked up the new rules, but the snapshot still serves the old ones
-    Assert.assertEquals(updatedRules.get(0), ruleManager.getRulesSnapshot().getRulesWithDefault(TestDataSource.WIKI).get(0));
-    Assert.assertEquals(originalRules.get(0), snapshot.getRulesWithDefault(TestDataSource.WIKI).get(0));
+    Assert.assertEquals(updatedRules.get(0), ruleManager.getRulesSnapshot().getEffectiveRules(TestDataSource.WIKI).get(0));
+    Assert.assertEquals(originalRules.get(0), snapshot.getEffectiveRules(TestDataSource.WIKI).get(0));
   }
 
   @Test
@@ -281,7 +281,7 @@ public class SQLMetadataRuleManagerTest
     // fetch rules from metadata storage
     ruleManager.poll();
 
-    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getRules(TestDataSource.WIKI));
+    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getOverrideRules(TestDataSource.WIKI));
 
     // verify audit entry is created
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(TestDataSource.WIKI, "rules", null);
@@ -314,8 +314,8 @@ public class SQLMetadataRuleManagerTest
     // fetch rules from metadata storage
     ruleManager.poll();
 
-    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getRules(TestDataSource.WIKI));
-    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getRules("test_dataSource2"));
+    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getOverrideRules(TestDataSource.WIKI));
+    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getOverrideRules("test_dataSource2"));
 
     // test fetch audit entries
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("rules", null);

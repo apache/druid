@@ -38,18 +38,26 @@ class RetentionRulesSnapshotTest
       null
   );
   private static final Rule DEFAULT_RULE = new ForeverLoadRule(Map.of(DruidServer.DEFAULT_TIER, 1), null);
+  /**
+   * Deliberately not {@code _default}, so that these tests fail if the snapshot ever assumes
+   * the conventional name instead of honouring the configured one.
+   */
+  private static final String DEFAULT_DATASOURCE = "configuredDefaultRules";
 
   @Test
   void testDatasourceRulesArePrependedToClusterDefaults()
   {
     final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(
-        Map.of(TestDataSource.WIKI, List.of(DATASOURCE_RULE)),
-        List.of(DEFAULT_RULE)
+        Map.of(
+            TestDataSource.WIKI, List.of(DATASOURCE_RULE),
+            DEFAULT_DATASOURCE, List.of(DEFAULT_RULE)
+        ),
+        DEFAULT_DATASOURCE
     );
 
     Assertions.assertEquals(
         List.of(DATASOURCE_RULE, DEFAULT_RULE),
-        rules.getRulesWithDefault(TestDataSource.WIKI)
+        rules.getEffectiveRules(TestDataSource.WIKI)
     );
   }
 
@@ -57,11 +65,14 @@ class RetentionRulesSnapshotTest
   void testDatasourceWithNoRulesResolvesToClusterDefaults()
   {
     final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(
-        Map.of(TestDataSource.WIKI, List.of(DATASOURCE_RULE)),
-        List.of(DEFAULT_RULE)
+        Map.of(
+            TestDataSource.WIKI, List.of(DATASOURCE_RULE),
+            DEFAULT_DATASOURCE, List.of(DEFAULT_RULE)
+        ),
+        DEFAULT_DATASOURCE
     );
 
-    Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getRulesWithDefault(TestDataSource.KOALA));
+    Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getEffectiveRules(TestDataSource.KOALA));
   }
 
   @Test
@@ -69,17 +80,18 @@ class RetentionRulesSnapshotTest
   {
     final Map<String, List<Rule>> source = new HashMap<>();
     source.put(TestDataSource.WIKI, List.of(DATASOURCE_RULE));
+    source.put(DEFAULT_DATASOURCE, List.of(DEFAULT_RULE));
 
-    final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(source, List.of(DEFAULT_RULE));
+    final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(source, DEFAULT_DATASOURCE);
 
     source.put(TestDataSource.WIKI, List.of(DEFAULT_RULE));
     source.put(TestDataSource.KOALA, List.of(DATASOURCE_RULE));
 
     Assertions.assertEquals(
         List.of(DATASOURCE_RULE, DEFAULT_RULE),
-        rules.getRulesWithDefault(TestDataSource.WIKI)
+        rules.getEffectiveRules(TestDataSource.WIKI)
     );
-    Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getRulesWithDefault(TestDataSource.KOALA));
+    Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getEffectiveRules(TestDataSource.KOALA));
   }
 
   @Test
@@ -87,22 +99,64 @@ class RetentionRulesSnapshotTest
   {
     final List<Rule> wikiRules = new ArrayList<>(List.of(DATASOURCE_RULE));
     final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(
-        Map.of(TestDataSource.WIKI, wikiRules),
-        List.of(DEFAULT_RULE)
+        Map.of(
+            TestDataSource.WIKI, wikiRules,
+            DEFAULT_DATASOURCE, List.of(DEFAULT_RULE)
+        ),
+        DEFAULT_DATASOURCE
     );
 
     wikiRules.clear();
 
-    Assertions.assertEquals(List.of(DATASOURCE_RULE), rules.getRules(TestDataSource.WIKI));
+    Assertions.assertEquals(List.of(DATASOURCE_RULE), rules.getOverrideRules(TestDataSource.WIKI));
     Assertions.assertEquals(
         List.of(DATASOURCE_RULE, DEFAULT_RULE),
-        rules.getRulesWithDefault(TestDataSource.WIKI)
+        rules.getEffectiveRules(TestDataSource.WIKI)
     );
+  }
+
+  @Test
+  void testClusterDefaultsAreEmptyWhenDefaultDatasourceHasNoRules()
+  {
+    // The default datasource has no rules until SQLMetadataRuleManager.createDefaultRule() has run
+    final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(
+        Map.of(TestDataSource.WIKI, List.of(DATASOURCE_RULE)),
+        DEFAULT_DATASOURCE
+    );
+
+    Assertions.assertEquals(List.of(DATASOURCE_RULE), rules.getEffectiveRules(TestDataSource.WIKI));
+    Assertions.assertEquals(List.of(), rules.getEffectiveRules(TestDataSource.KOALA));
+  }
+
+  @Test
+  void testDefaultDatasourceRulesAreNotAppendedToThemselves()
+  {
+    final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(
+        Map.of(
+            TestDataSource.WIKI, List.of(DATASOURCE_RULE),
+            DEFAULT_DATASOURCE, List.of(DEFAULT_RULE)
+        ),
+        DEFAULT_DATASOURCE
+    );
+
+    Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getEffectiveRules(DEFAULT_DATASOURCE));
+  }
+
+  @Test
+  void testWithClusterDefaultsAppliesRulesToEveryDatasource()
+  {
+    final RetentionRulesSnapshot rules = RetentionRulesSnapshot.withClusterDefaults(List.of(DEFAULT_RULE));
+
+    Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getEffectiveRules(TestDataSource.WIKI));
+    Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getEffectiveRules(TestDataSource.KOALA));
+
+    // No datasource has override rules of its own
+    Assertions.assertEquals(List.of(), rules.getOverrideRules(TestDataSource.WIKI));
   }
 
   @Test
   void testEmptySnapshotHasNoRulesForAnyDatasource()
   {
-    Assertions.assertEquals(List.of(), RetentionRulesSnapshot.empty().getRulesWithDefault(TestDataSource.WIKI));
+    Assertions.assertEquals(List.of(), RetentionRulesSnapshot.empty().getEffectiveRules(TestDataSource.WIKI));
   }
 }

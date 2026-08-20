@@ -65,7 +65,7 @@ public class TestMetadataRuleManager implements MetadataRuleManager
   @Override
   public RetentionRulesSnapshot getRulesSnapshot()
   {
-    return new RetentionRulesSnapshot(rules, rules.getOrDefault(DEFAULT_DATASOURCE, List.of()));
+    return new RetentionRulesSnapshot(rules, DEFAULT_DATASOURCE);
   }
 
   @Override

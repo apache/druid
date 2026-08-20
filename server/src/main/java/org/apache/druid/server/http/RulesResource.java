@@ -86,10 +86,10 @@ public class RulesResource
   {
     final RetentionRulesSnapshot rulesSnapshot = databaseRuleManager.getRulesSnapshot();
     if (full != null) {
-      return Response.ok(rulesSnapshot.getRulesWithDefault(dataSourceName))
+      return Response.ok(rulesSnapshot.getEffectiveRules(dataSourceName))
                      .build();
     }
-    return Response.ok(rulesSnapshot.getRules(dataSourceName))
+    return Response.ok(rulesSnapshot.getOverrideRules(dataSourceName))
                    .build();
   }
 
