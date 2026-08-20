@@ -122,6 +122,14 @@ public class SystemSchema extends AbstractSchema
           segment.getDataSource())
       );
 
+  /**
+   * Context map passed to {@link AuthorizationUtils} methods to indicate that authorization
+   * is being performed from the SystemSchema.
+   */
+  static final String AUTHORIZATION_CONTEXT_CALLER_PATH_VALUE = SystemSchema.class.getSimpleName();
+  private static final Map<String, Object> SYSTEM_SCHEMA_AUTHORIZATION_CONTEXT =
+      ImmutableMap.of(AuthorizationUtils.AUTHORIZATION_CONTEXT_CALLER_PATH_CONTEXT_KEY, AUTHORIZATION_CONTEXT_CALLER_PATH_VALUE);
+
   private static final long REPLICATION_FACTOR_UNKNOWN = -1L;
 
   /**
@@ -498,7 +506,8 @@ public class SystemSchema extends AbstractSchema
               authenticationResult,
               () -> it,
               SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR,
-              authorizerMapper
+              authorizerMapper,
+              SYSTEM_SCHEMA_AUTHORIZATION_CONTEXT
           );
       return authorizedSegments.iterator();
     }
@@ -523,7 +532,8 @@ public class SystemSchema extends AbstractSchema
               authenticationResult,
               () -> availableSegmentEntries,
               raGenerator,
-              authorizerMapper
+              authorizerMapper,
+              SYSTEM_SCHEMA_AUTHORIZATION_CONTEXT
           );
 
       return authorizedSegments.iterator();
@@ -874,7 +884,8 @@ public class SystemSchema extends AbstractSchema
             authenticationResult,
             druidServer.iterateAllSegments(),
             SEGMENT_RA_GENERATOR,
-            authorizerMapper
+            authorizerMapper,
+            SYSTEM_SCHEMA_AUTHORIZATION_CONTEXT
         );
 
         for (DataSegment segment : authorizedServerSegments) {
@@ -1009,7 +1020,8 @@ public class SystemSchema extends AbstractSchema
           authenticationResult,
           () -> it,
           raGenerator,
-          authorizerMapper
+          authorizerMapper,
+          SYSTEM_SCHEMA_AUTHORIZATION_CONTEXT
       );
 
       return wrap(authorizedTasks.iterator(), it);
@@ -1133,7 +1145,8 @@ public class SystemSchema extends AbstractSchema
           authenticationResult,
           () -> it,
           raGenerator,
-          authorizerMapper
+          authorizerMapper,
+          SYSTEM_SCHEMA_AUTHORIZATION_CONTEXT
       );
 
       return wrap(authorizedSupervisors.iterator(), it);
@@ -1302,7 +1315,8 @@ public class SystemSchema extends AbstractSchema
       final AuthorizationResult stateReadAuthorization = AuthorizationUtils.authorizeAllResourceActions(
           authenticationResult,
           Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
-          authorizerMapper
+          authorizerMapper,
+          SYSTEM_SCHEMA_AUTHORIZATION_CONTEXT
       );
 
       // Get queries from all engines
