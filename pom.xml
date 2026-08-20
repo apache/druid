@@ -97,7 +97,7 @@
         <derby.version>10.17.1.0</derby.version>
         <dropwizard.metrics.version>4.2.39</dropwizard.metrics.version>
         <errorprone.annotations.version>2.50.0</errorprone.annotations.version>
-        <errorprone.version>2.49.0</errorprone.version>
+        <errorprone.version>2.50.0</errorprone.version>
         <fabric8.version>7.8.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>33.6.0-jre</guava.version>
