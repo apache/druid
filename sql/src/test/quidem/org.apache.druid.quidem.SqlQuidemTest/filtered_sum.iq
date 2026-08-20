@@ -7,7 +7,7 @@ SELECT COUNT(1)FILTER(WHERE l1=-1),COUNT(1)FILTER(WHERE l1!=-1),MIN(l2) is null,
 +--------+--------+--------+--------+--------+
 | EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
 +--------+--------+--------+--------+--------+
-|      0 |      0 | true   |        |        |
+|      0 |      0 | true   |      0 |        |
 +--------+--------+--------+--------+--------+
 (1 row)
 
@@ -18,7 +18,7 @@ SELECT COUNT(1)FILTER(WHERE l1=-1),COUNT(1)FILTER(WHERE l1!=-1),MIN(l2) is null,
 +--------+--------+--------+--------+--------+
 | EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
 +--------+--------+--------+--------+--------+
-|      0 |      1 | false  |        |        |
+|      0 |      1 | false  |      0 |        |
 +--------+--------+--------+--------+--------+
 (1 row)
 
@@ -43,14 +43,14 @@ SELECT COUNT(1)FILTER(WHERE l1=7),COUNT(1)FILTER(WHERE l1!=7),MIN(l2) is null,
 +--------+--------+--------+--------+--------+
 | EXPR$0 | EXPR$1 | EXPR$2 | EXPR$3 | EXPR$4 |
 +--------+--------+--------+--------+--------+
-|      1 |      0 | true   |        |        |
+|      1 |      0 | true   |      0 |        |
 +--------+--------+--------+--------+--------+
 (1 row)
 
 !ok
 
 LogicalProject(EXPR$0=[$0], EXPR$1=[$1], EXPR$2=[IS NULL($2)], EXPR$3=[$3], EXPR$4=[$4])
-  LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT() FILTER $1], agg#2=[MIN($2)], EXPR$3=[SUM($3)], EXPR$4=[SUM($2) FILTER $0])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], EXPR$1=[COUNT() FILTER $1], agg#2=[MIN($2)], EXPR$3=[SUM0($3)], EXPR$4=[SUM($2) FILTER $0])
     LogicalProject($f1=[IS TRUE(=($0, 7))], $f2=[IS TRUE(<>($0, 7))], l2=[$1], $f4=[CASE(=($0, 7), $1, 0:BIGINT)])
       LogicalFilter(condition=[SEARCH($0, Sarg[(0L:BIGINT..10L:BIGINT)]:BIGINT)])
         LogicalProject(l1=[$11], l2=[$12])
