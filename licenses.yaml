@@ -4536,13 +4536,22 @@ libraries:
   - io.grpc: grpc-alts
   - io.grpc: grpc-api
   - io.grpc: grpc-auth
-  - io.grpc: grpc-context
   - io.grpc: grpc-core
   - io.grpc: grpc-grpclib
   - io.grpc: grpc-inprocess
   - io.grpc: grpc-protobuf
   - io.grpc: grpc-protobuf-lite
   - io.grpc: grpc-stub
+
+---
+
+name: grpc-context
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.70.0
+libraries:
+  - io.grpc: grpc-context
 
 ---
 
