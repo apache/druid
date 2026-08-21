@@ -26,6 +26,64 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
+## 38.0.0
+
+#### Java
+
+Druid now supports Java 25. While Druid 21 is still supported, we recommend you upgrade to Java 25.
+
+Support for Java 17 has been dropped.
+
+[#19304](https://github.com/apache/druid/pull/19304) [#19336](https://github.com/apache/druid/pull/19336)
+
+#### ZooKeeper-based task runner
+
+The ZooKeeper-based `RemoteTaskRunner` (`druid.indexer.runner.type=remote`) has been removed. The HTTP-based `httpRemote` runner has been the default since Druid 25.0.0 and is now the only supported distributed task runner. `local` (in-process) remains supported for single-process testing, and the `k8s` runner from the Kubernetes extension is unaffected.
+
+If your configuration sets `druid.indexer.runner.type=remote`, startup fails. Remove the property or set it to `httpRemote` (which is the default) to proceed.
+
+The following configuration properties are no longer recognized and should be removed from `common.runtime.properties`:
+
+- `druid.indexer.runner.maxZnodeBytes`
+- `druid.indexer.runner.taskShutdownLinkTimeout`
+- `druid.indexer.runner.compressZnodes`
+- `druid.zk.paths.indexer.base`
+- `druid.zk.paths.indexer.announcementsPath`
+- `druid.zk.paths.indexer.tasksPath`
+- `druid.zk.paths.indexer.statusPath`
+
+ZooKeeper is still used for Coordinator/Overlord leader election and service (node) announcement and discovery.
+
+[#19500](https://github.com/apache/druid/pull/19500)
+
+#### ZooKeeper-based segment announcement and discovery removed
+
+The ZooKeeper-based segment announcement and inventory view, which have been deprecated and off by default for several releases, have been removed. The HTTP-based path (the default for `druid.serverview.type=http`) is now the only supported option.
+
+If your configuration sets `druid.serverview.type` to anything other than `http`, startup now fails with a clear error message. Remove the property (or set it to `http`, which is the default) to proceed.
+
+The following configuration properties are no longer recognized and should be removed from `common.runtime.properties`:
+
+- `druid.announcer.segmentsPerNode`
+- `druid.announcer.maxBytesPerNode`
+- `druid.announcer.skipLoadSpec`
+- `druid.announcer.skipDimensionsAndMetrics`
+- `druid.announcer.skipSegmentAnnouncementOnZk`
+- `druid.zk.paths.announcementsPath`
+- `druid.zk.paths.liveSegmentsPath`
+- `druid.zk.paths.propertiesPath`
+- `druid.zk.paths.connectorPath`
+
+ZooKeeper is still used for leader election, service (node) announcement and discovery, and Overlord-to-MiddleManager task management.
+
+[#19377](https://github.com/apache/druid/pull/19377)
+
+#### Jackson update
+
+If external code has both `@JacksonInject` and `@JsonProperty` on the same parameter and relies on the JSON value winning when supplied, add the explicit `useInput = OptBoolean.TRUE` to the annotation (or stay on Jackson `2.20.x`). All such sites in Druid itself have been updated.
+
+[#19528](https://github.com/apache/druid/pull/19528)
+
 ## 37.0.0
 
 ### Upgrade notes
