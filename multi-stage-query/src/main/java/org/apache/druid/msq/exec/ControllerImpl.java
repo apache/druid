@@ -1363,14 +1363,8 @@ public class ControllerImpl implements Controller
           shardSpec = new NumberedShardSpec(segmentNumber, ranges.size());
         } else {
           final ClusterByPartition range = ranges.get(segmentNumber).rhs;
-          final StringTuple start =
-              segmentNumber == 0
-              ? null
-              : makeStringTuple(clusterBy, keyReader, range.getStart(), shardColumns.size());
-          final StringTuple end =
-              segmentNumber == ranges.size() - 1
-              ? null
-              : makeStringTuple(clusterBy, keyReader, range.getEnd(), shardColumns.size());
+          final StringTuple start = makeStringTuple(clusterBy, keyReader, range.getStart(), shardColumns.size());
+          final StringTuple end = makeStringTuple(clusterBy, keyReader, range.getEnd(), shardColumns.size());
           shardSpec = new DimensionRangeShardSpec(
               shardColumns,
               VirtualColumns.create(clusterByVirtualColumnMappings.values()),
