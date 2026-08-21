@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
@@ -39,6 +40,7 @@ import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -58,6 +60,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -78,6 +81,7 @@ public class HttpLoadQueuePeonTest
   @Before
   public void setUp()
   {
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
     segmentLoadingCapabilities = new SegmentLoadingCapabilities(1, 3);
     httpClient = new TestHttpClient();
     httpLoadQueuePeon = new HttpLoadQueuePeon(
@@ -322,6 +326,89 @@ public class HttpLoadQueuePeonTest
   }
 
   @Test
+  public void testPeonIsCreatedWhenServerErrorsOnLoadCapabilities()
+  {
+    // A server returning a non-OK, non-404 status (e.g. 503) on loadCapabilities must not
+    // fail peon construction. The peon falls back to default capabilities so the server is
+    // still managed, rather than throwing and aborting segment management for the cluster.
+    final HttpClient failingClient = new HttpClient()
+    {
+      @Override
+      public <Intermediate, Final> ListenableFuture<Final> go(
+          Request request,
+          HttpResponseHandler<Intermediate, Final> handler
+      )
+      {
+        return go(request, handler, null);
+      }
+
+      @Override
+      @SuppressWarnings("unchecked")
+      public <Intermediate, Final> ListenableFuture<Final> go(
+          Request request,
+          HttpResponseHandler<Intermediate, Final> handler,
+          Duration duration
+      )
+      {
+        final HttpResponse response =
+            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE);
+        response.setContent(ChannelBuffers.buffer(0));
+        handler.handleResponse(response, null);
+        return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
+      }
+    };
+
+    final HttpLoadQueuePeon peon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        failingClient,
+        new HttpLoadQueuePeonConfig(null, null, 10),
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService("HttpLoadQueuePeonTest-%s", httpClient.processingExecutor, true),
+        httpClient.callbackExecutor
+    );
+
+    // Construction succeeded and the peon fell back to default capabilities derived from the batch
+    // size: turbo loading threads default to the batch size (10) rather than a fetched value.
+    Assert.assertEquals(10, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
+  }
+
+  @Test
+  public void testCapabilitiesAreReFetchedAfterServerRecovers()
+  {
+    // Regression test for the review finding on #19950. If a server is unhealthy when the peon is
+    // constructed, the peon falls back to default capabilities. Since LoadQueueTaskMaster reuses the
+    // same peon while the server stays in inventory, the peon must re-fetch capabilities on a later
+    // tick once the server recovers, rather than staying pinned to the defaults forever.
+    final AtomicInteger loadCapabilitiesCalls = new AtomicInteger(0);
+    final RecoveringHttpClient recoveringClient = new RecoveringHttpClient(loadCapabilitiesCalls);
+
+    final HttpLoadQueuePeon peon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        recoveringClient,
+        new HttpLoadQueuePeonConfig(null, null, 10),
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService("HttpLoadQueuePeonTest-%s", recoveringClient.processingExecutor, true),
+        recoveringClient.callbackExecutor
+    );
+
+    // The probe issued during construction failed, so the peon falls back to default capabilities and
+    // reports the default batch size (10) rather than the real turbo capability (3).
+    Assert.assertEquals(1, loadCapabilitiesCalls.get());
+    Assert.assertEquals(10, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
+
+    // The server has since recovered. Trigger a segment management tick: the peon issues an async
+    // re-fetch, whose callback runs on the processing executor and updates the cached capabilities.
+    peon.loadSegment(segments.get(0), SegmentAction.LOAD, null);
+    recoveringClient.processingExecutor.finishAllPendingTasks();
+
+    // The peon picked up the real turbo capability (3) instead of remaining pinned to the default (10).
+    Assert.assertTrue(loadCapabilitiesCalls.get() > 1);
+    Assert.assertEquals(3, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
+  }
+
+  @Test
   public void testBatchSize()
   {
     Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
@@ -444,6 +531,85 @@ public class HttpLoadQueuePeonTest
     void executeCallbacks()
     {
       callbackExecutor.finishAllPendingTasks();
+    }
+  }
+
+  /**
+   * An {@link HttpClient} for a server whose loadCapabilities endpoint returns 503 on the first call
+   * (simulating an unhealthy server at peon construction) and real capabilities (1, 3) thereafter
+   * (simulating recovery). Segment change requests always succeed.
+   */
+  private static class RecoveringHttpClient implements HttpClient
+  {
+    final BlockingExecutorService processingExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-%s");
+    final BlockingExecutorService callbackExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-cb");
+    private final AtomicInteger loadCapabilitiesCalls;
+
+    RecoveringHttpClient(AtomicInteger loadCapabilitiesCalls)
+    {
+      this.loadCapabilitiesCalls = loadCapabilitiesCalls;
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler
+    )
+    {
+      return go(request, handler, null);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration duration
+    )
+    {
+      try {
+        if (request.getUrl().toString().contains("/loadCapabilities")) {
+          // First probe (during construction) fails; the server is healthy on every probe after that.
+          final boolean serverIsHealthy = loadCapabilitiesCalls.getAndIncrement() > 0;
+          if (serverIsHealthy) {
+            respond(handler, HttpResponseStatus.OK);
+            return (ListenableFuture<Final>) Futures.immediateFuture(
+                new ByteArrayInputStream(
+                    MAPPER.writerFor(SegmentLoadingCapabilities.class)
+                          .writeValueAsBytes(new SegmentLoadingCapabilities(1, 3))
+                )
+            );
+          }
+          respond(handler, HttpResponseStatus.SERVICE_UNAVAILABLE);
+          return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
+        }
+
+        // Segment change request: acknowledge every queued segment as successfully processed.
+        respond(handler, HttpResponseStatus.OK);
+        final List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
+            request.getContent().array(),
+            HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
+        );
+        final List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
+        for (DataSegmentChangeRequest cr : changeRequests) {
+          statuses.add(new DataSegmentChangeResponse(cr, SegmentChangeStatus.success()));
+        }
+        return (ListenableFuture<Final>) Futures.immediateFuture(
+            new ByteArrayInputStream(
+                MAPPER.writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF).writeValueAsBytes(statuses)
+            )
+        );
+      }
+      catch (Exception ex) {
+        throw new RE(ex, "Unexpected exception.");
+      }
+    }
+
+    private static void respond(HttpResponseHandler<?, ?> handler, HttpResponseStatus status)
+    {
+      final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+      response.setContent(ChannelBuffers.buffer(0));
+      handler.handleResponse(response, null);
     }
   }
 

@@ -57,7 +57,9 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -127,7 +129,24 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final Supplier<SegmentLoadingMode> loadingModeSupplier;
 
   private final ObjectWriter requestBodyWriter;
-  private final SegmentLoadingCapabilities serverCapabilities;
+
+  /**
+   * Loading capabilities of the server. Fetched during construction and re-fetched
+   * lazily on subsequent ticks if the initial fetch fell back to default values due
+   * to a transient failure (see {@link #refetchCapabilitiesIfNeeded()}). Read and
+   * written only on the single-threaded processing executor after construction, but
+   * declared {@code volatile} for safe publication from the constructing thread.
+   */
+  private volatile SegmentLoadingCapabilities serverCapabilities;
+
+  /**
+   * Whether {@link #serverCapabilities} holds a definitive value: {@code true} once
+   * the server has returned real capabilities, or a 404 indicating the endpoint does
+   * not exist on this server. It stays {@code false} while the peon is pinned to
+   * default capabilities due to a transient failure, so the value is re-fetched once
+   * the server recovers.
+   */
+  private volatile boolean capabilitiesConfirmed = false;
 
   public HttpLoadQueuePeon(
       String baseUrl,
@@ -151,48 +170,155 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.serverCapabilities = fetchSegmentLoadingCapabilities();
   }
 
+  private URL getLoadCapabilitiesUrl() throws MalformedURLException
+  {
+    return new URL(new URL(serverId), "druid-internal/v1/segments/loadCapabilities");
+  }
+
+  /**
+   * Synchronously fetches loading capabilities during construction. On a transient failure
+   * (non-OK status other than 404, timeout, or error), raises an alert and falls back to
+   * default capabilities, leaving {@link #capabilitiesConfirmed} unset so the value is
+   * re-fetched on a later tick once the server recovers (see {@link #refetchCapabilitiesIfNeeded()}).
+   */
   private SegmentLoadingCapabilities fetchSegmentLoadingCapabilities()
   {
     try {
-      final URL segmentLoadingCapabilitiesURL = new URL(
-          new URL(serverId),
-          "druid-internal/v1/segments/loadCapabilities"
-      );
-
-      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
-      InputStream stream = httpClient.go(
-          new Request(HttpMethod.GET, segmentLoadingCapabilitiesURL)
-              .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
+      final URL url = getLoadCapabilitiesUrl();
+      final BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
+      final InputStream stream = httpClient.go(
+          new Request(HttpMethod.GET, url).addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
           responseHandler,
           new Duration(DEFAULT_TIMEOUT)
       ).get();
 
-      if (HttpServletResponse.SC_NOT_FOUND == responseHandler.getStatus()) {
-        int batchSize = config.getBatchSize() == null ? 1 : config.getBatchSize();
-        SegmentLoadingCapabilities defaultCapabilities = new SegmentLoadingCapabilities(batchSize, batchSize);
-        log.warn(
-            "Historical capabilities endpoint not found at URL[%s]. Using default values[%s].",
-            segmentLoadingCapabilitiesURL,
-            defaultCapabilities
-        );
-        return defaultCapabilities;
-      } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
-        log.makeAlert("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
-        throw new RE("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
+      final int status = responseHandler.getStatus();
+      final SegmentLoadingCapabilities capabilities = interpretCapabilitiesResponse(status, stream, url);
+      if (!capabilitiesConfirmed) {
+        // Transient failure. Do not stall further processing due to a single unhealthy server:
+        // raise an alert and use default capabilities until the server recovers.
+        log.makeAlert(
+            "Received status[%s] when fetching loading capabilities from server[%s]. Using default values[%s].",
+            status,
+            serverId,
+            capabilities
+        ).emit();
       }
+      return capabilities;
+    }
+    catch (InterruptedException ie) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(ie);
+    }
+    catch (Exception e) {
+      SegmentLoadingCapabilities defaultCapabilities = getDefaultLoadingCapabilities();
+      log.makeAlert(
+          e,
+          "Received error while fetching historical capabilities from Server[%s]. Using default values[%s].",
+          serverId,
+          defaultCapabilities
+      ).emit();
+      return defaultCapabilities;
+    }
+  }
 
-      return jsonMapper.readValue(
-          stream,
-          SegmentLoadingCapabilities.class
+  /**
+   * Interprets a loadCapabilities response, setting {@link #capabilitiesConfirmed} and returning
+   * the capabilities to use. The value is confirmed on a real response (200) or a 404 (the endpoint
+   * is absent on this server, so retrying is pointless). A transient non-OK status yields default
+   * capabilities without confirming, so they are re-fetched on a later tick once the server recovers.
+   */
+  private SegmentLoadingCapabilities interpretCapabilitiesResponse(int status, InputStream stream, URL url)
+      throws IOException
+  {
+    if (HttpServletResponse.SC_NOT_FOUND == status) {
+      capabilitiesConfirmed = true;
+      SegmentLoadingCapabilities defaultCapabilities = getDefaultLoadingCapabilities();
+      log.warn(
+          "Historical capabilities endpoint not found at URL[%s]. Using default values[%s].",
+          url,
+          defaultCapabilities
+      );
+      return defaultCapabilities;
+    } else if (HttpServletResponse.SC_OK != status) {
+      return getDefaultLoadingCapabilities();
+    }
+
+    SegmentLoadingCapabilities capabilities = jsonMapper.readValue(stream, SegmentLoadingCapabilities.class);
+    capabilitiesConfirmed = true;
+    return capabilities;
+  }
+
+  /**
+   * Re-fetches loading capabilities if the peon is still pinned to default values from a
+   * transient failure during construction. Called on every segment management tick; a no-op
+   * once capabilities have been confirmed (the common case).
+   * <p>
+   * Unlike the construction path, this does not block the (single, shared) processing thread:
+   * the request is issued and its response handled in a callback, just like the segment change
+   * requests in {@link #doSegmentManagement()}. This keeps a single unhealthy server from
+   * stalling segment management for the rest of the cluster.
+   */
+  private void refetchCapabilitiesIfNeeded()
+  {
+    if (capabilitiesConfirmed || stopped) {
+      return;
+    }
+
+    try {
+      final URL url = getLoadCapabilitiesUrl();
+      final BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
+      final ListenableFuture<InputStream> future = httpClient.go(
+          new Request(HttpMethod.GET, url).addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
+          responseHandler,
+          new Duration(DEFAULT_TIMEOUT)
+      );
+
+      Futures.addCallback(
+          future,
+          new FutureCallback<>()
+          {
+            @Override
+            public void onSuccess(InputStream result)
+            {
+              try {
+                serverCapabilities = interpretCapabilitiesResponse(responseHandler.getStatus(), result, url);
+                if (capabilitiesConfirmed) {
+                  log.info("Refreshed loading capabilities[%s] for server[%s].", serverCapabilities, serverId);
+                }
+              }
+              catch (Throwable t) {
+                log.debug(t, "Could not parse refreshed loading capabilities from server[%s]. Will retry.", serverId);
+              }
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              log.debug(t, "Could not refresh loading capabilities from server[%s]. Will retry.", serverId);
+            }
+          },
+          processingExecutor
       );
     }
     catch (Throwable th) {
-      throw new RE(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
+      log.debug(th, "Error issuing capability refresh request to server[%s]. Will retry.", serverId);
     }
+  }
+
+  private SegmentLoadingCapabilities getDefaultLoadingCapabilities()
+  {
+    int batchSize = config.getBatchSize() == null ? 1 : config.getBatchSize();
+    return new SegmentLoadingCapabilities(batchSize, batchSize);
   }
 
   private void doSegmentManagement()
   {
+    // Re-fetch loading capabilities if we are still pinned to defaults from a transient
+    // failure. This is async and a no-op once capabilities are confirmed, so it runs
+    // independently of the main loop below (which may bail out early if already in progress).
+    refetchCapabilitiesIfNeeded();
+
     if (stopped || !mainLoopInProgress.compareAndSet(false, true)) {
       log.trace("[%s]Ignoring tick. Either in-progress already or stopped.", serverId);
       return;
@@ -371,11 +497,12 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   @VisibleForTesting
   int calculateBatchSize(SegmentLoadingMode loadingMode)
   {
+    final SegmentLoadingCapabilities capabilities = serverCapabilities;
     int batchSize;
     if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
-      batchSize = serverCapabilities.getNumTurboLoadingThreads();
+      batchSize = capabilities.getNumTurboLoadingThreads();
     } else {
-      batchSize = Configs.valueOrDefault(config.getBatchSize(), serverCapabilities.getNumLoadingThreads());
+      batchSize = Configs.valueOrDefault(config.getBatchSize(), capabilities.getNumLoadingThreads());
     }
 
     return Math.max(batchSize, 1);
