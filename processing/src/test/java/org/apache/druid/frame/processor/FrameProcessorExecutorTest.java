@@ -485,7 +485,7 @@ public class FrameProcessorExecutorTest
   public abstract static class BaseFrameProcessorExecutorTestSuite extends InitializedNullHandlingTest
   {
     @RegisterExtension
-    public static final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
     public final int numThreads;
 
     protected FrameProcessorExecutor exec;
@@ -583,6 +583,4 @@ public class FrameProcessorExecutorTest
       throw new RuntimeException(e);
     }
   }
-
-
 }
