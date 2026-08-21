@@ -21,6 +21,8 @@ package org.apache.druid.security.basic;
 
 import org.apache.druid.metadata.PasswordProvider;
 
+import javax.annotation.Nullable;
+
 public class BasicAuthLDAPConfig
 {
   private final String url;
@@ -33,6 +35,10 @@ public class BasicAuthLDAPConfig
   private final Integer credentialVerifyDuration;
   private final Integer credentialMaxDuration;
   private final Integer credentialCacheSize;
+  @Nullable
+  private final String groupBaseDn;
+  @Nullable
+  private final String groupSearch;
 
   public BasicAuthLDAPConfig(
       final String url,
@@ -47,6 +53,37 @@ public class BasicAuthLDAPConfig
       final Integer credentialCacheSize
   )
   {
+    this(
+        url,
+        bindUser,
+        bindPassword,
+        baseDn,
+        userSearch,
+        userAttribute,
+        credentialIterations,
+        credentialVerifyDuration,
+        credentialMaxDuration,
+        credentialCacheSize,
+        null,
+        null
+    );
+  }
+
+  public BasicAuthLDAPConfig(
+      final String url,
+      final String bindUser,
+      final PasswordProvider bindPassword,
+      final String baseDn,
+      final String userSearch,
+      final String userAttribute,
+      final int credentialIterations,
+      final Integer credentialVerifyDuration,
+      final Integer credentialMaxDuration,
+      final Integer credentialCacheSize,
+      @Nullable final String groupBaseDn,
+      @Nullable final String groupSearch
+  )
+  {
     this.url = url;
     this.bindUser = bindUser;
     this.bindPassword = bindPassword;
@@ -57,6 +94,8 @@ public class BasicAuthLDAPConfig
     this.credentialVerifyDuration = credentialVerifyDuration;
     this.credentialMaxDuration = credentialMaxDuration;
     this.credentialCacheSize = credentialCacheSize;
+    this.groupBaseDn = groupBaseDn;
+    this.groupSearch = groupSearch;
   }
 
   public String getUrl()
@@ -107,5 +146,22 @@ public class BasicAuthLDAPConfig
   public Integer getCredentialCacheSize()
   {
     return credentialCacheSize;
+  }
+
+  @Nullable
+  public String getGroupBaseDn()
+  {
+    return groupBaseDn;
+  }
+
+  @Nullable
+  public String getGroupSearch()
+  {
+    return groupSearch;
+  }
+
+  public boolean isGroupSearchConfigured()
+  {
+    return groupBaseDn != null && groupSearch != null;
   }
 }
