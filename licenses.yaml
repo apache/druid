@@ -1252,7 +1252,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1264,7 +1264,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
