@@ -75,7 +75,7 @@
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>1.1.0</aether.version>
         <apache.curator.version>5.9.0</apache.curator.version>
-        <apache.kafka.version>4.3.0</apache.kafka.version>
+        <apache.kafka.version>4.3.1</apache.kafka.version>
         <!-- when updating apache ranger, verify the usage of aws-bundle-sdk vs aws-logs-sdk
         and update as needed in extensions-contrib/druid-ranger-security/pom.xml  -->
         <apache.ranger.version>2.9.0</apache.ranger.version>
