@@ -22,6 +22,7 @@ package org.apache.druid.indexer.granularity;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -322,9 +323,9 @@ public class UniformGranularityTest
 
     Assertions.assertNotNull(spec);
 
-    // The constructor keeps this iterator lazy. Read one bucket to exercise the lazy path without traversing
-    // 315,619,200 one-second buckets solely to count them.
-    Assertions.assertTrue(spec.sortedBucketIntervals().iterator().hasNext());
+    int count = Iterators.size(spec.sortedBucketIntervals().iterator());
+    // account for three leap years...
+    Assertions.assertEquals(3600 * 24 * 365 * 10 + 3 * 24 * 3600, count);
   }
 
   private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2)
