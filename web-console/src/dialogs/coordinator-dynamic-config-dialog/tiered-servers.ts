@@ -16,17 +16,27 @@
  * limitations under the License.
  */
 
-import { Capabilities } from '../../helpers';
-import { shallow } from '../../utils/shallow-renderer';
+export interface TieredServers {
+  tiers: string[];
+  serversByTier: Record<string, string[]>;
+  serverToTier: Record<string, string>;
+  allServers: string[];
+}
 
-import { CoordinatorDynamicConfigDialog } from './coordinator-dynamic-config-dialog';
-
-describe('CoordinatorDynamicConfigDialog', () => {
-  it('matches snapshot', () => {
-    const coordinatorDynamicConfig = shallow(
-      <CoordinatorDynamicConfigDialog capabilities={Capabilities.FULL} onClose={() => {}} />,
-    );
-
-    expect(coordinatorDynamicConfig).toMatchSnapshot();
-  });
-});
+export function buildTieredServers(rows: { server: string; tier: string }[]): TieredServers {
+  const serversByTier: Record<string, string[]> = {};
+  const serverToTier: Record<string, string> = {};
+  for (const row of rows) {
+    if (!serversByTier[row.tier]) {
+      serversByTier[row.tier] = [];
+    }
+    serversByTier[row.tier].push(row.server);
+    serverToTier[row.server] = row.tier;
+  }
+  const tiers = Object.keys(serversByTier).sort();
+  for (const tier of tiers) {
+    serversByTier[tier].sort();
+  }
+  const allServers = tiers.flatMap(t => serversByTier[t]);
+  return { tiers, serversByTier, serverToTier, allServers };
+}
