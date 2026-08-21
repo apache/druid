@@ -41,9 +41,9 @@ import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.server.SegmentManager;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -53,7 +53,7 @@ public class JoinableFactoryModuleTest
 {
   private Injector injector;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     injector = makeInjectorWithProperties();
@@ -63,9 +63,9 @@ public class JoinableFactoryModuleTest
   public void testInjectJoinableFactoryIsSingleton()
   {
     JoinableFactory factory = injector.getInstance(JoinableFactory.class);
-    Assert.assertEquals(MapJoinableFactory.class, factory.getClass());
+    Assertions.assertEquals(MapJoinableFactory.class, factory.getClass());
     JoinableFactory otherFactory = injector.getInstance(JoinableFactory.class);
-    Assert.assertSame(factory, otherFactory);
+    Assertions.assertSame(factory, otherFactory);
   }
 
   @Test
@@ -73,7 +73,7 @@ public class JoinableFactoryModuleTest
   {
     final Set<JoinableFactory> factories =
         injector.getInstance(Key.get(new TypeLiteral<>() {}));
-    Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size(), factories.size());
+    Assertions.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size(), factories.size());
     Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoriesMappings = injector.getInstance(
         Key.get(new TypeLiteral<>() {})
     );
@@ -94,8 +94,8 @@ public class JoinableFactoryModuleTest
     );
     Set<JoinableFactory> factories = injector.getInstance(Key.get(new TypeLiteral<>() {}));
 
-    Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size() + 1, factories.size());
-    Assert.assertEquals(NoopDataSource.class, joinableFactoriesMappings.get(NoopJoinableFactory.class));
+    Assertions.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size() + 1, factories.size());
+    Assertions.assertEquals(NoopDataSource.class, joinableFactoriesMappings.get(NoopJoinableFactory.class));
     assertDefaultFactories(joinableFactoriesMappings);
   }
 
@@ -103,9 +103,9 @@ public class JoinableFactoryModuleTest
       Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoriesMappings
   )
   {
-    Assert.assertEquals(LookupDataSource.class, joinableFactoriesMappings.get(LookupJoinableFactory.class));
-    Assert.assertEquals(InlineDataSource.class, joinableFactoriesMappings.get(InlineJoinableFactory.class));
-    Assert.assertEquals(
+    Assertions.assertEquals(LookupDataSource.class, joinableFactoriesMappings.get(LookupJoinableFactory.class));
+    Assertions.assertEquals(InlineDataSource.class, joinableFactoriesMappings.get(InlineJoinableFactory.class));
+    Assertions.assertEquals(
         GlobalTableDataSource.class,
         joinableFactoriesMappings.get(BroadcastTableJoinableFactory.class)
     );

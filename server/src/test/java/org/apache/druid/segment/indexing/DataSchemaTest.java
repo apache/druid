@@ -55,8 +55,7 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -978,8 +977,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
                        .withSegmentGranularity(new SegmentGranularitySpec(Granularities.DAY, null))
                        .build()
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("segmentGranularitySpec"));
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("segmentGranularitySpec");
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("baseTable");
   }
 
   @Test
@@ -1004,8 +1003,8 @@ class DataSchemaTest extends InitializedNullHandlingTest
                        .withBaseTable(spec)
                        .build()
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("granularitySpec"));
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("baseTable"));
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("granularitySpec");
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("baseTable");
   }
 
   @Test
@@ -1101,6 +1100,6 @@ class DataSchemaTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> schema.withDimensionsSpec(DimensionsSpec.builder().build())
     );
-    MatcherAssert.assertThat(t.getMessage(), Matchers.containsString("dimensionsSpec"));
+    AssertionsForClassTypes.assertThat(t.getMessage()).contains("dimensionsSpec");
   }
 }
