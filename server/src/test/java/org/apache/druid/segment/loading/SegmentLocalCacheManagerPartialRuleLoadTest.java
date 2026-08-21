@@ -844,9 +844,12 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
 
     // Bump writable's usage so LeastBytesUsed picks readOnly first.
     final SegmentId dummy = SegmentId.of("dummy", Intervals.of("2020/2021"), "v", 0);
-    Assertions.assertTrue(
-        manager.getLocations().get(0).reserveWeak(stubCacheEntry(new SegmentCacheEntryIdentifier(dummy), 4096L))
-    );
+    final CacheEntry filler = stubCacheEntry(new SegmentCacheEntryIdentifier(dummy), 4096L);
+    final StorageLocation.ReservationHold<CacheEntry> fillerHold =
+        manager.getLocations().get(0).addWeakReservationHold(filler.getId(), () -> filler);
+    Assertions.assertNotNull(fillerHold);
+    filler.mount(manager.getLocations().get(0));
+    fillerHold.close();
     Assertions.assertTrue(readOnly.setReadOnly(), "test setup must be able to make readOnly location read-only");
     try {
       manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
