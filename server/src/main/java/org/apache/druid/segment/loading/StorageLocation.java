@@ -526,11 +526,11 @@ public class StorageLocation
    * <p>
    * This exists for callers that register a weak entry <em>without</em> a {@link ReservationHold} (the bootstrap
    * reserve path uses {@link #reserveWeak}) and need to clean it up after a failed mount. The normal runtime path
-   * registers weak entries via {@link #addWeakReservationHold} and relies on the hold's release runnable to evict a
-   * never-mounted entry on close; an entry registered without a hold has no such cleanup, so a failed mount would
-   * otherwise leave it lingering (and un-re-mountable if its on-disk state was deleted by the mount rollback). The
-   * hold guard makes this safe to call unconditionally on any mount failure: a held entry (runtime path) is left to
-   * its holder's release runnable.
+   * registers weak entries via {@link #addWeakReservationHold}, where a never-mounted entry is evicted on close by
+   * the creating hold's release runnable (see {@link #createWeakEntryReleaseRunnable}, which leaves the entry alone
+   * while any other acquire still holds it); an entry registered without a hold has no such cleanup, so a failed
+   * mount would otherwise leave it lingering. The hold guard makes this safe to call unconditionally on any mount
+   * failure: a held entry (runtime path) is left to its holders.
    */
   public void removeUnheldWeakEntry(CacheEntryIdentifier id)
   {
@@ -583,6 +583,19 @@ public class StorageLocation
    * Creates a release runnable for a {@link WeakCacheEntry} that handles immediate eviction when configured.
    * If {@link #areWeakEntriesEphemeral} is true and there are no more holds after releasing, the entry is immediately
    * evicted from the cache. For new entries (isNewEntry=true), unmounted entries are also removed.
+   * <p>
+   * Both removal branches require that no other hold remains on the entry, and that the entry still registered under
+   * this id <em>is</em> the one this hold was placed on. Evicting a held entry is what the hold exists to prevent: the
+   * holder is typically mid-mount, and a mount that finishes to find its entry unregistered rolls itself back, so a
+   * reference the holder was promised would stay alive dies underneath it. The identity check covers the same hazard
+   * one step removed: the hold is released before the write lock is taken, so in between the entry can be reclaimed
+   * and a fresh one registered under the same id, and this runnable would otherwise evict that replacement.
+   * <p>
+   * Keeping a held entry here means the last hold to be released is not necessarily the one that removes a
+   * never-mounted entry (a hold that did not create the entry takes the early return above), so such an entry can
+   * outlive every hold on it. That is harmless: it is unmounted and unheld, so {@link #reclaim} takes its reservation
+   * back as soon as the space is wanted, and a later acquire re-mounts the same entry rather than registering a
+   * second one for that id.
    */
   private Runnable createWeakEntryReleaseRunnable(
       final WeakCacheEntry weakEntry,
@@ -604,11 +617,14 @@ public class StorageLocation
         weakCacheEntries.computeIfPresent(
             weakEntry.cacheEntry.getId(),
             (cacheEntryIdentifier, weakCacheEntry) -> {
+              if (weakCacheEntry != weakEntry || weakCacheEntry.isHeld()) {
+                // Someone else's entry, or someone else is still using ours; either way, theirs to clean up.
+                return weakCacheEntry;
+              }
               // If we never successfully mounted, go ahead and remove so we don't have a dead entry.
               // Furthermore, if evictImmediatelyOnHoldRelease is set, evict on release if all holds are gone.
               final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
-              if ((isNewEntry && !isMounted)
-                  || (areWeakEntriesEphemeral && !weakCacheEntry.isHeld())) {
+              if ((isNewEntry && !isMounted) || areWeakEntriesEphemeral) {
                 unlinkWeakEntry(weakCacheEntry);
                 if (isMounted) {
                   weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));

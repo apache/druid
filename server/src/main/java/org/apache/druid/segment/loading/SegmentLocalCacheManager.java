@@ -690,9 +690,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 final long waitNanos = taskStartNanos - submitNanos;
                 final boolean wasMounted = reserved.metadata.isMounted();
                 // mount() is idempotent via PartialSegmentMetadataCacheEntry's mount-future dedup; already-mounted
-                // returns immediately, a concurrent mount is awaited, a fresh entry is mounted. The weak entry's
-                // hold-release runnable removes a never-mounted entry from the cache when our loadCleanup hold
-                // closes, so no explicit rollback is needed on failure.
+                // returns immediately, a concurrent mount is awaited, a fresh entry is mounted. No explicit rollback
+                // is needed on failure: closing our loadCleanup hold removes the never-mounted entry from the cache,
+                // unless another acquire is holding it too, in which case it is theirs to mount and ours to leave
+                // alone (an unheld never-mounted entry is reclaimable, so nothing is stranded either way).
                 try {
                   reserved.metadata.mount(reserved.location);
                 }
@@ -709,12 +710,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   taskMetadataRef = reserved.metadata.acquireMetadataReference();
                 }
                 catch (DruidException raceLost) {
-                  throw DruidException.defensive(
-                      raceLost,
-                      "Partial metadata for segment[%s] was dropped before %s task could complete",
-                      dataSegment.getId(),
-                      fullDownload ? "full-download" : "lazy mount"
-                  );
+                  // The entry was evicted between mounting it and pinning it. What keeps it resident across that
+                  // window is the hold in holdHolder, so an acquire that still holds one is entitled to its segment
+                  // and getting here means that guarantee has been broken so rethrow
+                  if (!holdHolder.isClosed()) {
+                    throw raceLost;
+                  }
+                  // Closing the AcquireSegmentAction released that hold, so this is what an abandoned acquire looks
+                  // like from inside the load task: a canceled or timed out query, or a caller unwinding because a
+                  // different segment failed. Mounting stays quiet about it (an entry evicted mid-mount is rolled
+                  // back by verifyStillReservedOrRollback without an error), so the loss surfaces here. Nothing is
+                  // waiting on this result, report the segment as unavailable rather than failing a query that is
+                  // already on its way down.
+                  return AcquireSegmentResult.empty();
                 }
                 try {
                   final PartialSegmentFileMapperV10 mapper = reserved.metadata.getFileMapper();
@@ -921,7 +929,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return new ReservedPartial(partial, location, hold);
       }
       catch (Throwable t) {
-        // Close the hold (removing the never-mounted weak entry), then nuke the on-disk dir.
+        // Close the hold (which removes the never-mounted weak entry unless a concurrent acquire is also holding it,
+        // in which case that acquire owns it and will re-create this directory on its own mount), then nuke the
+        // on-disk dir.
         try {
           throw CloseableUtils.closeAndWrapInCatch(t, hold);
         }
@@ -2321,12 +2331,24 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     @GuardedBy("this")
     private final Closer holds = Closer.create();
-    @GuardedBy("this")
-    private boolean closed = false;
+    /**
+     * Volatile rather than guarded, so {@link #isClosed} can be answered without queueing behind a {@link #close}
+     * that is working through a hold-release cascade (location write lock, unmount, unmap, file deletion).
+     */
+    private volatile boolean closed = false;
 
     private HoldHolder(Closeable initialHold)
     {
       holds.register(initialHold);
+    }
+
+    /**
+     * Whether the {@link AcquireSegmentAction} these holds belong to has been closed, i.e. whoever wanted the segment
+     * has stopped waiting for it and every hold taken so far is being (or has been) released.
+     */
+    private boolean isClosed()
+    {
+      return closed;
     }
 
     private void add(Closeable hold)
