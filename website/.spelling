@@ -160,6 +160,7 @@ JDBC
 JDK
 JDK7
 JDK8
+JIT
 JKS
 jks
 JMX
@@ -239,6 +240,7 @@ SAS
 SDK
 SIGAR
 SIMD
+SLEEF
 SNI
 SPNEGO
 Splunk
@@ -252,6 +254,7 @@ Splunk
 SqlParameter
 SslContextFactory
 StatsD
+SVML
 SYSTEM_TABLE
 TaskRunner
 TabItem
@@ -271,7 +274,9 @@ uris
 UTF-16
 UTF-8
 UTF8
+VO_MATHLIB
 XMLs
+x86
 ZK
 ZSTD
 accessor
@@ -611,6 +616,7 @@ transactionally
 try_parse_json
 tsv
 ulimit
+ulps
 unannounce
 unannouncements
 unary
