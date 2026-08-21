@@ -62,6 +62,7 @@ import java.util.stream.Collectors;
 public class KinesisResource extends StreamIngestResource<LocalStackContainer>
 {
   private static final String IMAGE = "localstack/localstack:4.13.1";
+  // Kinesis PutRecords accepts at most 500 records in a single request.
   private static final int PUT_RECORDS_BATCH_SIZE = 500;
 
   private KinesisClient kinesisClient;
