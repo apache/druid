@@ -1876,7 +1876,7 @@
                             <rules>
                                 <banDuplicatePomDependencyVersions/>
                                 <requireMavenVersion>
-                                    <version>3.0.0</version>
+                                    <version>3.6.3</version>
                                 </requireMavenVersion>
                                 <requireJavaVersion>
                                     <version>1.8.0</version>

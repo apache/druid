@@ -34,7 +34,7 @@ make sure it has `/master/` in the URL.
 ### Installing Java and Maven
 
 - See the [Java documentation](../operations/java.md) for information about obtaining a supported JDK
-- [Maven version 3.x](http://maven.apache.org/download.cgi)
+- [Maven version 3.6.3 or later](http://maven.apache.org/download.cgi)
 
 ### Other Dependencies
 
