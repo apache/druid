@@ -177,11 +177,11 @@ public class DataSourceCompactibleSegmentIteratorTest
     );
 
     // The DAY bucket overlaps the skip interval, so none of its segments should be picked up for compaction.
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
     final List<CompactionCandidate> skipped = iterator.getSkippedSegments();
-    Assert.assertEquals(1, skipped.size());
-    Assert.assertEquals(Intervals.of("2018-01-01/2018-01-02"), skipped.getFirst().getUmbrellaInterval());
-    Assert.assertEquals(24, skipped.getFirst().getSegments().size());
+    Assertions.assertEquals(1, skipped.size());
+    Assertions.assertEquals(Intervals.of("2018-01-01/2018-01-02"), skipped.getFirst().getUmbrellaInterval());
+    Assertions.assertEquals(24, skipped.getFirst().getSegments().size());
   }
 
   @Test
@@ -212,11 +212,11 @@ public class DataSourceCompactibleSegmentIteratorTest
         FINGERPRINT_MAPPER
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
     final List<CompactionCandidate> skipped = iterator.getSkippedSegments();
-    Assert.assertEquals(1, skipped.size());
-    Assert.assertEquals(24, skipped.getFirst().getSegments().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, skipped.size());
+    Assertions.assertEquals(24, skipped.getFirst().getSegments().size());
+    Assertions.assertEquals(
         StringUtils.format("Interval[%s] skipped by compaction config", Intervals.ETERNITY),
         skipped.getFirst().getCurrentStatus().getReason()
     );
