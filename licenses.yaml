@@ -1385,7 +1385,7 @@ name: Jetbrains kotlin-stdlib
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.2.21
+version: 2.4.10
 libraries:
   - org.jetbrains.kotlin: kotlin-stdlib
 
