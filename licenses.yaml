@@ -1363,7 +1363,7 @@ name: org.bouncycastle bcpkix-jdk18on and bcutil-jdk18on
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: MIT License
-version: "1.84"
+version: "1.85"
 libraries:
   - org.bouncycastle: bcpkix-jdk18on
   - org.bouncycastle: bcutil-jdk18on
