@@ -40,6 +40,7 @@ import java.util.Map;
 public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 {
   private static final long BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS = 120_000L;
+  private static final int BOUNDED_SUPERVISOR_MAX_ROWS_PER_SEGMENT = 100;
 
   private final KafkaResource kafkaServer = new KafkaResource();
 
@@ -166,6 +167,9 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   )
   {
     return createKafkaSupervisor(kafkaServer)
+        .withTuningConfig(
+            tuningConfig -> tuningConfig.withMaxRowsPerSegment(BOUNDED_SUPERVISOR_MAX_ROWS_PER_SEGMENT)
+        )
         .withIoConfig(io -> io
             .withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null))
             .withBoundedStreamConfig(boundedConfig)
