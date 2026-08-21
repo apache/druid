@@ -91,11 +91,13 @@ public class BrokerServerView implements TimelineServerView
   private final ScheduledExecutorService delayedRemovalExecutor;
 
   /**
-   * Map of segment IDs to their pending delayed removal futures. When the last server for a segment
-   * is removed, we schedule a delayed removal instead of immediately removing the segment from the
-   * timeline. If a new server announces the same segment before the delay expires, the scheduled
-   * removal is cancelled. This prevents the segment load/drop race described in
-   * <a href="https://github.com/apache/druid/issues/18738">#18738</a>.
+   * Map of segment IDs to their pending delayed cleanup futures. When the last server for a
+   * segment is removed and a delay is configured, the segment is removed from the timeline
+   * immediately (to prevent queries from seeing an empty selector), but the selector is kept
+   * in the selectors map. A delayed cleanup of the selector is scheduled. If a new server
+   * announces the same segment before the delay expires, the scheduled cleanup is cancelled
+   * and the segment is re-added to the timeline. This prevents the segment load/drop race
+   * described in <a href="https://github.com/apache/druid/issues/18738">#18738</a>.
    */
   private final ConcurrentHashMap<SegmentId, ScheduledFuture<?>> pendingSegmentRemovals = new ConcurrentHashMap<>();
 
@@ -332,6 +334,20 @@ public class BrokerServerView implements TimelineServerView
 
           timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
           selectors.put(segmentId, selector);
+        } else {
+          // The selector exists but may have been removed from the timeline during a
+          // delayed drop. Re-add it to the timeline if needed.
+          VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+          if (timeline == null) {
+            timeline = new VersionedIntervalTimeline<>(Ordering.natural(), true);
+            timelines.put(segment.getDataSource(), timeline);
+          }
+          // Only re-add if the selector is not already in the timeline (e.g., after a delayed drop).
+          // The timeline.add is idempotent so this is safe to call unconditionally, but we check
+          // isEmpty() as a heuristic to avoid unnecessary work.
+          if (selector.isEmpty()) {
+            timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
+          }
         }
 
         QueryableDruidServer queryableDruidServer = clients.get(server.getName());
@@ -396,27 +412,68 @@ public class BrokerServerView implements TimelineServerView
       if (selector.isEmpty()) {
         final long delayMillis = segmentWatcherConfig.getSegmentDropDelayMillis();
         if (delayMillis > 0) {
-          // Schedule a delayed removal to prevent the segment load/drop race condition.
-          // When a segment is moved from one historical to another, the broker may receive
-          // the drop callback from the old server before the load callback from the new one.
-          // By delaying the timeline removal, we give the new server time to announce the
-          // segment, preventing the segment from temporarily disappearing from the timeline.
+          // Remove the segment from the timeline immediately to prevent queries from seeing
+          // an empty ServerSelector during the delay window, which would cause partial results.
+          // The selector is kept in the selectors map so that a new server announcing the
+          // segment during the delay can re-add it to the timeline.
+          // We only remove from the timeline, not from the selectors map, and we do not fire
+          // the segmentRemoved callback since the segment may come back before the delay expires.
           // See https://github.com/apache/druid/issues/18738
+          final VersionedIntervalTimeline<String, ServerSelector> timeline = timelines.get(segment.getDataSource());
+          if (timeline != null) {
+            timeline.remove(
+                segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector)
+            );
+          }
+
+          // Schedule a delayed cleanup of the selector from the selectors map. If a new
+          // server announces the segment before the delay expires, the removal is cancelled
+          // and the segment is re-added to the timeline, preventing the segment load/drop
+          // race condition.
           final ScheduledFuture<?> pendingRemoval = delayedRemovalExecutor.schedule(
               () -> {
-                pendingSegmentRemovals.remove(segmentId);
-                removeSegmentFromTimeline(segment, selector);
+                synchronized (lock) {
+                  // Re-check under lock that this future is still the current pending
+                  // removal. The remove(key, value) call atomically verifies the future
+                  // is current, and the lock ensures no new server can add the segment
+                  // between the check and the selector cleanup.
+                  if (pendingSegmentRemovals.remove(segmentId, pendingRemoval)) {
+                    // Double-check the selector is still empty and unchanged
+                    final ServerSelector currentSelector = selectors.get(segmentId);
+                    if (currentSelector == selector && currentSelector.isEmpty()) {
+                      selectors.remove(segmentId);
+                      log.debug("Cleaned up selector for segment[%s] after delay.", segmentId);
+                    }
+                  }
+                }
               },
               delayMillis,
               TimeUnit.MILLISECONDS
           );
+
+          // Publish the pending removal future. Handle the race where the timer fires
+          // before the put completes by checking isDone() after the put.
           final ScheduledFuture<?> previous = pendingSegmentRemovals.put(segmentId, pendingRemoval);
           if (previous != null) {
             previous.cancel(false);
             log.warn("Replaced existing pending removal for segment[%s].", segmentId);
           }
+
+          // If the timer fired before the put completed, the callback returned without
+          // doing anything. Run the removal logic inline to clean up.
+          if (pendingRemoval.isDone()) {
+            synchronized (lock) {
+              if (pendingSegmentRemovals.remove(segmentId, pendingRemoval)) {
+                final ServerSelector currentSelector = selectors.get(segmentId);
+                if (currentSelector == selector && currentSelector.isEmpty()) {
+                  selectors.remove(segmentId);
+                }
+              }
+            }
+          }
+
           log.debug(
-              "Scheduled delayed removal of segment[%s] in [%d]ms. Waiting for a new server to announce it.",
+              "Scheduled delayed cleanup of segment[%s] in [%d]ms. Waiting for a new server to announce it.",
               segmentId,
               delayMillis
           );
@@ -429,8 +486,10 @@ public class BrokerServerView implements TimelineServerView
 
   /**
    * Removes a segment from the broker's timeline when it has no remaining servers.
-   * This is called either immediately (when delay is 0) or after a delay to prevent
-   * the segment load/drop race condition.
+   * This is called when segment removal delay is 0 (immediate removal).
+   * When delay is configured, the timeline entry is removed directly in
+   * {@link #serverRemovedSegment} and the selector is cleaned up later by the
+   * scheduled timer.
    */
   private void removeSegmentFromTimeline(final DataSegment segment, final ServerSelector selector)
   {
