@@ -72,16 +72,16 @@ class StorageLocationTest
     CacheEntry entry4 = new TestCacheEntry("4", 25);
     CacheEntry entry5 = new TestCacheEntry("5", 25);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
-    location.reserveWeak(entry5);
+    registerWeak(location, entry5);
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -98,10 +98,10 @@ class StorageLocationTest
     CacheEntry entry3 = new TestCacheEntry("3", 25);
     CacheEntry entry4 = new TestCacheEntry("4", 25);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -126,10 +126,10 @@ class StorageLocationTest
     CacheEntry entry3 = new TestCacheEntry("3", 25);
     CacheEntry entry4 = new TestCacheEntry("4", 25);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -159,10 +159,10 @@ class StorageLocationTest
     entries.add(entry3);
     entries.add(entry4);
 
-    location.reserveWeak(entry1);
-    location.reserveWeak(entry2);
-    location.reserveWeak(entry3);
-    location.reserveWeak(entry4);
+    registerWeak(location, entry1);
+    registerWeak(location, entry2);
+    registerWeak(location, entry3);
+    registerWeak(location, entry4);
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry3.getId()));
@@ -200,8 +200,8 @@ class StorageLocationTest
     Assertions.assertNotNull(closer.register(location.addWeakReservationHold(entry2.getId(), () -> entry2)));
     Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
     Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
-    Assertions.assertTrue(location.reserveWeak(entry3));
-    Assertions.assertTrue(location.reserveWeak(entry4));
+    Assertions.assertTrue(registerWeak(location, entry3));
+    Assertions.assertTrue(registerWeak(location, entry4));
 
     Assertions.assertEquals(100, location.currentWeakSizeBytes());
     Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
@@ -224,7 +224,7 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry4.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry5.getId()));
 
-    Assertions.assertTrue(location.reserveWeak(entry6));
+    Assertions.assertTrue(registerWeak(location, entry6));
 
     Assertions.assertTrue(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -249,11 +249,11 @@ class StorageLocationTest
     Assertions.assertTrue(location.isWeakReserved(entry7.getId()));
 
     // all storage is held, cannot reserve
-    Assertions.assertFalse(location.reserveWeak(entry8));
+    Assertions.assertFalse(registerWeak(location, entry8));
 
     // release holds
     CloseableUtils.closeAndWrapExceptions(closer);
-    Assertions.assertTrue(location.reserveWeak(entry8));
+    Assertions.assertTrue(registerWeak(location, entry8));
 
     Assertions.assertFalse(location.isWeakReserved(entry1.getId()));
     Assertions.assertTrue(location.isWeakReserved(entry2.getId()));
@@ -361,7 +361,7 @@ class StorageLocationTest
   {
     StorageLocation loc = new StorageLocation(tempDir, 1000L, null);
     final TestSegmentCacheEntry entry = makeSegmentEntry("2024/2025", 10);
-    loc.reserveWeak(entry);
+    registerWeak(loc, entry);
     entry.mount(loc);
 
     for (int i = 0; i < 1000; i++) {
@@ -399,7 +399,7 @@ class StorageLocationTest
     CacheEntry entry2 = new TestCacheEntry("2", 90);
     CacheEntry entry3 = new TestCacheEntry("3", 20);
 
-    location.reserveWeak(entry1);
+    registerWeak(location, entry1);
     // hold entry2 so it cannot be evicted by reclaim
     StorageLocation.ReservationHold<?> hold2 = location.addWeakReservationHold(
         entry2.getId(),
@@ -408,12 +408,12 @@ class StorageLocationTest
 
     // must free 20 bytes but can only evict entry1 (10). Fails and restores entry1
     // where the bug was a mismatch caused by creating a new entry in the list but re-using the old entry for the map.
-    Assertions.assertFalse(location.reserveWeak(entry3));
+    Assertions.assertFalse(registerWeak(location, entry3));
 
     // the hand pointer reaches the new entry1, removes the old entry1 from the map which is a zombie, then wraps around
     // to the same zombie entry1 again since its head — at which point the map no longer contains the ID and the defensive exception was
     // thrown.
-    Assertions.assertFalse(location.reserveWeak(entry3));
+    Assertions.assertFalse(registerWeak(location, entry3));
 
     hold2.close();
   }
@@ -425,7 +425,7 @@ class StorageLocationTest
     final UnmountTrackingCacheEntry entry = new UnmountTrackingCacheEntry("a", 30);
 
     // an unheld weak entry is removed: unlinked from the queue, unmounted, and its size reclaimed
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
     Assertions.assertTrue(location.isWeakReserved(entry.getId()));
     Assertions.assertEquals(30, location.currentSizeBytes());
 
@@ -476,7 +476,7 @@ class StorageLocationTest
   {
     final StorageLocation location = new StorageLocation(tempDir, 100L, null);
     final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 80);
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
     Assertions.assertEquals(80, location.currentWeakSizeBytes());
 
     location.adjustReservation(entry.getId(), 30);
@@ -541,7 +541,7 @@ class StorageLocationTest
   {
     final StorageLocation location = new StorageLocation(tempDir, 100L, null);
     final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 80);
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
 
     // Acquire a hold BEFORE shrinking. trackWeakHold records 80 bytes against currHoldBytes.
     final StorageLocation.ReservationHold<?> hold = location.addWeakReservationHold(entry.getId(), () -> entry);
@@ -566,7 +566,7 @@ class StorageLocationTest
   {
     final StorageLocation location = new StorageLocation(tempDir, 100L, null);
     final TestResizableCacheEntry entry = new TestResizableCacheEntry("a", 50);
-    Assertions.assertTrue(location.reserveWeak(entry));
+    Assertions.assertTrue(registerWeak(location, entry));
 
     // Two concurrent holds: trackWeakHold fires twice, so currHoldBytes = 2 * 50 = 100.
     final StorageLocation.ReservationHold<?> hold1 = location.addWeakReservationHold(entry.getId(), () -> entry);
@@ -629,9 +629,9 @@ class StorageLocationTest
         location.addWeakReservationHold(parent.getId(), () -> parent);
     Assertions.assertNotNull(parentHold);
 
-    // Child registered WITHOUT a hold (the bootstrap reserveWeak path that removeUnheldWeakEntry cleans up).
+    // Child left registered but unheld, the shape removeUnheldWeakEntry cleans up.
     final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 100L, parentHold);
-    Assertions.assertTrue(location.reserveWeak(child));
+    Assertions.assertTrue(registerWeak(location, child));
     child.mount(location);
 
     Assertions.assertDoesNotThrow(() -> location.removeUnheldWeakEntry(child.getId()));
@@ -658,11 +658,11 @@ class StorageLocationTest
 
     // Child registered unheld and mounted, sole holder of the parent's cache hold; it is the reclaim target.
     final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 40L, parentHold);
-    Assertions.assertTrue(location.reserveWeak(child));
+    Assertions.assertTrue(registerWeak(location, child));
     child.mount(location);
 
     final CascadingUnmountCacheEntry filler = new CascadingUnmountCacheEntry("filler", 40L, null);
-    Assertions.assertDoesNotThrow(() -> location.reserveWeak(filler));
+    Assertions.assertDoesNotThrow(() -> registerWeak(location, filler));
 
     Assertions.assertTrue(child.wasUnmounted());
     Assertions.assertTrue(parent.wasUnmounted());
@@ -755,6 +755,28 @@ class StorageLocationTest
     {
       isMounted = false;
     }
+  }
+
+  /**
+   * Register a weak entry the way production does — reserve under a hold, mount, release the hold — leaving it
+   * registered but unheld, which is the state reclaim and {@link StorageLocation#removeUnheldWeakEntry} act on.
+   * Returns false when the location could not accept the reservation at all.
+   */
+  private static boolean registerWeak(StorageLocation location, CacheEntry entry)
+  {
+    final StorageLocation.ReservationHold<CacheEntry> hold =
+        location.addWeakReservationHold(entry.getId(), () -> entry);
+    if (hold == null) {
+      return false;
+    }
+    try {
+      entry.mount(location);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    hold.close();
+    return true;
   }
 
   private static final class TestCacheEntry implements CacheEntry

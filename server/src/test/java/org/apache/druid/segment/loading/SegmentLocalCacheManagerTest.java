@@ -1092,10 +1092,20 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
         unzippedSegmentPathInLocation
     );
 
-    for (DataSegment segment : manager.getCachedSegments()) {
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(segmentToBootstrap.getId());
+    final List<DataSegment> cached = manager.getCachedSegments();
+    Assertions.assertEquals(ImmutableList.of(segmentToBootstrap), cached);
+    // under virtual storage getCachedSegments only recognizes the layout; the reservation is bootstrap's job, so that
+    // the mount happens under a hold and cannot be evicted out from under itself
+    Assertions.assertNull(manager.getLocations().get(0).getCacheEntry(id));
+
+    for (DataSegment segment : cached) {
       manager.bootstrap(segment, SegmentLazyLoadFailCallback.NOOP);
     }
 
+    final CacheEntry entry = manager.getLocations().get(0).getCacheEntry(id);
+    Assertions.assertNotNull(entry, "bootstrap must reserve the complete entry it mounts");
+    Assertions.assertTrue(entry.isMounted());
     // if bootstrapping a file that already exists it will be mounted by bootsrap
     Assertions.assertNotNull(manager.getSegmentFiles(segmentToBootstrap));
   }
