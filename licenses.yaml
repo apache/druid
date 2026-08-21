@@ -4534,7 +4534,6 @@ license_name: Apache License version 2.0
 version: 1.59.0
 libraries:
   - io.grpc: grpc-alts
-  - io.grpc: grpc-api
   - io.grpc: grpc-auth
   - io.grpc: grpc-core
   - io.grpc: grpc-grpclib
@@ -4542,6 +4541,16 @@ libraries:
   - io.grpc: grpc-protobuf
   - io.grpc: grpc-protobuf-lite
   - io.grpc: grpc-stub
+
+---
+
+name: grpc-api
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.70.0
+libraries:
+  - io.grpc: grpc-api
 
 ---
 

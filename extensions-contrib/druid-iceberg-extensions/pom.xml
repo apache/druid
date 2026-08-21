@@ -38,15 +38,6 @@
     <hive-storage-api.version>2.8.1</hive-storage-api.version>
     <hive.version>3.1.3</hive.version>
   </properties>
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>io.grpc</groupId>
-        <artifactId>grpc-context</artifactId>
-        <version>1.70.0</version>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -350,6 +341,16 @@
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
       <version>${com.google.cloud.storage.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-api</artifactId>
+      <version>1.70.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-context</artifactId>
+      <version>1.70.0</version>
     </dependency>
 
     <dependency>
