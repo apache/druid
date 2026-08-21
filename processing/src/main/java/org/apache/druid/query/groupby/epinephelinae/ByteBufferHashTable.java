@@ -144,25 +144,7 @@ public class ByteBufferHashTable
     }
 
     // Start table part-way through the buffer so the last growth can start from zero and thereby use more space.
-    tableStart = tableArenaSize - maxBuckets * bucketSizeWithHash;
-    int nextBuckets = maxBuckets * 2;
-    while (true) {
-      long nextBucketsSize = (long) nextBuckets * bucketSizeWithHash;
-      if (nextBucketsSize > Integer.MAX_VALUE) {
-        break;
-      }
-      final int nextTableStart = tableStart - nextBuckets * bucketSizeWithHash;
-      if (nextTableStart > tableArenaSize / 2) {
-        tableStart = nextTableStart;
-        nextBuckets = nextBuckets * 2;
-      } else {
-        break;
-      }
-    }
-
-    if (tableStart < tableArenaSize / 2) {
-      tableStart = 0;
-    }
+    tableStart = initialTableStart(maxBuckets);
 
     final ByteBuffer bufferDup = buffer.duplicate();
     bufferDup.position(tableStart);
@@ -183,20 +165,10 @@ public class ByteBufferHashTable
       return;
     }
 
-    final int newBuckets;
-    final int newMaxSize;
-    final int newTableStart;
-
-    if (((long) maxBuckets * 3 * bucketSizeWithHash) > (long) tableArenaSize - tableStart) {
-      // Not enough space to grow upwards, start back from zero
-      newTableStart = 0;
-      newBuckets = tableStart / bucketSizeWithHash;
-      newMaxSize = maxSizeForBuckets(newBuckets);
-    } else {
-      newTableStart = tableStart + tableBuffer.limit();
-      newBuckets = maxBuckets * 2;
-      newMaxSize = maxSizeForBuckets(newBuckets);
-    }
+    final GrowthLevel next = nextGrowthLevel(tableStart, maxBuckets);
+    final int newTableStart = next.tableStart;
+    final int newBuckets = next.buckets;
+    final int newMaxSize = maxSizeForBuckets(newBuckets);
 
     if (newBuckets < maxBuckets) {
       throw new ISE("newBuckets[%,d] < maxBuckets[%,d]", newBuckets, maxBuckets);
@@ -531,20 +503,43 @@ public class ByteBufferHashTable
   }
 
   /**
-   * Computes the terminal-level {@code regrowthThreshold} by replaying the arena geometry of {@link #reset()} and
-   * {@link #adjustTableWhenFull()} — without allocating any buffers. The table starts at some bucket count and grows
-   * by doubling upward through the arena; when there is no more room upward it wraps to {@code tableStart == 0} and
-   * consumes the whole lower region as its final level. This method walks that same sequence to the terminal level
-   * and returns {@link #maxSizeForBuckets} of the terminal bucket count. Overridden by fixed-size variants (e.g. the
-   * alternating heap-trim table) whose regrowth threshold never changes.
+   * Computes the terminal-level {@code regrowthThreshold} by replaying the arena geometry — without allocating any
+   * buffers — using the same {@link #initialTableStart} and {@link #nextGrowthLevel} primitives that {@link #reset()}
+   * and {@link #adjustTableWhenFull()} use. The table starts at some bucket count and grows by doubling upward through
+   * the arena; when there is no more room upward it wraps to {@code tableStart == 0} and consumes the whole lower
+   * region as its final level. This walks that sequence to the terminal level and returns {@link #maxSizeForBuckets}
+   * of the terminal bucket count.
+   *
+   * <p>This is valid only for the standard grow-by-doubling arena layout. Fixed-layout variants (the alternating
+   * limit-pushdown table, which builds two sub-buffers directly in its constructor rather than via
+   * {@link #reset()}/{@link #adjustTableWhenFull()}) must never reach this method — the alternating table is guarded by
+   * {@link #recordsFillProximity()} returning false, which short-circuits {@link #updateMaxMergeBufferUsedBytes()}
+   * before {@link #getSpillRegrowthThreshold()} is ever called. If a future variant needs a spill denominator, it must
+   * override this method rather than relying on this replay.
    */
   protected int computeSpillRegrowthThreshold()
   {
     int buckets = Math.min(tableArenaSize / bucketSizeWithHash, initialBuckets);
-    int start = tableArenaSize - buckets * bucketSizeWithHash;
+    int start = initialTableStart(buckets);
+    while (start != 0) {
+      final GrowthLevel next = nextGrowthLevel(start, buckets);
+      start = next.tableStart;
+      buckets = next.buckets;
+    }
+    return maxSizeForBuckets(buckets);
+  }
 
-    // Replay reset()'s initial placement: walk the smallest table down so successive doublings stack above it.
-    int nextBuckets = buckets * 2;
+  /**
+   * The placement of the initial (smallest) table within the arena: far enough from the front that successive
+   * doublings stack above it and the final growth can wrap to offset 0 (using the most space). Pure function of the
+   * arena geometry; shared by {@link #reset()} (which then slices the buffer) and {@link #computeSpillRegrowthThreshold()}
+   * (which only replays the sequence), so the placement math lives in one place. Returns 0 when the initial table is
+   * already close enough to the front that no upward doublings fit.
+   */
+  private int initialTableStart(int initialMaxBuckets)
+  {
+    int start = tableArenaSize - initialMaxBuckets * bucketSizeWithHash;
+    int nextBuckets = initialMaxBuckets * 2;
     while (true) {
       final long nextBucketsSize = (long) nextBuckets * bucketSizeWithHash;
       if (nextBucketsSize > Integer.MAX_VALUE) {
@@ -558,23 +553,41 @@ public class ByteBufferHashTable
         break;
       }
     }
-    if (start < tableArenaSize / 2) {
-      start = 0;
-    }
+    return start < tableArenaSize / 2 ? 0 : start;
+  }
 
-    // Replay adjustTableWhenFull()'s growth until the terminal level (start == 0) is reached.
-    while (start != 0) {
-      if (((long) buckets * 3 * bucketSizeWithHash) > (long) tableArenaSize - start) {
-        // Not enough room to grow upward: wrap to zero and consume the whole lower region.
-        buckets = start / bucketSizeWithHash;
-        start = 0;
-      } else {
-        // tableBuffer.limit() == buckets * bucketSizeWithHash for the current level.
-        start = start + buckets * bucketSizeWithHash;
-        buckets = buckets * 2;
-      }
+  /**
+   * The next growth level's placement given the current table's start offset and bucket count — the pure geometry
+   * decision shared by {@link #adjustTableWhenFull()} (which then allocates the new table and rehashes into it) and
+   * {@link #computeSpillRegrowthThreshold()} (which only replays the sequence). Grows upward by doubling while the arena
+   * still has room for the next 3x; otherwise wraps to offset 0 and consumes the whole lower region as the final level
+   * ({@code tableStart == 0}, after which no further growth is possible).
+   */
+  private GrowthLevel nextGrowthLevel(int curTableStart, int curBuckets)
+  {
+    if (((long) curBuckets * 3 * bucketSizeWithHash) > (long) tableArenaSize - curTableStart) {
+      // Not enough space to grow upwards; start back from zero.
+      return new GrowthLevel(0, curTableStart / bucketSizeWithHash);
+    } else {
+      // curBuckets * bucketSizeWithHash is the current table's byte length (== tableBuffer.limit()).
+      return new GrowthLevel(curTableStart + curBuckets * bucketSizeWithHash, curBuckets * 2);
     }
-    return maxSizeForBuckets(buckets);
+  }
+
+  /**
+   * A growth level's placement: the table's start offset within the arena and its bucket count. {@code tableStart == 0}
+   * marks the terminal (final) level.
+   */
+  private static final class GrowthLevel
+  {
+    private final int tableStart;
+    private final int buckets;
+
+    GrowthLevel(int tableStart, int buckets)
+    {
+      this.tableStart = tableStart;
+      this.buckets = buckets;
+    }
   }
 
   /**
