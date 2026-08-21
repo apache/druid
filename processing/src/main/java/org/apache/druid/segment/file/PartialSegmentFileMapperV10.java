@@ -36,6 +36,7 @@ import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -84,9 +85,10 @@ import java.util.concurrent.locks.ReentrantLock;
  * instances. The mmap reflects writes through the shared page cache.
  * <p>
  * State is persisted to disk so that the mapper can be restored after a process restart without re-fetching metadata
- * from deep storage. The raw V10 header bytes are written to a local file, and a compact bitmap file is appended to
- * the end of it to track which internal files have been downloaded (one bit per file, updated after each download). On
- * subsequent calls, the metadata is parsed from the local file instead of range-reading from deep storage.
+ * from deep storage. The local header file holds the raw V10 header bytes followed by a compact bitmap region that
+ * tracks which internal files have been downloaded (one bit per file, updated after each download). Both regions are
+ * written together, so the file's length is fixed for its lifetime at {@code headerSize + ceil(numFiles / 8)} bytes.
+ * On subsequent calls, the metadata is parsed from the local file instead of range-reading from deep storage.
  * <p>
  * External segment files are supported via child {@link PartialSegmentFileMapperV10} instances, each targeting a
  * different file in the segment's storage location.
@@ -119,6 +121,17 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * overhead small while letting large fetches spread across concurrent connections.
    */
   public static final long DEFAULT_MAX_FETCH_RUN_BYTES = 64L * 1024 * 1024;
+
+  /**
+   * Detect if {@code localCacheDir} holds a partial-download header file for {@code targetFilename}.
+   */
+  public static boolean isPartialSegmentLayout(@Nullable File localCacheDir, String targetFilename)
+  {
+    if (localCacheDir == null || !localCacheDir.isDirectory()) {
+      return false;
+    }
+    return new File(localCacheDir, targetFilename + METADATA_HEADER_SUFFIX).exists();
+  }
 
   /**
    * Create (or restore) a lazy mapper for the main segment file with attached external file mappers. If persisted state
@@ -194,15 +207,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     if (headerFile.exists()) {
       try {
         result = parseHeaderFile(headerFile, jsonMapper);
+        verifyPersistedHeaderLength(headerFile, result);
         bitmapBuffer = mmapBitmap(headerFile, result);
       }
       catch (ClosedByInterruptException e) {
-        // The header is fine, an interrupt aborted the mapping (see mapUninterruptibly). Treating this as corruption
-        // would delete a valid local header and force a needless re-download, so leave the file alone and unwind.
+        // the header is fine, an interrupt aborted the mapping (see mapUninterruptibly), no need to necessarily delete
+        // let callers determine that
         throw e;
       }
       catch (Exception e) {
-        // corrupted file (partial write, truncated bitmap, bad JSON, etc.), delete and re-fetch
+        // corrupted file, delete
         result = null;
         if (!headerFile.delete()) {
           LOG.warn(
@@ -216,10 +230,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     }
 
     if (result == null) {
-      fetchAndPersistHeader(rangeReader, targetFilename, headerFile);
-      result = parseHeaderFile(headerFile, jsonMapper);
+      result = fetchAndPersistHeader(rangeReader, jsonMapper, targetFilename, headerFile);
       bitmapBuffer = mmapBitmap(headerFile, result);
-      downloadListener.onBytesDownloaded(headerFile.length());
+      downloadListener.onBytesDownloaded(headerFileSize(result));
     }
 
     final PartialSegmentFileMapperV10 mapper = new PartialSegmentFileMapperV10(
@@ -235,11 +248,10 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     );
 
     try {
-      // bitmap-vs-container repair pre-pass: if the bitmap claims a file is downloaded but its container file is
-      // missing on disk, the bitmap is lying (e.g. partial-cache eviction that cleared containers but couldn't
-      // atomically clear bits, or external file-system damage). Clear those bits before the restore loop so we don't
-      // spuriously sparse-allocate empty containers in the restore loop's ensureContainerInitialized call and treat
-      // their files as downloaded.
+      // if the bitmap claims a file is downloaded but its container file is missing on disk, the bitmap is lying
+      // (e.g. partial-cache eviction that cleared containers but couldn't atomically clear bits, or external
+      // file-system damage). Clear those bits before the restore loop so we don't spuriously sparse-allocate empty
+      // containers in the restore loop's ensureContainerInitialized call and treat their files as downloaded.
       for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
         final int byteIndex = i / 8;
         final int bitMask = 1 << (i % 8);
@@ -308,13 +320,11 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   // file names per container index (parallel to metadata.getContainers()) in ascending start-offset order, for
   // whole-container bulk download and coalesced range planning (files tile back-to-back within a container, so offset
-  // order is a total order). Built once from the immutable metadata.
+  // order is a total order).
   private final List<List<String>> containerFileNames;
 
-  // external file mappers
   private final Map<String, PartialSegmentFileMapperV10> externalMappers = new HashMap<>();
 
-  // track which internal files have been downloaded
   private final Set<String> downloadedFiles = ConcurrentHashMap.newKeySet();
   private final ConcurrentHashMap<String, ReentrantLock> fileLocks = new ConcurrentHashMap<>();
   private final ReentrantLock bitmapLock;
@@ -858,24 +868,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Total on-disk size of the header file(s) backing this mapper, summed across the main file and any external file
-   * mappers. This is the actual reservation size that should be charged against the local cache once the metadata has
-   * been fetched and persisted; callers can compare it against an up-front pessimistic estimate to decide whether to
-   * shrink the reservation.
+   * Computed total on-disk size of the header file(s) backing this mapper, summed across the main file and any
+   * external file mappers.
    */
   public long getOnDiskHeaderSize()
   {
-    long total = headerFileSize(localCacheDir, targetFilename);
+    long total = headerFileSize(headerSize, metadata);
     for (PartialSegmentFileMapperV10 ext : externalMappers.values()) {
-      total += headerFileSize(ext.localCacheDir, ext.targetFilename);
+      total += headerFileSize(ext.headerSize, ext.metadata);
     }
     return total;
-  }
-
-  private static long headerFileSize(File dir, String filename)
-  {
-    final File header = new File(dir, filename + METADATA_HEADER_SUFFIX);
-    return header.exists() ? header.length() : 0;
   }
 
   /**
@@ -1204,12 +1206,32 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Fetch the raw V10 header bytes from deep storage and write them to a local file. The bitmap region is not
-   * included, it is created by {@link #mmapBitmap} after parsing. The file is parseable by
-   * {@link SegmentFileMetadataReader#read(InputStream, ObjectMapper)}.
+   * On-disk footprint of a single header file: the raw V10 header followed by one bit per internal file.
    */
-  private static void fetchAndPersistHeader(
+  private static long headerFileSize(long headerSize, SegmentFileMetadata metadata)
+  {
+    return headerSize + numBitmapBytes(metadata);
+  }
+
+  private static long headerFileSize(SegmentFileMetadataReader.Result result)
+  {
+    return headerFileSize(result.getHeaderSize(), result.getMetadata());
+  }
+
+  private static int numBitmapBytes(SegmentFileMetadata metadata)
+  {
+    return (metadata.getFiles().size() + 7) / 8;
+  }
+
+  /**
+   * Fetch the raw V10 header bytes from deep storage and persist them locally at the header file's final length: the
+   * raw header followed by the zeroed bitmap region.
+   *
+   * @return the parsed metadata of the header just persisted
+   */
+  private static SegmentFileMetadataReader.Result fetchAndPersistHeader(
       SegmentRangeReader rangeReader,
+      ObjectMapper jsonMapper,
       String targetFilename,
       File headerFile
   ) throws IOException
@@ -1243,20 +1265,47 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       actualHeaderSize = fixedHeader.length;
     }
 
-    // write fixed header + remaining metadata bytes to a local file atomically (write to temp, then rename)
-    // to avoid leaving a partial file on disk if the process crashes mid-write
+    // Matches how SegmentFileMetadataReader reports malformed header bytes (bad version, bad lengths): these bytes
+    // cannot be a V10 header at all, so there is nothing to recover by re-reading them.
+    if (remainingBytes < 0) {
+      throw DruidException.defensive(
+          "Header of [%s] declares [%d] metadata bytes",
+          targetFilename,
+          remainingBytes
+      );
+    }
+
+    // Read the header in full: the fixed part already in hand, plus the metadata bytes that follow it.
+    final byte[] rawHeader = new byte[actualHeaderSize + (int) remainingBytes];
+    System.arraycopy(fixedHeader, 0, rawHeader, 0, actualHeaderSize);
+    try (InputStream remainingStream = rangeReader.readRange(targetFilename, actualHeaderSize, remainingBytes)) {
+      ByteStreams.readFully(remainingStream, rawHeader, actualHeaderSize, (int) remainingBytes);
+    }
+
+    final SegmentFileMetadataReader.Result result;
+    try (InputStream headerBytes = new ByteArrayInputStream(rawHeader)) {
+      result = SegmentFileMetadataReader.read(headerBytes, jsonMapper);
+    }
+    if (rawHeader.length != result.getHeaderSize()) {
+      throw DruidException.defensive(
+          "Read [%d] header bytes for [%s] but its metadata describes a [%d] byte header",
+          rawHeader.length,
+          targetFilename,
+          result.getHeaderSize()
+      );
+    }
+
+    // zeroed bitmap region (nothing is downloaded yet).
+    final byte[] emptyBitmap = new byte[numBitmapBytes(result.getMetadata())];
+
+    // writeAtomically fsyncs before the rename, so a crash leaves either no header file or a complete one.
     FileUtils.mkdirp(headerFile.getParentFile());
     FileUtils.writeAtomically(headerFile, out -> {
-      out.write(fixedHeader, 0, actualHeaderSize);
-      try (InputStream remainingStream = rangeReader.readRange(
-               targetFilename,
-               actualHeaderSize,
-               remainingBytes
-           )) {
-        ByteStreams.limit(remainingStream, remainingBytes).transferTo(out);
-      }
+      out.write(rawHeader);
+      out.write(emptyBitmap);
       return null;
     });
+    return result;
   }
 
   /**
@@ -1273,25 +1322,44 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Mmap the bitmap region of the header file as read-write. Extends the file if the bitmap region doesn't exist yet.
-   * The channel is closed immediately after mapping.
+   * Mmap the bitmap region of the header file as read-write. The channel is closed immediately after mapping.
    */
   private static MappedByteBuffer mmapBitmap(
       File headerFile,
       SegmentFileMetadataReader.Result result
   ) throws IOException
   {
-    final int numBitmapBytes = (result.getMetadata().getFiles().size() + 7) / 8;
-    final long expectedSize = result.getHeaderSize() + numBitmapBytes;
+    final int numBitmapBytes = numBitmapBytes(result.getMetadata());
     return mapUninterruptibly(() -> {
       try (RandomAccessFile raf = new RandomAccessFile(headerFile, "rw");
            FileChannel channel = raf.getChannel()) {
-        if (raf.length() < expectedSize) {
-          raf.setLength(expectedSize);
-        }
         return channel.map(FileChannel.MapMode.READ_WRITE, result.getHeaderSize(), numBitmapBytes);
       }
     });
+  }
+
+  /**
+   * Corruption check for a header file restored from a previous session: its length must be exactly the header plus
+   * one bit per internal file, since {@link #fetchAndPersistHeader} only ever publishes both regions together.
+   */
+  private static void verifyPersistedHeaderLength(File headerFile, SegmentFileMetadataReader.Result result)
+      throws IOException
+  {
+    final long expectedSize = headerFileSize(result);
+    final long actualSize = headerFile.length();
+    if (actualSize != expectedSize) {
+      throw new IOException(
+          StringUtils.format(
+              "Header file[%s] is [%d] bytes on disk but its metadata describes [%d] bytes (header[%d] plus "
+              + "bitmap[%d]); treating it as corrupt",
+              headerFile,
+              actualSize,
+              expectedSize,
+              result.getHeaderSize(),
+              numBitmapBytes(result.getMetadata())
+          )
+      );
+    }
   }
 
   /**

@@ -78,8 +78,10 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -754,9 +756,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
       throws IOException, SegmentLoadingException
   {
     // Simulate process-restart state: prime the partial on-disk layout (header file + sparse-allocated containers)
-    // and the segment info file BEFORE getCachedSegments runs, then verify the new two-phase contract:
-    //   - getCachedSegments() reserves the metadata entry on the location but doesn't mount it
-    //   - bootstrap(DataSegment) is what triggers the actual mount + bundle restore via polymorphic dispatch
+    // and the segment info file BEFORE getCachedSegments runs, then verify the two-phase contract:
+    //   - getCachedSegments() only recognizes the layout as cached; it reserves nothing
+    //   - bootstrap(DataSegment) reserves the metadata entry and mounts it, which is also what sizes it
     final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
     FileUtils.mkdirp(partialDir);
     primePartialOnDiskState(partialDir);
@@ -767,23 +769,29 @@ class SegmentLocalCacheManagerPartialAcquireTest
 
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
     final StorageLocation location = manager.getLocations().get(0);
+    Assertions.assertNull(
+        location.getCacheEntry(id),
+        "getCachedSegments must not reserve a partial entry; reservation is deferred to bootstrap()"
+    );
+    Assertions.assertEquals(0, location.currentSizeBytes(), "nothing should be charged to the location yet");
+
+    manager.bootstrap(partialSegment, SegmentLazyLoadFailCallback.NOOP);
+
     final CacheEntry reserved = location.getCacheEntry(id);
     Assertions.assertInstanceOf(
         PartialSegmentMetadataCacheEntry.class,
         reserved,
-        "getCachedSegments must reserve a partial metadata entry on the location"
+        "bootstrap must reserve a partial metadata entry on the location holding the layout"
     );
     final PartialSegmentMetadataCacheEntry partial = (PartialSegmentMetadataCacheEntry) reserved;
-    Assertions.assertFalse(
-        partial.isMounted(),
-        "metadata entry should NOT be mounted after getCachedSegments; mount is deferred to bootstrap()"
-    );
-
-    // bootstrap() dispatches polymorphically: partial entry -> metadata.mount(location), which cascades into bundle
-    // restore via PartialSegmentCacheBootstrap.restoreBundlesFromDisk.
-    manager.bootstrap(partialSegment, SegmentLazyLoadFailCallback.NOOP);
 
     Assertions.assertTrue(partial.isMounted(), "metadata entry must be mounted after bootstrap()");
+    // The estimate the entry was reserved with has been shrunk to the mounted footprint, and the bootstrap hold is
+    // released, so the restored entry is as evictable as any other
+    Assertions.assertEquals(partial.getFileMapper().getOnDiskHeaderSize(), partial.getSize());
+    Assertions.assertTrue(
+        partial.getSize() < manager.getConfig().getVirtualStorageMetadataReservationEstimate()
+    );
     Assertions.assertFalse(
         partial.snapshotLinkedBundles().isEmpty(),
         "bundle restore must have linked at least one bundle to the metadata entry"
@@ -795,6 +803,26 @@ class SegmentLocalCacheManagerPartialAcquireTest
         restoredBundles.contains(Projections.BASE_TABLE_PROJECTION_NAME),
         "base bundle must be restored by bootstrap; got " + restoredBundles
     );
+
+    // A bootstrap-restored entry owns its info file just like an on-demand one: the info file asserts that local
+    // cache state exists, and unmounting deletes that state (header files included), so the two go together.
+    // Without the hook, an evicted restored segment would leave the next startup trying to restore a layout that
+    // isn't there. (Note dropping the segment is not what triggers this: a weak entry survives drop, and reclaim is
+    // left to eviction, which is what the unmount below stands in for.)
+    final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
+    Assertions.assertTrue(infoFile.exists(), "bootstrap must leave the info file it restored from in place");
+
+    // Unmount dependents before parents so each parent hold is released before its bundle tears down, the order
+    // eviction's cascade produces.
+    final List<PartialSegmentBundleCacheEntry> bundles = new ArrayList<>(partial.snapshotLinkedBundles());
+    bundles.sort(Comparator.comparing(b -> Projections.BASE_TABLE_PROJECTION_NAME.equals(b.getBundleName())));
+    for (PartialSegmentBundleCacheEntry bundle : bundles) {
+      bundle.unmount();
+    }
+    partial.unmount();
+
+    Assertions.assertFalse(partial.isMounted(), "the restored entry should be unmounted");
+    Assertions.assertFalse(infoFile.exists(), "unmounting the restored entry must delete its info file");
   }
 
   @Test
@@ -805,7 +833,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     FileUtils.mkdirp(partialDir);
     primePartialOnDiskState(partialDir);
     manager.storeInfoFile(partialSegment);
-    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
 
     // A manager with partial downloads disabled (operator toggled the flag off) over the same cache dir must reclaim
     // the now-unusable partial layout at bootstrap rather than reserving it and failing at query time.
@@ -846,7 +874,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
-  void testGetCachedSegmentsDeletesPartialLayoutWhenRangeReaderUnavailable() throws IOException
+  void testBootstrapDeletesPartialLayoutWhenRangeReaderUnavailable() throws IOException
   {
     // Prime a valid partial on-disk layout (header written from the real deep-storage dir) as a previous run left it.
     final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
@@ -855,8 +883,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
 
     // ...but record the segment with a loadSpec whose storage can't produce a range reader: an existing directory
     // that holds no V10 file, so LocalLoadSpec.openRangeReader returns null. This is the "shouldn't happen" case — a
-    // partial layout on disk means range reads worked when it was written — so partial-enabled bootstrap must reclaim
-    // the layout rather than reserve an entry that could never lazily fetch.
+    // partial layout on disk means range reads worked when it was written — so bootstrap must reclaim the layout and
+    // fail the segment rather than reserve an entry that could never lazily fetch.
     final File noRangeReaderStorage = new File(perTestTempDir, "no_range_reader_storage");
     FileUtils.mkdirp(noRangeReaderStorage);
     final DataSegment unreadableSegment =
@@ -866,16 +894,26 @@ class SegmentLocalCacheManagerPartialAcquireTest
                    .size(0)
                    .build();
     manager.storeInfoFile(unreadableSegment);
-    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
+    Assertions.assertTrue(infoFile.exists());
 
+    // The layout is on disk, so it still counts as cached; the reader is only needed once bootstrap tries to restore it
     final List<DataSegment> cached = manager.getCachedSegments();
-    Assertions.assertFalse(
-        cached.contains(unreadableSegment),
-        "bootstrap must not return a partial segment whose deep storage can't produce a range reader"
+    Assertions.assertEquals(List.of(unreadableSegment), cached);
+
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> manager.bootstrap(unreadableSegment, SegmentLazyLoadFailCallback.NOOP),
+        "bootstrap must fail the segment so the coordinator re-issues a load for it"
     );
     Assertions.assertFalse(
         partialDir.exists(),
         "bootstrap must delete the unusable partial layout from disk"
+    );
+    Assertions.assertFalse(
+        infoFile.exists(),
+        "the info file must go with the layout; it claims local cache state that no longer exists"
     );
     Assertions.assertNull(
         manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
@@ -884,7 +922,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
-  void testGetCachedSegmentsDeletesPartialLayoutWhenLoadSpecUnconvertible() throws IOException
+  void testBootstrapDeletesPartialLayoutWhenLoadSpecUnconvertible() throws IOException
   {
     // Prime a valid partial on-disk layout as a previous run left it...
     final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
@@ -892,8 +930,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
     primePartialOnDiskState(partialDir);
 
     // ...but record the segment with a loadSpec whose type is no longer registered, so converting it to a LoadSpec
-    // throws. Bootstrap must treat that broken segment like a null reader: delete the unusable layout and continue,
-    // rather than aborting or reserving an entry that could never fetch.
+    // throws. Bootstrap must treat that broken segment like a null reader: delete the unusable layout and fail this
+    // segment, rather than aborting the whole bootstrap or reserving an entry that could never fetch.
     final DataSegment unconvertibleSegment =
         DataSegment.builder(SEGMENT_ID)
                    .shardSpec(NoneShardSpec.instance())
@@ -901,14 +939,23 @@ class SegmentLocalCacheManagerPartialAcquireTest
                    .size(0)
                    .build();
     manager.storeInfoFile(unconvertibleSegment);
-    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
+    Assertions.assertTrue(infoFile.exists());
 
     final List<DataSegment> cached = manager.getCachedSegments();
-    Assertions.assertFalse(
-        cached.contains(unconvertibleSegment),
-        "bootstrap must not return a partial segment whose loadSpec can't be converted to a range reader"
+    Assertions.assertEquals(List.of(unconvertibleSegment), cached);
+
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> manager.bootstrap(unconvertibleSegment, SegmentLazyLoadFailCallback.NOOP),
+        "bootstrap must fail the segment so the coordinator re-issues a load for it"
     );
     Assertions.assertFalse(partialDir.exists(), "bootstrap must delete the unusable partial layout from disk");
+    Assertions.assertFalse(
+        infoFile.exists(),
+        "the info file must go with the layout; it claims local cache state that no longer exists"
+    );
     Assertions.assertNull(
         manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
         "no cache entry should be reserved for the deleted partial layout"

@@ -812,8 +812,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
           "bootstrap must reapply the persisted PartialLoadSpec wrapper's fingerprint"
       );
       // Selected bundle + its base dependency are held after bootstrap restore (they were on disk and got
-      // restored by the metadata mount's PartialSegmentCacheBootstrap.restoreBundlesFromDisk, which register with
-      // the metadata; applyRule picks up their rule-holds from the linkedBundles state).
+      // restored by the metadata mount's own bundle restore, which registers them with the metadata; applyRule picks
+      // up their rule-holds from the linkedBundles state).
       final StorageLocation loc = restarted.getLocations().get(0);
       Assertions.assertTrue(
           loc.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),

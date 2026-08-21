@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.PartialBundleAcquirer;
@@ -48,7 +49,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -227,15 +230,6 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   public SegmentId getSegmentId()
   {
     return segmentId;
-  }
-
-  /**
-   * The per-segment cache directory this entry reads from and writes to. Exposed for the bundle-restore helper in
-   * {@link PartialSegmentCacheBootstrap#restoreBundlesFromDisk} so it can locate the on-disk container files.
-   */
-  File getLocalCacheDir()
-  {
-    return localCacheDir;
   }
 
   /**
@@ -859,7 +853,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       // we just installed the gate and no external caller has had a chance to acquire a reference yet. The location
       // reservation release stays the caller's responsibility (matches mount's overall contract).
       try {
-        PartialSegmentCacheBootstrap.restoreBundlesFromDisk(this, mountLocation);
+        restoreBundlesFromDisk(mountLocation);
       }
       catch (Throwable t) {
         try {
@@ -891,6 +885,163 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
       throw t;
     }
+  }
+
+  /**
+   * Discover, reserve, and mount any bundles whose container files survived on disk for this segment, so a restart (or
+   * an acquire that follows an eviction which left container files behind) doesn't re-fetch bytes that are already
+   * local. Invoked from {@link #doMount} once the file mapper is installed; safe to call unconditionally, on the
+   * fresh-acquire path there are no container files yet and this is a no-op.
+   * <p>
+   * A bundle whose inferred dependency set includes a bundle that is <i>not</i> itself present on disk is treated as
+   * <b>orphaned</b>: restoring it would only produce a degenerate state where column reads that resolve into the
+   * missing parent fail at query time, so its container files are deleted (via
+   * {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the matching bitmap bits) and the bundle is
+   * left unrestored. The next access through the acquire path then triggers a clean cold re-fetch, the same fall-back
+   * as when the cache manager finds a segment in the info directory but missing on disk.
+   * <p>
+   * On any failure, bundles mounted so far are rolled back before the throw propagates. This entry's own rollback is
+   * {@link #doMount}'s responsibility, not this method's.
+   */
+  private void restoreBundlesFromDisk(StorageLocation location) throws IOException
+  {
+    final PartialSegmentFileMapperV10 mapper = getFileMapper();
+    if (mapper == null) {
+      // not mounted yet (or already unmounted); nothing to restore
+      return;
+    }
+
+    // Discover bundle names across the main file and every external file, then keep only those whose owned container
+    // files actually exist on disk. Walks via the file mapper so the external mappers' SegmentFileMetadata are visited
+    // too; bundles can legitimately span the main file and one or more externals when the writer propagates
+    // startFileBundle across them.
+    final List<String> presentBundleNames = filterByContainerPresence(
+        PartialSegmentBundleCacheEntry.bundleNames(mapper),
+        mapper
+    );
+    if (presentBundleNames.isEmpty()) {
+      // Fresh acquire path or a partial whose containers were all evicted: nothing to do.
+      return;
+    }
+
+    final List<String> mountableBundleNames = new ArrayList<>();
+    final Set<String> orphanedBundleNames = new HashSet<>();
+    for (String name : presentBundleNames) {
+      boolean orphaned = false;
+      for (PartialSegmentBundleCacheEntryIdentifier dep : inferBundleDependencies(name)) {
+        if (!presentBundleNames.contains(dep.bundleName())) {
+          orphaned = true;
+          break;
+        }
+      }
+      if (orphaned) {
+        orphanedBundleNames.add(name);
+      } else {
+        mountableBundleNames.add(name);
+      }
+    }
+
+    for (String orphanName : orphanedBundleNames) {
+      for (PartialSegmentBundleCacheEntry.BundleContainerRef ref :
+          PartialSegmentBundleCacheEntry.findContainersForBundle(mapper, orphanName)) {
+        mapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
+      }
+      LOG.debug(
+          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (dependency unrestorable); next access "
+          + "will trigger cold re-fetch",
+          orphanName,
+          segmentId
+      );
+    }
+
+    // Mount the base bundle before any dependent bundle so its hold is available when dependents acquire deps.
+    mountableBundleNames.sort(Comparator.comparing(name -> !Projections.BASE_TABLE_PROJECTION_NAME.equals(name)));
+
+    final List<PartialSegmentBundleCacheEntry> mountedBundles = new ArrayList<>();
+    boolean success = false;
+    try {
+      for (String bundleName : mountableBundleNames) {
+        // Mountable bundles have all dependencies present by construction (orphans were filtered out above), so the
+        // inferred dependency set is exactly what we want, no further filtering needed.
+        final PartialSegmentBundleCacheEntry bundle = PartialSegmentBundleCacheEntry.forBundle(
+            this,
+            bundleName,
+            inferBundleDependencies(bundleName)
+        );
+        // weak-reserve with a temporary hold so the mount call's own parent-hold acquisition can succeed; release the
+        // restore hold immediately after, if the entry should remain alive for query-side access, the runtime hold
+        // chain (transitive parents from aggregates, segment-level holds from acquire APIs) keeps it pinned.
+        try (StorageLocation.ReservationHold<?> restoreHold =
+                 location.addWeakReservationHold(bundle.getId(), () -> bundle)) {
+          if (restoreHold == null) {
+            throw DruidException.defensive(
+                "Failed to reserve bundle entry[%s] in location[%s] while restoring from disk",
+                bundle.getId(),
+                location.getPath()
+            );
+          }
+          bundle.mount(location);
+        }
+        mountedBundles.add(bundle);
+      }
+      success = true;
+      LOG.debug(
+          "Restored bundles for partial segment[%s] from [%s]: bundles[%s], orphans[%s]",
+          segmentId,
+          localCacheDir,
+          mountableBundleNames,
+          orphanedBundleNames
+      );
+    }
+    finally {
+      if (!success) {
+        // Reverse-dependency rollback for bundles only; this entry's own rollback is the caller's responsibility (it
+        // fires when the propagated throw escapes doMount's try/catch).
+        for (PartialSegmentBundleCacheEntry bundle : mountedBundles) {
+          try {
+            bundle.unmount();
+          }
+          catch (Throwable t) {
+            LOG.warn(t, "Failed to roll back bundle[%s] during restore failure for [%s]", bundle.getId(), segmentId);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * The subset of {@code candidateBundleNames} whose every owned container file is present in the local cache
+   * directory. A bundle with no containers at all, or with only some of them on disk, is not restorable.
+   */
+  private List<String> filterByContainerPresence(
+      Set<String> candidateBundleNames,
+      PartialSegmentFileMapperV10 mapper
+  )
+  {
+    final List<String> restorable = new ArrayList<>();
+    for (String bundleName : candidateBundleNames) {
+      final List<PartialSegmentBundleCacheEntry.BundleContainerRef> refs =
+          PartialSegmentBundleCacheEntry.findContainersForBundle(mapper, bundleName);
+      if (refs.isEmpty()) {
+        continue;
+      }
+      boolean allPresent = true;
+      for (PartialSegmentBundleCacheEntry.BundleContainerRef ref : refs) {
+        final String mapperFilename = mapper.mapperForContainer(ref.externalFilename()).getTargetFilename();
+        final File containerFile = new File(
+            localCacheDir,
+            StringUtils.format("%s.container.%05d", mapperFilename, ref.containerIndex())
+        );
+        if (!containerFile.exists()) {
+          allPresent = false;
+          break;
+        }
+      }
+      if (allPresent) {
+        restorable.add(bundleName);
+      }
+    }
+    return restorable;
   }
 
   private static void awaitMount(SettableFuture<Void> future) throws IOException
