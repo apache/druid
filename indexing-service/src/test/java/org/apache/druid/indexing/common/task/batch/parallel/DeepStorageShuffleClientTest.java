@@ -29,7 +29,6 @@ import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -56,7 +55,6 @@ public class DeepStorageShuffleClientTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
 
   @BeforeEach
@@ -78,7 +76,7 @@ public class DeepStorageShuffleClientTest
     );
     deepStorageShuffleClient = new DeepStorageShuffleClient(mapper);
 
-    final File temp = File.createTempFile("junit", null, temporaryFolder);
+    final File temp = temporaryFolderExtension.newFile();
     segmentFileName = temp.getName();
     try (Writer writer = Files.newBufferedWriter(temp.toPath(), StandardCharsets.UTF_8)) {
       for (int j = 0; j < 10; j++) {
@@ -92,7 +90,7 @@ public class DeepStorageShuffleClientTest
   @Test
   public void fetchSegmentFile() throws IOException
   {
-    final File partitionDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
+    final File partitionDir = temporaryFolderExtension.newFolder();
     final String subTaskId = "subTask";
     final File unzippedDir = deepStorageShuffleClient.fetchSegmentFile(
         partitionDir,

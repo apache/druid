@@ -71,7 +71,6 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private File segmentDir;
 
@@ -103,7 +102,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
     );
     segmentDir = indexMerger.persist(
         incrementalIndex,
-        temporaryFolder,
+        temporaryFolderExtension.getRoot(),
         IndexSpec.getDefault(),
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );

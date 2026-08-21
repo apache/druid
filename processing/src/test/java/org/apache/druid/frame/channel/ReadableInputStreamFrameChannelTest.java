@@ -53,7 +53,6 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   final IncrementalIndexCursorFactory cursorFactory =
       new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
@@ -90,7 +89,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   {
     final File file = FrameTestUtil.writeFrameFile(
         Sequences.empty(),
-        File.createTempFile("tmp", null, temporaryFolder)
+        temporaryFolderExtension.newFile()
     );
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
@@ -114,7 +113,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   @Test
   public void testZeroBytesFrameFile() throws IOException
   {
-    final File file = File.createTempFile("tmp", null, temporaryFolder);
+    final File file = temporaryFolderExtension.newFile();
     FileOutputStream outputStream = new FileOutputStream(file);
     outputStream.write(new byte[0]);
     outputStream.close();
@@ -156,7 +155,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
                             .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
                             .frameType(FrameType.latestRowBased())
                             .frames(),
-        File.createTempFile("tmp", null, temporaryFolder)
+        temporaryFolderExtension.newFile()
     );
 
     final byte[] truncatedFile = new byte[truncatedSize];
@@ -186,7 +185,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   @Test
   public void testIncorrectFrameFile() throws IOException
   {
-    final File file = File.createTempFile("tmp", null, temporaryFolder);
+    final File file = temporaryFolderExtension.newFile();
     FileOutputStream outputStream = new FileOutputStream(file);
     outputStream.write(10);
     outputStream.close();
@@ -266,7 +265,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
                               .maxRowsPerFrame(10)
                               .frameType(FrameType.latestRowBased())
                               .frames(),
-          File.createTempFile("tmp", null, temporaryFolder)
+          temporaryFolderExtension.newFile()
       );
       return Files.newInputStream(file.toPath());
     }

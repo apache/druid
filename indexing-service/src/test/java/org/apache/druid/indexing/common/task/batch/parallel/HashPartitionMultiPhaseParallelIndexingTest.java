@@ -339,7 +339,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   private void assertHashedPartition(
       Set<DataSegment> publishedSegments,
       Map<Interval, Integer> expectedIntervalToNumSegments
-  )
+  ) throws IOException
   {
     final Map<Interval, List<DataSegment>> intervalToSegments = new HashMap<>();
     publishedSegments.forEach(

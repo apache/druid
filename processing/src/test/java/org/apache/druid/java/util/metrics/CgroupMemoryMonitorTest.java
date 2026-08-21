@@ -31,13 +31,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 public class CgroupMemoryMonitorTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -45,8 +43,8 @@ public class CgroupMemoryMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
+    procDir = temporaryFolderExtension.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File memoryDir = new File(

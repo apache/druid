@@ -28,21 +28,19 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 
 public class CpuTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private CgroupDiscoverer discoverer;
 
   @BeforeEach
   public void setUp() throws IOException
   {
-    File cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
-    File procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    File cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
+    File procDir = temporaryFolderExtension.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpuDir = new File(

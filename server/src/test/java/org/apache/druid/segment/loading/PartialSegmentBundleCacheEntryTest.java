@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -102,22 +101,20 @@ class PartialSegmentBundleCacheEntryTest
   );
 
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  static final File sharedTempDir = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File perTestTempDir = temporaryFolderExtension.getRoot();
 
   private File cacheDir;
   private File deepStorageDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmp)
@@ -148,8 +145,7 @@ class PartialSegmentBundleCacheEntryTest
   void setup() throws IOException
   {
     deepStorageDir = segmentDir;
-    cacheDir = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @Test
@@ -303,8 +299,7 @@ class PartialSegmentBundleCacheEntryTest
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = newMetadataEntry();
     // mount metadata standalone without registering with the location, so no hold can be acquired below
-    final File anotherDir = new File(perTestTempDir, "adhoc");
-    FileUtils.mkdirp(anotherDir);
+    final File anotherDir = temporaryFolderExtension.newFolder("adhoc");
     final StorageLocation otherLocation = new StorageLocation(anotherDir, ESTIMATE * 8, null);
     Assertions.assertTrue(otherLocation.reserve(metadata));
     metadata.mount(otherLocation);
@@ -516,8 +511,9 @@ class PartialSegmentBundleCacheEntryTest
     // are unambiguous. forBundle should accept them as long as a container exists with that exact bundle name.
     // Build a V10 segment with a slashy bundle name and verify the cache layer attributes containers correctly.
     final File deepDir = writeSlashyGroupSegment("nested/group");
-    final File cache = new File(perTestTempDir, "slashy_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolderExtension.newFolder(
+        "slashy_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
@@ -549,25 +545,27 @@ class PartialSegmentBundleCacheEntryTest
     // Bundle "proj1" lives in BOTH the main file and an external file. forBundle should pick up containers from
     // both via the explicit bundle field, producing a single logical bundle spanning multiple physical files.
     final String externalName = "ext.segment";
-    final File deepDir = new File(perTestTempDir, "multi_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(deepDir);
+    final File deepDir = temporaryFolderExtension.newFolder(
+        "multi_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     try (SegmentFileBuilderV10 builder =
              SegmentFileBuilderV10.create(JSON_MAPPER, deepDir)) {
       // Attach the external builder BEFORE startFileBundle so the group propagates to it.
       final org.apache.druid.segment.file.SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       builder.startFileBundle("proj1");
 
-      final File mainTmp = new File(perTestTempDir, "main-col.bin");
+      final File mainTmp = temporaryFolderExtension.newFile("main-col.bin");
       Files.write(Ints.toByteArray(1), mainTmp);
       builder.add("proj1/main_col", mainTmp);
 
-      final File extTmp = new File(perTestTempDir, "ext-col.bin");
+      final File extTmp = temporaryFolderExtension.newFile("ext-col.bin");
       Files.write(Ints.toByteArray(2), extTmp);
       external.add("proj1/ext_col", extTmp);
     }
 
-    final File cache = new File(perTestTempDir, "multi_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolderExtension.newFolder(
+        "multi_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
@@ -611,8 +609,9 @@ class PartialSegmentBundleCacheEntryTest
     // A V10 segment written without any startFileBundle calls produces containers tagged with ROOT_BUNDLE_NAME.
     // forBundle(ROOT_BUNDLE_NAME) must own every such container.
     final File deepDir = writeRootOnlySegment();
-    final File cache = new File(perTestTempDir, "root_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolderExtension.newFolder(
+        "root_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
@@ -916,13 +915,14 @@ class PartialSegmentBundleCacheEntryTest
    */
   private File writeSlashyGroupSegment(String groupName) throws IOException
   {
-    final File deepDir = new File(perTestTempDir, "slashy_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(deepDir);
+    final File deepDir = temporaryFolderExtension.newFolder(
+        "slashy_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     try (SegmentFileBuilderV10 builder =
              SegmentFileBuilderV10.create(JSON_MAPPER, deepDir)) {
       builder.startFileBundle(groupName);
       for (int i = 0; i < 3; i++) {
-        final File tmp = new File(perTestTempDir, "slashy-col" + i + ".bin");
+        final File tmp = temporaryFolderExtension.newFile("slashy-col" + i + ".bin");
         Files.write(Ints.toByteArray(i), tmp);
         builder.add(groupName + "/col" + i, tmp);
       }
@@ -937,13 +937,14 @@ class PartialSegmentBundleCacheEntryTest
    */
   private File writeRootOnlySegment() throws IOException
   {
-    final File deepDir = new File(perTestTempDir, "root_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(deepDir);
+    final File deepDir = temporaryFolderExtension.newFolder(
+        "root_deep_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     try (SegmentFileBuilderV10 builder =
              SegmentFileBuilderV10.create(JSON_MAPPER, deepDir)) {
       // Never call startFileBundle; all writes default to the root bundle.
       for (int i = 0; i < 3; i++) {
-        final File tmp = new File(perTestTempDir, "root-col" + i + ".bin");
+        final File tmp = temporaryFolderExtension.newFile("root-col" + i + ".bin");
         Files.write(Ints.toByteArray(i), tmp);
         builder.add("col" + i, tmp);
       }

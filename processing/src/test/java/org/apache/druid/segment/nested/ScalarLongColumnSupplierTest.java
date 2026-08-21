@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -83,7 +82,6 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File tempFolder = temporaryFolderExtension.getRoot();
 
   BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
   DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());
@@ -113,7 +111,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
   public void setup() throws IOException
   {
     final String fileNameBase = "test";
-    fileMapper = smooshify(fileNameBase, FileUtils.createTempDirInLocation(tempFolder.toPath(), "dir"), data);
+    fileMapper = smooshify(fileNameBase, temporaryFolderExtension.newFolder(), data);
     baseBuffer = fileMapper.mapFile(fileNameBase);
   }
 
@@ -129,7 +127,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
       ScalarLongColumnSerializer serializer = new ScalarLongColumnSerializer(
           fileNameBase,
           NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault().getEffectiveSpec()),
-          writeOutMediumFactory.makeSegmentWriteOutMedium(FileUtils.createTempDirInLocation(tempFolder.toPath(), "dir")),
+          writeOutMediumFactory.makeSegmentWriteOutMedium(temporaryFolderExtension.newFolder()),
           closer
       );
 
@@ -151,7 +149,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      serializer.openDictionaryWriter(FileUtils.createTempDirInLocation(tempFolder.toPath(), "dir"));
+      serializer.openDictionaryWriter(temporaryFolderExtension.newFolder());
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
           globalDictionarySortedCollector.getSortedLongs(),

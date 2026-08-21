@@ -84,7 +84,6 @@ public class SingleTaskBackgroundRunnerTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private SingleTaskBackgroundRunner runner;
 
@@ -94,7 +93,7 @@ public class SingleTaskBackgroundRunnerTest
     final TestUtils utils = new TestUtils();
     final DruidNode node = new DruidNode("testServer", "testHost", false, 1000, null, true, false);
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(File.createTempFile("base", null, temporaryFolder).toString())
+        .setBaseDir(temporaryFolderExtension.newFile().toString())
         .setRestoreTasksOnRestart(true)
         .build();
     final ServiceEmitter emitter = new NoopServiceEmitter();

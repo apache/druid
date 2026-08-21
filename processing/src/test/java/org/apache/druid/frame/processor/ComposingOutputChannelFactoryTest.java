@@ -23,31 +23,28 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.testutil.FrameTestUtil;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.concurrent.ExecutionException;
 
 public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  static final Path folder = classScopedTemporaryFolder.getRoot().toPath();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
-  public ComposingOutputChannelFactoryTest()
+  public ComposingOutputChannelFactoryTest() throws IOException
   {
     super(
         new ComposingOutputChannelFactory(
             ImmutableList.of(
                 // TODO : currently hardcoded 256k since it allows one frame to be written to each factory
                 // nicer to do that automatically
-                new FileOutputChannelFactory(FileUtils.createTempDirInLocation(folder, "f1"), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY),
-                new FileOutputChannelFactory(FileUtils.createTempDirInLocation(folder, "f2"), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY)
+                new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY),
+                new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY)
             ),
             100
         ),
@@ -60,7 +57,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
   {
     ComposingOutputChannelFactory outputChannelFactory = new ComposingOutputChannelFactory(
         ImmutableList.of(
-            new FileOutputChannelFactory(FileUtils.createTempDirInLocation(folder, "t2"), 100, new ByteTracker(1), FrameTestUtil.WT_CONTEXT_LEGACY),
+            new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(1), FrameTestUtil.WT_CONTEXT_LEGACY),
             new ThrowingOutputChannelFactory() // adding this to check if it gets called
         ),
         100
@@ -83,7 +80,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
     // can handle the test data frames
     ComposingOutputChannelFactory outputChannelFactory = new ComposingOutputChannelFactory(
         ImmutableList.of(
-            new FileOutputChannelFactory(FileUtils.createTempDirInLocation(folder, "t3"), 100, new ByteTracker(1_000_000), FrameTestUtil.WT_CONTEXT_LEGACY),
+            new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(1_000_000), FrameTestUtil.WT_CONTEXT_LEGACY),
             new ThrowingOutputChannelFactory()
         ),
         100

@@ -28,7 +28,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -96,21 +95,19 @@ class PartialSegmentCacheBootstrapTest
   );
 
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  static final File sharedTempDir = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File deepStorageDir;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File perTestTempDir = temporaryFolderExtension.getRoot();
 
   private File cacheDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     deepStorageDir = IndexBuilder.create()
                                  .useV10()
                                  .tmpDir(tmp)
@@ -140,8 +137,7 @@ class PartialSegmentCacheBootstrapTest
   @BeforeEach
   void setupPerTest() throws IOException
   {
-    cacheDir = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @Test
@@ -426,7 +422,7 @@ class PartialSegmentCacheBootstrapTest
     Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(cacheDir, IndexIO.V10_FILE_NAME));
     Assertions.assertFalse(PartialSegmentCacheBootstrap.isPartialSegmentLayout(null, IndexIO.V10_FILE_NAME));
     Assertions.assertFalse(PartialSegmentCacheBootstrap.isPartialSegmentLayout(
-        new File(perTestTempDir, "nonexistent"),
+        new File(temporaryFolderExtension.getRoot(), "nonexistent"),
         IndexIO.V10_FILE_NAME
     ));
   }
@@ -526,7 +522,7 @@ class PartialSegmentCacheBootstrapTest
     // state. Instead, we want containers ON disk, so leave bundles mounted but close the file mapper. Since the
     // restore path re-opens via PartialSegmentFileMapperV10.create which is idempotent w.r.t. on-disk files,
     // un-mount on the SEED side AFTER files are sparse-allocated would also delete them. So we just leave the
-    // seed mounted: at test end @TempDir cleans up.
+    // seed mounted: TemporaryFolderExtension cleans up at test end.
     aggHold.close();
     baseHold.close();
   }

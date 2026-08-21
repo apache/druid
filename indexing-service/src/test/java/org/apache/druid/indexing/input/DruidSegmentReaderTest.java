@@ -86,7 +86,6 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private File segmentDirectory;
   private long segmentSize;
@@ -1041,9 +1040,9 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
     }
   }
 
-  private File createTempDir()
+  private File createTempDir() throws IOException
   {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "segment");
+    return temporaryFolderExtension.newFolder();
   }
 
 }

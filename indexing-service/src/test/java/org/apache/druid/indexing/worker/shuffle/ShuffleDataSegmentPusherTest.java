@@ -86,7 +86,6 @@ public class ShuffleDataSegmentPusherTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File tempDir = temporaryFolderExtension.getRoot();
 
   private IntermediaryDataManager intermediaryDataManager;
   private ShuffleDataSegmentPusher segmentPusher;
@@ -201,9 +200,7 @@ public class ShuffleDataSegmentPusherTest
 
   private File newTempDir(String name) throws IOException
   {
-    final File directory = new File(tempDir, name);
-    org.apache.druid.java.util.common.FileUtils.mkdirp(directory);
-    return directory;
+    return temporaryFolderExtension.newFolder(name);
   }
 
   private DataSegment newSegment(Interval interval)

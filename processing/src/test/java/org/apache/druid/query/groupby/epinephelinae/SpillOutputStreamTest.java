@@ -25,7 +25,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Arrays;
@@ -34,7 +33,6 @@ public class SpillOutputStreamTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testSmallWriteStaysInMemory() throws IOException
@@ -265,7 +263,7 @@ public class SpillOutputStreamTest
   private LimitedTemporaryStorage makeStorage(long maxBytes)
   {
     return new LimitedTemporaryStorage(
-        temporaryFolder,
+        temporaryFolderExtension.getRoot(),
         maxBytes,
         100,
         new GroupByStatsProvider.PerQueryStats()

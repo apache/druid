@@ -44,14 +44,13 @@ public class FileTaskLogsTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testSimple() throws Exception
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolderExtension.getRoot();
     final File logDir = new File(tmpDir, "druid/logs");
-    final File logFile = new File(tmpDir, "log");
+    final File logFile = temporaryFolderExtension.newFile("log");
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
     taskLogs.pushTaskLog("foo", logFile);
@@ -68,9 +67,9 @@ public class FileTaskLogsTest
   public void testSimpleReport() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolderExtension.getRoot();
     final File logDir = new File(tmpDir, "druid/logs");
-    final File reportFile = new File(tmpDir, "report.json");
+    final File reportFile = temporaryFolderExtension.newFile("report.json");
 
     final String taskId = "myTask";
     final TestTaskReport testReport = new TestTaskReport(taskId);
@@ -90,9 +89,9 @@ public class FileTaskLogsTest
   public void testSimpleStatus() throws Exception
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolderExtension.getRoot();
     final File logDir = new File(tmpDir, "druid/myTask");
-    final File statusFile = new File(tmpDir, "status.json");
+    final File statusFile = temporaryFolderExtension.newFile("status.json");
 
     final String taskId = "myTask";
     final TaskStatus taskStatus = TaskStatus.success(taskId);
@@ -111,10 +110,10 @@ public class FileTaskLogsTest
   @Test
   public void testPushTaskLogDirCreationFails() throws Exception
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolderExtension.getRoot();
     try {
       final File logDir = new File(tmpDir, "druid/logs");
-      final File logFile = new File(tmpDir, "log");
+      final File logFile = temporaryFolderExtension.newFile("log");
       Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
 
       if (!tmpDir.setWritable(false)) {
@@ -139,9 +138,9 @@ public class FileTaskLogsTest
   @Test
   public void testKill() throws Exception
   {
-    final File tmpDir = temporaryFolder;
+    final File tmpDir = temporaryFolderExtension.getRoot();
     final File logDir = new File(tmpDir, "logs");
-    final File logFile = new File(tmpDir, "log");
+    final File logFile = temporaryFolderExtension.newFile("log");
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
 
     Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");

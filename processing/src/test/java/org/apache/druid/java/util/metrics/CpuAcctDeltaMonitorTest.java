@@ -41,7 +41,6 @@ public class CpuAcctDeltaMonitorTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
   private File cgroupDir;
   private File cpuacctDir;
@@ -49,8 +48,8 @@ public class CpuAcctDeltaMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
+    cgroupDir = temporaryFolderExtension.newFolder("cgroup");
+    procDir = temporaryFolderExtension.newFolder("proc");
     TestUtils.setUpCgroups(procDir, cgroupDir);
     cpuacctDir = new File(
         cgroupDir,

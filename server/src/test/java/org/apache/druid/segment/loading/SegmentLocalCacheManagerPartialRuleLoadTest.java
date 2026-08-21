@@ -127,23 +127,21 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   );
 
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  static final File SHARED_TEMP_DIR = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File perTestTempDir = temporaryFolderExtension.getRoot();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
   private SegmentLocalCacheManager manager;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(SHARED_TEMP_DIR, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     DEEP_STORAGE_DIR = IndexBuilder.create()
                                    .useV10()
                                    .tmpDir(tmp)
@@ -193,15 +191,15 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheRoot);
+    cacheRoot = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @AfterEach
   void tearDown()
   {
     if (manager != null) {
-      // Drop the segment to release rule-holds and unmount mmap'd bundle files before @TempDir tries to clean up
+      // Drop the segment to release rule-holds and unmount mmap'd bundle files before
+      // TemporaryFolderExtension cleans up.
       // the cache directory. Without this, on some platforms the temp-dir cleanup fails on still-mapped files.
       try {
         manager.drop(partialWrapperSegment(List.of(AGG_BUNDLE)));
@@ -839,10 +837,12 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   {
     // Setup: writable first (so info_dir defaults there), read-only second, dummy reservation on writable so
     // LeastBytesUsed picks the read-only location first. mkdirp on read-only fails → release + continue to writable.
-    final File writable = new File(perTestTempDir, "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    final File readOnly = new File(perTestTempDir, "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(writable);
-    FileUtils.mkdirp(readOnly);
+    final File writable = temporaryFolderExtension.newFolder(
+        "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
+    final File readOnly = temporaryFolderExtension.newFolder(
+        "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     manager = makeManagerAtLocations(true, true, List.of(writable, readOnly));
 
     // Bump writable's usage so LeastBytesUsed picks readOnly first.
@@ -1058,11 +1058,9 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private DataSegment partialWrapperSegmentWithNullRangeReader(List<String> selectedProjections, String fingerprint)
       throws IOException
   {
-    final File noRangeReaderDir = new File(
-        perTestTempDir,
+    final File noRangeReaderDir = temporaryFolderExtension.newFolder(
         "no_range_reader_" + fingerprint.replace(':', '_').replace('.', '_')
     );
-    FileUtils.mkdirp(noRangeReaderDir);
     final Map<String, Object> delegate = Map.of(
         "type", "local",
         "path", noRangeReaderDir.getAbsolutePath()

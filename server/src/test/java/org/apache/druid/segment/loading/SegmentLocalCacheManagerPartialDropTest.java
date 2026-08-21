@@ -104,14 +104,12 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   );
 
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  static final File sharedTempDir = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File deepStorageDir;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File perTestTempDir = temporaryFolderExtension.getRoot();
 
   private File cacheDir;
   private File infoDir;
@@ -120,9 +118,9 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   private DataSegment dataSegment;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     deepStorageDir = IndexBuilder.create()
                                  .useV10()
                                  .tmpDir(tmp)
@@ -152,8 +150,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   @BeforeEach
   void setup() throws IOException
   {
-    cacheDir = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
     // SegmentLocalCacheManager defaults the info dir to <firstLocation>/info_dir when not configured.
     infoDir = new File(cacheDir, "info_dir");
     FileUtils.mkdirp(infoDir);

@@ -106,7 +106,6 @@ public class SeekableStreamIndexTaskRunnerTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Mock
   private InputRow row;
@@ -765,8 +764,7 @@ public class SeekableStreamIndexTaskRunnerTest
   private File createTaskWorkDirectory()
   {
     try {
-      final File taskWorkDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
-      FileUtils.mkdirp(taskWorkDir);
+      final File taskWorkDir = temporaryFolderExtension.newFolder();
       FileUtils.mkdirp(new File(taskWorkDir, "persist"));
       return taskWorkDir;
     }

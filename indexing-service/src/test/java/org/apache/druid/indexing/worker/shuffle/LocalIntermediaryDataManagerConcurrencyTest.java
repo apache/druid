@@ -72,7 +72,6 @@ public class LocalIntermediaryDataManagerConcurrencyTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File tempDir = temporaryFolderExtension.getRoot();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File sharedSegmentDir;
@@ -138,9 +137,7 @@ public class LocalIntermediaryDataManagerConcurrencyTest
 
   private File newTempDir(String name) throws IOException
   {
-    final File directory = new File(tempDir, name);
-    org.apache.druid.java.util.common.FileUtils.mkdirp(directory);
-    return directory;
+    return temporaryFolderExtension.newFolder(name);
   }
 
   private DataSegment newSegment(Interval interval, int bucketId)

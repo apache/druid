@@ -127,15 +127,13 @@ class SegmentLocalCacheManagerPartialAcquireTest
   private static final String CLUSTERED_PROJECTION_BUNDLE = "proj";
 
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  static final File SHARED_TEMP_DIR = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
   private static File CLUSTERED_DEEP_STORAGE_DIR;
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File perTestTempDir = temporaryFolderExtension.getRoot();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
@@ -143,9 +141,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
   private DataSegment partialSegment;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(SHARED_TEMP_DIR, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     DEEP_STORAGE_DIR = IndexBuilder.create()
                                    .useV10()
                                    .tmpDir(tmp)
@@ -181,7 +179,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
    * {@code sum(x)}). With no shared columns the layout is per-group {@code __base$<ids>} bundles + a self-contained
    * {@code proj} bundle and no {@code __base} bundle.
    */
-  private static File buildClusteredProjectionSegment()
+  private static File buildClusteredProjectionSegment() throws IOException
   {
     final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
@@ -201,7 +199,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
                                    new LongSumAggregatorFactory("sum_x", "x")
                                )
                                .build();
-    final File tmp = new File(SHARED_TEMP_DIR, "build_clustered_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = TEMPORARY_FOLDER.newFolder("build_clustered_" + ThreadLocalRandom.current().nextInt());
     return IndexBuilder.create()
                        .useV10()
                        .tmpDir(tmp)
@@ -252,8 +250,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheRoot);
+    cacheRoot = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
 
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
@@ -631,8 +628,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // bundle SIEVE-evicted under cache pressure mid-query cleared the mapper's downloaded-file set and the sync
     // makeCursorHolder then failed with "requires the segment to be fully downloaded". Uses a plain manager so we can
     // call acquireCachedSegment(FULL) directly (the shared fixture installs a tripwire that forbids it).
-    final File plainCacheRoot = new File(perTestTempDir, "plain_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(plainCacheRoot);
+    final File plainCacheRoot = temporaryFolderExtension.newFolder(
+        "plain_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocationConfig locConfig = new StorageLocationConfig(plainCacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
         .locations(locConfig)
@@ -860,8 +858,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // that holds no V10 file, so LocalLoadSpec.openRangeReader returns null. This is the "shouldn't happen" case — a
     // partial layout on disk means range reads worked when it was written — so partial-enabled bootstrap must reclaim
     // the layout rather than reserve an entry that could never lazily fetch.
-    final File noRangeReaderStorage = new File(perTestTempDir, "no_range_reader_storage");
-    FileUtils.mkdirp(noRangeReaderStorage);
+    final File noRangeReaderStorage = temporaryFolderExtension.newFolder("no_range_reader_storage");
     final DataSegment unreadableSegment =
         DataSegment.builder(SEGMENT_ID)
                    .shardSpec(NoneShardSpec.instance())

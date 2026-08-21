@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.metrics;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.ProcCgroupV2Discoverer;
 import org.apache.druid.java.util.metrics.cgroups.TestUtils;
@@ -32,14 +31,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.stream.Collectors;
 
 public class CgroupV2CpuMonitorTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
   private File cgroupDir;
   private File statFile;
@@ -48,8 +45,8 @@ public class CgroupV2CpuMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
+    procDir = temporaryFolderExtension.newFolder("procDir");
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
 

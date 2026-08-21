@@ -70,7 +70,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 
 @SuppressWarnings("DoNotMock")
@@ -80,7 +79,6 @@ public class TaskToolboxTest
   private TaskToolboxFactory taskToolbox = null;
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File baseDir = temporaryFolderExtension.getRoot();
   private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);
@@ -119,7 +117,7 @@ public class TaskToolboxTest
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
 
     TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(baseDir.toString())
+        .setBaseDir(temporaryFolderExtension.getRoot().toString())
         .build();
 
     taskToolbox = new TaskToolboxFactory(

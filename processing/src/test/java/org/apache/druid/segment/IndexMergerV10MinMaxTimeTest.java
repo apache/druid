@@ -50,7 +50,6 @@ class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   void testMinMaxTimePersistedForTimeSortedSegment() throws Exception
@@ -181,7 +180,7 @@ class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
     final long minTs = rows.stream().mapToLong(InputRow::getTimestampFromEpoch).min().orElseThrow();
     return IndexBuilder.create()
                        .useV10()
-                       .tmpDir(tempDir)
+                       .tmpDir(temporaryFolderExtension.getRoot())
                        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                        .schema(
                            IncrementalIndexSchema.builder()

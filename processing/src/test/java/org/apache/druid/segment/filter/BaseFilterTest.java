@@ -110,12 +110,11 @@ import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-
 import org.junit.jupiter.api.extension.RegisterExtension;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -451,7 +450,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private final List<InputRow> rows;
 
@@ -503,7 +501,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     CursorStuff cursorStuff = adaptersForClass.get(testName);
     if (cursorStuff == null) {
       Pair<CursorFactory, Closeable> pair = finisher.apply(
-          indexBuilder.tmpDir(temporaryFolder).rows(rows)
+          indexBuilder.tmpDir(temporaryFolderExtension.getRoot()).rows(rows)
       );
       cursorStuff = new CursorStuff(
           pair.lhs,

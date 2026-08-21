@@ -52,7 +52,6 @@ public class StorageLocationVirtualStorageManagerTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File tempFolder = temporaryFolderExtension.getRoot();
 
   private StorageLocation location;
   private StorageLocationVirtualStorageManager manager;
@@ -60,8 +59,7 @@ public class StorageLocationVirtualStorageManagerTest
   @BeforeEach
   public void setup() throws IOException
   {
-    File locationPath = new File(tempFolder, "storage");
-    Files.createDirectories(locationPath.toPath());
+    File locationPath = temporaryFolderExtension.newFolder("storage");
     location = new StorageLocation(locationPath, 10_000_000L, null);
     manager = new StorageLocationVirtualStorageManager(
         Collections.singletonList(location),

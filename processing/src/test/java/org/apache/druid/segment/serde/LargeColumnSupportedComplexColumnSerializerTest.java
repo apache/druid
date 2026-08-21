@@ -22,7 +22,6 @@ package org.apache.druid.segment.serde;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -43,7 +42,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 public class LargeColumnSupportedComplexColumnSerializerTest
 {
@@ -52,7 +50,6 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testSanity() throws IOException
@@ -70,7 +67,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 
     for (int columnSize : columnSizes) {
       for (int aCase : cases) {
-        File tmpFile = FileUtils.createTempDirInLocation(tempDir, "test");
+        File tmpFile = temporaryFolderExtension.newFolder();
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
         try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {

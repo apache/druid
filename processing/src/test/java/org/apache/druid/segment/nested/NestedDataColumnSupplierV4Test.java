@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -46,7 +45,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +54,6 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
   private static final String NO_MATCH = "no";
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(new RoaringBitmapFactory());
   List<Map<String, Object>> data = ImmutableList.of(
       TestHelper.makeMap("x", 1L, "y", 1.0, "z", "a", "v", "100", "nullish", "notnull"),
@@ -86,7 +83,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
   {
     String columnName = "shipTo";
     String firstValue = "Cole";
-    File tmpLocation = FileUtils.createTempDirInLocation(tempDir, "v3");
+    File tmpLocation = temporaryFolderExtension.newFolder("v3");
     CompressionUtils.unzip(
         NestedDataColumnSupplierV4Test.class.getClassLoader().getResourceAsStream("nested_segment_v3/index.zip"),
         tmpLocation
@@ -124,7 +121,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     String columnName = "shipTo";
     // i accidentally didn't use same segment granularity for v3 and v4 segments... so they have different first value
     String firstValue = "Beatty";
-    File tmpLocation = FileUtils.createTempDirInLocation(tempDir, "v4");
+    File tmpLocation = temporaryFolderExtension.newFolder("v4");
     CompressionUtils.unzip(
         NestedDataColumnSupplierV4Test.class.getClassLoader().getResourceAsStream("nested_segment_v4/index.zip"),
         tmpLocation

@@ -22,7 +22,6 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.TestHelper;
@@ -45,17 +44,15 @@ class SegmentFileMapperV10Test
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   void testWriteRead() throws IOException
   {
-    File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -75,12 +72,11 @@ class SegmentFileMapperV10Test
   @Test
   void testWriteReadCompressed() throws IOException
   {
-    File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, CompressionStrategy.ZSTD)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -101,18 +97,17 @@ class SegmentFileMapperV10Test
   void testWriteReadWithExternal() throws IOException
   {
     String externalName = "external.segment";
-    File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
       SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       for (int i = 20; i < 40; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         external.add(StringUtils.format("%d", i), tmpFile);
       }

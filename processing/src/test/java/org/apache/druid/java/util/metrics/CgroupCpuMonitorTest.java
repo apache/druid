@@ -36,7 +36,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,7 +44,6 @@ public class CgroupCpuMonitorTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
   private File cgroupDir;
   private File statFile;
@@ -54,8 +52,8 @@ public class CgroupCpuMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroupDir");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
+    procDir = temporaryFolderExtension.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpuDir = new File(
@@ -121,8 +119,8 @@ public class CgroupCpuMonitorTest
   public void testCgroupsV2Detection() throws IOException, URISyntaxException
   {
     // Set up cgroups v2 structure
-    File cgroupV2Dir = FileUtils.createTempDirInLocation(tempDir, "cgroupV2Dir");
-    File procV2Dir = FileUtils.createTempDirInLocation(tempDir, "procV2Dir");
+    File cgroupV2Dir = temporaryFolderExtension.newFolder("cgroupV2Dir");
+    File procV2Dir = temporaryFolderExtension.newFolder("procV2Dir");
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
 
 

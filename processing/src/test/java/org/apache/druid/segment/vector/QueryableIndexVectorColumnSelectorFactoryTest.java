@@ -53,7 +53,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -124,7 +123,6 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   Closer closer;
   ColumnCache theCache;
@@ -136,7 +134,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     closer = Closer.create();
     index = IndexBuilder.create(TestHelper.makeJsonMapper())
-                        .tmpDir(temporaryFolder)
+                        .tmpDir(temporaryFolderExtension.getRoot())
                         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                         .schema(
                             new IncrementalIndexSchema.Builder()

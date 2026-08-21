@@ -35,7 +35,6 @@ public class CpuSetV2Test
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private File cgroupDir;
   private File procDir;
@@ -44,10 +43,8 @@ public class CpuSetV2Test
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = new File(temporaryFolder, "cgroup");
-    cgroupDir.mkdir();
-    procDir = new File(temporaryFolder, "proc");
-    procDir.mkdir();
+    cgroupDir = temporaryFolderExtension.newFolder("cgroup");
+    procDir = temporaryFolderExtension.newFolder("proc");
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
   }

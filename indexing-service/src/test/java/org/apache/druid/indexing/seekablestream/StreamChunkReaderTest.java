@@ -33,7 +33,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.InputRowFilter;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -68,7 +67,6 @@ public class StreamChunkReaderTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
   private final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
@@ -104,7 +102,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null),
+        temporaryFolderExtension.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -142,7 +140,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null),
+        temporaryFolderExtension.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -164,7 +162,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null),
+        temporaryFolderExtension.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -196,7 +194,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         transformSpec,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null),
+        temporaryFolderExtension.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -255,7 +253,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         transformSpec,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null),
+        temporaryFolderExtension.newFolder(),
         rowFilter,
         rowIngestionMeters,
         parseExceptionHandler

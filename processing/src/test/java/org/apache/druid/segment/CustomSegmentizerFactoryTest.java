@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -44,7 +43,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
 {
@@ -54,7 +52,6 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @BeforeAll
   public static void setup()
@@ -81,7 +78,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   public void testDefaultSegmentizerPersist() throws IOException
   {
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
-    File segment = new File(FileUtils.createTempDirInLocation(tempDir, "seg"), "segment");
+    File segment = new File(temporaryFolderExtension.newFolder("seg"), "segment");
     File persisted = INDEX_MERGER.persist(
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),
@@ -100,7 +97,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   public void testCustomSegmentizerPersist() throws IOException
   {
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
-    File segment = new File(FileUtils.createTempDirInLocation(tempDir, "seg"), "segment");
+    File segment = new File(temporaryFolderExtension.newFolder("seg"), "segment");
     File persisted = INDEX_MERGER.persist(
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),

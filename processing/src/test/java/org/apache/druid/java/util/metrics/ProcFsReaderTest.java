@@ -29,20 +29,18 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class ProcFsReaderTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
 
   @BeforeEach
   public void setUp() throws IOException
   {
-    procDir = FileUtils.createTempDirInLocation(tempDir, "procDir");
+    procDir = temporaryFolderExtension.newFolder("procDir");
     File kernelDir = new File(
         procDir,
         "sys/kernel/random"

@@ -32,7 +32,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -42,26 +41,25 @@ public class SegmentUtilsTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   public void testVersionBin() throws Exception
   {
-    FileUtils.writeByteArrayToFile(new File(tempDir, "version.bin"), Ints.toByteArray(9));
-    Assertions.assertEquals(9, SegmentUtils.getVersionFromDir(tempDir));
+    FileUtils.writeByteArrayToFile(temporaryFolderExtension.newFile("version.bin"), Ints.toByteArray(9));
+    Assertions.assertEquals(9, SegmentUtils.getVersionFromDir(temporaryFolderExtension.getRoot()));
   }
 
   @Test
   public void testIndexDrd() throws Exception
   {
-    FileUtils.writeByteArrayToFile(new File(tempDir, "index.drd"), new byte[]{(byte) 0x8});
-    Assertions.assertEquals(8, SegmentUtils.getVersionFromDir(tempDir));
+    FileUtils.writeByteArrayToFile(temporaryFolderExtension.newFile("index.drd"), new byte[]{(byte) 0x8});
+    Assertions.assertEquals(8, SegmentUtils.getVersionFromDir(temporaryFolderExtension.getRoot()));
   }
 
   @Test
   public void testException() throws Exception
   {
-    Assertions.assertThrows(IOException.class, () -> SegmentUtils.getVersionFromDir(tempDir));
+    Assertions.assertThrows(IOException.class, () -> SegmentUtils.getVersionFromDir(temporaryFolderExtension.getRoot()));
   }
 
   @Test

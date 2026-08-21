@@ -40,14 +40,12 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 public class FrameFileWriterTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void test_abort_afterAllFrames() throws IOException
@@ -57,7 +55,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
                                                        .frameType(FrameType.latestRowBased())
                                                        .frames();
 
-    final File file = Files.createTempFile(tempDir, "junit", null).toFile();
+    final File file = temporaryFolderExtension.newFile();
     final FrameFileWriter fileWriter = FrameFileWriter.open(
         Files.newByteChannel(
             file.toPath(),

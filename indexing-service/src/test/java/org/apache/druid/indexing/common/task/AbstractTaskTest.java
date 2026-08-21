@@ -42,7 +42,6 @@ import org.mockito.Mockito;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -57,7 +56,6 @@ public class AbstractTaskTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private ObjectMapper objectMapper;
 
@@ -69,14 +67,14 @@ public class AbstractTaskTest
 
   private File createTempReportFile() throws Exception
   {
-    final File reportsFile = Files.createTempFile(temporaryFolder.toPath(), "report", ".json").toFile();
+    final File reportsFile = temporaryFolderExtension.newFile("report.json");
     FileUtils.write(reportsFile, "", StandardCharsets.UTF_8);
     return reportsFile;
   }
 
-  private File createTempDir()
+  private File createTempDir() throws Exception
   {
-    return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "task");
+    return temporaryFolderExtension.newFolder("task");
   }
 
   @Test

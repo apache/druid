@@ -41,7 +41,6 @@ import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -52,7 +51,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -73,7 +71,6 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testRead() throws IOException
@@ -91,7 +88,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null)
+        temporaryFolderExtension.newFolder()
     );
 
     int read = 0;
@@ -125,7 +122,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null)
+        temporaryFolderExtension.newFolder()
     );
 
     int read = 0;

@@ -53,7 +53,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,8 +62,7 @@ import java.util.Map;
 public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  public static final File temporaryFolder = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static IncrementalIndex INC_INDEX;
   private static QueryableIndex MMAP_INDEX;
@@ -71,7 +70,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   private static QueryableIndex MMAP_INDEX_WITH_NULLS;
 
   @BeforeAll
-  public static void setup()
+  public static void setup() throws IOException
   {
     InputRowSchema rowSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
@@ -112,7 +111,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                                .withRollup(false)
                                                .build()
                                        )
-                                       .tmpDir(new File(temporaryFolder, "index"));
+                                       .tmpDir(TEMPORARY_FOLDER.newFolder("index"));
     INC_INDEX = builder.buildIncrementalIndex();
     MMAP_INDEX = builder.buildMMappedIndex();
 
@@ -138,7 +137,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                                         .withRollup(false)
                                                         .build()
                                                 )
-                                                .tmpDir(new File(temporaryFolder, "index-with-nulls"));
+                                                .tmpDir(TEMPORARY_FOLDER.newFolder("index-with-nulls"));
     INC_INDEX_WITH_NULLS = builderWithNulls.buildIncrementalIndex();
     MMAP_INDEX_WITH_NULLS = builderWithNulls.buildMMappedIndex();
   }

@@ -22,7 +22,6 @@ package org.apache.druid.data.input;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.InputStatsImpl;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,14 +33,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.Arrays;
 
 public class BytesCountingInputEntityTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   private InputStats inputStats;
 
@@ -55,11 +52,11 @@ public class BytesCountingInputEntityTest
   public void testFetch() throws IOException
   {
     final int fileSize = 200;
-    final File sourceFile = tempDir.resolve("testWithFileEntity").toFile();
+    final File sourceFile = temporaryFolderExtension.newFile("testWithFileEntity");
     writeBytesToFile(sourceFile, fileSize);
 
     final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceFile), inputStats);
-    inputEntity.fetch(FileUtils.createTempDirInLocation(tempDir, "fetch1"), new byte[50]);
+    inputEntity.fetch(temporaryFolderExtension.newFolder(), new byte[50]);
     Assertions.assertEquals(fileSize, inputStats.getProcessedBytes());
   }
 
@@ -67,7 +64,7 @@ public class BytesCountingInputEntityTest
   public void testFetchFromPartiallyReadFile() throws IOException
   {
     final int fileSize = 200;
-    final File sourceFile = tempDir.resolve("testWithFileEntity2").toFile();
+    final File sourceFile = temporaryFolderExtension.newFile("testWithFileEntity2");
     writeBytesToFile(sourceFile, fileSize);
 
     final int bufferSize = 50;
@@ -79,14 +76,14 @@ public class BytesCountingInputEntityTest
     Assertions.assertEquals(bufferSize, inputStats.getProcessedBytes());
 
     // Read the whole file again
-    inputEntity.fetch(FileUtils.createTempDirInLocation(tempDir, "fetch2"), intermediateBuffer);
+    inputEntity.fetch(temporaryFolderExtension.newFolder(), intermediateBuffer);
     Assertions.assertEquals(fileSize + bufferSize, inputStats.getProcessedBytes());
   }
 
   @Test
   public void testFetchFromDirectory() throws IOException
   {
-    final File sourceDir = FileUtils.createTempDirInLocation(tempDir, "testWithDirectory");
+    final File sourceDir = temporaryFolderExtension.newFolder("testWithDirectory");
 
     final int fileSize1 = 100;
     final File sourceFile1 = new File(sourceDir, "file1");
@@ -97,7 +94,7 @@ public class BytesCountingInputEntityTest
     writeBytesToFile(sourceFile2, fileSize2);
 
     final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceDir), inputStats);
-    inputEntity.fetch(FileUtils.createTempDirInLocation(tempDir, "fetch3"), new byte[1000]);
+    inputEntity.fetch(temporaryFolderExtension.newFolder(), new byte[1000]);
     Assertions.assertEquals(fileSize1 + fileSize2, inputStats.getProcessedBytes());
   }
 

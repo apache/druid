@@ -44,7 +44,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.roaringbitmap.IntIterator;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -65,7 +64,6 @@ public class IndexMergerNullHandlingTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @BeforeEach
   public void setUp()
@@ -115,8 +113,9 @@ public class IndexMergerNullHandlingTest
         toPersist.add(new MapBasedInputRow(0L, ImmutableList.of("d"), m));
       }
 
-      final File tempDir = temporaryFolder;
-      try (QueryableIndex index = indexIO.loadIndex(indexMerger.persist(toPersist, tempDir, indexSpec, null))) {
+      try (QueryableIndex index = indexIO.loadIndex(
+          indexMerger.persist(toPersist, temporaryFolderExtension.getRoot(), indexSpec, null)
+      )) {
         final ColumnHolder columnHolder = index.getColumnHolder("d");
 
         if (nullFlavors.containsAll(subsetList)) {

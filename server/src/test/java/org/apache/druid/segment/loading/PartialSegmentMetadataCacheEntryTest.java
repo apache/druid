@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -62,7 +61,6 @@ class PartialSegmentMetadataCacheEntryTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File tempDir = temporaryFolderExtension.getRoot();
 
   private File segmentFile;
   private File cacheDir;
@@ -72,8 +70,7 @@ class PartialSegmentMetadataCacheEntryTest
   void setup() throws IOException
   {
     segmentFile = buildTestSegment(20);
-    cacheDir = new File(tempDir, "cache");
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolderExtension.newFolder("cache");
   }
 
   @Test
@@ -144,8 +141,7 @@ class PartialSegmentMetadataCacheEntryTest
   void testMountInDifferentLocationThrows() throws IOException
   {
     final StorageLocation location1 = new StorageLocation(cacheDir, ESTIMATE * 4, null);
-    final File otherDir = new File(tempDir, "other");
-    FileUtils.mkdirp(otherDir);
+    final File otherDir = temporaryFolderExtension.newFolder("other");
     final StorageLocation location2 = new StorageLocation(otherDir, ESTIMATE * 4, null);
 
     final PartialSegmentMetadataCacheEntry entry = newEntry(ESTIMATE);
@@ -603,11 +599,10 @@ class PartialSegmentMetadataCacheEntryTest
 
   private File buildTestSegment(int numFiles) throws IOException
   {
-    final File baseDir = new File(tempDir, "deep_storage");
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = temporaryFolderExtension.newFolder("deep_storage");
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, CompressionStrategy.NONE)) {
       for (int i = 0; i < numFiles; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("smoosh-%d.bin", i));
+        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%d.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -623,12 +618,11 @@ class PartialSegmentMetadataCacheEntryTest
   private File buildSegmentWithBundles(String... bundleNames) throws IOException
   {
     final int seq = fixtureSeq++;
-    final File baseDir = new File(tempDir, "deep_" + seq);
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = temporaryFolderExtension.newFolder("deep_" + seq);
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, CompressionStrategy.NONE)) {
       for (int i = 0; i < bundleNames.length; ++i) {
         builder.startFileBundle(bundleNames[i]);
-        final File tmpFile = new File(tempDir, StringUtils.format("fixture-%d-%d.bin", seq, i));
+        final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("fixture-%d-%d.bin", seq, i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(bundleNames[i] + "/col", tmpFile);
       }
@@ -642,8 +636,7 @@ class PartialSegmentMetadataCacheEntryTest
    */
   private PartialSegmentMetadataCacheEntry mountedEntryOver(File deepStorageDir) throws IOException
   {
-    final File cache = new File(tempDir, "cache_" + (fixtureSeq++));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolderExtension.newFolder("cache_" + (fixtureSeq++));
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 4, null);
     final PartialSegmentMetadataCacheEntry entry = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
@@ -669,8 +662,7 @@ class PartialSegmentMetadataCacheEntryTest
    */
   private PartialSegmentMetadataCacheEntry mountedWeakEntryOver(File deepStorageDir) throws IOException
   {
-    final File cache = new File(tempDir, "cache_" + (fixtureSeq++));
-    FileUtils.mkdirp(cache);
+    final File cache = temporaryFolderExtension.newFolder("cache_" + (fixtureSeq++));
     final StorageLocation location = new StorageLocation(cache, ESTIMATE * 4, null);
     final PartialSegmentMetadataCacheEntry entry = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,

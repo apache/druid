@@ -169,16 +169,15 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  protected final File parallelTemporaryFolder = temporaryFolderExtension.getRoot();
 
-  protected final File createTempDir()
+  protected final File createTempDir() throws IOException
   {
-    return FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), null);
+    return temporaryFolderExtension.newFolder();
   }
 
-  protected final File createTempDir(final String prefix)
+  protected final File createTempDir(final String prefix) throws IOException
   {
-    return FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), prefix);
+    return temporaryFolderExtension.newFolder(prefix);
   }
 
   /**
@@ -228,7 +227,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   @BeforeEach
   public void setUpAbstractParallelIndexSupervisorTaskTest(TestInfo testInfo) throws IOException
   {
-    localDeepStorage = FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "localStorage");
+    localDeepStorage = temporaryFolderExtension.newFolder("localStorage");
     taskRunner = new SimpleThreadingTaskRunner(testInfo.getTestMethod().orElseThrow().getName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
@@ -236,7 +235,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .setShuffleDataLocations(
             ImmutableList.of(
                 new StorageLocationConfig(
-                    FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "shuffle"),
+                    temporaryFolderExtension.newFolder("shuffle"),
                     null,
                     null
                 )
@@ -691,10 +690,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .dataSegmentKiller(new NoopDataSegmentKiller())
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .segmentCacheManager(
-            newSegmentLoader(FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "segmentCache"))
+            newSegmentLoader(temporaryFolderExtension.newFolder("segmentCache"))
         )
         .jsonMapper(objectMapper)
-        .taskWorkDir(FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), task.getId()))
+        .taskWorkDir(temporaryFolderExtension.newFolder(task.getId()))
         .indexIO(getIndexIO())
         .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)

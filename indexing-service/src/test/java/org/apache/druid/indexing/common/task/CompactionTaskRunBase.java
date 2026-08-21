@@ -59,7 +59,6 @@ import org.apache.druid.indexing.common.actions.TaskActionTestKit;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -190,8 +189,7 @@ public abstract class CompactionTaskRunBase
   protected static final int TOTAL_TEST_ROWS = 10;
 
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  protected static final File temporaryFolder = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   @RegisterExtension
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
@@ -233,7 +231,7 @@ public abstract class CompactionTaskRunBase
     this.inputInterval = inputInterval;
     this.segmentGranularity = segmentGranularity;
 
-    reportsFile = new File(temporaryFolder, "reports.json");
+    reportsFile = new File(TEMPORARY_FOLDER.getRoot(), "reports.json");
     testUtils = new TestUtils();
     segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
 
@@ -293,9 +291,9 @@ public abstract class CompactionTaskRunBase
     exec.shutdownNow();
   }
 
-  protected File newTempFolder()
+  protected File newTempFolder() throws IOException
   {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "tmp");
+    return TEMPORARY_FOLDER.newFolder();
   }
 
   @Test
@@ -1669,7 +1667,7 @@ public abstract class CompactionTaskRunBase
 
   protected abstract Builder compactionTaskBuilder(ClientCompactionTaskGranularitySpec granularitySpec);
 
-  private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient)
+  private TaskToolbox createTaskToolbox(ObjectMapper objectMapper, TaskActionClient taskActionClient) throws IOException
   {
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
         .locations(new StorageLocationConfig(localDeepStorage, null, null))

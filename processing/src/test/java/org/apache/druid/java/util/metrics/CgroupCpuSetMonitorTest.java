@@ -35,14 +35,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class CgroupCpuSetMonitorTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -50,8 +48,8 @@ public class CgroupCpuSetMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
+    cgroupDir = temporaryFolderExtension.newFolder("cgroup");
+    procDir = temporaryFolderExtension.newFolder("proc");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpusetDir = new File(
@@ -85,8 +83,8 @@ public class CgroupCpuSetMonitorTest
   public void testCgroupsV2DetectionInConstructor() throws IOException
   {
     // Set up cgroups v2 structure
-    File cgroupV2Dir = FileUtils.createTempDirInLocation(tempDir, "cgroupV2");
-    File procV2Dir = FileUtils.createTempDirInLocation(tempDir, "procV2");
+    File cgroupV2Dir = temporaryFolderExtension.newFolder("cgroupV2");
+    File procV2Dir = temporaryFolderExtension.newFolder("procV2");
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
     
     // Create v2 cpuset files in unified hierarchy

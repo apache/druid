@@ -400,7 +400,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     );
   }
 
-  private void assertRangePartitions(Set<DataSegment> publishedSegments)
+  private void assertRangePartitions(Set<DataSegment> publishedSegments) throws IOException
   {
     Multimap<Interval, DataSegment> intervalToSegments = ArrayListMultimap.create();
     publishedSegments.forEach(s -> intervalToSegments.put(s.getInterval(), s));

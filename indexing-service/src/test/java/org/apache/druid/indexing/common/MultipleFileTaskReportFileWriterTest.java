@@ -40,13 +40,12 @@ public class MultipleFileTaskReportFileWriterTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testReport() throws IOException
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File file = new File(temporaryFolder, "report.json");
+    final File file = temporaryFolderExtension.newFile("report.json");
     final MultipleFileTaskReportFileWriter writer = new MultipleFileTaskReportFileWriter();
     writer.setObjectMapper(mapper);
     writer.add(TASK_ID, file);

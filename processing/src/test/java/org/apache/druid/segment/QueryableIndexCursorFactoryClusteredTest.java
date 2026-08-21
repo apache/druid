@@ -77,7 +77,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -141,7 +140,6 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File tmpDir = temporaryFolderExtension.getRoot();
 
   private QueryableIndex segmentIndex;
 
@@ -993,7 +991,7 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
                               .build();
     return IndexBuilder.create()
                        .useV10()
-                       .tmpDir(tmpDir)
+                       .tmpDir(temporaryFolderExtension.getRoot())
                        .schema(schema)
                        .rows(rows)
                        .buildMMappedIndex(INTERVAL);
@@ -1012,7 +1010,7 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
                               .build();
     return IndexBuilder.create()
                        .useV10()
-                       .tmpDir(tmpDir)
+                       .tmpDir(temporaryFolderExtension.getRoot())
                        .schema(schema)
                        .rows(List.of(
                            row("Acme", "2025-01-01T00:00:00", "us-east-1"),

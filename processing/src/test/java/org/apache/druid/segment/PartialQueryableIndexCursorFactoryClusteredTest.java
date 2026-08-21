@@ -79,13 +79,12 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
   private static final String GLOBEX_BUNDLE = "__base$1";
 
   @RegisterExtension
-  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
-  static final File sharedTempDir = classScopedTemporaryFolder.getRoot();
+  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
     final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
@@ -105,7 +104,7 @@ class PartialQueryableIndexCursorFactoryClusteredTest extends PartialQueryableIn
                               .withRollup(false)
                               .withClusterSpec(clusterSpec)
                               .build();
-    final File tmpDir = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)

@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -53,7 +52,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
@@ -65,7 +63,6 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testSegmentizer() throws IOException, SegmentLoadingException
@@ -91,7 +88,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
 
     List<String> columnNames = data.getColumnNames();
-    File segment = new File(FileUtils.createTempDirInLocation(tempDir, "seg"), "segment");
+    File segment = new File(temporaryFolderExtension.newFolder("seg"), "segment");
     File persistedSegmentRoot = indexMerger.persist(
         data,
         testInterval,

@@ -204,7 +204,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<>()
   {
@@ -231,9 +230,9 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
 
   private final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private File newTempFolder()
+  private File newTempFolder() throws IOException
   {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "tmp");
+    return temporaryFolderExtension.newFolder();
   }
 
   private final String taskStorageType;
@@ -528,7 +527,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       DataSegmentPusher dataSegmentPusher,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       TestIndexerMetadataStorageCoordinator mdc
-  )
+  ) throws IOException
   {
     return setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, new TestAppenderatorsManager());
   }
@@ -538,7 +537,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       TestIndexerMetadataStorageCoordinator mdc,
       AppenderatorsManager appenderatorsManager
-  )
+  ) throws IOException
   {
     Preconditions.checkNotNull(queryRunnerFactoryConglomerate);
     Preconditions.checkNotNull(monitorScheduler);

@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
@@ -43,7 +42,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -60,7 +58,6 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @BeforeEach
   public void setUp()
@@ -94,7 +91,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
             ))
     );
 
-    final File tempDir = FileUtils.createTempDirInLocation(this.tempDir, "rollup");
+    final File tempDir = temporaryFolderExtension.newFolder("rollup");
 
     List<QueryableIndex> indexes = new ArrayList<>();
     Instant time = Instant.now();

@@ -23,15 +23,14 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.AsyncResources;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.file.CountingRangeReader;
 import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -49,7 +48,6 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  protected final File perTestTempDir = temporaryFolderExtension.getRoot();
 
   /**
    * Mount a fresh partial index over the (already built) segment via a {@link PartialSegmentFileMapperV10} backed by
@@ -71,8 +69,7 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
       long coalesceGapBytes
   ) throws IOException
   {
-    final File cacheDir = new File(perTestTempDir, cacheName);
-    FileUtils.mkdirp(cacheDir);
+    final File cacheDir = temporaryFolderExtension.newFolder(cacheName);
     final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
         rangeReader,
         TestHelper.makeJsonMapper(),

@@ -26,7 +26,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -78,7 +77,6 @@ public class CompressedVSizeColumnarIntsSerializerTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   public static Stream<Object[]> constructorFeeder()
   {
@@ -351,8 +349,8 @@ public class CompressedVSizeColumnarIntsSerializerTest
     }
   }
 
-  private File newSubDir()
+  private File newSubDir() throws IOException
   {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "dir" + dirCounter.getAndIncrement());
+    return temporaryFolderExtension.newFolder("dir" + dirCounter.getAndIncrement());
   }
 }

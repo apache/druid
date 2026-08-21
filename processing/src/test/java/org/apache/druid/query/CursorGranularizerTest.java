@@ -51,7 +51,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +59,6 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private CursorFactory cursorFactory;
   private TimeBoundaryInspector timeBoundaryInspector;
@@ -158,7 +156,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                             )
                         )
                     )
-                    .tmpDir(temporaryFolder);
+                    .tmpDir(temporaryFolderExtension.getRoot());
 
     final QueryableIndex index = bob.buildMMappedIndex(Intervals.of("2024-01-01T00:00Z/2024-01-02T00:00Z"));
     interval = index.getDataInterval();

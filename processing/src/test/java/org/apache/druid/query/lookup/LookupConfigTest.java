@@ -27,8 +27,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 public class LookupConfigTest
 {
@@ -36,12 +34,11 @@ public class LookupConfigTest
   ObjectMapper mapper = TestHelper.makeJsonMapper();
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testSerDesr() throws IOException
   {
-    LookupConfig lookupConfig = new LookupConfig(Files.createTempFile(tempDir, "junit", null).toFile().getAbsolutePath());
+    LookupConfig lookupConfig = new LookupConfig(temporaryFolderExtension.newFile().getAbsolutePath());
     Assertions.assertEquals(
         lookupConfig,
         mapper.readerFor(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig))

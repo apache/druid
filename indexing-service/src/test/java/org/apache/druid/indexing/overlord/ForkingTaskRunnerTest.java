@@ -80,16 +80,15 @@ public class ForkingTaskRunnerTest
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
-  private File newTempFolder()
+  private File newTempFolder() throws IOException
   {
-    return FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "tmp");
+    return temporaryFolderExtension.newFolder();
   }
 
   private File newTempFile() throws IOException
   {
-    return File.createTempFile("tmp", null, temporaryFolder);
+    return temporaryFolderExtension.newFile();
   }
 
   @Test

@@ -123,7 +123,7 @@ public class LocalFileStorageConnectorTest
   @Test
   public void incorrectBasePath() throws IOException
   {
-    File file = File.createTempFile("test", ".tmp", temporaryFolder);
+    File file = temporaryFolderExtension.newFile();
     StorageConnectorProvider storageConnectorProvider = new LocalFileStorageConnectorProvider(file);
     Assertions.assertThrows(IAE.class, () -> storageConnectorProvider.createStorageConnector(null));
   }

@@ -28,14 +28,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class ProcCgroupDiscovererTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -43,8 +41,8 @@ public class ProcCgroupDiscovererTest
   @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = FileUtils.createTempDirInLocation(tempDir, "cgroup");
-    procDir = FileUtils.createTempDirInLocation(tempDir, "proc");
+    cgroupDir = temporaryFolderExtension.newFolder("cgroup");
+    procDir = temporaryFolderExtension.newFolder("proc");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
   }
@@ -91,8 +89,8 @@ public class ProcCgroupDiscovererTest
   @Test
   public void testFallBack() throws Exception
   {
-    File cgroupDir = FileUtils.createTempDirInLocation(tempDir, "fallbackCgroup");
-    File procDir = FileUtils.createTempDirInLocation(tempDir, "fallbackProc");
+    File cgroupDir = temporaryFolderExtension.newFolder("fallbackCgroup");
+    File procDir = temporaryFolderExtension.newFolder("fallbackProc");
     TestUtils.setUpCgroups(procDir, cgroupDir);
 
     // Swap out the cgroup path with a default path

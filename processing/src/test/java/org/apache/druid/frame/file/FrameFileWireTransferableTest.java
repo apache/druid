@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +55,6 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testRacMethodThrowsWithoutDeserializerForRacEntry() throws IOException
@@ -89,7 +87,7 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
     final List<Frame> frameList = frames.toList();
 
     // Write frame file with useWireTransferableForFrames = true (RAC format)
-    final File file = Files.createTempFile(tempDir, "junit", null).toFile();
+    final File file = temporaryFolderExtension.newFile();
     try (final FrameFileWriter writer = FrameFileWriter.open(
         Channels.newChannel(Files.newOutputStream(file.toPath())),
         null,

@@ -33,7 +33,6 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -60,7 +59,6 @@ public class ByteBufferUtilsTest
 
   @RegisterExtension
   public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testAllocateDirect()
@@ -77,7 +75,7 @@ public class ByteBufferUtilsTest
   @Test
   public void testUnmapDoesntCrashJVM() throws Exception
   {
-    final File file = tempDir.resolve("some_mmap_file").toFile();
+    final File file = temporaryFolderExtension.newFile("some_mmap_file");
     try (final OutputStream os = new BufferedOutputStream(new FileOutputStream(file))) {
       final byte[] data = new byte[4096];
       Arrays.fill(data, (byte) 0x5A);
