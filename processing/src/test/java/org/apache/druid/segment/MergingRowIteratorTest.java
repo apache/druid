@@ -106,6 +106,8 @@ public class MergingRowIteratorTest extends InitializedNullHandlingTest
   {
     String message = Stream.of(timestampSequences).map(List::toString).collect(Collectors.joining(" "));
     int totalLength = Stream.of(timestampSequences).mapToInt(List::size).sum();
+    // The expected merge order does not depend on markIteration. Materialize it once per sequence
+    // triple so each mark iteration can focus on rebuilding the production iterator and testing mark handling.
     List<Long> expectedTimestamps = new ArrayList<>();
     Iterator<Long> expectedTimestampIterator = Utils.mergeSorted(
         Stream.of(timestampSequences).map(List::iterator).collect(Collectors.toList()),
