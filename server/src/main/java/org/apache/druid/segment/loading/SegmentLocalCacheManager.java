@@ -346,13 +346,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
       if (cacheEntry.checkExists(location.getPath())) {
         removeInfo = false;
-        final boolean reserveResult;
-        if (config.isVirtualStorage()) {
-          reserveResult = location.reserveWeak(cacheEntry);
-        } else {
-          reserveResult = location.reserve(cacheEntry);
-        }
-        if (!reserveResult) {
+        // Under virtual storage nothing is reserved here: as with the partial layout above, bootstrap() reserves this
+        // segment and mounts it under the resulting hold. The legacy path reserves it statically, up front.
+        if (!config.isVirtualStorage() && !location.reserve(cacheEntry)) {
           log.makeAlert(
               "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
               location.getPath(),
@@ -1418,18 +1414,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             "bootstrap() should not be called when virtualStorageIsEphemeral is true"
         );
       }
-      // During bootstrap, check if the segment exists in a location and mount it. getCachedSegments did the reserving
-      // for complete entries; partial layouts are reserved here instead, one segment at a time, so that the
-      // pessimistic metadata estimate is only outstanding until this segment's mount shrinks it to its real size.
+      // During bootstrap, reserve whatever this segment left on disk and mount it. getCachedSegments only recognizes
+      // the layout; the reservation is made here, one segment at a time, so that a partial's pessimistic metadata
+      // estimate is only outstanding until its mount shrinks it, and so that every mount runs under a hold. That hold
+      // matters: reclaim passes over held entries only, so an unheld entry can be evicted by a parallel bootstrap
+      // thread's reservation while this one is still mounting it.
       final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
       // Assemble the loaded-profile inside the segment lock (null = no partial materialized)
       PartialLoadProfile loadedProfile = null;
       final ReferenceCountingLock lock = lock(dataSegment);
       synchronized (lock) {
-        ReservedPartial reservedFromDisk = null;
+        StorageLocation.ReservationHold<SegmentCacheEntry> bootstrapHold = null;
         try {
-          // partials defer reservation until now, so if we're dealing with a partial reserve and take a hold now
-          reservedFromDisk = reservePartialForBootstrap(dataSegment, id);
+          // A segment has either a partial layout or a complete one, so at most one of these reserves anything
+          bootstrapHold = reservePartialForBootstrap(dataSegment, id);
+          if (bootstrapHold == null) {
+            bootstrapHold = reserveCompleteForBootstrap(dataSegment, id);
+          }
           for (StorageLocation location : locations) {
             final CacheEntry entry = location.getCacheEntry(id);
             if (entry == null) {
@@ -1482,9 +1483,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           }
         }
         finally {
-          if (reservedFromDisk != null) {
+          if (bootstrapHold != null) {
             CloseableUtils.closeAndSuppressExceptions(
-                reservedFromDisk.hold,
+                bootstrapHold,
                 t -> log.warn(t, "Failed to release bootstrap reservation hold for segment[%s]", dataSegment.getId())
             );
           }
@@ -1613,10 +1614,22 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
+   * Whether any location already has a cache entry for {@code id}
+   */
+  private boolean isRegisteredAtAnyLocation(SegmentCacheEntryIdentifier id)
+  {
+    for (StorageLocation location : locations) {
+      if (location.getCacheEntry(id) != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Reserve a metadata entry for a partial-load layout that survived on disk, so {@link #bootstrap} has something to
-   * mount. Returns {@code null} when this segment has no on-disk partial layout (it is a complete entry, already
-   * reserved by {@link #getCachedSegments}, or an entry already exists for it), in which case bootstrap proceeds
-   * exactly as it does for complete segments.
+   * mount, and hand back the hold it was reserved under. Returns {@code null} when this segment has no on-disk partial
+   * layout, or already has an entry, in which case bootstrap proceeds as it does for complete segments.
    * <p>
    * Restoring reads the local layout rather than deep storage: the mount parses the on-disk header and picks up
    * whichever bundles still have all their container files (see
@@ -1628,13 +1641,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    *                                 nothing behind it
    */
   @Nullable
-  private ReservedPartial reservePartialForBootstrap(DataSegment dataSegment, SegmentCacheEntryIdentifier id)
-      throws SegmentLoadingException
+  private StorageLocation.ReservationHold<SegmentCacheEntry> reservePartialForBootstrap(
+      DataSegment dataSegment,
+      SegmentCacheEntryIdentifier id
+  ) throws SegmentLoadingException
   {
-    for (StorageLocation location : locations) {
-      if (location.getCacheEntry(id) != null) {
-        return null;
-      }
+    if (isRegisteredAtAnyLocation(id)) {
+      return null;
     }
     for (StorageLocation location : locations) {
       final File partialDir = new File(location.getPath(), dataSegment.getId().toString());
@@ -1676,7 +1689,54 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             location.getPath()
         );
       }
-      return reserved;
+      return reserved.hold;
+    }
+    return null;
+  }
+
+  /**
+   * Reserve a {@link CompleteSegmentCacheEntry} for an eagerly-downloaded segment whose files are on disk, so
+   * {@link #bootstrap} has something to mount, and hand back the hold it was reserved under. Returns {@code null} when
+   * this segment has no complete layout on disk, or already has an entry. Virtual storage only: the legacy path
+   * reserves these statically in {@link #getCachedSegments} and never evicts them.
+   * <p>
+   * Reserving under a hold is what makes the mount safe: reclaim skips held entries only, so an unheld entry can be
+   * selected as a victim while a parallel bootstrap thread is still mounting it. Releasing the hold once mounted
+   * leaves the entry as evictable as any other weak entry.
+   *
+   * @throws SegmentLoadingException if the location cannot accept the reservation, which used to be an alert followed
+   *                                 by mounting the segment unreserved, leaving the location under-counting the disk
+   *                                 it was actually using
+   */
+  @Nullable
+  private StorageLocation.ReservationHold<SegmentCacheEntry> reserveCompleteForBootstrap(
+      DataSegment dataSegment,
+      SegmentCacheEntryIdentifier id
+  ) throws SegmentLoadingException
+  {
+    if (isRegisteredAtAnyLocation(id)) {
+      return null;
+    }
+    for (StorageLocation location : locations) {
+      final CacheEntry cacheEntry = new CompleteSegmentCacheEntry(dataSegment);
+      if (!((CompleteSegmentCacheEntry) cacheEntry).checkExists(location.getPath())) {
+        continue;
+      }
+      final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
+          id,
+          () -> new CompleteSegmentCacheEntry(dataSegment)
+      );
+      if (hold == null) {
+        throw new SegmentLoadingException(
+            "Location[%s] with available bytes[%,d] cannot reserve segment[%s] of size[%,d] during bootstrap; check "
+            + "druid.segmentCache.locations maxSize",
+            location.getPath(),
+            location.availableSizeBytes(),
+            dataSegment.getId(),
+            dataSegment.getSize()
+        );
+      }
+      return hold;
     }
     return null;
   }

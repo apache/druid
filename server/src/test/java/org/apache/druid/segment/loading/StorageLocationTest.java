@@ -629,7 +629,7 @@ class StorageLocationTest
         location.addWeakReservationHold(parent.getId(), () -> parent);
     Assertions.assertNotNull(parentHold);
 
-    // Child registered WITHOUT a hold (the bootstrap reserveWeak path that removeUnheldWeakEntry cleans up).
+    // Child registered WITHOUT a hold, the reserveWeak shape that removeUnheldWeakEntry cleans up.
     final CascadingUnmountCacheEntry child = new CascadingUnmountCacheEntry("child", 100L, parentHold);
     Assertions.assertTrue(location.reserveWeak(child));
     child.mount(location);

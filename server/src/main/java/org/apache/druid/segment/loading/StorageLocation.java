@@ -286,8 +286,9 @@ public class StorageLocation
 
   /**
    * Reserves space to store a 'weak' reservation for a given {@link CacheEntry}. Returns true if already reserved or
-   * was able to be successfully reserved, or false if unable to be reserved. This method is intended for use during
-   * 'bootstrapping'. To use weak cache entries in a query engine use
+   * was able to be successfully reserved, or false if unable to be reserved. The entry is registered with no hold, so
+   * nothing protects it from being reclaimed while it is being mounted; no production path does this any more (both
+   * bootstrap and the query engine reserve under a hold). To use weak cache entries in a query engine use
    * {@link #addWeakReservationHold(CacheEntryIdentifier, Supplier)} or
    * {@link #addWeakReservationHoldIfExists(CacheEntryIdentifier)}, which places a hold on cache entries to prevent
    * eviction until the hold is released.
@@ -525,7 +526,8 @@ public class StorageLocation
    * is absent, is a {@link #staticCacheEntries} entry, or still has outstanding holds.
    * <p>
    * This is for reclaiming a reservation whose entry has nothing behind it any more, after a failed mount. It covers
-   * both a weak entry registered <em>without</em> a {@link ReservationHold} (via {@link #reserveWeak}), and one whose
+   * both a weak entry registered <em>without</em> a {@link ReservationHold} (via {@link #reserveWeak}, which no
+   * production path uses any more), and one whose
    * hold was released mid-mount once the entry already reported {@link CacheEntry#isMounted()} — the release runnable
    * of {@link #addWeakReservationHold} only evicts a <em>never</em>-mounted new entry, so an abandoned mount that then
    * fails would otherwise leave its entry registered. The hold guard makes this safe to call unconditionally on any
