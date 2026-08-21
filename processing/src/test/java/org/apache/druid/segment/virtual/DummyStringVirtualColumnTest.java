@@ -42,9 +42,11 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -59,6 +61,9 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
   private final List<Segment> mmappedSegments;
   private final List<Segment> inMemorySegments;
   private final List<Segment> mixedSegments;
+
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   private final AggregationTestHelper topNTestHelper;
   private final AggregationTestHelper groupByTestHelper;
@@ -78,15 +83,15 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
     inMemorySegments = Lists.newArrayList(incrementalIndexSegment, incrementalIndexSegment);
     mixedSegments = Lists.newArrayList(incrementalIndexSegment, queryableIndexSegment);
 
-    topNTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
+    topNTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTemporaryFolderExtension(
         Collections.emptyList(),
-        null
+        temporaryFolder
     );
 
-    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
         Collections.emptyList(),
         new GroupByQueryConfig(),
-        null
+        temporaryFolder
     );
   }
 

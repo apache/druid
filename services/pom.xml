@@ -274,12 +274,6 @@
             <artifactId>httpclient</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Required by JUnit 4 rule types exposed by server/processing test-jar fixtures. -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>

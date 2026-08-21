@@ -24,9 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CompressionUtils;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -78,13 +75,11 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
             InputFormat.class
         )
     );
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-            "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
-            + "If [columns] is not set, the first row of your data must have your header and "
-            + "[findColumnsFromHeader] must be set to true."))
-    );
+    Assertions.assertTrue(e.getMessage().startsWith(
+        "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
+        + "If [columns] is not set, the first row of your data must have your header and "
+        + "[findColumnsFromHeader] must be set to true."
+    ));
   }
 
   @Test
@@ -98,12 +93,10 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
             InputFormat.class
         )
     );
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-            "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
-            + "Cannot accept both [findColumnsFromHeader] and [hasHeaderRow]"))
-    );
+    Assertions.assertTrue(e.getMessage().startsWith(
+        "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
+        + "Cannot accept both [findColumnsFromHeader] and [hasHeaderRow]"
+    ));
   }
 
   @Test
@@ -114,12 +107,10 @@ public class CsvInputFormatTest extends InitializedNullHandlingTest
         JsonProcessingException.class,
         () -> mapper.readValue("{\"type\":\"csv\"}", InputFormat.class)
     );
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
-            "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
-            + "Either [columns] or [findColumnsFromHeader] must be set"))
-    );
+    Assertions.assertTrue(e.getMessage().startsWith(
+        "Cannot construct instance of `org.apache.druid.data.input.impl.CsvInputFormat`, problem: "
+        + "Either [columns] or [findColumnsFromHeader] must be set"
+    ));
   }
 
   @Test

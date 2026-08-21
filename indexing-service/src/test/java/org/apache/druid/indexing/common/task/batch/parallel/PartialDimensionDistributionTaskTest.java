@@ -43,20 +43,18 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.testing.junit.LoggerCaptureRule;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.apache.druid.testing.junit.LoggerCaptureExtension;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.apache.logging.log4j.core.LogEvent;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -120,9 +118,10 @@ public class PartialDimensionDistributionTaskTest
 
   public static class RunTaskTest
   {
-    @TempDir
-    private File temporaryFolder;
-    private final LoggerCaptureRule logger = new LoggerCaptureRule(ParseExceptionHandler.class);
+    @RegisterExtension
+    private final TemporaryFolderExtension temporaryFolderExtension = new TemporaryFolderExtension();
+    @RegisterExtension
+    private final LoggerCaptureExtension logger = new LoggerCaptureExtension(ParseExceptionHandler.class);
 
     private Capture<SubTaskReport> reportCapture;
     private TaskToolbox taskToolbox;
@@ -130,24 +129,17 @@ public class PartialDimensionDistributionTaskTest
     @BeforeEach
     public void setup()
     {
-      logger.before();
       reportCapture = Capture.newInstance();
       ParallelIndexSupervisorTaskClient taskClient = EasyMock.mock(ParallelIndexSupervisorTaskClient.class);
       taskClient.report(EasyMock.capture(reportCapture));
       EasyMock.replay(taskClient);
       taskToolbox = EasyMock.mock(TaskToolbox.class);
-      EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolder);
+      EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolderExtension.getRoot());
       EasyMock.expect(taskToolbox.getSupervisorTaskClientProvider())
               .andReturn((supervisorTaskId, httpTimeout, numRetries) -> taskClient);
       EasyMock.expect(taskToolbox.getOverlordClient()).andReturn(null);
       EasyMock.expect(taskToolbox.getRowIngestionMetersFactory()).andReturn(new DropwizardRowIngestionMetersFactory());
       EasyMock.replay(taskToolbox);
-    }
-
-    @AfterEach
-    public void tearDown() throws IOException
-    {
-      logger.after();
     }
 
     @Test

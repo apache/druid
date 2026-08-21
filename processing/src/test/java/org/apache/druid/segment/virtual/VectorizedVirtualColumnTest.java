@@ -96,14 +96,14 @@ public class VectorizedVirtualColumnTest
   @BeforeEach
   public void setup()
   {
-    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
         Collections.emptyList(),
         new GroupByQueryConfig(),
-        tmpFolder.getRoot()
+        tmpFolder
     );
-    timeseriesTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
+    timeseriesTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
         Collections.emptyList(),
-        tmpFolder.getRoot()
+        tmpFolder
     );
     QueryableIndexSegment queryableIndexSegment = new QueryableIndexSegment(
         TestIndex.getMMappedTestIndex(),

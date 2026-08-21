@@ -86,7 +86,6 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
-import org.junit.rules.TemporaryFolder;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -155,19 +154,6 @@ public class AggregationTestHelper implements Closeable
     }
   }
 
-  public static AggregationTestHelper createGroupByQueryAggregationTestHelper(
-      List<? extends Module> jsonModulesToRegister,
-      GroupByQueryConfig config,
-      TemporaryFolder tempFolder
-  )
-  {
-    return createGroupByQueryAggregationTestHelper(
-        jsonModulesToRegister,
-        config,
-        tempFolderProvider(tempFolder)
-    );
-  }
-
   public static AggregationTestHelper createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
       List<? extends Module> jsonModulesToRegister,
       GroupByQueryConfig config,
@@ -232,17 +218,6 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  public static AggregationTestHelper createTimeseriesQueryAggregationTestHelper(
-      List<? extends Module> jsonModulesToRegister,
-      TemporaryFolder tempFolder
-  )
-  {
-    return createTimeseriesQueryAggregationTestHelper(
-        jsonModulesToRegister,
-        tempFolderProvider(tempFolder)
-    );
-  }
-
   public static AggregationTestHelper createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolderExtension tempFolder
@@ -297,17 +272,6 @@ public class AggregationTestHelper implements Closeable
         jsonModulesToRegister,
         Closer.create(),
         Collections.emptyMap()
-    );
-  }
-
-  public static AggregationTestHelper createTopNQueryAggregationTestHelper(
-      List<? extends Module> jsonModulesToRegister,
-      TemporaryFolder tempFolder
-  )
-  {
-    return createTopNQueryAggregationTestHelper(
-        jsonModulesToRegister,
-        tempFolderProvider(tempFolder)
     );
   }
 
@@ -380,17 +344,6 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  public static AggregationTestHelper createScanQueryAggregationTestHelper(
-      List<? extends Module> jsonModulesToRegister,
-      TemporaryFolder tempFolder
-  )
-  {
-    return createScanQueryAggregationTestHelper(
-        jsonModulesToRegister,
-        tempFolderProvider(tempFolder)
-    );
-  }
-
   public static AggregationTestHelper createScanQueryAggregationTestHelperWithTemporaryFolderExtension(
       List<? extends Module> jsonModulesToRegister,
       TemporaryFolderExtension tempFolder
@@ -452,11 +405,6 @@ public class AggregationTestHelper implements Closeable
   }
 
   private static TempFolderProvider tempFolderProvider(final TemporaryFolderExtension tempFolder)
-  {
-    return () -> tempFolder.newFolder();
-  }
-
-  private static TempFolderProvider tempFolderProvider(final TemporaryFolder tempFolder)
   {
     return () -> tempFolder.newFolder();
   }

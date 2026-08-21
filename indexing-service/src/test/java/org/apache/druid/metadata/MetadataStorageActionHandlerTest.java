@@ -27,7 +27,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.joda.time.DateTime;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -44,7 +44,7 @@ public class MetadataStorageActionHandlerTest
 
   private MetadataStorageActionHandler handler;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     this.handler = new MetadataStorageActionHandler()

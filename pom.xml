@@ -1466,12 +1466,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>pl.pragmatists</groupId>
-                <artifactId>JUnitParams</artifactId>
-                <version>1.1.1</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-testlib</artifactId>
                 <version>${guice.version}</version>

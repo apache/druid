@@ -87,15 +87,14 @@ import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -111,10 +110,9 @@ import java.util.stream.Collectors;
 
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
-  @org.junit.Rule
-  public final org.junit.rules.TemporaryFolder junit4TemporaryFolder = new org.junit.rules.TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = new TemporaryFolderExtension();
 
-  @TempDir
   public File temporaryFolder;
 
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
@@ -148,13 +146,10 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   }
 
 
-  @Before
   @BeforeEach
   public void setUpIngestionTestBase() throws IOException
   {
-    if (temporaryFolder == null) {
-      temporaryFolder = junit4TemporaryFolder.getRoot();
-    }
+    temporaryFolder = temporaryFolderExtension.getRoot();
     derbyConnectorRule.before();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
     baseDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "base");
@@ -204,7 +199,6 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     segmentMetadataCache.becomeLeader();
   }
 
-  @After
   @AfterEach
   public void tearDownIngestionTestBase()
   {
