@@ -218,6 +218,32 @@ public class SettableAsyncResourceTest
   }
 
   @Test
+  public void testReadyCallbackNotFiredWhenSetLosesRaceWithClose()
+  {
+    // A callback registered before close(), followed by a producer's late set() that loses the race, must NOT fire:
+    // close() is contractually "callbacks are not fired if close() happened first". This holds because close() drops
+    // the pending callbacks; setInternal still drains on its no-op path, so it finds nothing left to replay.
+    final AtomicInteger fired = new AtomicInteger();
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.addReadyCallback(fired::incrementAndGet);
+    resource.close();
+    Assertions.assertFalse(resource.set("value", null));
+    Assertions.assertEquals(0, fired.get());
+  }
+
+  @Test
+  public void testReadyCallbackNotFiredWhenSetExceptionLosesRaceWithClose()
+  {
+    final AtomicInteger fired = new AtomicInteger();
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.addReadyCallback(fired::incrementAndGet);
+    resource.close();
+    // setException on a CLOSED resource must not fire the dropped callback; the error is logged and otherwise dropped.
+    resource.setException(new IllegalStateException("late failure"));
+    Assertions.assertEquals(0, fired.get());
+  }
+
+  @Test
   public void testAwaitReturnsValueWhenReady() throws InterruptedException
   {
     final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
