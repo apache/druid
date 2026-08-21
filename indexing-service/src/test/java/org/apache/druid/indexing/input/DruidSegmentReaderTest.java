@@ -85,7 +85,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class DruidSegmentReaderTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private File segmentDirectory;
   private long segmentSize;
@@ -148,7 +148,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -244,7 +244,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
             new NotDimFilter(new SelectorDimFilter("a", "foo1", null)),
             new NotDimFilter(new SelectorDimFilter("b", "bar1", null))
         ),
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(Arrays.asList(rows.get(2), rows.get(1)), readRows(reader));
@@ -297,7 +297,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -340,7 +340,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         DimensionsSpec.builder().setDimensionExclusions(ImmutableList.of("__time", "strCol", "cnt", "met_s")).build(),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -388,7 +388,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.inclusionBased(ImmutableSet.of("__time", "strCol", "dblCol")),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -432,7 +432,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.inclusionBased(ImmutableSet.of("strCol", "dblCol")),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -474,7 +474,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         new SelectorDimFilter("dblCol", "1.23", null),
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -511,7 +511,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -559,7 +559,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -607,7 +607,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     Assertions.assertEquals(
@@ -735,7 +735,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
                     .rows(rows)
                     .buildIncrementalIndex();
 
-    File segmentDirectory = createTempDir();
+    File segmentDirectory = temporaryFolder.newFolder();
     long segmentSize;
     try {
       TestHelper.getTestIndexMergerV9(
@@ -773,7 +773,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     List<InputRow> readRows = readRows(reader);
@@ -847,7 +847,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
                     .rows(rows)
                     .buildIncrementalIndex();
 
-    File segmentDirectory = createTempDir();
+    File segmentDirectory = temporaryFolder.newFolder();
     long segmentSize;
     try {
       TestHelper.getTestIndexMergerV9(
@@ -885,7 +885,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
         ),
         ColumnsFilter.all(),
         null,
-        createTempDir()
+        temporaryFolder.newFolder()
     );
 
     List<InputRow> readRows = readRows(reader);
@@ -1022,7 +1022,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
                     .rows(rows)
                     .buildIncrementalIndex();
 
-    segmentDirectory = createTempDir();
+    segmentDirectory = temporaryFolder.newFolder();
 
     try {
       TestHelper.getTestIndexMergerV9(
@@ -1038,11 +1038,6 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
     finally {
       incrementalIndex.close();
     }
-  }
-
-  private File createTempDir() throws IOException
-  {
-    return temporaryFolderExtension.newFolder();
   }
 
 }

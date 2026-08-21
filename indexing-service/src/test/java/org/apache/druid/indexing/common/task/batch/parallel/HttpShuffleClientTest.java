@@ -59,14 +59,14 @@ public class HttpShuffleClientTest
   private static final int PARTITION_ID = 0;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private File segmentFile;
 
   @BeforeEach
   public void setup() throws IOException
   {
-    final File temp = temporaryFolderExtension.newFile();
+    final File temp = temporaryFolder.newFile();
     try (Writer writer = Files.newBufferedWriter(temp.toPath(), StandardCharsets.UTF_8)) {
       for (int j = 0; j < 10; j++) {
         writer.write(StringUtils.format("let's write some data.\n"));
@@ -80,7 +80,7 @@ public class HttpShuffleClientTest
   public void testFetchSegmentFileWithValidParamsReturningCopiedFileInPartitoinDir() throws IOException
   {
     ShuffleClient shuffleClient = mockClient(0);
-    final File localDir = temporaryFolderExtension.newFolder();
+    final File localDir = temporaryFolder.newFolder();
     final File fetchedFile = shuffleClient.fetchSegmentFile(
         localDir,
         SUPERVISOR_TASK_ID,
@@ -96,7 +96,7 @@ public class HttpShuffleClientTest
     Assertions.assertThrows(
         IOException.class,
         () -> shuffleClient.fetchSegmentFile(
-            temporaryFolderExtension.newFolder(),
+            temporaryFolder.newFolder(),
             SUPERVISOR_TASK_ID,
             new TestPartitionLocation()
         )
@@ -107,7 +107,7 @@ public class HttpShuffleClientTest
   public void testFetchSegmentFileWithTransientFailuresReturningCopiedFileInPartitionDir() throws IOException
   {
     ShuffleClient shuffleClient = mockClient(HttpShuffleClient.NUM_FETCH_RETRIES - 1);
-    final File localDir = temporaryFolderExtension.newFolder();
+    final File localDir = temporaryFolder.newFolder();
     final File fetchedFile = shuffleClient.fetchSegmentFile(
         localDir,
         SUPERVISOR_TASK_ID,
@@ -126,7 +126,7 @@ public class HttpShuffleClientTest
       List<Future<File>> futures = new ArrayList<>();
       List<File> localDirs = new ArrayList<>();
       for (int i = 0; i < 2; i++) {
-        localDirs.add(temporaryFolderExtension.newFolder());
+        localDirs.add(temporaryFolder.newFolder());
       }
       for (int i = 0; i < 2; i++) {
         final File localDir = localDirs.get(i);
@@ -158,7 +158,7 @@ public class HttpShuffleClientTest
       List<Future<File>> futures = new ArrayList<>();
       List<File> localDirs = new ArrayList<>();
       for (int i = 0; i < 2; i++) {
-        localDirs.add(temporaryFolderExtension.newFolder());
+        localDirs.add(temporaryFolder.newFolder());
       }
       for (int i = 0; i < 2; i++) {
         final File localDir = localDirs.get(i);

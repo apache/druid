@@ -40,13 +40,13 @@ public class SingleFileTaskReportFileWriterTest
   private static final String TASK_ID = "mytask";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testReport() throws IOException
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File file = temporaryFolderExtension.newFile("report.json");
+    final File file = temporaryFolder.newFile("report.json");
     final SingleFileTaskReportFileWriter writer = new SingleFileTaskReportFileWriter(file);
     writer.setObjectMapper(mapper);
     final TaskReport.ReportMap reportsMap = TaskReport.buildTaskReports(

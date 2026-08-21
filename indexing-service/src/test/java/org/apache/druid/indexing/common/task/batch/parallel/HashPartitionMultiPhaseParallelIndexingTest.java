@@ -121,7 +121,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = createTempDir("data");
+    inputDir = temporaryFolderExtension.newFolder("data");
     final Set<Interval> intervals = new HashSet<>();
     // set up data
     for (int i = 0; i < 10; i++) {
@@ -346,7 +346,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
         segment -> intervalToSegments.computeIfAbsent(segment.getInterval(), k -> new ArrayList<>()).add(segment)
     );
     Assertions.assertEquals(new HashSet<>(inputIntervals), intervalToSegments.keySet());
-    final File tempSegmentDir = createTempDir();
+    final File tempSegmentDir = temporaryFolderExtension.newFolder();
     for (Entry<Interval, List<DataSegment>> entry : intervalToSegments.entrySet()) {
       Interval interval = entry.getKey();
       List<DataSegment> segmentsInInterval = entry.getValue();
@@ -390,7 +390,7 @@ public class HashPartitionMultiPhaseParallelIndexingTest extends AbstractMultiPh
 
   private File newInputDirForReplace() throws IOException
   {
-    File inputDirectory = createTempDir("dataReplace");
+    File inputDirectory = temporaryFolderExtension.newFolder("dataReplace");
     // set up data
     Set<Integer> fileIds = new HashSet<>();
     fileIds.add(3);

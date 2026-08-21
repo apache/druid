@@ -31,21 +31,19 @@ import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.loading.StorageLoadingThreadPool;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.RuntimeInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 
 class SegmentCacheManagerFactoryTest
 {
-  @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File tempDir = temporaryFolderExtension.getRoot();
+  @TempDir
+  File tempDir;
 
   private ObjectMapper jsonMapper;
 

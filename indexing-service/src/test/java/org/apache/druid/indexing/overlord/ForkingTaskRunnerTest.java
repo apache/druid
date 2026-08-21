@@ -79,22 +79,12 @@ public class ForkingTaskRunnerTest
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-
-  private File newTempFolder() throws IOException
-  {
-    return temporaryFolderExtension.newFolder();
-  }
-
-  private File newTempFile() throws IOException
-  {
-    return temporaryFolderExtension.newFile();
-  }
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testGetJavaCommandPrefersRunJavaScriptWhenPresent() throws IOException
   {
-    final File workingDir = newTempFolder();
+    final File workingDir = temporaryFolder.newFolder();
     final File binDir = new File(workingDir, "bin");
     FileUtils.mkdirp(binDir);
     Assertions.assertTrue(new File(binDir, "run-java").createNewFile());
@@ -109,7 +99,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGetJavaCommandFallsBackToJavaWhenScriptAbsent() throws IOException
   {
-    final File workingDir = newTempFolder();
+    final File workingDir = temporaryFolder.newFolder();
     Assertions.assertEquals(
         "java",
         ForkingTaskRunner.getJavaCommand(null, workingDir)
@@ -125,7 +115,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGetJavaCommandRespectsExplicitOverride() throws IOException
   {
-    final File workingDir = newTempFolder();
+    final File workingDir = temporaryFolder.newFolder();
     final File binDir = new File(workingDir, "bin");
     FileUtils.mkdirp(binDir);
     Assertions.assertTrue(new File(binDir, "run-java").createNewFile());
@@ -319,7 +309,7 @@ public class ForkingTaskRunnerTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
-    File file = newTempFolder();
+    File file = temporaryFolder.newFolder();
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
         .setBaseTaskDir(file.toString())
         .build();
@@ -377,7 +367,7 @@ public class ForkingTaskRunnerTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     Task task = NoopTask.create();
-    File file = newTempFolder();
+    File file = temporaryFolder.newFolder();
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
         .setBaseTaskDir(file.toString())
         .build();
@@ -426,7 +416,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGettingTheNextAttemptDir() throws IOException
   {
-    File file = newTempFolder();
+    File file = temporaryFolder.newFolder();
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
         .setBaseTaskDir(file.toString())
         .build();
@@ -449,7 +439,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGettingTheNextAttemptDirFailsIfAttemptDirectoryCannotBeCreated() throws IOException
   {
-    final File taskDir = newTempFile();
+    final File taskDir = temporaryFolder.newFile();
     final File attemptDir = new File(taskDir, "attempt");
 
     final ISE exception = Assertions.assertThrows(
@@ -464,7 +454,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testGettingTheNextAttemptDirFailsIfAttemptCannotBeCreated() throws IOException
   {
-    final File taskDir = newTempFolder();
+    final File taskDir = temporaryFolder.newFolder();
     final File attemptDir = new File(taskDir, "attempt");
     FileUtils.mkdirp(attemptDir);
     final File attempt = new File(attemptDir, "1");
@@ -608,8 +598,8 @@ public class ForkingTaskRunnerTest
 
     TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromBaseDirs(
         ImmutableList.of(
-            newTempFolder().getAbsoluteFile(),
-            newTempFolder().getAbsoluteFile()
+            temporaryFolder.newFolder().getAbsoluteFile(),
+            temporaryFolder.newFolder().getAbsoluteFile()
         ),
         1,
         100_000_000_000_000_000L

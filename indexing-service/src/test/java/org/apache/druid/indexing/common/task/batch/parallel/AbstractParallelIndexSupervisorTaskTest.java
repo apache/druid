@@ -102,7 +102,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
@@ -114,7 +113,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -166,19 +164,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected static final double DEFAULT_TRANSIENT_API_FAILURE_RATE = 0.2;
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
-
-  @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-
-  protected final File createTempDir() throws IOException
-  {
-    return temporaryFolderExtension.newFolder();
-  }
-
-  protected final File createTempDir(final String prefix) throws IOException
-  {
-    return temporaryFolderExtension.newFolder(prefix);
-  }
 
   /**
    * Transient task failure rate emulated by the taskKiller in {@link SimpleThreadingTaskRunner}.

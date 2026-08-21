@@ -188,8 +188,10 @@ public abstract class CompactionTaskRunBase
   );
   protected static final int TOTAL_TEST_ROWS = 10;
 
+  //CHECKSTYLE.OFF: ConstantName
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.classScoped();
+  //CHECKSTYLE.ON: ConstantName
 
   @RegisterExtension
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
@@ -231,7 +233,7 @@ public abstract class CompactionTaskRunBase
     this.inputInterval = inputInterval;
     this.segmentGranularity = segmentGranularity;
 
-    reportsFile = new File(TEMPORARY_FOLDER.getRoot(), "reports.json");
+    reportsFile = new File(temporaryFolder.getRoot(), "reports.json");
     testUtils = new TestUtils();
     segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, testUtils.getTestObjectMapper());
 
@@ -282,18 +284,13 @@ public abstract class CompactionTaskRunBase
   public void setup() throws IOException
   {
     exec = Execs.multiThreaded(2, "compaction-task-run-test-%d");
-    localDeepStorage = newTempFolder();
+    localDeepStorage = temporaryFolder.newFolder();
   }
 
   @AfterEach
   public void teardown() throws IOException
   {
     exec.shutdownNow();
-  }
-
-  protected File newTempFolder() throws IOException
-  {
-    return TEMPORARY_FOLDER.newFolder();
   }
 
   @Test
@@ -1232,7 +1229,7 @@ public abstract class CompactionTaskRunBase
     Assertions.assertEquals(newCompactionState, segments.get(0).getLastCompactionState());
     Assertions.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,
@@ -1346,7 +1343,7 @@ public abstract class CompactionTaskRunBase
     Assertions.assertEquals(expectedState, segments.get(0).getLastCompactionState());
     Assertions.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,
@@ -1465,7 +1462,7 @@ public abstract class CompactionTaskRunBase
     Assertions.assertEquals(expectedState, compactSegment.getLastCompactionState());
     Assertions.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
 
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,
@@ -1583,7 +1580,7 @@ public abstract class CompactionTaskRunBase
       boolean appendToExisting
   ) throws Exception
   {
-    File tmpDir = newTempFolder();
+    File tmpDir = temporaryFolder.newFolder();
     File tmpFile = File.createTempFile("druid", "index", tmpDir);
 
     try (BufferedWriter writer = Files.newWriter(tmpFile, StandardCharsets.UTF_8)) {
@@ -1693,7 +1690,7 @@ public abstract class CompactionTaskRunBase
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .segmentCacheManager(cacheManager)
         .jsonMapper(objectMapper)
-        .taskWorkDir(newTempFolder())
+        .taskWorkDir(temporaryFolder.newFolder())
         .indexIO(testUtils.getTestIndexIO())
         .handoffNotifierFactory(new NoopSegmentHandoffNotifierFactory())
         .indexMerger(testUtils.getIndexMergerV9Factory().create(true))
@@ -1712,7 +1709,7 @@ public abstract class CompactionTaskRunBase
 
   protected List<String> getCSVFormatRowsFromSegments(List<DataSegment> segments) throws Exception
   {
-    final File cacheDir = newTempFolder();
+    final File cacheDir = temporaryFolder.newFolder();
     final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(
         cacheDir,
         null,

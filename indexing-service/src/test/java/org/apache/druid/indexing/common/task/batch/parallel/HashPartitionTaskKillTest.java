@@ -94,7 +94,7 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = createTempDir("data");
+    inputDir = temporaryFolderExtension.newFolder("data");
     final Set<Interval> intervals = new HashSet<>();
     // set up data
     for (int i = 0; i < 10; i++) {

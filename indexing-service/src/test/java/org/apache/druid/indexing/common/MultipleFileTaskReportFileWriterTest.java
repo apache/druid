@@ -39,13 +39,13 @@ public class MultipleFileTaskReportFileWriterTest
   private static final String TASK_ID = "mytask";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testReport() throws IOException
   {
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
-    final File file = temporaryFolderExtension.newFile("report.json");
+    final File file = temporaryFolder.newFile("report.json");
     final MultipleFileTaskReportFileWriter writer = new MultipleFileTaskReportFileWriter();
     writer.setObjectMapper(mapper);
     writer.add(TASK_ID, file);

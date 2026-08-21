@@ -54,7 +54,7 @@ public class DeepStorageShuffleClientTest
   private String segmentFileName;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
 
   @BeforeEach
@@ -76,7 +76,7 @@ public class DeepStorageShuffleClientTest
     );
     deepStorageShuffleClient = new DeepStorageShuffleClient(mapper);
 
-    final File temp = temporaryFolderExtension.newFile();
+    final File temp = temporaryFolder.newFile();
     segmentFileName = temp.getName();
     try (Writer writer = Files.newBufferedWriter(temp.toPath(), StandardCharsets.UTF_8)) {
       for (int j = 0; j < 10; j++) {
@@ -90,7 +90,7 @@ public class DeepStorageShuffleClientTest
   @Test
   public void fetchSegmentFile() throws IOException
   {
-    final File partitionDir = temporaryFolderExtension.newFolder();
+    final File partitionDir = temporaryFolder.newFolder();
     final String subTaskId = "subTask";
     final File unzippedDir = deepStorageShuffleClient.fetchSegmentFile(
         partitionDir,

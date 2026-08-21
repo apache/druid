@@ -135,7 +135,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = createTempDir("data");
+    inputDir = temporaryFolderExtension.newFolder("data");
     intervalToDims = createInputFiles(inputDir, useMultivalueDim);
   }
 
@@ -270,7 +270,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
       return;
     }
 
-    File inputDirectory = createTempDir("dataReplace");
+    File inputDirectory = temporaryFolderExtension.newFolder("dataReplace");
     createInputFilesForReplace(inputDirectory, useMultivalueDim);
 
     final DataSegmentsWithSchemas publishedDataSegmentsWithSchemasAfterReplace = runTask(runTestTask(
@@ -408,7 +408,7 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
     Set<Interval> publishedIntervals = intervalToSegments.keySet();
     assertHasExpectedIntervals(publishedIntervals);
 
-    File tempSegmentDir = createTempDir();
+    File tempSegmentDir = temporaryFolderExtension.newFolder();
 
     intervalToSegments.asMap().forEach((interval, segments) -> {
       assertNumPartition(segments);
