@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -49,6 +50,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.storage.NilStorageConnector;
+import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,6 +65,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 public class SqlMSQStatementResourcePostTest extends MSQTestBase
 {
@@ -312,7 +316,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   @Test
   public void forbiddenTest()
   {
-    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), resource.doPost(
+    // The datasource is not visible to this user, so it cannot be resolved.
+    final Response response = resource.doPost(
         new SqlQuery(
             StringUtils.format("select * from %s", CalciteTests.FORBIDDEN_DATASOURCE),
             null,
@@ -323,7 +328,18 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             null
         ),
         SqlStatementResourceTest.makeOkRequest()
-    ).getStatus());
+    );
+
+    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+
+    final DruidException e = ((ErrorResponse) response.getEntity()).getUnderlyingException();
+    Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.startsWith(
+            StringUtils.format("Object '%s' not found", CalciteTests.FORBIDDEN_DATASOURCE)
+        )
+    );
   }
 
   @Test

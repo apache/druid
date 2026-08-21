@@ -19,12 +19,14 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.base.Preconditions;
 import org.apache.calcite.schema.Table;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
-
-import javax.inject.Inject;
 
 import java.util.Set;
 
@@ -33,12 +35,17 @@ public class DruidSchema extends AbstractTableSchema
   private final BrokerSegmentMetadataCache segmentMetadataCache;
   private final DruidSchemaManager druidSchemaManager;
   private final CatalogResolver catalogResolver;
+  private final AuthorizerMapper authorizerMapper;
+  private final AuthenticationResult authenticationResult;
+  private final boolean authorizeTableVisibility;
 
-  @Inject
   public DruidSchema(
       final BrokerSegmentMetadataCache segmentMetadataCache,
       final DruidSchemaManager druidSchemaManager,
-      final CatalogResolver catalogResolver
+      final CatalogResolver catalogResolver,
+      final AuthorizerMapper authorizerMapper,
+      final AuthenticationResult authenticationResult,
+      final boolean authorizeTableVisibility
   )
   {
     this.segmentMetadataCache = segmentMetadataCache;
@@ -48,16 +55,20 @@ public class DruidSchema extends AbstractTableSchema
     } else {
       this.druidSchemaManager = null;
     }
-  }
-
-  protected BrokerSegmentMetadataCache cache()
-  {
-    return segmentMetadataCache;
+    this.authorizerMapper = authorizerMapper;
+    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
+    this.authorizeTableVisibility = authorizeTableVisibility;
   }
 
   @Override
   public Table getTable(String name)
   {
+    if (authorizeTableVisibility
+        && !SchemaUtils.isTableVisible(authorizerMapper, authenticationResult, name, _ -> ResourceType.DATASOURCE)) {
+      // Do not return tables that are not supposed to be visible in this schema.
+      return null;
+    }
+
     DruidTable schemaMgrTable = null;
     DruidTable catalogTable = catalogResolver.resolveDatasource(name, null);
     if (catalogTable == null && druidSchemaManager != null) {
@@ -74,10 +85,22 @@ public class DruidSchema extends AbstractTableSchema
   @Override
   public Set<String> getTableNames()
   {
+    final Set<String> allTableNames;
     if (druidSchemaManager != null) {
-      return druidSchemaManager.getTableNames(segmentMetadataCache);
+      allTableNames = druidSchemaManager.getTableNames(segmentMetadataCache);
     } else {
-      return catalogResolver.getTableNames(segmentMetadataCache.getDatasourceNames());
+      allTableNames = catalogResolver.getTableNames(segmentMetadataCache.getDatasourceNames());
+    }
+
+    if (authorizeTableVisibility) {
+      return SchemaUtils.filterVisibleTables(
+          authorizerMapper,
+          authenticationResult,
+          allTableNames,
+          _ -> ResourceType.DATASOURCE
+      );
+    } else {
+      return allTableNames;
     }
   }
 }

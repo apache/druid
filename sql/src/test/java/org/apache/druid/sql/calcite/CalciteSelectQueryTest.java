@@ -49,19 +49,25 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.Assert.assertThrows;
 
 public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
@@ -1230,69 +1236,125 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectStarOnForbiddenTable()
+  public void testSelectStarOnForbiddenTable_regularUser()
   {
-    assertQueryIsForbidden(
-        "SELECT * FROM druid.forbiddenDatasource",
-        CalciteTests.REGULAR_USER_AUTH_RESULT
-    );
+    final String sql = "SELECT * FROM druid.forbiddenDatasource";
 
-    testQuery(
-        PLANNER_CONFIG_DEFAULT,
-        "SELECT * FROM druid.forbiddenDatasource",
-        CalciteTests.SUPER_USER_AUTH_RESULT,
-        ImmutableList.of(
-            newScanQueryBuilder()
-                .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
-                .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "dim1", "dim2", "cnt", "m1", "m2", "unique_dim1")
-                .columnTypes(
-                    ColumnType.LONG,
-                    ColumnType.STRING,
-                    ColumnType.STRING,
-                    ColumnType.LONG,
-                    ColumnType.FLOAT,
-                    ColumnType.DOUBLE,
-                    ColumnType.ofComplex("hyperUnique")
-                )
-                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .context(QUERY_CONTEXT_DEFAULT)
-                .build()
-        ),
-        ImmutableList.of(
-            new Object[]{
-                timestamp("2000-01-01"),
-                "forbidden",
-                "abcd",
-                1L,
-                9999.0f,
-                null,
-                "\"AQAAAQAAAALFBA==\""
-            },
-            new Object[]{
-                timestamp("2000-01-02"),
-                "forbidden",
-                "a",
-                1L,
-                1234.0f,
-                null,
-                "\"AQAAAQAAAALFBA==\""
-            }
-        )
+    // The regular user does not have access to forbiddenDatasource, so they shouldn't see it.
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql(sql)
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .build()
+            .run()
     );
+    assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString("Object 'forbiddenDatasource' not found within 'druid'"))
+    );
+  }
+
+  @Test
+  public void testSelectStarOnForbiddenTable_regularUser_noAuthorizeTableVisibility()
+  {
+    final String sql = "SELECT * FROM druid.forbiddenDatasource";
+
+    // The regular user does not have access to forbiddenDatasource. When authorizeTableVisibility = false, the
+    // validator is aware of it, but querying is still forbidden.
+    ForbiddenException e = assertThrows(
+        ForbiddenException.class,
+        () -> testBuilder()
+            .sql(sql)
+            .plannerConfig(PlannerConfig.builder().authorizeTableVisibility(false).build())
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .build()
+            .run()
+    );
+    assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Unauthorized"))
+    );
+  }
+
+  @Test
+  public void testSelectStarOnForbiddenTable_superUser()
+  {
+    // The superuser can see and query forbiddenDatasource.
+    testBuilder()
+        .sql("SELECT * FROM druid.forbiddenDatasource")
+        .plannerConfig(PLANNER_CONFIG_DEFAULT)
+        .authResult(CalciteTests.SUPER_USER_AUTH_RESULT)
+        .expectedQueries(
+            ImmutableList.of(
+                newScanQueryBuilder()
+                    .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .columns("__time", "dim1", "dim2", "cnt", "m1", "m2", "unique_dim1")
+                    .columnTypes(
+                        ColumnType.LONG,
+                        ColumnType.STRING,
+                        ColumnType.STRING,
+                        ColumnType.LONG,
+                        ColumnType.FLOAT,
+                        ColumnType.DOUBLE,
+                        ColumnType.ofComplex("hyperUnique")
+                    )
+                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .context(QUERY_CONTEXT_DEFAULT)
+                    .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{
+                    timestamp("2000-01-01"),
+                    "forbidden",
+                    "abcd",
+                    1L,
+                    9999.0f,
+                    null,
+                    "\"AQAAAQAAAALFBA==\""
+                },
+                new Object[]{
+                    timestamp("2000-01-02"),
+                    "forbidden",
+                    "a",
+                    1L,
+                    1234.0f,
+                    null,
+                    "\"AQAAAQAAAALFBA==\""
+                }
+            )
+        )
+        .run();
   }
 
   @Test
   public void testSelectStarOnForbiddenView()
   {
-    assertQueryIsForbidden(
-        "SELECT * FROM view.forbiddenView",
-        CalciteTests.REGULAR_USER_AUTH_RESULT
+    final String sql = "SELECT * FROM view.forbiddenView";
+
+    // The regular user does not have access to forbiddenDatasource, so they shouldn't see it.
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql(sql)
+            .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .build()
+            .run()
+    );
+    assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.containsString("Object 'forbiddenView' not found within 'view'"))
     );
 
+    // The superuser can see forbiddenDatasource.
     testQuery(
         PLANNER_CONFIG_DEFAULT,
-        "SELECT * FROM view.forbiddenView",
+        sql,
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(
             newScanQueryBuilder()
