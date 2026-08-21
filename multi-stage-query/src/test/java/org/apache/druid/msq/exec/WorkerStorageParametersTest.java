@@ -21,24 +21,24 @@ package org.apache.druid.msq.exec;
 
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughTemporaryStorageFault;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class WorkerStorageParametersTest
 {
   @Test
   public void test_WorkerStorageParameter_createInstance()
   {
-    Assert.assertEquals(WorkerStorageParameters.createInstanceForTests(1000000000), WorkerStorageParameters.createInstance(2_250_000_000L, true));
+    Assertions.assertEquals(WorkerStorageParameters.createInstanceForTests(1000000000), WorkerStorageParameters.createInstance(2_250_000_000L, true));
   }
 
   @Test
   public void test_insufficientTemporaryStorage()
   {
-    final MSQException e = Assert.assertThrows(
+    final MSQException e = Assertions.assertThrows(
         MSQException.class,
         () -> WorkerStorageParameters.createInstance(2_000L, true)
     );
-    Assert.assertEquals(new NotEnoughTemporaryStorageFault(2250000000L, 2000), e.getFault());
+    Assertions.assertEquals(new NotEnoughTemporaryStorageFault(2250000000L, 2000), e.getFault());
   }
 }

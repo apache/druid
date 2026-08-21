@@ -26,10 +26,10 @@ import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.Collections;
@@ -55,13 +55,13 @@ public class CoordinatorCompactionResourceTest
       1
   );
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mock = EasyMock.createStrictMock(DruidCoordinator.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(mock);
@@ -80,8 +80,8 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock)
         .getCompactionSnapshotForDataSource("");
-    Assert.assertEquals(new CompactionStatusResponse(List.of(expectedSnapshot)), response.getEntity());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new CompactionStatusResponse(List.of(expectedSnapshot)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
   }
 
   @Test
@@ -98,8 +98,8 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock)
         .getCompactionSnapshotForDataSource(null);
-    Assert.assertEquals(new CompactionStatusResponse(List.of(expectedSnapshot)), response.getEntity());
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(new CompactionStatusResponse(List.of(expectedSnapshot)), response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
   }
 
   @Test
@@ -113,11 +113,11 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock)
         .getCompactionSnapshotForDataSource(dataSourceName);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new CompactionStatusResponse(Collections.singletonList(expectedSnapshot)),
         response.getEntity()
     );
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
   }
 
   @Test
@@ -131,7 +131,7 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock)
         .getCompactionSnapshotForDataSource(dataSourceName);
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
   }
 
   @Test
@@ -141,10 +141,10 @@ public class CoordinatorCompactionResourceTest
 
     final Response response = new CoordinatorCompactionResource(mock)
         .getCompactionProgress(null);
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
 
     final Object responseEntity = response.getEntity();
-    Assert.assertTrue(responseEntity instanceof ErrorResponse);
+    Assertions.assertTrue(responseEntity instanceof ErrorResponse);
 
     DruidExceptionMatcher.assertThat(
         ((ErrorResponse) responseEntity).getUnderlyingException(),

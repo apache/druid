@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -45,7 +45,7 @@ public class WorkerImplTest
         ImmutableMap.of("foo", "bar")
     );
 
-    Assert.assertSame(
+    Assertions.assertSame(
         workOrder,
         WorkerImpl.makeWorkOrderToUse(
             workOrder,
@@ -71,7 +71,7 @@ public class WorkerImplTest
         null
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new WorkOrder(
             workOrder.getQueryDefinition(),
             workOrder.getStageNumber(),

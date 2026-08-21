@@ -52,7 +52,7 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -167,7 +167,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
         invocationOnMock -> {
           ScanQuery query = invocationOnMock.getArgument(0);
           ScanQuery.verifyOrderByForNativeExecution(query);
-          Assert.assertEquals(Long.MAX_VALUE, query.getScanRowsLimit());
+          Assertions.assertEquals(Long.MAX_VALUE, query.getScanRowsLimit());
           return Futures.immediateFuture(
               new DataServerQueryResult<>(
                   ImmutableList.of(

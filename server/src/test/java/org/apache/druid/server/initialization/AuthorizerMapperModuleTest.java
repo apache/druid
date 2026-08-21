@@ -33,9 +33,9 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthValidator;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -43,7 +43,7 @@ public class AuthorizerMapperModuleTest
 {
   private Injector injector;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     injector = Guice.createInjector(
@@ -65,14 +65,14 @@ public class AuthorizerMapperModuleTest
   {
     AuthValidator authValidator = injector.getInstance(AuthValidator.class);
     AuthValidator other = injector.getInstance(AuthValidator.class);
-    Assert.assertSame(authValidator, other);
+    Assertions.assertSame(authValidator, other);
   }
 
   @Test
   public void testEmitAuthMetrics_defaultsFalse_emitterNullInMapper()
   {
     AuthorizerMapper mapper = injector.getInstance(AuthorizerMapper.class);
-    Assert.assertNull(mapper.getServiceEmitter());
+    Assertions.assertNull(mapper.getServiceEmitter());
   }
 
   @Test
@@ -92,6 +92,6 @@ public class AuthorizerMapperModuleTest
         new AuthorizerMapperModule()
     );
     AuthorizerMapper mapper = inj.getInstance(AuthorizerMapper.class);
-    Assert.assertSame(emitter, mapper.getServiceEmitter());
+    Assertions.assertSame(emitter, mapper.getServiceEmitter());
   }
 }

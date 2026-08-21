@@ -322,7 +322,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -375,7 +375,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -1062,7 +1062,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1252,7 +1252,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1264,7 +1264,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1352,10 +1352,19 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: MIT License
-version: "1.84"
+version: "1.85.2"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
+
+---
+
+name: org.bouncycastle bcpkix-jdk18on and bcutil-jdk18on
+license_category: binary
+module: extensions-core/kubernetes-extensions
+license_name: MIT License
+version: "1.84"
+libraries:
   - org.bouncycastle: bcpkix-jdk18on
   - org.bouncycastle: bcutil-jdk18on
 ---
@@ -1545,7 +1554,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.16.Final
+version: 4.2.17.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2579,7 +2588,7 @@ name: SIGAR
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.5.132
+version: 1.6.5.132-6
 libraries:
   - org.hyperic: sigar
 notices:
@@ -3073,7 +3082,7 @@ name: Apache Directory
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.0.3
+version: 2.1.8
 libraries:
   - org.apache.directory.api: api-util
 notices:
@@ -3174,7 +3183,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3184,7 +3193,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions-core/protobuf-extensions
 license_name: Apache License version 2.0
@@ -3197,7 +3206,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -3228,7 +3237,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -3624,7 +3633,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 4.3.0
+version: 4.3.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3753,7 +3762,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.63
+version: 1.0.64
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3765,7 +3774,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.2.6
+version: 2.2.7
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
@@ -4698,7 +4707,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 4.3.0
+version: 4.3.1
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -4889,7 +4898,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.78.Final
+version: 2.0.81.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -7406,7 +7415,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

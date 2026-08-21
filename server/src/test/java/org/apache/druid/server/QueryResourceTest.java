@@ -108,6 +108,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -1234,7 +1235,7 @@ public class QueryResourceTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testSecuredCancelQuery() throws Exception
   {
     final CountDownLatch waitForCancellationLatch = new CountDownLatch(1);
@@ -1349,7 +1350,7 @@ public class QueryResourceTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testDenySecuredCancelQuery() throws Exception
   {
     final CountDownLatch waitForCancellationLatch = new CountDownLatch(1);
@@ -1457,7 +1458,7 @@ public class QueryResourceTest
   }
 
   @Test
-  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testTooManyQuery() throws InterruptedException, ExecutionException
   {
     expectPermissiveHappyPathAuth();
@@ -1535,7 +1536,7 @@ public class QueryResourceTest
   }
 
   @Test
-  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testTooManyQueryInLane() throws InterruptedException, ExecutionException
   {
     expectPermissiveHappyPathAuth();
@@ -1616,7 +1617,7 @@ public class QueryResourceTest
   }
 
   @Test
-  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 10_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testTooManyQueryInLaneImplicitFromDurationThreshold() throws InterruptedException, ExecutionException
   {
     expectPermissiveHappyPathAuth();
