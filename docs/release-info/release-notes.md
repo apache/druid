@@ -59,7 +59,7 @@ This section contains important information about new and existing features.
 
 #### Java
 
-Druid now supports Java 25. While Druid 21 is still supported, we recommend you upgrade to Java 25.
+Druid now supports Java 25. While Java 21 is still supported, we recommend you upgrade to Java 25.
 
 Support for Java 17 has been dropped.
 
@@ -67,7 +67,7 @@ Support for Java 17 has been dropped.
 
 #### Historical tier aliases
 
-You can now use the `historicalTierAliases` Coordinator dynamic configuration to map a virtual tier name to a set of real Historical tiers so that a group of Historical tiers has a single identifier. When a load/drop rule references the alias, the Coordinator replaces it with the actual tiers. For example, if you map the Historical tiers `hot_1` and `hot_2` to the alias `hot`, the rule `{"hot": 2}` loads 2 replicas of each onto `hot_1` and `hot_2`.
+You can map a virtual tier name to a number of real Historical tiers with the `historicalTierAliases` Coordinator dynamic configuration. This creates a single identifier for a group of Historical tiers. When a load/drop rule references the alias, the Coordinator replaces it with the actual tiers. For example, if you map the Historical tiers `hot_1` and `hot_2` to the alias `hot`, the rule `{"hot": 2}` loads 2 replicas of each onto `hot_1` and `hot_2`.
 
 [#19204](https://github.com/apache/druid/pull/19204) [#19667](https://github.com/apache/druid/pull/19667)
 
@@ -77,7 +77,7 @@ Adds a new family of retention rules, `loadPartialByPeriod`, `loadPartialByInter
 
 [#19374](https://github.com/apache/druid/pull/19374)
 
-#### Realtime segments query context
+#### Realtime segments mode query context
 
 The `realtimeSegmentsOnly` query context parameter has been deprecated and replaced with `realtimeSegmentsMode`. 
 
@@ -109,7 +109,7 @@ This feature is on by default and is controlled by the `backgroundFetchExternalF
 
 #### Segment prefetching for Dart
 
-Dart now supports the runtime property `druid.msq.dart.worker.segmentLoadAheadCount`, which controls the number of segments that Dart prefetches. If configured to be greater than 0 for a worker, this becomes the default `segmentLoadAheadCount` value for the worker. If a query includes the `segmentLoadAheadCount` query context parameter, the query context takes precedence.
+Dart now supports the runtime property `druid.msq.dart.worker.segmentLoadAheadCount`, which controls the number of segments that Dart prefetches. If set greater than 0 for a worker, this setting becomes the default `segmentLoadAheadCount` value for the worker. If a query includes the `segmentLoadAheadCount` query context parameter, the query context takes precedence.
 
 [#19559](https://github.com/apache/druid/pull/19559)
 
@@ -141,13 +141,13 @@ This section contains detailed release notes separated by areas.
 
 - Added the following status details to the **Services** view for Historical services: cloning from another Historical, in turbo loading mode, in decommissioning mode [#19253](https://github.com/apache/druid/pull/19253)
 - Added support for resetting a supervisor to the latest offsets and backfilling [#19533](https://github.com/apache/druid/pull/19533)
-- Improved how new tabs are handled [#19483](https://github.com/apache/druid/pull/19483)
+- Improved handling for new tabs [#19483](https://github.com/apache/druid/pull/19483)
 - Improved the Home view's **Services** card. It now reports Overlord, Coordinator, Router, Broker, and Indexer counts on clusters where the web console talks to the Coordinator without SQL access [#19481](https://github.com/apache/druid/pull/19481)  
 
 ### Ingestion
 
 * You can now use the expression aggregator at ingestion time for expressions that produce a LONG or DOUBLE for both fold and combine expressions [#19508](https://github.com/apache/druid/pull/19508)
-* Added `now()` expression function that returns the current system timestamp in milliseconds since epoch. Useful at ingestion time for troubleshooting pipeline delays (e.g., `now() - __time`). Note: `now()` is non-deterministic as it evaluates for every row, so it can break idempotency. This can be added to any besides `__time` [#19386](https://github.com/apache/druid/pull/19386)
+* Added `now()` expression function that returns the current system timestamp in milliseconds since epoch. Useful at ingestion time for troubleshooting pipeline delays (e.g., `now() - __time`). Note: `now()` is non-deterministic as it evaluates for every row, so it can break idempotency. This can be added to any column besides `__time` [#19386](https://github.com/apache/druid/pull/19386)
 * Improved resiliency when ingesting from S3. Druid now retries on `SSLException` and transient credential errors instead of failing [#19617](https://github.com/apache/druid/pull/19617) [#19558](https://github.com/apache/druid/pull/19558)
 * Improved S3 performance [#19394](https://github.com/apache/druid/pull/19394)
 * Updated the default S3 connection pool size so that it's computed based on the number of available processors [#19536](https://github.com/apache/druid/pull/19536)
@@ -176,7 +176,7 @@ SELECT ...
 
 ##### Scaling cool down
 
-You can now configure different cool downs for scaling up and scaling down streaming task autoscalers.
+You can now configure different cool down durations for scaling up and scaling down streaming task autoscalers.
 
 [#19286](https://github.com/apache/druid/pull/19286)
 
@@ -184,9 +184,9 @@ You can now configure different cool downs for scaling up and scaling down strea
 
 Supervisors no longer restart for all changes. Based on the type of change, one of the following can occur:
 
-- The updated spec is persisted without a restart
-- The supervisor is restarted but running tasks aren't impacted
-- The supervisor is restarted and its tasks are terminated (the default behavior prior to this change)
+- Druid persists the updated spec without a restart.
+- Druid restarts the supervisor, but running tasks aren't impacted.
+- Druid restarts the supervisor is restarted and its tasks are terminated, which was the default behavior before this change.
 
 For example, cosmetic changes to a supervisor spec no longer trigger a restart.
 
@@ -198,7 +198,7 @@ Additionally, the algorithm for determining a change in the spec has been improv
 
 ###### Latest offset and backfill
 
-For Kafka and RabbitMQ, you can now reset a supervisor to the latest offset and start a new bounded backfill supervisor to ingest data from the skipped range. This is a useful feature for operating Druid clusters where the most recent data is the most important, such as for alerting.
+For Kafka and RabbitMQ, you can now reset a supervisor to the latest offset and start a new bounded backfill supervisor to ingest data from the skipped range. This is a useful feature for operating Druid clusters where the most recent data is the most important, like alerting scenarios.
 
 Note the following requirements:
 
@@ -258,7 +258,7 @@ These threshold weights default to 1.
 
 #### Improved `diskNormalized` balancer strategy
 
-The `diskNormalized` strategy is now more tunable. The primary changes are making the `utilizationThreshold` more intuitive: increasing the threshold increases the "tolerance" of the strategy while decreasing pushes nodes' disk utilization closer together.
+The `diskNormalized` strategy is now more tunable.  The `utilizationThreshold` configuration works more intuitively: increasing the threshold increases the "tolerance" of the strategy while decreasing the threshold pushes nodes' disk utilization closer together.
 
 [#19663](https://github.com/apache/druid/pull/19663)
 
@@ -288,7 +288,7 @@ Set `useUtilizationRatio` to `true` to use this new ratio for autoscaling.
 - Added `error_message` column to `sys.server_properties` table and made the table resilient to unreachable servers. Previously, the entire query would fail if any server was unreachable; now a row is returned with `error_message` populated. The table also now supports filter and projection pushdown [#19459](https://github.com/apache/druid/pull/19459)
 - Added `druid.expressions.useVectorApi` config to support the incubating JDK Vector API. To use the API, set the config to `true` and start Druid with the `--add-modules=jdk.incubator.vector` flag [#19512](https://github.com/apache/druid/pull/19512)
 - Added debug logging at the INFO level for projections if the debug flag is set [#19613](https://github.com/apache/druid/pull/19613)
-- Changed MSQ task engine logging. It now logs the full stack trace when `debug` is set in the context [#19361](https://github.com/apache/druid/pull/19361)
+- The MSQ task engine now logs the full stack trace when `debug` is set in the context [#19361](https://github.com/apache/druid/pull/19361)
 - Improved the cost-based autoscaler so that it scales down over-provisioned supervisors running above the ideal idle ratio with low lag [#19562](https://github.com/apache/druid/pull/19562)
 - Improved how Druid handles Java. MiddleManagers now honor `JAVA_HOME` [#19709](https://github.com/apache/druid/pull/19709)
 
