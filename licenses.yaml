@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.53.1
+version: 2.53.2
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
