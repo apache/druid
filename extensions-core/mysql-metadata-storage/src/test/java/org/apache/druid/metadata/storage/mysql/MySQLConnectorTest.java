@@ -26,6 +26,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mariadb.jdbc.export.MaxAllowedPacketException;
 
 import java.sql.SQLException;
 import java.sql.SQLTransientConnectionException;
@@ -123,10 +124,14 @@ public class MySQLConnectorTest
         centralizedDatasourceSchemaConfig
     );
 
-    // The test method should return true only for
-    // mariadb.MaxAllowedPacketException or mysql.PacketTooBigException.
-    // Verifying this requires creating a mock Class object, but Class is final
-    // and has only a private constructor. It would be overkill to try to mock it.
+    Assertions.assertTrue(
+        connector.isRootCausePacketTooBigException(new MaxAllowedPacketException("packet too large", false))
+    );
+    Assertions.assertTrue(
+        connector.isRootCausePacketTooBigException(
+            new SQLException("packet too large", new MaxAllowedPacketException("packet too large", false))
+        )
+    );
 
     // Verify some of the false cases
     Assertions.assertFalse(
@@ -185,5 +190,28 @@ public class MySQLConnectorTest
         centralizedDatasourceSchemaConfig
     );
     Assertions.assertEquals("LIMIT 100", connector.limitClause(100));
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGetStreamingFetchSize(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+  {
+    final MySQLConnector mysqlConnector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MYSQL_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
+    );
+    final MySQLConnector mariaDbConnector = new MySQLConnector(
+        CONNECTOR_CONFIG_SUPPLIER,
+        TABLES_CONFIG_SUPPLIER,
+        new MySQLConnectorSslConfig(),
+        MARIADB_DRIVER_CONFIG,
+        centralizedDatasourceSchemaConfig
+    );
+
+    Assertions.assertEquals(Integer.MIN_VALUE, mysqlConnector.getStreamingFetchSize());
+    Assertions.assertEquals(1, mariaDbConnector.getStreamingFetchSize());
   }
 }
