@@ -94,6 +94,7 @@ public class MSQWorkerFaultToleranceTest extends EmbeddedClusterTestBase
     final EmbeddedIndexer faultyIndexer = new EmbeddedIndexer()
         .addProperty("druid.plaintextPort", "7091")
         .addProperty("druid.unsafe.cluster.testing", "true")
+        // Keep the injected delay short so the retry path is exercised without a one-hour wait.
         .addProperty("druid.unsafe.cluster.testing.overlordClient.taskStatusDelay", "PT1S")
         .addProperty("druid.worker.capacity", "1");
     cluster.addServer(faultyIndexer);
