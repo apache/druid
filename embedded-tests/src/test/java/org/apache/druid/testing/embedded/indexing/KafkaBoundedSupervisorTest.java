@@ -39,6 +39,8 @@ import java.util.Map;
  */
 public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 {
+  private static final long BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS = 120_000L;
+
   private final KafkaResource kafkaServer = new KafkaResource();
 
   @Override
@@ -89,7 +91,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
 
     // Bounded supervisor cold start (post supervisor -> schedule task -> consume -> publish) can exceed
     // the cluster default wait on CI; give it a generous ceiling.
-    waitUntilPublishedRecordsAreIngested(totalRecords, 120_000L);
+    waitUntilPublishedRecordsAreIngested(totalRecords, BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS);
 
     // Wait for supervisor to transition to COMPLETED state
     waitForSupervisorToComplete(supervisor.getId());
@@ -203,7 +205,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     cluster.callApi().postSupervisor(supervisor1);
 
     // Wait for records to be ingested (approximately 200 records total from both partitions)
-    waitUntilPublishedRecordsAreIngested(200);
+    waitUntilPublishedRecordsAreIngested(200, BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS);
 
     // Wait for supervisor to transition to COMPLETED state
     waitForSupervisorToComplete(supervisor1.getId());
@@ -265,7 +267,7 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
     final KafkaSupervisorSpec supervisor1 = createBoundedKafkaSupervisor(kafkaServer, topic, boundedConfig1);
 
     cluster.callApi().postSupervisor(supervisor1);
-    waitUntilPublishedRecordsAreIngested(250);
+    waitUntilPublishedRecordsAreIngested(250, BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS);
     waitForSupervisorToComplete(supervisor1.getId());
 
     final SupervisorStatus status1 = cluster.callApi().getSupervisorStatus(supervisor1.getId());
