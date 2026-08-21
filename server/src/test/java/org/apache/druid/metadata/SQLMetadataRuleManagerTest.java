@@ -38,6 +38,7 @@ import org.apache.druid.server.audit.AuditSerdeHelper;
 import org.apache.druid.server.audit.SQLAuditManager;
 import org.apache.druid.server.audit.SQLAuditManagerConfig;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -109,10 +110,68 @@ public class SQLMetadataRuleManagerTest
     );
     ruleManager.overrideRule(TestDataSource.WIKI, rules, createAuditInfo("override rule"));
     // New rule should be be reflected in the in memory rules map immediately after being set by user
-    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Map<String, List<Rule>> allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get(TestDataSource.WIKI).size());
     Assert.assertEquals(rules.get(0), allRules.get(TestDataSource.WIKI).get(0));
+  }
+
+  @Test
+  public void testGetRulesSnapshot()
+  {
+    // Creates the cluster default rule
+    ruleManager.start();
+
+    final List<Rule> wikiRules = Collections.singletonList(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
+        )
+    );
+    ruleManager.overrideRule(TestDataSource.WIKI, wikiRules, createAuditInfo("override rule"));
+
+    final List<Rule> defaultRules = ruleManager.getRulesSnapshot().getAllRules().get(managerConfig.getDefaultRule());
+    final RetentionRulesSnapshot snapshot = ruleManager.getRulesSnapshot();
+
+    // A datasource with rules of its own gets them ahead of the cluster defaults
+    Assert.assertEquals(
+        ImmutableList.builder().addAll(wikiRules).addAll(defaultRules).build(),
+        snapshot.getEffectiveRules(TestDataSource.WIKI)
+    );
+
+    // A datasource with no rules of its own gets only the cluster defaults
+    Assert.assertEquals(defaultRules, snapshot.getEffectiveRules(TestDataSource.KOALA));
+  }
+
+  @Test
+  public void testGetRulesSnapshotIsUnaffectedByLaterOverride()
+  {
+    ruleManager.start();
+
+    final List<Rule> originalRules = Collections.singletonList(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, 1),
+            null
+        )
+    );
+    ruleManager.overrideRule(TestDataSource.WIKI, originalRules, createAuditInfo("override rule"));
+
+    final RetentionRulesSnapshot snapshot = ruleManager.getRulesSnapshot();
+
+    final List<Rule> updatedRules = Collections.singletonList(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, 2),
+            null
+        )
+    );
+    ruleManager.overrideRule(TestDataSource.WIKI, updatedRules, createAuditInfo("override rule"));
+
+    // The manager has picked up the new rules, but the snapshot still serves the old ones
+    Assert.assertEquals(updatedRules.get(0), ruleManager.getRulesSnapshot().getEffectiveRules(TestDataSource.WIKI).get(0));
+    Assert.assertEquals(originalRules.get(0), snapshot.getEffectiveRules(TestDataSource.WIKI).get(0));
   }
 
   @Test
@@ -222,7 +281,7 @@ public class SQLMetadataRuleManagerTest
     // fetch rules from metadata storage
     ruleManager.poll();
 
-    Assert.assertEquals(rules, ruleManager.getRules(TestDataSource.WIKI));
+    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getOverrideRules(TestDataSource.WIKI));
 
     // verify audit entry is created
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(TestDataSource.WIKI, "rules", null);
@@ -255,8 +314,8 @@ public class SQLMetadataRuleManagerTest
     // fetch rules from metadata storage
     ruleManager.poll();
 
-    Assert.assertEquals(rules, ruleManager.getRules(TestDataSource.WIKI));
-    Assert.assertEquals(rules, ruleManager.getRules("test_dataSource2"));
+    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getOverrideRules(TestDataSource.WIKI));
+    Assert.assertEquals(rules, ruleManager.getRulesSnapshot().getOverrideRules("test_dataSource2"));
 
     // test fetch audit entries
     List<AuditEntry> auditEntries = auditManager.fetchAuditHistory("rules", null);
@@ -284,7 +343,7 @@ public class SQLMetadataRuleManagerTest
 
     // Verify that the rule was added
     ruleManager.poll();
-    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Map<String, List<Rule>> allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get(TestDataSource.WIKI).size());
 
@@ -293,7 +352,7 @@ public class SQLMetadataRuleManagerTest
 
     // Verify that rule was deleted
     ruleManager.poll();
-    allRules = ruleManager.getAllRules();
+    allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(0, allRules.size());
   }
 
@@ -311,7 +370,7 @@ public class SQLMetadataRuleManagerTest
 
     // Verify that rule was added
     ruleManager.poll();
-    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Map<String, List<Rule>> allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get(TestDataSource.WIKI).size());
 
@@ -321,7 +380,7 @@ public class SQLMetadataRuleManagerTest
 
     // Verify that rule was not deleted
     ruleManager.poll();
-    allRules = ruleManager.getAllRules();
+    allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get(TestDataSource.WIKI).size());
   }
@@ -340,7 +399,7 @@ public class SQLMetadataRuleManagerTest
 
     // Verify that rule was added
     ruleManager.poll();
-    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Map<String, List<Rule>> allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get(TestDataSource.WIKI).size());
 
@@ -367,7 +426,7 @@ public class SQLMetadataRuleManagerTest
 
     // Verify that rule was not deleted
     ruleManager.poll();
-    allRules = ruleManager.getAllRules();
+    allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get(TestDataSource.WIKI).size());
   }
@@ -379,14 +438,14 @@ public class SQLMetadataRuleManagerTest
     ruleManager.start();
     // Verify the default rule
     ruleManager.poll();
-    Map<String, List<Rule>> allRules = ruleManager.getAllRules();
+    Map<String, List<Rule>> allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get("_default").size());
     // Delete everything
     ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
     // Verify the default rule was not deleted
     ruleManager.poll();
-    allRules = ruleManager.getAllRules();
+    allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assert.assertEquals(1, allRules.size());
     Assert.assertEquals(1, allRules.get("_default").size());
   }
