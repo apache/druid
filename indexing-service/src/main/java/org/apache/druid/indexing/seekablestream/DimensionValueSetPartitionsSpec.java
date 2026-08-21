@@ -23,12 +23,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * {@link StreamingPartitionsSpec} that records, per published segment, the distinct values observed for a configured set
@@ -87,13 +91,33 @@ public class DimensionValueSetPartitionsSpec implements StreamingPartitionsSpec
 
   @Nullable
   @Override
-  public StreamingShardSpecCollector createCollector()
+  public StreamingShardSpecCollector createCollector(@Nullable DimensionsSpec dimensionsSpec)
   {
     // Nothing to collect without dimensions; treat as feature-off so segments are published unchanged.
     if (partitionDimensions.isEmpty()) {
       return null;
     }
-    return new DimensionValueSetCollector(partitionDimensions, maxValuesPerDimension);
+    return new DimensionValueSetCollector(partitionDimensions, maxValuesPerDimension, longDimensions(dimensionsSpec));
+  }
+
+  /**
+   * The subset of {@link #partitionDimensions} explicitly declared as {@link LongDimensionSchema}. Only these are
+   * canonicalized to a Long string at capture and stamped {@link org.apache.druid.segment.column.ColumnType#LONG} at
+   * publish, enabling type-gated numeric pruning at the broker. A LONG stringifies identically at ingest and query, so
+   * set membership is exact; schemaless/auto or non-LONG dimensions are excluded to avoid canonicalization hazards.
+   */
+  private Set<String> longDimensions(@Nullable DimensionsSpec dimensionsSpec)
+  {
+    if (dimensionsSpec == null) {
+      return Collections.emptySet();
+    }
+    final Set<String> longDimensions = new HashSet<>();
+    for (String dimension : partitionDimensions) {
+      if (dimensionsSpec.getSchema(dimension) instanceof LongDimensionSchema) {
+        longDimensions.add(dimension);
+      }
+    }
+    return longDimensions;
   }
 
   @Override

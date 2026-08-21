@@ -29,6 +29,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.discovery.DataNodeService;
@@ -50,6 +51,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.InputRowFilterResult;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -396,6 +398,110 @@ public class SeekableStreamIndexTaskRunnerTest
   }
 
   /**
+   * A partition dimension explicitly declared as a {@link LongDimensionSchema} gets a {@link ColumnType#LONG} stamp in
+   * {@link DimensionValueSetShardSpec#getDimensionColumnTypes()}, gating the broker's typed numeric-value pruning.
+   */
+  @Test
+  public void testAnnotateSegmentStampsLongColumnTypeForLongDimensionSchema() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        createDataSchemaWithPartitionDimensionSchemas(),
+        null,
+        null,
+        null,
+        Map.of("partition", "0"),
+        Map.of("partition", "100"),
+        new DimensionValueSetPartitionsSpec(List.of("tenant"))
+    );
+
+    final DataSegment segment = createSingleSegment();
+    final SegmentId lookupKey = segment.getId();
+    observe(runner, lookupKey, "tenant", "100", "200");
+
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
+
+    Assertions.assertTrue(annotated.getShardSpec() instanceof DimensionValueSetShardSpec);
+    final DimensionValueSetShardSpec shardSpec = (DimensionValueSetShardSpec) annotated.getShardSpec();
+    Assertions.assertEquals(ColumnType.LONG, shardSpec.getDimensionColumnTypes().get("tenant"));
+    // The new type stamp does not disturb value-stamping.
+    Assertions.assertEquals(
+        Arrays.asList("100", "200"),
+        shardSpec.getPartitionDimensionValues().get("tenant")
+    );
+  }
+
+  /**
+   * A LONG partition dimension's raw value canonicalizes to the same string the indexer stores and the broker queries
+   * with, so a non-canonical token (leading zeros, leading '+', trailing ".0", a boxed number) is not wrongly pruned.
+   * Unparseable, multi-value, and null/missing values coerce to null so {@code IS NULL} is not pruned.
+   */
+  @Test
+  public void testCanonicalLongValueMatchesIndexerCoercion()
+  {
+    // Non-canonical tokens collapse to the canonical Long string.
+    Assertions.assertEquals("1", DimensionValueSetCollector.canonicalLongValue("00001", "tenant"));
+    Assertions.assertEquals("5", DimensionValueSetCollector.canonicalLongValue("+5", "tenant"));
+    Assertions.assertEquals("1", DimensionValueSetCollector.canonicalLongValue("1.0", "tenant"));
+    Assertions.assertEquals("1", DimensionValueSetCollector.canonicalLongValue(1L, "tenant"));
+    Assertions.assertEquals("5", DimensionValueSetCollector.canonicalLongValue(5, "tenant"));
+    Assertions.assertEquals("1", DimensionValueSetCollector.canonicalLongValue(1.0, "tenant"));
+
+    // Null, unparseable, whitespace-padded, and multi-value all become null (so IS NULL is not falsely pruned).
+    Assertions.assertNull(DimensionValueSetCollector.canonicalLongValue(null, "tenant"));
+    Assertions.assertNull(DimensionValueSetCollector.canonicalLongValue("abc", "tenant"));
+    Assertions.assertNull(DimensionValueSetCollector.canonicalLongValue(" 5", "tenant"));
+    Assertions.assertNull(DimensionValueSetCollector.canonicalLongValue(Arrays.asList(1, 2), "tenant"));
+  }
+
+  /**
+   * A partition dimension declared as a {@link StringDimensionSchema} (or not declared at all, i.e. schemaless) is left
+   * out of {@link DimensionValueSetShardSpec#getDimensionColumnTypes()}, but is still stamped in
+   * {@link DimensionValueSetShardSpec#getPartitionDimensionValues()}.
+   */
+  @Test
+  public void testAnnotateSegmentOmitsColumnTypeForStringOrSchemalessDimension() throws Exception
+  {
+    final TestSeekableStreamIndexTaskRunner runner = createRunner(
+        createDataSchemaWithPartitionDimensionSchemas(),
+        null,
+        null,
+        null,
+        Map.of("partition", "0"),
+        Map.of("partition", "100"),
+        new DimensionValueSetPartitionsSpec(List.of("region", "unknown"))
+    );
+
+    final DataSegment segment = createSingleSegment();
+    final SegmentId lookupKey = segment.getId();
+    // Feed both tracked dimensions on each row: a row missing a tracked dimension records a null for it (for IS NULL),
+    // which would leave a stray null in the other dimension's set here.
+    collectRow(runner, lookupKey, Map.of("region", "us-west", "unknown", "1"));
+    collectRow(runner, lookupKey, Map.of("region", "us-east", "unknown", "2"));
+
+    final DataSegment annotated = runner.annotateSegmentWithPartitionDimensionValues(segment);
+
+    Assertions.assertTrue(annotated.getShardSpec() instanceof DimensionValueSetShardSpec);
+    final DimensionValueSetShardSpec shardSpec = (DimensionValueSetShardSpec) annotated.getShardSpec();
+    Assertions.assertFalse(
+        shardSpec.getDimensionColumnTypes().containsKey("region"),
+        "A StringDimensionSchema dimension must not get a column type stamp"
+    );
+    Assertions.assertFalse(
+        shardSpec.getDimensionColumnTypes().containsKey("unknown"),
+        "A dimension absent from the DimensionsSpec (schemaless) must not get a column type stamp"
+    );
+    // Both are still stamped with their observed values.
+    Assertions.assertEquals(
+        ImmutableSet.of("us-west", "us-east"),
+        ImmutableSet.copyOf(shardSpec.getPartitionDimensionValues().get("region"))
+    );
+    Assertions.assertEquals(
+        Arrays.asList("1", "2"),
+        shardSpec.getPartitionDimensionValues().get("unknown")
+    );
+  }
+
+  /**
    * A segment that spans a task restart has incomplete observed values, so it must NOT declare any partition filters
    * (no pruning), to avoid wrongly pruning pre-restart rows. It is still stamped with an empty-filter
    * {@link DimensionValueSetShardSpec} (not a bare {@link NumberedShardSpec}) so that all segments in an interval keep a
@@ -477,8 +583,8 @@ public class SeekableStreamIndexTaskRunnerTest
   }
 
   /**
-   * A dimension that ingested a null/missing value declares null (as a null list element) alongside its non-null
-   * values, so {@code IS NULL} queries are not pruned. Here tenant saw tenant_a and a null; region saw only us-west.
+   * A dimension that ingested a null/missing value declares null (a null list element) alongside its non-null values,
+   * so {@code IS NULL} queries are not pruned.
    */
   @Test
   public void testNullValuedDimensionDeclaresNullInPartitionDimensionValues() throws Exception
@@ -861,6 +967,29 @@ public class SeekableStreamIndexTaskRunnerTest
         Arrays.asList(
             new StringDimensionSchema("d1"),
             new StringDimensionSchema("d2")
+        )
+    );
+    return DataSchema.builder()
+                     .withDataSource(DATA_SOURCE)
+                     .withTimestamp(TimestampSpec.DEFAULT)
+                     .withDimensions(dimensionsSpec)
+                     .withGranularity(
+                         new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
+                     )
+                     .build();
+  }
+
+  /**
+   * A DataSchema declaring "tenant" as a {@link LongDimensionSchema} and "region" as a {@link StringDimensionSchema},
+   * for exercising the dimensionColumnTypes stamping in {@code annotateSegmentWithPartitionDimensionValues}. Note
+   * that "unknown" is deliberately absent, standing in for a schemaless/not-explicitly-declared dimension.
+   */
+  private static DataSchema createDataSchemaWithPartitionDimensionSchemas()
+  {
+    final DimensionsSpec dimensionsSpec = new DimensionsSpec(
+        Arrays.asList(
+            new LongDimensionSchema("tenant"),
+            new StringDimensionSchema("region")
         )
     );
     return DataSchema.builder()

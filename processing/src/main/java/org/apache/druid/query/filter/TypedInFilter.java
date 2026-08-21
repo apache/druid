@@ -66,12 +66,14 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.Utf8ValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueSetIndexes;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.timeline.partition.TypedValueSet;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -275,6 +277,28 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       }
     }
     return retSet;
+  }
+
+  @Nullable
+  @Override
+  public TypedValueSet getDimensionValueSet(String dimension)
+  {
+    if (!Objects.equals(getColumn(), dimension)) {
+      return null;
+    }
+    // Only LONG is safe (identical stringification on ingest and query); DOUBLE/FLOAT are excluded and STRING is
+    // handled by getDimensionRangeSet.
+    if (!matchValueType.is(ValueType.LONG)) {
+      return null;
+    }
+    // Coerce to matchValueType before stringifying: the presorted (sortedValues) path stores values as supplied, so a
+    // LONG filter may carry 1.0, which must canonicalize to "1" to match ingest. A null is kept so it matches a shard's
+    // stamped null (missing value).
+    final Set<String> values = new HashSet<>();
+    for (Object value : sortedMatchValues.get()) {
+      values.add(Evals.asString(coerceValue(value, matchValueType)));
+    }
+    return new TypedValueSet(values, matchValueType);
   }
 
   @Override

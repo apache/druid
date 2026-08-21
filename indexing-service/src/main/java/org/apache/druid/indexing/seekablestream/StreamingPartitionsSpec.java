@@ -22,6 +22,7 @@ package org.apache.druid.indexing.seekablestream;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.annotation.JsonTypeResolver;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.jackson.StrictTypeIdResolver;
 
 import javax.annotation.Nullable;
@@ -55,7 +56,21 @@ public interface StreamingPartitionsSpec
    * segment's shard spec with it at publish time. Returns {@code null} when this spec is configured such that there is
    * nothing to collect (e.g. no dimensions), in which case no collector runs and segments are published unchanged.
    * One collector is created per task run.
+   *
+   * @param dimensionsSpec the task's declared dimensions, or {@code null} if none; lets a strategy consult per-dimension
+   *                       schema (e.g. to enable type-gated numeric pruning for {@code LONG} dimensions).
    */
   @Nullable
-  StreamingShardSpecCollector createCollector();
+  StreamingShardSpecCollector createCollector(@Nullable DimensionsSpec dimensionsSpec);
+
+  /**
+   * @deprecated use {@link #createCollector(DimensionsSpec)}; retained for source compatibility with callers that
+   * predate the schema-aware overload.
+   */
+  @Deprecated
+  @Nullable
+  default StreamingShardSpecCollector createCollector()
+  {
+    return createCollector(null);
+  }
 }

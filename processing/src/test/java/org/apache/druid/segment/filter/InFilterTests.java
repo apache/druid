@@ -51,6 +51,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.partition.TypedValueSet;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
@@ -63,8 +64,10 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -818,6 +821,42 @@ public class InFilterTests
       );
       Assertions.assertNull(
           inFilter("x", ColumnType.FLOAT, Arrays.asList(null, 1.1f, 2.2f, 3.3f)).getDimensionRangeSet("x")
+      );
+    }
+
+    @Test
+    public void testGetDimensionValueSet()
+    {
+      // LONG IN yields a LONG-typed set of stringified values for the matching column, null for another.
+      final TypedInFilter longFilter = inFilter("x", ColumnType.LONG, Arrays.asList(1L, 2L, 3L));
+      final TypedValueSet valueSet = longFilter.getDimensionValueSet("x");
+      Assertions.assertNotNull(valueSet);
+      Assertions.assertEquals(ColumnType.LONG, valueSet.getType());
+      Assertions.assertEquals(new HashSet<>(Arrays.asList("1", "2", "3")), valueSet.getValues());
+      Assertions.assertNull(longFilter.getDimensionValueSet("y"));
+
+      // A null IN element is kept as a null set element (a null match value).
+      final TypedValueSet withNull = inFilter("x", ColumnType.LONG, Arrays.asList(null, 1L, 2L)).getDimensionValueSet("x");
+      Assertions.assertNotNull(withNull);
+      final Set<String> expectedWithNull = new HashSet<>(Arrays.asList("1", "2"));
+      expectedWithNull.add(null);
+      Assertions.assertEquals(expectedWithNull, withNull.getValues());
+
+      // The presorted (sortedValues) path stores values as supplied, so a LONG filter carrying 1.0 must still
+      // canonicalize to "1" to match ingest, else the segment is wrongly pruned.
+      final TypedValueSet presorted =
+          new TypedInFilter("x", ColumnType.LONG, null, Arrays.asList(1.0, 2.0), null).getDimensionValueSet("x");
+      Assertions.assertEquals(new HashSet<>(Arrays.asList("1", "2")), presorted.getValues());
+
+      // Non-LONG match value types must NOT return a typed value set.
+      Assertions.assertNull(
+          inFilter("x", ColumnType.STRING, Arrays.asList("a", "b")).getDimensionValueSet("x")
+      );
+      Assertions.assertNull(
+          inFilter("x", ColumnType.DOUBLE, Arrays.asList(1.1, 2.2)).getDimensionValueSet("x")
+      );
+      Assertions.assertNull(
+          inFilter("x", ColumnType.FLOAT, Arrays.asList(1.1f, 2.2f)).getDimensionValueSet("x")
       );
     }
 
