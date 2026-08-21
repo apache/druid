@@ -3082,7 +3082,7 @@ name: Apache Directory
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.0.3
+version: 2.1.8
 libraries:
   - org.apache.directory.api: api-util
 notices:
