@@ -31,9 +31,10 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.loading.DirectoryBackedRangeReader;
 import org.apache.druid.segment.loading.SegmentRangeReader;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -60,8 +61,9 @@ class PartialSegmentFileMapperV10Test
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   void testMapFileThrowsUntilFetchedThenSlices() throws IOException

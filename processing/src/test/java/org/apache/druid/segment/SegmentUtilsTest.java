@@ -24,12 +24,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,8 +40,9 @@ import java.util.List;
  */
 public class SegmentUtilsTest
 {
-  @TempDir
-  public File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   public void testVersionBin() throws Exception

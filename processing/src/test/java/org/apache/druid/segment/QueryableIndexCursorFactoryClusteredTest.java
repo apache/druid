@@ -68,13 +68,14 @@ import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -138,8 +139,9 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
     engineCloser.close();
   }
 
-  @TempDir
-  public File tmpDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File tmpDir = temporaryFolderExtension.getRoot();
 
   private QueryableIndex segmentIndex;
 

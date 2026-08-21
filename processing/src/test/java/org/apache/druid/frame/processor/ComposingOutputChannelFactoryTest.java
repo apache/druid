@@ -24,9 +24,10 @@ import org.apache.druid.frame.channel.ByteTracker;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -34,8 +35,9 @@ import java.util.concurrent.ExecutionException;
 
 public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
-  @TempDir
-  static Path folder;
+  @RegisterExtension
+  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
+  static final Path folder = classScopedTemporaryFolder.getRoot().toPath();
 
   public ComposingOutputChannelFactoryTest()
   {

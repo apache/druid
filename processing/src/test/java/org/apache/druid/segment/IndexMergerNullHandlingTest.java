@@ -37,10 +37,11 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.roaringbitmap.IntIterator;
 
 import java.io.File;
@@ -62,8 +63,9 @@ public class IndexMergerNullHandlingTest
   private IndexSpec indexSpec;
 
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @BeforeEach
   public void setUp()

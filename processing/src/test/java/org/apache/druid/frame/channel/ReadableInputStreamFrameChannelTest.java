@@ -31,11 +31,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -50,8 +51,9 @@ import java.util.concurrent.ExecutorService;
 public class ReadableInputStreamFrameChannelTest extends InitializedNullHandlingTest
 {
 
-  @TempDir
-  File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   final IncrementalIndexCursorFactory cursorFactory =
       new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());

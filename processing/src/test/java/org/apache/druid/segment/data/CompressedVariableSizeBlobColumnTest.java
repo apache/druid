@@ -25,9 +25,10 @@ import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,8 +41,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class CompressedVariableSizeBlobColumnTest
 {
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File tempFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testSomeValues() throws IOException

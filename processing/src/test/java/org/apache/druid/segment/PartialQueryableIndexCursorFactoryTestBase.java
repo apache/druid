@@ -29,8 +29,9 @@ import org.apache.druid.segment.file.CountingRangeReader;
 import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.io.TempDir;
 
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -46,8 +47,9 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
 {
   protected static final ColumnConfig COLUMN_CONFIG = ColumnConfig.DEFAULT;
 
-  @TempDir
-  protected File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  protected final File perTestTempDir = temporaryFolderExtension.getRoot();
 
   /**
    * Mount a fresh partial index over the (already built) segment via a {@link PartialSegmentFileMapperV10} backed by

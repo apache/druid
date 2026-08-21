@@ -29,11 +29,12 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.Streams;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,8 +53,9 @@ import java.util.stream.Collectors;
 public class LocalInputSourceTest
 {
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testSerdeAbsoluteBaseDir() throws IOException

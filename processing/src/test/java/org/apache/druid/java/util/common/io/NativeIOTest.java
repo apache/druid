@@ -20,9 +20,10 @@
 package org.apache.druid.java.util.common.io;
 
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -33,8 +34,9 @@ import java.util.Arrays;
 
 public class NativeIOTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testChunkedCopy() throws Exception

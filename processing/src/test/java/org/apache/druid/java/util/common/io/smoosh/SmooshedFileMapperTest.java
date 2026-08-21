@@ -27,9 +27,10 @@ import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.file.SegmentFileChannel;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,8 +42,9 @@ import java.util.Arrays;
  */
 public class SmooshedFileMapperTest
 {
-  @TempDir
-  public File folder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File folder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testSanity() throws Exception

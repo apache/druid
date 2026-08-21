@@ -60,13 +60,14 @@ import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderator
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -77,8 +78,9 @@ public class TaskToolboxTest
 {
 
   private TaskToolboxFactory taskToolbox = null;
-  @TempDir
-  private File baseDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  private final File baseDir = temporaryFolderExtension.getRoot();
   private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);

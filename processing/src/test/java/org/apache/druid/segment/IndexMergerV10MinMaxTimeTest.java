@@ -35,10 +35,11 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.ProjectionMetadata;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.Arrays;
@@ -47,8 +48,9 @@ import java.util.List;
 
 class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   void testMinMaxTimePersistedForTimeSortedSegment() throws Exception

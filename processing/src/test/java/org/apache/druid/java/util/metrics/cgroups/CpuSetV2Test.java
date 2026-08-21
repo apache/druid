@@ -19,10 +19,11 @@
 
 package org.apache.druid.java.util.metrics.cgroups;
 
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,8 +33,9 @@ import java.nio.file.Paths;
 
 public class CpuSetV2Test
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private File cgroupDir;
   private File procDir;

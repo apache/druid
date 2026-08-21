@@ -34,11 +34,12 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
 import org.apache.druid.segment.loading.LocalLoadSpec;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,8 +54,9 @@ public class DeepStorageShuffleClientTest
   private File segmentFile;
   private String segmentFileName;
 
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
 
   @BeforeEach

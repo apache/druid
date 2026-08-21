@@ -35,9 +35,10 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -49,8 +50,9 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 
   private final HashFunction fn = Hashing.murmur3_128();
 
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testSanity() throws IOException

@@ -22,9 +22,10 @@ package org.apache.druid.java.util.common;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -57,8 +58,9 @@ public class ByteBufferUtilsTest
       "fox"
   );
 
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  private final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testAllocateDirect()

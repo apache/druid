@@ -51,11 +51,12 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.assertj.core.util.Lists;
 import org.joda.time.Period;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nonnull;
 import java.io.ByteArrayInputStream;
@@ -77,8 +78,9 @@ public class ForkingTaskRunnerTest
 {
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  private final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   private File newTempFolder()
   {
@@ -602,6 +604,7 @@ public class ForkingTaskRunnerTest
   public void testCannotRestoreTasks() throws Exception
   {
     TaskConfig taskConfig = makeDefaultTaskConfigBuilder()
+        .setGracefulShutdownTimeout(new Period("PT1S"))
         .build();
 
     TaskStorageDirTracker dirTracker = TaskStorageDirTracker.fromBaseDirs(
@@ -633,8 +636,13 @@ public class ForkingTaskRunnerTest
 
     forkingTaskRunner.setNumProcessorsPerTask();
     Task task = NoopTask.create();
-    forkingTaskRunner.run(task);
-    Assertions.assertTrue(forkingTaskRunner.restore().isEmpty());
+    try {
+      forkingTaskRunner.run(task);
+      Assertions.assertTrue(forkingTaskRunner.restore().isEmpty());
+    }
+    finally {
+      forkingTaskRunner.stop();
+    }
   }
 
   @Test

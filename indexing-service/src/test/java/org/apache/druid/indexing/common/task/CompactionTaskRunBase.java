@@ -113,6 +113,7 @@ import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -126,7 +127,6 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
-import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 
@@ -189,8 +189,9 @@ public abstract class CompactionTaskRunBase
   );
   protected static final int TOTAL_TEST_ROWS = 10;
 
-  @TempDir
-  protected static File temporaryFolder;
+  @RegisterExtension
+  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
+  protected static final File temporaryFolder = classScopedTemporaryFolder.getRoot();
 
   @RegisterExtension
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();

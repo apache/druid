@@ -31,10 +31,11 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,8 +50,9 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
     BuiltInTypesModule.registerHandlersAndSerde();
   }
 
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   public void testReadSegmentWithBuggyPaths() throws IOException

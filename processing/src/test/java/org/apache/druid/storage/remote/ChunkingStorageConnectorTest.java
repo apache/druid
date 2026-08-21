@@ -23,10 +23,11 @@ import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,8 +38,9 @@ import java.util.List;
 public class ChunkingStorageConnectorTest
 {
 
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   private StorageConnector storageConnector;
 

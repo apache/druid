@@ -23,10 +23,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntity.CleanableFile;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CompressionUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,8 +39,9 @@ public class FileEntityTest
 {
   private static final String CONTENT = "the quick brown fox\n";
 
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final File tempDir = temporaryFolderExtension.getRoot();
 
   @Test
   public void test_openRaw_returnsRawBytesWithoutDecompressing() throws IOException

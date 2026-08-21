@@ -53,6 +53,7 @@ import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
@@ -62,7 +63,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -79,8 +80,9 @@ import static org.apache.druid.segment.filter.Filters.or;
 
 public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  public static File tmp;
+  @RegisterExtension
+  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
+  public static final File tmp = classScopedTemporaryFolder.getRoot();
   private static Closer CLOSER;
   private static IncrementalIndex INCREMENTAL_INDEX;
   private static IncrementalIndexCursorFactory INCREMENTAL_INDEX_CURSOR_FACTORY;

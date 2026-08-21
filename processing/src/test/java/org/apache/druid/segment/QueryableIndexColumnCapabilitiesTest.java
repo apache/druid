@@ -46,11 +46,12 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -60,8 +61,9 @@ import java.util.Map;
 
 public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  public static File temporaryFolder;
+  @RegisterExtension
+  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
+  public static final File temporaryFolder = classScopedTemporaryFolder.getRoot();
 
   private static IncrementalIndex INC_INDEX;
   private static QueryableIndex MMAP_INDEX;

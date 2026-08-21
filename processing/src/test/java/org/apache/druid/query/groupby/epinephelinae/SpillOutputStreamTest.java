@@ -20,9 +20,10 @@
 package org.apache.druid.query.groupby.epinephelinae;
 
 import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,8 +32,9 @@ import java.util.Arrays;
 
 public class SpillOutputStreamTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testSmallWriteStaysInMemory() throws IOException

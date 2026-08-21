@@ -22,10 +22,11 @@ package org.apache.druid.java.util.metrics.cgroups;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -33,8 +34,9 @@ import java.util.Map;
 
 public class DiskTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;

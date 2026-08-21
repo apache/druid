@@ -34,9 +34,10 @@ import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,8 +54,9 @@ import java.util.Map;
  */
 public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  final Path tempDir = temporaryFolderExtension.getRoot().toPath();
 
   @Test
   public void testRacMethodThrowsWithoutDeserializerForRacEntry() throws IOException

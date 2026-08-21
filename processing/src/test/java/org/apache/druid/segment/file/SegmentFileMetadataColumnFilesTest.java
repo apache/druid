@@ -42,11 +42,12 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,8 +70,9 @@ class SegmentFileMetadataColumnFilesTest extends InitializedNullHandlingTest
   private static final String BASE_PREFIX = Projections.BASE_TABLE_PROJECTION_NAME + "/";
   private static final String PROJECTION_NAME = "dim1_hourly_metric1_sum";
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension classScopedTemporaryFolder = TemporaryFolderExtension.classScoped();
+  static final File sharedTempDir = classScopedTemporaryFolder.getRoot();
 
   private static SegmentFileMetadata metadata;
 

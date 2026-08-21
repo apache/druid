@@ -20,11 +20,12 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Predicates;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -36,8 +37,9 @@ import java.nio.file.Path;
 
 public class FileUtilsTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final File temporaryFolder = temporaryFolderExtension.getRoot();
 
   @Test
   public void testMap() throws IOException
