@@ -104,7 +104,7 @@
   "taskSlot/lazy/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/blacklisted/count" : { "dimensions" : ["category"], "type" : "gauge" },
 
-  "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
+  "task/run/time" : { "dimensions" : ["dataSource", "taskType", "taskStatus"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "segment/moved/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "segment/nuked/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
