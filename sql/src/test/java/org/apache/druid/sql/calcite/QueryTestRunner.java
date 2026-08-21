@@ -216,7 +216,7 @@ public class QueryTestRunner
       final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
                                                 .systemDefaultContext(Map.of())
                                                 .queryContext(builder.queryContext)
-                                                .sqlParameters(builder.parameters)
+                                                .parameters(builder.parameters)
                                                 .auth(builder.authenticationResult)
                                                 .build();
       final SqlStatementFactory sqlStatementFactory = builder.statementFactory();
@@ -271,7 +271,7 @@ public class QueryTestRunner
       for (final String vectorize : vectorizeValues) {
         // Need to create sqlQuery inside the loop, because SqlQueryPlus can only be used once
         final SqlQueryPlus sqlQuery = SqlQueryPlus.builder(builder.sql)
-                                                  .sqlParameters(builder.parameters)
+                                                  .parameters(builder.parameters)
                                                   .auth(builder.authenticationResult)
                                                   .systemDefaultContext(Map.of())
                                                   .queryContext(builder.queryContext)

@@ -889,9 +889,9 @@ public class MSQTestBase extends BaseCalciteQueryTest
         SqlQueryPlus.builder()
                     .sql(query)
                     .queryContext(context)
-                    .parameters(parameters)
                     .auth(authenticationResult)
                     .build()
+                    .withParameters(parameters)
     );
 
     final List<Object[]> sequence = stmt.execute().getResults().toList();

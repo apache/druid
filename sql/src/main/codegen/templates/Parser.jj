@@ -7967,7 +7967,15 @@ SqlNode JdbcFunctionCall() :
         )
     )
     <RBRACE> {
-        return new SqlJdbcFunctionCall(name).createCall(s.end(this),
+        // Druid: uppercase JDBC escape functions so they can be looked up case-insensitively in SqlJdbcFunctionCall.
+        final String jdbcFunctionName = name.toUpperCase(Locale.ENGLISH);
+
+        // Druid: we have our own CURRENT_TIMESTAMP, so map NOW to it directly rather than using SqlJdbcFunctionCall.
+        if ("NOW".equals(jdbcFunctionName) && args.size() == 0) {
+            return new SqlIdentifier("CURRENT_TIMESTAMP", s.end(this));
+        }
+
+        return new SqlJdbcFunctionCall(jdbcFunctionName).createCall(s.end(this),
             args.getList());
     }
 }

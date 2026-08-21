@@ -327,8 +327,15 @@ const Redirects=[
     "to": "/docs/latest/api-reference/sql-api"
   },
   {
+    "from": [
+      "/docs/latest/api-reference/sql-jdbc",
+      "/docs/latest/api-reference/sql-jdbc.html"
+    ],
+    "to": "/docs/latest/querying/sql-jdbc-avatica"
+  },
+  {
     "from":  "/docs/latest/querying/sql-jdbc.html",
-    "to": "/docs/latest/api-reference/sql-jdbc"
+    "to": "/docs/latest/querying/sql-jdbc"
   },
   {
     "from":  "/docs/latest/multi-stage-query/api.html",
