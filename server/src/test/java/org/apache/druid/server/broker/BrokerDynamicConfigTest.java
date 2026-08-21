@@ -32,8 +32,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.DefaultQueryBlocklistRule;
 import org.apache.druid.server.QueryBlocklistRule;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
@@ -68,7 +68,7 @@ public class BrokerDynamicConfigTest
         new DefaultQueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null)
     );
 
-    Assert.assertEquals(expectedBlocklist, actual.getQueryBlocklist());
+    Assertions.assertEquals(expectedBlocklist, actual.getQueryBlocklist());
   }
 
   @Test
@@ -86,9 +86,9 @@ public class BrokerDynamicConfigTest
 
     BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
 
-    Assert.assertEquals(1, actual.getQueryBlocklist().size());
-    Assert.assertTrue(actual.getQueryBlocklist().get(0) instanceof DefaultQueryBlocklistRule);
-    Assert.assertEquals(
+    Assertions.assertEquals(1, actual.getQueryBlocklist().size());
+    Assertions.assertTrue(actual.getQueryBlocklist().get(0) instanceof DefaultQueryBlocklistRule);
+    Assertions.assertEquals(
         new DefaultQueryBlocklistRule("block-wikipedia", ImmutableSet.of("wikipedia"), null, null),
         actual.getQueryBlocklist().get(0)
     );
@@ -101,8 +101,8 @@ public class BrokerDynamicConfigTest
 
     BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
     // When no blocklist is provided, it defaults to an empty list
-    Assert.assertNotNull(actual.getQueryBlocklist());
-    Assert.assertTrue(actual.getQueryBlocklist().isEmpty());
+    Assertions.assertNotNull(actual.getQueryBlocklist());
+    Assertions.assertTrue(actual.getQueryBlocklist().isEmpty());
   }
 
   @Test
@@ -111,8 +111,8 @@ public class BrokerDynamicConfigTest
     String jsonStr = "{\"queryBlocklist\": []}";
 
     BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
-    Assert.assertNotNull(actual.getQueryBlocklist());
-    Assert.assertTrue(actual.getQueryBlocklist().isEmpty());
+    Assertions.assertNotNull(actual.getQueryBlocklist());
+    Assertions.assertTrue(actual.getQueryBlocklist().isEmpty());
   }
 
   @Test
@@ -133,16 +133,16 @@ public class BrokerDynamicConfigTest
 
     BrokerDynamicConfig actual = mapper.readValue(jsonStr, BrokerDynamicConfig.class);
 
-    Assert.assertNotNull(actual.getQueryBlocklist());
-    Assert.assertEquals(2, actual.getQueryBlocklist().size());
+    Assertions.assertNotNull(actual.getQueryBlocklist());
+    Assertions.assertEquals(2, actual.getQueryBlocklist().size());
 
     DefaultQueryBlocklistRule rule1 = (DefaultQueryBlocklistRule) actual.getQueryBlocklist().get(0);
-    Assert.assertEquals("block-scan-queries", rule1.getRuleName());
-    Assert.assertEquals(ImmutableSet.of("scan"), rule1.getQueryTypes());
+    Assertions.assertEquals("block-scan-queries", rule1.getRuleName());
+    Assertions.assertEquals(ImmutableSet.of("scan"), rule1.getQueryTypes());
 
     DefaultQueryBlocklistRule rule2 = (DefaultQueryBlocklistRule) actual.getQueryBlocklist().get(1);
-    Assert.assertEquals("block-context", rule2.getRuleName());
-    Assert.assertEquals(ImmutableMap.of("priority", "0"), rule2.getContextMatches());
+    Assertions.assertEquals("block-context", rule2.getRuleName());
+    Assertions.assertEquals(ImmutableMap.of("priority", "0"), rule2.getContextMatches());
   }
 
   @Test
@@ -160,15 +160,15 @@ public class BrokerDynamicConfigTest
         BrokerDynamicConfig.class
     );
 
-    Assert.assertEquals(QueryContext.of(ImmutableMap.of("priority", 10, "useCache", false)), actual.getQueryContext());
+    Assertions.assertEquals(QueryContext.of(ImmutableMap.of("priority", 10, "useCache", false)), actual.getQueryContext());
   }
 
   @Test
   public void testNullQueryContextDefaultsToEmptyMap() throws Exception
   {
     BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
-    Assert.assertNotNull(actual.getQueryContext());
-    Assert.assertTrue(actual.getQueryContext().isEmpty());
+    Assertions.assertNotNull(actual.getQueryContext());
+    Assertions.assertTrue(actual.getQueryContext().isEmpty());
   }
 
   @Test
@@ -190,15 +190,15 @@ public class BrokerDynamicConfigTest
         "my_large_ds", new PerSegmentTimeoutConfig(5000, true),
         "my_other_ds", new PerSegmentTimeoutConfig(3000, null)
     );
-    Assert.assertEquals(expected, actual.getPerSegmentTimeoutConfig());
+    Assertions.assertEquals(expected, actual.getPerSegmentTimeoutConfig());
   }
 
   @Test
   public void testNullPerSegmentTimeoutConfigDefaultsToEmptyMap() throws Exception
   {
     BrokerDynamicConfig actual = mapper.readValue("{}", BrokerDynamicConfig.class);
-    Assert.assertNotNull(actual.getPerSegmentTimeoutConfig());
-    Assert.assertTrue(actual.getPerSegmentTimeoutConfig().isEmpty());
+    Assertions.assertNotNull(actual.getPerSegmentTimeoutConfig());
+    Assertions.assertTrue(actual.getPerSegmentTimeoutConfig().isEmpty());
   }
 
   @Test
@@ -213,27 +213,27 @@ public class BrokerDynamicConfigTest
   public void testContextOverridesInjectsPerSegmentTimeoutForMatchingDatasource()
   {
     BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, false));
-    Assert.assertEquals(5000L, config.getContextOverridesForQuery(query("ds")).getPerSegmentTimeout());
+    Assertions.assertEquals(5000L, config.getContextOverridesForQuery(query("ds")).getPerSegmentTimeout());
   }
 
   @Test
   public void testContextOverridesEmptyForMonitorOnly()
   {
     BrokerDynamicConfig config = perSegmentTimeout("ds", new PerSegmentTimeoutConfig(5000, true));
-    Assert.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
+    Assertions.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
   }
 
   @Test
   public void testContextOverridesEmptyForNonMatchingDatasource()
   {
     BrokerDynamicConfig config = perSegmentTimeout("other", new PerSegmentTimeoutConfig(5000, false));
-    Assert.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
+    Assertions.assertTrue(config.getContextOverridesForQuery(query("ds")).isEmpty());
   }
 
   @Test
   public void testContextOverridesEmptyWhenNoPerSegmentTimeoutConfigured()
   {
-    Assert.assertTrue(BrokerDynamicConfig.builder().build().getContextOverridesForQuery(query("ds")).isEmpty());
+    Assertions.assertTrue(BrokerDynamicConfig.builder().build().getContextOverridesForQuery(query("ds")).isEmpty());
   }
 
   private static BrokerDynamicConfig perSegmentTimeout(String datasource, PerSegmentTimeoutConfig timeoutConfig)

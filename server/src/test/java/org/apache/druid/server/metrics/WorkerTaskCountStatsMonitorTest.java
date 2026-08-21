@@ -26,11 +26,12 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Map;
 
 public class WorkerTaskCountStatsMonitorTest
@@ -44,7 +45,7 @@ public class WorkerTaskCountStatsMonitorTest
   private IndexerTaskCountStatsProvider indexerTaskStatsProvider;
   private WorkerTaskCountStatsProvider nullStatsProvider;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     statsProvider = new WorkerTaskCountStatsProvider()
@@ -222,7 +223,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForMiddleManager, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(5, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(5, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "worker/task/failed/count",
         ImmutableMap.of("category", "workerCategory", "workerVersion", "workerVersion"),
@@ -257,7 +258,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForIndexer, ImmutableSet.of(NodeRole.INDEXER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(10, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(10, emitter.getNumEmittedEvents());
     emitter.verifyValue(
         "worker/task/running/count",
         ImmutableMap.of("dataSource", "wikipedia"),
@@ -317,7 +318,7 @@ public class WorkerTaskCountStatsMonitorTest
         new WorkerTaskCountStatsMonitor(injectorForMiddleManagerNullStats, ImmutableSet.of(NodeRole.MIDDLE_MANAGER));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(0, emitter.getNumEmittedEvents());
   }
 
   @Test
@@ -327,6 +328,6 @@ public class WorkerTaskCountStatsMonitorTest
             new WorkerTaskCountStatsMonitor(injectorForPeon, ImmutableSet.of(NodeRole.PEON));
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
-    Assert.assertEquals(0, emitter.getNumEmittedEvents());
+    Assertions.assertEquals(0, emitter.getNumEmittedEvents());
   }
 }
