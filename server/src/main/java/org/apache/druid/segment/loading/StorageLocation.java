@@ -524,13 +524,12 @@ public class StorageLocation
    * queue and terminating its phaser (which fires the underlying {@link CacheEntry#unmount}). No-op when the entry
    * is absent, is a {@link #staticCacheEntries} entry, or still has outstanding holds.
    * <p>
-   * This exists for callers that register a weak entry <em>without</em> a {@link ReservationHold} (the bootstrap
-   * reserve path uses {@link #reserveWeak}) and need to clean it up after a failed mount. The normal runtime path
-   * registers weak entries via {@link #addWeakReservationHold} and relies on the hold's release runnable to evict a
-   * never-mounted entry on close; an entry registered without a hold has no such cleanup, so a failed mount would
-   * otherwise leave it lingering (and un-re-mountable if its on-disk state was deleted by the mount rollback). The
-   * hold guard makes this safe to call unconditionally on any mount failure: a held entry (runtime path) is left to
-   * its holder's release runnable.
+   * This is for reclaiming a reservation whose entry has nothing behind it any more, after a failed mount. It covers
+   * both a weak entry registered <em>without</em> a {@link ReservationHold} (via {@link #reserveWeak}), and one whose
+   * hold was released mid-mount once the entry already reported {@link CacheEntry#isMounted()} — the release runnable
+   * of {@link #addWeakReservationHold} only evicts a <em>never</em>-mounted new entry, so an abandoned mount that then
+   * fails would otherwise leave its entry registered. The hold guard makes this safe to call unconditionally on any
+   * mount failure: an entry someone still holds is left to its holder's release runnable.
    */
   public void removeUnheldWeakEntry(CacheEntryIdentifier id)
   {

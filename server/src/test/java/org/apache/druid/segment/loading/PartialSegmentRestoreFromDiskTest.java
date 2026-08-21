@@ -51,6 +51,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -318,6 +320,40 @@ class PartialSegmentRestoreFromDiskTest
     Assertions.assertFalse(headerFile.exists(), "bootstrap failure deletes the header via the unmount cleanup path");
   }
 
+  /**
+   * The restore mounts {@code __base} before the bundles that depend on it, so a failure on a later bundle has to
+   * unwind one that already mounted. Unmounting it is not enough: its cache entry would stay registered with its
+   * reservation, while its containers are gone, and a later acquire reuses a registered entry by id, re-mounting a
+   * bundle bound to the metadata entry this failure tears down.
+   */
+  @Test
+  void testRollbackRemovesBundlesItAlreadyMounted() throws IOException
+  {
+    primeOnDiskState();
+
+    final StorageLocation location = Mockito.spy(new StorageLocation(cacheDir, ESTIMATE * 8, null));
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+    // Refuse only the aggregate bundle's reservation, so the restore fails with __base already mounted.
+    Mockito.doReturn(null)
+           .when(location)
+           .addWeakReservationHold(ArgumentMatchers.eq(aggId), ArgumentMatchers.any());
+
+    Assertions.assertThrows(Throwable.class, () -> restoreFromDisk(location));
+
+    // Pins that __base really did mount and then got removed, rather than the rollback loop being empty because the
+    // restore failed before mounting anything.
+    Mockito.verify(location).removeUnheldWeakEntry(
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME)
+    );
+    Assertions.assertEquals(
+        0,
+        location.getWeakEntryCount(),
+        "rollback must remove the bundle entries it registered, not just unmount them"
+    );
+    Assertions.assertEquals(0, location.currentSizeBytes(), "rollback must release every reservation it took");
+  }
+
   @Test
   void testMountFailureRemovesLingeringWeakEntry() throws IOException
   {
@@ -352,9 +388,9 @@ class PartialSegmentRestoreFromDiskTest
   @Test
   void testRestoredEntryCanFetchUndownloadedFile() throws IOException
   {
-    // a bootstrap-restored entry must keep the segment's real deep-storage range reader so a later query can
-    // fetch a bundle/column that wasn't on disk at startup. Previously the entry held a throwing disk-only reader, so
-    // this fetch failed with "bootstrap should only read from local disk".
+    // a restored entry keeps the segment's real deep-storage range reader, so a later query can fetch a bundle or
+    // column that wasn't on disk at startup. The local layout is a head start, never the limit of what the entry can
+    // read.
     primeOnDiskState();
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = restoreFromDisk(location);

@@ -868,15 +868,10 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
     }
     catch (Throwable t) {
-      // A failed mount must not leave a lingering, un-re-mountable weak entry in the location. The inner rollbacks
-      // above close the mapper and delete the on-disk header, so any weak entry left behind is poison: a later
-      // findExistingPartialWithHold would resurrect it and re-mount would fail again (the header is gone and the
-      // bootstrap reserve path's entry uses a disk-only range reader). Remove it here so the next acquire rebuilds a
-      // fresh, deep-storage-capable entry via reservePartial. This is keyed on the entry being unheld: the runtime
-      // acquire path holds the entry via the AcquireSegmentAction's loadCleanup, so removeUnheldWeakEntry is a no-op
-      // there and the holder's release runnable performs cleanup instead. The bootstrap reserve path
-      // (StorageLocation.reserveWeak) places no hold, so this is what cleans it up. Runs outside entryLock (the
-      // inner blocks released it) so the writeLock -> entryLock order inside removeUnheldWeakEntry is respected.
+      // Reclaim the reservation of an entry that is still registered here but no longer held, which the rollbacks
+      // above have just left with a closed mapper and no header on disk. No-op if anything holds this (including
+      // bundle entries). Runs outside entryLock (the inner blocks released it) so the writeLock -> entryLock order
+      // inside removeUnheldWeakEntry is respected.
       try {
         mountLocation.removeUnheldWeakEntry(id);
       }
@@ -995,11 +990,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     }
     finally {
       if (!success) {
-        // Reverse-dependency rollback for bundles only; this entry's own rollback is the caller's responsibility (it
-        // fires when the propagated throw escapes doMount's try/catch).
-        for (PartialSegmentBundleCacheEntry bundle : mountedBundles) {
+        // Roll back the bundles, dependents before parents, so a parent is unheld (its dependent's holds released) by
+        // the time we try to remove it.
+        for (int i = mountedBundles.size() - 1; i >= 0; i--) {
+          final PartialSegmentBundleCacheEntry bundle = mountedBundles.get(i);
           try {
             bundle.unmount();
+            location.removeUnheldWeakEntry(bundle.getId());
           }
           catch (Throwable t) {
             LOG.warn(t, "Failed to roll back bundle[%s] during restore failure for [%s]", bundle.getId(), segmentId);
@@ -1486,8 +1483,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
 
       /**
-       * Mount the bundle on the supplied location, closing the bootstrap hold and propagating a {@link DruidException}
-       * if the mount fails. Used by both the fresh-build and re-mount branches.
+       * Mount the bundle on the supplied location, closing the transient reservation hold and propagating a
+       * {@link DruidException} if the mount fails. Used by both the fresh-build and re-mount branches.
        */
       private void mountBundleOrClose(
           PartialSegmentBundleCacheEntry bundle,
@@ -1496,13 +1493,10 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
           String bundleName
       )
       {
-        // Mount this bundle's parents (e.g. __base for a projection bundle) FIRST: the bundle's own mount() takes
-        // holds + references on each parent and fails with a defensive error if a parent isn't registered+mounted at
-        // the location. The bootstrap restore path orders base-before-dependents; this is the equivalent ordering for
-        // the runtime acquire path, which would otherwise reach a projection bundle directly with no __base mounted.
-        // The bundle keeps its own dependency holds/refs for its lifetime, so we hold these transient ones only across
-        // the mount and release them immediately after a successful mount (acquire() is acyclic: base/root have no
-        // dependencies, so the recursion terminates).
+        // Mount this bundle's parents first: the bundle's own mount() takes holds + references on each parent and
+        // fails with a defensive error if a parent isn't registered+mounted at the location. The bundle keeps its own
+        // dependency holds/refs for its lifetime, so we hold these transient ones only across the mount and release
+        // them immediately after a successful mount.
         final Closer parentHolds = Closer.create();
         try {
           for (PartialSegmentBundleCacheEntryIdentifier depId : inferBundleDependencies(bundleName)) {
