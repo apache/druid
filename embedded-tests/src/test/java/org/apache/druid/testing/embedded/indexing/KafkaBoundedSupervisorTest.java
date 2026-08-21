@@ -23,6 +23,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.indexing.kafka.simulate.KafkaResource;
 import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
+import org.apache.druid.indexing.kafka.supervisor.KafkaSupervisorSpecBuilder;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.indexing.seekablestream.supervisor.BoundedStreamConfig;
 import org.apache.druid.query.DruidMetrics;
@@ -48,6 +49,15 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   protected StreamIngestResource<?> getStreamIngestResource()
   {
     return kafkaServer;
+  }
+
+  @Override
+  protected KafkaSupervisorSpecBuilder createKafkaSupervisor(KafkaResource kafkaServer)
+  {
+    return super.createKafkaSupervisor(kafkaServer)
+        .withTuningConfig(
+            tuningConfig -> tuningConfig.withMaxRowsPerSegment(BOUNDED_SUPERVISOR_MAX_ROWS_PER_SEGMENT)
+        );
   }
 
   @Override
@@ -167,9 +177,6 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   )
   {
     return createKafkaSupervisor(kafkaServer)
-        .withTuningConfig(
-            tuningConfig -> tuningConfig.withMaxRowsPerSegment(BOUNDED_SUPERVISOR_MAX_ROWS_PER_SEGMENT)
-        )
         .withIoConfig(io -> io
             .withKafkaInputFormat(new JsonInputFormat(null, null, null, null, null))
             .withBoundedStreamConfig(boundedConfig)
