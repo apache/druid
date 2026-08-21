@@ -3753,7 +3753,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.63
+version: 1.0.64
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3765,7 +3765,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.2.6
+version: 2.2.7
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
