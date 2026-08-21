@@ -847,6 +847,9 @@
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:kms</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-gcp</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>com.google.cloud:google-cloud-storage</ignoredUnusedDeclaredDependency>
+              <!-- Transitive dependencies explicitly added to propagate aligned versions -->
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-api</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-context</ignoredUnusedDeclaredDependency>
             </ignoredUnusedDeclaredDependencies>
           </configuration>
         </plugin>
