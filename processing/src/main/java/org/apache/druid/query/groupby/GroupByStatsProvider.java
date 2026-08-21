@@ -191,11 +191,9 @@ public class GroupByStatsProvider
      *       across all queries, where each query's usage is itself the sum across the query's slices.</li>
      *   <li>{@code maxMergeBufferUsedBytes} (emitted as {@code mergeBuffer/maxBytesUsed}) is the max such per-query
      *       summed usage across queries.</li>
-     *   <li>{@code maxSpillProximity} (emitted as {@code mergeBuffer/maxSpillProximity}) is the max per-query spill
-     *       proximity across queries, where each query's value is its fullest slice's peak
-     *       {@code size / regrowthThreshold} (bucket-count based, tracked by the underlying hash table). Unlike the
-     *       byte sums above, this is a per-slice MAX so it reflects the slice that drives a spill; 1.0 corresponds
-     *       exactly to the spill trigger (a bucket allocation was rejected).</li>
+     *   <li>{@code maxSpillProximity} (emitted as {@code mergeBuffer/maxSpillProximity}) is the max across queries of
+     *       each query's fullest-slice peak fill ratio — a per-slice MAX (not a byte sum), so it reflects the slice
+     *       that drives a spill; 1.0 iff a slice actually spilled.</li>
      * </ul>
      */
     public void addQueryStats(PerQueryStats perQueryStats)
@@ -249,14 +247,12 @@ public class GroupByStatsProvider
      */
     private final AtomicLong mergeBufferUsedBytes = new AtomicLong(0);
     /**
-     * Spill proximity of the single fullest slice this query held, in [0.0, 1.0]. Each {@link #sliceUsage} call
-     * contributes one slice's peak {@code size / regrowthThreshold} ratio (tracked bucket-by-bucket by the underlying
-     * hash table, preserved across resets), and this keeps the MAX across the query's slices. A query spills as soon
-     * as one slice fills, so proximity is driven by the hottest slice, NOT the byte sum tracked by
-     * {@link #mergeBufferUsedBytes}. Keeping the ratio per slice (rather than maxing numerator and denominator
-     * independently) is what makes the metric correct when a single query mixes groupers with different spill
-     * thresholds — e.g. small sliced groupers from a {@code ConcurrentGrouper} alongside a full-buffer
-     * {@code SpillingGrouper} for subtotal/nested processing. 1.0 corresponds exactly to the actual spill trigger.
+     * Spill proximity of the fullest slice this query held, in [0.0, 1.0]. Each {@link #sliceUsage} call contributes
+     * one slice's peak fill ratio and this keeps the MAX across slices: a query spills as soon as its hottest slice
+     * fills, so proximity is driven by that slice, not the byte sum in {@link #mergeBufferUsedBytes}. Keeping each
+     * slice's ratio intact (rather than maxing numerator and denominator separately) stays correct when a query mixes
+     * groupers of different sizes (e.g. {@code ConcurrentGrouper} slices alongside a full-buffer grouper). 1.0 iff a
+     * slice actually spilled.
      */
     private final DoubleAccumulator maxSpillProximity = new DoubleAccumulator(Math::max, 0.0);
     private final AtomicLong spilledBytes = new AtomicLong(0);
@@ -277,14 +273,8 @@ public class GroupByStatsProvider
     }
 
     /**
-     * Records one slice's peak fill ratio in [0.0, 1.0] — the underlying hash table's peak
-     * {@code size / regrowthThreshold} over the slice's lifetime, which reaches exactly 1.0 iff the slice actually
-     * spilled. Kept as a max across the query's slices, so after all slices close the value describes the single
-     * fullest slice — the one that drives spilling. Recording the ratio per slice (rather than maxing bytes and
-     * thresholds independently) keeps each slice's numerator paired with its own denominator, so a query that mixes
-     * groupers of different sizes still reports the true max proximity. Used to compute
-     * {@code mergeBuffer/maxSpillProximity}. Values are clamped defensively to [0, 1]; NaN is ignored so a
-     * never-initialized grouper contributes nothing.
+     * Records one slice's peak fill ratio (1.0 iff it spilled), kept as a max across the query's slices; see
+     * {@link #maxSpillProximity}. Clamped to [0, 1]; NaN is ignored so a never-initialized grouper contributes nothing.
      */
     public void sliceUsage(double proximity)
     {

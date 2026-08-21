@@ -589,18 +589,11 @@ public class LimitedBufferHashGrouper<KeyType> extends AbstractBufferHashGrouper
     }
 
     /**
-     * The alternating table trims-and-swaps to keep the top-{@code limit} entries in memory; it never grows and never
-     * spills to disk via the fill path. Its active sub-buffer fills to {@code regrowthThreshold} on every swap, so
-     * recording {@code size / regrowthThreshold} would falsely saturate proximity near {@code (T-1)/T} ≈ 1.0 for any
-     * high-cardinality limit-pushdown query (which is designed to stay in memory). Suppress fill-proximity recording
-     * entirely so such queries read 0.0 (correct: they won't spill).
-     *
-     * <p>The only genuine spill signal here is a bucket rejection in {@link #findBucketWithAutoGrowth}, which still
-     * pins 1.0 unconditionally. That does not fire on ordinary swaps: after a swap {@code size = numCopied} and
-     * {@code numCopied <= limit}, and the grouper is validated at construction to have
-     * {@code regrowthThreshold >= limit + 1}, so {@code size < regrowthThreshold} always holds post-swap and the
-     * subsequent findBucket succeeds. Only a genuinely-full-and-cannot-swap condition returns -1 — the real spill
-     * case.</p>
+     * The alternating table trims-and-swaps to keep the top-{@code limit} entries in memory and never spills via the
+     * fill path (see base {@link #recordsFillProximity()}), so suppress fill-proximity recording — such queries read
+     * 0.0. Its only spill signal is a rejection in {@link #findBucketWithAutoGrowth}, which does NOT fire on ordinary
+     * swaps: post-swap {@code size == numCopied <= limit}, and construction guarantees
+     * {@code regrowthThreshold >= limit + 1}, so the next insert always finds a bucket.
      */
     @Override
     protected boolean recordsFillProximity()

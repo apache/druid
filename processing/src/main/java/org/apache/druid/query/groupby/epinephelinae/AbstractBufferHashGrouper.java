@@ -186,10 +186,9 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   }
 
   /**
-   * Peak {@code size / regrowthThreshold} observed over this grouper's lifetime, in [0.0, 1.0]. 1.0 means the grouper
-   * actually hit its spill trigger (a bucket allocation was rejected) — the value {@code SpillingGrouper} reports for
-   * {@code mergeBuffer/maxSpillProximity}. Preserved across {@link #reset()}, so a slice that spilled and then had
-   * more rows added still reports 1.0 at close time. Returns 0.0 when the grouper has never been initialized.
+   * Peak fraction of the way to a spill over this grouper's lifetime, in [0.0, 1.0]; 1.0 means it actually spilled.
+   * The value {@code SpillingGrouper} reports for {@code mergeBuffer/maxSpillProximity}. Preserved across
+   * {@link #reset()}; 0.0 if the grouper was never initialized. See {@link ByteBufferHashTable#getMaxSpillProximity()}.
    */
   public double getMaxSpillProximity()
   {
