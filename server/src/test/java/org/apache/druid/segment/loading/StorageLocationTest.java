@@ -24,7 +24,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -32,7 +31,7 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -49,9 +48,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 class StorageLocationTest
 {
-  @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
-  final File tempDir = temporaryFolder.getRoot();
+  @TempDir
+  File tempDir;
 
   ExecutorService executorService;
 
