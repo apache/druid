@@ -5775,7 +5775,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                               notNull("_j0.a0"),
                               notNull("dim1")
                           ),
-                          "a0"
+                          "a0",
+                          null
                       ),
                       new FilteredAggregatorFactory(
                           new FloatMinAggregatorFactory("a1", "m1"),
@@ -5790,7 +5791,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                   )
                               )
                           ),
-                          "a1"
+                          "a1",
+                          null
                       )
                   )
                   .context(queryContext)
@@ -5995,7 +5997,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                                              new FilteredAggregatorFactory(
                                                                  new CountAggregatorFactory("a1"),
                                                                  notNull("m1"),
-                                                                 "a1"
+                                                                 "a1",
+                                                                 null
                                                              )
                                                          )
                                                          .intervals(querySegmentSpec(Filtration.eternity()))
