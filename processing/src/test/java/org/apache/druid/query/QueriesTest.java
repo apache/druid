@@ -44,7 +44,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -519,7 +518,7 @@ public class QueriesTest
             new TableDataSource("foo")
         )
     );
-    assertThat(
+    DruidExceptionMatcher.assertThat(
         e,
         DruidExceptionMatcher.defensive()
             .expectMessageContains("Its unsafe to replace the BaseDataSource of a non-processable query")

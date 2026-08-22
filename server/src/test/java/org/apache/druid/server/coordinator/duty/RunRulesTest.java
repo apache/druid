@@ -59,10 +59,12 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -70,6 +72,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -95,7 +98,7 @@ public class RunRulesTest
 
   private ListeningExecutorService balancerExecutor;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
@@ -107,7 +110,7 @@ public class RunRulesTest
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     balancerExecutor.shutdown();
@@ -168,7 +171,7 @@ public class RunRulesTest
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     // There are 24 under-replicated segments, but only 10 replicas are assigned
-    Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
+    Assertions.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
 
     EasyMock.verify(mockPeon);
   }
@@ -229,8 +232,8 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
-    Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
+    Assertions.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
+    Assertions.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
 
     EasyMock.verify(mockPeon);
   }
@@ -299,10 +302,10 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
-    Assert.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
-    Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
+    Assertions.assertEquals(6L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
+    Assertions.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -380,9 +383,9 @@ public class RunRulesTest
         .build();
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
-    Assert.assertEquals(18L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
+    Assertions.assertEquals(18L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "cold", DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -430,9 +433,9 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(12L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
+    Assertions.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -501,11 +504,11 @@ public class RunRulesTest
     runDutyAndGetStats(params);
 
     final List<AlertEvent> events = emitter.getAlerts();
-    Assert.assertEquals(1, events.size());
+    Assertions.assertEquals(1, events.size());
 
     AlertEvent alertEvent = events.get(0);
     EventMap eventMap = alertEvent.toMap();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "No matching retention rule for [24] segments in datasource[test]",
         eventMap.get("description")
     );
@@ -544,7 +547,7 @@ public class RunRulesTest
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
+    Assertions.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
   }
 
   @Test
@@ -593,8 +596,8 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
-    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
+    Assertions.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
     EasyMock.verify(mockPeon);
   }
@@ -636,8 +639,8 @@ public class RunRulesTest
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
-    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
+    Assertions.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
     EasyMock.verify(mockPeon);
   }
@@ -676,8 +679,8 @@ public class RunRulesTest
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
-    Assert.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(12L, stats.get(Stats.Segments.DELETED, DATASOURCE_STAT_KEY));
 
     EasyMock.verify(mockPeon);
   }
@@ -728,7 +731,7 @@ public class RunRulesTest
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
 
     EasyMock.verify(mockPeon);
     EasyMock.verify(anotherMockPeon);
@@ -776,8 +779,8 @@ public class RunRulesTest
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     DataSegment overFlowSegment = new DataSegment(
         "test",
@@ -799,7 +802,7 @@ public class RunRulesTest
             .build()
     );
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
+    Assertions.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
 
     EasyMock.verify(mockPeon);
   }
@@ -849,9 +852,9 @@ public class RunRulesTest
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
-    Assert.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
+    Assertions.assertEquals(24L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -905,7 +908,7 @@ public class RunRulesTest
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
     // There is no throttling on drop
-    Assert.assertEquals(25L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
+    Assertions.assertEquals(25L, stats.getSegmentStat(Stats.Segments.DROPPED, "normal", DATASOURCE));
     EasyMock.verify(mockPeon);
   }
 
@@ -956,11 +959,11 @@ public class RunRulesTest
         .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(1, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
-    Assert.assertEquals(2, usedSegments.size());
-    Assert.assertEquals(usedSegments, params.getUsedSegmentsNewestFirst());
+    Assertions.assertEquals(2, usedSegments.size());
+    Assertions.assertEquals(usedSegments, params.getUsedSegmentsNewestFirst());
 
     EasyMock.verify(mockPeon);
   }
@@ -971,7 +974,8 @@ public class RunRulesTest
    * Replicants - 3
    * Random balancer strategy should not assign anything and not get into loop as there are not enough nodes for replication
    */
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testTwoNodesOneTierThreeReplicantsRandomStrategyNotEnoughNodes()
   {
     mockEmptyPeon();
@@ -1014,8 +1018,8 @@ public class RunRulesTest
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -1027,7 +1031,8 @@ public class RunRulesTest
    * Replicants - 1
    * Random balancer strategy should select the only node
    */
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testOneNodesOneTierOneReplicantRandomStrategyEnoughSpace()
   {
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
@@ -1064,8 +1069,8 @@ public class RunRulesTest
             .build();
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -1076,7 +1081,8 @@ public class RunRulesTest
    * Replicants - 1
    * Random balancer strategy should not assign anything as there is not enough space
    */
-  @Test(timeout = 5000L)
+  @Test
+  @Timeout(value = 5000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testOneNodesOneTierOneReplicantRandomStrategyNotEnoughSpace()
   {
     mockEmptyPeon();
@@ -1113,14 +1119,14 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         dataSegment.getSize() * numReplicants,
         stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
     );
 
     // Verify that primary assignment failed
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -1168,12 +1174,12 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
     final RowKey tierRowKey = RowKey.of(Dimension.TIER, DruidServer.DEFAULT_TIER);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         dataSegment.getSize() * numReplicants,
         stats.get(Stats.Tier.REQUIRED_CAPACITY, tierRowKey)
     );
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
-    Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
+    Assertions.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, DruidServer.DEFAULT_TIER, DATASOURCE));
+    Assertions.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     EasyMock.verify(mockPeon);
   }
@@ -1195,15 +1201,15 @@ public class RunRulesTest
         .build();
     params = ruleRunner.run(params);
 
-    Assert.assertNotNull(params);
+    Assertions.assertNotNull(params);
     SegmentReplicationStatus replicationStatus = params.getSegmentReplicationStatus();
-    Assert.assertNotNull(replicationStatus);
+    Assertions.assertNotNull(replicationStatus);
 
     SegmentReplicaCount replicaCounts = replicationStatus.getReplicaCountsInCluster(segment.getId());
-    Assert.assertNotNull(replicaCounts);
-    Assert.assertEquals(0, replicaCounts.required());
-    Assert.assertEquals(0, replicaCounts.totalLoaded());
-    Assert.assertEquals(0, replicaCounts.requiredAndLoadable());
+    Assertions.assertNotNull(replicaCounts);
+    Assertions.assertEquals(0, replicaCounts.required());
+    Assertions.assertEquals(0, replicaCounts.totalLoaded());
+    Assertions.assertEquals(0, replicaCounts.requiredAndLoadable());
   }
 
   private CoordinatorRunStats runDutyAndGetStats(DruidCoordinatorRuntimeParams params)

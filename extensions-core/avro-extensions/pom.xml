@@ -314,6 +314,15 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <org.apache.avro.SERIALIZABLE_CLASSES>org.apache.druid.data.input.SomeAvroDatum</org.apache.avro.SERIALIZABLE_CLASSES>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>

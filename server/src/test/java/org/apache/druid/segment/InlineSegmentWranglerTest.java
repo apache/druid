@@ -28,18 +28,13 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
 public class InlineSegmentWranglerTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final InlineSegmentWrangler factory = new InlineSegmentWrangler();
 
   private final InlineDataSource inlineDataSource = InlineDataSource.fromIterable(
@@ -53,13 +48,11 @@ public class InlineSegmentWranglerTest
   @Test
   public void test_getSegmentsForIntervals_nonInline()
   {
-    expectedException.expect(ClassCastException.class);
-    expectedException.expectMessage("TableDataSource cannot be cast");
-
-    final Iterable<Segment> ignored = factory.getSegmentsForIntervals(
-        new TableDataSource("foo"),
-        Intervals.ONLY_ETERNITY
+    final ClassCastException exception = Assertions.assertThrows(
+        ClassCastException.class,
+        () -> factory.getSegmentsForIntervals(new TableDataSource("foo"), Intervals.ONLY_ETERNITY)
     );
+    Assertions.assertTrue(exception.getMessage().contains("TableDataSource cannot be cast"));
   }
 
   @Test
@@ -72,7 +65,7 @@ public class InlineSegmentWranglerTest
         )
     );
 
-    Assert.assertEquals(1, segments.size());
+    Assertions.assertEquals(1, segments.size());
 
     final Segment segment = Iterables.getOnlyElement(segments);
     MatcherAssert.assertThat(segment, CoreMatchers.instanceOf(RowBasedSegment.class));

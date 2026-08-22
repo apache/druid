@@ -34,7 +34,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
-    <thrift.version>0.23.0</thrift.version>
+    <thrift.version>0.24.0</thrift.version>
     <elephantbird.version>4.17</elephantbird.version>
     <scrooge.version>21.2.0</scrooge.version>
   </properties>

@@ -24,7 +24,6 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +57,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testInvalidRegexpExtractPattern()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(DruidException.class, () ->
             eval(
                 "regexp_extract('pod-1234-node', '[ab-0-9]')",

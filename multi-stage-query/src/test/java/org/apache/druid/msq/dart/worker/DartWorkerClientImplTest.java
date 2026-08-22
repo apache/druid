@@ -26,8 +26,6 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactoryImpl;
 import org.apache.druid.rpc.ServiceClosedException;
 import org.apache.druid.segment.TestHelper;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,6 +117,6 @@ public class DartWorkerClientImplTest
         () -> workerClient.stopWorker(WORKER_ID.toString()).get()
     );
 
-    MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(ServiceClosedException.class));
+    Assertions.assertInstanceOf(ServiceClosedException.class, e.getCause());
   }
 }

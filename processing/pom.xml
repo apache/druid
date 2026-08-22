@@ -35,8 +35,8 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sigar.base.version>1.6.5</sigar.base.version>
-    <sigar.version>${sigar.base.version}.132</sigar.version>
-    <oshi.version>6.9.1</oshi.version>
+    <sigar.version>1.6.5.132-6</sigar.version>
+    <oshi.version>7.4.4</oshi.version>
   </properties>
 
   <dependencies>
@@ -132,13 +132,13 @@
       <artifactId>maven-artifact</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.el</groupId>
-      <artifactId>javax.el-api</artifactId>
+      <groupId>jakarta.el</groupId>
+      <artifactId>jakarta.el-api</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>org.glassfish</groupId>
-      <artifactId>jakarta.el</artifactId>
+      <groupId>org.glassfish.expressly</groupId>
+      <artifactId>expressly</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -338,6 +338,11 @@
     <dependency>
       <groupId>com.github.oshi</groupId>
       <artifactId>oshi-core</artifactId>
+      <version>${oshi.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.oshi</groupId>
+      <artifactId>oshi-common</artifactId>
       <version>${oshi.version}</version>
     </dependency>
 

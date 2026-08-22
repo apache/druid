@@ -24,7 +24,8 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
@@ -45,6 +46,7 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
   private final String datasource = TestDataSource.WIKI;
 
   @Override
+  @BeforeEach
   public void setUp()
   {
     // T1 and T2 are interchangeable physical tiers grouped under the alias "hot"

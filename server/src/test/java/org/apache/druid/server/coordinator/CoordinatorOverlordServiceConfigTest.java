@@ -19,19 +19,19 @@
 
 package org.apache.druid.server.coordinator;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CoordinatorOverlordServiceConfigTest
 {
   @Test
   public void testOverlordServiceIsRequiredIfEnabled()
   {
-    IllegalArgumentException e = Assert.assertThrows(
+    IllegalArgumentException e = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new CoordinatorOverlordServiceConfig(true, null)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "'overlordService' must be specified when running Coordinator as Overlord.",
         e.getMessage()
     );

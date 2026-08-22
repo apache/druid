@@ -44,6 +44,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -195,6 +196,11 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         result = parseHeaderFile(headerFile, jsonMapper);
         bitmapBuffer = mmapBitmap(headerFile, result);
       }
+      catch (ClosedByInterruptException e) {
+        // The header is fine, an interrupt aborted the mapping (see mapUninterruptibly). Treating this as corruption
+        // would delete a valid local header and force a needless re-download, so leave the file alone and unwind.
+        throw e;
+      }
       catch (Exception e) {
         // corrupted file (partial write, truncated bitmap, bad JSON, etc.), delete and re-fetch
         result = null;
@@ -228,47 +234,54 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         maxFetchRunBytes
     );
 
-    // bitmap-vs-container repair pre-pass: if the bitmap claims a file is downloaded but its container file is
-    // missing on disk, the bitmap is lying (e.g. partial-cache eviction that cleared containers but couldn't atomically
-    // clear bits, or external file-system damage). Clear those bits before the restore loop so we don't spuriously
-    // sparse-allocate empty containers in the restore loop's ensureContainerInitialized call and treat their files as
-    // downloaded.
-    for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
-      final int byteIndex = i / 8;
-      final int bitMask = 1 << (i % 8);
-      if ((bitmapBuffer.get(byteIndex) & bitMask) == 0) {
-        continue;
-      }
-      final String name = mapper.sortedFileNames.get(i);
-      final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
-      if (fileMetadata == null) {
-        continue;
-      }
-      final File containerFile = new File(
-          localCacheDir,
-          StringUtils.format("%s.container.%05d", targetFilename, fileMetadata.getContainer())
-      );
-      if (!containerFile.exists()) {
-        bitmapBuffer.put(byteIndex, (byte) (bitmapBuffer.get(byteIndex) & ~bitMask));
-      }
-    }
-
-    // restore downloaded files from the (now-repaired) bitmap
-    for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
-      final int byteIndex = i / 8;
-      final int bitIndex = i % 8;
-      if ((bitmapBuffer.get(byteIndex) & (1 << bitIndex)) != 0) {
+    try {
+      // bitmap-vs-container repair pre-pass: if the bitmap claims a file is downloaded but its container file is
+      // missing on disk, the bitmap is lying (e.g. partial-cache eviction that cleared containers but couldn't
+      // atomically clear bits, or external file-system damage). Clear those bits before the restore loop so we don't
+      // spuriously sparse-allocate empty containers in the restore loop's ensureContainerInitialized call and treat
+      // their files as downloaded.
+      for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
+        final int byteIndex = i / 8;
+        final int bitMask = 1 << (i % 8);
+        if ((bitmapBuffer.get(byteIndex) & bitMask) == 0) {
+          continue;
+        }
         final String name = mapper.sortedFileNames.get(i);
         final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
-        if (fileMetadata != null) {
-          mapper.ensureContainerInitialized(fileMetadata.getContainer());
-          mapper.downloadedFiles.add(name);
-          mapper.downloadedBytes.addAndGet(fileMetadata.getSize());
+        if (fileMetadata == null) {
+          continue;
+        }
+        final File containerFile = new File(
+            localCacheDir,
+            StringUtils.format("%s.container.%05d", targetFilename, fileMetadata.getContainer())
+        );
+        if (!containerFile.exists()) {
+          bitmapBuffer.put(byteIndex, (byte) (bitmapBuffer.get(byteIndex) & ~bitMask));
         }
       }
-    }
 
-    return mapper;
+      // restore downloaded files from the (now-repaired) bitmap
+      for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
+        final int byteIndex = i / 8;
+        final int bitIndex = i % 8;
+        if ((bitmapBuffer.get(byteIndex) & (1 << bitIndex)) != 0) {
+          final String name = mapper.sortedFileNames.get(i);
+          final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
+          if (fileMetadata != null) {
+            mapper.ensureContainerInitialized(fileMetadata.getContainer());
+            mapper.downloadedFiles.add(name);
+            mapper.downloadedBytes.addAndGet(fileMetadata.getSize());
+          }
+        }
+      }
+
+      return mapper;
+    }
+    catch (Throwable t) {
+      // close a half-built mapper
+      CloseableUtils.closeAndSuppressExceptions(mapper, t::addSuppressed);
+      throw t;
+    }
   }
 
   private final SegmentFileMetadata metadata;
@@ -1072,8 +1085,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   /**
    * Initialize a local container file if not already done. Creates a sparse file at the original container size
-   * and memory-maps it. The channel is closed immediately after mapping, the mmap persists independently, backed by
-   * the kernel page cache. This avoids the risk of channel closure from thread interruption.
+   * and memory-maps it via {@link #mapUninterruptibly}. The channel is closed immediately after mapping, the mmap
+   * persists independently, backed by the kernel page cache, so once established it is immune to channel closure from
+   * thread interruption.
    */
   private void ensureContainerInitialized(int containerIndex) throws IOException
   {
@@ -1095,15 +1109,14 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       );
 
       // create sparse file at original container size, mmap it, then close the channel immediately
-      try (RandomAccessFile raf = new RandomAccessFile(localFile, "rw"); FileChannel channel = raf.getChannel()) {
-        raf.setLength(containerMeta.getSize());
-        containerFiles[containerIndex] = localFile;
-        containers[containerIndex] = channel.map(
-            FileChannel.MapMode.READ_ONLY,
-            0,
-            containerMeta.getSize()
-        );
-      }
+      final MappedByteBuffer container = mapUninterruptibly(() -> {
+        try (RandomAccessFile raf = new RandomAccessFile(localFile, "rw"); FileChannel channel = raf.getChannel()) {
+          raf.setLength(containerMeta.getSize());
+          return channel.map(FileChannel.MapMode.READ_ONLY, 0, containerMeta.getSize());
+        }
+      });
+      containerFiles[containerIndex] = localFile;
+      containers[containerIndex] = container;
     }
     finally {
       containerLocks[containerIndex].unlock();
@@ -1270,13 +1283,67 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   {
     final int numBitmapBytes = (result.getMetadata().getFiles().size() + 7) / 8;
     final long expectedSize = result.getHeaderSize() + numBitmapBytes;
-    try (RandomAccessFile raf = new RandomAccessFile(headerFile, "rw");
-         FileChannel channel = raf.getChannel()) {
-      if (raf.length() < expectedSize) {
-        raf.setLength(expectedSize);
+    return mapUninterruptibly(() -> {
+      try (RandomAccessFile raf = new RandomAccessFile(headerFile, "rw");
+           FileChannel channel = raf.getChannel()) {
+        if (raf.length() < expectedSize) {
+          raf.setLength(expectedSize);
+        }
+        return channel.map(FileChannel.MapMode.READ_WRITE, result.getHeaderSize(), numBitmapBytes);
       }
-      return channel.map(FileChannel.MapMode.READ_WRITE, result.getHeaderSize(), numBitmapBytes);
+    });
+  }
+
+  /**
+   * Establish a memory mapping, shielding it from the calling thread's interrupt status.
+   * <p>
+   * {@link FileChannel#map} is an interruptible channel operation: an interrupt (a canceled query, a stage tearing
+   * down, {@code shutdownNow} on the processing pool) closes the channel mid-call and surfaces as
+   * {@link ClosedByInterruptException}. This class already avoids that hazard for container data by reading and
+   * writing through plain {@link RandomAccessFile} rather than NIO channels, but mapping has no non-NIO equivalent, so
+   * it is handled here instead: the interrupt status is parked for the duration of the call and the mapping is retried
+   * once on a fresh channel if an interrupt lands inside the call itself.
+   * <p>
+   * The flag is always restored before returning, so an interrupt is never swallowed, the caller still observes it at
+   * its next cancellation checkpoint.
+   */
+  private static MappedByteBuffer mapUninterruptibly(MmapOperation operation) throws IOException
+  {
+    boolean interrupted = Thread.interrupted();
+    boolean retried = false;
+
+    try {
+      while (true) {
+        try {
+          return operation.run();
+        }
+        catch (ClosedByInterruptException e) {
+          // An interrupt arrived after the clear above, retry once
+          interrupted = true;
+
+          if (retried) {
+            throw e;
+          }
+
+          retried = true;
+          Thread.interrupted();
+        }
+      }
     }
+    finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  /**
+   * A mapping attempt for {@link #mapUninterruptibly}. Opens its own channel so that each attempt is independent.
+   */
+  @FunctionalInterface
+  private interface MmapOperation
+  {
+    MappedByteBuffer run() throws IOException;
   }
 
   /**
