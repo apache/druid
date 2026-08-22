@@ -51,7 +51,6 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -149,7 +148,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   {
     derbyConnectorRule.before();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    baseDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "base");
+    baseDir = temporaryFolder.newFolder("base");
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
@@ -188,7 +187,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
     lockbox.syncFromStorage();
     segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, getObjectMapper());
-    reportsFile = new File(temporaryFolder.getRoot(), "reports.json");
+    reportsFile = temporaryFolder.newFile("reports.json");
     dataSegmentKiller = new TestDataSegmentKiller();
     taskActionToolbox = createTaskActionToolbox();
 
