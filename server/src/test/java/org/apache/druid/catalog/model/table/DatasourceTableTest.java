@@ -513,7 +513,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
                    List.of(new DatasourceProjectionMetadata(good), new DatasourceProjectionMetadata(good))
                )
                .buildSpec();
-    assertThrows(DruidException.class, () -> projectionRegistry.resolve(duplicateNames).validate());
+    Assertions.assertThrows(DruidException.class, () -> projectionRegistry.resolve(duplicateNames).validate());
 
     // A sealed table declares its whole schema, so a projection over an undeclared column can never be built.
     final AggregateProjectionSpec undeclared = AggregateProjectionSpec
@@ -530,11 +530,11 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
                    List.of(new DatasourceProjectionMetadata(undeclared))
                )
                .buildSpec();
-    final DruidException e = assertThrows(
+    final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> projectionRegistry.resolve(sealedWithUndeclared).validate()
     );
-    assertTrue(e.getMessage().contains("references column [nope]"));
+    Assertions.assertTrue(e.getMessage().contains("references column [nope]"));
 
     // Ingestion may add columns to a table that is not sealed, so the same projection is allowed there.
     projectionRegistry.resolve(
@@ -556,13 +556,13 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
                     .column("met", Columns.SQL_BIGINT)
                     .property(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, List.of(new DatasourceProjectionMetadata(good)))
                     .buildSpec();
-    final DruidException retyped = assertThrows(
+    final DruidException retyped = Assertions.assertThrows(
         DruidException.class,
         () -> projectionRegistry.resolve(retypedGroupingColumn).validate()
     );
-    assertTrue(
-        retyped.getMessage(),
-        retyped.getMessage().contains("groups on column [dim] as type [STRING], but the table declares it as type [LONG]")
+    Assertions.assertTrue(
+        retyped.getMessage().contains("groups on column [dim] as type [STRING], but the table declares it as type [LONG]"),
+        retyped.getMessage()
     );
   }
 
