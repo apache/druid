@@ -2213,6 +2213,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         if (currentMetadata == null) {
           metadataUpdateSuccess = true;
         } else {
+          // Use minus() to remove the stale offsets from the metadata, so that
+          // the supervisor will use auto.offset.reset to determine the starting
+          // position. Using plus() would preserve the invalid offsets, causing
+          // an infinite reset loop on the next run.
           final DataSourceMetadata newMetadata = currentMetadata.minus(resetMetadata);
           try {
             metadataUpdateSuccess = indexerMetadataStorageCoordinator.resetDataSourceMetadata(supervisorId, newMetadata);
@@ -4446,13 +4450,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     // If any partitions need a reset, issue a single batch reset.
     if (!partitionsToReset.isEmpty()) {
+      log.makeAlert(
+          "Previous sequenceNumbers are no longer available - automatically resetting sequences"
+      ).addData("partitions", partitionsToReset).emit();
       resetInternal(createDataSourceMetaDataForReset(ioConfig.getStream(), partitionsToReset));
-      throw new StreamException(
-          new ISE(
-              "Previous sequenceNumbers %s are no longer available - automatically resetting sequences",
-              partitionsToReset
-          )
-      );
+
+      // Remove affected groups from newTaskGroups — they were built before the reset
+      // and excluded the reset partitions. The next supervisor run cycle will rebuild
+      // them with the correct starting offsets (now that partitionOffsets are reset).
+      for (PartitionIdType partition : partitionsToReset.keySet()) {
+        newTaskGroups.remove(getTaskGroupIdForPartition(partition));
+      }
     }
 
     for (Entry<Integer, TaskGroup> entry : newTaskGroups.entrySet()) {
