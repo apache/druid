@@ -44,10 +44,6 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   // This is a maximum wait, not a fixed delay; successful waits return as soon as the metric is emitted.
   private static final long BOUNDED_SUPERVISOR_INGESTION_TIMEOUT_MILLIS = 120_000L;
 
-  // Use up to 100 rows per segment instead of the shared fixture's one-row segments. The test assertions
-  // cover bounded offsets, row counts, and supervisor state, so they do not depend on segment count.
-  private static final int BOUNDED_SUPERVISOR_MAX_ROWS_PER_SEGMENT = 100;
-
   private final KafkaResource kafkaServer = new KafkaResource();
 
   @Override
@@ -59,10 +55,11 @@ public class KafkaBoundedSupervisorTest extends StreamIndexTestBase
   @Override
   protected KafkaSupervisorSpecBuilder createKafkaSupervisor(KafkaResource kafkaServer)
   {
+    // Use a moderate segment size to avoid the shared fixture's one-row segment rollover overhead while
+    // retaining normal segment publication behavior. These tests assert offsets, row counts, and supervisor
+    // state, not segment count, so 100 does not change their semantics.
     return super.createKafkaSupervisor(kafkaServer)
-        .withTuningConfig(
-            tuningConfig -> tuningConfig.withMaxRowsPerSegment(BOUNDED_SUPERVISOR_MAX_ROWS_PER_SEGMENT)
-        );
+        .withTuningConfig(tuningConfig -> tuningConfig.withMaxRowsPerSegment(100));
   }
 
   @Override
