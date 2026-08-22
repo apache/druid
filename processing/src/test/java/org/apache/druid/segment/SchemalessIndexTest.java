@@ -196,8 +196,7 @@ public class SchemalessIndexTest
     QueryableIndex bottomIndex = null;
 
     try {
-      File tmpFile = File.createTempFile("yay", "who");
-      tmpFile.delete();
+      File tmpFile = FileUtils.createTempDir("yay");
 
       File topFile = new File(tmpFile, "top");
       File bottomFile = new File(tmpFile, "bottom");
@@ -261,8 +260,7 @@ public class SchemalessIndexTest
       }
 
       try {
-        File tmpFile = File.createTempFile("yay", "who");
-        tmpFile.delete();
+        File tmpFile = FileUtils.createTempDir("yay");
 
         File mergedFile = new File(tmpFile, "merged");
 
@@ -299,8 +297,7 @@ public class SchemalessIndexTest
       }
 
       try {
-        File tmpFile = File.createTempFile("yay", "who");
-        tmpFile.delete();
+        File tmpFile = FileUtils.createTempDir("yay");
 
         File mergedFile = new File(tmpFile, "merged");
 
@@ -386,9 +383,7 @@ public class SchemalessIndexTest
               new MapBasedInputRow(timestamp, dims, event)
           );
 
-          File tmpFile = File.createTempFile("billy", "yay");
-          tmpFile.delete();
-          FileUtils.mkdirp(tmpFile);
+          File tmpFile = FileUtils.createTempDir("billy");
           tmpFile.deleteOnExit();
 
           indexMerger.persist(rowIndex, tmpFile, INDEX_SPEC, null);
@@ -466,8 +461,7 @@ public class SchemalessIndexTest
   private QueryableIndex makeMergedMMappedIndex(Iterable<Pair<String, AggregatorFactory[]>> files)
   {
     try {
-      File tmpFile = File.createTempFile("yay", "who");
-      tmpFile.delete();
+      File tmpFile = FileUtils.createTempDir("yay");
       File mergedFile = new File(tmpFile, "merged");
       FileUtils.mkdirp(mergedFile);
       mergedFile.deleteOnExit();
