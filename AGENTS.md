@@ -69,6 +69,8 @@ When adding or migrating tests, reuse these existing test-scope helpers:
 
 ## Running Tests
 
+Use JUnit 5 (`org.junit.jupiter`) for new test classes and for new test methods added to existing JUnit 5 classes. Before adding a JUnit 5 method to an existing JUnit 4 (`org.junit`) class, migrate the class and its module to JUnit 5; otherwise, keep the new method in JUnit 4 until that migration is complete.
+
 Use these flags for faster tests: `-Pskip-static-checks -Dweb.console.skip=true -T1C`
 
 **Single test method:**
