@@ -58,11 +58,12 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -72,19 +73,17 @@ import java.util.List;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
 {
 
-  @Parameterized.Parameters
   public static Collection<?> constructorFeeder()
   {
     List<Object[]> argumentArrays = new ArrayList<>();
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
-      final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
+      final IncrementalIndex incrementalIndex = schemalessIndexTest.createIncrementalIndex();
       final QueryableIndex persistedIncrementalIndex = TestIndex.persistAndMemoryMap(incrementalIndex);
-      final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
+      final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.createMergedIncrementalIndex();
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("test"))});
       argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, SegmentId.dummy("test"))});
       argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedIncrementalIndex, SegmentId.dummy("test"))});
@@ -115,16 +114,21 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
       Collections.singletonList(Intervals.of("1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z"))
   );
 
-  private final Segment segment;
+  private Segment segmentToClose;
 
-  public SchemalessTestSimpleTest(Segment segment)
+  @AfterEach
+  public void closeSegment() throws IOException
   {
-    this.segment = segment;
+    if (segmentToClose != null) {
+      segmentToClose.close();
+    }
   }
 
-  @Test
-  public void testFullOnTimeseries()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testFullOnTimeseries(final Segment segment)
   {
+    segmentToClose = segment;
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(dataSource)
                                   .granularity(ALL_GRAN)
@@ -165,10 +169,13 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
 
   //  @Test TODO: Handling of null values is inconsistent right now, need to make it all consistent and re-enable test
   // TODO: Complain to Eric when you see this.  It shouldn't be like this...
-  @Ignore
+  @Disabled
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
   @SuppressWarnings("unused")
-  public void testFullOnTopN()
+  public void testFullOnTopN(final Segment segment)
   {
+    segmentToClose = segment;
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(ALL_GRAN)
@@ -239,9 +246,11 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
     }
   }
 
-  @Test
-  public void testFullOnSearch()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testFullOnSearch(final Segment segment)
   {
+    segmentToClose = segment;
     SearchQuery query = Druids.newSearchQueryBuilder()
                               .dataSource(dataSource)
                               .granularity(ALL_GRAN)
@@ -267,9 +276,11 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
     TestHelper.assertExpectedResults(expectedResults, runner.run(QueryPlus.wrap(query)));
   }
 
-  @Test
-  public void testTimeBoundary()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testTimeBoundary(final Segment segment)
   {
+    segmentToClose = segment;
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder()
                                     .dataSource("testing")
                                     .build();
