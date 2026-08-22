@@ -52,7 +52,7 @@ import java.util.List;
 public class HyperUniquesAggregationTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final GroupByQueryConfig config;
 

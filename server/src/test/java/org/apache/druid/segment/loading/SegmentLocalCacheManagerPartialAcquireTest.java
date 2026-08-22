@@ -133,7 +133,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   private static File CLUSTERED_DEEP_STORAGE_DIR;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;

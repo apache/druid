@@ -81,7 +81,7 @@ class SegmentLocalCacheManagerConcurrencyTest
   private final String segmentVersion;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   final File tempDir = temporaryFolder.getRoot();
 
   private File localSegmentCacheFolder;

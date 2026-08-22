@@ -44,7 +44,7 @@ import java.util.UUID;
 public class LocalFileStorageConnectorTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File storageDir;
   private StorageConnector storageConnector;

@@ -40,7 +40,7 @@ public class FileEntityTest
   private static final String CONTENT = "the quick brown fox\n";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void test_openRaw_returnsRawBytesWithoutDecompressing() throws IOException

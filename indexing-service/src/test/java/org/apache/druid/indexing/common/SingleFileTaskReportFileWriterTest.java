@@ -40,7 +40,7 @@ public class SingleFileTaskReportFileWriterTest
   private static final String TASK_ID = "mytask";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testReport() throws IOException

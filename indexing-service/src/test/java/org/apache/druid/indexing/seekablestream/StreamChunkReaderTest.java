@@ -66,7 +66,7 @@ import java.util.Map;
 public class StreamChunkReaderTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
   private final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(

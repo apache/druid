@@ -32,7 +32,7 @@ import java.util.Arrays;
 public class SpillOutputStreamTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSmallWriteStaysInMemory() throws IOException

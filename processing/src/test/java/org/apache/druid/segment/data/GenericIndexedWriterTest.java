@@ -32,7 +32,7 @@ import java.nio.file.StandardOpenOption;
 public class GenericIndexedWriterTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void writeLargeValueIntoLargeColumn() throws IOException

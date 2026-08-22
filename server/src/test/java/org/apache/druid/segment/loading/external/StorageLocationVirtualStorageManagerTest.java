@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class StorageLocationVirtualStorageManagerTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private StorageLocation location;
   private StorageLocationVirtualStorageManager manager;

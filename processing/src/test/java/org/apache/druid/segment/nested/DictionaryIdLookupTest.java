@@ -41,7 +41,7 @@ import java.nio.ByteOrder;
 public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testIdLookup() throws IOException

@@ -60,7 +60,7 @@ class PartialSegmentMetadataCacheEntryTest
   private static final long ESTIMATE = 16 * 1024 * 1024L;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File segmentFile;
   private File cacheDir;

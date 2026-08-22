@@ -37,7 +37,7 @@ public class ChunkingStorageConnectorTest
 {
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private StorageConnector storageConnector;
 

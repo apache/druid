@@ -106,7 +106,7 @@ class PartialSegmentBundleCacheEntryTest
   private static File segmentDir;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cacheDir;
   private File deepStorageDir;

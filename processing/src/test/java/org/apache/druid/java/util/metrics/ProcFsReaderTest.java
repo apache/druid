@@ -34,7 +34,7 @@ import java.nio.file.Paths;
 public class ProcFsReaderTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
 
   @BeforeEach

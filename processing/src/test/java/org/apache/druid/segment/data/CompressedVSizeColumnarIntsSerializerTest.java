@@ -76,7 +76,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
   private final AtomicInteger dirCounter = new AtomicInteger(0);
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public static Stream<Object[]> constructorFeeder()
   {

@@ -42,7 +42,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class CompressedVariableSizeBlobColumnTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSomeValues() throws IOException

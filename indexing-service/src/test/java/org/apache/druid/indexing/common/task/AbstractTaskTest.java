@@ -55,7 +55,7 @@ import static org.mockito.Mockito.when;
 public class AbstractTaskTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper objectMapper;
 

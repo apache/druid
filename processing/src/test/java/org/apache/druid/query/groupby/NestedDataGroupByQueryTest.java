@@ -73,7 +73,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   private static final Logger LOG = new Logger(NestedDataGroupByQueryTest.class);
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final Closer closer;
   private final QueryContexts.Vectorize vectorize;

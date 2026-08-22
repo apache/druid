@@ -83,7 +83,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   private static final String DATASOURCE = "DATASOURCE";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private QueryableIndexSegment backingSegment;
   private BroadcastSegmentIndexedTable broadcastTable;
   private List<String> columnNames;

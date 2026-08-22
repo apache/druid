@@ -132,7 +132,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private static File DEEP_STORAGE_DIR;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;

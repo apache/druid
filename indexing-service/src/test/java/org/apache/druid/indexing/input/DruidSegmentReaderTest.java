@@ -85,7 +85,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class DruidSegmentReaderTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File segmentDirectory;
   private long segmentSize;

@@ -33,7 +33,7 @@ public class LookupConfigTest
 
   ObjectMapper mapper = TestHelper.makeJsonMapper();
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSerDesr() throws IOException

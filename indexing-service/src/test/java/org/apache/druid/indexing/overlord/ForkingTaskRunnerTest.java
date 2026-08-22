@@ -79,7 +79,7 @@ public class ForkingTaskRunnerTest
 
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testGetJavaCommandPrefersRunJavaScriptWhenPresent() throws IOException

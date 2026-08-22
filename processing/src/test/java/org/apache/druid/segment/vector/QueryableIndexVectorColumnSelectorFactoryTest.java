@@ -122,7 +122,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   Closer closer;
   ColumnCache theCache;

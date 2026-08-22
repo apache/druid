@@ -50,7 +50,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   private FrameFile frameFile;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp() throws IOException

@@ -61,7 +61,7 @@ public class ShuffleResourceTest
   private static final String DATASOURCE = "datasource";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private ShuffleMetrics shuffleMetrics;

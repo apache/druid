@@ -59,7 +59,7 @@ public class HttpShuffleClientTest
   private static final int PARTITION_ID = 0;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File segmentFile;
 

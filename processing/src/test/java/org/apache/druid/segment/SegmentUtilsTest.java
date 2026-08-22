@@ -40,7 +40,7 @@ import java.util.List;
 public class SegmentUtilsTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testVersionBin() throws Exception

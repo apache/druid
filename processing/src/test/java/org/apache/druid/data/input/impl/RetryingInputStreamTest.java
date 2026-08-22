@@ -58,7 +58,7 @@ public class RetryingInputStreamTest
 {
   private static final int MAX_RETRY = 5;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File testFile;
 
   private int readBytesBeforeExceptions = 0;

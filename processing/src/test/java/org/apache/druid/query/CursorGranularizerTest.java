@@ -58,7 +58,7 @@ import java.util.List;
 public class CursorGranularizerTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private CursorFactory cursorFactory;
   private TimeBoundaryInspector timeBoundaryInspector;

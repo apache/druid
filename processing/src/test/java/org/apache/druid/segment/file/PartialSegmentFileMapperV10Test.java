@@ -62,7 +62,7 @@ class PartialSegmentFileMapperV10Test
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   void testMapFileThrowsUntilFetchedThenSlices() throws IOException

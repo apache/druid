@@ -111,7 +111,7 @@ import java.util.stream.Collectors;
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));

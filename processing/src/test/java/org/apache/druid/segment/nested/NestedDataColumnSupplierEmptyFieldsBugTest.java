@@ -51,7 +51,7 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testReadSegmentWithBuggyPaths() throws IOException

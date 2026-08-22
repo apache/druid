@@ -52,7 +52,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 {
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   final IncrementalIndexCursorFactory cursorFactory =
       new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());

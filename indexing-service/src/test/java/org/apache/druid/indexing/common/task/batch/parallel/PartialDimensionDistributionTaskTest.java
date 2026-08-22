@@ -119,7 +119,7 @@ public class PartialDimensionDistributionTaskTest
   public static class RunTaskTest
   {
     @RegisterExtension
-    private final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    private final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
     @RegisterExtension
     private final LoggerCaptureExtension logger = new LoggerCaptureExtension(ParseExceptionHandler.class);
 

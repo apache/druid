@@ -57,7 +57,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   private IndexSpec indexSpec;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp()

@@ -38,7 +38,7 @@ import java.util.Arrays;
 public class BytesCountingInputEntityTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private InputStats inputStats;
 

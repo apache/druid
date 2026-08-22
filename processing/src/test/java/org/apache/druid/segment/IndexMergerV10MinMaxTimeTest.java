@@ -49,7 +49,7 @@ import java.util.List;
 class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   void testMinMaxTimePersistedForTimeSortedSegment() throws Exception

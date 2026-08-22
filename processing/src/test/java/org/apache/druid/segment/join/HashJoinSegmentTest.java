@@ -59,7 +59,7 @@ import java.util.Optional;
 public class HashJoinSegmentTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private QueryableIndexSegment baseSegment;
   private ReferenceCountedSegmentProvider baseSegmentRef;

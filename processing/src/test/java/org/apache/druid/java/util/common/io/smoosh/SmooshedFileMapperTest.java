@@ -43,7 +43,7 @@ import java.util.Arrays;
 public class SmooshedFileMapperTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSanity() throws Exception

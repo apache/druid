@@ -85,7 +85,7 @@ public class ShuffleDataSegmentPusherTest
   public String intermediateDataStore;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private IntermediaryDataManager intermediaryDataManager;
   private ShuffleDataSegmentPusher segmentPusher;

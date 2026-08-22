@@ -90,7 +90,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   public Closer resourceCloser;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public QueryableIndex index1;
   public QueryableIndex index2;

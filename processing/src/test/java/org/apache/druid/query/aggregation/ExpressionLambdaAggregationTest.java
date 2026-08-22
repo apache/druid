@@ -66,7 +66,7 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
   private static final DateTime TIMESTAMP = DateTimes.of("2020-01-01");
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private QueryableIndex mergedIndex;
   private Segment segment;

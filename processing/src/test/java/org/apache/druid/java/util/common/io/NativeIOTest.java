@@ -33,7 +33,7 @@ import java.util.Arrays;
 public class NativeIOTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testChunkedCopy() throws Exception

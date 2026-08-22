@@ -57,7 +57,7 @@ import java.util.Set;
 public class LocalIntermediaryDataManagerAutoCleanupTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private TaskConfig taskConfig;
   private OverlordClient overlordClient;

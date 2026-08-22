@@ -203,7 +203,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<>()
   {

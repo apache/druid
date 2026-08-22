@@ -45,7 +45,7 @@ import java.nio.file.StandardOpenOption;
 public class FrameFileWriterTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void test_abort_afterAllFrames() throws IOException

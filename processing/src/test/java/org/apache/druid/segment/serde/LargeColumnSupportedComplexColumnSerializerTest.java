@@ -49,7 +49,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
   private final HashFunction fn = Hashing.murmur3_128();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSanity() throws IOException

@@ -139,7 +139,7 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private QueryableIndex segmentIndex;
 

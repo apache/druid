@@ -35,7 +35,7 @@ import java.io.IOException;
 public class CgroupDiskMonitorTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private File servicedFile;

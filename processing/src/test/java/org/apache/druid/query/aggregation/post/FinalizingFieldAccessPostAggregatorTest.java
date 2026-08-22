@@ -67,7 +67,7 @@ import java.util.Map;
 public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension tempFoler = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFoler = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testComputeWithoutFinalizing()

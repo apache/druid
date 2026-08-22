@@ -40,7 +40,7 @@ import java.io.IOException;
  *
  * // A fresh directory for each test.
  * @RegisterExtension
- * public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+ * public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
  * }</pre>
  */
 public class TemporaryFolderExtension implements BeforeAllCallback, BeforeEachCallback, AfterAllCallback, AfterEachCallback
@@ -55,12 +55,12 @@ public class TemporaryFolderExtension implements BeforeAllCallback, BeforeEachCa
   private final Scope scope;
   private File root;
 
-  public TemporaryFolderExtension()
+  private TemporaryFolderExtension()
   {
     this(null, Scope.TEST);
   }
 
-  public TemporaryFolderExtension(final File parentDirectory)
+  private TemporaryFolderExtension(final File parentDirectory)
   {
     this(parentDirectory, Scope.TEST);
   }
@@ -70,7 +70,7 @@ public class TemporaryFolderExtension implements BeforeAllCallback, BeforeEachCa
     return new TemporaryFolderExtension(null, Scope.CLASS);
   }
 
-  public static TemporaryFolderExtension perTest()
+  public static TemporaryFolderExtension testCaseScoped()
   {
     return new TemporaryFolderExtension(null, Scope.TEST);
   }

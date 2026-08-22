@@ -47,7 +47,7 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
   protected static final ColumnConfig COLUMN_CONFIG = ColumnConfig.DEFAULT;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   /**
    * Mount a fresh partial index over the (already built) segment via a {@link PartialSegmentFileMapperV10} backed by

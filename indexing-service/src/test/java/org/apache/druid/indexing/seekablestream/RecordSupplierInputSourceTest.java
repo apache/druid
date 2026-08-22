@@ -70,7 +70,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   private static final String TIMESTAMP_STRING = "2019-01-01";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testRead() throws IOException

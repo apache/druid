@@ -53,7 +53,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private static final String NO_MATCH = "no";
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(new RoaringBitmapFactory());
   List<Map<String, Object>> data = ImmutableList.of(
       TestHelper.makeMap("x", 1L, "y", 1.0, "z", "a", "v", "100", "nullish", "notnull"),

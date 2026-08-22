@@ -449,7 +449,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final List<InputRow> rows;
 

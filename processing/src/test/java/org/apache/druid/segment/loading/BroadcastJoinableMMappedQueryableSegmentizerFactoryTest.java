@@ -62,7 +62,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
       ImmutableSet.of("market", "longNumericNull", "doubleNumericNull", "floatNumericNull", "partial_null_column");
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSegmentizer() throws IOException, SegmentLoadingException

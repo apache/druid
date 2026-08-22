@@ -75,7 +75,7 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
 
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
   private AggregationTestHelper helper;
   private Closer closer;
 

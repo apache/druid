@@ -43,7 +43,7 @@ import java.util.List;
 public class LoggingEmitterTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private List<Object> serializedObjects;
   private ObjectMapper trackingMapper;

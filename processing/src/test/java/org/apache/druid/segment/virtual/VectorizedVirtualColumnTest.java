@@ -87,7 +87,7 @@ public class VectorizedVirtualColumnTest
   );
 
   @RegisterExtension
-  public final TemporaryFolderExtension tmpFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tmpFolder = TemporaryFolderExtension.testCaseScoped();
 
   private AggregationTestHelper groupByTestHelper;
   private AggregationTestHelper timeseriesTestHelper;

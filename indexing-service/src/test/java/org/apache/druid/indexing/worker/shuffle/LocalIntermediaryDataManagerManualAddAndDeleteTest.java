@@ -54,7 +54,7 @@ import java.util.Optional;
 public class LocalIntermediaryDataManagerManualAddAndDeleteTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File intermediarySegmentsLocation;

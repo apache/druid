@@ -83,7 +83,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class SingleTaskBackgroundRunnerTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private SingleTaskBackgroundRunner runner;
 

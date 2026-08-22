@@ -63,7 +63,7 @@ public class NestedDataTopNQueryTest extends InitializedNullHandlingTest
   private static final Logger LOG = new Logger(NestedDataTopNQueryTest.class);
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final AggregationTestHelper helper;
   private final BiFunction<TemporaryFolderExtension, Closer, List<Segment>> segmentsGenerator;

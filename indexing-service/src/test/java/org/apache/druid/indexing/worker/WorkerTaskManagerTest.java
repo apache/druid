@@ -98,7 +98,7 @@ public class WorkerTaskManagerTest
   private final IndexIO indexIO;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private final File tempDir = temporaryFolder.getRoot();
 
   @Parameter(0)

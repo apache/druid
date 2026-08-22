@@ -70,7 +70,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
 
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File segmentDir;
 

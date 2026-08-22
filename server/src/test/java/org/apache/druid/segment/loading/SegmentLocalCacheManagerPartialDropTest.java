@@ -109,7 +109,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   private static File deepStorageDir;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cacheDir;
   private File infoDir;

@@ -77,7 +77,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   DefaultColumnFormatConfig DEFAULT_FORMAT = new DefaultColumnFormatConfig(null, null, null, null);
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final AggregationTestHelper helper;
   private final Closer closer;

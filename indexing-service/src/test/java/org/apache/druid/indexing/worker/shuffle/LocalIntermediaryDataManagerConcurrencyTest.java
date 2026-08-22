@@ -71,7 +71,7 @@ public class LocalIntermediaryDataManagerConcurrencyTest
   private static final String SUPERVISOR_TASK_ID = "supervisorTaskId";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File sharedSegmentDir;

@@ -33,7 +33,7 @@ import java.io.IOException;
 public class CpuTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private CgroupDiscoverer discoverer;
 
   @BeforeEach

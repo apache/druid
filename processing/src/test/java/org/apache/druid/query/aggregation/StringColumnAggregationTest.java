@@ -59,7 +59,7 @@ import java.util.List;
 public class StringColumnAggregationTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final String singleValue = "singleValue";
   private final String multiValue = "multiValue";

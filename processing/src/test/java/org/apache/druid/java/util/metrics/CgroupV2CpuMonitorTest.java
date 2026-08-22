@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 public class CgroupV2CpuMonitorTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private File statFile;

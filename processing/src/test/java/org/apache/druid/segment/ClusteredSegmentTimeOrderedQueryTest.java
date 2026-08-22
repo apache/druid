@@ -109,7 +109,7 @@ class ClusteredSegmentTimeOrderedQueryTest extends InitializedNullHandlingTest
   );
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   final File tempDir = temporaryFolder.getRoot();
 
   private Segment clusteredSegment;

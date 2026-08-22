@@ -54,7 +54,7 @@ import java.util.Map;
 public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testRacMethodThrowsWithoutDeserializerForRacEntry() throws IOException

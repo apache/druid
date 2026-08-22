@@ -51,7 +51,7 @@ When adding or migrating tests, reuse these existing test-scope helpers:
 
   ```java
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   ```
 
   Use `getRoot()`, `newFolder(...)`, or `newFile(...)`. Prefer `TemporaryFolderExtension` over JUnit 5 `@TempDir` or JUnit 4 `TemporaryFolder`. Do not add new `TempFolderOperations` usages; the existing compatibility bridge is only for tests that have not yet migrated.

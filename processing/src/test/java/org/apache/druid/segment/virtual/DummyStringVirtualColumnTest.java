@@ -63,7 +63,7 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
   private final List<Segment> mixedSegments;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final AggregationTestHelper topNTestHelper;
   private final AggregationTestHelper groupByTestHelper;

@@ -75,7 +75,7 @@ public class CompressedColumnarIntsSerializerTest
   private final Random rand = new Random(0);
   private int[] vals;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public static Stream<Object[]> constructorFeeder()
   {

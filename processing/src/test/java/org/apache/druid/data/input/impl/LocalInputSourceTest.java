@@ -54,7 +54,7 @@ public class LocalInputSourceTest
 {
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSerdeAbsoluteBaseDir() throws IOException

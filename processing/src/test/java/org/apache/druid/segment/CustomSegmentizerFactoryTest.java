@@ -51,7 +51,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   private static IndexMerger INDEX_MERGER;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeAll
   public static void setup()

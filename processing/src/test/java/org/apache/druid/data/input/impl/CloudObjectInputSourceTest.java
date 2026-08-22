@@ -55,7 +55,7 @@ import java.util.stream.Stream;
 public class CloudObjectInputSourceTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private static final String SCHEME = "s3";
 

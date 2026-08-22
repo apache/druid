@@ -58,7 +58,7 @@ public class ComplexDimensionGroupByQueryTest
   private final List<Segment> segments;
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   public ComplexDimensionGroupByQueryTest(GroupByQueryConfig config, String vectorize)
   {

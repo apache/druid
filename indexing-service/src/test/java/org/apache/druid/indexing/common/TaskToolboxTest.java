@@ -78,7 +78,7 @@ public class TaskToolboxTest
 
   private TaskToolboxFactory taskToolbox = null;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);

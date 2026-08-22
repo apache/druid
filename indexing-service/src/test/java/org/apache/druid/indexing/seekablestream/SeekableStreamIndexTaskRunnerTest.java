@@ -105,7 +105,7 @@ public class SeekableStreamIndexTaskRunnerTest
   private static final String DATA_SOURCE = "datasource";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Mock
   private InputRow row;
