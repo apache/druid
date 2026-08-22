@@ -30,6 +30,7 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategy;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -105,10 +106,7 @@ public class CostBalancerStrategyBenchmark
       exec = MoreExecutors.listeningDecorator(Execs.multiThreaded(numThreads, "CostBalancerStrategyBenchmark-%d"));
       strategy = new CostBalancerStrategy(exec);
       serverHolderList = initServers();
-      segmentToLoad = DataSegment.builder()
-                                 .dataSource("testds")
-                                 .version("1000")
-                                 .interval(INTERVAL1)
+      segmentToLoad = DataSegment.builder(SegmentId.of("testds", INTERVAL1, "1000", 0))
                                  .size(100L)
                                  .build();
     }

@@ -241,13 +241,16 @@ public class HdfsDataSegmentPusherTest
     for (int i = 0; i < numberOfSegments; i++) {
       final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], false);
 
-      String indexUri = StringUtils.format(
-          "%s/%s/%d_index.%s",
-          FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-          pusher.getStorageDir(segments[i], false),
-          segments[i].getShardSpec().getPartitionNum(),
-          format.getExtension()
-      );
+      final String indexUri;
+      try (FileSystem fileSystem = FileSystem.newInstance(conf)) {
+        indexUri = StringUtils.format(
+            "%s/%s/%d_index.%s",
+            fileSystem.makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+            pusher.getStorageDir(segments[i], false),
+            segments[i].getShardSpec().getPartitionNum(),
+            format.getExtension()
+        );
+      }
 
       Assertions.assertEquals(segments[i].getSize(), pushedSegment.getSize());
       Assertions.assertEquals(segments[i], pushedSegment);
@@ -331,12 +334,15 @@ public class HdfsDataSegmentPusherTest
     DataSegment segment = pusher.push(segmentDir, segmentToPush, false);
 
 
-    String indexUri = StringUtils.format(
-        "%s/%s/%d_index.zip",
-        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-        pusher.getStorageDir(segmentToPush, false),
-        segmentToPush.getShardSpec().getPartitionNum()
-    );
+    final String indexUri;
+    try (FileSystem fileSystem = FileSystem.newInstance(conf)) {
+      indexUri = StringUtils.format(
+          "%s/%s/%d_index.zip",
+          fileSystem.makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+          pusher.getStorageDir(segmentToPush, false),
+          segmentToPush.getShardSpec().getPartitionNum()
+      );
+    }
 
     Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assertions.assertEquals(segmentToPush, segment);
