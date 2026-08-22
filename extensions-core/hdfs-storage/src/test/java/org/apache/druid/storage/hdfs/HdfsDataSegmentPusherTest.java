@@ -286,13 +286,16 @@ public class HdfsDataSegmentPusherTest
 
 
       // push twice will fail and temp dir cleaned
-      File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
-      outDir.setReadOnly();
+      final File outDir = new File(storageDirectory, segmentPath);
+      Assertions.assertTrue(outDir.setReadOnly(), "test setup must be able to make the output directory read-only");
       try {
         pusher.push(segmentDir, segments[i], false);
       }
       catch (IOException e) {
         Assertions.fail("should not throw exception");
+      }
+      finally {
+        Assertions.assertTrue(outDir.setWritable(true), "test teardown must restore write permission");
       }
     }
   }
@@ -364,13 +367,16 @@ public class HdfsDataSegmentPusherTest
     Assertions.assertTrue(indexFile.exists());
 
     // push twice will fail and temp dir cleaned
-    File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
-    outDir.setReadOnly();
+    final File outDir = new File(storageDirectory, segmentPath);
+    Assertions.assertTrue(outDir.setReadOnly(), "test setup must be able to make the output directory read-only");
     try {
       pusher.push(segmentDir, segmentToPush, false);
     }
     catch (IOException e) {
       Assertions.fail("should not throw exception");
+    }
+    finally {
+      Assertions.assertTrue(outDir.setWritable(true), "test teardown must restore write permission");
     }
   }
 
