@@ -167,7 +167,7 @@ public class AggregationTestHelper implements Closeable
     );
   }
 
-  public static AggregationTestHelper createGroupByQueryAggregationTestHelperWithTempDir(
+  public static AggregationTestHelper createGroupByQueryAggregationTestHelper(
       List<? extends Module> jsonModulesToRegister,
       GroupByQueryConfig config,
       File tempFolder
