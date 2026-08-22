@@ -95,7 +95,7 @@ class PartialSegmentCacheBootstrapTest
   );
 
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File deepStorageDir;
 
@@ -107,7 +107,7 @@ class PartialSegmentCacheBootstrapTest
   @BeforeAll
   static void buildSegment() throws IOException
   {
-    final File tmp = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     deepStorageDir = IndexBuilder.create()
                                  .useV10()
                                  .tmpDir(tmp)

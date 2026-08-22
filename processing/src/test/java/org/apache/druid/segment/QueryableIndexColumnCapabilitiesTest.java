@@ -62,7 +62,7 @@ import java.util.Map;
 public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static IncrementalIndex INC_INDEX;
   private static QueryableIndex MMAP_INDEX;
@@ -111,7 +111,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                                .withRollup(false)
                                                .build()
                                        )
-                                       .tmpDir(TEMPORARY_FOLDER.newFolder("index"));
+                                       .tmpDir(SHARED_TEMPORARY_FOLDER.newFolder("index"));
     INC_INDEX = builder.buildIncrementalIndex();
     MMAP_INDEX = builder.buildMMappedIndex();
 
@@ -137,7 +137,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                                         .withRollup(false)
                                                         .build()
                                                 )
-                                                .tmpDir(TEMPORARY_FOLDER.newFolder("index-with-nulls"));
+                                                .tmpDir(SHARED_TEMPORARY_FOLDER.newFolder("index-with-nulls"));
     INC_INDEX_WITH_NULLS = builderWithNulls.buildIncrementalIndex();
     MMAP_INDEX_WITH_NULLS = builderWithNulls.buildMMappedIndex();
   }

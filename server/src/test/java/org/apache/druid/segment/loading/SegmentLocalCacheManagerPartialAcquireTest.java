@@ -127,7 +127,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   private static final String CLUSTERED_PROJECTION_BUNDLE = "proj";
 
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
   private static File CLUSTERED_DEEP_STORAGE_DIR;
@@ -143,7 +143,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   @BeforeAll
   static void buildSegment() throws IOException
   {
-    final File tmp = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     DEEP_STORAGE_DIR = IndexBuilder.create()
                                    .useV10()
                                    .tmpDir(tmp)
@@ -199,7 +199,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
                                    new LongSumAggregatorFactory("sum_x", "x")
                                )
                                .build();
-    final File tmp = TEMPORARY_FOLDER.newFolder("build_clustered_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_clustered_" + ThreadLocalRandom.current().nextInt());
     return IndexBuilder.create()
                        .useV10()
                        .tmpDir(tmp)

@@ -34,7 +34,7 @@ import java.util.concurrent.ExecutionException;
 public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   public ComposingOutputChannelFactoryTest() throws IOException
   {
@@ -43,8 +43,8 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
             ImmutableList.of(
                 // TODO : currently hardcoded 256k since it allows one frame to be written to each factory
                 // nicer to do that automatically
-                new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY),
-                new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY)
+                new FileOutputChannelFactory(SHARED_TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY),
+                new FileOutputChannelFactory(SHARED_TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(256_000), FrameTestUtil.WT_CONTEXT_LEGACY)
             ),
             100
         ),
@@ -57,7 +57,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
   {
     ComposingOutputChannelFactory outputChannelFactory = new ComposingOutputChannelFactory(
         ImmutableList.of(
-            new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(1), FrameTestUtil.WT_CONTEXT_LEGACY),
+            new FileOutputChannelFactory(SHARED_TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(1), FrameTestUtil.WT_CONTEXT_LEGACY),
             new ThrowingOutputChannelFactory() // adding this to check if it gets called
         ),
         100
@@ -80,7 +80,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
     // can handle the test data frames
     ComposingOutputChannelFactory outputChannelFactory = new ComposingOutputChannelFactory(
         ImmutableList.of(
-            new FileOutputChannelFactory(TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(1_000_000), FrameTestUtil.WT_CONTEXT_LEGACY),
+            new FileOutputChannelFactory(SHARED_TEMPORARY_FOLDER.newFolder(), 100, new ByteTracker(1_000_000), FrameTestUtil.WT_CONTEXT_LEGACY),
             new ThrowingOutputChannelFactory()
         ),
         100

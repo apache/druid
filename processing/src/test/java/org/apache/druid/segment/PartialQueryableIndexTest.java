@@ -114,7 +114,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
   );
 
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   // the built V10 segment directory, shared across tests since it's read-only
   private static File segmentDir;
@@ -122,7 +122,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
   @BeforeAll
   static void buildSegment() throws IOException
   {
-    final File tmpDir = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)
@@ -649,7 +649,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
    */
   private File buildExternalColumnSegment(String externalName) throws IOException
   {
-    final File baseDir = TEMPORARY_FOLDER.newFolder(
+    final File baseDir = SHARED_TEMPORARY_FOLDER.newFolder(
         "ext_seg_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
     );
 
@@ -694,7 +694,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
 
   private File newCacheDir(String name) throws IOException
   {
-    return TEMPORARY_FOLDER.newFolder(name + "_" + ThreadLocalRandom.current().nextInt());
+    return SHARED_TEMPORARY_FOLDER.newFolder(name + "_" + ThreadLocalRandom.current().nextInt());
   }
 
   private static PartialSegmentFileMapperV10 createMapper(SegmentRangeReader rangeReader, File cacheDir) throws IOException

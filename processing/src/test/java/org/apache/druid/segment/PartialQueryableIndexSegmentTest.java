@@ -87,7 +87,7 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
   );
 
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
 
@@ -97,7 +97,7 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
   @BeforeAll
   static void buildSegment() throws IOException
   {
-    final File tmpDir = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)

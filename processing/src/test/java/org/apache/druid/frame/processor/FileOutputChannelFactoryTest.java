@@ -26,10 +26,10 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 public class FileOutputChannelFactoryTest extends OutputChannelFactoryTest
 {
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   public FileOutputChannelFactoryTest()
   {
-    super(new FileOutputChannelFactory(TEMPORARY_FOLDER.getRoot(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
+    super(new FileOutputChannelFactory(SHARED_TEMPORARY_FOLDER.getRoot(), 100, null, FrameTestUtil.WT_CONTEXT_LEGACY), 100);
   }
 }

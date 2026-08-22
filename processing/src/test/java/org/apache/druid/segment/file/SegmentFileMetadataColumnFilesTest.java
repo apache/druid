@@ -71,14 +71,14 @@ class SegmentFileMetadataColumnFilesTest extends InitializedNullHandlingTest
   private static final String PROJECTION_NAME = "dim1_hourly_metric1_sum";
 
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static SegmentFileMetadata metadata;
 
   @BeforeAll
   static void buildSegment() throws IOException
   {
-    final File tmpDir = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     final List<InputRow> rows = List.of(
         row("a", 1L, Map.of("x", 1L, "y", "one")),
         row("a", 2L, Map.of("x", 2L, "y", "two")),

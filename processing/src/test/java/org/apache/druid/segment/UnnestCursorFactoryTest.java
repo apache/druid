@@ -81,7 +81,7 @@ import static org.apache.druid.segment.filter.Filters.or;
 public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
   private static Closer CLOSER;
   private static IncrementalIndex INCREMENTAL_INDEX;
   private static IncrementalIndexCursorFactory INCREMENTAL_INDEX_CURSOR_FACTORY;
@@ -132,7 +132,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
     );
     IndexBuilder bob = IndexBuilder.create()
-                                   .tmpDir(TEMPORARY_FOLDER.newFolder("index"))
+                                   .tmpDir(SHARED_TEMPORARY_FOLDER.newFolder("index"))
                                    .schema(
                                        IncrementalIndexSchema.builder()
                                                              .withTimestampSpec(TimestampSpec.DEFAULT)
@@ -146,7 +146,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                                    .inputSource(inputSource)
                                    .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
                                    .transform(TransformSpec.NONE)
-                                   .inputTmpDir(TEMPORARY_FOLDER.newFolder("input"));
+                                   .inputTmpDir(SHARED_TEMPORARY_FOLDER.newFolder("input"));
     QUERYABLE_INDEX = CLOSER.register(bob.buildMMappedIndex());
     UNNEST_ARRAYS = new UnnestCursorFactory(
         new QueryableIndexCursorFactory(QUERYABLE_INDEX),

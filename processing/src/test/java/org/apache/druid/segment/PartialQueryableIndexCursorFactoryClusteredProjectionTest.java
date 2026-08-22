@@ -70,7 +70,7 @@ class PartialQueryableIndexCursorFactoryClusteredProjectionTest extends PartialQ
   private static final String GLOBEX_BUNDLE = "__base$1";
 
   @RegisterExtension
-  public static final TemporaryFolderExtension TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File segmentDir;
 
@@ -105,7 +105,7 @@ class PartialQueryableIndexCursorFactoryClusteredProjectionTest extends PartialQ
                               .withClusterSpec(clusterSpec)
                               .withProjections(List.of(projectionSpec))
                               .build();
-    final File tmpDir = TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)
