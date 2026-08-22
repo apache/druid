@@ -104,6 +104,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.CatalogTableWriter;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
@@ -219,6 +220,11 @@ public class SqlTestFramework
     default CatalogResolver createCatalogResolver()
     {
       return CatalogResolver.NULL_RESOLVER;
+    }
+
+    default CatalogTableWriter createCatalogTableWriter()
+    {
+      return CatalogTableWriter.NOT_AVAILABLE;
     }
 
     /**
@@ -752,6 +758,7 @@ public class SqlTestFramework
     private final QueryComponentSupplier componentSupplier;
     private int mergeBufferCount;
     private CatalogResolver catalogResolver = CatalogResolver.NULL_RESOLVER;
+    private CatalogTableWriter catalogTableWriter = CatalogTableWriter.NOT_AVAILABLE;
     private List<Module> overrideModules = new ArrayList<>();
     private SqlTestFrameworkConfig config;
     private Closer resourceCloser = Closer.create();
@@ -770,6 +777,12 @@ public class SqlTestFramework
     public Builder catalogResolver(CatalogResolver catalogResolver)
     {
       this.catalogResolver = catalogResolver;
+      return this;
+    }
+
+    public Builder catalogTableWriter(CatalogTableWriter catalogTableWriter)
+    {
+      this.catalogTableWriter = catalogTableWriter;
       return this;
     }
 
@@ -798,6 +811,11 @@ public class SqlTestFramework
     public CatalogResolver getCatalogResolver()
     {
       return catalogResolver;
+    }
+
+    public CatalogTableWriter getCatalogTableWriter()
+    {
+      return catalogTableWriter;
     }
 
     public Closer getResourceCloser()
@@ -849,6 +867,7 @@ public class SqlTestFramework
           new CalciteRulesManager(componentSupplier.extensionCalciteRules()),
           framework.injector.getInstance(JoinableFactoryWrapper.class),
           framework.builder.catalogResolver,
+          framework.builder.catalogTableWriter,
           authConfig != null ? authConfig : new AuthConfig(),
           NoopPolicyEnforcer.instance(),
           new DruidHookDispatcher()

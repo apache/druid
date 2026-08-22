@@ -21,6 +21,8 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.catalog.model.CatalogUtils;
+import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
 import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
@@ -30,12 +32,23 @@ import org.apache.druid.catalog.model.ModelProperties.StringListPropertyDefn;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableSpec;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.VirtualColumn;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.indexing.DataSchema;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class DatasourceDefn extends TableDefn
 {
@@ -123,6 +136,115 @@ public class DatasourceDefn extends TableDefn
       // fail fast instead of surfacing layout problems at ingest time.
       baseTable.createSpec(table.spec().columns());
     }
+    validateProjections(table);
+  }
+
+  /**
+   * Cross-validate the declared projections. Names must be unique, a projection must not be coarser than the segments
+   * it lives in, and the types it groups by must agree with the types the table declares. For a sealed table the
+   * declared columns are the whole schema, so a projection that reads a column the table does not declare can never be
+   * built and is rejected; for a non-sealed table ingestion may add columns the catalog has not seen, so only the
+   * projections' internal consistency is checked.
+   */
+  private void validateProjections(ResolvedTable table)
+  {
+    final List<DatasourceProjectionMetadata> projections = table.decodeProperty(PROJECTIONS_KEYS_PROPERTY);
+    if (projections == null || projections.isEmpty()) {
+      return;
+    }
+
+    final List<AggregateProjectionSpec> specs = new ArrayList<>(projections.size());
+    for (DatasourceProjectionMetadata projection : projections) {
+      if (projection == null || projection.getSpec() == null) {
+        throw InvalidInput.exception("Projections must each have a [spec]");
+      }
+      specs.add(projection.getSpec());
+    }
+
+    final String granularity = table.stringProperty(SEGMENT_GRANULARITY_PROPERTY);
+    DataSchema.validateProjections(
+        specs,
+        granularity == null ? null : CatalogUtils.asDruidGranularity(granularity)
+    );
+
+    validateProjectionGroupingTypes(table, specs);
+
+    if (!table.booleanProperty(SEALED_PROPERTY) || table.spec().columns() == null) {
+      return;
+    }
+    final Set<String> declared = new HashSet<>(CatalogUtils.columnNames(table.spec().columns()));
+    declared.add(Columns.TIME_COLUMN);
+    for (AggregateProjectionSpec spec : specs) {
+      final Set<String> available = new HashSet<>(declared);
+      for (VirtualColumn virtualColumn : spec.getVirtualColumns().getVirtualColumns()) {
+        available.add(virtualColumn.getOutputName());
+      }
+      for (String required : requiredColumns(spec)) {
+        if (!available.contains(required)) {
+          throw InvalidInput.exception(
+              "Projection [%s] references column [%s], which table [%s] does not declare",
+              spec.getName(),
+              required,
+              table.spec().type()
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Reconcile the types a projection groups by against the types the table declares. Grouping columns are the only
+   * part of a projection that shares column components with the base table, such as dictionaries, so they are the only
+   * part whose types have to agree with it. A grouping column that disagrees was built against a definition the table
+   * no longer has.
+   */
+  private static void validateProjectionGroupingTypes(ResolvedTable table, List<AggregateProjectionSpec> specs)
+  {
+    final List<ColumnSpec> columns = table.spec().columns();
+    if (columns == null) {
+      return;
+    }
+    final Map<String, ColumnType> declaredTypes = new HashMap<>();
+    for (ColumnSpec column : columns) {
+      final ColumnType type = Columns.druidType(column);
+      if (type != null) {
+        declaredTypes.put(column.name(), type);
+      }
+    }
+    for (AggregateProjectionSpec spec : specs) {
+      for (DimensionSchema grouping : spec.getGroupingColumns()) {
+        final ColumnType declared = declaredTypes.get(grouping.getName());
+        if (declared != null && !declared.equals(grouping.getColumnType())) {
+          throw InvalidInput.exception(
+              "Projection [%s] groups on column [%s] as type [%s], but the table declares it as type [%s]. A"
+              + " projection is built from the table's columns, so changing the type of a column requires redefining"
+              + " the projections that group on it",
+              spec.getName(),
+              grouping.getName(),
+              grouping.getColumnType(),
+              declared
+          );
+        }
+      }
+    }
+  }
+
+  private static Set<String> requiredColumns(AggregateProjectionSpec spec)
+  {
+    final Set<String> required = new HashSet<>();
+    for (VirtualColumn virtualColumn : spec.getVirtualColumns().getVirtualColumns()) {
+      required.addAll(virtualColumn.requiredColumns());
+    }
+    for (DimensionSchema groupingColumn : spec.getGroupingColumns()) {
+      required.add(groupingColumn.getName());
+    }
+    for (AggregatorFactory aggregator : spec.getAggregators()) {
+      required.addAll(aggregator.requiredFields());
+    }
+    if (spec.getFilter() != null) {
+      required.addAll(spec.getFilter().getRequiredColumns());
+    }
+    return required;
   }
 
   /**

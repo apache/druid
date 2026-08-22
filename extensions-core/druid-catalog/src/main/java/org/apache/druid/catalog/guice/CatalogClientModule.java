@@ -29,6 +29,7 @@ import org.apache.druid.catalog.sync.CachedMetadataCatalog;
 import org.apache.druid.catalog.sync.CatalogClient;
 import org.apache.druid.catalog.sync.CatalogClientConfig;
 import org.apache.druid.catalog.sync.CatalogSource;
+import org.apache.druid.catalog.sync.CatalogSqlTableWriter;
 import org.apache.druid.catalog.sync.CatalogUpdateListener;
 import org.apache.druid.catalog.sync.CatalogUpdateReceiver;
 import org.apache.druid.discovery.NodeRole;
@@ -41,6 +42,7 @@ import org.apache.druid.guice.annotations.ExcludeScope;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
+import org.apache.druid.sql.calcite.planner.CatalogTableWriter;
 
 /**
  * Configures the metadata catalog on the Broker and Overlord to use a cache
@@ -99,6 +101,12 @@ public class CatalogClientModule implements DruidModule
     binder
         .bind(CatalogResolver.class)
         .to(LiveCatalogResolver.class)
+        .in(LazySingleton.class);
+
+    // Catalog writer for DDL statements. This will override the base binding.
+    binder
+        .bind(CatalogTableWriter.class)
+        .to(CatalogSqlTableWriter.class)
         .in(LazySingleton.class);
 
     // The listener resource sends to the catalog listener (the cached catalog.)

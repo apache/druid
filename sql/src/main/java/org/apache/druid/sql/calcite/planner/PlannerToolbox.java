@@ -38,6 +38,7 @@ public class PlannerToolbox
   protected final PlannerConfig plannerConfig;
   protected final DruidSchemaCatalog rootSchema;
   protected final CatalogResolver catalog;
+  protected final CatalogTableWriter catalogTableWriter;
   protected final String druidSchemaName;
   protected final CalciteRulesManager calciteRuleManager;
   protected final AuthorizerMapper authorizerMapper;
@@ -45,6 +46,9 @@ public class PlannerToolbox
   protected final PolicyEnforcer policyEnforcer;
   protected final DruidHookDispatcher hookDispatcher;
 
+  /**
+   * Convenience for callers that never execute catalog DDL, such as tests and benchmarks.
+   */
   public PlannerToolbox(
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
@@ -61,6 +65,41 @@ public class PlannerToolbox
       final DruidHookDispatcher hookDispatcher
   )
   {
+    this(
+        operatorTable,
+        macroTable,
+        jsonMapper,
+        plannerConfig,
+        rootSchema,
+        joinableFactoryWrapper,
+        catalog,
+        CatalogTableWriter.NOT_AVAILABLE,
+        druidSchemaName,
+        calciteRuleManager,
+        authorizerMapper,
+        authConfig,
+        policyEnforcer,
+        hookDispatcher
+    );
+  }
+
+  public PlannerToolbox(
+      final DruidOperatorTable operatorTable,
+      final ExprMacroTable macroTable,
+      final ObjectMapper jsonMapper,
+      final PlannerConfig plannerConfig,
+      final DruidSchemaCatalog rootSchema,
+      final JoinableFactoryWrapper joinableFactoryWrapper,
+      final CatalogResolver catalog,
+      final CatalogTableWriter catalogTableWriter,
+      final String druidSchemaName,
+      final CalciteRulesManager calciteRuleManager,
+      final AuthorizerMapper authorizerMapper,
+      final AuthConfig authConfig,
+      final PolicyEnforcer policyEnforcer,
+      final DruidHookDispatcher hookDispatcher
+  )
+  {
     this.operatorTable = operatorTable;
     this.macroTable = macroTable;
     this.jsonMapper = jsonMapper;
@@ -68,6 +107,7 @@ public class PlannerToolbox
     this.rootSchema = rootSchema;
     this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.catalog = catalog;
+    this.catalogTableWriter = catalogTableWriter;
     this.druidSchemaName = druidSchemaName;
     this.calciteRuleManager = calciteRuleManager;
     this.authorizerMapper = authorizerMapper;
@@ -104,6 +144,11 @@ public class PlannerToolbox
   public CatalogResolver catalogResolver()
   {
     return catalog;
+  }
+
+  public CatalogTableWriter catalogTableWriter()
+  {
+    return catalogTableWriter;
   }
 
   public String druidSchemaName()

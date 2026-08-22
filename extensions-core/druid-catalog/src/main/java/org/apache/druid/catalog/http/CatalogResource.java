@@ -129,6 +129,7 @@ public class CatalogResource
       TableSpec spec,
       @QueryParam("version") long version,
       @QueryParam("overwrite") boolean overwrite,
+      @QueryParam("ifNotExists") boolean ifNotExists,
       @Context final HttpServletRequest req
   )
   {
@@ -159,6 +160,9 @@ public class CatalogResource
           if (overwrite) {
             // User wants to overwrite, so do so.
             newVersion = catalog.tables().replace(table);
+          } else if (ifNotExists) {
+            // User asked to leave an existing table alone. Report no change, as the edit operations do.
+            newVersion = 0;
           } else {
             throw e;
           }

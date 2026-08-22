@@ -28,17 +28,22 @@ import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
+import org.apache.druid.catalog.model.DatasourceProjectionMetadata;
 import org.apache.druid.catalog.model.ResolvedTable;
 import org.apache.druid.catalog.model.TableDefn;
 import org.apache.druid.catalog.model.TableDefnRegistry;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.facade.DatasourceFacade;
 import org.apache.druid.catalog.model.facade.DatasourceFacade.ColumnFacade;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
@@ -475,6 +480,92 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
     }
   }
 
+  /**
+   * Projections hold polymorphic aggregators and dimension schemas, so validating them needs a mapper that knows
+   * those subtypes; the shared mapper in this class does not register them.
+   */
+  @Test
+  public void testProjectionValidation()
+  {
+    final TableDefnRegistry projectionRegistry = new TableDefnRegistry(TestHelper.makeJsonMapper());
+    final TableBuilder builder = TableBuilder.datasource("foo", "P1D")
+                                             .timeColumn()
+                                             .column("dim", Columns.SQL_VARCHAR)
+                                             .column("met", Columns.SQL_BIGINT);
+
+    final AggregateProjectionSpec good = AggregateProjectionSpec
+        .builder("daily")
+        .groupingColumns(new StringDimensionSchema("dim"))
+        .aggregators(new LongSumAggregatorFactory("sum_met", "met"))
+        .build();
+
+    projectionRegistry.resolve(
+        builder.copy()
+               .property(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, List.of(new DatasourceProjectionMetadata(good)))
+               .buildSpec()
+    ).validate();
+
+    // Two projections cannot share a name.
+    final TableSpec duplicateNames =
+        builder.copy()
+               .property(
+                   DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                   List.of(new DatasourceProjectionMetadata(good), new DatasourceProjectionMetadata(good))
+               )
+               .buildSpec();
+    assertThrows(DruidException.class, () -> projectionRegistry.resolve(duplicateNames).validate());
+
+    // A sealed table declares its whole schema, so a projection over an undeclared column can never be built.
+    final AggregateProjectionSpec undeclared = AggregateProjectionSpec
+        .builder("bad")
+        .groupingColumns(new StringDimensionSchema("nope"))
+        .aggregators(new LongSumAggregatorFactory("sum_met", "met"))
+        .build();
+
+    final TableSpec sealedWithUndeclared =
+        builder.copy()
+               .sealed(true)
+               .property(
+                   DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                   List.of(new DatasourceProjectionMetadata(undeclared))
+               )
+               .buildSpec();
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> projectionRegistry.resolve(sealedWithUndeclared).validate()
+    );
+    assertTrue(e.getMessage().contains("references column [nope]"));
+
+    // Ingestion may add columns to a table that is not sealed, so the same projection is allowed there.
+    projectionRegistry.resolve(
+        builder.copy()
+               .property(
+                   DatasourceDefn.PROJECTIONS_KEYS_PROPERTY,
+                   List.of(new DatasourceProjectionMetadata(undeclared))
+               )
+               .buildSpec()
+    ).validate();
+
+    // A projection groups by the type the column had when it was defined, so a table that now declares a different
+    // type for that column carries a projection it can no longer build. Not limited to sealed tables: an undeclared
+    // column has no type to disagree with, but a declared one does.
+    final TableSpec retypedGroupingColumn =
+        TableBuilder.datasource("foo", "P1D")
+                    .timeColumn()
+                    .column("dim", Columns.SQL_BIGINT)
+                    .column("met", Columns.SQL_BIGINT)
+                    .property(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY, List.of(new DatasourceProjectionMetadata(good)))
+                    .buildSpec();
+    final DruidException retyped = assertThrows(
+        DruidException.class,
+        () -> projectionRegistry.resolve(retypedGroupingColumn).validate()
+    );
+    assertTrue(
+        retyped.getMessage(),
+        retyped.getMessage().contains("groups on column [dim] as type [STRING], but the table declares it as type [LONG]")
+    );
+  }
+
   @Test
   public void testTimeColumn()
   {
@@ -513,9 +604,19 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
       Assertions.assertSame(ColumnType.LONG, col.druidType());
     }
 
-    {
+    // Any spelling that resolves to a LONG is accepted: TIMESTAMP is how SQL names the time column, BIGINT is its
+    // SQL storage type, and LONG is the native name.
+    for (String timeType : new String[]{Columns.SQL_TIMESTAMP, Columns.SQL_BIGINT, Columns.LONG, "long"}) {
       TableSpec spec = builder.copy()
-          .column(Columns.TIME_COLUMN, Columns.STRING)
+          .column(Columns.TIME_COLUMN, timeType)
+          .buildSpec();
+      registry.resolve(spec).validate();
+    }
+
+    // Types that do not resolve to a LONG are rejected, as are types that do not resolve at all.
+    for (String badType : new String[]{Columns.STRING, Columns.SQL_VARCHAR, Columns.SQL_DOUBLE, "NOT_A_TYPE"}) {
+      TableSpec spec = builder.copy()
+          .column(Columns.TIME_COLUMN, badType)
           .buildSpec();
       expectValidationFails(spec);
     }
