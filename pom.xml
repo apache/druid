@@ -1280,12 +1280,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.13.2</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
                 <groupId>net.hydromatic</groupId>
                 <artifactId>quidem</artifactId>
                 <version>0.12</version>
