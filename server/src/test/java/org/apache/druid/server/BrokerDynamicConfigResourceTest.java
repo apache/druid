@@ -23,9 +23,9 @@ import org.apache.druid.client.BrokerViewOfBrokerConfig;
 import org.apache.druid.client.BrokerViewOfCoordinatorConfig;
 import org.apache.druid.server.broker.BrokerDynamicConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import javax.ws.rs.core.Response;
@@ -36,7 +36,7 @@ public class BrokerDynamicConfigResourceTest
   private BrokerViewOfBrokerConfig brokerViewOfBrokerConfig;
   private BrokerDynamicConfigResource resource;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     brokerViewOfCoordinatorConfig = Mockito.mock(BrokerViewOfCoordinatorConfig.class);
@@ -55,8 +55,8 @@ public class BrokerDynamicConfigResourceTest
 
     Response response = resource.getBrokerDynamicConfig();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(config, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(config, response.getEntity());
     Mockito.verify(brokerViewOfBrokerConfig, Mockito.times(1)).getDynamicConfig();
   }
 
@@ -67,7 +67,7 @@ public class BrokerDynamicConfigResourceTest
 
     Response response = resource.setBrokerDynamicConfig(config);
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     Mockito.verify(brokerViewOfBrokerConfig, Mockito.times(1)).setDynamicConfig(config);
   }
 
@@ -79,8 +79,8 @@ public class BrokerDynamicConfigResourceTest
 
     Response response = resource.getDynamicConfig();
 
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(config, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(config, response.getEntity());
     Mockito.verify(brokerViewOfCoordinatorConfig, Mockito.times(1)).getDynamicConfig();
   }
 
@@ -91,7 +91,7 @@ public class BrokerDynamicConfigResourceTest
 
     Response response = resource.setDynamicConfig(config);
 
-    Assert.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(200, response.getStatus());
     Mockito.verify(brokerViewOfCoordinatorConfig, Mockito.times(1)).setDynamicConfig(config);
   }
 }

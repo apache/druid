@@ -24,6 +24,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.math.IntMath;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -37,18 +38,14 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CloseableUtils;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -64,7 +61,8 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
   /**
    * Tests that use {@link BlockingQueueFrameChannel#minimal()}.
    */
-  public static class WithMinimalBuffering extends InitializedNullHandlingTest
+  @Nested
+  public class WithMinimalBuffering extends InitializedNullHandlingTest
   {
     private final Frame frame = Iterables.getOnlyElement(
         FrameSequenceBuilder
@@ -74,8 +72,8 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
             .toList()
     );
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
     private BlockingQueueFrameChannel channel;
     private ChannelStageOutputReader channelReader;
@@ -87,7 +85,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private long offset;
     private ListenableFuture<InputStream> nextRead;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception
     {
       channel = BlockingQueueFrameChannel.minimal();
@@ -96,7 +94,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       tmpOut = Files.newOutputStream(tmpFile.toPath());
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception
     {
       CloseableUtils.closeAll(tmpOut, tmpFrameFile);
@@ -112,7 +110,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
         // Do nothing, just keep reading.
       }
 
-      Assert.assertEquals(0, tmpFrameFile.numFrames());
+      Assertions.assertEquals(0, tmpFrameFile.numFrames());
     }
 
     @Test
@@ -126,14 +124,14 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
         // Do nothing, just keep reading.
       }
 
-      Assert.assertEquals(1, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
+      Assertions.assertEquals(1, tmpFrameFile.numFrames());
+      Assertions.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
     }
 
     @Test
     public void test_remote_oneFrame_writeAfterFirstRead() throws Exception
     {
-      Assert.assertTrue(doRead(-1));
+      Assertions.assertTrue(doRead(-1));
 
       // Close after writing one frame.
       channel.writable().write(frame);
@@ -143,8 +141,8 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
         // Do nothing, just keep reading.
       }
 
-      Assert.assertEquals(1, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
+      Assertions.assertEquals(1, tmpFrameFile.numFrames());
+      Assertions.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
     }
 
     @Test
@@ -158,8 +156,8 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
         // Do nothing, just keep reading.
       }
 
-      Assert.assertEquals(1, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
+      Assertions.assertEquals(1, tmpFrameFile.numFrames());
+      Assertions.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
     }
 
     @Test
@@ -169,45 +167,43 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       channel.writable().write(frame);
 
       // See that we can't write another frame.
-      final IllegalStateException e = Assert.assertThrows(
+      final IllegalStateException e = Assertions.assertThrows(
           IllegalStateException.class,
           () -> channel.writable().write(frame)
       );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Channel has no capacity"))
-      );
+      ThrowableMatcher.of(IllegalStateException.class)
+                     .expectMessage(message -> message.startsWith("Channel has no capacity"))
+                     .assertThat(e);
 
       // Read the first frame until we start blocking.
       while (nextRead == null) {
-        Assert.assertTrue(doRead(1));
+        Assertions.assertTrue(doRead(1));
       }
 
       // Write the next frame.
-      Assert.assertFalse(nextRead.isDone());
+      Assertions.assertFalse(nextRead.isDone());
       channel.writable().write(frame);
 
       // This write would have unblocked nextRead, which will now be done.
-      Assert.assertTrue(nextRead.isDone());
+      Assertions.assertTrue(nextRead.isDone());
 
       // Write a third frame.
       channel.writable().write(frame);
 
       // See that we can't write a fourth frame.
-      final IllegalStateException e2 = Assert.assertThrows(
+      final IllegalStateException e2 = Assertions.assertThrows(
           IllegalStateException.class,
           () -> channel.writable().write(frame)
       );
 
-      MatcherAssert.assertThat(
-          e2,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Channel has no capacity"))
-      );
+      ThrowableMatcher.of(IllegalStateException.class)
+                     .expectMessage(message -> message.startsWith("Channel has no capacity"))
+                     .assertThat(e2);
 
       // And read until we start blocking.
       while (nextRead == null) {
-        Assert.assertTrue(doRead(1));
+        Assertions.assertTrue(doRead(1));
       }
 
       // Close.
@@ -218,10 +214,10 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
         // Just keep looping.
       }
 
-      Assert.assertEquals(3, tmpFrameFile.numFrames());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(1, null).as(Frame.class).numBytes());
-      Assert.assertEquals(frame.numBytes(), tmpFrameFile.rac(2, null).as(Frame.class).numBytes());
+      Assertions.assertEquals(3, tmpFrameFile.numFrames());
+      Assertions.assertEquals(frame.numBytes(), tmpFrameFile.rac(0, null).as(Frame.class).numBytes());
+      Assertions.assertEquals(frame.numBytes(), tmpFrameFile.rac(1, null).as(Frame.class).numBytes());
+      Assertions.assertEquals(frame.numBytes(), tmpFrameFile.rac(2, null).as(Frame.class).numBytes());
     }
 
     /**
@@ -274,7 +270,8 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
   /**
    * Tests that use {@link BlockingQueueFrameChannel} that is fully buffered.
    */
-  public static class WithMaximalBuffering extends InitializedNullHandlingTest
+  @Nested
+  public class WithMaximalBuffering extends InitializedNullHandlingTest
   {
     private static final int MAX_FRAMES = 10;
     private static final int EXPECTED_NUM_ROWS = 1209;
@@ -282,13 +279,13 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(MAX_FRAMES);
     private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
 
-    @Rule
-    public TemporaryFolder temporaryFolder = new TemporaryFolder();
+    @RegisterExtension
+    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
     private FrameReader frameReader;
     private List<Frame> frameList;
 
-    @Before
+    @BeforeEach
     public void setUp()
     {
       final IncrementalIndex index = TestIndex.getIncrementalTestIndex();
@@ -307,7 +304,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
                                       .toList();
     }
 
-    @After
+    @AfterEach
     public void tearDown()
     {
       reader.close();
@@ -318,11 +315,11 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     {
       writeAllFramesToChannel();
 
-      Assert.assertSame(channel.readable(), reader.readLocally());
+      Assertions.assertSame(channel.readable(), reader.readLocally());
       reader.close(); // Won't close the channel, because it's already been returned by readLocally
 
       final int numRows = FrameTestUtil.readRowsFromFrameChannel(channel.readable(), frameReader).toList().size();
-      Assert.assertEquals(EXPECTED_NUM_ROWS, numRows);
+      Assertions.assertEquals(EXPECTED_NUM_ROWS, numRows);
     }
 
     @Test
@@ -333,7 +330,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       reader.close();
 
       // Can't read the channel after closing the reader
-      Assert.assertThrows(
+      Assertions.assertThrows(
           IllegalStateException.class,
           reader::readLocally
       );
@@ -344,17 +341,17 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     {
       writeAllFramesToChannel();
 
-      Assert.assertSame(channel.readable(), reader.readLocally());
+      Assertions.assertSame(channel.readable(), reader.readLocally());
 
       // Can't read remotely after reading locally
-      Assert.assertThrows(
+      Assertions.assertThrows(
           IllegalStateException.class,
           () -> reader.readRemotelyFrom(0)
       );
 
       // Can still read locally after this error
       final int numRows = FrameTestUtil.readRowsFromFrameChannel(channel.readable(), frameReader).toList().size();
-      Assert.assertEquals(EXPECTED_NUM_ROWS, numRows);
+      Assertions.assertEquals(EXPECTED_NUM_ROWS, numRows);
     }
 
     @Test
@@ -382,14 +379,14 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
           }
         }
 
-        MatcherAssert.assertThat(numReads, Matchers.greaterThan(1));
+        Assertions.assertTrue(numReads > 1);
       }
 
       final FrameFile frameFile = FrameFile.open(tmpFile, null);
       final int numRows =
           FrameTestUtil.readRowsFromFrameChannel(new ReadableFileFrameChannel(frameFile, null), frameReader).toList().size();
 
-      Assert.assertEquals(EXPECTED_NUM_ROWS, numRows);
+      Assertions.assertEquals(EXPECTED_NUM_ROWS, numRows);
     }
 
     @Test
@@ -420,14 +417,14 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
           }
         }
 
-        Assert.assertEquals(numReads, offset + 1);
+        Assertions.assertEquals(numReads, offset + 1);
       }
 
       final FrameFile frameFile = FrameFile.open(tmpFile, null);
       final int numRows =
           FrameTestUtil.readRowsFromFrameChannel(new ReadableFileFrameChannel(frameFile, null), frameReader).toList().size();
 
-      Assert.assertEquals(EXPECTED_NUM_ROWS, numRows);
+      Assertions.assertEquals(EXPECTED_NUM_ROWS, numRows);
     }
 
     @Test
@@ -439,7 +436,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       FutureUtils.getUnchecked(reader.readRemotelyFrom(0), true);
 
       // Then read locally
-      Assert.assertThrows(
+      Assertions.assertThrows(
           IllegalStateException.class,
           reader::readLocally
       );
@@ -453,23 +450,21 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       // Read remotely from offset = 1.
       final InputStream in = FutureUtils.getUnchecked(reader.readRemotelyFrom(1), true);
       final int offset = ByteStreams.toByteArray(in).length;
-      MatcherAssert.assertThat(offset, Matchers.greaterThan(0));
+      Assertions.assertTrue(offset > 0);
 
       // Then read again from offset = 0; should get an error.
-      final RuntimeException e = Assert.assertThrows(
+      final RuntimeException e = Assertions.assertThrows(
           RuntimeException.class,
           () -> FutureUtils.getUnchecked(reader.readRemotelyFrom(0), true)
       );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableCauseMatcher.hasCause(
-              Matchers.allOf(
-                  CoreMatchers.instanceOf(IllegalStateException.class),
-                  ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Offset[0] no longer available"))
-              )
-          )
-      );
+      ThrowableMatcher.of(RuntimeException.class)
+                     .expectCause(
+                         cause -> cause instanceof IllegalStateException
+                                  && cause.getMessage() != null
+                                  && cause.getMessage().startsWith("Offset[0] no longer available")
+                     )
+                     .assertThat(e);
     }
 
     private void writeAllFramesToChannel() throws IOException

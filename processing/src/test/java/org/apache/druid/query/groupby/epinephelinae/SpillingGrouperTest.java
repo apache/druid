@@ -29,10 +29,10 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,8 +52,8 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
   private static final float MAX_LOAD_FACTOR = 0.75f;
   private static final int INITIAL_BUCKETS = 4;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   @Test
   public void testNoSpilling() throws IOException
@@ -62,11 +62,11 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     //  Only 3 keys with a 10,000-byte buffer. Everything fits in memory
     try (SpillingGrouper<IntKey> grouper = makeGrouper(10000, storageDir, 1024 * 1024, 100)) {
       for (int i = 0; i < 3; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       assertResultsCorrect(grouper, 3, 1);
-      Assert.assertEquals(0, storageDir.listFiles().length);
+      Assertions.assertEquals(0, storageDir.listFiles().length);
     }
   }
 
@@ -78,25 +78,25 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     // 100 unique keys force many spills since buffer is only 50 bytes. With iterator(true), results should be sorted ascending by key.
     try (SpillingGrouper<IntKey> grouper = makeGrouper(50, storageDir, 1024 * 1024, 100)) {
       for (int i = 0; i < numKeys; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       try (CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true)) {
-        Assert.assertTrue("spilling should have occurred", storageDir.listFiles().length > 0);
+        Assertions.assertTrue(storageDir.listFiles().length > 0, "spilling should have occurred");
         int prevKey = -1;
         int count = 0;
         while (iterator.hasNext()) {
           Grouper.Entry<IntKey> entry = iterator.next();
-          Assert.assertTrue(
-              "keys should be sorted ascending",
-              entry.getKey().intValue() > prevKey
+          Assertions.assertTrue(
+              entry.getKey().intValue() > prevKey,
+              "keys should be sorted ascending"
           );
           prevKey = entry.getKey().intValue();
-          Assert.assertEquals(1L, entry.getValues()[0]);
-          Assert.assertEquals(1L, entry.getValues()[1]);
+          Assertions.assertEquals(1L, entry.getValues()[0]);
+          Assertions.assertEquals(1L, entry.getValues()[1]);
           count++;
         }
-        Assert.assertEquals(numKeys, count);
+        Assertions.assertEquals(numKeys, count);
       }
     }
   }
@@ -109,11 +109,11 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     // 100 unique keys force many spills since buffer is only 50 bytes. With iterator(false), results may be in any order, but all keys should be present with correct values.
     try (SpillingGrouper<IntKey> grouper = makeGrouper(50, storageDir, 1024 * 1024, 100)) {
       for (int i = 0; i < numKeys; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       assertResultsCorrect(grouper, numKeys, 1);
-      Assert.assertTrue("spilling should have occurred", storageDir.listFiles().length > 0);
+      Assertions.assertTrue(storageDir.listFiles().length > 0, "spilling should have occurred");
     }
   }
 
@@ -129,31 +129,31 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     try (SpillingGrouper<IntKey> grouper = makeGrouper(50, storageDir, 1024 * 1024, 100)) {
       for (int round = 0; round < duplicates; round++) {
         for (int i = 0; i < numKeys; i++) {
-          Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+          Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
         }
       }
 
       int totalEntries = 0;
       final Map<Integer, Long> totalCounts = new HashMap<>();
       try (CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true)) {
-        Assert.assertTrue("spilling should have occurred", storageDir.listFiles().length > 0);
+        Assertions.assertTrue(storageDir.listFiles().length > 0, "spilling should have occurred");
         while (iterator.hasNext()) {
           Grouper.Entry<IntKey> entry = iterator.next();
           totalCounts.merge(entry.getKey().intValue(), (Long) entry.getValues()[1], Long::sum);
           totalEntries++;
         }
       }
-      Assert.assertTrue(
+      Assertions.assertTrue(
+          totalEntries > numKeys,
           "duplicate keys should exist across spills, so total entries (" + totalEntries
-          + ") should exceed unique key count (" + numKeys + ")",
-          totalEntries > numKeys
+          + ") should exceed unique key count (" + numKeys + ")"
       );
-      Assert.assertEquals(numKeys, totalCounts.size());
+      Assertions.assertEquals(numKeys, totalCounts.size());
       for (Map.Entry<Integer, Long> e : totalCounts.entrySet()) {
-        Assert.assertEquals(
-            "total count for key " + e.getKey(),
+        Assertions.assertEquals(
             (long) duplicates,
-            (long) e.getValue()
+            (long) e.getValue(),
+            "total count for key " + e.getKey()
         );
       }
     }
@@ -167,25 +167,25 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     final int numKeys = 100;
 
     int maxUsableEntries = computeMaxUsableEntries(bufferSize);
-    Assert.assertEquals(
-        "buffer should hold at most 1 entry, guaranteeing a spill on every key",
+    Assertions.assertEquals(
         1,
-        maxUsableEntries
+        maxUsableEntries,
+        "buffer should hold at most 1 entry, guaranteeing a spill on every key"
     );
 
     try (SpillingGrouper<IntKey> grouper = makeGrouper(bufferSize, storageDir, 1024 * 1024, 100)) {
       for (int i = 0; i < numKeys; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       assertResultsCorrect(grouper, numKeys, 1);
 
       File[] files = storageDir.listFiles();
-      Assert.assertNotNull(files);
-      Assert.assertEquals(
-          "all spills are tiny and should batch into a single data + dictionary file pair",
+      Assertions.assertNotNull(files);
+      Assertions.assertEquals(
           2,
-          files.length
+          files.length,
+          "all spills are tiny and should batch into a single data + dictionary file pair"
       );
     }
   }
@@ -200,15 +200,15 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     final int numKeys = 100;
 
     int maxUsableEntries = computeMaxUsableEntries(bufferSize);
-    Assert.assertEquals(
-        "buffer should hold at most 1 entry, guaranteeing a spill on every key",
+    Assertions.assertEquals(
         1,
-        maxUsableEntries
+        maxUsableEntries,
+        "buffer should hold at most 1 entry, guaranteeing a spill on every key"
     );
 
     try (SpillingGrouper<IntKey> grouper = makeGrouper(bufferSize, temporaryStorage)) {
       for (int i = 0; i < numKeys; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       // Before iterator(): small spills were created and deleted during batching, so the
@@ -219,23 +219,23 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
 
       // With a 50-byte buffer and 100 keys, many individual spills occur. Batching deletes
       // each small temp file immediately, so the file count should be much less than numKeys.
-      Assert.assertTrue(
+      Assertions.assertTrue(
+          fileCountBeforeIterator < numKeys,
           "file count (" + fileCountBeforeIterator + ") should be much less than numKeys (" + numKeys
-          + ") because small spill files are deleted after being read into memory",
-          fileCountBeforeIterator < numKeys
+          + ") because small spill files are deleted after being read into memory"
       );
 
       // The tracked bytes should reflect only the files still on disk, not the deleted ones.
       long actualDiskBytes = 0;
       File[] diskFiles = storageDir.listFiles();
-      Assert.assertNotNull(diskFiles);
+      Assertions.assertNotNull(diskFiles);
       for (File f : diskFiles) {
         actualDiskBytes += f.length();
       }
-      Assert.assertEquals(
-          "tracked bytes should match actual bytes on disk",
+      Assertions.assertEquals(
           actualDiskBytes,
-          sizeBeforeIterator
+          sizeBeforeIterator,
+          "tracked bytes should match actual bytes on disk"
       );
 
       // Calling iterator() flushes remaining pending runs; verify results are still correct.
@@ -245,14 +245,14 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
       long sizeAfterIterator = temporaryStorage.currentSize();
       long actualDiskBytesAfter = 0;
       File[] diskFilesAfter = storageDir.listFiles();
-      Assert.assertNotNull(diskFilesAfter);
+      Assertions.assertNotNull(diskFilesAfter);
       for (File f : diskFilesAfter) {
         actualDiskBytesAfter += f.length();
       }
-      Assert.assertEquals(
-          "tracked bytes should match actual bytes on disk after iterator",
+      Assertions.assertEquals(
           actualDiskBytesAfter,
-          sizeAfterIterator
+          sizeAfterIterator,
+          "tracked bytes should match actual bytes on disk after iterator"
       );
     }
   }
@@ -262,26 +262,26 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
   {
     try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 1024 * 1024, 100)) {
       for (int i = 0; i < 50; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       grouper.reset();
 
       for (int i = 1000; i < 1010; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       try (CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true)) {
         int count = 0;
         while (iterator.hasNext()) {
           Grouper.Entry<IntKey> entry = iterator.next();
-          Assert.assertTrue(
-              "keys should be >= 1000 after reset",
-              entry.getKey().intValue() >= 1000
+          Assertions.assertTrue(
+              entry.getKey().intValue() >= 1000,
+              "keys should be >= 1000 after reset"
           );
           count++;
         }
-        Assert.assertEquals(10, count);
+        Assertions.assertEquals(10, count);
       }
     }
   }
@@ -300,17 +300,17 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
       // Aggregate enough keys to trigger multiple spills, but not enough to exceed
       // minSpillFileSize in total pending bytes.
       for (int i = 0; i < 20; i++) {
-        Assert.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
       }
 
       // No files should have been created — all spills are below the threshold and
       // pending bytes haven't reached minSpillFileSize yet.
-      Assert.assertEquals(
-          "small spills should stay in memory without creating any temp files",
+      Assertions.assertEquals(
           0,
-          temporaryStorage.currentFileCount()
+          temporaryStorage.currentFileCount(),
+          "small spills should stay in memory without creating any temp files"
       );
-      Assert.assertEquals(0, storageDir.listFiles().length);
+      Assertions.assertEquals(0, storageDir.listFiles().length);
 
       // Results should still be correct when iterated.
       assertResultsCorrect(grouper, 20, 1);
@@ -328,10 +328,10 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         lastResult = grouper.aggregate(new IntKey(i));
       }
 
-      Assert.assertFalse("should have hit disk full", lastResult.isOk());
-      Assert.assertTrue(
-          "reason should mention disk space",
-          lastResult.getReason().contains("Not enough disk space")
+      Assertions.assertFalse(lastResult.isOk(), "should have hit disk full");
+      Assertions.assertTrue(
+          lastResult.getReason().contains("Not enough disk space"),
+          "reason should mention disk space"
       );
     }
   }
@@ -359,15 +359,15 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         }
       }
 
-      Assert.assertFalse("should have hit max file count", lastResult.isOk());
-      Assert.assertTrue(
-          "reason should mention spill file count",
-          lastResult.getReason().contains("Maximum number of spill files")
+      Assertions.assertFalse(lastResult.isOk(), "should have hit max file count");
+      Assertions.assertTrue(
+          lastResult.getReason().contains("Maximum number of spill files"),
+          "reason should mention spill file count"
       );
-      Assert.assertTrue(
+      Assertions.assertTrue(
+          keysAggregated > maxUsableEntries * 2,
           "batching should allow many keys (" + keysAggregated + ") before hitting file limit;"
-          + " without batching only ~" + (maxUsableEntries * 2) + " would succeed",
-          keysAggregated > maxUsableEntries * 2
+          + " without batching only ~" + (maxUsableEntries * 2) + " would succeed"
       );
     }
   }
@@ -448,20 +448,20 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
         int key = entry.getKey().intValue();
         Object[] valuesCopy = new Object[entry.getValues().length];
         System.arraycopy(entry.getValues(), 0, valuesCopy, 0, valuesCopy.length);
-        Assert.assertNull("duplicate key in results: " + key, results.put(key, valuesCopy));
+        Assertions.assertNull(results.put(key, valuesCopy), "duplicate key in results: " + key);
       }
     }
-    Assert.assertEquals(expectedKeys, results.size());
+    Assertions.assertEquals(expectedKeys, results.size());
     for (Map.Entry<Integer, Object[]> e : results.entrySet()) {
-      Assert.assertEquals(
-          "valueSum for key " + e.getKey(),
+      Assertions.assertEquals(
           expectedCountPerKey,
-          e.getValue()[0]
+          e.getValue()[0],
+          "valueSum for key " + e.getKey()
       );
-      Assert.assertEquals(
-          "count for key " + e.getKey(),
+      Assertions.assertEquals(
           expectedCountPerKey,
-          e.getValue()[1]
+          e.getValue()[1],
+          "count for key " + e.getKey()
       );
     }
   }

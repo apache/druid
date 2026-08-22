@@ -765,19 +765,19 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5</artifactId>
-      <version>5.5.1</version>
+      <version>5.6.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
-      <version>0.23.0</version>
+      <version>0.24.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.aliyun.oss</groupId>
       <artifactId>aliyun-sdk-oss</artifactId>
-      <version>3.11.3</version>
+      <version>3.18.5</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>

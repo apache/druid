@@ -27,8 +27,8 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SparseStripedReadablePartitionsTest
 {
@@ -37,7 +37,7 @@ public class SparseStripedReadablePartitionsTest
   {
     final SparseStripedReadablePartitions partitions =
         (SparseStripedReadablePartitions) ReadablePartitions.striped(1, new IntAVLTreeSet(new int[]{1, 3}), 3);
-    Assert.assertEquals(ImmutableSet.of(0, 1, 2), partitions.getPartitionNumbers());
+    Assertions.assertEquals(ImmutableSet.of(0, 1, 2), partitions.getPartitionNumbers());
   }
 
   @Test
@@ -45,7 +45,7 @@ public class SparseStripedReadablePartitionsTest
   {
     final SparseStripedReadablePartitions partitions =
         (SparseStripedReadablePartitions) ReadablePartitions.striped(1, new IntAVLTreeSet(new int[]{1, 3}), 3);
-    Assert.assertEquals(IntSet.of(1, 3), partitions.getWorkers());
+    Assertions.assertEquals(IntSet.of(1, 3), partitions.getWorkers());
   }
 
   @Test
@@ -53,7 +53,7 @@ public class SparseStripedReadablePartitionsTest
   {
     final SparseStripedReadablePartitions partitions =
         (SparseStripedReadablePartitions) ReadablePartitions.striped(1, new IntAVLTreeSet(new int[]{1, 3}), 3);
-    Assert.assertEquals(1, partitions.getStageNumber());
+    Assertions.assertEquals(1, partitions.getStageNumber());
   }
 
   @Test
@@ -63,7 +63,7 @@ public class SparseStripedReadablePartitionsTest
     final SparseStripedReadablePartitions partitions =
         (SparseStripedReadablePartitions) ReadablePartitions.striped(1, workers, 3);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(
             new SparseStripedReadablePartitions(1, workers, new IntAVLTreeSet(new int[]{0, 2})),
             new SparseStripedReadablePartitions(1, workers, new IntAVLTreeSet(new int[]{1}))
@@ -81,7 +81,7 @@ public class SparseStripedReadablePartitionsTest
     final IntAVLTreeSet workers = new IntAVLTreeSet(new int[]{1, 3});
     final ReadablePartitions partitions = ReadablePartitions.striped(1, workers, 3);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         partitions,
         mapper.readValue(
             mapper.writeValueAsString(partitions),

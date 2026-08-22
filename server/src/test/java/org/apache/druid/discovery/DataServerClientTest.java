@@ -44,9 +44,9 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryResource;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
@@ -65,7 +65,7 @@ public class DataServerClientTest
   private ScanQuery query;
   private DataServerClient target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     jsonMapper = TestHelper.makeJsonMapper();
@@ -116,7 +116,7 @@ public class DataServerClientTest
         Closer.create()
     ).get();
 
-    Assert.assertEquals(ImmutableList.of(scanResultValue), result.toList());
+    Assertions.assertEquals(ImmutableList.of(scanResultValue), result.toList());
   }
 
   @Test
@@ -140,7 +140,7 @@ public class DataServerClientTest
         Closer.create()
     );
 
-    Assert.assertEquals(1, responseContext.getMissingSegments().size());
+    Assertions.assertEquals(1, responseContext.getMissingSegments().size());
   }
 
   @Test
@@ -165,7 +165,7 @@ public class DataServerClientTest
     );
 
     ResponseContext responseContext = new DefaultResponseContext();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         QueryTimeoutException.class,
         () -> target.run(
             scanQueryWithTimeout,

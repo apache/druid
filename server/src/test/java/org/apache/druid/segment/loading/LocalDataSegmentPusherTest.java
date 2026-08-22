@@ -25,15 +25,14 @@ import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.utils.CompressionUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,11 +40,8 @@ import java.util.regex.Pattern;
 
 public class LocalDataSegmentPusherTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   LocalDataSegmentPusher localDataSegmentPusher;
   LocalDataSegmentPusher localDataSegmentPusherZip;
@@ -75,7 +71,7 @@ public class LocalDataSegmentPusherTest
       0
   );
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     config = new LocalDataSegmentPusherConfig();
@@ -103,13 +99,13 @@ public class LocalDataSegmentPusherTest
     DataSegment returnSegment1 = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
     DataSegment returnSegment2 = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment2, false);
 
-    Assert.assertNotNull(returnSegment1);
-    Assert.assertEquals(dataSegment, returnSegment1);
+    Assertions.assertNotNull(returnSegment1);
+    Assertions.assertEquals(dataSegment, returnSegment1);
 
-    Assert.assertNotNull(returnSegment2);
-    Assert.assertEquals(dataSegment2, returnSegment2);
+    Assertions.assertNotNull(returnSegment2);
+    Assertions.assertEquals(dataSegment2, returnSegment2);
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         localDataSegmentPusherZip.getStorageDir(dataSegment, false),
         localDataSegmentPusherZip.getStorageDir(dataSegment2, false)
     );
@@ -120,7 +116,7 @@ public class LocalDataSegmentPusherTest
           localDataSegmentPusherZip.getStorageDir(returnSegment, false)
       );
       File versionFile = new File(outDir, "index.zip");
-      Assert.assertTrue(versionFile.exists());
+      Assertions.assertTrue(versionFile.exists());
     }
   }
 
@@ -135,13 +131,13 @@ public class LocalDataSegmentPusherTest
     DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false);
     DataSegment returnSegment2 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment2, false);
 
-    Assert.assertNotNull(returnSegment1);
-    Assert.assertEquals(dataSegment, returnSegment1);
+    Assertions.assertNotNull(returnSegment1);
+    Assertions.assertEquals(dataSegment, returnSegment1);
 
-    Assert.assertNotNull(returnSegment2);
-    Assert.assertEquals(dataSegment2, returnSegment2);
+    Assertions.assertNotNull(returnSegment2);
+    Assertions.assertEquals(dataSegment2, returnSegment2);
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         localDataSegmentPusher.getStorageDir(dataSegment, false),
         localDataSegmentPusher.getStorageDir(dataSegment2, false)
     );
@@ -156,14 +152,14 @@ public class LocalDataSegmentPusherTest
       );
 
       // Check against loadSpec.
-      Assert.assertEquals(
+      Assertions.assertEquals(
           outDir.toURI().getPath(),
           returnSegment.getLoadSpec().get("path")
       );
 
       // Check for version.bin.
       File versionFile = new File(outDir, "version.bin");
-      Assert.assertTrue(versionFile.exists());
+      Assertions.assertTrue(versionFile.exists());
     }
   }
 
@@ -176,8 +172,8 @@ public class LocalDataSegmentPusherTest
     Pattern pattern = Pattern.compile(
         ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index/$"
     );
-    Assert.assertTrue(path, pattern.matcher(path).matches());
-    Assert.assertTrue(new File(path).exists());
+    Assertions.assertTrue(pattern.matcher(path).matches(), path);
+    Assertions.assertTrue(new File(path).exists());
   }
 
   @Test
@@ -189,8 +185,8 @@ public class LocalDataSegmentPusherTest
     Pattern pattern = Pattern.compile(
         ".*/ds/1970-01-01T00:00:00\\.000Z_1970-01-01T00:00:00\\.001Z/v1/0/[A-Za-z0-9-]{36}/index\\.zip"
     );
-    Assert.assertTrue(path, pattern.matcher(path).matches());
-    Assert.assertTrue(new File(path).exists());
+    Assertions.assertTrue(pattern.matcher(path).matches(), path);
+    Assertions.assertTrue(new File(path).exists());
   }
 
   @Test
@@ -205,8 +201,8 @@ public class LocalDataSegmentPusherTest
     DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false);
     DataSegment returnSegment2 = localDataSegmentPusher.push(replicatedDataSegmentFiles, dataSegment2, false);
 
-    Assert.assertEquals(dataSegment.getDimensions(), returnSegment1.getDimensions());
-    Assert.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
+    Assertions.assertEquals(dataSegment.getDimensions(), returnSegment1.getDimensions());
+    Assertions.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
 
     final String expectedPath = StringUtils.format(
         "%s/%s",
@@ -214,11 +210,11 @@ public class LocalDataSegmentPusherTest
         "ds/1970-01-01T00:00:00.000Z_1970-01-01T00:00:00.001Z/v1/0/index/"
     );
 
-    Assert.assertEquals(expectedPath, returnSegment1.getLoadSpec().get("path"));
-    Assert.assertEquals(expectedPath, returnSegment2.getLoadSpec().get("path"));
+    Assertions.assertEquals(expectedPath, returnSegment1.getLoadSpec().get("path"));
+    Assertions.assertEquals(expectedPath, returnSegment2.getLoadSpec().get("path"));
 
     final File versionFile = new File(expectedPath, "version.bin");
-    Assert.assertEquals(0x8, Ints.fromByteArray(Files.toByteArray(versionFile)));
+    Assertions.assertEquals(0x8, Ints.fromByteArray(Files.toByteArray(versionFile)));
   }
 
   @Test
@@ -233,8 +229,8 @@ public class LocalDataSegmentPusherTest
     DataSegment returnSegment1 = localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
     DataSegment returnSegment2 = localDataSegmentPusherZip.push(replicatedDataSegmentFiles, dataSegment2, false);
 
-    Assert.assertEquals(dataSegment.getDimensions(), returnSegment1.getDimensions());
-    Assert.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
+    Assertions.assertEquals(dataSegment.getDimensions(), returnSegment1.getDimensions());
+    Assertions.assertEquals(dataSegment2.getDimensions(), returnSegment2.getDimensions());
 
     File unzipDir = new File(configZip.storageDirectory, "unzip");
     FileUtils.mkdirp(unzipDir);
@@ -243,28 +239,32 @@ public class LocalDataSegmentPusherTest
         unzipDir
     );
 
-    Assert.assertEquals(0x8, Ints.fromByteArray(Files.toByteArray(new File(unzipDir, "version.bin"))));
+    Assertions.assertEquals(0x8, Ints.fromByteArray(Files.toByteArray(new File(unzipDir, "version.bin"))));
   }
 
   @Test
   public void testPushCannotCreateDirectory() throws IOException
   {
-    exception.expect(IOException.class);
-    exception.expectMessage("Cannot create directory");
     config.storageDirectory = new File(config.storageDirectory, "xxx");
-    Assert.assertTrue(config.storageDirectory.mkdir());
+    Assertions.assertTrue(config.storageDirectory.mkdir());
     config.storageDirectory.setWritable(false);
-    localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false);
+    final IOException exception = Assertions.assertThrows(
+        IOException.class,
+        () -> localDataSegmentPusher.push(dataSegmentFiles, dataSegment, false)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create directory"));
   }
 
   @Test
   public void testPushZipCannotCreateDirectory() throws IOException
   {
-    exception.expect(IOException.class);
-    exception.expectMessage("Cannot create directory");
     configZip.storageDirectory = new File(configZip.storageDirectory, "xxx");
-    Assert.assertTrue(configZip.storageDirectory.mkdir());
+    Assertions.assertTrue(configZip.storageDirectory.mkdir());
     configZip.storageDirectory.setWritable(false);
-    localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false);
+    final IOException exception = Assertions.assertThrows(
+        IOException.class,
+        () -> localDataSegmentPusherZip.push(dataSegmentFiles, dataSegment, false)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Cannot create directory"));
   }
 }

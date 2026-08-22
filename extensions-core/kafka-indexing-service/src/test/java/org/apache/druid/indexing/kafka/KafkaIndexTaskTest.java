@@ -38,6 +38,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Scopes;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.cli.CliPeon;
 import org.apache.druid.cli.PeonLoadSpecHolder;
@@ -153,8 +155,6 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

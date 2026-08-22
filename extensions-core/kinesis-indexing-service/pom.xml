@@ -126,11 +126,11 @@
             <version>${aws.sdk.v2.version}</version>
             <scope>provided</scope>
         </dependency>
-        <!-- KCL v2 for deaggregation support -->
+        <!-- KCL for deaggregation support -->
         <dependency>
             <groupId>software.amazon.kinesis</groupId>
             <artifactId>amazon-kinesis-client</artifactId>
-            <version>2.6.0</version>
+            <version>3.5.1</version>
             <exclusions>
                 <!-- Exclude transitive dependencies we don't need for deaggregation -->
                 <exclusion>
@@ -140,6 +140,18 @@
                 <exclusion>
                     <groupId>software.amazon.awssdk</groupId>
                     <artifactId>dynamodb</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>software.amazon.awssdk</groupId>
+                    <artifactId>dynamodb-enhanced</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>dynamodb-lock-client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>io.opentelemetry</groupId>
+                    <artifactId>opentelemetry-api</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>io.reactivex.rxjava3</groupId>

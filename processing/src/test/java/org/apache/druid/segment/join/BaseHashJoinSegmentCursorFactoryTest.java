@@ -41,14 +41,13 @@ import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -70,11 +69,8 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
   public static final String REGION_TO_COUNTRY_PREFIX = "rtc.";
   public static Long NULL_COUNTRY;
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   public QueryableIndexSegment factSegment;
   public LookupExtractor countryIsoCodeToNameLookup;
@@ -82,13 +78,13 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
   public IndexedTable countriesTable;
   public IndexedTable regionsTable;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpStatic()
   {
     NULL_COUNTRY = null;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     factSegment = new QueryableIndexSegment(
@@ -101,7 +97,7 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
     regionsTable = JoinTestHelper.createRegionsIndexedTable();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (factSegment != null) {
@@ -245,15 +241,15 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
       ExpressionVirtualColumn actualVirtualColumn
   )
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedVirtualColumn.getOutputName(),
         actualVirtualColumn.getOutputName()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedVirtualColumn.getOutputType(),
         actualVirtualColumn.getOutputType()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         expectedVirtualColumn.getParsedExpression().get().toString(),
         actualVirtualColumn.getParsedExpression().get().toString()
     );

@@ -31,8 +31,8 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -136,7 +136,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
 
     MatcherAssert.assertThat(
         e.getMessage(),
-        CoreMatchers.startsWith("Incomplete or missing frame at end of stream")
+        Matchers.startsWith("Incomplete or missing frame at end of stream")
     );
   }
 

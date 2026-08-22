@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
@@ -190,7 +189,7 @@ public @interface NotYetSupported
           }
           // If the base test case is supposed to be ignored already, just skip
           // the further evaluation
-          if (e instanceof AssumptionViolatedException || e instanceof TestAbortedException) {
+          if (e instanceof TestAbortedException) {
             throw e;
           }
           if (e instanceof IncompleteExecutionException) {
