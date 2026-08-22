@@ -1598,11 +1598,6 @@
                 <dependencies>
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
-                        <artifactId>rewrite-testing-frameworks</artifactId>
-                        <version>2.20.0</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-apache</artifactId>
                         <version>2.29.0</version>
                     </dependency>
