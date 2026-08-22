@@ -138,4 +138,17 @@ public class MetricsTest
     Assertions.assertArrayEquals(expectedHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
   }
 
+  @Test
+  public void testTaskRunTimeHasTaskStatusLabel()
+  {
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_7", null, null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
+    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("task/run/time", "overlord");
+    Assertions.assertNotNull(dimensionsAndCollector);
+    Assertions.assertArrayEquals(
+        new String[]{"dataSource", "druid_service", "host_name", "taskStatus", "taskType"},
+        dimensionsAndCollector.getDimensions()
+    );
+  }
+
 }
