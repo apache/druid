@@ -259,14 +259,17 @@ public final class SegmentGenerationUtils
           querySignature.getColumnType(queryColumn)
                         .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
 
-      if (type.is(ValueType.COMPLEX) && !DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(type.getComplexTypeName())) {
-        // A base table stores columns as dimensions, so a complex type with no dimension handler has nowhere to go
-        throw InvalidInput.exception(
-            "Column [%s] has type [%s], which cannot be stored in a base table that does not declare it. Declare the"
-            + " column in the table, or cast it to a type that can be stored as a dimension",
-            outputColumnName,
-            type
-        );
+      if (type.is(ValueType.COMPLEX)) {
+        final String typeName = type.getComplexTypeName();
+        if (typeName == null || !DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(typeName)) {
+          // A base table stores columns as dimensions, so a complex type with no dimension handler has nowhere to go
+          throw InvalidInput.exception(
+              "Column [%s] has type [%s], which cannot be stored in a base table that does not declare it. Declare the"
+              + " column in the table, or cast it to a type that can be stored as a dimension",
+              outputColumnName,
+              type
+          );
+        }
       }
       undeclared.add(getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas));
     }

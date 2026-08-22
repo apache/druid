@@ -387,8 +387,8 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
   @Test
   void testWithAdditionalColumnsRejectsDuplicateOfVirtualColumnOutput()
   {
-    // region_upper is materialized by a virtual column, so an incoming column of the same name is not an extra; it is a
-    // collision with a column the spec already declares.
+    // region_upper is materialized by a virtual column, so an incoming column of the same name would be computed by
+    // the virtual column rather than read; the arriving values would be ignored.
     final DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> ClusteredValueGroupsBaseTableProjectionSpec.builder()
@@ -405,7 +405,34 @@ class ClusteredValueGroupsBaseTableProjectionSpecTest extends InitializedNullHan
             .build()
             .withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("region_upper")))
     );
-    Assertions.assertTrue(e.getMessage().contains("duplicate name [region_upper]"));
+    Assertions.assertTrue(e.getMessage().contains("[region_upper]"));
+    Assertions.assertTrue(e.getMessage().contains("computed by a virtual column"));
+  }
+
+  @Test
+  void testWithAdditionalColumnsRejectsUnmaterializedVirtualColumnName()
+  {
+    // Chain: tenant_key := upper(v0), v0 := lower(tenant); the intermediate v0 is not a stored column. Appending a
+    // column named v0 would pass the constructor's rules (its output would simply become stored), but ingest reads
+    // virtual columns first, so the arriving v0 values would be silently discarded.
+    final ClusteredValueGroupsBaseTableProjectionSpec spec = ClusteredValueGroupsBaseTableProjectionSpec.builder()
+        .virtualColumns(VirtualColumns.create(
+            new ExpressionVirtualColumn("v0", "lower(tenant)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+            new ExpressionVirtualColumn("tenant_key", "upper(v0)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+        ))
+        .columns(
+            new StringDimensionSchema("tenant_key"),
+            new StringDimensionSchema("tenant"),
+            new LongDimensionSchema("__time")
+        )
+        .clusteringColumns("tenant_key")
+        .build();
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> spec.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("v0")))
+    );
+    Assertions.assertTrue(e.getMessage().contains("[v0]"));
+    Assertions.assertTrue(e.getMessage().contains("computed by a virtual column"));
   }
 
   /**

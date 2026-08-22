@@ -251,6 +251,14 @@ public final class ClusteredValueGroupsBaseTableProjectionSpec implements BaseTa
             TYPE_NAME
         );
       }
+      if (virtualColumns.getVirtualColumn(additionalColumn.getName()) != null) {
+        throw InvalidInput.exception(
+            "Cannot append column [%s] to a [%s] base table; it is computed by a virtual column, so"
+            + " the arriving values for this column would be ignored",
+            additionalColumn.getName(),
+            TYPE_NAME
+        );
+      }
       revised.add(additionalColumn);
     }
     // Duplicates of a declared column, and of a column materialized by a virtual column, are rejected by the
