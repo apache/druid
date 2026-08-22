@@ -1280,12 +1280,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>4.13.2</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
                 <groupId>net.hydromatic</groupId>
                 <artifactId>quidem</artifactId>
                 <version>0.12</version>
@@ -1316,12 +1310,6 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.carrotsearch</groupId>
-                <artifactId>junit-benchmarks</artifactId>
-                <version>0.7.2</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>com.google.caliper</groupId>
@@ -1466,12 +1454,6 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>pl.pragmatists</groupId>
-                <artifactId>JUnitParams</artifactId>
-                <version>1.1.1</version>
-                <scope>test</scope>
-            </dependency>
-            <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-testlib</artifactId>
                 <version>${guice.version}</version>
@@ -1493,12 +1475,6 @@
               <groupId>org.objenesis</groupId>
               <artifactId>objenesis</artifactId>
               <version>3.5</version>
-              <scope>test</scope>
-            </dependency>
-            <dependency>
-              <groupId>com.github.stefanbirkner</groupId>
-              <artifactId>system-rules</artifactId>
-              <version>1.19.0</version>
               <scope>test</scope>
             </dependency>
           <dependency>
@@ -1614,11 +1590,6 @@
                     </exclusions>
                 </configuration>
                 <dependencies>
-                    <dependency>
-                        <groupId>org.openrewrite.recipe</groupId>
-                        <artifactId>rewrite-testing-frameworks</artifactId>
-                        <version>2.20.0</version>
-                    </dependency>
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-apache</artifactId>

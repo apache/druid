@@ -28,9 +28,10 @@ import org.apache.druid.data.input.MaxSizeSplitHintSpec;
 import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -53,6 +54,9 @@ import java.util.stream.Stream;
 
 public class CloudObjectInputSourceTest
 {
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
   private static final String SCHEME = "s3";
 
   private static final List<URI> URIS = Collections.singletonList(
@@ -317,7 +321,7 @@ public class CloudObjectInputSourceTest
   }
 
   @Test
-  public void test_asFilePointers_populatorFetchesContent(@TempDir File tempDir) throws IOException
+  public void test_asFilePointers_populatorFetchesContent() throws IOException
   {
     final byte[] content = "hello,world\n1,2\n".getBytes(StandardCharsets.UTF_8);
 
@@ -335,7 +339,7 @@ public class CloudObjectInputSourceTest
     final List<InputFilePointer> pointers = inputSource.asFilePointers();
     Assertions.assertEquals(1, pointers.size());
 
-    final File dstFile = new File(tempDir, "fetched.csv");
+    final File dstFile = new File(temporaryFolder.getRoot(), "fetched.csv");
     pointers.get(0).populator().populate(dstFile);
 
     Assertions.assertArrayEquals(content, Files.readAllBytes(dstFile.toPath()));

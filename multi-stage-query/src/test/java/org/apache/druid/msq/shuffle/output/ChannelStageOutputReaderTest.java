@@ -73,7 +73,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     );
 
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private BlockingQueueFrameChannel channel;
     private ChannelStageOutputReader channelReader;
@@ -280,7 +280,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
     private final ChannelStageOutputReader reader = new ChannelStageOutputReader(channel.readable(), FrameTestUtil.WT_CONTEXT_LEGACY);
 
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private FrameReader frameReader;
     private List<Frame> frameList;

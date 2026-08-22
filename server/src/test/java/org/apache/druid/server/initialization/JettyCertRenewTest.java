@@ -85,7 +85,7 @@ import java.util.zip.GZIPOutputStream;
 public class JettyCertRenewTest extends BaseJettyTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension folder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension folder = TemporaryFolderExtension.testCaseScoped();
 
   private Injector injector;
 

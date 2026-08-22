@@ -32,7 +32,6 @@ import org.apache.druid.data.input.impl.FileEntity;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
@@ -43,10 +42,11 @@ import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -55,8 +55,8 @@ import java.util.List;
 
 public class OrcReaderTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testTest1() throws IOException
@@ -433,7 +433,7 @@ public class OrcReaderTest extends InitializedNullHandlingTest
     );
     final FileEntity entity = new FileEntity(new File("example/orc-file-11-format.orc"));
 
-    final InputEntityReader reader = inputFormat.createReader(schema, entity, newFolder(temporaryFolder, "junit"));
+    final InputEntityReader reader = inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
 
     List<String> dims = ImmutableList.of(
         "boolean1",
@@ -707,15 +707,10 @@ public class OrcReaderTest extends InitializedNullHandlingTest
       DimensionsSpec dimensionsSpec,
       InputFormat inputFormat,
       String dataFile
-  )
+  ) throws IOException
   {
     final InputRowSchema schema = new InputRowSchema(timestampSpec, dimensionsSpec, ColumnsFilter.all());
     final FileEntity entity = new FileEntity(new File(dataFile));
-    return inputFormat.createReader(schema, entity, newFolder(temporaryFolder, "junit"));
-  }
-
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
+    return inputFormat.createReader(schema, entity, temporaryFolder.newFolder());
   }
 }

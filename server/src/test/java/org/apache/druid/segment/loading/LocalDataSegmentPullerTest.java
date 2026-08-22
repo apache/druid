@@ -41,7 +41,7 @@ import java.util.zip.GZIPOutputStream;
 public class LocalDataSegmentPullerTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File tmpDir;
   private LocalDataSegmentPuller puller;
 

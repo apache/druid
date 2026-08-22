@@ -21,19 +21,19 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -58,15 +58,15 @@ public class HttpShuffleClientTest
   private static final int PORT = 1080;
   private static final int PARTITION_ID = 0;
 
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File segmentFile;
 
   @BeforeEach
   public void setup() throws IOException
   {
-    final File temp = File.createTempFile("junit", null, temporaryFolder);
+    final File temp = temporaryFolder.newFile();
     try (Writer writer = Files.newBufferedWriter(temp.toPath(), StandardCharsets.UTF_8)) {
       for (int j = 0; j < 10; j++) {
         writer.write(StringUtils.format("let's write some data.\n"));
@@ -80,7 +80,7 @@ public class HttpShuffleClientTest
   public void testFetchSegmentFileWithValidParamsReturningCopiedFileInPartitoinDir() throws IOException
   {
     ShuffleClient shuffleClient = mockClient(0);
-    final File localDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
+    final File localDir = temporaryFolder.newFolder();
     final File fetchedFile = shuffleClient.fetchSegmentFile(
         localDir,
         SUPERVISOR_TASK_ID,
@@ -96,7 +96,7 @@ public class HttpShuffleClientTest
     Assertions.assertThrows(
         IOException.class,
         () -> shuffleClient.fetchSegmentFile(
-            FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null),
+            temporaryFolder.newFolder(),
             SUPERVISOR_TASK_ID,
             new TestPartitionLocation()
         )
@@ -107,7 +107,7 @@ public class HttpShuffleClientTest
   public void testFetchSegmentFileWithTransientFailuresReturningCopiedFileInPartitionDir() throws IOException
   {
     ShuffleClient shuffleClient = mockClient(HttpShuffleClient.NUM_FETCH_RETRIES - 1);
-    final File localDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null);
+    final File localDir = temporaryFolder.newFolder();
     final File fetchedFile = shuffleClient.fetchSegmentFile(
         localDir,
         SUPERVISOR_TASK_ID,
@@ -126,7 +126,7 @@ public class HttpShuffleClientTest
       List<Future<File>> futures = new ArrayList<>();
       List<File> localDirs = new ArrayList<>();
       for (int i = 0; i < 2; i++) {
-        localDirs.add(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null));
+        localDirs.add(temporaryFolder.newFolder());
       }
       for (int i = 0; i < 2; i++) {
         final File localDir = localDirs.get(i);
@@ -158,7 +158,7 @@ public class HttpShuffleClientTest
       List<Future<File>> futures = new ArrayList<>();
       List<File> localDirs = new ArrayList<>();
       for (int i = 0; i < 2; i++) {
-        localDirs.add(FileUtils.createTempDirInLocation(temporaryFolder.toPath(), null));
+        localDirs.add(temporaryFolder.newFolder());
       }
       for (int i = 0; i < 2; i++) {
         final File localDir = localDirs.get(i);

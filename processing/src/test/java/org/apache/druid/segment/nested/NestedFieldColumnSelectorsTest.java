@@ -56,9 +56,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
@@ -75,23 +74,19 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
   private static final String NESTED_SPARSE_MIXED_FIELD = "sparse_mixed";
 
 
-  @TempDir
-  public File tempFolderDir;
-
-  private TemporaryFolderExtension tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
   private AggregationTestHelper helper;
   private Closer closer;
 
   @BeforeEach
   public void setup() throws IOException
   {
-    tempFolder = new TemporaryFolderExtension(tempFolderDir);
-    tempFolder.create();
     BuiltInTypesModule.registerHandlersAndSerde();
     List<? extends Module> mods = BuiltInTypesModule.getJacksonModulesList();
-    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelperWithTempDir(
+    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(
         mods,
-        tempFolder.getRoot()
+        tempFolder
     );
     this.closer = Closer.create();
   }

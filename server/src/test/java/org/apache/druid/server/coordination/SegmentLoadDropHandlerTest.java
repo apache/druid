@@ -64,7 +64,7 @@ public class SegmentLoadDropHandlerTest
   private ScheduledExecutorFactory scheduledExecutorFactory;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp() throws IOException

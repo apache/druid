@@ -78,7 +78,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
   public void initHllSketchAggregatorTest(GroupByQueryConfig config, String vectorize, StringEncoding stringEncoding)
   {
     HllSketchModule.registerSerde();
-    groupByHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    groupByHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new HllSketchModule().getJacksonModules(), config, groupByFolder
     );
     timeseriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(

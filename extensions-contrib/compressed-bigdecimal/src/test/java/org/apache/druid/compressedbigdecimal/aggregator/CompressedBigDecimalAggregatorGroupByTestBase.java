@@ -66,7 +66,7 @@ public abstract class CompressedBigDecimalAggregatorGroupByTestBase
   {
     final CompressedBigDecimalModule module = new CompressedBigDecimalModule();
     CompressedBigDecimalModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         module.getJacksonModules(),
         config,
         tempFolder

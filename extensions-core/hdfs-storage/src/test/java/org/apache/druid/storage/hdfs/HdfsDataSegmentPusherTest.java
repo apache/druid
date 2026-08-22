@@ -33,9 +33,9 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.jackson.GranularityModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -48,7 +48,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -74,8 +74,8 @@ public class HdfsDataSegmentPusherTest
     objectMapper.setInjectableValues(injectableValues);
   }
 
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private HdfsDataSegmentPusher hdfsDataSegmentPusher;
 
@@ -124,7 +124,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -132,7 +132,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
@@ -165,7 +165,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -173,7 +173,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
@@ -205,7 +205,7 @@ public class HdfsDataSegmentPusherTest
     DataSegment[] segments = new DataSegment[numberOfSegments];
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -213,7 +213,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setCompressionFormat(format);
     config.setStorageDirectory(
@@ -241,13 +241,16 @@ public class HdfsDataSegmentPusherTest
     for (int i = 0; i < numberOfSegments; i++) {
       final DataSegment pushedSegment = pusher.push(segmentDir, segments[i], false);
 
-      String indexUri = StringUtils.format(
-          "%s/%s/%d_index.%s",
-          FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-          pusher.getStorageDir(segments[i], false),
-          segments[i].getShardSpec().getPartitionNum(),
-          format.getExtension()
-      );
+      final String indexUri;
+      try (FileSystem fileSystem = FileSystem.newInstance(conf)) {
+        indexUri = StringUtils.format(
+            "%s/%s/%d_index.%s",
+            fileSystem.makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+            pusher.getStorageDir(segments[i], false),
+            segments[i].getShardSpec().getPartitionNum(),
+            format.getExtension()
+        );
+      }
 
       Assertions.assertEquals(segments[i].getSize(), pushedSegment.getSize());
       Assertions.assertEquals(segments[i], pushedSegment);
@@ -283,13 +286,16 @@ public class HdfsDataSegmentPusherTest
 
 
       // push twice will fail and temp dir cleaned
-      File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
-      outDir.setReadOnly();
+      final File outDir = new File(storageDirectory, segmentPath);
+      Assertions.assertTrue(outDir.setReadOnly(), "test setup must be able to make the output directory read-only");
       try {
         pusher.push(segmentDir, segments[i], false);
       }
       catch (IOException e) {
         Assertions.fail("should not throw exception");
+      }
+      finally {
+        Assertions.assertTrue(outDir.setWritable(true), "test teardown must restore write permission");
       }
     }
   }
@@ -299,7 +305,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -307,7 +313,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(
         scheme != null
@@ -331,12 +337,15 @@ public class HdfsDataSegmentPusherTest
     DataSegment segment = pusher.push(segmentDir, segmentToPush, false);
 
 
-    String indexUri = StringUtils.format(
-        "%s/%s/%d_index.zip",
-        FileSystem.newInstance(conf).makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
-        pusher.getStorageDir(segmentToPush, false),
-        segmentToPush.getShardSpec().getPartitionNum()
-    );
+    final String indexUri;
+    try (FileSystem fileSystem = FileSystem.newInstance(conf)) {
+      indexUri = StringUtils.format(
+          "%s/%s/%d_index.zip",
+          fileSystem.makeQualified(new Path(config.getStorageDirectory())).toUri().toString(),
+          pusher.getStorageDir(segmentToPush, false),
+          segmentToPush.getShardSpec().getPartitionNum()
+      );
+    }
 
     Assertions.assertEquals(segmentToPush.getSize(), segment.getSize());
     Assertions.assertEquals(segmentToPush, segment);
@@ -358,13 +367,16 @@ public class HdfsDataSegmentPusherTest
     Assertions.assertTrue(indexFile.exists());
 
     // push twice will fail and temp dir cleaned
-    File outDir = new File(StringUtils.format("%s/%s", config.getStorageDirectory(), segmentPath));
-    outDir.setReadOnly();
+    final File outDir = new File(storageDirectory, segmentPath);
+    Assertions.assertTrue(outDir.setReadOnly(), "test setup must be able to make the output directory read-only");
     try {
       pusher.push(segmentDir, segmentToPush, false);
     }
     catch (IOException e) {
       Assertions.fail("should not throw exception");
+    }
+    finally {
+      Assertions.assertTrue(outDir.setWritable(true), "test teardown must restore write permission");
     }
   }
 
@@ -430,8 +442,4 @@ public class HdfsDataSegmentPusherTest
 
   }
 
-  private static File newFolder(File root)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), "junit");
-  }
 }
