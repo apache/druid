@@ -28,6 +28,7 @@ import javax.annotation.Nullable;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -36,6 +37,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
+import java.util.Arrays;
 
 /**
  * Utility class for symmetric key encryption (i.e. same secret is used for encryption and decryption) of byte[]
@@ -51,6 +53,20 @@ public class CryptoService
   // Based on Javadocs on SecureRandom, It is threadsafe as well.
   private static final SecureRandom SECURE_RANDOM_INSTANCE = new SecureRandom();
 
+  private static final String AUTHENTICATED_CIPHER_ALGORITHM = "AES";
+  private static final String AUTHENTICATED_CIPHER_TRANSFORMATION = "AES/GCM/NoPadding";
+  private static final int GCM_IV_SIZE = 12;
+  private static final int GCM_TAG_LENGTH_BITS = 128;
+  private static final int AUTHENTICATED_FORMAT_MAGIC = 0xD2525549;
+
+  /**
+   * Negative magic followed by a format version. A valid legacy payload starts with its nonnegative salt length, so
+   * this header unambiguously distinguishes authenticated ciphertext from the legacy format.
+   */
+  private static final byte[] AUTHENTICATED_FORMAT_HEADER = {
+      (byte) 0xD2, 0x52, 0x55, 0x49, 0x01
+  };
+
   // User provided secret phrase used for encrypting data
   private final char[] passPhrase;
 
@@ -60,7 +76,7 @@ public class CryptoService
   private final int iterationCount;
   private final int keyLength;
 
-  // Cipher algorithm information
+  // Cipher algorithm information retained for decrypting ciphertext written by earlier versions.
   private final String cipherAlgName;
   private final String cipherAlgMode;
   private final String cipherAlgPadding;
@@ -95,8 +111,8 @@ public class CryptoService
     this.iterationCount = iterationCount == null ? 65536 : iterationCount;
     this.keyLength = keyLength == null ? 128 : keyLength;
 
-    // encrypt/decrypt a test string to ensure all params are valid
-    String testString = "duh! !! !!!";
+    // Validate authenticated parameters eagerly; the legacy transformation is decrypt-only and validated on first use.
+    final String testString = "duh! !! !!!";
     Preconditions.checkState(
         testString.equals(StringUtils.fromUtf8(decrypt(encrypt(StringUtils.toUtf8(testString))))),
         "decrypt(encrypt(testString)) failed"
@@ -106,22 +122,28 @@ public class CryptoService
   public byte[] encrypt(byte[] plain)
   {
     try {
-      byte[] salt = new byte[saltSize];
+      final byte[] salt = new byte[saltSize];
       SECURE_RANDOM_INSTANCE.nextBytes(salt);
 
-      SecretKey tmp = getKeyFromPassword(passPhrase, salt);
-      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
+      final SecretKey tmp = getKeyFromPassword(passPhrase, salt);
+      final SecretKey secret = new SecretKeySpec(tmp.getEncoded(), AUTHENTICATED_CIPHER_ALGORITHM);
 
-      // error-prone warns if the transformation is not a compile-time constant
-      // since it cannot check it for insecure combinations.
-      @SuppressWarnings("InsecureCryptoUsage")
-      Cipher ecipher = Cipher.getInstance(transformation);
-      ecipher.init(Cipher.ENCRYPT_MODE, secret);
-      return new EncryptedData(
+      final byte[] iv = new byte[GCM_IV_SIZE];
+      SECURE_RANDOM_INSTANCE.nextBytes(iv);
+
+      final Cipher ecipher = Cipher.getInstance(AUTHENTICATED_CIPHER_TRANSFORMATION);
+      ecipher.init(Cipher.ENCRYPT_MODE, secret, new GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv));
+      ecipher.updateAAD(AUTHENTICATED_FORMAT_HEADER);
+
+      final byte[] encryptedData = new EncryptedData(
           salt,
-          ecipher.getParameters().getParameterSpec(IvParameterSpec.class).getIV(),
+          iv,
           ecipher.doFinal(plain)
       ).toByteAray();
+      return ByteBuffer.allocate(Math.addExact(AUTHENTICATED_FORMAT_HEADER.length, encryptedData.length))
+                       .put(AUTHENTICATED_FORMAT_HEADER)
+                       .put(encryptedData)
+                       .array();
     }
     catch (Exception ex) {
       log.noStackTrace().warn(ex, "Encryption failed");
@@ -129,18 +151,23 @@ public class CryptoService
     }
   }
 
+  // Legacy ciphertext may use a weaker configured transformation; new ciphertext is always written using GCM.
   public byte[] decrypt(byte[] data)
   {
     try {
-      EncryptedData encryptedData = EncryptedData.fromByteArray(data);
+      if (hasAuthenticatedFormatMagic(data)) {
+        return decryptAuthenticated(data);
+      }
 
-      SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
-      SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
+      final EncryptedData encryptedData = EncryptedData.fromByteArray(data);
+
+      final SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
+      final SecretKey secret = new SecretKeySpec(tmp.getEncoded(), cipherAlgName);
 
       // error-prone warns if the transformation is not a compile-time constant
       // since it cannot check it for insecure combinations.
       @SuppressWarnings("InsecureCryptoUsage")
-      Cipher dcipher = Cipher.getInstance(transformation);
+      final Cipher dcipher = Cipher.getInstance(transformation);
       dcipher.init(Cipher.DECRYPT_MODE, secret, new IvParameterSpec(encryptedData.getIv()));
       return dcipher.doFinal(encryptedData.getCipher());
     }
@@ -150,11 +177,49 @@ public class CryptoService
     }
   }
 
-  private SecretKey getKeyFromPassword(char[] passPhrase, byte[] salt)
+  private byte[] decryptAuthenticated(final byte[] data) throws Exception
+  {
+    Preconditions.checkArgument(
+        data.length >= AUTHENTICATED_FORMAT_HEADER.length
+        && Arrays.equals(
+            data,
+            0,
+            AUTHENTICATED_FORMAT_HEADER.length,
+            AUTHENTICATED_FORMAT_HEADER,
+            0,
+            AUTHENTICATED_FORMAT_HEADER.length
+        ),
+        "Unsupported encrypted data version"
+    );
+
+    final EncryptedData encryptedData = EncryptedData.fromByteArray(
+        Arrays.copyOfRange(data, AUTHENTICATED_FORMAT_HEADER.length, data.length)
+    );
+    Preconditions.checkArgument(encryptedData.getIv().length == GCM_IV_SIZE, "Invalid GCM IV size");
+
+    final SecretKey tmp = getKeyFromPassword(passPhrase, encryptedData.getSalt());
+    final SecretKey secret = new SecretKeySpec(tmp.getEncoded(), AUTHENTICATED_CIPHER_ALGORITHM);
+    final Cipher dcipher = Cipher.getInstance(AUTHENTICATED_CIPHER_TRANSFORMATION);
+    dcipher.init(
+        Cipher.DECRYPT_MODE,
+        secret,
+        new GCMParameterSpec(GCM_TAG_LENGTH_BITS, encryptedData.getIv())
+    );
+    dcipher.updateAAD(AUTHENTICATED_FORMAT_HEADER);
+    return dcipher.doFinal(encryptedData.getCipher());
+  }
+
+  private static boolean hasAuthenticatedFormatMagic(final byte[] data)
+  {
+    return data.length >= Integer.BYTES
+           && ByteBuffer.wrap(data).getInt() == AUTHENTICATED_FORMAT_MAGIC;
+  }
+
+  private SecretKey getKeyFromPassword(final char[] passPhrase, final byte[] salt)
       throws NoSuchAlgorithmException, InvalidKeySpecException
   {
-    SecretKeyFactory factory = SecretKeyFactory.getInstance(secretKeyFactoryAlg);
-    KeySpec spec = new PBEKeySpec(passPhrase, salt, iterationCount, keyLength);
+    final SecretKeyFactory factory = SecretKeyFactory.getInstance(secretKeyFactoryAlg);
+    final KeySpec spec = new PBEKeySpec(passPhrase, salt, iterationCount, keyLength);
     return factory.generateSecret(spec);
   }
 
@@ -188,8 +253,10 @@ public class CryptoService
 
     public byte[] toByteAray()
     {
-      int headerLength = 12;
-      ByteBuffer bb = ByteBuffer.allocate(salt.length + iv.length + cipher.length + headerLength);
+      final int headerLength = 12;
+      final int encryptedDataLength =
+          Math.addExact(Math.addExact(Math.addExact(salt.length, iv.length), cipher.length), headerLength);
+      final ByteBuffer bb = ByteBuffer.allocate(encryptedDataLength);
       bb.putInt(salt.length)
         .putInt(iv.length)
         .putInt(cipher.length)
@@ -203,19 +270,25 @@ public class CryptoService
 
     public static EncryptedData fromByteArray(byte[] array)
     {
-      ByteBuffer bb = ByteBuffer.wrap(array);
+      Preconditions.checkArgument(array.length >= 12, "Invalid encrypted data");
+      final ByteBuffer bb = ByteBuffer.wrap(array);
 
-      int saltSize = bb.getInt();
-      int ivSize = bb.getInt();
-      int cipherSize = bb.getInt();
+      final int saltSize = bb.getInt();
+      final int ivSize = bb.getInt();
+      final int cipherSize = bb.getInt();
+      final long payloadSize = (long) saltSize + ivSize + cipherSize;
+      Preconditions.checkArgument(
+          saltSize >= 0 && ivSize >= 0 && cipherSize >= 0 && payloadSize == bb.remaining(),
+          "Invalid encrypted data"
+      );
 
-      byte[] salt = new byte[saltSize];
+      final byte[] salt = new byte[saltSize];
       bb.get(salt);
 
-      byte[] iv = new byte[ivSize];
+      final byte[] iv = new byte[ivSize];
       bb.get(iv);
 
-      byte[] cipher = new byte[cipherSize];
+      final byte[] cipher = new byte[cipherSize];
       bb.get(cipher);
 
       return new EncryptedData(salt, iv, cipher);
