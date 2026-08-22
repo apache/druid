@@ -3679,7 +3679,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private Injector makePeonInjectorWithStubEmitter(Task task) throws IOException
   {
-    final File taskFile = new File(super.tempFolder, "task.json");
+    final File taskFile = new File(temporaryFolder, "task.json");
     FileUtils.write(taskFile, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
 
     final Properties properties = new Properties();
