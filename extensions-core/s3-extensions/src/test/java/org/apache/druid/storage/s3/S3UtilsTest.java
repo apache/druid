@@ -28,6 +28,11 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
+import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
@@ -44,6 +49,36 @@ import java.util.stream.Collectors;
 
 public class S3UtilsTest
 {
+  @Test
+  public void testConfigureLegacyMd5Disabled()
+  {
+    final S3ClientBuilder s3ClientBuilder = S3Client.builder();
+
+    S3Utils.configureLegacyMd5(new AWSClientConfig(), s3ClientBuilder);
+
+    Assertions.assertFalse(
+        s3ClientBuilder.plugins().stream().anyMatch(LegacyMd5Plugin.class::isInstance)
+    );
+  }
+
+  @Test
+  public void testConfigureLegacyMd5EnabledForSyncAndAsyncClients()
+  {
+    final AWSClientConfig clientConfig = EasyMock.createMock(AWSClientConfig.class);
+    EasyMock.expect(clientConfig.isEnableLegacyMd5()).andReturn(true).once();
+    EasyMock.replay(clientConfig);
+    final S3ClientBuilder s3ClientBuilder = S3Client.builder();
+    final S3AsyncClientBuilder s3AsyncClientBuilder = S3AsyncClient.builder();
+
+    S3Utils.configureLegacyMd5(clientConfig, s3ClientBuilder, s3AsyncClientBuilder);
+
+    Assertions.assertEquals(1, s3ClientBuilder.plugins().size());
+    Assertions.assertEquals(1, s3AsyncClientBuilder.plugins().size());
+    Assertions.assertInstanceOf(LegacyMd5Plugin.class, s3ClientBuilder.plugins().get(0));
+    Assertions.assertInstanceOf(LegacyMd5Plugin.class, s3AsyncClientBuilder.plugins().get(0));
+    EasyMock.verify(clientConfig);
+  }
+
   @Test
   public void testRetryWithIOExceptions()
   {
