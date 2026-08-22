@@ -56,7 +56,7 @@ class SegmentFileBuilderV10Test
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   void testOneContainerPerProjection() throws IOException
@@ -72,7 +72,7 @@ class SegmentFileBuilderV10Test
         builder.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + col;
-          final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("%s-%s.bin", projection, col));
+          final File tmpFile = temporaryFolder.newFile(StringUtils.format("%s-%s.bin", projection, col));
           Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
           builder.add(name, tmpFile);
         }
@@ -102,14 +102,14 @@ class SegmentFileBuilderV10Test
       builder.startFileBundle("__base");
       for (int col = 0; col < colCount; col++) {
         final String name = "__base/col" + col;
-        final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("base-%s.bin", col));
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("base-%s.bin", col));
         Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
         builder.add(name, tmpFile);
       }
       builder.startFileBundle(slashyProjection);
       for (int col = 0; col < colCount; col++) {
         final String name = slashyProjection + "/col" + col;
-        final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("slashy-%s.bin", col));
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("slashy-%s.bin", col));
         Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
         builder.add(name, tmpFile);
       }
@@ -144,7 +144,7 @@ class SegmentFileBuilderV10Test
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       builder.startFileBundle("projA");
-      final File tmp = temporaryFolderExtension.newFile("no-prefix.bin");
+      final File tmp = temporaryFolder.newFile("no-prefix.bin");
       Files.write(Ints.toByteArray(1), tmp);
       // file name doesn't start with "projA/", so add must throw
       Assertions.assertThrows(RuntimeException.class, () -> builder.add("wrong/col0", tmp));
@@ -185,7 +185,7 @@ class SegmentFileBuilderV10Test
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       // never call startFileBundle; bare names are fine under the default root bundle
-      final File tmp = temporaryFolderExtension.newFile("bare.bin");
+      final File tmp = temporaryFolder.newFile("bare.bin");
       Files.write(Ints.toByteArray(1), tmp);
       builder.add("col0", tmp);
     }
@@ -204,7 +204,7 @@ class SegmentFileBuilderV10Test
         builder.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + col;
-          final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("%s-%s.bin", projection, col));
+          final File tmpFile = temporaryFolder.newFile(StringUtils.format("%s-%s.bin", projection, col));
           Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
           builder.add(name, tmpFile);
         }
@@ -243,7 +243,7 @@ class SegmentFileBuilderV10Test
       // never call startFileBundle; the single container should be tagged with ROOT_BUNDLE_NAME
       for (int col = 0; col < 3; col++) {
         final String name = "col" + col;
-        final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("nobundle-%s.bin", col));
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("nobundle-%s.bin", col));
         Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
         builder.add(name, tmpFile);
       }
@@ -267,13 +267,13 @@ class SegmentFileBuilderV10Test
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       builder.startFileBundle("first");
-      final File firstFile = temporaryFolderExtension.newFile("first.bin");
+      final File firstFile = temporaryFolder.newFile("first.bin");
       Files.write(Ints.toByteArray(1), firstFile);
       builder.add("first/a", firstFile);
 
       // Passing null resets to ROOT_BUNDLE_NAME; subsequent writes go in a root-bundle container.
       builder.startFileBundle(null);
-      final File rootFile = temporaryFolderExtension.newFile("root.bin");
+      final File rootFile = temporaryFolder.newFile("root.bin");
       Files.write(Ints.toByteArray(2), rootFile);
       builder.add("root_a", rootFile);
     }
@@ -343,7 +343,7 @@ class SegmentFileBuilderV10Test
         builder.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + col;
-          final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("main-%s-%s.bin", projection, col));
+          final File tmpFile = temporaryFolder.newFile(StringUtils.format("main-%s-%s.bin", projection, col));
           Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
           builder.add(name, tmpFile);
         }
@@ -356,7 +356,7 @@ class SegmentFileBuilderV10Test
         external.startFileBundle(projection);
         for (int col = 0; col < colCount; col++) {
           final String name = projection + "/col" + (col + 1000);
-          final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("ext-%s-%s.bin", projection, col));
+          final File tmpFile = temporaryFolder.newFile(StringUtils.format("ext-%s-%s.bin", projection, col));
           Files.write(Ints.toByteArray(name.hashCode()), tmpFile);
           external.add(name, tmpFile);
         }
@@ -634,7 +634,7 @@ class SegmentFileBuilderV10Test
     final File baseDir = newBaseDir();
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      final File tmpFile = temporaryFolderExtension.newFile("no-columns.bin");
+      final File tmpFile = temporaryFolder.newFile("no-columns.bin");
       Files.write(Ints.toByteArray(1), tmpFile);
       builder.add("plain", tmpFile);
     }
@@ -702,7 +702,7 @@ class SegmentFileBuilderV10Test
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
-        final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("plain-%s.bin", i));
+        final File tmpFile = temporaryFolder.newFile(StringUtils.format("plain-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(String.valueOf(i), tmpFile);
       }
@@ -724,7 +724,7 @@ class SegmentFileBuilderV10Test
     // (CompressedPools.BUFFER_SIZE) used by the default metadata compression (zstd) when using heap buffers.
     final int fileCount = 2000;
     final byte[] payload = Ints.toByteArray(0xCAFEBABE);
-    final File payloadFile = temporaryFolderExtension.newFile("payload-" + metaCompression + ".bin");
+    final File payloadFile = temporaryFolder.newFile("payload-" + metaCompression + ".bin");
     Files.write(payload, payloadFile);
 
     final Set<String> expectedNames = new TreeSet<>();
@@ -788,7 +788,7 @@ class SegmentFileBuilderV10Test
 
   private File newBaseDir() throws IOException
   {
-    return temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    return temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
   }
 
   private static void assertNoContainerMixesProjections(SegmentFileMetadata metadata)

@@ -98,8 +98,8 @@ public class WorkerTaskManagerTest
   private final IndexIO indexIO;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  private final File tempDir = temporaryFolderExtension.getRoot();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  private final File tempDir = temporaryFolder.getRoot();
 
   @Parameter(0)
   public boolean restoreTasksOnRestart;

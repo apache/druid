@@ -53,7 +53,7 @@ import java.util.List;
 public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void test() throws IOException
@@ -62,7 +62,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
     final List<File> files = new ArrayList<>();
     long totalFileSize = 0;
     for (int i = 0; i < numFiles; i++) {
-      final File file = temporaryFolderExtension.newFile("test_" + i);
+      final File file = temporaryFolder.newFile("test_" + i);
       files.add(file);
       try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write(StringUtils.format("%d,%s,%d\n", 20190101 + i, "name_" + i, i));
@@ -91,7 +91,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
         ),
         SystemFieldDecoratorFactory.NONE,
-        temporaryFolderExtension.getRoot()
+        temporaryFolder.getRoot()
     );
 
     final InputStats inputStats = new InputStatsImpl();
@@ -121,7 +121,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
     final int numFiles = 5;
     final List<File> files = new ArrayList<>();
     for (int i = 0; i < numFiles; i++) {
-      final File file = temporaryFolderExtension.newFile("test_" + i);
+      final File file = temporaryFolder.newFile("test_" + i);
       files.add(file);
       try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write(StringUtils.format("%d,%s,%d\n", 20190101 + i, "name_" + i, i));
@@ -130,7 +130,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
     }
 
     LocalInputSource inputSource = new LocalInputSource(
-        temporaryFolderExtension.getRoot(),
+        temporaryFolder.getRoot(),
         "test_*",
         null,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.PATH)));
@@ -160,7 +160,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
         ),
         SystemFieldDecoratorFactory.fromInputSource(inputSource),
-        temporaryFolderExtension.getRoot()
+        temporaryFolder.getRoot()
     );
 
     try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
@@ -220,7 +220,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             ).iterator()
         ),
         SystemFieldDecoratorFactory.NONE,
-        temporaryFolderExtension.getRoot()
+        temporaryFolder.getRoot()
     );
 
     try (CloseableIterator<InputRow> readIterator = inputReader.read()) {

@@ -61,7 +61,7 @@ public class ShuffleResourceTest
   private static final String DATASOURCE = "datasource";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private ShuffleMetrics shuffleMetrics;
@@ -92,7 +92,9 @@ public class ShuffleResourceTest
 
     };
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(newTempDir("shuffle"), null, null)))
+        .setShuffleDataLocations(
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder("shuffle"), null, null))
+        )
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient()
     {
@@ -205,14 +207,10 @@ public class ShuffleResourceTest
   private File generateSegmentDir(String fileName) throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = newTempDir(fileName);
+    final File segmentDir = temporaryFolder.newFolder(fileName);
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
   }
 
-  private File newTempDir(String name) throws IOException
-  {
-    return temporaryFolderExtension.newFolder(name);
-  }
 }

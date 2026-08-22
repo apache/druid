@@ -32,7 +32,7 @@ import java.util.Arrays;
 public class SpillOutputStreamTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testSmallWriteStaysInMemory() throws IOException
@@ -263,7 +263,7 @@ public class SpillOutputStreamTest
   private LimitedTemporaryStorage makeStorage(long maxBytes)
   {
     return new LimitedTemporaryStorage(
-        temporaryFolderExtension.getRoot(),
+        temporaryFolder.getRoot(),
         maxBytes,
         100,
         new GroupByStatsProvider.PerQueryStats()

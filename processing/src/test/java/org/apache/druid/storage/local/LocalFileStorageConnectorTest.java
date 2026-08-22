@@ -44,8 +44,7 @@ import java.util.UUID;
 public class LocalFileStorageConnectorTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private File storageDir;
   private StorageConnector storageConnector;
@@ -53,7 +52,7 @@ public class LocalFileStorageConnectorTest
   @BeforeEach
   public void init() throws IOException
   {
-    storageDir = temporaryFolder;
+    storageDir = temporaryFolder.getRoot();
     storageConnector = new LocalFileStorageConnectorProvider(storageDir).createStorageConnector(null);
   }
 
@@ -123,7 +122,7 @@ public class LocalFileStorageConnectorTest
   @Test
   public void incorrectBasePath() throws IOException
   {
-    File file = temporaryFolderExtension.newFile();
+    File file = temporaryFolder.newFile();
     StorageConnectorProvider storageConnectorProvider = new LocalFileStorageConnectorProvider(file);
     Assertions.assertThrows(IAE.class, () -> storageConnectorProvider.createStorageConnector(null));
   }

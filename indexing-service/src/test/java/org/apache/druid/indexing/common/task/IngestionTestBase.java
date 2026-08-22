@@ -111,9 +111,7 @@ import java.util.stream.Collectors;
 public abstract class IngestionTestBase extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = new TemporaryFolderExtension();
-
-  public File temporaryFolder;
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
@@ -149,10 +147,9 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
   @BeforeEach
   public void setUpIngestionTestBase() throws IOException
   {
-    temporaryFolder = temporaryFolderExtension.getRoot();
     derbyConnectorRule.before();
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    baseDir = FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "base");
+    baseDir = FileUtils.createTempDirInLocation(temporaryFolder.getRoot().toPath(), "base");
 
     final SQLMetadataConnector connector = derbyConnectorRule.getConnector();
     connector.createTaskTables();
@@ -191,7 +188,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     lockbox = new GlobalTaskLockbox(taskStorage, storageCoordinator);
     lockbox.syncFromStorage();
     segmentCacheManagerFactory = SegmentCacheManagerFactory.createWithOwnedPool(TestIndex.INDEX_IO, getObjectMapper());
-    reportsFile = new File(temporaryFolder, "reports.json");
+    reportsFile = new File(temporaryFolder.getRoot(), "reports.json");
     dataSegmentKiller = new TestDataSegmentKiller();
     taskActionToolbox = createTaskActionToolbox();
 
@@ -475,7 +472,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         taskStorage.insert(task, TaskStatus.running(task.getId()));
         taskActionClient = createActionClient(task);
         taskReportsFile = new File(
-            temporaryFolder,
+            temporaryFolder.getRoot(),
             StringUtils.format("ingestionTestBase-%s.json", System.currentTimeMillis())
         );
 

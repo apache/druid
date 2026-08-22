@@ -32,7 +32,7 @@ import java.nio.file.StandardOpenOption;
 public class GenericIndexedWriterTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void writeLargeValueIntoLargeColumn() throws IOException
@@ -53,8 +53,8 @@ public class GenericIndexedWriterTest
     writer.write("i really like writing strings i really like writing strings i really like writing strings");
     writer.write("i really like writing strings");
     writer.writeTo(
-        FileChannel.open(temporaryFolderExtension.newFile().toPath(), StandardOpenOption.WRITE),
-        new FileSmoosher(temporaryFolderExtension.newFolder("smoosh"))
+        FileChannel.open(temporaryFolder.newFile().toPath(), StandardOpenOption.WRITE),
+        new FileSmoosher(temporaryFolder.newFolder("smoosh"))
     );
   }
 }

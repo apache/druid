@@ -78,7 +78,7 @@ public class TaskToolboxTest
 
   private TaskToolboxFactory taskToolbox = null;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);
@@ -117,7 +117,7 @@ public class TaskToolboxTest
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
 
     TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(temporaryFolderExtension.getRoot().toString())
+        .setBaseDir(temporaryFolder.getRoot().toString())
         .build();
 
     taskToolbox = new TaskToolboxFactory(

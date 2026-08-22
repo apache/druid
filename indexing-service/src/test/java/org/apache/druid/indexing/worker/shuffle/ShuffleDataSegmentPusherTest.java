@@ -85,7 +85,7 @@ public class ShuffleDataSegmentPusherTest
   public String intermediateDataStore;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private IntermediaryDataManager intermediaryDataManager;
   private ShuffleDataSegmentPusher segmentPusher;
@@ -98,13 +98,15 @@ public class ShuffleDataSegmentPusherTest
   {
     final WorkerConfig workerConfig = new WorkerConfig();
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(newTempDir("shuffle"), null, null)))
+        .setShuffleDataLocations(
+            ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder("shuffle"), null, null))
+        )
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient();
     if (LOCAL.equals(intermediateDataStore)) {
       intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     } else if (DEEPSTORE.equals(intermediateDataStore)) {
-      localDeepStore = newTempDir("localStorage");
+      localDeepStore = temporaryFolder.newFolder("localStorage");
       intermediaryDataManager = new DeepStorageIntermediaryDataManager(
           new LocalDataSegmentPusher(
               new LocalDataSegmentPusherConfig()
@@ -150,7 +152,7 @@ public class ShuffleDataSegmentPusherTest
     Assertions.assertEquals(9, pushed.getBinaryVersion().intValue());
     Assertions.assertEquals(14, pushed.getSize()); // 10 bytes data + 4 bytes version
 
-    final File tempDir = newTempDir("unzipped");
+    final File tempDir = temporaryFolder.newFolder("unzipped");
     if (intermediaryDataManager instanceof LocalIntermediaryDataManager) {
       final Optional<ByteSource> zippedSegment = intermediaryDataManager.findPartitionFile(
           "supervisorTaskId",
@@ -192,15 +194,10 @@ public class ShuffleDataSegmentPusherTest
   private File generateSegmentDir() throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = newTempDir("segment");
+    final File segmentDir = temporaryFolder.newFolder("segment");
     Files.asByteSink(new File(segmentDir, "version.bin")).write(Ints.toByteArray(0x9));
     FileUtils.write(new File(segmentDir, "test"), "test data.", StandardCharsets.UTF_8);
     return segmentDir;
-  }
-
-  private File newTempDir(String name) throws IOException
-  {
-    return temporaryFolderExtension.newFolder(name);
   }
 
   private DataSegment newSegment(Interval interval)

@@ -63,7 +63,7 @@ public class IndexMergerNullHandlingTest
 
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @BeforeEach
   public void setUp()
@@ -114,7 +114,7 @@ public class IndexMergerNullHandlingTest
       }
 
       try (QueryableIndex index = indexIO.loadIndex(
-          indexMerger.persist(toPersist, temporaryFolderExtension.getRoot(), indexSpec, null)
+          indexMerger.persist(toPersist, temporaryFolder.getRoot(), indexSpec, null)
       )) {
         final ColumnHolder columnHolder = index.getColumnHolder("d");
 

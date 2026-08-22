@@ -70,8 +70,8 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "millis", null);
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File tempDir = temporaryFolderExtension.getRoot();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  final File tempDir = temporaryFolder.getRoot();
 
   private static ClusteredValueGroupsBaseTableProjectionSpec tenantClusterSpec()
   {

@@ -163,7 +163,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   private static final Logger log = new Logger(SeekableStreamIndexTaskTestBase.class);
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -560,7 +560,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
       throws IOException
   {
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
-    directory = temporaryFolderExtension.newFolder();
+    directory = temporaryFolder.newFolder();
     final TaskConfig taskConfig =
         new TaskConfigBuilder()
             .setBaseDir(new File(directory, "baseDir").getPath())

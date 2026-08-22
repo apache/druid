@@ -566,7 +566,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
     final File timeOrderedSegmentDir = buildTimeOrderedProjectionSegment(projectionName);
 
     final CountingRangeReader rangeReader = new CountingRangeReader(timeOrderedSegmentDir);
-    final File cacheDir = temporaryFolderExtension.newFolder("time_ordered_proj");
+    final File cacheDir = temporaryFolder.newFolder("time_ordered_proj");
     final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
         rangeReader,
         TestHelper.makeJsonMapper(),
@@ -1068,7 +1068,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
 
   private File buildNestedSegment() throws IOException
   {
-    final File tmpDir = temporaryFolderExtension.newFolder(
+    final File tmpDir = temporaryFolder.newFolder(
         "build_nested_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
     );
     final List<InputRow> rows = new ArrayList<>();
@@ -1121,7 +1121,7 @@ class PartialQueryableIndexCursorFactoryTest extends PartialQueryableIndexCursor
                                )
                                .build()
     );
-    final File tmpDir = temporaryFolderExtension.newFolder(
+    final File tmpDir = temporaryFolder.newFolder(
         "build_time_ordered_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
     );
     return IndexBuilder.create()

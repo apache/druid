@@ -51,7 +51,7 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testReadSegmentWithBuggyPaths() throws IOException
@@ -62,7 +62,7 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
     // prior to https://github.com/apache/druid/pull/19072 this would fail with an error like
     // org.apache.druid.error.DruidException: jq path [$[''].a] is invalid, path parts separated by '.' must not be empty
     // (which was also incorrect since it is a JSONPath not jq path)
-    File tmpLocation = temporaryFolderExtension.newFile("druid.segment");
+    File tmpLocation = temporaryFolder.newFile("druid.segment");
     Files.copy(
         NestedDataColumnSupplierEmptyFieldsBugTest.class.getClassLoader()
                                                         .getResourceAsStream("nested_segment_empty_fieldname_bug/druid.segment"),
@@ -71,7 +71,7 @@ public class NestedDataColumnSupplierEmptyFieldsBugTest
     );
     try (Closer closer = Closer.create()) {
       QueryableIndex theIndex = closer.register(
-          TestHelper.getTestIndexIO().loadIndex(temporaryFolderExtension.getRoot())
+          TestHelper.getTestIndexIO().loadIndex(temporaryFolder.getRoot())
       );
       ColumnHolder columnHolder = theIndex.getColumnHolder("obj");
       Assertions.assertNotNull(columnHolder);

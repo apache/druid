@@ -43,7 +43,7 @@ import java.util.List;
 public class LoggingEmitterTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private List<Object> serializedObjects;
   private ObjectMapper trackingMapper;
@@ -204,7 +204,7 @@ public class LoggingEmitterTest
 
   private File createAllowlistFile(String jsonContent) throws IOException
   {
-    final File file = temporaryFolderExtension.newFile("allowedMetrics.json");
+    final File file = temporaryFolder.newFile("allowedMetrics.json");
     try (Writer writer = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)) {
       writer.write(jsonContent);
     }

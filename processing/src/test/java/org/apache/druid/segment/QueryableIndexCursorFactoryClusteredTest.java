@@ -139,7 +139,7 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private QueryableIndex segmentIndex;
 
@@ -991,7 +991,7 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
                               .build();
     return IndexBuilder.create()
                        .useV10()
-                       .tmpDir(temporaryFolderExtension.getRoot())
+                       .tmpDir(temporaryFolder.getRoot())
                        .schema(schema)
                        .rows(rows)
                        .buildMMappedIndex(INTERVAL);
@@ -1010,7 +1010,7 @@ class QueryableIndexCursorFactoryClusteredTest extends InitializedNullHandlingTe
                               .build();
     return IndexBuilder.create()
                        .useV10()
-                       .tmpDir(temporaryFolderExtension.getRoot())
+                       .tmpDir(temporaryFolder.getRoot())
                        .schema(schema)
                        .rows(List.of(
                            row("Acme", "2025-01-01T00:00:00", "us-east-1"),

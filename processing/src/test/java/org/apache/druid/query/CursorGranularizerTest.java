@@ -58,7 +58,7 @@ import java.util.List;
 public class CursorGranularizerTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private CursorFactory cursorFactory;
   private TimeBoundaryInspector timeBoundaryInspector;
@@ -156,7 +156,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                             )
                         )
                     )
-                    .tmpDir(temporaryFolderExtension.getRoot());
+                    .tmpDir(temporaryFolder.getRoot());
 
     final QueryableIndex index = bob.buildMMappedIndex(Intervals.of("2024-01-01T00:00Z/2024-01-02T00:00Z"));
     interval = index.getDataInterval();

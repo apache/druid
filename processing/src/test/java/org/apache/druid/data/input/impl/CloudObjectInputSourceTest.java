@@ -55,7 +55,7 @@ import java.util.stream.Stream;
 public class CloudObjectInputSourceTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private static final String SCHEME = "s3";
 
@@ -339,7 +339,7 @@ public class CloudObjectInputSourceTest
     final List<InputFilePointer> pointers = inputSource.asFilePointers();
     Assertions.assertEquals(1, pointers.size());
 
-    final File dstFile = new File(temporaryFolderExtension.getRoot(), "fetched.csv");
+    final File dstFile = new File(temporaryFolder.getRoot(), "fetched.csv");
     pointers.get(0).populator().populate(dstFile);
 
     Assertions.assertArrayEquals(content, Files.readAllBytes(dstFile.toPath()));

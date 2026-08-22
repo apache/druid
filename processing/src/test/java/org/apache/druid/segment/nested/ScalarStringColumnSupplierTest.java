@@ -81,7 +81,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
   private static final String NO_MATCH = "no";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   BitmapSerdeFactory bitmapSerdeFactory = RoaringBitmapSerdeFactory.getInstance();
   DefaultBitmapResultFactory resultFactory = new DefaultBitmapResultFactory(bitmapSerdeFactory.getBitmapFactory());
@@ -111,7 +111,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
   public void setup() throws IOException
   {
     final String fileNameBase = "test";
-    fileMapper = smooshify(fileNameBase, temporaryFolderExtension.newFolder(), data);
+    fileMapper = smooshify(fileNameBase, temporaryFolder.newFolder(), data);
     baseBuffer = fileMapper.mapFile(fileNameBase);
   }
 
@@ -127,7 +127,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
       ScalarStringColumnSerializer serializer = new ScalarStringColumnSerializer(
           fileNameBase,
           NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.getDefault().getEffectiveSpec()),
-          writeOutMediumFactory.makeSegmentWriteOutMedium(temporaryFolderExtension.newFolder()),
+          writeOutMediumFactory.makeSegmentWriteOutMedium(temporaryFolder.newFolder()),
           closer
       );
 
@@ -149,7 +149,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      serializer.openDictionaryWriter(temporaryFolderExtension.newFolder());
+      serializer.openDictionaryWriter(temporaryFolder.newFolder());
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
           globalDictionarySortedCollector.getSortedLongs(),

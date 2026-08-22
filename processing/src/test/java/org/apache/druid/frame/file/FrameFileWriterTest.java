@@ -45,7 +45,7 @@ import java.nio.file.StandardOpenOption;
 public class FrameFileWriterTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void test_abort_afterAllFrames() throws IOException
@@ -55,7 +55,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
                                                        .frameType(FrameType.latestRowBased())
                                                        .frames();
 
-    final File file = temporaryFolderExtension.newFile();
+    final File file = temporaryFolder.newFile();
     final FrameFileWriter fileWriter = FrameFileWriter.open(
         Files.newByteChannel(
             file.toPath(),

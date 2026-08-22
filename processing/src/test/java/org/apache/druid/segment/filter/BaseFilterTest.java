@@ -449,7 +449,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
 
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private final List<InputRow> rows;
 
@@ -501,7 +501,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     CursorStuff cursorStuff = adaptersForClass.get(testName);
     if (cursorStuff == null) {
       Pair<CursorFactory, Closeable> pair = finisher.apply(
-          indexBuilder.tmpDir(temporaryFolderExtension.getRoot()).rows(rows)
+          indexBuilder.tmpDir(temporaryFolder.getRoot()).rows(rows)
       );
       cursorStuff = new CursorStuff(
           pair.lhs,

@@ -50,8 +50,8 @@ import java.util.concurrent.ThreadLocalRandom;
 class StorageLocationTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  final File tempDir = temporaryFolderExtension.getRoot();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
+  final File tempDir = temporaryFolder.getRoot();
 
   ExecutorService executorService;
 

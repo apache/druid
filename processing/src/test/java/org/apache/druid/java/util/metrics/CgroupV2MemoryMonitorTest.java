@@ -36,7 +36,7 @@ import java.util.List;
 public class CgroupV2MemoryMonitorTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -44,8 +44,8 @@ public class CgroupV2MemoryMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
-    procDir = temporaryFolderExtension.newFolder("procDir");
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
 

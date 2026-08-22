@@ -92,7 +92,7 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
   private static File segmentDir;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @BeforeAll
   static void buildSegment() throws IOException
@@ -125,7 +125,7 @@ class PartialQueryableIndexSegmentTest extends InitializedNullHandlingTest
 
   private PartialQueryableIndex openIndex(CountingRangeReader rangeReader, String cacheName) throws IOException
   {
-    final File cacheDir = temporaryFolderExtension.newFolder(cacheName);
+    final File cacheDir = temporaryFolder.newFolder(cacheName);
     final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
         rangeReader,
         TestHelper.makeJsonMapper(),

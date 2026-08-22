@@ -40,26 +40,26 @@ import java.util.List;
 public class SegmentUtilsTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testVersionBin() throws Exception
   {
-    FileUtils.writeByteArrayToFile(temporaryFolderExtension.newFile("version.bin"), Ints.toByteArray(9));
-    Assertions.assertEquals(9, SegmentUtils.getVersionFromDir(temporaryFolderExtension.getRoot()));
+    FileUtils.writeByteArrayToFile(temporaryFolder.newFile("version.bin"), Ints.toByteArray(9));
+    Assertions.assertEquals(9, SegmentUtils.getVersionFromDir(temporaryFolder.getRoot()));
   }
 
   @Test
   public void testIndexDrd() throws Exception
   {
-    FileUtils.writeByteArrayToFile(temporaryFolderExtension.newFile("index.drd"), new byte[]{(byte) 0x8});
-    Assertions.assertEquals(8, SegmentUtils.getVersionFromDir(temporaryFolderExtension.getRoot()));
+    FileUtils.writeByteArrayToFile(temporaryFolder.newFile("index.drd"), new byte[]{(byte) 0x8});
+    Assertions.assertEquals(8, SegmentUtils.getVersionFromDir(temporaryFolder.getRoot()));
   }
 
   @Test
   public void testException() throws Exception
   {
-    Assertions.assertThrows(IOException.class, () -> SegmentUtils.getVersionFromDir(temporaryFolderExtension.getRoot()));
+    Assertions.assertThrows(IOException.class, () -> SegmentUtils.getVersionFromDir(temporaryFolder.getRoot()));
   }
 
   @Test

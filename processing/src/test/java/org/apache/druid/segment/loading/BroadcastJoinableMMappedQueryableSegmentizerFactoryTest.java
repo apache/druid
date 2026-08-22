@@ -62,7 +62,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
       ImmutableSet.of("market", "longNumericNull", "doubleNumericNull", "floatNumericNull", "partial_null_column");
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testSegmentizer() throws IOException, SegmentLoadingException
@@ -88,7 +88,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
 
     List<String> columnNames = data.getColumnNames();
-    File segment = new File(temporaryFolderExtension.newFolder("seg"), "segment");
+    File segment = new File(temporaryFolder.newFolder("seg"), "segment");
     File persistedSegmentRoot = indexMerger.persist(
         data,
         testInterval,

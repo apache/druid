@@ -55,7 +55,7 @@ import static org.mockito.Mockito.when;
 public class AbstractTaskTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private ObjectMapper objectMapper;
 
@@ -67,14 +67,14 @@ public class AbstractTaskTest
 
   private File createTempReportFile() throws Exception
   {
-    final File reportsFile = temporaryFolderExtension.newFile("report.json");
+    final File reportsFile = temporaryFolder.newFile("report.json");
     FileUtils.write(reportsFile, "", StandardCharsets.UTF_8);
     return reportsFile;
   }
 
   private File createTempDir() throws Exception
   {
-    return temporaryFolderExtension.newFolder("task");
+    return temporaryFolder.newFolder("task");
   }
 
   @Test

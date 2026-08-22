@@ -49,7 +49,7 @@ import java.util.List;
 class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   void testMinMaxTimePersistedForTimeSortedSegment() throws Exception
@@ -180,7 +180,7 @@ class IndexMergerV10MinMaxTimeTest extends InitializedNullHandlingTest
     final long minTs = rows.stream().mapToLong(InputRow::getTimestampFromEpoch).min().orElseThrow();
     return IndexBuilder.create()
                        .useV10()
-                       .tmpDir(temporaryFolderExtension.getRoot())
+                       .tmpDir(temporaryFolder.getRoot())
                        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                        .schema(
                            IncrementalIndexSchema.builder()

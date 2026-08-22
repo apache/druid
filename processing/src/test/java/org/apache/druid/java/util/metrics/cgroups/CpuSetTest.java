@@ -33,15 +33,15 @@ import java.io.IOException;
 public class CpuSetTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private CgroupDiscoverer discoverer;
   private File cpusetDir;
 
   @BeforeEach
   public void setUp() throws IOException
   {
-    File cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
-    File procDir = temporaryFolderExtension.newFolder("procDir");
+    File cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    File procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     cpusetDir = new File(

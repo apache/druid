@@ -70,7 +70,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
   private static final String TIMESTAMP_STRING = "2019-01-01";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testRead() throws IOException
@@ -88,7 +88,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        temporaryFolderExtension.newFolder()
+        temporaryFolder.newFolder()
     );
 
     int read = 0;
@@ -122,7 +122,7 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
             ColumnsFilter.all()
         ),
         inputFormat,
-        temporaryFolderExtension.newFolder()
+        temporaryFolder.newFolder()
     );
 
     int read = 0;

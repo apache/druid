@@ -34,13 +34,13 @@ import java.nio.file.Paths;
 public class ProcFsReaderTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private File procDir;
 
   @BeforeEach
   public void setUp() throws IOException
   {
-    procDir = temporaryFolderExtension.newFolder("procDir");
+    procDir = temporaryFolder.newFolder("procDir");
     File kernelDir = new File(
         procDir,
         "sys/kernel/random"

@@ -58,7 +58,7 @@ public class ByteBufferUtilsTest
   );
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testAllocateDirect()
@@ -75,7 +75,7 @@ public class ByteBufferUtilsTest
   @Test
   public void testUnmapDoesntCrashJVM() throws Exception
   {
-    final File file = temporaryFolderExtension.newFile("some_mmap_file");
+    final File file = temporaryFolder.newFile("some_mmap_file");
     try (final OutputStream os = new BufferedOutputStream(new FileOutputStream(file))) {
       final byte[] data = new byte[4096];
       Arrays.fill(data, (byte) 0x5A);

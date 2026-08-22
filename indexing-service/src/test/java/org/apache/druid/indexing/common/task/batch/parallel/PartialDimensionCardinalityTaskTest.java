@@ -147,7 +147,7 @@ public class PartialDimensionCardinalityTaskTest
   public static class RunTaskTest
   {
     @RegisterExtension
-    private final TemporaryFolderExtension temporaryFolderExtension = new TemporaryFolderExtension();
+    private final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
     @RegisterExtension
     private final LoggerCaptureExtension logger = new LoggerCaptureExtension(ParseExceptionHandler.class);
 
@@ -162,7 +162,7 @@ public class PartialDimensionCardinalityTaskTest
       taskClient.report(EasyMock.capture(reportCapture));
       EasyMock.replay(taskClient);
       taskToolbox = EasyMock.mock(TaskToolbox.class);
-      EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolderExtension.getRoot());
+      EasyMock.expect(taskToolbox.getIndexingTmpDir()).andStubReturn(temporaryFolder.getRoot());
       EasyMock.expect(taskToolbox.getSupervisorTaskClientProvider())
               .andReturn((supervisorTaskId, httpTimeout, numRetries) -> taskClient);
       EasyMock.expect(taskToolbox.getOverlordClient()).andReturn(null);

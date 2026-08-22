@@ -34,7 +34,7 @@ import java.nio.file.Paths;
 public class CpuSetV2Test
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private File cgroupDir;
   private File procDir;
@@ -43,8 +43,8 @@ public class CpuSetV2Test
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolderExtension.newFolder("cgroup");
-    procDir = temporaryFolderExtension.newFolder("proc");
+    cgroupDir = temporaryFolder.newFolder("cgroup");
+    procDir = temporaryFolder.newFolder("proc");
     TestUtils.setUpCgroupsV2(procDir, cgroupDir);
     discoverer = new ProcCgroupV2Discoverer(procDir.toPath());
   }

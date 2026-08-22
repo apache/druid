@@ -62,7 +62,7 @@ class PartialSegmentFileMapperV10Test
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   void testMapFileThrowsUntilFetchedThenSlices() throws IOException
@@ -706,11 +706,11 @@ class PartialSegmentFileMapperV10Test
   void testProjectionStyleFileNames() throws IOException
   {
     // test with names like "projectionName/columnName" which is how V10 projections name their files
-    final File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("col-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("col-%s.bin", i));
         Files.write(Ints.toByteArray(i * 100), tmpFile);
         builder.add(StringUtils.format("myProjection/col_%d", i), tmpFile);
       }
@@ -733,17 +733,17 @@ class PartialSegmentFileMapperV10Test
   void testExternalFilesMatchEagerMapper() throws IOException
   {
     final String externalName = "external.segment";
-    final File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("main-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("main-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
       SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       for (int i = 5; i < 10; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("ext-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("ext-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         external.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -930,17 +930,17 @@ class PartialSegmentFileMapperV10Test
   void testCreateWithExternals() throws IOException
   {
     final String externalName = "external.segment";
-    final File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("main-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("main-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
       SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       for (int i = 5; i < 10; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("ext-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("ext-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         external.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -1137,7 +1137,7 @@ class PartialSegmentFileMapperV10Test
 
   private File newCacheDir(String name) throws IOException
   {
-    return temporaryFolderExtension.newFolder(name + "_" + ThreadLocalRandom.current().nextInt());
+    return temporaryFolder.newFolder(name + "_" + ThreadLocalRandom.current().nextInt());
   }
 
   /**
@@ -1147,13 +1147,13 @@ class PartialSegmentFileMapperV10Test
    */
   private File buildMultiBundleSegment(int numBundles, int filesPerBundle) throws IOException
   {
-    final File baseDir = temporaryFolderExtension.newFolder("multibundle_" + ThreadLocalRandom.current().nextInt());
+    final File baseDir = temporaryFolder.newFolder("multibundle_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int b = 0; b < numBundles; b++) {
         builder.startFileBundle("b" + b);
         for (int i = 0; i < filesPerBundle; i++) {
-          final File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("mb-%d-%d.bin", b, i));
+          final File tmpFile = temporaryFolder.newFile(StringUtils.format("mb-%d-%d.bin", b, i));
           Files.write(Ints.toByteArray(b * 100 + i), tmpFile);
           builder.add(StringUtils.format("b%d/col_%d", b, i), tmpFile);
         }
@@ -1165,11 +1165,11 @@ class PartialSegmentFileMapperV10Test
 
   private File buildTestSegment(int numFiles, CompressionStrategy compression) throws IOException
   {
-    final File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, compression)) {
       for (int i = 0; i < numFiles; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }

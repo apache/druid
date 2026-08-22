@@ -49,7 +49,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
   private final HashFunction fn = Hashing.murmur3_128();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testSanity() throws IOException
@@ -67,7 +67,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 
     for (int columnSize : columnSizes) {
       for (int aCase : cases) {
-        File tmpFile = temporaryFolderExtension.newFolder();
+        File tmpFile = temporaryFolder.newFolder();
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
         try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {

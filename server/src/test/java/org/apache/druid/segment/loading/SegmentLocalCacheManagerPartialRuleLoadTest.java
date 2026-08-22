@@ -132,7 +132,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private static File DEEP_STORAGE_DIR;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
@@ -191,7 +191,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    cacheRoot = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @AfterEach
@@ -837,10 +837,10 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   {
     // Setup: writable first (so info_dir defaults there), read-only second, dummy reservation on writable so
     // LeastBytesUsed picks the read-only location first. mkdirp on read-only fails → release + continue to writable.
-    final File writable = temporaryFolderExtension.newFolder(
+    final File writable = temporaryFolder.newFolder(
         "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
     );
-    final File readOnly = temporaryFolderExtension.newFolder(
+    final File readOnly = temporaryFolder.newFolder(
         "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
     );
     manager = makeManagerAtLocations(true, true, List.of(writable, readOnly));
@@ -1058,7 +1058,7 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private DataSegment partialWrapperSegmentWithNullRangeReader(List<String> selectedProjections, String fingerprint)
       throws IOException
   {
-    final File noRangeReaderDir = temporaryFolderExtension.newFolder(
+    final File noRangeReaderDir = temporaryFolder.newFolder(
         "no_range_reader_" + fingerprint.replace(':', '_').replace('.', '_')
     );
     final Map<String, Object> delegate = Map.of(

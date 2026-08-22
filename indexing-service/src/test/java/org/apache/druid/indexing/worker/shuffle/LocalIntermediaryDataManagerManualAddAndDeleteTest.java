@@ -54,7 +54,7 @@ import java.util.Optional;
 public class LocalIntermediaryDataManagerManualAddAndDeleteTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File intermediarySegmentsLocation;
@@ -64,8 +64,8 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
   public void setup() throws IOException
   {
     final WorkerConfig workerConfig = new WorkerConfig();
-    intermediarySegmentsLocation = newTempDir("intermediary");
-    siblingLocation = newTempDir("sibling");
+    intermediarySegmentsLocation = temporaryFolder.newFolder("intermediary");
+    siblingLocation = temporaryFolder.newFolder("sibling");
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 1200L, null)))
         .build();
@@ -246,15 +246,10 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
   private File generateSegmentDir(String fileName) throws IOException
   {
     // Each file size is 138 bytes after compression
-    final File segmentDir = newTempDir(fileName);
+    final File segmentDir = temporaryFolder.newFolder(fileName);
     FileUtils.write(new File(segmentDir, fileName), "test data.", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(segmentDir, "version.bin"), Ints.toByteArray(9));
     return segmentDir;
-  }
-
-  private File newTempDir(String name) throws IOException
-  {
-    return temporaryFolderExtension.newFolder(name);
   }
 
   private DataSegment newSegment(Interval interval, int bucketId)

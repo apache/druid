@@ -50,7 +50,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
   private FrameFile frameFile;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @BeforeEach
   public void setUp() throws IOException
@@ -61,7 +61,7 @@ public class ReadableFileFrameChannelTest extends InitializedNullHandlingTest
                             .frameType(FrameType.latestRowBased())
                             .maxRowsPerFrame(ROWS_PER_FRAME)
                             .frames(),
-        temporaryFolderExtension.newFile()
+        temporaryFolder.newFile()
     );
     allRows = FrameTestUtil.readRowsFromCursorFactory(cursorFactory).toList();
     frameReader = FrameReader.create(cursorFactory.getRowSignature());

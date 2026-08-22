@@ -33,12 +33,12 @@ public class LookupConfigTest
 
   ObjectMapper mapper = TestHelper.makeJsonMapper();
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testSerDesr() throws IOException
   {
-    LookupConfig lookupConfig = new LookupConfig(temporaryFolderExtension.newFile().getAbsolutePath());
+    LookupConfig lookupConfig = new LookupConfig(temporaryFolder.newFile().getAbsolutePath());
     Assertions.assertEquals(
         lookupConfig,
         mapper.readerFor(LookupConfig.class).readValue(mapper.writeValueAsString(lookupConfig))

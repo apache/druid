@@ -47,7 +47,7 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
   protected static final ColumnConfig COLUMN_CONFIG = ColumnConfig.DEFAULT;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   /**
    * Mount a fresh partial index over the (already built) segment via a {@link PartialSegmentFileMapperV10} backed by
@@ -69,7 +69,7 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
       long coalesceGapBytes
   ) throws IOException
   {
-    final File cacheDir = temporaryFolderExtension.newFolder(cacheName);
+    final File cacheDir = temporaryFolder.newFolder(cacheName);
     final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
         rangeReader,
         TestHelper.makeJsonMapper(),

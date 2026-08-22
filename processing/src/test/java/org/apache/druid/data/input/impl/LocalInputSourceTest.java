@@ -54,8 +54,7 @@ public class LocalInputSourceTest
 {
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testSerdeAbsoluteBaseDir() throws IOException
@@ -182,7 +181,7 @@ public class LocalInputSourceTest
   @Test
   public void testGetFileIteratorWithBothBaseDirAndDuplicateFilesIteratingFilesOnlyOnce() throws IOException
   {
-    File baseDir = temporaryFolder;
+    File baseDir = temporaryFolder.getRoot();
     List<File> filesInBaseDir = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
@@ -210,7 +209,7 @@ public class LocalInputSourceTest
   @Test
   public void testGetFileIteratorWithOnlyBaseDirIteratingAllFiles() throws IOException
   {
-    File baseDir = temporaryFolder;
+    File baseDir = temporaryFolder.getRoot();
     Set<File> filesInBaseDir = new HashSet<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);
@@ -227,7 +226,7 @@ public class LocalInputSourceTest
   @Test
   public void testGetFileIteratorWithOnlyFilesIteratingAllFiles() throws IOException
   {
-    File baseDir = temporaryFolder;
+    File baseDir = temporaryFolder.getRoot();
     List<File> filesInBaseDir = new ArrayList<>();
     for (int i = 0; i < 10; i++) {
       final File file = File.createTempFile("local-input-source", ".data", baseDir);

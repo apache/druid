@@ -133,7 +133,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   private static File CLUSTERED_DEEP_STORAGE_DIR;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
@@ -250,7 +250,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    cacheRoot = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
 
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
@@ -628,7 +628,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // bundle SIEVE-evicted under cache pressure mid-query cleared the mapper's downloaded-file set and the sync
     // makeCursorHolder then failed with "requires the segment to be fully downloaded". Uses a plain manager so we can
     // call acquireCachedSegment(FULL) directly (the shared fixture installs a tripwire that forbids it).
-    final File plainCacheRoot = temporaryFolderExtension.newFolder(
+    final File plainCacheRoot = temporaryFolder.newFolder(
         "plain_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
     );
     final StorageLocationConfig locConfig = new StorageLocationConfig(plainCacheRoot, 1024L * 1024L * 1024L, null);
@@ -858,7 +858,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // that holds no V10 file, so LocalLoadSpec.openRangeReader returns null. This is the "shouldn't happen" case — a
     // partial layout on disk means range reads worked when it was written — so partial-enabled bootstrap must reclaim
     // the layout rather than reserve an entry that could never lazily fetch.
-    final File noRangeReaderStorage = temporaryFolderExtension.newFolder("no_range_reader_storage");
+    final File noRangeReaderStorage = temporaryFolder.newFolder("no_range_reader_storage");
     final DataSegment unreadableSegment =
         DataSegment.builder(SEGMENT_ID)
                    .shardSpec(NoneShardSpec.instance())

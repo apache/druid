@@ -54,7 +54,7 @@ import java.util.Map;
 public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testRacMethodThrowsWithoutDeserializerForRacEntry() throws IOException
@@ -87,7 +87,7 @@ public class FrameFileWireTransferableTest extends InitializedNullHandlingTest
     final List<Frame> frameList = frames.toList();
 
     // Write frame file with useWireTransferableForFrames = true (RAC format)
-    final File file = temporaryFolderExtension.newFile();
+    final File file = temporaryFolder.newFile();
     try (final FrameFileWriter writer = FrameFileWriter.open(
         Channels.newChannel(Files.newOutputStream(file.toPath())),
         null,

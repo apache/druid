@@ -38,7 +38,7 @@ import java.util.Arrays;
 public class BytesCountingInputEntityTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private InputStats inputStats;
 
@@ -52,11 +52,11 @@ public class BytesCountingInputEntityTest
   public void testFetch() throws IOException
   {
     final int fileSize = 200;
-    final File sourceFile = temporaryFolderExtension.newFile("testWithFileEntity");
+    final File sourceFile = temporaryFolder.newFile("testWithFileEntity");
     writeBytesToFile(sourceFile, fileSize);
 
     final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceFile), inputStats);
-    inputEntity.fetch(temporaryFolderExtension.newFolder(), new byte[50]);
+    inputEntity.fetch(temporaryFolder.newFolder(), new byte[50]);
     Assertions.assertEquals(fileSize, inputStats.getProcessedBytes());
   }
 
@@ -64,7 +64,7 @@ public class BytesCountingInputEntityTest
   public void testFetchFromPartiallyReadFile() throws IOException
   {
     final int fileSize = 200;
-    final File sourceFile = temporaryFolderExtension.newFile("testWithFileEntity2");
+    final File sourceFile = temporaryFolder.newFile("testWithFileEntity2");
     writeBytesToFile(sourceFile, fileSize);
 
     final int bufferSize = 50;
@@ -76,14 +76,14 @@ public class BytesCountingInputEntityTest
     Assertions.assertEquals(bufferSize, inputStats.getProcessedBytes());
 
     // Read the whole file again
-    inputEntity.fetch(temporaryFolderExtension.newFolder(), intermediateBuffer);
+    inputEntity.fetch(temporaryFolder.newFolder(), intermediateBuffer);
     Assertions.assertEquals(fileSize + bufferSize, inputStats.getProcessedBytes());
   }
 
   @Test
   public void testFetchFromDirectory() throws IOException
   {
-    final File sourceDir = temporaryFolderExtension.newFolder("testWithDirectory");
+    final File sourceDir = temporaryFolder.newFolder("testWithDirectory");
 
     final int fileSize1 = 100;
     final File sourceFile1 = new File(sourceDir, "file1");
@@ -94,7 +94,7 @@ public class BytesCountingInputEntityTest
     writeBytesToFile(sourceFile2, fileSize2);
 
     final BytesCountingInputEntity inputEntity = new BytesCountingInputEntity(new FileEntity(sourceDir), inputStats);
-    inputEntity.fetch(temporaryFolderExtension.newFolder(), new byte[1000]);
+    inputEntity.fetch(temporaryFolder.newFolder(), new byte[1000]);
     Assertions.assertEquals(fileSize1 + fileSize2, inputStats.getProcessedBytes());
   }
 

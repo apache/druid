@@ -105,7 +105,7 @@ public class SeekableStreamIndexTaskRunnerTest
   private static final String DATA_SOURCE = "datasource";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Mock
   private InputRow row;
@@ -764,7 +764,7 @@ public class SeekableStreamIndexTaskRunnerTest
   private File createTaskWorkDirectory()
   {
     try {
-      final File taskWorkDir = temporaryFolderExtension.newFolder();
+      final File taskWorkDir = temporaryFolder.newFolder();
       FileUtils.mkdirp(new File(taskWorkDir, "persist"));
       return taskWorkDir;
     }

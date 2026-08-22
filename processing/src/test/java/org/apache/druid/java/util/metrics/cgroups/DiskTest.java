@@ -34,7 +34,7 @@ import java.util.Map;
 public class DiskTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -42,8 +42,8 @@ public class DiskTest
   @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
-    procDir = temporaryFolderExtension.newFolder("procDir");
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File blkioDir = new File(

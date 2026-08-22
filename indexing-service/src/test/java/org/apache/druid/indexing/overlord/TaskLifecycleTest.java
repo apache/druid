@@ -203,7 +203,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<>()
   {
@@ -229,11 +229,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   );
 
   private final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-
-  private File newTempFolder() throws IOException
-  {
-    return temporaryFolderExtension.newFolder();
-  }
 
   private final String taskStorageType;
 
@@ -556,7 +551,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         )
     );
     taskConfig = new TaskConfigBuilder()
-        .setBaseDir(newTempFolder().toString())
+        .setBaseDir(temporaryFolder.newFolder().toString())
         .setTmpStorageBytesPerTask(-1L)
         .build();
 
@@ -770,7 +765,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Test
   public void testKillUnusedSegmentsTask() throws Exception
   {
-    final File tmpSegmentDir = newTempFolder();
+    final File tmpSegmentDir = temporaryFolder.newFolder();
 
     List<DataSegment> expectedUnusedSegments = Lists.transform(
         ImmutableList.of(
@@ -868,7 +863,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Test
   public void testKillUnusedSegmentsTaskWithMaxSegmentsToKill() throws Exception
   {
-    final File tmpSegmentDir = newTempFolder();
+    final File tmpSegmentDir = temporaryFolder.newFolder();
 
     List<DataSegment> expectedUnusedSegments = Lists.transform(
         ImmutableList.of(

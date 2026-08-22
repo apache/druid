@@ -52,7 +52,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = temporaryFolderExtension.newFolder("data");
+    inputDir = temporaryFolder.newFolder("data");
     // set up data
     for (int i = 0; i < 5; i++) {
       try (final Writer writer =

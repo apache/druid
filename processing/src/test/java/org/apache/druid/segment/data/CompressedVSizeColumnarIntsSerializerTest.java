@@ -76,7 +76,7 @@ public class CompressedVSizeColumnarIntsSerializerTest
   private final AtomicInteger dirCounter = new AtomicInteger(0);
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   public static Stream<Object[]> constructorFeeder()
   {
@@ -351,6 +351,6 @@ public class CompressedVSizeColumnarIntsSerializerTest
 
   private File newSubDir() throws IOException
   {
-    return temporaryFolderExtension.newFolder("dir" + dirCounter.getAndIncrement());
+    return temporaryFolder.newFolder("dir" + dirCounter.getAndIncrement());
   }
 }

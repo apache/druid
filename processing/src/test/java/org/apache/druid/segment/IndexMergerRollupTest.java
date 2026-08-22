@@ -57,7 +57,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   private IndexSpec indexSpec;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @BeforeEach
   public void setUp()
@@ -91,7 +91,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
             ))
     );
 
-    final File tempDir = temporaryFolderExtension.newFolder("rollup");
+    final File tempDir = temporaryFolder.newFolder("rollup");
 
     List<QueryableIndex> indexes = new ArrayList<>();
     Instant time = Instant.now();

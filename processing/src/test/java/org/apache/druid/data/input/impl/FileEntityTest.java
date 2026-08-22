@@ -40,7 +40,7 @@ public class FileEntityTest
   private static final String CONTENT = "the quick brown fox\n";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void test_openRaw_returnsRawBytesWithoutDecompressing() throws IOException
@@ -99,7 +99,7 @@ public class FileEntityTest
 
   private File writeFile(final String name, final String content) throws IOException
   {
-    final File file = temporaryFolderExtension.newFile(name);
+    final File file = temporaryFolder.newFile(name);
     Files.write(file.toPath(), StringUtils.toUtf8(content));
     return file;
   }
@@ -107,14 +107,14 @@ public class FileEntityTest
   private File gzipFile(final String name, final String content) throws IOException
   {
     final File source = writeFile("source-for-" + name, content);
-    final File gzFile = temporaryFolderExtension.newFile(name);
+    final File gzFile = temporaryFolder.newFile(name);
     CompressionUtils.gzip(source, gzFile);
     return gzFile;
   }
 
   private File makeDir(final String name) throws IOException
   {
-    return temporaryFolderExtension.newFolder(name);
+    return temporaryFolder.newFolder(name);
   }
 
   private static byte[] fetchBuffer()

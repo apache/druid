@@ -122,7 +122,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   Closer closer;
   ColumnCache theCache;
@@ -134,7 +134,7 @@ public class QueryableIndexVectorColumnSelectorFactoryTest extends InitializedNu
   {
     closer = Closer.create();
     index = IndexBuilder.create(TestHelper.makeJsonMapper())
-                        .tmpDir(temporaryFolderExtension.getRoot())
+                        .tmpDir(temporaryFolder.getRoot())
                         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
                         .schema(
                             new IncrementalIndexSchema.Builder()

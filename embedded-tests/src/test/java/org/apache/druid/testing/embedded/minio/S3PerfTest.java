@@ -84,8 +84,10 @@ public class S3PerfTest
 
   abstract static class PerfTestBase extends EmbeddedClusterTestBase
   {
+    //CHECKSTYLE.OFF: ConstantName
     @RegisterExtension
-    static final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.classScoped();
+    static final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.classScoped();
+    //CHECKSTYLE.ON: ConstantName
 
     private final List<File> tempFiles = new ArrayList<>();
 
@@ -115,7 +117,7 @@ public class S3PerfTest
     @BeforeAll
     void generateInputFiles() throws IOException
     {
-      final Path tempDir = temporaryFolderExtension.getRoot().toPath();
+      final Path tempDir = temporaryFolder.getRoot().toPath();
       final DateTime baseDay = DateTimes.of("2025-01-01");
       for (int i = 0; i < TASK_COUNT; i++) {
         final File f = generateLargeCsvFile(tempDir, baseDay.plusDays(i), ROWS_PER_TASK);

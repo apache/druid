@@ -33,7 +33,7 @@ import java.nio.file.Paths;
 public class ProcCgroupDiscovererTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;
@@ -41,8 +41,8 @@ public class ProcCgroupDiscovererTest
   @BeforeEach
   public void setUp() throws Exception
   {
-    cgroupDir = temporaryFolderExtension.newFolder("cgroup");
-    procDir = temporaryFolderExtension.newFolder("proc");
+    cgroupDir = temporaryFolder.newFolder("cgroup");
+    procDir = temporaryFolder.newFolder("proc");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
   }
@@ -89,8 +89,8 @@ public class ProcCgroupDiscovererTest
   @Test
   public void testFallBack() throws Exception
   {
-    File cgroupDir = temporaryFolderExtension.newFolder("fallbackCgroup");
-    File procDir = temporaryFolderExtension.newFolder("fallbackProc");
+    File cgroupDir = temporaryFolder.newFolder("fallbackCgroup");
+    File procDir = temporaryFolder.newFolder("fallbackProc");
     TestUtils.setUpCgroups(procDir, cgroupDir);
 
     // Swap out the cgroup path with a default path

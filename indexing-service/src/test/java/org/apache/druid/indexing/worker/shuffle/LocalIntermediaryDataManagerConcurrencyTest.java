@@ -71,7 +71,7 @@ public class LocalIntermediaryDataManagerConcurrencyTest
   private static final String SUPERVISOR_TASK_ID = "supervisorTaskId";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private LocalIntermediaryDataManager intermediaryDataManager;
   private File sharedSegmentDir;
@@ -82,7 +82,9 @@ public class LocalIntermediaryDataManagerConcurrencyTest
     final WorkerConfig workerConfig = new WorkerConfig();
     final ImmutableList.Builder<StorageLocationConfig> locations = ImmutableList.builder();
     for (int i = 0; i < LOCATION_COUNT; i++) {
-      locations.add(new StorageLocationConfig(newTempDir("loc_" + i), LOCATION_CAPACITY_BYTES, null));
+      locations.add(
+          new StorageLocationConfig(temporaryFolder.newFolder("loc_" + i), LOCATION_CAPACITY_BYTES, null)
+      );
     }
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(locations.build())
@@ -91,7 +93,7 @@ public class LocalIntermediaryDataManagerConcurrencyTest
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);
     intermediaryDataManager.start();
     // Pre-built shared input dir keeps per-call work small so the race window dominates wall time.
-    sharedSegmentDir = newTempDir("shared_input");
+    sharedSegmentDir = temporaryFolder.newFolder("shared_input");
     FileUtils.write(new File(sharedSegmentDir, "data.txt"), "x", StandardCharsets.UTF_8);
     FileUtils.writeByteArrayToFile(new File(sharedSegmentDir, "version.bin"), Ints.toByteArray(9));
   }
@@ -133,11 +135,6 @@ public class LocalIntermediaryDataManagerConcurrencyTest
     }
     executor.shutdown();
     Assertions.assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
-  }
-
-  private File newTempDir(String name) throws IOException
-  {
-    return temporaryFolderExtension.newFolder(name);
   }
 
   private DataSegment newSegment(Interval interval, int bucketId)

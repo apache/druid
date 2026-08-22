@@ -51,7 +51,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class StorageLocationVirtualStorageManagerTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private StorageLocation location;
   private StorageLocationVirtualStorageManager manager;
@@ -59,7 +59,7 @@ public class StorageLocationVirtualStorageManagerTest
   @BeforeEach
   public void setup() throws IOException
   {
-    File locationPath = temporaryFolderExtension.newFolder("storage");
+    File locationPath = temporaryFolder.newFolder("storage");
     location = new StorageLocation(locationPath, 10_000_000L, null);
     manager = new StorageLocationVirtualStorageManager(
         Collections.singletonList(location),

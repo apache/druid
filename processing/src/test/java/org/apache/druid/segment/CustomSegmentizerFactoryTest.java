@@ -51,7 +51,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   private static IndexMerger INDEX_MERGER;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @BeforeAll
   public static void setup()
@@ -78,7 +78,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   public void testDefaultSegmentizerPersist() throws IOException
   {
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
-    File segment = new File(temporaryFolderExtension.newFolder("seg"), "segment");
+    File segment = new File(temporaryFolder.newFolder("seg"), "segment");
     File persisted = INDEX_MERGER.persist(
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),
@@ -97,7 +97,7 @@ public class CustomSegmentizerFactoryTest extends InitializedNullHandlingTest
   public void testCustomSegmentizerPersist() throws IOException
   {
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
-    File segment = new File(temporaryFolderExtension.newFolder("seg"), "segment");
+    File segment = new File(temporaryFolder.newFolder("seg"), "segment");
     File persisted = INDEX_MERGER.persist(
         data,
         Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z"),

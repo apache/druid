@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 public class CgroupCpuMonitorTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private File procDir;
   private File cgroupDir;
   private File statFile;
@@ -52,8 +52,8 @@ public class CgroupCpuMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
-    procDir = temporaryFolderExtension.newFolder("procDir");
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File cpuDir = new File(
@@ -119,8 +119,8 @@ public class CgroupCpuMonitorTest
   public void testCgroupsV2Detection() throws IOException, URISyntaxException
   {
     // Set up cgroups v2 structure
-    File cgroupV2Dir = temporaryFolderExtension.newFolder("cgroupV2Dir");
-    File procV2Dir = temporaryFolderExtension.newFolder("procV2Dir");
+    File cgroupV2Dir = temporaryFolder.newFolder("cgroupV2Dir");
+    File procV2Dir = temporaryFolder.newFolder("procV2Dir");
     TestUtils.setUpCgroupsV2(procV2Dir, cgroupV2Dir);
 
 

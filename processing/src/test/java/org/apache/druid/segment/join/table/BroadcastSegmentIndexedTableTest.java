@@ -83,8 +83,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   private static final String DATASOURCE = "DATASOURCE";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
-  public final File temporaryFolder = temporaryFolderExtension.getRoot();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private QueryableIndexSegment backingSegment;
   private BroadcastSegmentIndexedTable broadcastTable;
   private List<String> columnNames;
@@ -116,7 +115,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
     Interval testInterval = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
     IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
-    File segment = new File(temporaryFolder, "segment");
+    File segment = new File(temporaryFolder.getRoot(), "segment");
     File persisted = indexMerger.persist(
         data,
         testInterval,

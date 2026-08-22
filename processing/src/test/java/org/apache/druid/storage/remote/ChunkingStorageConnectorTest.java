@@ -37,14 +37,14 @@ public class ChunkingStorageConnectorTest
 {
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private StorageConnector storageConnector;
 
   @BeforeEach
   public void setup() throws IOException
   {
-    storageConnector = new TestStorageConnector(temporaryFolderExtension.newFolder("storage"));
+    storageConnector = new TestStorageConnector(temporaryFolder.newFolder("storage"));
   }
 
   @Test

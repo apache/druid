@@ -43,16 +43,16 @@ class SegmentFileMapperV10Test
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   void testWriteRead() throws IOException
   {
-    File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -72,11 +72,11 @@ class SegmentFileMapperV10Test
   @Test
   void testWriteReadCompressed() throws IOException
   {
-    File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, CompressionStrategy.ZSTD)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -97,17 +97,17 @@ class SegmentFileMapperV10Test
   void testWriteReadWithExternal() throws IOException
   {
     String externalName = "external.segment";
-    File baseDir = temporaryFolderExtension.newFolder("base_" + ThreadLocalRandom.current().nextInt());
+    File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 20; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
       SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       for (int i = 20; i < 40; ++i) {
-        File tmpFile = temporaryFolderExtension.newFile(StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         external.add(StringUtils.format("%d", i), tmpFile);
       }

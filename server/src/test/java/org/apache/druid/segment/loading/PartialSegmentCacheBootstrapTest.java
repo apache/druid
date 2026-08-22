@@ -100,7 +100,7 @@ class PartialSegmentCacheBootstrapTest
   private static File deepStorageDir;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private File cacheDir;
 
@@ -137,7 +137,7 @@ class PartialSegmentCacheBootstrapTest
   @BeforeEach
   void setupPerTest() throws IOException
   {
-    cacheDir = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    cacheDir = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @Test
@@ -422,7 +422,7 @@ class PartialSegmentCacheBootstrapTest
     Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(cacheDir, IndexIO.V10_FILE_NAME));
     Assertions.assertFalse(PartialSegmentCacheBootstrap.isPartialSegmentLayout(null, IndexIO.V10_FILE_NAME));
     Assertions.assertFalse(PartialSegmentCacheBootstrap.isPartialSegmentLayout(
-        new File(temporaryFolderExtension.getRoot(), "nonexistent"),
+        new File(temporaryFolder.getRoot(), "nonexistent"),
         IndexIO.V10_FILE_NAME
     ));
   }

@@ -109,7 +109,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   private static File deepStorageDir;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private File cacheDir;
   private File infoDir;
@@ -150,7 +150,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   @BeforeEach
   void setup() throws IOException
   {
-    cacheDir = temporaryFolderExtension.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
+    cacheDir = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
     // SegmentLocalCacheManager defaults the info dir to <firstLocation>/info_dir when not configured.
     infoDir = new File(cacheDir, "info_dir");
     FileUtils.mkdirp(infoDir);

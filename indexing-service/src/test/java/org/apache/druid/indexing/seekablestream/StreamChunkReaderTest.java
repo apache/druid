@@ -66,7 +66,7 @@ import java.util.Map;
 public class StreamChunkReaderTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   private final RowIngestionMeters rowIngestionMeters = new SimpleRowIngestionMeters();
   private final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
@@ -102,7 +102,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        temporaryFolderExtension.newFolder(),
+        temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -140,7 +140,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        temporaryFolderExtension.newFolder(),
+        temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -162,7 +162,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         TransformSpec.NONE,
-        temporaryFolderExtension.newFolder(),
+        temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -194,7 +194,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         transformSpec,
-        temporaryFolderExtension.newFolder(),
+        temporaryFolder.newFolder(),
         InputRowFilter.allowAll(),
         rowIngestionMeters,
         parseExceptionHandler
@@ -253,7 +253,7 @@ public class StreamChunkReaderTest
         inputFormat,
         new InputRowSchema(TimestampSpec.DEFAULT, DimensionsSpec.EMPTY, ColumnsFilter.all()),
         transformSpec,
-        temporaryFolderExtension.newFolder(),
+        temporaryFolder.newFolder(),
         rowFilter,
         rowIngestionMeters,
         parseExceptionHandler

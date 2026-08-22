@@ -58,7 +58,7 @@ public class RetryingInputStreamTest
 {
   private static final int MAX_RETRY = 5;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private File testFile;
 
   private int readBytesBeforeExceptions = 0;
@@ -85,7 +85,7 @@ public class RetryingInputStreamTest
   @BeforeEach
   public void setup() throws IOException
   {
-    testFile = temporaryFolderExtension.newFile();
+    testFile = temporaryFolder.newFile();
 
     try (FileOutputStream fis = new FileOutputStream(testFile);
          GZIPOutputStream gis = new GZIPOutputStream(fis);

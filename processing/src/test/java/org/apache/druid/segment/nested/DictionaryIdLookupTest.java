@@ -41,7 +41,7 @@ import java.nio.ByteOrder;
 public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   @Test
   public void testIdLookup() throws IOException
@@ -64,7 +64,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 
     // setup dictionary writers
     SegmentWriteOutMedium medium = TmpFileSegmentWriteOutMediumFactory.instance()
-                                                                      .makeSegmentWriteOutMedium(temporaryFolderExtension.newFolder("medium"));
+                                                                      .makeSegmentWriteOutMedium(temporaryFolder.newFolder("medium"));
     DictionaryWriter<String> stringWriter = StringEncodingStrategies.getStringDictionaryWriter(
         new StringEncodingStrategy.FrontCoded(4, (byte) 1),
         medium,
@@ -90,7 +90,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
         4
     );
 
-    File dictTempDir = temporaryFolderExtension.newFolder("dict");
+    File dictTempDir = temporaryFolder.newFolder("dict");
 
     // make lookup with references to writers
     DictionaryIdLookup idLookup = new DictionaryIdLookup(

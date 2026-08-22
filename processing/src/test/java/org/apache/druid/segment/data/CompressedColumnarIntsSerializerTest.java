@@ -75,7 +75,7 @@ public class CompressedColumnarIntsSerializerTest
   private final Random rand = new Random(0);
   private int[] vals;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
 
   public static Stream<Object[]> constructorFeeder()
   {
@@ -151,14 +151,14 @@ public class CompressedColumnarIntsSerializerTest
   @Test
   public void testLargeColumn() throws IOException
   {
-    final File columnDir = temporaryFolderExtension.newFolder("columnDir");
+    final File columnDir = temporaryFolder.newFolder("columnDir");
     final String columnName = "column";
     final long numRows = 500_000; // enough values that we expect to switch into large-column mode
 
     try (
         SegmentWriteOutMedium segmentWriteOutMedium =
             TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(
-                temporaryFolderExtension.newFolder("medium1")
+                temporaryFolder.newFolder("medium1")
             );
         FileSmoosher smoosher = new FileSmoosher(columnDir)
     ) {
@@ -215,7 +215,7 @@ public class CompressedColumnarIntsSerializerTest
           try (
               SegmentWriteOutMedium segmentWriteOutMedium =
                   TmpFileSegmentWriteOutMediumFactory.instance()
-                                                     .makeSegmentWriteOutMedium(temporaryFolderExtension.newFolder("medium2"))
+                                                     .makeSegmentWriteOutMedium(temporaryFolder.newFolder("medium2"))
           ) {
             CompressedColumnarIntsSerializer serializer = new CompressedColumnarIntsSerializer(
                 "test",
@@ -248,7 +248,7 @@ public class CompressedColumnarIntsSerializerTest
 
   private void checkSerializedSizeAndData(int chunkFactor) throws Exception
   {
-    final File smoosherDir = temporaryFolderExtension.newFolder(
+    final File smoosherDir = temporaryFolder.newFolder(
         StringUtils.replace("smoosher_" + compressionStrategy + "_" + byteOrder.toString(), " ", "")
     );
     FileSmoosher smoosher = new FileSmoosher(smoosherDir);

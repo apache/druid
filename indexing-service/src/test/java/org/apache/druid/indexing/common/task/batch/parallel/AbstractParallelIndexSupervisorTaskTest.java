@@ -212,7 +212,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   @BeforeEach
   public void setUpAbstractParallelIndexSupervisorTaskTest(TestInfo testInfo) throws IOException
   {
-    localDeepStorage = temporaryFolderExtension.newFolder("localStorage");
+    localDeepStorage = temporaryFolder.newFolder("localStorage");
     taskRunner = new SimpleThreadingTaskRunner(testInfo.getTestMethod().orElseThrow().getName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
@@ -220,7 +220,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .setShuffleDataLocations(
             ImmutableList.of(
                 new StorageLocationConfig(
-                    temporaryFolderExtension.newFolder("shuffle"),
+                    temporaryFolder.newFolder("shuffle"),
                     null,
                     null
                 )
@@ -675,10 +675,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .dataSegmentKiller(new NoopDataSegmentKiller())
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .segmentCacheManager(
-            newSegmentLoader(temporaryFolderExtension.newFolder("segmentCache"))
+            newSegmentLoader(temporaryFolder.newFolder("segmentCache"))
         )
         .jsonMapper(objectMapper)
-        .taskWorkDir(temporaryFolderExtension.newFolder(task.getId()))
+        .taskWorkDir(temporaryFolder.newFolder(task.getId()))
         .indexIO(getIndexIO())
         .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)

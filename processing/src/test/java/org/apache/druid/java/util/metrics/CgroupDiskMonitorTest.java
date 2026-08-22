@@ -35,7 +35,7 @@ import java.io.IOException;
 public class CgroupDiskMonitorTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolderExtension = TemporaryFolderExtension.perTest();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.perTest();
   private File procDir;
   private File cgroupDir;
   private File servicedFile;
@@ -45,8 +45,8 @@ public class CgroupDiskMonitorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    cgroupDir = temporaryFolderExtension.newFolder("cgroupDir");
-    procDir = temporaryFolderExtension.newFolder("procDir");
+    cgroupDir = temporaryFolder.newFolder("cgroupDir");
+    procDir = temporaryFolder.newFolder("procDir");
     discoverer = new ProcCgroupDiscoverer(procDir.toPath());
     TestUtils.setUpCgroups(procDir, cgroupDir);
     final File blkioDir = new File(
