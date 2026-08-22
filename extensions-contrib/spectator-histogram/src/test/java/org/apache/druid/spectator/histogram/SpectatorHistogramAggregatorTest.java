@@ -32,7 +32,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Druids;
@@ -74,17 +73,17 @@ import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -105,8 +104,8 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   private static final DelimitedInputFormat INPUT_FORMAT = DelimitedInputFormat.forColumns(
       List.of("timestamp", "product", "cost")
   );
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private static final SegmentMetadataQueryRunnerFactory METADATA_QR_FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
@@ -143,10 +142,10 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
     SpectatorHistogramModule.registerSerde();
     SpectatorHistogramModule module = new SpectatorHistogramModule();
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        module.getJacksonModules(), config, tempFolder);
+        module.getJacksonModules(), config, tempFolder.getRoot());
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         module.getJacksonModules(),
-        tempFolder
+        tempFolder.getRoot()
     );
   }
 
@@ -467,7 +466,7 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   @Test
   public void testMetadataQueryTimer() throws Exception
   {
-    File segmentDir = newFolder(tempFolder, "junit");
+    File segmentDir = tempFolder.newFolder();
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -513,7 +512,7 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
   @Test
   public void testMetadataQueryDistribution() throws Exception
   {
-    File segmentDir = newFolder(tempFolder, "junit");
+    File segmentDir = tempFolder.newFolder();
     helper.createIndex(
         new File(this.getClass().getClassLoader().getResource("input_data.tsv").getFile()),
         INPUT_ROW_SCHEMA,
@@ -839,14 +838,6 @@ public class SpectatorHistogramAggregatorTest extends InitializedNullHandlingTes
         "Expected histogram metric of type SpectatorHistogramUtils.HistogramMap"
     );
     Assertions.assertEquals(EXPECTED_HISTOGRAMS.get(product), histogram, "Count values didn't match");
-  }
-
-  private static File newFolder(File root, String... subDirs) throws IOException
-  {
-    final String subFolder = String.join("/", subDirs);
-    final File result = new File(root, subFolder);
-    FileUtils.mkdirp(result);
-    return result;
   }
 
 }

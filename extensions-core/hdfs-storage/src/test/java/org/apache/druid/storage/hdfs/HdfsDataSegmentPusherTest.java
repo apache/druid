@@ -33,9 +33,9 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import org.apache.druid.jackson.GranularityModule;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -48,7 +48,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -74,8 +74,8 @@ public class HdfsDataSegmentPusherTest
     objectMapper.setInjectableValues(injectableValues);
   }
 
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private HdfsDataSegmentPusher hdfsDataSegmentPusher;
 
@@ -124,7 +124,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -132,7 +132,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
@@ -165,7 +165,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -173,7 +173,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(StringUtils.format("file://%s", storageDirectory.getAbsolutePath()));
     HdfsDataSegmentPusher pusher = new HdfsDataSegmentPusher(config, conf);
@@ -205,7 +205,7 @@ public class HdfsDataSegmentPusherTest
     DataSegment[] segments = new DataSegment[numberOfSegments];
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -213,7 +213,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setCompressionFormat(format);
     config.setStorageDirectory(
@@ -299,7 +299,7 @@ public class HdfsDataSegmentPusherTest
     Configuration conf = new Configuration(true);
 
     // Create a mock segment on disk
-    File segmentDir = newFolder(tempFolder);
+    File segmentDir = tempFolder.newFolder();
     File tmp = new File(segmentDir, "version.bin");
 
     final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
@@ -307,7 +307,7 @@ public class HdfsDataSegmentPusherTest
     final long size = data.length;
 
     HdfsDataSegmentPusherConfig config = new HdfsDataSegmentPusherConfig();
-    final File storageDirectory = newFolder(tempFolder);
+    final File storageDirectory = tempFolder.newFolder();
 
     config.setStorageDirectory(
         scheme != null
@@ -430,8 +430,4 @@ public class HdfsDataSegmentPusherTest
 
   }
 
-  private static File newFolder(File root)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), "junit");
-  }
 }
