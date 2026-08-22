@@ -74,7 +74,7 @@ public class NestedDataTopNQueryTest extends InitializedNullHandlingTest
   )
   {
     BuiltInTypesModule.registerHandlersAndSerde();
-    this.helper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTemporaryFolderExtension(
+    this.helper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
         BuiltInTypesModule.getJacksonModulesList(),
         tempFolder
     );

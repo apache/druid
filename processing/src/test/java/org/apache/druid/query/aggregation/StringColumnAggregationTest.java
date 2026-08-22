@@ -97,7 +97,7 @@ public class StringColumnAggregationTest
       ));
     }
 
-    aggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+    aggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         new GroupByQueryConfig(),
         tempFolder
@@ -239,7 +239,7 @@ public class StringColumnAggregationTest
                                   )
                                   .build();
 
-    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         Collections.emptyList(),
         tempFolder
     )

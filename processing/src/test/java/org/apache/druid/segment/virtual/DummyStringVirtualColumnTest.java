@@ -83,12 +83,12 @@ public class DummyStringVirtualColumnTest extends InitializedNullHandlingTest
     inMemorySegments = Lists.newArrayList(incrementalIndexSegment, incrementalIndexSegment);
     mixedSegments = Lists.newArrayList(incrementalIndexSegment, queryableIndexSegment);
 
-    topNTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelperWithTemporaryFolderExtension(
+    topNTestHelper = AggregationTestHelper.createTopNQueryAggregationTestHelper(
         Collections.emptyList(),
         temporaryFolder
     );
 
-    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         new GroupByQueryConfig(),
         temporaryFolder

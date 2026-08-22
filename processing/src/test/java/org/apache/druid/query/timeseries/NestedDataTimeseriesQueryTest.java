@@ -99,7 +99,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
       String vectorize
   )
   {
-    this.helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+    this.helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         BuiltInTypesModule.getJacksonModulesList(),
         tempFolder
     );

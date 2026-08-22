@@ -60,13 +60,12 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -108,9 +107,8 @@ class ClusteredSegmentTimeOrderedQueryTest extends InitializedNullHandlingTest
       row(T0 + 2 * MINUTE, "acme", 4)
   );
 
-  @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
-  final File tempDir = temporaryFolder.getRoot();
+  @TempDir
+  File tempDir;
 
   private Segment clusteredSegment;
   private Segment nonClusteredSegment;

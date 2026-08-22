@@ -208,7 +208,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
   public void testIngestAndQueryWithArithmeticPostAggregator() throws Exception
   {
     try (
-        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             Collections.singletonList(new AggregatorsModule()),
             GroupByQueryRunnerTest.testConfigs().get(0),
             tempFoler

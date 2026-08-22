@@ -74,7 +74,7 @@ public class HyperUniquesAggregationTest
   public void testIngestAndQuery() throws Exception
   {
     try (
-        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             Collections.singletonList(new AggregatorsModule()),
             config,
             tempFolder
@@ -124,7 +124,7 @@ public class HyperUniquesAggregationTest
   public void testIngestAndQueryPrecomputedHll() throws Exception
   {
     try (
-        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             Collections.singletonList(new AggregatorsModule()),
             config,
             tempFolder

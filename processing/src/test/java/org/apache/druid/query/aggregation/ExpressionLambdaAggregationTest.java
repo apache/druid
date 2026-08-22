@@ -184,7 +184,7 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
                                         .build();
 
     try (final AggregationTestHelper helper =
-             AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+             AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
                  Collections.emptyList(),
                  tempFolder
              )) {

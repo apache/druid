@@ -96,12 +96,12 @@ public class VectorizedVirtualColumnTest
   @BeforeEach
   public void setup()
   {
-    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+    groupByTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         new GroupByQueryConfig(),
         tmpFolder
     );
-    timeseriesTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+    timeseriesTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         Collections.emptyList(),
         tmpFolder
     );

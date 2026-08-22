@@ -44,11 +44,10 @@ import org.apache.druid.segment.projections.ClusteredValueGroupsBaseTableSchema;
 import org.apache.druid.segment.projections.TableClusterGroupSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.ClusterGroupTuples;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -69,9 +68,8 @@ class IndexMergerV10ClusteredTest extends InitializedNullHandlingTest
   private static final long T0 = DateTimes.of("2026-01-01T00:00:00").getMillis();
   private static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("ts", "millis", null);
 
-  @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
-  final File tempDir = temporaryFolder.getRoot();
+  @TempDir
+  File tempDir;
 
   private static ClusteredValueGroupsBaseTableProjectionSpec tenantClusterSpec()
   {

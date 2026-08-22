@@ -81,13 +81,13 @@ public class DoubleMeanAggregationTest
   public DoubleMeanAggregationTest()
   {
 
-    groupByQueryTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+    groupByQueryTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         new GroupByQueryConfig(),
         tempFolder
     );
 
-    timeseriesQueryTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+    timeseriesQueryTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         Collections.emptyList(),
         tempFolder
     );

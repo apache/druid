@@ -125,7 +125,7 @@ public class MultiValuedDimensionTest extends InitializedNullHandlingTest
 
   public MultiValuedDimensionTest(final GroupByQueryConfig config, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, boolean forceHashAggregation)
   {
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         ImmutableList.of(),
         config,
         null
