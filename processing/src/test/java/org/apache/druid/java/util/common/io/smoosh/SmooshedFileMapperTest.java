@@ -27,7 +27,6 @@ import org.apache.druid.java.util.common.BufferUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.file.SegmentFileChannel;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -90,7 +89,7 @@ public class SmooshedFileMapperTest
     File baseDir = new File(folder, "base");
     baseDir.mkdir();
     try (FileSmoosher smoosher = new FileSmoosher(baseDir, 5)) {
-      MatcherAssert.assertThat(
+      DruidExceptionMatcher.assertThat(
           Assertions.assertThrows(
               DruidException.class,
               () -> smoosher.addWithChannel("foo", 10)

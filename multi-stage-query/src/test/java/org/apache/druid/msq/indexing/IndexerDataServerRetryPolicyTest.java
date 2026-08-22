@@ -20,8 +20,8 @@
 package org.apache.druid.msq.indexing;
 
 import org.apache.druid.java.util.common.RetryUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -32,9 +32,9 @@ public class IndexerDataServerRetryPolicyTest
   {
     final IndexerDataServerRetryPolicy policy = IndexerDataServerRetryPolicy.standard();
 
-    Assert.assertEquals(5, policy.maxAttempts());
-    Assert.assertEquals(RetryUtils.BASE_SLEEP_MILLIS, policy.minWaitMillis());
-    Assert.assertEquals(RetryUtils.MAX_SLEEP_MILLIS, policy.maxWaitMillis());
+    Assertions.assertEquals(5, policy.maxAttempts());
+    Assertions.assertEquals(RetryUtils.BASE_SLEEP_MILLIS, policy.minWaitMillis());
+    Assertions.assertEquals(RetryUtils.MAX_SLEEP_MILLIS, policy.maxWaitMillis());
   }
 
   @Test
@@ -42,9 +42,9 @@ public class IndexerDataServerRetryPolicyTest
   {
     final IndexerDataServerRetryPolicy policy = IndexerDataServerRetryPolicy.noRetries();
 
-    Assert.assertEquals(1, policy.maxAttempts());
-    Assert.assertEquals(0, policy.minWaitMillis());
-    Assert.assertEquals(0, policy.maxWaitMillis());
+    Assertions.assertEquals(1, policy.maxAttempts());
+    Assertions.assertEquals(0, policy.minWaitMillis());
+    Assertions.assertEquals(0, policy.maxWaitMillis());
   }
 
   @Test
@@ -52,8 +52,8 @@ public class IndexerDataServerRetryPolicyTest
   {
     final IndexerDataServerRetryPolicy policy = IndexerDataServerRetryPolicy.standard();
 
-    Assert.assertTrue(policy.retryThrowable(new IOException("test")));
-    Assert.assertTrue(policy.retryThrowable(new RuntimeException("test")));
+    Assertions.assertTrue(policy.retryThrowable(new IOException("test")));
+    Assertions.assertTrue(policy.retryThrowable(new RuntimeException("test")));
   }
 
   @Test
@@ -62,7 +62,7 @@ public class IndexerDataServerRetryPolicyTest
     final IndexerDataServerRetryPolicy policy = IndexerDataServerRetryPolicy.standard();
 
     // Chains including InterruptedException should not be retried
-    Assert.assertFalse(policy.retryThrowable(new InterruptedException()));
-    Assert.assertFalse(policy.retryThrowable(new RuntimeException(new InterruptedException())));
+    Assertions.assertFalse(policy.retryThrowable(new InterruptedException()));
+    Assertions.assertFalse(policy.retryThrowable(new RuntimeException(new InterruptedException())));
   }
 }

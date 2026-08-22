@@ -29,9 +29,11 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
@@ -117,10 +119,10 @@ public class TestDerbyConnector extends DerbyConnector
     catch (UnableToObtainConnectionException e) {
       SQLException cause = (SQLException) e.getCause();
       // error code "08006" indicates proper shutdown
-      Assert.assertEquals(
-          StringUtils.format("Derby not shutdown: [%s]", cause.toString()),
+      Assertions.assertEquals(
           "08006",
-          cause.getSQLState()
+          cause.getSQLState(),
+          StringUtils.format("Derby not shutdown: [%s]", cause.toString())
       );
     }
   }
@@ -140,7 +142,7 @@ public class TestDerbyConnector extends DerbyConnector
     this.getDBI().open().close();
   }
 
-  public static class DerbyConnectorRule extends ExternalResource
+  public static class DerbyConnectorRule extends ExternalResource implements BeforeEachCallback, AfterEachCallback
   {
     private TestDerbyConnector connector;
     private final MetadataStorageTablesConfig tablesConfig;
@@ -227,6 +229,18 @@ public class TestDerbyConnector extends DerbyConnector
     public PendingSegmentsTable pendingSegments()
     {
       return new PendingSegmentsTable(this);
+    }
+
+    @Override
+    public void beforeEach(ExtensionContext context)
+    {
+      before();
+    }
+
+    @Override
+    public void afterEach(ExtensionContext context)
+    {
+      after();
     }
   }
 
@@ -342,6 +356,18 @@ public class TestDerbyConnector extends DerbyConnector
 
   public static class DerbyConnectorRule5 extends DerbyConnectorRule implements BeforeAllCallback, AfterAllCallback
   {
+
+    @Override
+    public void beforeEach(ExtensionContext context)
+    {
+      // Managed once per class by beforeAll.
+    }
+
+    @Override
+    public void afterEach(ExtensionContext context)
+    {
+      // Managed once per class by afterAll.
+    }
 
     @Override
     public void beforeAll(ExtensionContext context)

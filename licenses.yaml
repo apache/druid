@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.51.3
+version: 2.53.1
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -309,7 +309,7 @@ name: AWS CRT
 license_category: binary
 module: extensions-core/s3-extensions
 license_name: Apache License version 2.0
-version: 0.48.2
+version: 0.48.4
 libraries:
   - software.amazon.awssdk.crt: aws-crt
 notice: |
@@ -322,7 +322,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -375,7 +375,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -461,6 +461,26 @@ libraries:
 
 ---
 
+name: Guava
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 33.6.0-jre
+libraries:
+  - com.google.guava: guava
+
+---
+
+name: Failureaccess
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.0.3
+libraries:
+  - com.google.guava: failureaccess
+
+---
+
 name: j2objc
 license_category: binary
 module: core
@@ -527,7 +547,7 @@ name: LZF Compressor
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.2.0
+version: 1.2.1
 libraries:
   - com.ning: compress-lzf
 notices:
@@ -708,7 +728,7 @@ name: IPAddress
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.3.4
+version: 5.6.2
 libraries:
   - com.github.seancfoley: ipaddress
 
@@ -762,13 +782,16 @@ name: Apache Commons DBCP
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.11.0
+version: 2.14.0
 libraries:
   - org.apache.commons: commons-dbcp2
 notices:
   - commons-dbcp2: |
       Apache Commons DBCP
-      Copyright 2001-2014 The Apache Software Foundation
+      Copyright 2001-2025 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
@@ -823,6 +846,23 @@ notices:
       Doug Lea with assistance from members of JCP JSR-166 Expert Group and released
       to the public domain, as explained at
       http://creativecommons.org/licenses/publicdomain
+
+---
+
+name: Apache Commons Pool
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 2.13.0
+libraries:
+  - org.apache.commons: commons-pool2
+notices:
+  - commons-pool2: |
+      Apache Commons Pool
+      Copyright 2001-2025 The Apache Software Foundation
+
+      This product includes software developed at
+      The Apache Software Foundation (https://www.apache.org/).
 
 ---
 
@@ -1022,7 +1062,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1212,7 +1252,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1224,7 +1264,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1312,10 +1352,19 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: MIT License
-version: "1.84"
+version: "1.85.2"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
+
+---
+
+name: org.bouncycastle bcpkix-jdk18on and bcutil-jdk18on
+license_category: binary
+module: extensions-core/kubernetes-extensions
+license_name: MIT License
+version: "1.84"
+libraries:
   - org.bouncycastle: bcpkix-jdk18on
   - org.bouncycastle: bcutil-jdk18on
 ---
@@ -1505,7 +1554,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.16.Final
+version: 4.2.17.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -1794,7 +1843,7 @@ name: Bean Validation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.0.2
+version: 3.1.1
 libraries:
   - jakarta.validation: jakarta.validation-api
 
@@ -1804,7 +1853,7 @@ name: Joda-Time
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.14.0
+version: 2.14.3
 libraries:
   - joda-time: joda-time
 notices:
@@ -1840,6 +1889,8 @@ license_name: Apache License version 2.0
 version: 5.19.1
 libraries:
   - net.java.dev.jna: jna
+  - net.java.dev.jna: jna-jpms
+  - net.java.dev.jna: jna-platform-jpms
 
 ---
 
@@ -1857,7 +1908,7 @@ name: aws-elasticache-cluster-client-memcached-for-java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.2.0
+version: 1.2.4
 libraries:
   - com.amazonaws: elasticache-java-cluster-client
 
@@ -1867,7 +1918,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 0.0.10
+version: 1.6.2
 libraries:
   - net.thisptr: jackson-jq
 
@@ -2060,13 +2111,13 @@ name: Apache HttpClient 5
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 5.6.2
+version: 5.6.4
 libraries:
   - org.apache.httpcomponents.client5: httpclient5
 notices:
   - httpclient5: |
       Apache HttpClient
-      Copyright 1999-2021 The Apache Software Foundation
+      Copyright 1999-2025 The Apache Software Foundation
 
 ---
 
@@ -2537,7 +2588,7 @@ name: SIGAR
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.5.132
+version: 1.6.5.132-6
 libraries:
   - org.hyperic: sigar
 notices:
@@ -2666,9 +2717,10 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 6.9.1
+version: 7.4.4
 libraries:
   - com.github.oshi: oshi-core
+  - com.github.oshi: oshi-common
 license_file_path: licenses/bin/oshi.MIT
 
 ---
@@ -2744,7 +2796,7 @@ name: RoaringBitmap
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.18
+version: 1.6.20
 libraries:
   - org.roaringbitmap: RoaringBitmap
   - org.roaringbitmap: shims
@@ -3030,7 +3082,7 @@ name: Apache Directory
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.0.3
+version: 2.1.8
 libraries:
   - org.apache.directory.api: api-util
 notices:
@@ -3131,7 +3183,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3141,7 +3193,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions-core/protobuf-extensions
 license_name: Apache License version 2.0
@@ -3154,7 +3206,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -3185,7 +3237,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -3214,7 +3266,7 @@ notice: |
 
 name: Kinesis Client
 license_category: binary
-version: 2.6.0
+version: 3.5.1
 module: extensions/druid-kinesis-indexing-service
 license_name: Apache License version 2.0
 libraries:
@@ -3460,7 +3512,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 1.12.1
+version: 1.12.2
 libraries:
   - org.apache.avro: avro
 notices:
@@ -3581,7 +3633,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 4.3.0
+version: 4.3.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3710,7 +3762,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.50
+version: 1.0.64
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3722,7 +3774,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.1.34
+version: 2.2.7
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
@@ -4007,15 +4059,13 @@ libraries:
 
 ---
 
-name: Expression Language 3.0 API
+name: Jakarta Expression Language API
 license_category: binary
 module: java-core
-license_name: CDDL 1.1
-version: 3.0.0
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
+license_name: Eclipse Public License 2.0
+version: 6.0.1
 libraries:
-  - javax.el: javax.el-api
+  - jakarta.el: jakarta.el-api
 
 ---
 
@@ -4391,13 +4441,13 @@ name: Hive storage API
 license_category: binary
 module: extensions/druid-orc-extensions
 license_name: Apache License version 2.0
-version: 2.8.1
+version: 4.2.0
 libraries:
   - org.apache.hive: hive-storage-api
 notices:
   - hive-storage-api: |
       Hive Storage API
-      Copyright 2018 The Apache Software Foundation
+      Copyright 2008-2025 The Apache Software Foundation
 
 ---
 
@@ -4657,7 +4707,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 4.3.0
+version: 4.3.1
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -4700,7 +4750,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.29.0
+version: 12.35.0
 libraries:
   - com.azure: azure-storage-blob
 
@@ -4711,7 +4761,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.14.2
+version: 1.18.4
 libraries:
   - com.azure: azure-identity
 
@@ -4722,7 +4772,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.25.0
+version: 12.31.0
 libraries:
   - com.azure: azure-storage-blob-batch
 
@@ -4733,7 +4783,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.28.0
+version: 12.34.0
 libraries:
   - com.azure: azure-storage-common
 
@@ -4744,7 +4794,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 12.14.0
+version: 12.20.0
 libraries:
   - com.azure: azure-storage-internal-avro
 
@@ -4755,7 +4805,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.3.0
+version: 1.5.1
 libraries:
   - com.azure: azure-json
 
@@ -4766,7 +4816,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.1.0
+version: 1.2.1
 libraries:
   - com.azure: azure-xml
 
@@ -4776,7 +4826,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.15.7
+version: 1.16.5
 libraries:
   - com.azure: azure-core-http-netty
 
@@ -4787,7 +4837,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.54.1
+version: 1.58.1
 libraries:
   - com.azure: azure-core
 
@@ -4798,7 +4848,7 @@ license_category: binary
 module: extensions/druid-azure-extensions
 license_name: MIT License
 copyright: Microsoft
-version: 1.17.2
+version: 1.23.1
 libraries:
   - com.microsoft.azure: msal4j
 
@@ -4815,41 +4865,11 @@ libraries:
 
 ---
 
-name: NimbusDS Content Type
-license_category: binary
-module: extensions/druid-azure-extensions
-license_name: Apache License version 2.0
-version: 2.3
-libraries:
-  - com.nimbusds: content-type
-
----
-
-name: NimbusDS Jose
-license_category: binary
-module: extensions/druid-azure-extensions
-license_name: Apache License version 2.0
-version: '9.40'
-libraries:
-  - com.nimbusds: nimbus-jose-jwt
-
----
-
-name: NimbusDS Oauth
-license_category: binary
-module: extensions/druid-azure-extensions
-license_name: Apache License version 2.0
-version: 11.18
-libraries:
-  - com.nimbusds: oauth2-oidc-sdk
-
----
-
 name: Reactor Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 1.0.48
+version: 1.2.18
 libraries:
   - io.projectreactor.netty: reactor-netty-core
   - io.projectreactor.netty: reactor-netty-http
@@ -4860,7 +4880,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.4.41
+version: 3.7.19
 libraries:
   - io.projectreactor: reactor-core
 ---
@@ -4878,7 +4898,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.78.Final
+version: 2.0.81.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -5161,7 +5181,7 @@ libraries:
 
 name: com.amazonaws aws-java-sdk-logs
 license_category: binary
-version: 1.12.638
+version: 1.12.797
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5171,7 +5191,7 @@ libraries:
 
 name: com.amazonaws jmespath-java
 license_category: binary
-version: 1.12.638
+version: 1.12.797
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5211,7 +5231,7 @@ libraries:
 
 name: net.java.dev.jna jna-platform
 license_category: binary
-version: 5.18.1
+version: 5.19.1
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5450,7 +5470,7 @@ name: RE2/J
 license_category: binary
 module: java-core
 license_name: The Go license
-version: 1.7
+version: 1.8
 license_file_path: licenses/bin/re2j.GO
 libraries:
   - com.google.re2j: re2j
@@ -5529,14 +5549,14 @@ libraries:
 
 ---
 
-name: jakarta.el
+name: Expressly
 license_category: binary
 module: core
 license_name: Eclipse Public License 2.0
-version: 3.0.4
+version: 6.0.0
 license_file_path: licenses/bin/jakarta.el.EPL2
 libraries:
-  - org.glassfish: jakarta.el
+  - org.glassfish.expressly: expressly
 
 ---
 
@@ -7270,7 +7290,7 @@ name: Apache Commons Configuration
 license_category: binary
 module: extensions-core/druid-kerberos
 license_name: Apache License version 2.0
-version: 2.15.0
+version: 2.15.1
 libraries:
   - org.apache.commons: commons-configuration2
 
@@ -7395,7 +7415,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

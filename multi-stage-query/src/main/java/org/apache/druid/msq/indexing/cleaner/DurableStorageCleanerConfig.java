@@ -20,10 +20,9 @@
 package org.apache.druid.msq.indexing.cleaner;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-
-import javax.validation.constraints.Min;
 
 public class DurableStorageCleanerConfig
 {

@@ -29,12 +29,8 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.LookupSegment;
 import org.apache.druid.query.lookup.LookupSegmentTest;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,9 +38,6 @@ import java.util.Set;
 
 public class LookupSegmentWranglerTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final LookupSegmentWrangler factory = new LookupSegmentWrangler(
       new LookupExtractorFactoryContainerProvider()
       {
@@ -80,13 +73,15 @@ public class LookupSegmentWranglerTest
   @Test
   public void test_getSegmentsForIntervals_nonLookup()
   {
-    expectedException.expect(ClassCastException.class);
-    expectedException.expectMessage("TableDataSource cannot be cast");
-
-    final Iterable<Segment> ignored = factory.getSegmentsForIntervals(
-        new TableDataSource("foo"),
-        Intervals.ONLY_ETERNITY
+    final ClassCastException exception = Assertions.assertThrows(
+        ClassCastException.class,
+        () -> factory.getSegmentsForIntervals(
+            new TableDataSource("foo"),
+            Intervals.ONLY_ETERNITY
+        )
     );
+    Assertions.assertNotNull(exception.getMessage());
+    Assertions.assertTrue(exception.getMessage().contains("TableDataSource cannot be cast"));
   }
 
   @Test
@@ -99,8 +94,8 @@ public class LookupSegmentWranglerTest
         )
     );
 
-    Assert.assertEquals(1, segments.size());
-    MatcherAssert.assertThat(Iterables.getOnlyElement(segments), CoreMatchers.instanceOf(LookupSegment.class));
+    Assertions.assertEquals(1, segments.size());
+    Assertions.assertInstanceOf(LookupSegment.class, Iterables.getOnlyElement(segments));
   }
 
   @Test
@@ -113,6 +108,6 @@ public class LookupSegmentWranglerTest
         )
     );
 
-    Assert.assertEquals(0, segments.size());
+    Assertions.assertEquals(0, segments.size());
   }
 }

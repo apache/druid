@@ -56,16 +56,16 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager.DataSourceState;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NumberedOverwriteShardSpec;
 import org.apache.druid.timeline.partition.PartitionIds;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -96,10 +96,10 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   private SegmentLocalCacheManager virtualCacheManager;
   private SegmentManager virtualSegmentManager;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
@@ -158,7 +158,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     executor = Execs.multiThreaded(SEGMENTS.size(), "SegmentManagerTest-%d");
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     executor.shutdownNow();
@@ -219,7 +219,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
       segmentManager.loadSegment(eachSegment);
       ReferenceCountedSegmentProvider refProvider = cacheManager.getSegmentReferenceProvider(eachSegment);
       referenceProviders.add(refProvider);
-      Assert.assertFalse(refProvider.isClosed());
+      Assertions.assertFalse(refProvider.isClosed());
     }
 
     final List<Future<Void>> futures = ImmutableList.of(SEGMENTS.get(0), SEGMENTS.get(2)).stream()
@@ -241,11 +241,11 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
         ImmutableList.of(SEGMENTS.get(1), SEGMENTS.get(3), SEGMENTS.get(4))
     );
     for (int i = 0; i < SEGMENTS.size(); i++) {
-      Assert.assertEquals(0, referenceProviders.get(i).getNumReferences());
+      Assertions.assertEquals(0, referenceProviders.get(i).getNumReferences());
       if (i == 0 || i == 2) {
-        Assert.assertTrue(referenceProviders.get(i).isClosed());
+        Assertions.assertTrue(referenceProviders.get(i).isClosed());
       } else {
-        Assert.assertFalse(referenceProviders.get(i).isClosed());
+        Assertions.assertFalse(referenceProviders.get(i).isClosed());
       }
     }
   }
@@ -368,15 +368,15 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   {
     segmentManager.loadSegment(SEGMENTS.get(0));
     assertResult(ImmutableList.of(SEGMENTS.get(0)));
-    Assert.assertEquals(1, segmentManager.getDataSources().size());
+    Assertions.assertEquals(1, segmentManager.getDataSources().size());
     segmentManager.dropSegment(SEGMENTS.get(0));
-    Assert.assertEquals(0, segmentManager.getDataSources().size());
+    Assertions.assertEquals(0, segmentManager.getDataSources().size());
   }
 
   @Test
   public void testGetNonExistingTimeline()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Optional.empty(),
         segmentManager.getTimeline((new TableDataSource("nonExisting")))
     );
@@ -427,22 +427,22 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     );
 
     // expect 2 cached segments
-    Assert.assertEquals(2, bundle.getCachedSegments().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(2, bundle.getCachedSegments().size());
+    Assertions.assertEquals(
         d1.getDescriptor(),
         bundle.getCachedSegments().get(0).getSegmentDescriptor()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         d2.getDescriptor(),
         bundle.getCachedSegments().get(1).getSegmentDescriptor()
     );
     // no loadable segments since vsf is not enabled
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(),
         bundle.getLoadableSegments()
     );
     // 2 missing segments since cannot load d3 on demand and it was not loaded into the cache
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(d3.getDescriptor(), d4.getDescriptor()),
         bundle.getMissingSegments()
     );
@@ -462,9 +462,9 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
 
     final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad, AcquireMode.FULL);
     AcquireSegmentResult result = action.getSegmentFuture().get();
-    Assert.assertNotNull(result);
-    Assert.assertEquals(1L, result.getLoadSizeBytes());
-    Assert.assertTrue(result.getLoadTimeNanos() > 0);
+    Assertions.assertNotNull(result);
+    Assertions.assertEquals(1L, result.getLoadSizeBytes());
+    Assertions.assertTrue(result.getLoadTimeNanos() > 0);
 
     DataSegmentAndDescriptor d1 = new DataSegmentAndDescriptor(SEGMENTS.get(0), SEGMENTS.get(0).toDescriptor());
     DataSegmentAndDescriptor d2 = new DataSegmentAndDescriptor(toLoad, toLoad.toDescriptor());
@@ -477,18 +477,18 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     );
 
     // expect 1 cached segment since we called acquireSegment
-    Assert.assertEquals(1, bundle.getCachedSegments().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, bundle.getCachedSegments().size());
+    Assertions.assertEquals(
         d2.getDescriptor(),
         bundle.getCachedSegments().get(0).getSegmentDescriptor()
     );
     // 2 loadable segments (in theory, would explode if we tried since they dont have real files)
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(d1, d3),
         bundle.getLoadableSegments()
     );
     // 1 missing segment
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(d4.getDescriptor()),
         bundle.getMissingSegments()
     );
@@ -519,21 +519,21 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
       );
     }
 
-    Assert.assertEquals(expectedDataSourceNames, segmentManager.getDataSourceNames());
-    Assert.assertEquals(expectedDataSourceCounts, segmentManager.getDataSourceCounts());
-    Assert.assertEquals(expectedDataSourceSizes, segmentManager.getDataSourceSizes());
+    Assertions.assertEquals(expectedDataSourceNames, segmentManager.getDataSourceNames());
+    Assertions.assertEquals(expectedDataSourceCounts, segmentManager.getDataSourceCounts());
+    Assertions.assertEquals(expectedDataSourceSizes, segmentManager.getDataSourceSizes());
 
     final Map<String, DataSourceState> dataSources = segmentManager.getDataSources();
-    Assert.assertEquals(expectedTimelines.size(), dataSources.size());
+    Assertions.assertEquals(expectedTimelines.size(), dataSources.size());
 
     dataSources.forEach(
         (sourceName, dataSourceState) -> {
-          Assert.assertEquals(expectedDataSourceCounts.get(sourceName).longValue(), dataSourceState.getNumSegments());
-          Assert.assertEquals(
+          Assertions.assertEquals(expectedDataSourceCounts.get(sourceName).longValue(), dataSourceState.getNumSegments());
+          Assertions.assertEquals(
               expectedDataSourceSizes.get(sourceName).longValue(),
               dataSourceState.getTotalSegmentSize()
           );
-          Assert.assertEquals(
+          Assertions.assertEquals(
               expectedTimelines.get(sourceName).getAllTimelineEntries(),
               dataSourceState.getTimeline().getAllTimelineEntries()
           );

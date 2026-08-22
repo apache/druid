@@ -52,6 +52,10 @@ spec:
               value: "NONE"
             - name: "LOAD_BROADCAST_SEGMENTS"
               value: "false"
+            - name: "DRUID_POD_TEMPLATE"
+              valueFrom:
+                fieldRef:
+                  fieldPath: "metadata.annotations['task.jobTemplate']"
             - name: "TASK_JSON"
               valueFrom:
                 fieldRef:

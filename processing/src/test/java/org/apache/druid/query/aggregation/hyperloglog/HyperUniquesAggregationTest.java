@@ -33,12 +33,12 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -46,11 +46,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class HyperUniquesAggregationTest
 {
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
 
   private final GroupByQueryConfig config;
 
@@ -59,7 +61,6 @@ public class HyperUniquesAggregationTest
     this.config = config;
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -73,7 +74,7 @@ public class HyperUniquesAggregationTest
   public void testIngestAndQuery() throws Exception
   {
     try (
-        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
             Collections.singletonList(new AggregatorsModule()),
             config,
             tempFolder
@@ -114,8 +115,8 @@ public class HyperUniquesAggregationTest
       );
 
       final ResultRow resultRow = seq.toList().get(0);
-      Assert.assertEquals("index_hll", 3.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
-      Assert.assertEquals("index_unique_count", 3.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
+      Assertions.assertEquals(3.0, ((Number) resultRow.get(0)).floatValue(), 0.1, "index_hll");
+      Assertions.assertEquals(3.0, ((Number) resultRow.get(1)).floatValue(), 0.1, "index_unique_count");
     }
   }
 
@@ -123,7 +124,7 @@ public class HyperUniquesAggregationTest
   public void testIngestAndQueryPrecomputedHll() throws Exception
   {
     try (
-        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
             Collections.singletonList(new AggregatorsModule()),
             config,
             tempFolder
@@ -164,8 +165,8 @@ public class HyperUniquesAggregationTest
       );
 
       final ResultRow resultRow = seq.toList().get(0);
-      Assert.assertEquals("index_hll", 4.0, ((Number) resultRow.get(0)).floatValue(), 0.1);
-      Assert.assertEquals("index_unique_count", 4.0, ((Number) resultRow.get(1)).floatValue(), 0.1);
+      Assertions.assertEquals(4.0, ((Number) resultRow.get(0)).floatValue(), 0.1, "index_hll");
+      Assertions.assertEquals(4.0, ((Number) resultRow.get(1)).floatValue(), 0.1, "index_unique_count");
     }
   }
 }

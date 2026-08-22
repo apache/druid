@@ -34,12 +34,12 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -49,10 +49,10 @@ public class DruidJsonValidatorTest
   private File inputFile;
   private final Injector injector = GuiceInjectors.makeStartupInjector();
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     inputFile = temporaryFolder.newFile();
@@ -65,22 +65,28 @@ public class DruidJsonValidatorTest
                        .build();
 
     Object command = parser.parse(args);
-    Assert.assertTrue(command instanceof Runnable);
+    Assertions.assertTrue(command instanceof Runnable);
 
     injector.injectMembers(command);
     return (Runnable) command;
   }
 
-  @Test(expected = UnsupportedOperationException.class)
+  @Test
   public void testExceptionCase()
   {
-    parseCommand("validator", "-f", inputFile.getAbsolutePath(), "-t", "").run();
+    Assertions.assertThrows(
+        UnsupportedOperationException.class,
+        () -> parseCommand("validator", "-f", inputFile.getAbsolutePath(), "-t", "").run()
+    );
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testExceptionCaseNoFile()
   {
-    parseCommand("validator", "-f", "", "-t", "query").run();
+    Assertions.assertThrows(
+        RuntimeException.class,
+        () -> parseCommand("validator", "-f", "", "-t", "query").run()
+    );
   }
 
   @Test
@@ -140,8 +146,8 @@ public class DruidJsonValidatorTest
     parseCommand("validator", "-f", tmp.getAbsolutePath(), "-t", "task").run();
   }
 
-  @After
-  public void tearDown()
+  @AfterEach
+  public void tearDown() throws IOException
   {
     temporaryFolder.delete();
   }
