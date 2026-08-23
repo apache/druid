@@ -35,6 +35,8 @@ public class DruidK8sConstants
   public static final String DEFAULT_JAVA_HEAP_SIZE = "1G";
   public static final String TLS_ENABLED = "tls.enabled";
   public static final String TASK_JSON_ENV = "TASK_JSON";
+  public static final String POD_TEMPLATE_ENV = "DRUID_POD_TEMPLATE";
+  public static final String POD_TEMPLATE_DIMENSION = "podTemplate";
   public static final String TASK_DIR_ENV = "TASK_DIR";
   public static final String TASK_ID_ENV = "TASK_ID";
   public static final String LOAD_BROADCAST_DATASOURCE_MODE_ENV = "LOAD_BROADCAST_DATASOURCE_MODE";

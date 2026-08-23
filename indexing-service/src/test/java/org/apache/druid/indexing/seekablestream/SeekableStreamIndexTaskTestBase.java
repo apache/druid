@@ -86,6 +86,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
@@ -592,6 +593,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
             derbyConnector,
             new TestDruidLeaderSelector(),
             NoopSegmentMetadataCache.instance(),
+            new SegmentsMetadataManagerConfig(null, null, null),
             NoopServiceEmitter.instance()
         ),
         objectMapper,

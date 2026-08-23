@@ -41,14 +41,14 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.Collections;
 import java.util.List;
@@ -65,13 +65,13 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
   private static final String DOUBLE_FIELD = "doubleField";
   private static final DateTime TIMESTAMP = DateTimes.of("2020-01-01");
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
 
   private QueryableIndex mergedIndex;
   private Segment segment;
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (segment != null) {
@@ -184,7 +184,10 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
                                         .build();
 
     try (final AggregationTestHelper helper =
-             AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(Collections.emptyList(), tempFolder)) {
+             AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+                 Collections.emptyList(),
+                 tempFolder
+             )) {
 
       final Sequence<Result<TimeseriesResultValue>> seq = helper.runQueryOnSegmentsObjs(
           ImmutableList.of(segment),
@@ -193,10 +196,10 @@ public class ExpressionLambdaAggregationTest extends InitializedNullHandlingTest
       final TimeseriesResultValue result = Iterables.getOnlyElement(seq.toList()).getValue();
 
       // Three input rows rolled up into one, count reflects rollup happened
-      Assert.assertEquals(3L, result.getLongMetric("count").longValue());
-      Assert.assertEquals(7L, result.getLongMetric("long_sum").longValue());
-      Assert.assertEquals(7L, result.getLongMetric("bitwise_or").longValue());
-      Assert.assertEquals(3.75, result.getDoubleMetric("double_sum").doubleValue(), 0.0);
+      Assertions.assertEquals(3L, result.getLongMetric("count").longValue());
+      Assertions.assertEquals(7L, result.getLongMetric("long_sum").longValue());
+      Assertions.assertEquals(7L, result.getLongMetric("bitwise_or").longValue());
+      Assertions.assertEquals(3.75, result.getDoubleMetric("double_sum").doubleValue(), 0.0);
     }
   }
 

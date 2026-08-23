@@ -27,8 +27,8 @@ import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -57,7 +57,7 @@ public class FingerprintGeneratorTest
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
 
     String expected = "82E774457D26D0B8D481B6C39872070B25EA3C72C6EFC107B346FA42641740E1";
-    Assert.assertEquals(expected, fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0));
+    Assertions.assertEquals(expected, fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0));
   }
 
   @Test
@@ -96,7 +96,7 @@ public class FingerprintGeneratorTest
     );
 
     SchemaPayload schemaPayloadNew = new SchemaPayload(rowSignaturePermutation, aggregatorFactoryMapForPermutation);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0),
         fingerprintGenerator.generateFingerprint(schemaPayloadNew, "ds", 0)
     );
@@ -117,7 +117,7 @@ public class FingerprintGeneratorTest
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds1", 0),
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds2", 0)
     );
@@ -138,7 +138,7 @@ public class FingerprintGeneratorTest
 
     SchemaPayload schemaPayload = new SchemaPayload(rowSignature, aggregatorFactoryMap);
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 0),
         fingerprintGenerator.generateFingerprint(schemaPayload, "ds", 1)
     );
@@ -158,14 +158,14 @@ public class FingerprintGeneratorTest
 
     RowSignature sortedSignature = fingerprintGenerator.getLexicographicallySortedSignature(rowSignature);
 
-    Assert.assertNotEquals(rowSignature, sortedSignature);
+    Assertions.assertNotEquals(rowSignature, sortedSignature);
 
     List<String> columnNames = sortedSignature.getColumnNames();
     List<String> sortedOrder = Arrays.asList("a1", "b2", "c1", "c5", "d3");
-    Assert.assertEquals(sortedOrder, columnNames);
+    Assertions.assertEquals(sortedOrder, columnNames);
 
     for (String column : sortedOrder) {
-      Assert.assertEquals(sortedSignature.getColumnType(column), rowSignature.getColumnType(column));
+      Assertions.assertEquals(sortedSignature.getColumnType(column), rowSignature.getColumnType(column));
     }
   }
 }

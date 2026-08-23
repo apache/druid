@@ -26,7 +26,7 @@ import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -136,10 +136,10 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   {
     try {
       testQuery("SELECT ARRAY_AGG(unique_dim1) FROM druid.foo", ImmutableList.of(), ImmutableList.of());
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (ISE e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("Cannot handle column [a0] with type [ARRAY<COMPLEX<hyperUnique>>]")
       );
     }

@@ -20,8 +20,6 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DefaultBitmapResultFactory;
@@ -38,25 +36,24 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
-@RunWith(JUnitParamsRunner.class)
 public class FilterBundleTest extends InitializedNullHandlingTest
 {
   private Closer closer;
   protected BitmapFactory bitmapFactory;
   protected ColumnIndexSelector indexSelector;
 
-  @Rule
-  public TemporaryFolder tmpDir = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension tmpDir = new TemporaryFolderExtension();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     final QueryableIndex index = TestIndex.getMMappedWikipediaIndex();
@@ -65,15 +62,15 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     indexSelector = new ColumnCache(index, VirtualColumns.EMPTY, closer);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception
   {
     closer.close();
     indexSelector = null;
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_or_country_isRobot(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -86,7 +83,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: OR (selectionSize = 39244)\n"
         + "  index: countryName = United States (selectionSize = 528)\n"
         + "  index: isRobot = true (selectionSize = 15420)\n",
@@ -94,8 +91,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_and_country_isRobot(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -108,7 +105,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: AND (selectionSize = 0)\n"
         + "  index: countryName = United States (selectionSize = 528)\n"
         + "  index: isRobot = true (selectionSize = 15420)\n",
@@ -116,8 +113,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_or_countryIsNull_pageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -130,7 +127,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "matcher: OR\n"
         + "  matcher: countryName IS NULL\n"
         + "    with partial index: countryName IS NULL (selectionSize = 35445)\n"
@@ -139,8 +136,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_and_countryIsNull_pageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -153,7 +150,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: AND (selectionSize = 14165)\n"
         + "  index: countryName IS NULL (selectionSize = 35445)\n"
         + "  index: page LIKE '%u%' (selectionSize = 15328)\n",
@@ -161,8 +158,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_and_country_pageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -175,15 +172,15 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: countryName = United States (selectionSize = 528)\n"
         + "matcher: page LIKE '%u%'\n",
         filterBundle.getInfo().describe()
     );
   }
 
-  @Test
-  @Parameters({"true"})
+  @ParameterizedTest
+  @ValueSource(booleans = true)
   public void test_pageLike_and_country_pageLike_with_cursorAutoArrangeFilters(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -197,15 +194,15 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
 
     // With cursorAutoArrangeFilters flag on, the indexes are sorted by cost ASC, hence country name index is used first.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: countryName = United States (selectionSize = 528)\n"
         + "matcher: page LIKE '%u%'\n",
         filterBundle.getInfo().describe()
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_or_countryNotNull_pageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -218,7 +215,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: OR (selectionSize = 39244)\n"
         + "  index: ~(countryName IS NULL) (selectionSize = 3799)\n"
         + "  index: page LIKE '%u%' (selectionSize = 15328)\n",
@@ -226,8 +223,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true"})
+  @ParameterizedTest
+  @ValueSource(booleans = true)
   public void test_or_pageLike_countryNotNull_pageLike_with_cursorAutoArrangeFilters(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -241,7 +238,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
 
     // With cursorAutoArrangeFilters flag on, the indexes are sorted by cost ASC, hence country name index is used first.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: OR (selectionSize = 39244)\n"
         + "  index: ~(countryName IS NULL) (selectionSize = 3799)\n"
         + "  index: page LIKE '%u%' (selectionSize = 15328)\n",
@@ -249,8 +246,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_and_countryNotNull_pageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -263,7 +260,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: ~(countryName IS NULL) (selectionSize = 3799)\n"
         + "matcher: page LIKE '%u%'\n",
         filterBundle.getInfo().describe()
@@ -271,8 +268,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
   }
 
 
-  @Test
-  @Parameters({"true"})
+  @ParameterizedTest
+  @ValueSource(booleans = true)
   public void test_and_cursorAutoArrangeFilters(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -295,7 +292,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     // 1. countryName NullFilter: 0
     // 2. isRobot EqualityFilter: 1
     // 3. page LikeFilter with prefix and countryName EqualityFIlter: 1 + size of page dictionary with keys matching "O" prefix
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "index: AND (selectionSize = 562)\n"
         + "  index: ~(countryName IS NULL) (selectionSize = 3799)\n"
         + "  index: isRobot = false (selectionSize = 23824)\n"
@@ -306,8 +303,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true"})
+  @ParameterizedTest
+  @ValueSource(booleans = true)
   public void test_or_cursorAutoArrangeFilters(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -339,7 +336,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     // 3. isRobot TypedInFilter: 2
     // 4. page LikeFilter with prefix and countryName EqualityFilter: 1 + size of page dictionary with keys matching "O" prefix
     // 5. page LikeFilter and countryName EqualityFilter: 1 + size of page dictionary
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "matcher: OR\n"
         + "  matcher: OR\n"
         + "    with partial index: OR (selectionSize = 39244)\n"
@@ -357,8 +354,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
 
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_or_countryIsAndPageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -387,7 +384,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "matcher: OR\n"
         + "  matcher: AND\n"
         + "    with partial index: AND (selectionSize = 11851)\n"
@@ -403,8 +400,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_or_countryIsNull_and_country_pageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -422,7 +419,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "matcher: OR\n"
         + "  matcher: countryName IS NULL\n"
         + "    with partial index: countryName IS NULL (selectionSize = 35445)\n"
@@ -433,8 +430,8 @@ public class FilterBundleTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  @Parameters({"true", "false"})
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
   public void test_or_countryIsNull_and_isRobotInFalseTrue_pageLike(boolean cursorAutoArrangeFilters)
   {
     final FilterBundle filterBundle = makeFilterBundle(
@@ -455,7 +452,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
         cursorAutoArrangeFilters
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "matcher: OR\n"
         + "  matcher: countryName IS NULL\n"
         + "    with partial index: countryName IS NULL (selectionSize = 35445)\n"

@@ -30,6 +30,16 @@
     <version>39.0.0-SNAPSHOT</version>
   </parent>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>3.2.2</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
   <dependencies>
     <dependency>
       <groupId>org.jdbi</groupId>
@@ -130,9 +140,9 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.wnameless</groupId>
+      <groupId>com.github.wnameless.json</groupId>
       <artifactId>json-flattener</artifactId>
-      <version>0.1.0</version>
+      <version>0.18.2</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -238,7 +248,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jmh.version>1.21</jmh.version>
+    <jmh.version>1.37</jmh.version>
     <uberjar.name>benchmarks</uberjar.name>
   </properties>
 
@@ -316,7 +326,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-install-plugin</artifactId>
-          <version>2.5.1</version>
+          <version>3.1.4</version>
         </plugin>
         <plugin>
           <artifactId>maven-jar-plugin</artifactId>
@@ -336,7 +346,7 @@
         </plugin>
         <plugin>
           <artifactId>maven-source-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.4.0</version>
         </plugin>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>

@@ -26,8 +26,8 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -71,7 +71,7 @@ public class InlineJoinableFactoryTest
   {
     final Joinable joinable = factory.build(inlineDataSource, makeCondition("x == \"j.long\"")).get();
 
-    MatcherAssert.assertThat(joinable, CoreMatchers.instanceOf(IndexedTableJoinable.class));
+    MatcherAssert.assertThat(joinable, Matchers.instanceOf(IndexedTableJoinable.class));
     Assertions.assertEquals(ImmutableList.of("str", "long"), joinable.getAvailableColumns());
     Assertions.assertEquals(3, joinable.getCardinality("str"));
     Assertions.assertEquals(3, joinable.getCardinality("long"));

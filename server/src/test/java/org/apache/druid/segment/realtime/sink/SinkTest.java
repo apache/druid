@@ -55,8 +55,8 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CloseableUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -99,18 +99,18 @@ public class SinkTest extends InitializedNullHandlingTest
     sink.add(new MapBasedInputRow(DateTimes.of("2013-01-01"), ImmutableList.of(), ImmutableMap.of()));
 
     FireHydrant currHydrant = sink.getCurrHydrant();
-    Assert.assertEquals(Intervals.of("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
+    Assertions.assertEquals(Intervals.of("2013-01-01/PT1M"), currHydrant.getIndex().getInterval());
 
 
     FireHydrant swapHydrant = sink.swap();
 
     sink.add(new MapBasedInputRow(DateTimes.of("2013-01-01"), ImmutableList.of(), ImmutableMap.of()));
 
-    Assert.assertEquals(currHydrant, swapHydrant);
-    Assert.assertNotSame(currHydrant, sink.getCurrHydrant());
-    Assert.assertEquals(Intervals.of("2013-01-01/PT1M"), sink.getCurrHydrant().getIndex().getInterval());
+    Assertions.assertEquals(currHydrant, swapHydrant);
+    Assertions.assertNotSame(currHydrant, sink.getCurrHydrant());
+    Assertions.assertEquals(Intervals.of("2013-01-01/PT1M"), sink.getCurrHydrant().getIndex().getInterval());
 
-    Assert.assertEquals(2, Iterators.size(sink.iterator()));
+    Assertions.assertEquals(2, Iterators.size(sink.iterator()));
   }
 
   @Test
@@ -133,7 +133,7 @@ public class SinkTest extends InitializedNullHandlingTest
                                         .withSegmentGranularity(new SegmentGranularitySpec(Granularities.HOUR, null))
                                         .withBaseTable(clusterSpec)
                                         .build();
-    Assert.assertNotNull(schema.getClusterSpec());
+    Assertions.assertNotNull(schema.getClusterSpec());
 
     final long t0 = DateTimes.of("2013-01-01T00:00:00").getMillis();
     final Sink sink = new Sink(
@@ -151,12 +151,12 @@ public class SinkTest extends InitializedNullHandlingTest
     sink.add(clusterRow(t0 + 2, "globex", "eu-west-1"));
 
     final IncrementalIndex index = sink.getCurrHydrant().getIndex();
-    Assert.assertTrue(index instanceof OnheapIncrementalIndex);
+    Assertions.assertTrue(index instanceof OnheapIncrementalIndex);
     final OnHeapClusteredBaseTable clusteredBaseTable = ((OnheapIncrementalIndex) index).getClusteredBaseTable();
-    Assert.assertNotNull("expected clustered IncrementalIndex from clustered DataSchema", clusteredBaseTable);
-    Assert.assertEquals(3, clusteredBaseTable.numRows());
-    Assert.assertEquals(2, clusteredBaseTable.getGroups().size());
-    Assert.assertEquals(List.of("acme", "globex"), clusteredBaseTable.getStringDictionary());
+    Assertions.assertNotNull(clusteredBaseTable, "expected clustered IncrementalIndex from clustered DataSchema");
+    Assertions.assertEquals(3, clusteredBaseTable.numRows());
+    Assertions.assertEquals(2, clusteredBaseTable.getGroups().size());
+    Assertions.assertEquals(List.of("acme", "globex"), clusteredBaseTable.getStringDictionary());
   }
 
   @Test
@@ -171,7 +171,7 @@ public class SinkTest extends InitializedNullHandlingTest
                   .withAggregators(new CountAggregatorFactory("count"))
                   .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.NONE, null))
                   .build();
-    Assert.assertNull(schema.getClusterSpec());
+    Assertions.assertNull(schema.getClusterSpec());
 
     final Sink sink = new Sink(
         Intervals.of("2013-01-01/2013-01-02"),
@@ -185,8 +185,8 @@ public class SinkTest extends InitializedNullHandlingTest
     sink.add(clusterRow(DateTimes.of("2013-01-01").getMillis(), "acme", "us-east-1"));
 
     final IncrementalIndex index = sink.getCurrHydrant().getIndex();
-    Assert.assertTrue(index instanceof OnheapIncrementalIndex);
-    Assert.assertNull(((OnheapIncrementalIndex) index).getClusteredBaseTable());
+    Assertions.assertTrue(index instanceof OnheapIncrementalIndex);
+    Assertions.assertNull(((OnheapIncrementalIndex) index).getClusteredBaseTable());
   }
 
   private static InputRow clusterRow(long ts, String tenant, String region)
@@ -201,7 +201,7 @@ public class SinkTest extends InitializedNullHandlingTest
   @Test
   public void testAcquireSegmentReferences_empty()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.emptyList(),
         Sink.acquireSegmentReferences(Collections.emptyList(), SegmentMapFunction.IDENTITY, false)
     );
@@ -212,12 +212,12 @@ public class SinkTest extends InitializedNullHandlingTest
   {
     final List<FireHydrant> hydrants = twoHydrants();
     final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, SegmentMapFunction.IDENTITY, false);
-    Assert.assertNotNull(references);
-    Assert.assertEquals(2, references.size());
-    Assert.assertEquals(0, references.get(0).getHydrantNumber());
-    Assert.assertFalse(references.get(0).isImmutable());
-    Assert.assertEquals(1, references.get(1).getHydrantNumber());
-    Assert.assertTrue(references.get(1).isImmutable());
+    Assertions.assertNotNull(references);
+    Assertions.assertEquals(2, references.size());
+    Assertions.assertEquals(0, references.get(0).getHydrantNumber());
+    Assertions.assertFalse(references.get(0).isImmutable());
+    Assertions.assertEquals(1, references.get(1).getHydrantNumber());
+    Assertions.assertTrue(references.get(1).isImmutable());
     CloseableUtils.closeAll(references);
   }
 
@@ -226,10 +226,10 @@ public class SinkTest extends InitializedNullHandlingTest
   {
     final List<FireHydrant> hydrants = twoHydrants();
     final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, SegmentMapFunction.IDENTITY, true);
-    Assert.assertNotNull(references);
-    Assert.assertEquals(1, references.size());
-    Assert.assertEquals(1, references.get(0).getHydrantNumber());
-    Assert.assertTrue(references.get(0).isImmutable());
+    Assertions.assertNotNull(references);
+    Assertions.assertEquals(1, references.size());
+    Assertions.assertEquals(1, references.get(0).getHydrantNumber());
+    Assertions.assertTrue(references.get(0).isImmutable());
     CloseableUtils.closeAll(references);
   }
 
@@ -241,7 +241,7 @@ public class SinkTest extends InitializedNullHandlingTest
     hydrants.get(1).swapSegment(null);
 
     final List<SinkSegmentReference> references = Sink.acquireSegmentReferences(hydrants, SegmentMapFunction.IDENTITY, false);
-    Assert.assertNull(references);
+    Assertions.assertNull(references);
   }
 
   @Test
@@ -286,7 +286,7 @@ public class SinkTest extends InitializedNullHandlingTest
     expectedColumnTypeMap.put("rows", ColumnType.LONG);
 
     RowSignature signature = sink.getSignature();
-    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
+    Assertions.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
     sink.add(
         new MapBasedInputRow(
@@ -300,7 +300,7 @@ public class SinkTest extends InitializedNullHandlingTest
     expectedColumnTypeMap.put("newCol1", ColumnType.STRING);
     expectedColumnTypeMap.put("rows", ColumnType.LONG);
     signature = sink.getSignature();
-    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
+    Assertions.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
     sink.swap();
 
@@ -314,7 +314,7 @@ public class SinkTest extends InitializedNullHandlingTest
 
     expectedColumnTypeMap.put("newCol2", ColumnType.STRING);
     signature = sink.getSignature();
-    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
+    Assertions.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
 
     sink.add(
         new MapBasedInputRow(
@@ -326,7 +326,7 @@ public class SinkTest extends InitializedNullHandlingTest
 
     expectedColumnTypeMap.put("newCol3", ColumnType.STRING);
     signature = sink.getSignature();
-    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
+    Assertions.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
     sink.swap();
 
     sink.add(
@@ -339,7 +339,7 @@ public class SinkTest extends InitializedNullHandlingTest
 
     expectedColumnTypeMap.put("newCol4", ColumnType.STRING);
     signature = sink.getSignature();
-    Assert.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
+    Assertions.assertEquals(toRowSignature(expectedColumnTypeMap), signature);
   }
 
   private RowSignature toRowSignature(Map<String, ColumnType> columnTypeMap)

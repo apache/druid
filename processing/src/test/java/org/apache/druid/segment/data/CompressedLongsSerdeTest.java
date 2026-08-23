@@ -29,19 +29,17 @@ import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CloseableUtils;
-import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -57,10 +55,11 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("compressionStrategies")
 public class CompressedLongsSerdeTest
 {
-  @Parameterized.Parameters(name = "{0} {1} {2}")
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
@@ -73,11 +72,8 @@ public class CompressedLongsSerdeTest
     return data;
   }
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @RegisterExtension
+  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
 
   protected final CompressionFactory.LongEncodingStrategy encodingStrategy;
   protected final CompressionStrategy compressionStrategy;
@@ -143,7 +139,7 @@ public class CompressedLongsSerdeTest
   }
 
   // this test takes ~50 minutes to run (even skipping 'auto')
-  @Ignore
+  @Disabled
   @Test
   public void testTooManyValues() throws IOException
   {
@@ -151,28 +147,32 @@ public class CompressedLongsSerdeTest
     if (encodingStrategy.equals(CompressionFactory.LongEncodingStrategy.AUTO)) {
       return;
     }
-    expectedException.expect(ColumnCapacityExceededException.class);
-    expectedException.expectMessage(ColumnCapacityExceededException.formatMessage("test"));
-    try (
-        SegmentWriteOutMedium segmentWriteOutMedium =
-            TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
-    ) {
-      ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
-          "test",
-          segmentWriteOutMedium,
-          "test",
-          order,
-          encodingStrategy,
-          compressionStrategy,
-          segmentWriteOutMedium.getCloser()
-      );
-      serializer.open();
+    final ColumnCapacityExceededException exception = Assertions.assertThrows(
+        ColumnCapacityExceededException.class,
+        () -> {
+          try (
+              SegmentWriteOutMedium segmentWriteOutMedium =
+                  TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder())
+          ) {
+            ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
+                "test",
+                segmentWriteOutMedium,
+                "test",
+                order,
+                encodingStrategy,
+                compressionStrategy,
+                segmentWriteOutMedium.getCloser()
+            );
+            serializer.open();
 
-      final long numRows = Integer.MAX_VALUE + 100L;
-      for (long i = 0L; i < numRows; i++) {
-        serializer.add(ThreadLocalRandom.current().nextLong());
-      }
-    }
+            final long numRows = Integer.MAX_VALUE + 100L;
+            for (long i = 0L; i < numRows; i++) {
+              serializer.add(ThreadLocalRandom.current().nextLong());
+            }
+          }
+        }
+    );
+    Assertions.assertEquals(ColumnCapacityExceededException.formatMessage("test"), exception.getMessage());
   }
 
   @Test
@@ -180,8 +180,8 @@ public class CompressedLongsSerdeTest
   {
     // This test only makes sense if we can use BlockLayoutColumnarLongsSerializer directly. Exclude incompatible
     // combinations of compressionStrategy, encodingStrategy.
-    Assume.assumeThat(compressionStrategy, CoreMatchers.not(CoreMatchers.equalTo(CompressionStrategy.NONE)));
-    Assume.assumeThat(encodingStrategy, CoreMatchers.equalTo(CompressionFactory.LongEncodingStrategy.LONGS));
+    Assumptions.assumeTrue(compressionStrategy != CompressionStrategy.NONE);
+    Assumptions.assumeTrue(encodingStrategy == CompressionFactory.LongEncodingStrategy.LONGS);
 
     final File columnDir = temporaryFolder.newFolder();
     final String columnName = "column";
@@ -229,7 +229,7 @@ public class CompressedLongsSerdeTest
       );
 
       try (final ColumnarLongs column = columnSupplier.get()) {
-        Assert.assertEquals(numRows, column.size());
+        Assertions.assertEquals(numRows, column.size());
       }
     }
   }
@@ -255,11 +255,11 @@ public class CompressedLongsSerdeTest
     serializer.open();
 
     serializer.addAll(values, 0, values.length);
-    Assert.assertEquals(values.length, serializer.size());
+    Assertions.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.writeTo(Channels.newChannel(baos), null);
-    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+    Assertions.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedColumnarLongsSupplier supplier = CompressedColumnarLongsSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
     try (ColumnarLongs longs = supplier.get()) {
@@ -286,13 +286,13 @@ public class CompressedLongsSerdeTest
     indexed.get(filled, startIndex, size);
 
     for (int i = startIndex; i < filled.length; i++) {
-      Assert.assertEquals(vals[i + startIndex], filled[i]);
+      Assertions.assertEquals(vals[i + startIndex], filled[i]);
     }
   }
 
   private void assertIndexMatchesVals(ColumnarLongs indexed, long[] vals)
   {
-    Assert.assertEquals(vals.length, indexed.size());
+    Assertions.assertEquals(vals.length, indexed.size());
 
     // sequential access
     long[] vector = new long[256];
@@ -301,8 +301,8 @@ public class CompressedLongsSerdeTest
       if (i % 256 == 0) {
         indexed.get(vector, i, Math.min(256, indexed.size() - i));
       }
-      Assert.assertEquals(vals[i], indexed.get(i));
-      Assert.assertEquals(vals[i], vector[i % 256]);
+      Assertions.assertEquals(vals[i], indexed.get(i));
+      Assertions.assertEquals(vals[i], vector[i % 256]);
       indices[i] = i;
     }
 
@@ -312,7 +312,7 @@ public class CompressedLongsSerdeTest
     final int limit = Math.min(indexed.size(), 1000);
     for (int i = 0; i < limit; ++i) {
       int k = indices[i];
-      Assert.assertEquals(vals[k], indexed.get(k));
+      Assertions.assertEquals(vals[k], indexed.get(k));
     }
   }
 
@@ -322,7 +322,7 @@ public class CompressedLongsSerdeTest
     supplier.writeTo(Channels.newChannel(baos), null);
 
     final byte[] bytes = baos.toByteArray();
-    Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
+    Assertions.assertEquals(supplier.getSerializedSize(), bytes.length);
     CompressedColumnarLongsSupplier anotherSupplier =
         CompressedColumnarLongsSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), order, null);
     try (ColumnarLongs indexed = anotherSupplier.get()) {
@@ -430,7 +430,7 @@ public class CompressedLongsSerdeTest
     }
 
     if (failureHappened.get()) {
-      Assert.fail("Failure happened.  Reason: " + reason.get());
+      Assertions.fail("Failure happened.  Reason: " + reason.get());
     }
   }
 }

@@ -22,12 +22,12 @@ package org.apache.druid.indexing.overlord.config;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.util.List;
 

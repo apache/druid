@@ -26,6 +26,7 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.msq.indexing.LegacyMSQSpec;
@@ -47,8 +48,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -137,11 +136,11 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[dim3] using type[VARCHAR ARRAY] and arrayIngestMode[array], "
-                + "since the existing type is[VARCHAR]"))
+                + "since the existing type is[VARCHAR]"
+            )
         ))
         .verifyExecutionError();
   }
@@ -164,12 +163,12 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[array], since the "
                 + "existing type is[VARCHAR ARRAY]. Try adjusting your query to make this column an ARRAY instead "
-                + "of VARCHAR."))
+                + "of VARCHAR."
+            )
         ))
         .verifyExecutionError();
   }
@@ -192,12 +191,12 @@ public class MSQArraysTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME"
         )
         .setQueryContext(adjustedContext)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(DruidException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith(
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(DruidException.class)
+            .expectMessage(message -> message.startsWith(
                 "Cannot write into field[arrayString] using type[VARCHAR] and arrayIngestMode[mvd], since the "
                 + "existing type is[VARCHAR ARRAY]. Try setting arrayIngestMode to[array] and adjusting your query to "
-                + "make this column an ARRAY instead of VARCHAR."))
+                + "make this column an ARRAY instead of VARCHAR."
+            )
         ))
         .verifyExecutionError();
   }
@@ -391,11 +390,9 @@ public class MSQArraysTest extends MSQTestBase
                              + "  )\n"
                              + ") PARTITIONED BY ALL")
                      .setQueryContext(adjustedContext)
-                     .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-                         CoreMatchers.instanceOf(ISE.class),
-                         ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                             "Numeric arrays can only be ingested when"))
-                     ))
+                     .setExpectedExecutionErrorMatcher(
+                         ThrowableMatcher.of(ISE.class).expectMessageContains("Numeric arrays can only be ingested when")
+                     )
                      .verifyExecutionError();
   }
 

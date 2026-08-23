@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.loading;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,12 +32,12 @@ import java.util.regex.Pattern;
 
 public class LocalFileTimestampVersionFinderTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
   private File tmpDir;
   private LocalFileTimestampVersionFinder finder;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     tmpDir = temporaryFolder.newFolder();
@@ -52,11 +52,11 @@ public class LocalFileTimestampVersionFinderTest
     Thread.sleep(1_000); // In order to roll over to the next unix second
     File newFile = File.createTempFile("new", ".txt", tmpDir);
     newFile.createNewFile();
-    Assert.assertTrue(oldFile.exists());
-    Assert.assertTrue(newFile.exists());
-    Assert.assertNotEquals(oldFile.lastModified(), newFile.lastModified());
-    Assert.assertEquals(oldFile.getParentFile(), newFile.getParentFile());
-    Assert.assertEquals(
+    Assertions.assertTrue(oldFile.exists());
+    Assertions.assertTrue(newFile.exists());
+    Assertions.assertNotEquals(oldFile.lastModified(), newFile.lastModified());
+    Assertions.assertEquals(oldFile.getParentFile(), newFile.getParentFile());
+    Assertions.assertEquals(
         newFile.getAbsolutePath(),
         finder.getLatestVersion(oldFile.toURI(), Pattern.compile(".*\\.txt")).getPath()
     );
@@ -66,8 +66,8 @@ public class LocalFileTimestampVersionFinderTest
   public void testSimpleOneFileLatestVersion() throws IOException
   {
     File oldFile = File.createTempFile("old", ".txt", tmpDir);
-    Assert.assertTrue(oldFile.exists());
-    Assert.assertEquals(
+    Assertions.assertTrue(oldFile.exists());
+    Assertions.assertEquals(
         oldFile.getAbsolutePath(),
         finder.getLatestVersion(oldFile.toURI(), Pattern.compile(".*\\.txt")).getPath()
     );
@@ -77,8 +77,8 @@ public class LocalFileTimestampVersionFinderTest
   public void testSimpleOneFileLatestVersionNullMatcher() throws IOException
   {
     File oldFile = File.createTempFile("old", ".txt", tmpDir);
-    Assert.assertTrue(oldFile.exists());
-    Assert.assertEquals(
+    Assertions.assertTrue(oldFile.exists());
+    Assertions.assertEquals(
         oldFile.getAbsolutePath(),
         finder.getLatestVersion(oldFile.toURI(), null).getPath()
     );
@@ -90,7 +90,7 @@ public class LocalFileTimestampVersionFinderTest
     File oldFile = File.createTempFile("test", ".txt", tmpDir);
     oldFile.delete();
     URI uri = oldFile.toURI();
-    Assert.assertNull(
+    Assertions.assertNull(
         finder.getLatestVersion(uri, Pattern.compile(".*\\.txt"))
     );
   }
@@ -103,9 +103,9 @@ public class LocalFileTimestampVersionFinderTest
     Thread.sleep(1_000); // In order to roll over to the next unix second
     File newFile = File.createTempFile("new", ".txt", tmpDir);
     newFile.createNewFile();
-    Assert.assertTrue(oldFile.exists());
-    Assert.assertTrue(newFile.exists());
-    Assert.assertEquals(
+    Assertions.assertTrue(oldFile.exists());
+    Assertions.assertTrue(newFile.exists());
+    Assertions.assertEquals(
         newFile.getAbsolutePath(),
         finder.getLatestVersion(oldFile.getParentFile().toURI(), Pattern.compile(".*\\.txt")).getPath()
     );
@@ -116,9 +116,9 @@ public class LocalFileTimestampVersionFinderTest
   {
     File tmpFile = new File(tmpDir, "renames-123.gz");
     tmpFile.createNewFile();
-    Assert.assertTrue(tmpFile.exists());
-    Assert.assertFalse(tmpFile.isDirectory());
-    Assert.assertEquals(
+    Assertions.assertTrue(tmpFile.exists());
+    Assertions.assertFalse(tmpFile.isDirectory());
+    Assertions.assertEquals(
         tmpFile.getAbsolutePath(),
         finder.getLatestVersion(tmpDir.toURI(), Pattern.compile("renames-[0-9]*\\.gz")).getPath()
     );
