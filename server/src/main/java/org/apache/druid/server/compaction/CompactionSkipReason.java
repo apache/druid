@@ -86,16 +86,17 @@ public enum CompactionSkipReason
    * by the category so that a newly added {@link CompactionSkipReason} behaves
    * sensibly without the consumer being updated.
    * <p>
-   * The single question a category answers is <i>does this interval count against
-   * the datasource being fully compacted?</i> Only {@link #DEFERRED} and
-   * {@link #UNSUPPORTED} do. When adding a reason, pick its category by that
-   * question rather than by how the interval is worded in a log line.
+   * Only {@link #DEFERRED} and {@link #UNSUPPORTED} count against a datasource
+   * being fully compacted. Pick a category by whether compaction considered the
+   * interval at all, and if it did, whether the interval still needs compacting,
+   * rather than by how the skip reads in a log line.
    */
   public enum Category
   {
     /**
-     * Interval was deliberately excluded by the compaction config, so it was
-     * never meant to be compacted.
+     * Compaction was told not to consider this interval at all, so it was never
+     * evaluated against the compaction config. Whether the interval would match
+     * the config is unknown.
      * <p>
      * Does not count against the datasource being fully compacted.
      */
@@ -105,8 +106,8 @@ public enum CompactionSkipReason
      * Interval could not be evaluated or acted upon in this run, but is expected
      * to be picked up in a later run with no operator action. Whether it matches
      * the compaction config is unknown, and in the case of
-     * {@link #TIMELINE_NOT_UPDATED} it very likely does, since compaction of that
-     * interval has just succeeded.
+     * {@link CompactionSkipReason#TIMELINE_NOT_UPDATED} it very likely does, since
+     * compaction of that interval has just succeeded.
      * <p>
      * Does not count against the datasource being fully compacted, so that the
      * reported progress does not dip while a successful compaction settles.
@@ -114,10 +115,12 @@ public enum CompactionSkipReason
     TRANSIENT,
 
     /**
-     * Interval is known not to match the compaction config and will keep being
-     * passed over until the compaction config or policy is changed.
+     * Interval needs compaction, but an operator-configured threshold or search
+     * policy is holding it back. It keeps being passed over until that
+     * configuration changes.
      * <p>
-     * Counts against the datasource being fully compacted.
+     * Counts against the datasource being fully compacted, so that an operator can
+     * see when their own settings are the reason compaction is not progressing.
      */
     DEFERRED,
 

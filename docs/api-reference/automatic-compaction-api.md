@@ -788,10 +788,10 @@ The `latestStatus` object has the following properties:
 * `skippedStatsByReason`: Breakdown of the skipped stats by the reason each interval was skipped. The totals of this list are the `bytesSkipped`, `segmentCountSkipped` and `intervalCountSkipped` fields above. Each entry has:
   * `reason`: Stable code for why the intervals were not compacted. One of `SKIP_OFFSET`, `INTERVAL_LOCKED`, `TIMELINE_NOT_UPDATED`, `LOCK_ACQUISITION_FAILED`, `REJECTED_BY_SEARCH_POLICY`, `INPUT_SEGMENT_SIZE_EXCEEDED`, `PARTIAL_ETERNITY_INTERVAL` or `INVALID_JOB`. More reasons may be added in future releases.
   * `category`: How to treat these intervals, so that consumers do not need their own mapping of reasons. One of:
-    * `OUT_OF_SCOPE`: Deliberately excluded by the compaction config, for example by `skipOffsetFromLatest`. These intervals do not count against the datasource being fully compacted.
-    * `TRANSIENT`: Could not be compacted in this run, but is expected to be picked up later with no operator action.
-    * `DEFERRED`: Does not match the compaction config and will keep being passed over until the compaction config or the compaction candidate search policy is changed.
-    * `UNSUPPORTED`: Cannot be compacted as it currently stands, regardless of config.
+    * `OUT_OF_SCOPE`: Compaction was told not to consider these intervals at all, for example by `skipOffsetFromLatest`. Does not count against the datasource being fully compacted.
+    * `TRANSIENT`: Could not be compacted in this run, but is expected to be picked up later with no operator action. Does not count against the datasource being fully compacted.
+    * `DEFERRED`: Needs compaction, but a threshold or search policy you configured is holding it back, such as `inputSegmentSizeBytes`. Counts against the datasource being fully compacted.
+    * `UNSUPPORTED`: Cannot be compacted as it currently stands, regardless of config. Counts against the datasource being fully compacted.
   * `bytes`, `segmentCount`, `intervalCount`: Stats for the intervals skipped for this reason.
 
 #### URL
