@@ -100,9 +100,6 @@ public class RetentionRulesSnapshot
    */
   public List<Rule> getEffectiveRules(String datasource)
   {
-    if (datasource == null) {
-      return clusterDefaultRules;
-    }
     return datasourceToEffectiveRules.getOrDefault(datasource, clusterDefaultRules);
   }
 }
