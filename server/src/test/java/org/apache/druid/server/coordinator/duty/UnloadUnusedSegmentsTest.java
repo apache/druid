@@ -27,6 +27,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -289,8 +290,12 @@ public class UnloadUnusedSegmentsTest
 
     // The snapshot loads broadcastDatasource like any other datasource rather than
     // broadcasting it, so the realtime server must be skipped for it
-    final RetentionRulesSnapshot rulesWithoutBroadcast = RetentionRulesSnapshot.withClusterDefaults(
-        List.of(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1, "tier2", 1), null))
+    final RetentionRulesSnapshot rulesWithoutBroadcast = new RetentionRulesSnapshot(
+        Map.of(
+            MetadataRuleManagerConfig.DEFAULT_RULE_NAME,
+            List.of(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1, "tier2", 1), null))
+        ),
+        MetadataRuleManagerConfig.DEFAULT_RULE_NAME
     );
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams

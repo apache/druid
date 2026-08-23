@@ -157,6 +157,7 @@ public class DruidCoordinatorRuntimeParams
    */
   public RetentionRulesSnapshot getRetentionRulesSnapshot()
   {
+    Preconditions.checkState(retentionRulesSnapshot != null, "retentionRulesSnapshot must be set");
     return retentionRulesSnapshot;
   }
 
@@ -222,7 +223,6 @@ public class DruidCoordinatorRuntimeParams
     {
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.compactionConfig = DruidCompactionConfig.empty();
-      this.retentionRulesSnapshot = RetentionRulesSnapshot.empty();
       this.broadcastDatasources = Collections.emptySet();
     }
 

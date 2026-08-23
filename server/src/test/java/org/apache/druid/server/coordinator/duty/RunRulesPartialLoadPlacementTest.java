@@ -26,6 +26,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.coordination.ServerType;
@@ -212,7 +213,12 @@ public class RunRulesPartialLoadPlacementTest
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDruidCluster(cluster)
-        .withRetentionRulesSnapshot(RetentionRulesSnapshot.withClusterDefaults(rules))
+        .withRetentionRulesSnapshot(
+            new RetentionRulesSnapshot(
+                Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, rules),
+                MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+            )
+        )
         .withUsedSegments(segments)
         .withBalancerStrategy(balancerStrategy)
         .withDynamicConfigs(

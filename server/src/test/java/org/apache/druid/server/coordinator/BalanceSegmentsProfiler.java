@@ -27,6 +27,7 @@ import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.server.coordinator.duty.BalanceSegments;
 import org.apache.druid.server.coordinator.duty.RunRules;
 import org.apache.druid.server.coordinator.loading.LoadQueuePeon;
@@ -47,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * TODO convert benchmarks to JMH
@@ -123,7 +125,12 @@ public class BalanceSegmentsProfiler
         .builder()
         .withDruidCluster(druidCluster)
         .withUsedSegments(segments)
-        .withRetentionRulesSnapshot(RetentionRulesSnapshot.withClusterDefaults(rules))
+        .withRetentionRulesSnapshot(
+            new RetentionRulesSnapshot(
+                Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, rules),
+                MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+            )
+        )
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()

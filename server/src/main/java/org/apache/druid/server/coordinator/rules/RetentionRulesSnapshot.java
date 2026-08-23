@@ -32,19 +32,8 @@ import java.util.Map;
 public class RetentionRulesSnapshot
 {
   /**
-   * Conventional value of {@code druid.manager.rules.defaultRule}, used only by
-   * {@link #withClusterDefaults}. Real snapshots take the configured name from their caller,
-   * as an operator may have changed it.
-   */
-  private static final String DEFAULT_DATASOURCE_NAME = "_default";
-
-  // The default datasource name is immaterial when there are no rules to look it up in
-  private static final RetentionRulesSnapshot EMPTY = new RetentionRulesSnapshot(Map.of(), "");
-
-  /**
-   * Rules of each datasource exactly as configured, i.e. no entry has {@link #clusterDefaultRules}
-   * appended to it. The cluster defaults are still present as the entry for the default datasource
-   * ({@code druid.manager.rules.defaultRule}), which is where {@link #clusterDefaultRules} comes from.
+   * Override rules of each datasource. Cluster level rules are present in this map against the
+   * default datasource, which is where {@link #clusterDefaultRules} comes from.
    */
   private final Map<String, List<Rule>> datasourceToRules;
   /**
@@ -52,25 +41,8 @@ public class RetentionRulesSnapshot
    * Contains an entry only for datasources that have override rules and are not the default
    * datasource itself, so that everything else can share the {@link #clusterDefaultRules} instance.
    */
-  private final Map<String, List<Rule>> datasourceToRulesWithDefault;
+  private final Map<String, List<Rule>> datasourceToEffectiveRules;
   private final List<Rule> clusterDefaultRules;
-
-  public static RetentionRulesSnapshot empty()
-  {
-    return EMPTY;
-  }
-
-  /**
-   * Snapshot in which the given rules are the cluster defaults and no datasource has
-   * override rules, so that they apply to every datasource.
-   */
-  public static RetentionRulesSnapshot withClusterDefaults(List<Rule> clusterDefaultRules)
-  {
-    return new RetentionRulesSnapshot(
-        Map.of(DEFAULT_DATASOURCE_NAME, clusterDefaultRules),
-        DEFAULT_DATASOURCE_NAME
-    );
-  }
 
   /**
    * @param datasourceToRules     Rules configured for each datasource, including the entry for
@@ -85,9 +57,10 @@ public class RetentionRulesSnapshot
     this.clusterDefaultRules = List.copyOf(datasourceToRules.getOrDefault(defaultDatasourceName, List.of()));
 
     // Copy the rule lists as well as the map spine, so that a caller still holding one of
-    // the source lists cannot mutate this snapshot.
+    // the source lists cannot mutate this snapshot. The effective rules of each datasource are
+    // resolved here rather than in getEffectiveRules(), which is called once per used segment.
     final Map<String, List<Rule>> rules = Maps.newHashMapWithExpectedSize(datasourceToRules.size());
-    final Map<String, List<Rule>> rulesWithDefault = Maps.newHashMapWithExpectedSize(datasourceToRules.size());
+    final Map<String, List<Rule>> effectiveRules = Maps.newHashMapWithExpectedSize(datasourceToRules.size());
     datasourceToRules.forEach((datasource, overrideRules) -> {
       rules.put(datasource, List.copyOf(overrideRules));
       // The default datasource is skipped so that its own rules are not appended to themselves.
@@ -95,11 +68,11 @@ public class RetentionRulesSnapshot
         final List<Rule> combinedRules = new ArrayList<>(overrideRules.size() + this.clusterDefaultRules.size());
         combinedRules.addAll(overrideRules);
         combinedRules.addAll(this.clusterDefaultRules);
-        rulesWithDefault.put(datasource, Collections.unmodifiableList(combinedRules));
+        effectiveRules.put(datasource, Collections.unmodifiableList(combinedRules));
       }
     });
     this.datasourceToRules = Map.copyOf(rules);
-    this.datasourceToRulesWithDefault = Map.copyOf(rulesWithDefault);
+    this.datasourceToEffectiveRules = Map.copyOf(effectiveRules);
   }
 
   /**
@@ -127,6 +100,9 @@ public class RetentionRulesSnapshot
    */
   public List<Rule> getEffectiveRules(String datasource)
   {
-    return datasourceToRulesWithDefault.getOrDefault(datasource, clusterDefaultRules);
+    if (datasource == null) {
+      return clusterDefaultRules;
+    }
+    return datasourceToEffectiveRules.getOrDefault(datasource, clusterDefaultRules);
   }
 }

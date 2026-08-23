@@ -143,9 +143,12 @@ class RetentionRulesSnapshotTest
   }
 
   @Test
-  void testWithClusterDefaultsAppliesRulesToEveryDatasource()
+  void testClusterDefaultsApplyToEveryDatasourceWithNoRulesOfItsOwn()
   {
-    final RetentionRulesSnapshot rules = RetentionRulesSnapshot.withClusterDefaults(List.of(DEFAULT_RULE));
+    final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(
+        Map.of(DEFAULT_DATASOURCE, List.of(DEFAULT_RULE)),
+        DEFAULT_DATASOURCE
+    );
 
     Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getEffectiveRules(TestDataSource.WIKI));
     Assertions.assertEquals(List.of(DEFAULT_RULE), rules.getEffectiveRules(TestDataSource.KOALA));
@@ -157,6 +160,9 @@ class RetentionRulesSnapshotTest
   @Test
   void testEmptySnapshotHasNoRulesForAnyDatasource()
   {
-    Assertions.assertEquals(List.of(), RetentionRulesSnapshot.empty().getEffectiveRules(TestDataSource.WIKI));
+    final RetentionRulesSnapshot rules = new RetentionRulesSnapshot(Map.of(), DEFAULT_DATASOURCE);
+
+    Assertions.assertEquals(List.of(), rules.getEffectiveRules(TestDataSource.WIKI));
+    Assertions.assertEquals(Map.of(), rules.getAllRules());
   }
 }

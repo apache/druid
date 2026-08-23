@@ -441,14 +441,14 @@ public class SQLMetadataRuleManagerTest
     ruleManager.poll();
     Map<String, List<Rule>> allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assertions.assertEquals(1, allRules.size());
-    Assertions.assertEquals(1, allRules.get("_default").size());
+    Assertions.assertEquals(1, allRules.get(managerConfig.getDefaultRule()).size());
     // Delete everything
     ruleManager.removeRulesForEmptyDatasourcesOlderThan(System.currentTimeMillis());
     // Verify the default rule was not deleted
     ruleManager.poll();
     allRules = ruleManager.getRulesSnapshot().getAllRules();
     Assertions.assertEquals(1, allRules.size());
-    Assertions.assertEquals(1, allRules.get("_default").size());
+    Assertions.assertEquals(1, allRules.get(managerConfig.getDefaultRule()).size());
   }
 
   @AfterEach

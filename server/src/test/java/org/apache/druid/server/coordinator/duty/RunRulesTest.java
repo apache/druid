@@ -33,6 +33,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -71,6 +72,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
@@ -104,7 +106,7 @@ public class RunRulesTest
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
     emitter = StubServiceEmitter.createStarted();
     EmittingLogger.registerEmitter(emitter);
-    rulesSnapshot = RetentionRulesSnapshot.empty();
+    rulesSnapshot = new RetentionRulesSnapshot(Map.of(), MetadataRuleManagerConfig.DEFAULT_RULE_NAME);
     ruleRunner = new RunRules((ds, set) -> set.size());
     loadQueueManager = new SegmentLoadQueueManager(null, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
@@ -123,7 +125,10 @@ public class RunRulesTest
    */
   private void setRetentionRules(Rule... rules)
   {
-    rulesSnapshot = RetentionRulesSnapshot.withClusterDefaults(List.of(rules));
+    rulesSnapshot = new RetentionRulesSnapshot(
+        Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, List.of(rules)),
+        MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+    );
   }
 
   /**

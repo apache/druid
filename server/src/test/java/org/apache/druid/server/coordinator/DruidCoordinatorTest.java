@@ -39,6 +39,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -851,7 +852,10 @@ public class DruidCoordinatorTest
    */
   private static RetentionRulesSnapshot clusterDefaultRules(Rule... rules)
   {
-    return RetentionRulesSnapshot.withClusterDefaults(List.of(rules));
+    return new RetentionRulesSnapshot(
+        Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, List.of(rules)),
+        MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+    );
   }
 
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)

@@ -178,7 +178,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
         "If specified, 'druid.manager.rules.defaultRule' must have a non-empty value."
     );
 
-    this.rulesSnapshot = new AtomicReference<>(RetentionRulesSnapshot.empty());
+    this.rulesSnapshot = new AtomicReference<>(new RetentionRulesSnapshot(Map.of(), defaultRule));
   }
 
   @Override
@@ -227,7 +227,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
       if (currentStartOrder == -1) {
         return;
       }
-      rulesSnapshot.set(RetentionRulesSnapshot.empty());
+      rulesSnapshot.set(new RetentionRulesSnapshot(Map.of(), config.getDefaultRule()));
       currentStartOrder = -1;
       // This call cancels the periodic poll() task, scheduled in start().
       exec.shutdownNow();

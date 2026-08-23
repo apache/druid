@@ -44,6 +44,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
@@ -930,7 +931,10 @@ public class DataSourcesResourceTest
    */
   private static RetentionRulesSnapshot clusterDefaultRules(Rule... rules)
   {
-    return RetentionRulesSnapshot.withClusterDefaults(List.of(rules));
+    return new RetentionRulesSnapshot(
+        Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, List.of(rules)),
+        MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+    );
   }
 
   private static DataSegment buildHandoffSegment(String dataSource, Interval interval, String version, int partitionNumber)
