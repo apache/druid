@@ -1208,7 +1208,7 @@
             <dependency>
                 <groupId>org.codehaus.plexus</groupId>
                 <artifactId>plexus-utils</artifactId>
-                <version>3.6.1</version>
+                <version>4.1.0</version>
             </dependency>
             <dependency>
                 <groupId>com.github.ben-manes.caffeine</groupId>
