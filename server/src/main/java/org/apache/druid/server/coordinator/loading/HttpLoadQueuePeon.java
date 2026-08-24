@@ -148,6 +148,14 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    */
   private volatile boolean capabilitiesConfirmed = false;
 
+  /**
+   * Guards {@link #refetchCapabilitiesIfNeeded()} so that at most one capability probe is
+   * outstanding at a time. Without this, every {@link #doSegmentManagement()} tick issues its
+   * own probe whenever {@link #capabilitiesConfirmed} is false, so queuing many segments onto a
+   * still-unhealthy server fires one redundant concurrent probe per tick at that same server.
+   */
+  private final AtomicBoolean refetchInProgress = new AtomicBoolean(false);
+
   public HttpLoadQueuePeon(
       String baseUrl,
       ObjectMapper jsonMapper,
@@ -261,7 +269,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
    */
   private void refetchCapabilitiesIfNeeded()
   {
-    if (capabilitiesConfirmed || stopped) {
+    if (capabilitiesConfirmed || stopped || !refetchInProgress.compareAndSet(false, true)) {
       return;
     }
 
@@ -290,12 +298,16 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
               catch (Throwable t) {
                 log.debug(t, "Could not parse refreshed loading capabilities from server[%s]. Will retry.", serverId);
               }
+              finally {
+                refetchInProgress.set(false);
+              }
             }
 
             @Override
             public void onFailure(Throwable t)
             {
               log.debug(t, "Could not refresh loading capabilities from server[%s]. Will retry.", serverId);
+              refetchInProgress.set(false);
             }
           },
           processingExecutor
@@ -303,6 +315,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
     catch (Throwable th) {
       log.debug(th, "Error issuing capability refresh request to server[%s]. Will retry.", serverId);
+      refetchInProgress.set(false);
     }
   }
 

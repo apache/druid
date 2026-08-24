@@ -61,6 +61,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -409,6 +410,44 @@ public class HttpLoadQueuePeonTest
   }
 
   @Test
+  public void testOnlyOneCapabilitiesProbeIsOutstandingAtATime()
+  {
+    DoubleAccumulator dd = new DoubleAccumulator(Math::max, 0.0);
+    // A still-unhealthy server should have at most one outstanding capability probe at a time: while
+    // one is in flight, other doSegmentManagement() ticks must not issue their own duplicate probes.
+    final AtomicInteger loadCapabilitiesCalls = new AtomicInteger(0);
+    final AlwaysUnhealthyHttpClient unhealthyClient = new AlwaysUnhealthyHttpClient(loadCapabilitiesCalls);
+
+    final HttpLoadQueuePeon peon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        unhealthyClient,
+        new HttpLoadQueuePeonConfig(null, null, 10),
+        () -> SegmentLoadingMode.NORMAL,
+        new WrappingScheduledExecutorService("HttpLoadQueuePeonTest-%s", unhealthyClient.processingExecutor, true),
+        unhealthyClient.callbackExecutor
+    );
+
+    // The probe issued during construction failed, so capabilities remain unconfirmed.
+    Assert.assertEquals(1, loadCapabilitiesCalls.get());
+
+    // Queue every available segment onto the still-unhealthy peon before draining anything, i.e.
+    // before any prior probe has had a chance to resolve. Each loadSegment() call queues exactly one
+    // doSegmentManagement() tick.
+    for (DataSegment segment : segments) {
+      peon.loadSegment(segment, SegmentAction.LOAD, null);
+    }
+
+    // Run exactly those queued ticks, without letting any capability-probe callback resolve yet (the
+    // callback for the first tick's probe is enqueued behind them, so it isn't among these).
+    unhealthyClient.processingExecutor.finishNextPendingTasks(segments.size());
+
+    // Only the first of those ticks should have issued a probe; the rest must see one already
+    // outstanding and skip theirs, instead of each firing its own duplicate at the struggling server.
+    Assert.assertEquals(2, loadCapabilitiesCalls.get());
+  }
+
+  @Test
   public void testBatchSize()
   {
     Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
@@ -580,6 +619,74 @@ public class HttpLoadQueuePeonTest
                 )
             );
           }
+          respond(handler, HttpResponseStatus.SERVICE_UNAVAILABLE);
+          return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
+        }
+
+        // Segment change request: acknowledge every queued segment as successfully processed.
+        respond(handler, HttpResponseStatus.OK);
+        final List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
+            request.getContent().array(),
+            HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
+        );
+        final List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
+        for (DataSegmentChangeRequest cr : changeRequests) {
+          statuses.add(new DataSegmentChangeResponse(cr, SegmentChangeStatus.success()));
+        }
+        return (ListenableFuture<Final>) Futures.immediateFuture(
+            new ByteArrayInputStream(
+                MAPPER.writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF).writeValueAsBytes(statuses)
+            )
+        );
+      }
+      catch (Exception ex) {
+        throw new RE(ex, "Unexpected exception.");
+      }
+    }
+
+    private static void respond(HttpResponseHandler<?, ?> handler, HttpResponseStatus status)
+    {
+      final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+      response.setContent(ChannelBuffers.buffer(0));
+      handler.handleResponse(response, null);
+    }
+  }
+
+  /**
+   * An {@link HttpClient} whose loadCapabilities endpoint always returns 503, simulating a server
+   * that never recovers. Segment change requests always succeed.
+   */
+  private static class AlwaysUnhealthyHttpClient implements HttpClient
+  {
+    final BlockingExecutorService processingExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-%s");
+    final BlockingExecutorService callbackExecutor = new BlockingExecutorService("HttpLoadQueuePeonTest-cb");
+    private final AtomicInteger loadCapabilitiesCalls;
+
+    AlwaysUnhealthyHttpClient(AtomicInteger loadCapabilitiesCalls)
+    {
+      this.loadCapabilitiesCalls = loadCapabilitiesCalls;
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler
+    )
+    {
+      return go(request, handler, null);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration duration
+    )
+    {
+      try {
+        if (request.getUrl().toString().contains("/loadCapabilities")) {
+          loadCapabilitiesCalls.incrementAndGet();
           respond(handler, HttpResponseStatus.SERVICE_UNAVAILABLE);
           return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
         }
