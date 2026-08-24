@@ -30,8 +30,8 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import java.util.Collection;
@@ -52,7 +52,7 @@ public class StatusResourceTest
     List<StatusResource.ModuleVersion> statusResourceModuleList =
         new StatusResource.Status(modules, JvmUtils.getRuntimeInfo()).getModules();
 
-    Assert.assertEquals("Status should have all modules loaded!", modules.size(), statusResourceModuleList.size());
+    Assertions.assertEquals(modules.size(), statusResourceModuleList.size(), "Status should have all modules loaded!");
 
     for (DruidModule module : modules) {
       String moduleName = module.getClass().getName();
@@ -64,7 +64,7 @@ public class StatusResourceTest
           break;
         }
       }
-      Assert.assertTrue("Status resource should contain module " + moduleName, contains);
+      Assertions.assertTrue(contains, "Status resource should contain module " + moduleName);
     }
   }
 
@@ -87,8 +87,8 @@ public class StatusResourceTest
     state.markReady();
     final StatusResource resource = new StatusResource(new Properties(), null, null, null, state);
     final Response response = resource.getReady();
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(true, response.getEntity());
+    Assertions.assertEquals(200, response.getStatus());
+    Assertions.assertEquals(true, response.getEntity());
   }
 
   @Test
@@ -97,8 +97,8 @@ public class StatusResourceTest
     final ServiceAnnouncementState state = new ServiceAnnouncementState();
     final StatusResource resource = new StatusResource(new Properties(), null, null, null, state);
     final Response response = resource.getReady();
-    Assert.assertEquals(503, response.getStatus());
-    Assert.assertEquals(false, response.getEntity());
+    Assertions.assertEquals(503, response.getStatus());
+    Assertions.assertEquals(false, response.getEntity());
   }
 
   private void testHiddenPropertiesWithPropertyFileName(String fileName) throws Exception
@@ -115,9 +115,9 @@ public class StatusResourceTest
                                                            .map(StringUtils::toLowerCase)
                                                            .collect(Collectors.toSet());
 
-    Assert.assertTrue(
-        "The list of unfiltered Properties is not > the list of filtered Properties?!?",
-        injector.getInstance(Properties.class).stringPropertyNames().size() > returnedProperties.size()
+    Assertions.assertTrue(
+        injector.getInstance(Properties.class).stringPropertyNames().size() > returnedProperties.size(),
+        "The list of unfiltered Properties is not > the list of filtered Properties?!?"
     );
 
     Set<String> hiddenProperties = new ObjectMapper().readValue(
@@ -128,7 +128,7 @@ public class StatusResourceTest
     hiddenProperties.forEach(
         (property) -> {
           lowerCasePropertyNames.forEach(
-              lowerCasePropertyName -> Assert.assertFalse(lowerCasePropertyName.contains(StringUtils.toLowerCase(
+              lowerCasePropertyName -> Assertions.assertFalse(lowerCasePropertyName.contains(StringUtils.toLowerCase(
                   property)))
           );
         }

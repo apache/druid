@@ -151,7 +151,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -181,9 +180,6 @@ import java.util.stream.Stream;
 @MethodSource("constructorFeeder")
 public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
-  @TempDir
-  public File temporaryFolder;
-
   private static final long POLL_RETRY_MS = 100;
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(new Header()
   {
@@ -3005,7 +3001,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private void makeToolboxFactory() throws IOException
   {
-    directory = newFolder(temporaryFolder, "junit");
+    directory = temporaryFolder.newFolder();
     final TestUtils testUtils = new TestUtils();
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
 
@@ -3432,7 +3428,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    final File file = new File(temporaryFolder, "task.json");
+    final File file = new File(temporaryFolder.getRoot(), "task.json");
 
     FileUtils.write(file, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
 
@@ -3679,7 +3675,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private Injector makePeonInjectorWithStubEmitter(Task task) throws IOException
   {
-    final File taskFile = new File(super.tempFolder, "task.json");
+    final File taskFile = new File(temporaryFolder.getRoot(), "task.json");
     FileUtils.write(taskFile, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
 
     final Properties properties = new Properties();
@@ -3712,11 +3708,4 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     return peon.makeInjector(Set.of(NodeRole.PEON));
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(
-        root.toPath(),
-        String.join("-", subDirs)
-    );
-  }
 }

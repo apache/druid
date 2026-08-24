@@ -48,10 +48,10 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
@@ -61,7 +61,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.DoubleAccumulator;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -79,7 +78,7 @@ public class HttpLoadQueuePeonTest
   private HttpLoadQueuePeon httpLoadQueuePeon;
   private SegmentLoadingCapabilities segmentLoadingCapabilities;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
@@ -101,7 +100,7 @@ public class HttpLoadQueuePeonTest
     httpLoadQueuePeon.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     httpLoadQueuePeon.stop();
@@ -120,11 +119,11 @@ public class HttpLoadQueuePeonTest
         .loadSegment(segments.get(3), SegmentAction.MOVE_TO, markSegmentProcessed(segments.get(3)));
 
     httpClient.sendRequestToServerAndHandleResponse();
-    Assert.assertEquals(segments, httpClient.segmentsSentToServer);
+    Assertions.assertEquals(segments, httpClient.segmentsSentToServer);
 
     // Verify that all callbacks are executed
     httpClient.executeCallbacks();
-    Assert.assertEquals(segments, httpClient.processedSegments);
+    Assertions.assertEquals(segments, httpClient.processedSegments);
   }
 
   @Test
@@ -147,8 +146,8 @@ public class HttpLoadQueuePeonTest
       }
     });
 
-    Assert.assertTrue(failedSegments.contains(segment1));
-    Assert.assertTrue(failedSegments.contains(segment2));
+    Assertions.assertTrue(failedSegments.contains(segment1));
+    Assertions.assertTrue(failedSegments.contains(segment2));
   }
 
   @Test
@@ -174,7 +173,7 @@ public class HttpLoadQueuePeonTest
     httpClient.sendRequestToServerAndHandleResponse();
 
     // Verify that all segments are sent to the server in the expected order
-    Assert.assertEquals(segmentsDay1, httpClient.segmentsSentToServer);
+    Assertions.assertEquals(segmentsDay1, httpClient.segmentsSentToServer);
   }
 
   @Test
@@ -215,7 +214,7 @@ public class HttpLoadQueuePeonTest
     httpClient.sendRequestToServerAndHandleResponse();
 
     // Verify that all segments are sent to the server in the expected order
-    Assert.assertEquals(expectedSegmentOrder, httpClient.segmentsSentToServer);
+    Assertions.assertEquals(expectedSegmentOrder, httpClient.segmentsSentToServer);
   }
 
   @Test
@@ -223,13 +222,13 @@ public class HttpLoadQueuePeonTest
   {
     final DataSegment segment = segments.get(0);
     httpLoadQueuePeon.loadSegment(segment, SegmentAction.REPLICATE, markSegmentProcessed(segment));
-    Assert.assertEquals(1, httpLoadQueuePeon.getSegmentsToLoad().size());
+    Assertions.assertEquals(1, httpLoadQueuePeon.getSegmentsToLoad().size());
 
     boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
-    Assert.assertTrue(cancelled);
-    Assert.assertEquals(0, httpLoadQueuePeon.getSegmentsToLoad().size());
+    Assertions.assertTrue(cancelled);
+    Assertions.assertEquals(0, httpLoadQueuePeon.getSegmentsToLoad().size());
 
-    Assert.assertTrue(httpClient.processedSegments.isEmpty());
+    Assertions.assertTrue(httpClient.processedSegments.isEmpty());
   }
 
   @Test
@@ -237,13 +236,13 @@ public class HttpLoadQueuePeonTest
   {
     final DataSegment segment = segments.get(0);
     httpLoadQueuePeon.dropSegment(segment, markSegmentProcessed(segment));
-    Assert.assertEquals(1, httpLoadQueuePeon.getSegmentsToDrop().size());
+    Assertions.assertEquals(1, httpLoadQueuePeon.getSegmentsToDrop().size());
 
     boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
-    Assert.assertTrue(cancelled);
-    Assert.assertTrue(httpLoadQueuePeon.getSegmentsToDrop().isEmpty());
+    Assertions.assertTrue(cancelled);
+    Assertions.assertTrue(httpLoadQueuePeon.getSegmentsToDrop().isEmpty());
 
-    Assert.assertTrue(httpClient.processedSegments.isEmpty());
+    Assertions.assertTrue(httpClient.processedSegments.isEmpty());
   }
 
   @Test
@@ -251,26 +250,26 @@ public class HttpLoadQueuePeonTest
   {
     final DataSegment segment = segments.get(0);
     httpLoadQueuePeon.loadSegment(segment, SegmentAction.REPLICATE, markSegmentProcessed(segment));
-    Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
+    Assertions.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
 
     httpClient.sendRequestToServer();
-    Assert.assertTrue(httpClient.segmentsSentToServer.contains(segment));
+    Assertions.assertTrue(httpClient.segmentsSentToServer.contains(segment));
 
     // Segment is still in queue but operation cannot be cancelled
-    Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
+    Assertions.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
     boolean cancelled = httpLoadQueuePeon.cancelOperation(segment);
-    Assert.assertFalse(cancelled);
+    Assertions.assertFalse(cancelled);
 
     httpClient.handleResponseFromServer();
 
     // Segment has been removed from queue
-    Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().isEmpty());
+    Assertions.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().isEmpty());
     cancelled = httpLoadQueuePeon.cancelOperation(segment);
-    Assert.assertFalse(cancelled);
+    Assertions.assertFalse(cancelled);
 
     // Execute callbacks and verify segment is fully processed
     httpClient.executeCallbacks();
-    Assert.assertTrue(httpClient.processedSegments.contains(segment));
+    Assertions.assertTrue(httpClient.processedSegments.contains(segment));
   }
 
   @Test
@@ -278,10 +277,10 @@ public class HttpLoadQueuePeonTest
   {
     final DataSegment segment = segments.get(0);
     httpLoadQueuePeon.loadSegment(segment, SegmentAction.REPLICATE, markSegmentProcessed(segment));
-    Assert.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
+    Assertions.assertTrue(httpLoadQueuePeon.getSegmentsToLoad().contains(segment));
 
-    Assert.assertTrue(httpLoadQueuePeon.cancelOperation(segment));
-    Assert.assertFalse(httpLoadQueuePeon.cancelOperation(segment));
+    Assertions.assertTrue(httpLoadQueuePeon.cancelOperation(segment));
+    Assertions.assertFalse(httpLoadQueuePeon.cancelOperation(segment));
   }
 
   @Test
@@ -289,8 +288,8 @@ public class HttpLoadQueuePeonTest
   {
     httpLoadQueuePeon.loadSegment(segments.get(0), SegmentAction.LOAD, null);
     httpClient.sendRequestToServer();
-    Assert.assertEquals(1, httpLoadQueuePeon.getSegmentsToLoad().size());
-    Assert.assertEquals(0, httpLoadQueuePeon.getLoadRateKbps());
+    Assertions.assertEquals(1, httpLoadQueuePeon.getSegmentsToLoad().size());
+    Assertions.assertEquals(0, httpLoadQueuePeon.getLoadRateKbps());
   }
 
   @Test
@@ -304,7 +303,7 @@ public class HttpLoadQueuePeonTest
     httpClient.handleResponseFromServer();
 
     // Verify that load rate is still zero
-    Assert.assertEquals(0, httpLoadQueuePeon.getLoadRateKbps());
+    Assertions.assertEquals(0, httpLoadQueuePeon.getLoadRateKbps());
   }
 
   @Test
@@ -320,7 +319,7 @@ public class HttpLoadQueuePeonTest
     // Verify that load rate has been updated
     long expectedRateKbps = (8 * segments.get(0).getSize()) / millisTakenToLoadSegment;
     long observedRateKbps = httpLoadQueuePeon.getLoadRateKbps();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         observedRateKbps > expectedRateKbps / 2
         && observedRateKbps <= expectedRateKbps
     );
@@ -351,10 +350,7 @@ public class HttpLoadQueuePeonTest
           Duration duration
       )
       {
-        final HttpResponse response =
-            new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.SERVICE_UNAVAILABLE);
-        response.setContent(ChannelBuffers.buffer(0));
-        handler.handleResponse(response, null);
+        respond(handler, HttpResponseStatus.SERVICE_UNAVAILABLE);
         return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(new byte[0]));
       }
     };
@@ -371,7 +367,7 @@ public class HttpLoadQueuePeonTest
 
     // Construction succeeded and the peon fell back to default capabilities derived from the batch
     // size: turbo loading threads default to the batch size (10) rather than a fetched value.
-    Assert.assertEquals(10, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
+    Assertions.assertEquals(10, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
   }
 
   @Test
@@ -396,8 +392,8 @@ public class HttpLoadQueuePeonTest
 
     // The probe issued during construction failed, so the peon falls back to default capabilities and
     // reports the default batch size (10) rather than the real turbo capability (3).
-    Assert.assertEquals(1, loadCapabilitiesCalls.get());
-    Assert.assertEquals(10, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
+    Assertions.assertEquals(1, loadCapabilitiesCalls.get());
+    Assertions.assertEquals(10, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
 
     // The server has since recovered. Trigger a segment management tick: the peon issues an async
     // re-fetch, whose callback runs on the processing executor and updates the cached capabilities.
@@ -405,14 +401,13 @@ public class HttpLoadQueuePeonTest
     recoveringClient.processingExecutor.finishAllPendingTasks();
 
     // The peon picked up the real turbo capability (3) instead of remaining pinned to the default (10).
-    Assert.assertTrue(loadCapabilitiesCalls.get() > 1);
-    Assert.assertEquals(3, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
+    Assertions.assertTrue(loadCapabilitiesCalls.get() > 1);
+    Assertions.assertEquals(3, peon.calculateBatchSize(SegmentLoadingMode.TURBO));
   }
 
   @Test
   public void testOnlyOneCapabilitiesProbeIsOutstandingAtATime()
   {
-    DoubleAccumulator dd = new DoubleAccumulator(Math::max, 0.0);
     // A still-unhealthy server should have at most one outstanding capability probe at a time: while
     // one is in flight, other doSegmentManagement() ticks must not issue their own duplicate probes.
     final AtomicInteger loadCapabilitiesCalls = new AtomicInteger(0);
@@ -429,7 +424,7 @@ public class HttpLoadQueuePeonTest
     );
 
     // The probe issued during construction failed, so capabilities remain unconfirmed.
-    Assert.assertEquals(1, loadCapabilitiesCalls.get());
+    Assertions.assertEquals(1, loadCapabilitiesCalls.get());
 
     // Queue every available segment onto the still-unhealthy peon before draining anything, i.e.
     // before any prior probe has had a chance to resolve. Each loadSegment() call queues exactly one
@@ -444,13 +439,13 @@ public class HttpLoadQueuePeonTest
 
     // Only the first of those ticks should have issued a probe; the rest must see one already
     // outstanding and skip theirs, instead of each firing its own duplicate at the struggling server.
-    Assert.assertEquals(2, loadCapabilitiesCalls.get());
+    Assertions.assertEquals(2, loadCapabilitiesCalls.get());
   }
 
   @Test
   public void testBatchSize()
   {
-    Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+    Assertions.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
 
     // Without a batch size runtime parameter
     httpLoadQueuePeon = new HttpLoadQueuePeon(
@@ -467,13 +462,20 @@ public class HttpLoadQueuePeonTest
         httpClient.callbackExecutor
     );
 
-    Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
-    Assert.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));
+    Assertions.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+    Assertions.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));
   }
 
   private LoadPeonCallback markSegmentProcessed(DataSegment segment)
   {
     return success -> httpClient.processedSegments.add(segment);
+  }
+
+  private static void respond(HttpResponseHandler<?, ?> handler, HttpResponseStatus status)
+  {
+    final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+    response.setContent(ChannelBuffers.buffer(0));
+    handler.handleResponse(response, null);
   }
 
   private class TestHttpClient implements HttpClient, DataSegmentChangeHandler
@@ -643,13 +645,6 @@ public class HttpLoadQueuePeonTest
         throw new RE(ex, "Unexpected exception.");
       }
     }
-
-    private static void respond(HttpResponseHandler<?, ?> handler, HttpResponseStatus status)
-    {
-      final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
-      response.setContent(ChannelBuffers.buffer(0));
-      handler.handleResponse(response, null);
-    }
   }
 
   /**
@@ -710,13 +705,6 @@ public class HttpLoadQueuePeonTest
       catch (Exception ex) {
         throw new RE(ex, "Unexpected exception.");
       }
-    }
-
-    private static void respond(HttpResponseHandler<?, ?> handler, HttpResponseStatus status)
-    {
-      final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
-      response.setContent(ChannelBuffers.buffer(0));
-      handler.handleResponse(response, null);
     }
   }
 

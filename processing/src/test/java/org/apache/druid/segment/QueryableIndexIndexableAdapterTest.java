@@ -61,7 +61,7 @@ public class QueryableIndexIndexableAdapterTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   @RegisterExtension
   public final CloserExtension closer = new CloserExtension(false);
 

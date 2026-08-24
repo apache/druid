@@ -31,11 +31,11 @@ import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -43,10 +43,10 @@ import java.util.Collection;
 /**
  *
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("getParameters")
 public class LoadSpecTest
 {
-  @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
     return ImmutableList.of(
@@ -65,7 +65,7 @@ public class LoadSpecTest
 
   private static ObjectMapper mapper;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp()
   {
     final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
@@ -95,6 +95,6 @@ public class LoadSpecTest
   public void testStringResolve() throws IOException
   {
     LoadSpec loadSpec = mapper.readValue(value, LoadSpec.class);
-    Assert.assertEquals(expectedId, loadSpec.getClass().getAnnotation(JsonTypeName.class).value());
+    Assertions.assertEquals(expectedId, loadSpec.getClass().getAnnotation(JsonTypeName.class).value());
   }
 }

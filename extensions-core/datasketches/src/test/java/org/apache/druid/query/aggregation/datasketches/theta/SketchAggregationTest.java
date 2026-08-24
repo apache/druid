@@ -88,7 +88,7 @@ public class SketchAggregationTest
   public void initSketchAggregationTest(final GroupByQueryConfig config, final String vectorize)
   {
     SketchModule.registerSerde();
-    this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new SketchModule().getJacksonModules(),
         config,
         tempFolder

@@ -30,10 +30,10 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -56,7 +56,7 @@ public class CachingCostBalancerStrategyTest
   private List<DataSegment> segmentQueries;
   private ListeningExecutorService executorService;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     Random random = new Random(0);
@@ -80,7 +80,7 @@ public class CachingCostBalancerStrategyTest
     executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(""));
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     executorService.shutdownNow();
@@ -107,7 +107,7 @@ public class CachingCostBalancerStrategyTest
             }
         )
         .sum();
-    Assert.assertTrue(((double) notEqual / (double) segmentQueries.size()) < 0.01);
+    Assertions.assertTrue(((double) notEqual / (double) segmentQueries.size()) < 0.01);
   }
 
   private CachingCostBalancerStrategy createCachingCostBalancerStrategy(

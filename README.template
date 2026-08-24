@@ -33,7 +33,7 @@ You can build Apache Druid directly from source.
 
 Prerequisites:
   JDK 25
-  Maven version 3.x
+  Maven version 3.6.3 or later
 
 
 The basic command to build Druid from source is:
