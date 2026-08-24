@@ -17,6 +17,7 @@ name: "Cron Job ITs"
 on:
   schedule: # Runs by default on master branch
     - cron: '0 3 * * *' # Runs every day at 3:00 AM UTC
+  workflow_dispatch:
   pull_request:
     paths:
       - 'owasp-dependency-check-suppressions.xml'
@@ -45,6 +46,14 @@ jobs:
           distribution: 'zulu'
           cache: maven
 
+      - name: Restore Dependency-Check data
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/dependency-check
+          key: dependency-check-data-${{ runner.os }}-${{ hashFiles('pom.xml') }}-${{ github.run_id }}
+          restore-keys: |
+            dependency-check-data-${{ runner.os }}-${{ hashFiles('pom.xml') }}-
+
       - name: maven build # needed to rebuild in case of maven snapshot resolution fails
         run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
@@ -54,7 +63,7 @@ jobs:
           OSS_INDEX_PASSWORD: ${{ secrets.OSS_INDEX_PASSWORD }}
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
-          mvn -B dependency-check:purge dependency-check:check -DnvdApiKey=$NVD_API_KEY -DossIndexUsername=$OSS_INDEX_USERNAME -DossIndexPassword=$OSS_INDEX_PASSWORD || { echo "
+          mvn -B dependency-check:check -DdataDirectory="$HOME/.cache/dependency-check" -DnvdValidForHours=24 -DnvdApiKey="$NVD_API_KEY" -DossIndexUsername="$OSS_INDEX_USERNAME" -DossIndexPassword="$OSS_INDEX_PASSWORD" || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           `mvn dependency-check:check`
@@ -62,3 +71,10 @@ jobs:
           they can be suppressed by adding entries to owasp-dependency-check-suppressions.xml (for more
           information, see https://jeremylong.github.io/DependencyCheck/general/suppression.html).
           " && false; }
+
+      - name: Save Dependency-Check data
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/dependency-check
+          key: dependency-check-data-${{ runner.os }}-${{ hashFiles('pom.xml') }}-${{ github.run_id }}
