@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -32,7 +33,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,8 +51,8 @@ class SegmentLocalCacheManagerBootstrapReserveTest
   private static final SegmentId SEGMENT_ID = SegmentId.of("test", Intervals.of("2025/2026"), "v1", 0);
   private static final long SEGMENT_SIZE = 4096L;
 
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cacheRoot;
   private SegmentLocalCacheManager manager;
@@ -60,11 +61,10 @@ class SegmentLocalCacheManagerBootstrapReserveTest
   @BeforeEach
   void setup() throws IOException
   {
-    cacheRoot = new File(tempDir, "cache");
-    FileUtils.mkdirp(cacheRoot);
+    cacheRoot = temporaryFolder.newFolder("cache");
     segment = DataSegment.builder(SEGMENT_ID)
                          .shardSpec(NoneShardSpec.instance())
-                         .loadSpec(Map.of("type", "local", "path", new File(tempDir, "deep").getAbsolutePath()))
+                         .loadSpec(Map.of("type", "local", "path", temporaryFolder.newFolder("deep").getAbsolutePath()))
                          .size(SEGMENT_SIZE)
                          .build();
   }
