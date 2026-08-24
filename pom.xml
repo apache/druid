@@ -138,7 +138,7 @@
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>2.2.0</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
+        <com.google.cloud.storage.version>2.71.0</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
