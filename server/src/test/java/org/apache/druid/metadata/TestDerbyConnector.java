@@ -35,7 +35,6 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.rules.ExternalResource;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
@@ -142,7 +141,7 @@ public class TestDerbyConnector extends DerbyConnector
     this.getDBI().open().close();
   }
 
-  public static class DerbyConnectorRule extends ExternalResource implements BeforeEachCallback, AfterEachCallback
+  public static class DerbyConnectorRule implements BeforeEachCallback, AfterEachCallback
   {
     private TestDerbyConnector connector;
     private final MetadataStorageTablesConfig tablesConfig;
@@ -189,7 +188,6 @@ public class TestDerbyConnector extends DerbyConnector
       this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     }
 
-    @Override
     public void before()
     {
       connector = new TestDerbyConnector(
@@ -200,7 +198,6 @@ public class TestDerbyConnector extends DerbyConnector
       connector.createDatabase(); // create db
     }
 
-    @Override
     public void after()
     {
       connector.tearDown();

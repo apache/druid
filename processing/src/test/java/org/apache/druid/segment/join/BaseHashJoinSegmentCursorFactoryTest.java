@@ -70,7 +70,7 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
   public static Long NULL_COUNTRY;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public QueryableIndexSegment factSegment;
   public LookupExtractor countryIsoCodeToNameLookup;

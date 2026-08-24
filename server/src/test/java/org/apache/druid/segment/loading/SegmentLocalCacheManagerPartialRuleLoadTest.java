@@ -55,6 +55,7 @@ import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -64,7 +65,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -125,22 +126,22 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File SHARED_TEMP_DIR;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
   private SegmentLocalCacheManager manager;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(SHARED_TEMP_DIR, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     DEEP_STORAGE_DIR = IndexBuilder.create()
                                    .useV10()
                                    .tmpDir(tmp)
@@ -190,15 +191,15 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheRoot);
+    cacheRoot = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @AfterEach
   void tearDown()
   {
     if (manager != null) {
-      // Drop the segment to release rule-holds and unmount mmap'd bundle files before @TempDir tries to clean up
+      // Drop the segment to release rule-holds and unmount mmap'd bundle files before
+      // TemporaryFolderExtension cleans up.
       // the cache directory. Without this, on some platforms the temp-dir cleanup fails on still-mapped files.
       try {
         manager.drop(partialWrapperSegment(List.of(AGG_BUNDLE)));
@@ -836,10 +837,12 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   {
     // Setup: writable first (so info_dir defaults there), read-only second, dummy reservation on writable so
     // LeastBytesUsed picks the read-only location first. mkdirp on read-only fails → release + continue to writable.
-    final File writable = new File(perTestTempDir, "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    final File readOnly = new File(perTestTempDir, "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(writable);
-    FileUtils.mkdirp(readOnly);
+    final File writable = temporaryFolder.newFolder(
+        "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
+    final File readOnly = temporaryFolder.newFolder(
+        "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     manager = makeManagerAtLocations(true, true, List.of(writable, readOnly));
 
     // Bump writable's usage so LeastBytesUsed picks readOnly first.
@@ -1055,11 +1058,9 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private DataSegment partialWrapperSegmentWithNullRangeReader(List<String> selectedProjections, String fingerprint)
       throws IOException
   {
-    final File noRangeReaderDir = new File(
-        perTestTempDir,
+    final File noRangeReaderDir = temporaryFolder.newFolder(
         "no_range_reader_" + fingerprint.replace(':', '_').replace('.', '_')
     );
-    FileUtils.mkdirp(noRangeReaderDir);
     final Map<String, Object> delegate = Map.of(
         "type", "local",
         "path", noRangeReaderDir.getAbsolutePath()
