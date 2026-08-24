@@ -656,7 +656,7 @@ class PartialSegmentMetadataCacheEntryTest
   }
 
   /**
-   * Variant of {@link #mountedEntryOver} that uses {@link StorageLocation#reserveWeak} so the mounted entry is a real
+   * Variant of {@link #mountedEntryOver} that leaves the entry registered but unheld, so the mounted entry is a real
    * weak reservation — needed by the rule-holds state machine, which calls
    * {@link StorageLocation#addWeakReservationHoldIfExists} on itself when {@code applyRule} runs.
    */
@@ -676,8 +676,13 @@ class PartialSegmentMetadataCacheEntryTest
         PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
         PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
-    Assertions.assertTrue(location.reserveWeak(entry));
+    // Reserve under a hold, mount, then release: the entry stays registered but unheld, as it would after a
+    // bootstrap restore.
+    final StorageLocation.ReservationHold<SegmentCacheEntry> hold =
+        location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(hold);
     entry.mount(location);
+    hold.close();
     return entry;
   }
 }
