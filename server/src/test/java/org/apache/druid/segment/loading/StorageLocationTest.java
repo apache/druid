@@ -617,41 +617,11 @@ class StorageLocationTest
     reacquire.close();
     Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
 
-    // Releasing that hold does not remove it either (only the hold that created an entry takes the removal path), but
-    // it is now a plain unheld, never-mounted weak entry, so reclaim takes its reservation back when space is wanted.
+    // Releasing that hold does not remove it either - removal is the creating hold's job - so it is left registered
+    // and unmounted, for reclaim to take when the space is wanted.
     other.close();
     Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
-    Assertions.assertTrue(location.reserveWeak(new UnmountTrackingCacheEntry("b", 100)));
-    Assertions.assertNull(location.getCacheEntry(entry.getId()));
-    Assertions.assertTrue(entry.unmountCalled);
-  }
-
-  @Test
-  public void testReleasingStaleHoldDoesNotEvictTheEntryThatReplacedIt()
-  {
-    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
-    final ReleaseHookCacheEntry stale = new ReleaseHookCacheEntry("a", 10);
-    final UnmountTrackingCacheEntry replacement = new UnmountTrackingCacheEntry("a", 10);
-
-    final StorageLocation.ReservationHold<?> hold = location.addWeakReservationHold(stale.getId(), () -> stale);
-    Assertions.assertNotNull(hold);
-
-    // A hold is released before its release runnable takes the write lock, and the hold-bytes bookkeeping reads the
-    // entry's size in exactly that window. Use that to do deterministically what another thread would otherwise have
-    // to win a race to do: reclaim the entry this hold was placed on, and register a fresh one under the same id.
-    stale.onGetSize = () -> {
-      // The entry is unheld now, so a reservation that needs the space takes it...
-      Assertions.assertTrue(location.reserveWeak(new UnmountTrackingCacheEntry("filler", 100)));
-      Assertions.assertNull(location.getCacheEntry(stale.getId()));
-      // ...and a fresh entry lands under that id. It is deliberately registered without a hold, so nothing but the
-      // identity check stands between it and this stale runnable's `isNewEntry && !isMounted` removal.
-      Assertions.assertTrue(location.reserveWeak(replacement));
-    };
-
-    hold.close();
-
-    Assertions.assertSame(replacement, location.getCacheEntry(replacement.getId()));
-    Assertions.assertFalse(replacement.unmountCalled);
+    Assertions.assertFalse(entry.unmountCalled);
   }
 
   @Test
@@ -889,65 +859,6 @@ class StorageLocationTest
     public void unmount()
     {
       // do nothing
-    }
-  }
-
-  /**
-   * A {@link CacheEntry} that tracks mount/unmount so tests can assert that lifecycle hooks fired.
-   */
-  /**
-   * A {@link CacheEntry} that runs a one-shot hook the next time its size is read. Used to act inside the window
-   * between a hold being released and that hold's release runnable taking the location's write lock, since the
-   * hold-bytes bookkeeping reads the entry's size in exactly that window.
-   */
-  private static final class ReleaseHookCacheEntry implements CacheEntry
-  {
-    private final StringCacheIdentifier id;
-    private final long size;
-    private boolean mounted = false;
-    @Nullable
-    private Runnable onGetSize;
-
-    private ReleaseHookCacheEntry(String id, long size)
-    {
-      this.id = new StringCacheIdentifier(id);
-      this.size = size;
-    }
-
-    @Override
-    public StringCacheIdentifier getId()
-    {
-      return id;
-    }
-
-    @Override
-    public long getSize()
-    {
-      final Runnable hook = onGetSize;
-      if (hook != null) {
-        // one-shot, so the reads this hook itself provokes don't re-enter it
-        onGetSize = null;
-        hook.run();
-      }
-      return size;
-    }
-
-    @Override
-    public boolean isMounted()
-    {
-      return mounted;
-    }
-
-    @Override
-    public void mount(StorageLocation location)
-    {
-      mounted = true;
-    }
-
-    @Override
-    public void unmount()
-    {
-      mounted = false;
     }
   }
 

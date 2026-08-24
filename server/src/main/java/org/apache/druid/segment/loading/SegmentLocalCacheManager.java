@@ -648,14 +648,18 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 final long waitNanos = taskStartNanos - submitNanos;
                 final boolean wasMounted = reserved.metadata.isMounted();
                 // mount() is idempotent via PartialSegmentMetadataCacheEntry's mount-future dedup; already-mounted
-                // returns immediately, a concurrent mount is awaited, a fresh entry is mounted. No explicit rollback
-                // is needed on failure: closing our loadCleanup hold removes the never-mounted entry from the cache,
-                // unless another acquire is holding it too, in which case it is theirs to mount and ours to leave
-                // alone (an unheld never-mounted entry is reclaimable, so nothing is stranded either way).
+                // returns immediately, a concurrent mount is awaited, a fresh entry is mounted. The weak entry's
+                // hold-release runnable removes a never-mounted entry from the cache when our loadCleanup hold
+                // closes, so no explicit rollback is needed on failure.
                 try {
                   reserved.metadata.mount(reserved.location);
                 }
-                catch (IOException e) {
+                catch (IOException | RuntimeException e) {
+                  // only fail if caller was expecting this to finish
+                  if (holdHolder.isClosed()) {
+                    log.debug(e, "Mount of segment[%s] failed after its acquire was abandoned", dataSegment.getId());
+                    return AcquireSegmentResult.empty();
+                  }
                   throw DruidException.defensive(
                       e,
                       "Failed to mount partial metadata for segment[%s]",
@@ -676,10 +680,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   }
                   // Closing the AcquireSegmentAction released that hold, so this is what an abandoned acquire looks
                   // like from inside the load task: a canceled or timed out query, or a caller unwinding because a
-                  // different segment failed. Mounting stays quiet about it (an entry evicted mid-mount is rolled
-                  // back by verifyStillReservedOrRollback without an error), so the loss surfaces here. Nothing is
-                  // waiting on this result, report the segment as unavailable rather than failing a query that is
-                  // already on its way down.
+                  // different segment failed. This is where the loss surfaces when the mount itself went fine and
+                  // verifyStillReservedOrRollback rolled it back quietly. Nothing is waiting on this result, report
+                  // the segment as unavailable rather than failing a query that is already on its way down.
                   return AcquireSegmentResult.empty();
                 }
                 try {
@@ -958,6 +961,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final ReservedPartial existing = findExistingPartialWithHold(dataSegment.getId());
     if (existing != null) {
+      if (!existing.metadata().isMounted()) {
+        // rewrite the info file if it is missing
+        try {
+          storeInfoFile(dataSegment);
+        }
+        catch (IOException e) {
+          log.warn(e, "Failed to restore info file for cached segment[%s]", dataSegment.getId());
+        }
+      }
       return existing;
     }
     return reservePartial(dataSegment, rangeReader);

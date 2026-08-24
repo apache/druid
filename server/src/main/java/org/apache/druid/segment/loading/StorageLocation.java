@@ -542,12 +542,6 @@ public class StorageLocation
    * reference the holder was promised would stay alive dies underneath it. The identity check covers the same hazard
    * one step removed: the hold is released before the write lock is taken, so in between the entry can be reclaimed
    * and a fresh one registered under the same id, and this runnable would otherwise evict that replacement.
-   * <p>
-   * Keeping a held entry here means the last hold to be released is not necessarily the one that removes a
-   * never-mounted entry (a hold that did not create the entry takes the early return above), so such an entry can
-   * outlive every hold on it. That is harmless: it is unmounted and unheld, so {@link #reclaim} takes its reservation
-   * back as soon as the space is wanted, and a later acquire re-mounts the same entry rather than registering a
-   * second one for that id.
    */
   private Runnable createWeakEntryReleaseRunnable(
       final WeakCacheEntry weakEntry,
