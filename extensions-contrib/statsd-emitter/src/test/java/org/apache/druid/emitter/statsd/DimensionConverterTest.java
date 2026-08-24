@@ -62,6 +62,48 @@ public class DimensionConverterTest
   }
 
   @Test
+  public void testConvertTaskCountMetrics()
+  {
+    DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+    for (String metric : new String[]{
+        "task/success/count",
+        "task/failed/count",
+        "task/running/count",
+        "task/pending/count",
+        "task/waiting/count"
+    }) {
+      ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+          .setDimension("dataSource", "data-source")
+          .setDimension("taskType", "index_kafka")
+          .setDimension("supervisorId", "supervisor-1")
+          .setMetric(metric, 1)
+          .build("overlord", "overlordHost1");
+
+      ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
+      StatsDMetric statsDMetric = dimensionConverter.addFilteredUserDims(
+          event.getService(),
+          event.getMetric(),
+          event.getUserDims(),
+          actual
+      );
+      Assertions.assertNotNull(statsDMetric, metric + " is mapped");
+      final ImmutableMap<String, String> dims = actual.build();
+      Assertions.assertEquals(
+          ImmutableMap.of("dataSource", "data-source", "taskType", "index_kafka"),
+          dims,
+          "correct Dimensions for " + metric
+      );
+      // Dimensions are iterated in sorted order, and for non-dogstatsd output their values are
+      // appended to the dotted metric name in that order, so the emitted order is user-visible.
+      Assertions.assertEquals(
+          List.of("dataSource", "taskType"),
+          List.copyOf(dims.keySet()),
+          "correct Dimension order for " + metric
+      );
+    }
+  }
+
+  @Test
   public void testConvertTaskRunTime()
   {
     DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);

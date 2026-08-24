@@ -85,7 +85,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   private final Closer closer;
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   public DumpSegmentTest()
   {

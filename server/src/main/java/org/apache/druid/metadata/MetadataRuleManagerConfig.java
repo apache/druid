@@ -26,8 +26,14 @@ import org.joda.time.Period;
  */
 public class MetadataRuleManagerConfig
 {
+  /**
+   * Default value of {@code druid.manager.rules.defaultRule}, i.e. the datasource against which
+   * the cluster-level default rules are stored when an operator has not configured another name.
+   */
+  public static final String DEFAULT_RULE_NAME = "_default";
+
   @JsonProperty
-  private String defaultRule = "_default";
+  private String defaultRule = DEFAULT_RULE_NAME;
 
   @JsonProperty
   private Period pollDuration = new Period("PT1M");

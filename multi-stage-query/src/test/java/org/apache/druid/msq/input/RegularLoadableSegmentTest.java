@@ -96,7 +96,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   private static File SEGMENT_ZIP_FILE;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private Path tempDir;
 

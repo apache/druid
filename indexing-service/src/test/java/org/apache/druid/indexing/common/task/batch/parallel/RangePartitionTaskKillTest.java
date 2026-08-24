@@ -97,7 +97,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = createTempDir("data");
+    inputDir = temporaryFolder.newFolder("data");
   }
 
   @Test

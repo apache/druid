@@ -49,7 +49,7 @@ public class StorageLocationSelectorStrategyTest
 {
 
   @RegisterExtension
-  public final TemporaryFolderExtension tmpFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tmpFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testLeastBytesUsedLocationSelectorStrategy() throws Exception
