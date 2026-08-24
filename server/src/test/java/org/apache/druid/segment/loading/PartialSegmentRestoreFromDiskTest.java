@@ -27,7 +27,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -44,13 +43,14 @@ import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -96,20 +96,20 @@ class PartialSegmentRestoreFromDiskTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File deepStorageDir;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cacheDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     deepStorageDir = IndexBuilder.create()
                                  .useV10()
                                  .tmpDir(tmp)
@@ -139,8 +139,7 @@ class PartialSegmentRestoreFromDiskTest
   @BeforeEach
   void setupPerTest() throws IOException
   {
-    cacheDir = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @Test
@@ -579,7 +578,7 @@ class PartialSegmentRestoreFromDiskTest
     // state. Instead, we want containers ON disk, so leave bundles mounted but close the file mapper. Since the
     // restore path re-opens via PartialSegmentFileMapperV10.create which is idempotent w.r.t. on-disk files,
     // un-mount on the SEED side AFTER files are sparse-allocated would also delete them. So we just leave the
-    // seed mounted: at test end @TempDir cleans up.
+    // seed mounted: TemporaryFolderExtension cleans up at test end.
     aggHold.close();
     baseHold.close();
   }

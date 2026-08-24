@@ -20,21 +20,16 @@
 package org.apache.druid.error;
 
 import com.google.common.base.Throwables;
-import org.apache.druid.matchers.DruidMatchers;
-import org.hamcrest.Description;
-import org.hamcrest.DiagnosingMatcher;
-import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.hamcrest.core.AllOf;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 
 /**
- * A matcher for validating exceptions in unit tests, providing a fluent API for constructing matchers to allow
- * matching of {@link Throwable} objects, such as verifying exception type, message content, and cause.
+ * A JUnit 5 assertion helper for validating exceptions by type, message, and cause.
  */
-public class ExceptionMatcher extends DiagnosingMatcher<Throwable>
+public class ExceptionMatcher
 {
 
   public static ExceptionMatcher of(Class<? extends Throwable> clazz)
@@ -42,73 +37,63 @@ public class ExceptionMatcher extends DiagnosingMatcher<Throwable>
     return new ExceptionMatcher(clazz);
   }
 
-  private final AllOf<Throwable> delegate;
-  private final ArrayList<Matcher<? super Throwable>> matcherList;
+  private final List<Consumer<Throwable>> assertions = new ArrayList<>();
   private final Class<? extends Throwable> clazz;
 
   public ExceptionMatcher(Class<? extends Throwable> clazz)
   {
     this.clazz = clazz;
 
-    matcherList = new ArrayList<>();
-    delegate = new AllOf<>(matcherList);
   }
 
-  public ExceptionMatcher expectMessageIs(String s)
+  public ExceptionMatcher expectMessageIs(final String message)
   {
-    return expectMessage(Matchers.equalTo(s));
-  }
-
-  public ExceptionMatcher expectMessageContains(String contains)
-  {
-    return expectMessage(Matchers.containsString(contains));
-  }
-
-  public ExceptionMatcher expectMessage(Matcher<String> messageMatcher)
-  {
-    matcherList.add(0, DruidMatchers.fn("message", Throwable::getMessage, messageMatcher));
+    assertions.add(exception -> Assertions.assertEquals(message, exception.getMessage()));
     return this;
   }
 
-  public ExceptionMatcher expectCause(Matcher<Throwable> causeMatcher)
+  public ExceptionMatcher expectMessageContains(final String contains)
   {
-    matcherList.add(0, DruidMatchers.fn("cause", Throwable::getCause, causeMatcher));
+    assertions.add(exception -> {
+      Assertions.assertNotNull(exception.getMessage());
+      Assertions.assertTrue(exception.getMessage().contains(contains));
+    });
     return this;
   }
 
-  public ExceptionMatcher expectRootCause(Matcher<Throwable> causeMatcher)
+  public ExceptionMatcher expectCause(final ExceptionMatcher causeMatcher)
   {
-    matcherList.add(0, DruidMatchers.fn("rootCause", Throwables::getRootCause, causeMatcher));
+    assertions.add(exception -> causeMatcher.assertThat(exception.getCause()));
     return this;
   }
 
-  @Override
-  protected boolean matches(Object item, Description mismatchDescription)
+  public ExceptionMatcher expectRootCause(final ExceptionMatcher causeMatcher)
   {
-    return delegate.matches(item, mismatchDescription);
+    assertions.add(exception -> causeMatcher.assertThat(Throwables.getRootCause(exception)));
+    return this;
   }
 
-  @Override
-  public void describeTo(Description description)
+  public boolean matches(final Throwable actual)
   {
-    delegate.describeTo(description);
-  }
-
-  public <T> void assertThrowsAndMatches(ThrowingSupplier fn)
-  {
-    boolean thrown = false;
     try {
-      fn.get();
+      assertThat(actual);
+      return true;
     }
-    catch (Throwable e) {
-      if (clazz.isInstance(e)) {
-        MatcherAssert.assertThat(e, this);
-        thrown = true;
-      } else {
-        throw new RuntimeException(e);
-      }
+    catch (AssertionError e) {
+      return false;
     }
-    MatcherAssert.assertThat(thrown, Matchers.is(true));
+  }
+
+  public void assertThat(final Throwable actual)
+  {
+    Assertions.assertNotNull(actual);
+    assertions.forEach(assertion -> assertion.accept(actual));
+  }
+
+  public void assertThrowsAndMatches(final ThrowingSupplier fn)
+  {
+    final Throwable exception = Assertions.assertThrows(clazz, fn::get);
+    assertThat(exception);
   }
 
   public interface ThrowingSupplier

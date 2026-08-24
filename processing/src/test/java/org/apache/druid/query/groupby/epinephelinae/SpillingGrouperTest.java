@@ -53,7 +53,7 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
   private static final int INITIAL_BUCKETS = 4;
 
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testNoSpilling() throws IOException

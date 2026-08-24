@@ -76,7 +76,7 @@ public class SegmentLocalCacheManagerTest extends InitializedNullHandlingTest
   private static final String TEST_DATA_RELATIVE_PATH_4 = TEST_DATA_BASE_RELATIVE_PATH + "3";
 
   @RegisterExtension
-  public final TemporaryFolderExtension tmpFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tmpFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper jsonMapper;
   private File segmentDeepStorageDir;

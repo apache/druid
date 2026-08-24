@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.53.1
+version: 2.53.3
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -694,7 +694,7 @@ name: Apache Commons Logging
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.6
+version: 1.4.0
 libraries:
   - commons-logging: commons-logging
 notices:
@@ -1363,7 +1363,7 @@ name: org.bouncycastle bcpkix-jdk18on and bcutil-jdk18on
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: MIT License
-version: "1.84"
+version: "1.85"
 libraries:
   - org.bouncycastle: bcpkix-jdk18on
   - org.bouncycastle: bcutil-jdk18on
@@ -1394,7 +1394,7 @@ name: Jetbrains kotlin-stdlib
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.2.21
+version: 2.4.10
 libraries:
   - org.jetbrains.kotlin: kotlin-stdlib
 
@@ -2221,13 +2221,13 @@ name: Apache Maven Artifact
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.9.11
+version: 3.9.16
 libraries:
   - org.apache.maven: maven-artifact
 notices:
   - maven-artifact: |
       Maven Artifact
-      Copyright 2001-2025 The Apache Software Foundation
+      Copyright 2001-2026 The Apache Software Foundation
 ---
 
 name: Maven Artifact Resolver Connector Basic
@@ -2717,7 +2717,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.4.4
+version: 7.5.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -2755,7 +2755,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.11.1
+version: 1.11.2
 libraries:
   - at.yawk.lz4: lz4-java
 
@@ -3668,7 +3668,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.17.1
+version: 1.18.0
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3809,7 +3809,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.5.7-7
+version: 1.5.7-11
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -4543,15 +4543,33 @@ license_name: Apache License version 2.0
 version: 1.59.0
 libraries:
   - io.grpc: grpc-alts
-  - io.grpc: grpc-api
   - io.grpc: grpc-auth
-  - io.grpc: grpc-context
   - io.grpc: grpc-core
   - io.grpc: grpc-grpclib
   - io.grpc: grpc-inprocess
   - io.grpc: grpc-protobuf
   - io.grpc: grpc-protobuf-lite
   - io.grpc: grpc-stub
+
+---
+
+name: grpc-api
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.70.0
+libraries:
+  - io.grpc: grpc-api
+
+---
+
+name: grpc-context
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.70.0
+libraries:
+  - io.grpc: grpc-context
 
 ---
 

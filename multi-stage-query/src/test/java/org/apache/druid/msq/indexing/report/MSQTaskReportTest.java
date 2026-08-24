@@ -80,7 +80,7 @@ public class MSQTaskReportTest
           .build();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSerdeResultsReport() throws Exception

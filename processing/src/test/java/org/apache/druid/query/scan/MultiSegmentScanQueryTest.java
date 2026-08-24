@@ -53,20 +53,17 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /**
  *
  */
-@ParameterizedClass
-@MethodSource("constructorFeeder")
 public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
 {
   private static final ScanQueryQueryToolChest TOOL_CHEST = new ScanQueryQueryToolChest(
@@ -164,41 +161,49 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
     IOUtils.closeQuietly(segment0);
     IOUtils.closeQuietly(segment1);
   }
-  public static Iterable<Object[]> constructorFeeder()
+
+  /**
+   * Cases for the tests below. These are {@link ParameterizedTest} rather than a parameterized class
+   * for performance reasons: <a href="https://github.com/apache/maven-surefire/issues/3439">maven-surefire#3439</a>.
+   */
+  public static Iterable<ScanCase> constructorFeeder()
   {
-    return QueryRunnerTestHelper.cartesian(
-        Arrays.asList(0, 1, 3, 7, 10, 20, 1000),
-        Arrays.asList(0, 1, 3, 5, 7, 10, 20, 200, 1000),
-        Arrays.asList(0, 1, 3, 6, 7, 10, 123, 2000)
-    );
+    final List<ScanCase> constructors = new ArrayList<>();
+
+    for (int limit : new int[]{0, 1, 3, 7, 10, 20, 1000}) {
+      for (int offset : new int[]{0, 1, 3, 5, 7, 10, 20, 200, 1000}) {
+        for (int batchSize : new int[]{0, 1, 3, 6, 7, 10, 123, 2000}) {
+          constructors.add(new ScanCase(limit, offset, batchSize));
+        }
+      }
+    }
+
+    return constructors;
   }
 
-  private final int limit;
-  private final int offset;
-  private final int batchSize;
-
-  public MultiSegmentScanQueryTest(int limit, int offset, int batchSize)
+  /**
+   * One case of the {@link #constructorFeeder()} matrix, supplied as a single test-method parameter.
+   */
+  record ScanCase(int limit, int offset, int batchSize)
   {
-    this.limit = limit;
-    this.offset = offset;
-    this.batchSize = batchSize;
   }
 
-  private Druids.ScanQueryBuilder newBuilder()
+  private static Druids.ScanQueryBuilder newBuilder(final ScanCase testCase)
   {
     return Druids.newScanQueryBuilder()
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .intervals(I_0112_0114_SPEC)
-                 .batchSize(batchSize)
+                 .batchSize(testCase.batchSize())
                  .columns(Collections.emptyList())
-                 .limit(limit)
-                 .offset(offset);
+                 .limit(testCase.limit())
+                 .offset(testCase.offset());
   }
 
-  @Test
-  public void testMergeRunnersWithLimitAndOffset()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testMergeRunnersWithLimitAndOffset(final ScanCase testCase)
   {
-    ScanQuery query = newBuilder().build();
+    ScanQuery query = newBuilder(testCase).build();
     List<ScanResultValue> results = FACTORY
         .mergeRunners(
             Execs.directExecutor(),
@@ -212,12 +217,13 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
     }
     Assertions.assertEquals(
         totalCount,
-        limit != 0 ? Math.min(limit, V_0112.length + V_0113.length) : V_0112.length + V_0113.length
+        testCase.limit() != 0 ? Math.min(testCase.limit(), V_0112.length + V_0113.length) : V_0112.length + V_0113.length
     );
   }
 
-  @Test
-  public void testMergeResultsWithLimitAndOffset()
+  @ParameterizedTest
+  @MethodSource("constructorFeeder")
+  public void testMergeResultsWithLimitAndOffset(final ScanCase testCase)
   {
     QueryRunner<ScanResultValue> runner = TOOL_CHEST.mergeResults(
         (queryPlus, responseContext) -> {
@@ -231,7 +237,7 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
           );
         }
     );
-    ScanQuery query = newBuilder().build();
+    ScanQuery query = newBuilder(testCase).build();
     List<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
     int totalCount = 0;
     for (ScanResultValue result : results) {
@@ -241,9 +247,9 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
         totalCount,
         Math.max(
             0,
-            limit != 0
-            ? Math.min(limit, V_0112.length + V_0113.length - offset)
-            : V_0112.length + V_0113.length - offset
+            testCase.limit() != 0
+            ? Math.min(testCase.limit(), V_0112.length + V_0113.length - testCase.offset())
+            : V_0112.length + V_0113.length - testCase.offset()
         )
     );
   }

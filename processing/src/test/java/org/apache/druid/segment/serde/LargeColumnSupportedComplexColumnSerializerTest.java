@@ -22,7 +22,6 @@ package org.apache.druid.segment.serde;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.druid.hll.HyperLogLogCollector;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -35,22 +34,22 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.file.SegmentFileChannel;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 public class LargeColumnSupportedComplexColumnSerializerTest
 {
 
   private final HashFunction fn = Hashing.murmur3_128();
 
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSanity() throws IOException
@@ -68,7 +67,7 @@ public class LargeColumnSupportedComplexColumnSerializerTest
 
     for (int columnSize : columnSizes) {
       for (int aCase : cases) {
-        File tmpFile = FileUtils.createTempDirInLocation(tempDir, "test");
+        File tmpFile = temporaryFolder.newFolder();
         HyperLogLogCollector baseCollector = HyperLogLogCollector.makeLatestCollector();
         try (SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
              FileSmoosher v9Smoosher = new FileSmoosher(tmpFile)) {
