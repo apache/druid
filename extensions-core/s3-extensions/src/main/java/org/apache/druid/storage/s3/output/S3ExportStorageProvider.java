@@ -30,6 +30,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.aws.AWSClientConfig;
 import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
@@ -45,7 +46,6 @@ import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.net.URI;
 import java.util.List;

@@ -48,9 +48,9 @@ import org.apache.druid.sql.calcite.schema.ViewSchema;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -59,7 +59,7 @@ public class ResultsContextSerdeTest
   private ResultsContext resultsContext;
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     final PlannerToolbox toolbox = new PlannerToolbox(
@@ -114,6 +114,6 @@ public class ResultsContextSerdeTest
     String s = objectMapper.writeValueAsString(resultsContext);
 
     ResultsContext deserialized = objectMapper.readValue(s, ResultsContext.class);
-    Assert.assertEquals(resultsContext, deserialized);
+    Assertions.assertEquals(resultsContext, deserialized);
   }
 }

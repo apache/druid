@@ -93,14 +93,16 @@ import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.sql.http.SqlResourceQueryResultPusherFactory;
 import org.apache.druid.sql.http.StandardQueryState;
 import org.apache.druid.sql.http.SupportedEnginesResponse;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
@@ -116,12 +118,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-
 /**
  * Functional test of {@link SqlResource}, {@link DartSqlEngine}, and {@link DartQueryMaker}.
  * Other classes are mocked when possible.
  */
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class DartSqlResourceTest extends MSQTestBase
 {
   private static final DruidNode SELF_NODE = new DruidNode("none", "localhost", false, 8080, -1, true, false);
@@ -151,7 +153,6 @@ public class DartSqlResourceTest extends MSQTestBase
   private SqlResource sqlResource;
   private DartControllerRegistry controllerRegistry;
   private ControllerThreadPool controllerThreadPool;
-  private AutoCloseable mockCloser;
   private final StubServiceEmitter serviceEmitter = new StubServiceEmitter();
 
   // Mocks below this line.
@@ -183,8 +184,6 @@ public class DartSqlResourceTest extends MSQTestBase
   @BeforeEach
   void setUp()
   {
-    mockCloser = MockitoAnnotations.openMocks(this);
-
     final DruidSchemaCatalogProvider schemaProvider = QueryFrameworkUtils.createMockRootSchemaProvider(
         CalciteTests.INJECTOR,
         queryFramework().conglomerate(),
@@ -298,8 +297,6 @@ public class DartSqlResourceTest extends MSQTestBase
   @AfterEach
   void tearDown() throws Exception
   {
-    mockCloser.close();
-
     // shutdown(), not shutdownNow(), to ensure controllers stop timely on their own.
     controllerThreadPool.getRunExecutorService().shutdown();
 
@@ -627,10 +624,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals("invalidInput", e.get("errorCode"));
     Assertions.assertEquals("INVALID_INPUT", e.get("category"));
-    assertThat(
-        (String) e.get("errorMessage"),
-        CoreMatchers.startsWith("Object 'forbiddenDatasource' not found")
-    );
+    Assertions.assertTrue(((String) e.get("errorMessage")).startsWith("Object 'forbiddenDatasource' not found"));
   }
 
   @Test
@@ -665,7 +659,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals("InvalidNullByte", e.get("errorCode"));
     Assertions.assertEquals("INVALID_INPUT", e.get("category"));
-    assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
+    Assertions.assertTrue(((String) e.get("errorMessage")).startsWith("InvalidNullByte: "));
   }
 
   @Test
@@ -791,7 +785,7 @@ public class DartSqlResourceTest extends MSQTestBase
         (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
     final MSQErrorReport errorReport = report.getPayload().getStatus().getErrorReport();
     Assertions.assertNotNull(errorReport);
-    assertThat(errorReport.getFault(), CoreMatchers.instanceOf(InvalidNullByteFault.class));
+    Assertions.assertInstanceOf(InvalidNullByteFault.class, errorReport.getFault());
   }
 
   @Test
@@ -824,8 +818,9 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(asyncContext);
 
     // Cancellation request.
-    Mockito.when(httpServletRequest2.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
-           .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
+    Mockito.doReturn(makeAuthenticationResult(REGULAR_USER_NAME))
+           .when(httpServletRequest2)
+           .getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT);
 
     // Block up the controllerExecutor so the controller runs long enough to cancel it.
     final Future<?> sleepFuture = controllerThreadPool.getRunExecutorService().submit(() -> {

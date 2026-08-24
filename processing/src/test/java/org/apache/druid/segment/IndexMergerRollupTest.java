@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.FloatFirstAggregatorFactory;
@@ -36,13 +35,13 @@ import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,8 +56,8 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
   private IndexIO indexIO;
   private IndexSpec indexSpec;
 
-  @TempDir
-  private Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp()
@@ -92,7 +91,7 @@ public class IndexMergerRollupTest extends InitializedNullHandlingTest
             ))
     );
 
-    final File tempDir = FileUtils.createTempDirInLocation(this.tempDir, "rollup");
+    final File tempDir = temporaryFolder.newFolder("rollup");
 
     List<QueryableIndex> indexes = new ArrayList<>();
     Instant time = Instant.now();

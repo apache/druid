@@ -55,19 +55,15 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertThrows;
 
 public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 {
@@ -1241,7 +1237,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String sql = "SELECT * FROM druid.forbiddenDatasource";
 
     // The regular user does not have access to forbiddenDatasource, so they shouldn't see it.
-    DruidException e = assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testBuilder()
             .sql(sql)
@@ -1249,10 +1245,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             .build()
             .run()
     );
-    assertThat(
+    DruidExceptionMatcher.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Object 'forbiddenDatasource' not found within 'druid'"))
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("Object 'forbiddenDatasource' not found within 'druid'")
     );
   }
 
@@ -1263,7 +1259,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
     // The regular user does not have access to forbiddenDatasource. When authorizeTableVisibility = false, the
     // validator is aware of it, but querying is still forbidden.
-    ForbiddenException e = assertThrows(
+    ForbiddenException e = Assertions.assertThrows(
         ForbiddenException.class,
         () -> testBuilder()
             .sql(sql)
@@ -1272,10 +1268,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             .build()
             .run()
     );
-    assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Unauthorized"))
-    );
+    Assertions.assertTrue(e.getMessage().contains("Unauthorized"));
   }
 
   @Test
@@ -1337,7 +1330,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     final String sql = "SELECT * FROM view.forbiddenView";
 
     // The regular user does not have access to forbiddenDatasource, so they shouldn't see it.
-    DruidException e = assertThrows(
+    DruidException e = Assertions.assertThrows(
         DruidException.class,
         () -> testBuilder()
             .sql(sql)
@@ -1345,10 +1338,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             .build()
             .run()
     );
-    assertThat(
+    DruidExceptionMatcher.assertThat(
         e,
-        ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Object 'forbiddenView' not found within 'view'"))
+        DruidExceptionMatcher.invalidInput()
+                             .expectMessageContains("Object 'forbiddenView' not found within 'view'")
     );
 
     // The superuser can see forbiddenDatasource.

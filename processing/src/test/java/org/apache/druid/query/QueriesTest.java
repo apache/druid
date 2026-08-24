@@ -37,14 +37,13 @@ import org.apache.druid.query.planning.ExecutionVertexTest;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.join.JoinType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -81,7 +80,7 @@ public class QueriesTest
       exceptionOccurred = true;
     }
 
-    Assert.assertFalse(exceptionOccurred);
+    Assertions.assertFalse(exceptionOccurred);
   }
 
   @Test
@@ -113,7 +112,7 @@ public class QueriesTest
       exceptionOccurred = true;
     }
 
-    Assert.assertTrue(exceptionOccurred);
+    Assertions.assertTrue(exceptionOccurred);
   }
 
   @Test
@@ -167,7 +166,7 @@ public class QueriesTest
       exceptionOccurred = true;
     }
 
-    Assert.assertFalse(exceptionOccurred);
+    Assertions.assertFalse(exceptionOccurred);
   }
 
   @Test
@@ -221,7 +220,7 @@ public class QueriesTest
       exceptionOccurred = true;
     }
 
-    Assert.assertTrue(exceptionOccurred);
+    Assertions.assertTrue(exceptionOccurred);
   }
 
   @Test
@@ -232,7 +231,7 @@ public class QueriesTest
         new SegmentDescriptor(Intervals.of("2000/3000"), "0", 1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("foo")
               .intervals(
@@ -264,7 +263,7 @@ public class QueriesTest
         new SegmentDescriptor(Intervals.of("2000/3000"), "0", 1)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Druids.newTimeseriesQueryBuilder()
               .dataSource(
                   new QueryDataSource(
@@ -332,13 +331,13 @@ public class QueriesTest
         DruidException.class,
         () -> Queries.withSpecificSegments(query, descriptors)
     );
-    Assert.assertEquals("Base dataSource[LookupDataSource{lookupName='lookyloo'}] is not a table!", e.getMessage());
+    Assertions.assertEquals("Base dataSource[LookupDataSource{lookupName='lookyloo'}] is not a table!", e.getMessage());
   }
 
   @Test
   public void testWithBaseDataSourceBasic()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Druids.newTimeseriesQueryBuilder()
               .dataSource("bar")
               .intervals("2000/3000")
@@ -358,7 +357,7 @@ public class QueriesTest
   @Test
   public void testWithBaseDataSourceSubQueryStackWithJoinOnUnion()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Druids.newTimeseriesQueryBuilder()
             .dataSource(
                 JoinDataSource.create(
@@ -407,7 +406,7 @@ public class QueriesTest
   @Test
   public void testWithBaseDataSourcedBaseFilterWithMultiJoin()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Druids.newTimeseriesQueryBuilder()
             .dataSource(
                 JoinDataSource.create(
@@ -519,7 +518,7 @@ public class QueriesTest
             new TableDataSource("foo")
         )
     );
-    assertThat(
+    DruidExceptionMatcher.assertThat(
         e,
         DruidExceptionMatcher.defensive()
             .expectMessageContains("Its unsafe to replace the BaseDataSource of a non-processable query")

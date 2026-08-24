@@ -23,11 +23,11 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,7 +41,9 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("compressionStrategies")
 public class TestColumnCompression
 {
 
@@ -58,7 +60,6 @@ public class TestColumnCompression
     compressionType = strategy;
   }
 
-  @Parameterized.Parameters
   public static Iterable<Object[]> compressionStrategies()
   {
     return Arrays.stream(CompressionStrategy.values())
@@ -66,7 +67,7 @@ public class TestColumnCompression
                  .map(strategy -> new Object[]{strategy}).collect(Collectors.toList());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     Random rand = ThreadLocalRandom.current();
@@ -107,7 +108,7 @@ public class TestColumnCompression
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     ByteBufferUtils.free(buffer);

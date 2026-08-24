@@ -80,7 +80,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   @BeforeEach
   public void setup() throws IOException
   {
-    inputDir = createTempDir("data");
+    inputDir = temporaryFolder.newFolder("data");
 
     // set up data
     for (int i = 0; i < 10; i++) {

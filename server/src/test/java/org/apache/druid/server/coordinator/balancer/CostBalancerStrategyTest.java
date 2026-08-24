@@ -35,10 +35,10 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -58,7 +58,7 @@ public class CostBalancerStrategyTest
   private CostBalancerStrategy strategy;
   private int uniqueServerId;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     balancerExecutor = Execs.singleThreaded("test-balance-exec-%d");
@@ -68,7 +68,7 @@ public class CostBalancerStrategyTest
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (balancerExecutor != null) {
@@ -79,19 +79,19 @@ public class CostBalancerStrategyTest
   @Test
   public void testIntervalCostAdditivity()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         intervalCost(1, 1, 3),
         intervalCost(1, 1, 2) + intervalCost(1, 2, 3),
         DELTA
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         intervalCost(2, 1, 3),
         intervalCost(2, 1, 2) + intervalCost(2, 2, 3),
         DELTA
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         intervalCost(3, 1, 2),
         intervalCost(1, 0, 1) + intervalCost(1, 1, 2) + intervalCost(1, 1, 2),
         DELTA
@@ -108,25 +108,25 @@ public class CostBalancerStrategyTest
   {
     // no overlap
     // [0, 1) [1, 2)
-    Assert.assertEquals(0.3995764, intervalCost(1, 1, 2), DELTA);
+    Assertions.assertEquals(0.3995764, intervalCost(1, 1, 2), DELTA);
     // [0, 1) [-1, 0)
-    Assert.assertEquals(0.3995764, intervalCost(1, -1, 0), DELTA);
+    Assertions.assertEquals(0.3995764, intervalCost(1, -1, 0), DELTA);
 
     // exact overlap
     // [0, 1), [0, 1)
-    Assert.assertEquals(0.7357589, intervalCost(1, 0, 1), DELTA);
+    Assertions.assertEquals(0.7357589, intervalCost(1, 0, 1), DELTA);
     // [0, 2), [0, 2)
-    Assert.assertEquals(2.270671, intervalCost(2, 0, 2), DELTA);
+    Assertions.assertEquals(2.270671, intervalCost(2, 0, 2), DELTA);
 
     // partial overlap
     // [0, 2), [1, 3)
-    Assert.assertEquals(1.681908, intervalCost(2, 1, 3), DELTA);
+    Assertions.assertEquals(1.681908, intervalCost(2, 1, 3), DELTA);
     // [0, 2), [1, 2)
-    Assert.assertEquals(1.135335, intervalCost(2, 1, 2), DELTA);
+    Assertions.assertEquals(1.135335, intervalCost(2, 1, 2), DELTA);
     // [0, 2), [0, 1)
-    Assert.assertEquals(1.135335, intervalCost(2, 0, 1), DELTA);
+    Assertions.assertEquals(1.135335, intervalCost(2, 0, 1), DELTA);
     // [0, 3), [1, 2)
-    Assert.assertEquals(1.534912, intervalCost(3, 1, 2), DELTA);
+    Assertions.assertEquals(1.534912, intervalCost(3, 1, 2), DELTA);
   }
 
   @Test
@@ -163,7 +163,7 @@ public class CostBalancerStrategyTest
                                                    .startingAt("2010-01-01")
                                                    .eachOfSizeInMb(100).get(0);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         CostBalancerStrategy.computeJointSegmentsCost(segmentA, segmentB),
         CostBalancerStrategy.computeJointSegmentsCost(segmentB, segmentA),
         DELTA
@@ -185,12 +185,12 @@ public class CostBalancerStrategyTest
     // Verify that cross datasource cost is twice that of same datasource cost
     final double crossDatasourceCost =
         CostBalancerStrategy.computeJointSegmentsCost(koalaSegment, wikiSegment);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2 * crossDatasourceCost,
         CostBalancerStrategy.computeJointSegmentsCost(wikiSegment, wikiSegment),
         DELTA
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         2 * crossDatasourceCost,
         CostBalancerStrategy.computeJointSegmentsCost(koalaSegment, koalaSegment),
         DELTA
@@ -237,7 +237,7 @@ public class CostBalancerStrategyTest
         segmentAllGranularity,
         segmentAllGranularity
     );
-    Assert.assertTrue(cost >= 3.548e14 && cost <= 3.549e14);
+    Assertions.assertTrue(cost >= 3.548e14 && cost <= 3.549e14);
   }
 
   @Test
@@ -332,11 +332,11 @@ public class CostBalancerStrategyTest
     strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
     CoordinatorRunStats computeStats = strategy.getStats();
 
-    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT));
+    Assertions.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT));
 
     long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME);
-    Assert.assertTrue(computeTime >= 0 && computeTime <= 100);
-    Assert.assertFalse(computeStats.hasStat(Stats.Balancer.COMPUTATION_ERRORS));
+    Assertions.assertTrue(computeTime >= 0 && computeTime <= 100);
+    Assertions.assertFalse(computeStats.hasStat(Stats.Balancer.COMPUTATION_ERRORS));
   }
 
   @Test
@@ -352,7 +352,7 @@ public class CostBalancerStrategyTest
     ServerHolder serverB = new ServerHolder(createHistorical().toImmutableDruidServer(), peon);
 
     balancerExecutor.shutdownNow();
-    Assert.assertThrows(
+    Assertions.assertThrows(
         RejectedExecutionException.class,
         () -> strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB))
     );
@@ -366,7 +366,7 @@ public class CostBalancerStrategyTest
   private void verifyPlacementCost(DataSegment segment, ServerHolder server, double expectedCost)
   {
     double observedCost = strategy.computePlacementCost(segment, server);
-    Assert.assertEquals(expectedCost, observedCost, DELTA);
+    Assertions.assertEquals(expectedCost, observedCost, DELTA);
 
     double totalJointSegmentCost = 0;
     for (DataSegment segmentOnServer : server.getServer().iterateAllSegments()) {
@@ -375,7 +375,7 @@ public class CostBalancerStrategyTest
     if (server.isServingSegment(segment)) {
       totalJointSegmentCost -= CostBalancerStrategy.computeJointSegmentsCost(segment, segment);
     }
-    Assert.assertEquals(totalJointSegmentCost, observedCost, DELTA);
+    Assertions.assertEquals(totalJointSegmentCost, observedCost, DELTA);
   }
 
   private void verifyJointSegmentsCost(
@@ -399,7 +399,7 @@ public class CostBalancerStrategyTest
                           .eachOfSizeInMb(100).get(0);
 
     double observedCost = CostBalancerStrategy.computeJointSegmentsCost(segmentX, segmentY);
-    Assert.assertEquals(expectedCost, observedCost, DELTA);
+    Assertions.assertEquals(expectedCost, observedCost, DELTA);
   }
 
   private DruidServer createHistorical()

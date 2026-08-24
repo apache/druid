@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.granularity.IntervalsByGranularity;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
@@ -310,7 +311,8 @@ public class TombstoneHelper
       Collection<DataSegment> usedSegmentsInInputInterval =
           taskActionClient.submit(new RetrieveUsedSegmentsAction(
               dataSource,
-              condensedInputIntervals
+              condensedInputIntervals,
+              SegmentDetail.none()
           ));
       for (DataSegment usedSegment : usedSegmentsInInputInterval) {
         for (Interval condensedInputInterval : condensedInputIntervals) {

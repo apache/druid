@@ -829,10 +829,11 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
             encodedValueColumn.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
           } else {
             final int[] offsets = offset.getOffsets();
-            if (offsets[offsets.length - 1] < offsetMark) {
+            final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
+            if (maxOffset < offsetMark) {
               nullIterator = nullValueBitmap.peekableIterator();
             }
-            offsetMark = offsets[offsets.length - 1];
+            offsetMark = maxOffset;
             encodedValueColumn.get(idVector, offsets, offset.getCurrentVectorSize());
           }
           for (int i = 0; i < offset.getCurrentVectorSize(); i++) {

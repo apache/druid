@@ -24,8 +24,8 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.router.RendezvousHasher;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -65,7 +65,7 @@ public class RendezvousHasherTest
     for (int i = 0; i < 2; i++) {
       for (Map.Entry<String, String> entry : uuidServerMap.entrySet()) {
         String targetServer = hasher.chooseNode(nodes, StringUtils.toUtf8(entry.getKey()));
-        Assert.assertEquals(entry.getValue(), targetServer);
+        Assertions.assertEquals(entry.getValue(), targetServer);
       }
     }
   }
@@ -104,7 +104,7 @@ public class RendezvousHasherTest
     log.info(StringUtils.format("testAddNode Total: %s, Same: %s, Diff: %s", NUM_ITERATIONS, same, diff));
 
     double diffRatio = ((double) diff) / NUM_ITERATIONS;
-    Assert.assertTrue(diffRatio < 0.33);
+    Assertions.assertTrue(diffRatio < 0.33);
   }
 
   @Test
@@ -141,7 +141,7 @@ public class RendezvousHasherTest
     log.info(StringUtils.format("testRemoveNode Total: %s, Same: %s, Diff: %s", NUM_ITERATIONS, same, diff));
 
     double diffRatio = ((double) diff) / NUM_ITERATIONS;
-    Assert.assertTrue(diffRatio < 0.33);
+    Assertions.assertTrue(diffRatio < 0.33);
   }
 
   @Test
@@ -249,7 +249,7 @@ public class RendezvousHasherTest
     log.info(StringUtils.format("%s Total: %s, Same: %s, Diff: %s", testName, NUM_ITERATIONS, same, diff));
     log.info("Expected diff ratio: %s, Actual diff ratio: %s", expectedDiffRatio, actualDiffRatio);
 
-    Assert.assertTrue(actualDiffRatio <= expectedDiffRatio);
+    Assertions.assertTrue(actualDiffRatio <= expectedDiffRatio);
   }
 
   @Test
@@ -280,6 +280,6 @@ public class RendezvousHasherTest
                                                             .put("localhost:3", 25)
                                                             .put("localhost:4", 15)
                                                             .build();
-    Assert.assertEquals(expectedDistribution, brokerToConnectionCount);
+    Assertions.assertEquals(expectedDistribution, brokerToConnectionCount);
   }
 }

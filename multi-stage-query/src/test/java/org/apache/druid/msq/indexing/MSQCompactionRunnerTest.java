@@ -88,10 +88,11 @@ import org.apache.druid.server.initialization.AuthorizerMapperModule;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -188,8 +189,8 @@ public class MSQCompactionRunnerTest
         compactionTask,
         intervalDataschemas
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         StringUtils.format("MSQ: Disjoint compaction intervals[%s] not supported", intervalDataschemas.keySet()),
         validationResult.getReason()
     );
@@ -205,7 +206,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
+    Assertions.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -218,7 +219,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
+    Assertions.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -237,8 +238,8 @@ public class MSQCompactionRunnerTest
         compactionTask,
         INTERVAL_DATASCHEMAS
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: Non-string partition dimension[long_dim] of type[LONG] not supported with 'range' partition spec",
         validationResult.getReason()
     );
@@ -260,8 +261,8 @@ public class MSQCompactionRunnerTest
         compactionTask,
         INTERVAL_DATASCHEMAS
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: Multi-valued string partition dimension[mv_string_dim] not supported with 'range' partition spec",
         validationResult.getReason()
     );
@@ -277,7 +278,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
+    Assertions.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -290,7 +291,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
+    Assertions.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -303,7 +304,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, Granularities.ALL, null),
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
+    Assertions.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -316,7 +317,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, false),
         AGGREGATORS.toArray(new AggregatorFactory[0])
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
+    Assertions.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -329,7 +330,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, true),
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
+    Assertions.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -349,8 +350,8 @@ public class MSQCompactionRunnerTest
         compactionTask,
         INTERVAL_DATASCHEMAS
     );
-    Assert.assertFalse(validationResult.isValid());
-    Assert.assertEquals(
+    Assertions.assertFalse(validationResult.isValid());
+    Assertions.assertEquals(
         "MSQ: Aggregator[sum_added] not supported in 'metricsSpec'",
         validationResult.getReason()
     );
@@ -361,7 +362,7 @@ public class MSQCompactionRunnerTest
   {
     CompactionTask compactionTask = createCompactionTask(null, null, Collections.emptyMap(), null, null);
     TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.emptyMap(), null);
-    Assert.assertTrue(taskStatus.isFailure());
+    Assertions.assertTrue(taskStatus.isFailure());
   }
 
   @Test
@@ -403,11 +404,11 @@ public class MSQCompactionRunnerTest
 
     LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
-    Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
-    Assert.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
+    Assertions.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
+    Assertions.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
 
     Query<?> query = actualMSQSpec.getQuery();
-    Assert.assertTrue(query instanceof ScanQuery);
+    Assertions.assertTrue(query instanceof ScanQuery);
     ScanQuery scanQuery = (ScanQuery) query;
 
     List<String> expectedColumns = new ArrayList<>();
@@ -423,20 +424,20 @@ public class MSQCompactionRunnerTest
     expectedColumns.addAll(DIMENSIONS.stream().map(DimensionSchema::getName).collect(Collectors.toList()));
     expectedColumnTypes.addAll(DIMENSIONS.stream().map(DimensionSchema::getColumnType).collect(Collectors.toList()));
 
-    Assert.assertEquals(expectedColumns, scanQuery.getColumns());
-    Assert.assertEquals(expectedColumnTypes, scanQuery.getColumnTypes());
+    Assertions.assertEquals(expectedColumns, scanQuery.getColumns());
+    Assertions.assertEquals(expectedColumnTypes, scanQuery.getColumnTypes());
 
-    Assert.assertEquals(dimFilter, scanQuery.getFilter());
-    Assert.assertEquals(
+    Assertions.assertEquals(dimFilter, scanQuery.getFilter());
+    Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
     );
-    Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
-    Assert.assertEquals(
+    Assertions.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+    Assertions.assertEquals(
         PARTITION_DIMENSIONS.stream().map(OrderBy::ascending).collect(Collectors.toList()),
         scanQuery.getOrderBys()
     );
@@ -486,11 +487,11 @@ public class MSQCompactionRunnerTest
     LegacyMSQSpec actualMSQSpec = Iterables.getOnlyElement(msqControllerTasks).getQuerySpec();
 
     Query<?> query = actualMSQSpec.getQuery();
-    Assert.assertTrue(query instanceof ScanQuery);
+    Assertions.assertTrue(query instanceof ScanQuery);
     ScanQuery scanQuery = (ScanQuery) query;
 
     // Dimensions should already list __time and the order should remain intact
-    Assert.assertEquals(
+    Assertions.assertEquals(
         nonTimeSortedDimensions.stream().map(DimensionSchema::getName).collect(Collectors.toList()),
         scanQuery.getColumns()
     );
@@ -536,23 +537,23 @@ public class MSQCompactionRunnerTest
 
     LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
-    Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
-    Assert.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
+    Assertions.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
+    Assertions.assertEquals(getExpectedDestination(), actualMSQSpec.getDestination());
 
     Query<?> query = actualMSQSpec.getQuery();
-    Assert.assertTrue(query instanceof GroupByQuery);
+    Assertions.assertTrue(query instanceof GroupByQuery);
     GroupByQuery groupByQuery = (GroupByQuery) query;
 
-    Assert.assertEquals(dimFilter, groupByQuery.getFilter());
-    Assert.assertEquals(
+    Assertions.assertEquals(dimFilter, groupByQuery.getFilter());
+    Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
     );
-    Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+    Assertions.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
 
     List<DimensionSpec> expectedDimensionSpec = new ArrayList<>();
     expectedDimensionSpec.add(
@@ -579,7 +580,7 @@ public class MSQCompactionRunnerTest
                                                         dim.getColumnType()
                                                     ))
                                            .collect(Collectors.toList()));
-    Assert.assertEquals(expectedDimensionSpec, groupByQuery.getDimensions());
+    Assertions.assertEquals(expectedDimensionSpec, groupByQuery.getDimensions());
   }
 
   @Test
@@ -622,10 +623,10 @@ public class MSQCompactionRunnerTest
 
     LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
-    Assert.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
-    Assert.assertEquals(getExpectedDestinationWithProjections(), actualMSQSpec.getDestination());
+    Assertions.assertEquals(getExpectedTuningConfig(), actualMSQSpec.getTuningConfig());
+    Assertions.assertEquals(getExpectedDestinationWithProjections(), actualMSQSpec.getDestination());
 
-    Assert.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
+    Assertions.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
     ScanQuery scanQuery = (ScanQuery) actualMSQSpec.getQuery();
 
     List<String> expectedColumns = new ArrayList<>();
@@ -641,20 +642,20 @@ public class MSQCompactionRunnerTest
     expectedColumns.addAll(DIMENSIONS.stream().map(DimensionSchema::getName).collect(Collectors.toList()));
     expectedColumnTypes.addAll(DIMENSIONS.stream().map(DimensionSchema::getColumnType).collect(Collectors.toList()));
 
-    Assert.assertEquals(expectedColumns, scanQuery.getColumns());
-    Assert.assertEquals(expectedColumnTypes, scanQuery.getColumnTypes());
+    Assertions.assertEquals(expectedColumns, scanQuery.getColumns());
+    Assertions.assertEquals(expectedColumnTypes, scanQuery.getColumnTypes());
 
-    Assert.assertEquals(dimFilter, scanQuery.getFilter());
-    Assert.assertEquals(
+    Assertions.assertEquals(dimFilter, scanQuery.getFilter());
+    Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(SEGMENT_GRANULARITY.toString()),
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         JSON_MAPPER.writeValueAsString(QUERY_GRANULARITY.toString()),
         msqControllerTask.getContext().get(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY)
     );
-    Assert.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
-    Assert.assertEquals(
+    Assertions.assertEquals(WorkerAssignmentStrategy.MAX, actualMSQSpec.getAssignmentStrategy());
+    Assertions.assertEquals(
         PARTITION_DIMENSIONS.stream().map(OrderBy::ascending).collect(Collectors.toList()),
         scanQuery.getOrderBys()
     );
@@ -701,23 +702,23 @@ public class MSQCompactionRunnerTest
     LegacyMSQSpec actualMSQSpec = msqControllerTask.getQuerySpec();
 
     // Clustered base tables are never rollup, so the query is always a Scan, never a GroupBy.
-    Assert.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
+    Assertions.assertTrue(actualMSQSpec.getQuery() instanceof ScanQuery);
     ScanQuery scanQuery = (ScanQuery) actualMSQSpec.getQuery();
 
     // Columns follow the spec's declared order: clustering prefix, remaining columns, then the explicit __time marker.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(tenant.getName(), region.getName(), ColumnHolder.TIME_COLUMN_NAME),
         scanQuery.getColumns()
     );
 
     // Destination is base-table-mode: it carries the spec and no legacy dimensionSchemas.
-    Assert.assertTrue(actualMSQSpec.getDestination() instanceof DataSourceMSQDestination);
+    Assertions.assertTrue(actualMSQSpec.getDestination() instanceof DataSourceMSQDestination);
     DataSourceMSQDestination destination = (DataSourceMSQDestination) actualMSQSpec.getDestination();
-    Assert.assertEquals(baseTable, destination.getBaseTable());
-    Assert.assertNull(destination.getDimensionSchemas());
+    Assertions.assertEquals(baseTable, destination.getBaseTable());
+    Assertions.assertNull(destination.getDimensionSchemas());
 
     // Column mappings carry the same columns in declared order.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(tenant.getName(), region.getName(), ColumnHolder.TIME_COLUMN_NAME),
         actualMSQSpec.getColumnMappings().getOutputColumnNames()
     );

@@ -31,8 +31,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -70,17 +70,17 @@ public class SegmentChangeRequestLoadTest
         mapper.writeValueAsString(segmentDrop), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
-    Assert.assertEquals("load", objectMap.get("action"));
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
-    Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
-    Assert.assertEquals(1, objectMap.get("size"));
+    Assertions.assertEquals(11, objectMap.size());
+    Assertions.assertEquals("load", objectMap.get("action"));
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assertions.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(1, objectMap.get("size"));
   }
 
   @Test
@@ -99,8 +99,8 @@ public class SegmentChangeRequestLoadTest
         mapper.writeValueAsString(load),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertFalse(objectMap.containsKey("fingerprint"));
-    Assert.assertFalse(objectMap.containsKey("loadedBytes"));
+    Assertions.assertFalse(objectMap.containsKey("fingerprint"));
+    Assertions.assertFalse(objectMap.containsKey("loadedBytes"));
   }
 
   @Test
@@ -121,9 +121,9 @@ public class SegmentChangeRequestLoadTest
     );
     String json = mapper.writeValueAsString(load);
     SegmentChangeRequestLoad reread = mapper.readValue(json, SegmentChangeRequestLoad.class);
-    Assert.assertEquals(load, reread);
-    Assert.assertEquals("v1:abcdef0123456789", reread.getFingerprint());
-    Assert.assertEquals(Long.valueOf(12345L), reread.getLoadedBytes());
+    Assertions.assertEquals(load, reread);
+    Assertions.assertEquals("v1:abcdef0123456789", reread.getFingerprint());
+    Assertions.assertEquals(Long.valueOf(12345L), reread.getLoadedBytes());
   }
 
   @Test
@@ -137,8 +137,8 @@ public class SegmentChangeRequestLoadTest
         .size(100)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertNull(announcement.getFingerprint());
-    Assert.assertNull(announcement.getLoadedBytes());
+    Assertions.assertNull(announcement.getFingerprint());
+    Assertions.assertNull(announcement.getLoadedBytes());
   }
 
   @Test
@@ -161,8 +161,8 @@ public class SegmentChangeRequestLoadTest
         .size(12345)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
-    Assert.assertEquals(Long.valueOf(12345L), announcement.getLoadedBytes());
+    Assertions.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
+    Assertions.assertEquals(Long.valueOf(12345L), announcement.getLoadedBytes());
   }
 
   @Test
@@ -189,11 +189,11 @@ public class SegmentChangeRequestLoadTest
         PartialLoadProfile.forLoaded(wrapped, "v1:abcdef0123456789", 4321L)
     );
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(wrappedSegment);
-    Assert.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
-    Assert.assertEquals(
-        "loadedBytes must come from the DataSegmentAndLoadProfile's PartialLoadProfile, not segment.getSize()",
+    Assertions.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
+    Assertions.assertEquals(
         Long.valueOf(4321L),
-        announcement.getLoadedBytes()
+        announcement.getLoadedBytes(),
+        "loadedBytes must come from the DataSegmentAndLoadProfile's PartialLoadProfile, not segment.getSize()"
     );
   }
 
@@ -215,8 +215,8 @@ public class SegmentChangeRequestLoadTest
         .size(7777)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertEquals("v1:1111111111111111", announcement.getFingerprint());
-    Assert.assertEquals(Long.valueOf(7777L), announcement.getLoadedBytes());
+    Assertions.assertEquals("v1:1111111111111111", announcement.getFingerprint());
+    Assertions.assertEquals(Long.valueOf(7777L), announcement.getLoadedBytes());
   }
 
   @Test
@@ -237,8 +237,8 @@ public class SegmentChangeRequestLoadTest
         .size(100)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertNull(announcement.getFingerprint());
-    Assert.assertNull(announcement.getLoadedBytes());
+    Assertions.assertNull(announcement.getFingerprint());
+    Assertions.assertNull(announcement.getLoadedBytes());
   }
 
   @Test
@@ -258,8 +258,8 @@ public class SegmentChangeRequestLoadTest
         .size(100)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertNull(announcement.getFingerprint());
-    Assert.assertNull(announcement.getLoadedBytes());
+    Assertions.assertNull(announcement.getFingerprint());
+    Assertions.assertNull(announcement.getLoadedBytes());
   }
 
   @Test
@@ -275,7 +275,7 @@ public class SegmentChangeRequestLoadTest
         .build();
     String oldJson = mapper.writeValueAsString(new SegmentChangeRequestLoad(segment));
     SegmentChangeRequestLoad reread = mapper.readValue(oldJson, SegmentChangeRequestLoad.class);
-    Assert.assertNull(reread.getFingerprint());
-    Assert.assertNull(reread.getLoadedBytes());
+    Assertions.assertNull(reread.getFingerprint());
+    Assertions.assertNull(reread.getLoadedBytes());
   }
 }

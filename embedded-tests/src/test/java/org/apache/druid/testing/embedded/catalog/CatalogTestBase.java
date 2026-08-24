@@ -31,7 +31,6 @@ import org.apache.druid.testing.embedded.EmbeddedHistorical;
 import org.apache.druid.testing.embedded.EmbeddedIndexer;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 
 import java.util.List;
@@ -70,18 +69,17 @@ public abstract class CatalogTestBase extends EmbeddedClusterTestBase
 
   void verifySubmitSqlTaskFailsWith400BadRequest(String sql, String expectedMessageSubstring)
   {
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            Exception.class,
-            () -> cluster.callApi().onAnyBroker(
-                b -> b.submitSqlTask(
-                    new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
-                )
+    final Throwable exception = Assertions.assertThrows(
+        Exception.class,
+        () -> cluster.callApi().onAnyBroker(
+            b -> b.submitSqlTask(
+                new ClientSqlQuery(sql, null, false, false, false, Map.of(), List.of())
             )
-        ),
-        ExceptionMatcher.of(HttpResponseException.class)
-                        .expectMessageContains("400 Bad Request")
-                        .expectMessageContains(expectedMessageSubstring)
+        )
     );
+    ExceptionMatcher.of(HttpResponseException.class)
+                    .expectMessageContains("400 Bad Request")
+                    .expectMessageContains(expectedMessageSubstring)
+                    .assertThat(exception);
   }
 }

@@ -21,10 +21,10 @@ package org.apache.druid.common.exception;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.util.Optional;
 import java.util.function.Function;
 

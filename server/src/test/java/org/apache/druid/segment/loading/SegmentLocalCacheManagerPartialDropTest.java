@@ -44,6 +44,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -52,7 +53,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -102,13 +103,13 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File deepStorageDir;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cacheDir;
   private File infoDir;
@@ -117,9 +118,9 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   private DataSegment dataSegment;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     deepStorageDir = IndexBuilder.create()
                                  .useV10()
                                  .tmpDir(tmp)
@@ -149,8 +150,7 @@ class SegmentLocalCacheManagerPartialDropTest extends InitializedNullHandlingTes
   @BeforeEach
   void setup() throws IOException
   {
-    cacheDir = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
     // SegmentLocalCacheManager defaults the info dir to <firstLocation>/info_dir when not configured.
     infoDir = new File(cacheDir, "info_dir");
     FileUtils.mkdirp(infoDir);

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.kafka;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -43,7 +44,6 @@ import org.apache.kafka.common.TopicPartition;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
