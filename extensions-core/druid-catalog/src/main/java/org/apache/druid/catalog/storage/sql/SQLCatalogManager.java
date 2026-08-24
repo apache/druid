@@ -460,7 +460,10 @@ public class SQLCatalogManager implements CatalogManager
                   handle.rollback();
                   return null;
                 }
-                final long updateTime = System.currentTimeMillis();
+                // The version is also the compare-and-set token, so it must actually change on every write: a commit
+                // landing in the same millisecond as the write that produced the version it read would otherwise
+                // leave the token as it was, letting a second writer's predicate match after this one commits.
+                final long updateTime = Math.max(System.currentTimeMillis(), existing.updateTime() + 1);
                 final int updateCount = handle
                     .createStatement(statement(updateStmt))
                     .bind(SCHEMA_NAME_COL, id.schema())
