@@ -10034,9 +10034,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesDescending()
   {
-    // Cannot vectorize due to descending order.
-    cannotVectorize();
-
     testQuery(
         "SELECT gran, SUM(cnt) FROM (\n"
         + "  SELECT floor(__time TO month) AS gran,\n"
@@ -12391,9 +12388,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testPostAggWithTimeseries()
   {
-    // Cannot vectorize due to descending order.
-    cannotVectorize();
-
     testQuery(
         "SELECT "
         + "  FLOOR(__time TO YEAR), "
