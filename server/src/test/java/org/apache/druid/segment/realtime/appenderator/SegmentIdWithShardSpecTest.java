@@ -24,8 +24,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class SegmentIdWithShardSpecTest
 {
@@ -48,18 +48,18 @@ public class SegmentIdWithShardSpecTest
         SegmentIdWithShardSpec.class
     );
 
-    Assert.assertEquals(ID_1, id2);
-    Assert.assertEquals(DATA_SOURCE, id2.getDataSource());
-    Assert.assertEquals(INTERVAL, id2.getInterval());
-    Assert.assertEquals(VERSION, id2.getVersion());
-    Assert.assertEquals(SHARD_SPEC_1.getPartitionNum(), id2.getShardSpec().getPartitionNum());
-    Assert.assertEquals(SHARD_SPEC_1.getNumCorePartitions(), id2.getShardSpec().getNumCorePartitions());
+    Assertions.assertEquals(ID_1, id2);
+    Assertions.assertEquals(DATA_SOURCE, id2.getDataSource());
+    Assertions.assertEquals(INTERVAL, id2.getInterval());
+    Assertions.assertEquals(VERSION, id2.getVersion());
+    Assertions.assertEquals(SHARD_SPEC_1.getPartitionNum(), id2.getShardSpec().getPartitionNum());
+    Assertions.assertEquals(SHARD_SPEC_1.getNumCorePartitions(), id2.getShardSpec().getNumCorePartitions());
   }
 
   @Test
   public void testAsString()
   {
-    Assert.assertEquals("foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_v1", ID_0.toString());
-    Assert.assertEquals("foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_v1_1", ID_1.toString());
+    Assertions.assertEquals("foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_v1", ID_0.toString());
+    Assertions.assertEquals("foo_2000-01-01T00:00:00.000Z_2000-01-01T01:00:00.000Z_v1_1", ID_1.toString());
   }
 }

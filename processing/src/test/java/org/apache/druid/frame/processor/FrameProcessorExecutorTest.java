@@ -54,15 +54,11 @@ import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CloseableUtils;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -199,10 +195,7 @@ public class FrameProcessorExecutorTest
           failerFuture::get
       );
 
-      MatcherAssert.assertThat(
-          e.getCause().getCause(),
-          Matchers.hasProperty("message", CoreMatchers.containsString("failure!"))
-      );
+      Assertions.assertTrue(e.getCause().getCause().getMessage().contains("failure!"));
 
       final ReadableFrameChannel outReadableChannel = outChannel.readable();
       Assertions.assertTrue(outReadableChannel.canRead());
@@ -212,10 +205,7 @@ public class FrameProcessorExecutorTest
           outReadableChannel::readFrame
       );
 
-      MatcherAssert.assertThat(
-          readException.getCause(),
-          Matchers.hasProperty("message", CoreMatchers.containsString("failure!"))
-      );
+      Assertions.assertTrue(readException.getCause().getMessage().contains("failure!"));
 
       Assertions.assertTrue(outReadableChannel.isFinished()); // Finished now that we read the error
     }
@@ -257,7 +247,7 @@ public class FrameProcessorExecutorTest
     }
 
     @Test
-    @org.junit.jupiter.api.Timeout(value = 30_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
+    @Timeout(value = 30_000L, unit = TimeUnit.MILLISECONDS)
     public void test_futureCancel_sleepy() throws Exception
     {
       final SleepyFrameProcessor processor = new SleepyFrameProcessor();
@@ -384,7 +374,7 @@ public class FrameProcessorExecutorTest
             Assertions.assertTrue(future.isCancelled());
 
             final Exception e = Assertions.assertThrows(Exception.class, future::get);
-            MatcherAssert.assertThat(e, CoreMatchers.instanceOf(CancellationException.class));
+            Assertions.assertInstanceOf(CancellationException.class, e);
           }
         }
 
@@ -460,7 +450,7 @@ public class FrameProcessorExecutorTest
 
       // Verify exception
       final ExecutionException e = Assertions.assertThrows(ExecutionException.class, processorFuture::get);
-      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(CancellationException.class));
+      Assertions.assertInstanceOf(CancellationException.class, e.getCause());
     }
 
     @Test
@@ -480,15 +470,15 @@ public class FrameProcessorExecutorTest
 
       // Verify exception
       final ExecutionException e = Assertions.assertThrows(ExecutionException.class, processorFuture::get);
-      MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(RuntimeException.class));
-      MatcherAssert.assertThat(e.getCause(), Matchers.hasProperty("message", CoreMatchers.equalTo("oops")));
+      Assertions.assertInstanceOf(RuntimeException.class, e.getCause());
+      Assertions.assertEquals("oops", e.getCause().getMessage());
     }
   }
 
   public abstract static class BaseFrameProcessorExecutorTestSuite extends InitializedNullHandlingTest
   {
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
     public final int numThreads;
 
     protected FrameProcessorExecutor exec;
@@ -498,8 +488,6 @@ public class FrameProcessorExecutorTest
       this.numThreads = numThreads;
     }
 
-    // Keep the JUnit 4 annotations for un-migrated test-jar consumers of this shared base class.
-    @Before
     @BeforeEach
     public void setUp() throws Exception
     {
@@ -513,7 +501,6 @@ public class FrameProcessorExecutorTest
       );
     }
 
-    @After
     @AfterEach
     public void tearDown() throws Exception
     {

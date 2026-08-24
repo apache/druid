@@ -32,6 +32,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -85,7 +86,7 @@ public class CachePopulatorTest
   }
 
   @Test
-  @Timeout(value = 60000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testBackgroundPopulator() throws InterruptedException
   {
     final CachePopulator populator = new BackgroundCachePopulator(exec, objectMapper, stats, -1);
@@ -105,7 +106,7 @@ public class CachePopulatorTest
   }
 
   @Test
-  @Timeout(value = 60000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testBackgroundPopulatorMaxEntrySize() throws InterruptedException
   {
     final CachePopulator populator = new BackgroundCachePopulator(exec, objectMapper, stats, 30);

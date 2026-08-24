@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
@@ -68,13 +69,9 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.timeline.SegmentId;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -114,9 +111,6 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     );
   }
 
-  /**
-   * Verifies that a time-descending scan produces the same rows whether or not vectorization is used.
-   */
   @Test
   public void test_runWithSegments_descendingMatchesNonVectorized() throws Exception
   {
@@ -139,14 +133,14 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
     final List<List<Object>> vectorizedRows = runScanOverSegment(queryableIndex, vectorizedQuery);
 
     // The vectorized descending scan must match the non-vectorized descending scan exactly.
-    Assert.assertFalse(vectorizedRows.isEmpty());
-    Assert.assertEquals(nonVectorizedRows, vectorizedRows);
+    Assertions.assertFalse(vectorizedRows.isEmpty());
+    Assertions.assertEquals(nonVectorizedRows, vectorizedRows);
 
     // Sanity check: __time (column 0) is non-increasing.
     long previousTime = Long.MAX_VALUE;
     for (final List<Object> row : vectorizedRows) {
       final long time = ((Number) row.getFirst()).longValue();
-      Assert.assertTrue("descending __time", time <= previousTime);
+      Assertions.assertTrue(time <= previousTime, "descending __time");
       previousTime = time;
     }
   }
@@ -218,17 +212,17 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         FrameReader.create(signature)
     );
 
-    final RuntimeException e = Assert.assertThrows(
+    final RuntimeException e = Assertions.assertThrows(
         RuntimeException.class,
         rowsFromProcessor::toList
     );
 
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-            "Expected eternity intervals, but got[[2001-01-01T00:00:00.000Z/2011-01-01T00:00:00.000Z, "
-            + "2011-01-02T00:00:00.000Z/2021-01-01T00:00:00.000Z]]"))
-    );
+    ThrowableMatcher.of(RuntimeException.class)
+                   .expectMessageContains(
+                       "Expected eternity intervals, but got[[2001-01-01T00:00:00.000Z/2011-01-01T00:00:00.000Z, "
+                       + "2011-01-02T00:00:00.000Z/2021-01-01T00:00:00.000Z]]"
+                   )
+                   .assertThat(e);
   }
 
   /**
@@ -381,7 +375,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         rowsFromProcessor
     );
 
-    Assert.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
+    Assertions.assertEquals(Unit.instance(), retVal.get(30, TimeUnit.SECONDS));
   }
 
   private List<List<Object>> runScanOverSegment(final QueryableIndex queryableIndex, final ScanQuery query)
@@ -432,7 +426,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         FrameReader.create(signature)
     ).toList();
 
-    Assert.assertEquals(Unit.instance(), retVal.get());
+    Assertions.assertEquals(Unit.instance(), retVal.get());
     Assertions.assertEquals(0, segmentReferenceProvider.getNumReferences()); // Segment reference was closed
     return rows;
   }

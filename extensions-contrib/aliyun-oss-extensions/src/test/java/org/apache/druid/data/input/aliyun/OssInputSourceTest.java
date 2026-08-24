@@ -59,7 +59,6 @@ import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -69,17 +68,17 @@ import org.apache.druid.storage.aliyun.OssInputDataConfig;
 import org.apache.druid.storage.aliyun.OssStorageDruidModule;
 import org.apache.druid.storage.aliyun.OssUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CompressionUtils;
 import org.easymock.EasyMock;
 import org.easymock.IArgumentMatcher;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -141,8 +140,8 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     INPUT_DATA_CONFIG.setMaxListingLength(MAX_LISTING_LENGTH);
   }
 
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSerdeWithUris() throws Exception
@@ -543,7 +542,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     InputSourceReader reader = inputSource.reader(
         someSchema,
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
-        newFolder(temporaryFolder, "junit")
+        temporaryFolder.newFolder()
     );
 
     final InputStats inputStats = new InputStatsImpl();
@@ -590,7 +589,7 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     InputSourceReader reader = inputSource.reader(
         someSchema,
         new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
-        newFolder(temporaryFolder, "junit")
+        temporaryFolder.newFolder()
     );
 
     final InputStats inputStats = new InputStatsImpl();
@@ -809,11 +808,4 @@ public class OssInputSourceTest extends InitializedNullHandlingTest
     return retVal;
   }
 
-  private static File newFolder(File root, String... subDirs) throws IOException
-  {
-    final String subFolder = String.join("/", subDirs);
-    final File result = new File(root, subFolder);
-    FileUtils.mkdirp(result);
-    return result;
-  }
 }

@@ -28,8 +28,8 @@ import jakarta.validation.Validator;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Properties;
 
@@ -41,13 +41,13 @@ public class ExternalStorageAccessSecurityModuleTest
     JdbcAccessSecurityConfig securityConfig = makeInjectorWithProperties(new Properties()).getInstance(
         JdbcAccessSecurityConfig.class
     );
-    Assert.assertNotNull(securityConfig);
-    Assert.assertEquals(
+    Assertions.assertNotNull(securityConfig);
+    Assertions.assertEquals(
         JdbcAccessSecurityConfig.DEFAULT_ALLOWED_PROPERTIES,
         securityConfig.getAllowedProperties()
     );
-    Assert.assertTrue(securityConfig.isAllowUnknownJdbcUrlFormat());
-    Assert.assertTrue(securityConfig.isEnforceAllowedProperties());
+    Assertions.assertTrue(securityConfig.isAllowUnknownJdbcUrlFormat());
+    Assertions.assertTrue(securityConfig.isEnforceAllowedProperties());
   }
 
   @Test
@@ -60,8 +60,8 @@ public class ExternalStorageAccessSecurityModuleTest
     JdbcAccessSecurityConfig securityConfig = makeInjectorWithProperties(properties).getInstance(
         JdbcAccessSecurityConfig.class
     );
-    Assert.assertNotNull(securityConfig);
-    Assert.assertEquals(
+    Assertions.assertNotNull(securityConfig);
+    Assertions.assertEquals(
         ImmutableSet.of(
             "valid1",
             "valid2",
@@ -69,8 +69,8 @@ public class ExternalStorageAccessSecurityModuleTest
         ),
         securityConfig.getAllowedProperties()
     );
-    Assert.assertFalse(securityConfig.isAllowUnknownJdbcUrlFormat());
-    Assert.assertTrue(securityConfig.isEnforceAllowedProperties());
+    Assertions.assertFalse(securityConfig.isAllowUnknownJdbcUrlFormat());
+    Assertions.assertTrue(securityConfig.isEnforceAllowedProperties());
   }
 
   private static Injector makeInjectorWithProperties(final Properties props)
