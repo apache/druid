@@ -1965,7 +1965,7 @@
             <plugin>
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>12.2.0</version>
+                <version>12.2.2</version>
                 <configuration>
                     <nvdApiKey>${nvdApiKey}</nvdApiKey>
                     <failBuildOnCVSS>7</failBuildOnCVSS>
