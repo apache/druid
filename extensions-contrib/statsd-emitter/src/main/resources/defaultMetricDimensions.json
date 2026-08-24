@@ -79,11 +79,11 @@
 
   "ingest/pause/time" : { "dimensions" : ["dataSource", "taskId"], "type" : "timer" },
 
-  "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "task/success/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
+  "task/failed/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
+  "task/running/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
+  "task/pending/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
+  "task/waiting/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
 
   "task/action/run/time": { "dimensions" : ["dataSource", "taskActionType"], "type" : "timer" },
   "task/status/queue/count": { "dimensions" : [], "type" : "gauge" },
