@@ -535,13 +535,6 @@ public class StorageLocation
    * Creates a release runnable for a {@link WeakCacheEntry} that handles immediate eviction when configured.
    * If {@link #areWeakEntriesEphemeral} is true and there are no more holds after releasing, the entry is immediately
    * evicted from the cache. For new entries (isNewEntry=true), unmounted entries are also removed.
-   * <p>
-   * Both removal branches require that no other hold remains on the entry, and that the entry still registered under
-   * this id <em>is</em> the one this hold was placed on. Evicting a held entry is what the hold exists to prevent: the
-   * holder is typically mid-mount, and a mount that finishes to find its entry unregistered rolls itself back, so a
-   * reference the holder was promised would stay alive dies underneath it. The identity check covers the same hazard
-   * one step removed: the hold is released before the write lock is taken, so in between the entry can be reclaimed
-   * and a fresh one registered under the same id, and this runnable would otherwise evict that replacement.
    */
   private Runnable createWeakEntryReleaseRunnable(
       final WeakCacheEntry weakEntry,

@@ -678,11 +678,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   if (!holdHolder.isClosed()) {
                     throw raceLost;
                   }
-                  // Closing the AcquireSegmentAction released that hold, so this is what an abandoned acquire looks
-                  // like from inside the load task: a canceled or timed out query, or a caller unwinding because a
-                  // different segment failed. This is where the loss surfaces when the mount itself went fine and
-                  // verifyStillReservedOrRollback rolled it back quietly. Nothing is waiting on this result, report
-                  // the segment as unavailable rather than failing a query that is already on its way down.
+                  // hold is release so we have an abandoned acquire; nothing is waiting on this result, report
+                  // the segment as unavailable rather than failing a query that is already on its way down
                   return AcquireSegmentResult.empty();
                 }
                 try {
