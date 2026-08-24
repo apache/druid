@@ -26,8 +26,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorFactoryNotMergeableException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class PassthroughAggregatorFactoryTest
 {
@@ -39,17 +39,17 @@ public class PassthroughAggregatorFactoryTest
     objectMapper.registerSubtypes(PassthroughAggregatorFactory.class);
     AggregatorFactory aggregatorFactory = new PassthroughAggregatorFactory("x", "y");
     String serializedvalue = objectMapper.writeValueAsString(aggregatorFactory);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"passthrough\",\"columnName\":\"x\",\"complexTypeName\":\"y\"}",
         serializedvalue
     );
-    Assert.assertEquals(aggregatorFactory, objectMapper.readValue(serializedvalue, AggregatorFactory.class));
+    Assertions.assertEquals(aggregatorFactory, objectMapper.readValue(serializedvalue, AggregatorFactory.class));
   }
 
   @Test
   public void testRequiredFields()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of("x"),
         new PassthroughAggregatorFactory("x", "y").requiredFields()
     );
@@ -58,7 +58,7 @@ public class PassthroughAggregatorFactoryTest
   @Test
   public void testGetCombiningFactory()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new PassthroughAggregatorFactory("x", "y"),
         new PassthroughAggregatorFactory("x", "y").getCombiningFactory()
     );
@@ -70,18 +70,18 @@ public class PassthroughAggregatorFactoryTest
     final AggregatorFactory mergingFactory =
         new PassthroughAggregatorFactory("x", "y").getMergingFactory(new PassthroughAggregatorFactory("x", "y"));
 
-    Assert.assertEquals(new PassthroughAggregatorFactory("x", "y"), mergingFactory);
+    Assertions.assertEquals(new PassthroughAggregatorFactory("x", "y"), mergingFactory);
   }
 
   @Test
   public void testGetMergingFactoryNotOk()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         AggregatorFactoryNotMergeableException.class,
         () -> new PassthroughAggregatorFactory("x", "y").getMergingFactory(new PassthroughAggregatorFactory("x", "z"))
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         AggregatorFactoryNotMergeableException.class,
         () -> new PassthroughAggregatorFactory("x", "y").getMergingFactory(new PassthroughAggregatorFactory("z", "y"))
     );

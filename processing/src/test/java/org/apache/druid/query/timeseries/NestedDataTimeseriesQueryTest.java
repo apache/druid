@@ -85,7 +85,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final Closer closer;
   private final AggregationTestHelper helper;
@@ -99,7 +99,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
       String vectorize
   )
   {
-    this.helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+    this.helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         BuiltInTypesModule.getJacksonModulesList(),
         tempFolder
     );

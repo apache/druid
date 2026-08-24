@@ -121,7 +121,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -1142,9 +1141,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final DruidExceptionMatcher exceptionMatcher
   )
   {
-    // DruidExceptionMatcher is a Hamcrest matcher, so this delegates to Hamcrest's MatcherAssert.assertThat.
-    // Remove this bridge in the final cleanup after all DruidExceptionMatcher callers are migrated.
-    assertThat(exception, exceptionMatcher);
+    DruidExceptionMatcher.assertThat(exception, exceptionMatcher);
   }
 
   public void analyzeResources(

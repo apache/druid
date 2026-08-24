@@ -23,7 +23,8 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
 public class MarkSegmentsAsUnusedTest extends CoordinatorSimulationBaseTest
 {
   @Override
+  @BeforeEach
   public void setUp()
   {
 

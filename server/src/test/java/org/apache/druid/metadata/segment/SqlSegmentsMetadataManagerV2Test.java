@@ -43,18 +43,18 @@ import org.apache.druid.timeline.DataSegment;
 import org.assertj.core.util.Sets;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.List;
 import java.util.Set;
 
 public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManagerTestBase
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule =
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
@@ -70,7 +70,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
                           .startingAt(JAN_1)
                           .eachOfSize(500);
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     setUp(derbyConnectorRule);
@@ -120,7 +120,7 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     segmentMetadataCacheExec.finishNextPendingTasks(2);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (manager == null) {
@@ -139,14 +139,14 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     initManager(SegmentMetadataCache.UsageMode.ALWAYS, false);
 
     manager.startPollingDatabasePeriodically();
-    Assert.assertTrue(manager.isPollingDatabasePeriodically());
+    Assertions.assertTrue(manager.isPollingDatabasePeriodically());
 
     syncSegmentMetadataCache();
     verifyDatasourceSnapshot();
 
     // isPolling returns true even after stop since cache is still polling the metadata store
     manager.stopPollingDatabasePeriodically();
-    Assert.assertTrue(manager.isPollingDatabasePeriodically());
+    Assertions.assertTrue(manager.isPollingDatabasePeriodically());
 
     emitter.verifyNotEmitted("segment/poll/time");
     emitter.verifyNotEmitted("segment/pollWithSchema/time");
@@ -162,12 +162,12 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     initManager(SegmentMetadataCache.UsageMode.NEVER, false);
 
     manager.startPollingDatabasePeriodically();
-    Assert.assertTrue(manager.isPollingDatabasePeriodically());
+    Assertions.assertTrue(manager.isPollingDatabasePeriodically());
 
     verifyDatasourceSnapshot();
 
     manager.stopPollingDatabasePeriodically();
-    Assert.assertFalse(manager.isPollingDatabasePeriodically());
+    Assertions.assertFalse(manager.isPollingDatabasePeriodically());
 
     emitter.verifyEmitted("segment/poll/time", 1);
     emitter.verifyNotEmitted(Metric.SYNC_DURATION_MILLIS);
@@ -179,14 +179,14 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
     initManager(SegmentMetadataCache.UsageMode.ALWAYS, true);
 
     manager.startPollingDatabasePeriodically();
-    Assert.assertTrue(manager.isPollingDatabasePeriodically());
+    Assertions.assertTrue(manager.isPollingDatabasePeriodically());
 
     syncSegmentMetadataCache();
     verifyDatasourceSnapshot();
 
     // isPolling returns true even after stop since cache is still polling the metadata store
     manager.stopPollingDatabasePeriodically();
-    Assert.assertTrue(manager.isPollingDatabasePeriodically());
+    Assertions.assertTrue(manager.isPollingDatabasePeriodically());
 
     emitter.verifyNotEmitted("segment/poll/time");
     emitter.verifyNotEmitted("segment/pollWithSchema/time");
@@ -198,11 +198,11 @@ public class SqlSegmentsMetadataManagerV2Test extends SqlSegmentsMetadataManager
   private void verifyDatasourceSnapshot()
   {
     final DataSourcesSnapshot snapshot = manager.getRecentDataSourcesSnapshot();
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.copyOf(WIKI_SEGMENTS_1X5D),
         Sets.newHashSet(snapshot.iterateAllUsedSegmentsInSnapshot())
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Set.copyOf(WIKI_SEGMENTS_1X5D),
         Set.copyOf(snapshot.getDataSource(TestDataSource.WIKI).getSegments())
     );

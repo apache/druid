@@ -20,13 +20,13 @@
 package org.apache.druid.guice.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Min;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import javax.validation.constraints.Min;
 import java.util.concurrent.TimeUnit;
 
 /**

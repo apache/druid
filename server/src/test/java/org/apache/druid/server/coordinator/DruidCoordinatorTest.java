@@ -39,6 +39,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -68,6 +69,7 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
@@ -76,9 +78,11 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -86,6 +90,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -109,7 +114,7 @@ public class DruidCoordinatorTest
   private CompactionStatusTracker statusTracker;
   private LatchableServiceEmitter serviceEmitter;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
     serverInventoryView = EasyMock.createMock(ServerInventoryView.class);
@@ -198,7 +203,8 @@ public class DruidCoordinatorTest
     );
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorRun() throws Exception
   {
     String dataSource = "dataSource1";
@@ -206,8 +212,8 @@ public class DruidCoordinatorTest
 
     // Setup MetadataRuleManager
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2), null);
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-            .andReturn(ImmutableList.of(foreverLoadRule)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(foreverLoadRule)).atLeastOnce();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
@@ -249,67 +255,68 @@ public class DruidCoordinatorTest
 
     coordinator.start();
 
-    Assert.assertNull(coordinator.getReplicationFactor(dataSegment.getId()));
-    Assert.assertNull(coordinator.getBroadcastSegments());
+    Assertions.assertNull(coordinator.getReplicationFactor(dataSegment.getId()));
+    Assertions.assertNull(coordinator.getBroadcastSegments());
 
     // Wait for this coordinator to become leader
 
     // This coordinator should be leader by now
-    Assert.assertTrue(coordinator.isLeader());
-    Assert.assertEquals(druidNode.getHostAndPort(), coordinator.getCurrentLeader());
+    Assertions.assertTrue(coordinator.isLeader());
+    Assertions.assertEquals(druidNode.getHostAndPort(), coordinator.getCurrentLeader());
 
     serviceEmitter.coordinatorRunLatch.await();
 
-    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
+    Assertions.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     Object2IntMap<String> numsUnavailableUsedSegmentsPerDataSource =
         coordinator.getDatasourceToUnavailableSegmentCount();
-    Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
-    Assert.assertEquals(0, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
-    Assert.assertEquals(0, coordinator.getBroadcastSegments().size());
+    Assertions.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
+    Assertions.assertEquals(0, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
+    Assertions.assertEquals(0, coordinator.getBroadcastSegments().size());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.getTierToDatasourceToUnderReplicatedCount(false);
-    Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
-    Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
+    Assertions.assertNotNull(underReplicationCountsPerDataSourcePerTier);
+    Assertions.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
     Object2LongMap<String> underRepliicationCountsPerDataSource = underReplicationCountsPerDataSourcePerTier.get(tier);
-    Assert.assertNotNull(underRepliicationCountsPerDataSource);
-    Assert.assertEquals(1, underRepliicationCountsPerDataSource.size());
+    Assertions.assertNotNull(underRepliicationCountsPerDataSource);
+    Assertions.assertEquals(1, underRepliicationCountsPerDataSource.size());
     //noinspection deprecation
-    Assert.assertNotNull(underRepliicationCountsPerDataSource.get(dataSource));
+    Assertions.assertNotNull(underRepliicationCountsPerDataSource.get(dataSource));
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
-    Assert.assertEquals(1L, underRepliicationCountsPerDataSource.getLong(dataSource));
+    Assertions.assertEquals(1L, underRepliicationCountsPerDataSource.getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.getTierToDatasourceToUnderReplicatedCount(true);
-    Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
-    Assert.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
+    Assertions.assertNotNull(underReplicationCountsPerDataSourcePerTier);
+    Assertions.assertEquals(1, underReplicationCountsPerDataSourcePerTier.size());
 
     Object2LongMap<String> underRepliicationCountsPerDataSourceUsingClusterView =
         underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tier);
-    Assert.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView);
-    Assert.assertEquals(1, underRepliicationCountsPerDataSourceUsingClusterView.size());
+    Assertions.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView);
+    Assertions.assertEquals(1, underRepliicationCountsPerDataSourceUsingClusterView.size());
     //noinspection deprecation
-    Assert.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView.get(dataSource));
+    Assertions.assertNotNull(underRepliicationCountsPerDataSourceUsingClusterView.get(dataSource));
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, but only 1 historical server in cluster. Since computing using cluster view
     // the segments are replicated as many times as they can be given state of cluster, therefore should not be
     // under-replicated.
-    Assert.assertEquals(0L, underRepliicationCountsPerDataSourceUsingClusterView.getLong(dataSource));
-    Assert.assertEquals(Integer.valueOf(2), coordinator.getReplicationFactor(dataSegment.getId()));
+    Assertions.assertEquals(0L, underRepliicationCountsPerDataSourceUsingClusterView.getLong(dataSource));
+    Assertions.assertEquals(Integer.valueOf(2), coordinator.getReplicationFactor(dataSegment.getId()));
 
     coordinator.stop();
 
-    Assert.assertFalse(coordinator.isLeader());
-    Assert.assertNull(coordinator.getCurrentLeader());
+    Assertions.assertFalse(coordinator.isLeader());
+    Assertions.assertNull(coordinator.getCurrentLeader());
 
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(metadataRuleManager);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorTieredRun() throws Exception
   {
     final String dataSource = "dataSource", hotTierName = "hot", coldTierName = "cold";
@@ -336,8 +343,8 @@ public class DruidCoordinatorTest
 
     setupSegmentsMetadataMock(druidDataSources[0]);
 
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-            .andReturn(ImmutableList.of(hotTier, coldTier)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(hotTier, coldTier)).atLeastOnce();
 
     EasyMock.expect(serverInventoryView.getInventory())
             .andReturn(ImmutableList.of(hotServer, coldServer))
@@ -350,21 +357,21 @@ public class DruidCoordinatorTest
 
     serviceEmitter.coordinatorRunLatch.await();
 
-    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
+    Assertions.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.getTierToDatasourceToUnderReplicatedCount(false);
-    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
+    Assertions.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.getTierToDatasourceToUnderReplicatedCount(true);
-    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
+    Assertions.assertEquals(2, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
 
-    dataSegments.forEach(dataSegment -> Assert.assertEquals(Integer.valueOf(1), coordinator.getReplicationFactor(dataSegment.getId())));
+    dataSegments.forEach(dataSegment -> Assertions.assertEquals(Integer.valueOf(1), coordinator.getReplicationFactor(dataSegment.getId())));
 
     coordinator.stop();
 
@@ -373,7 +380,8 @@ public class DruidCoordinatorTest
     EasyMock.verify(metadataRuleManager);
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testComputeUnderReplicationCountsPerDataSourcePerTierForSegmentsWithBroadcastRule() throws Exception
   {
     final String dataSource = "dataSource";
@@ -418,8 +426,8 @@ public class DruidCoordinatorTest
     setupSegmentsMetadataMock(druidDataSource);
 
     final Rule broadcastDistributionRule = new ForeverBroadcastDistributionRule();
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-            .andReturn(ImmutableList.of(broadcastDistributionRule)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(broadcastDistributionRule)).atLeastOnce();
 
     EasyMock.expect(serverInventoryView.getInventory())
             .andReturn(ImmutableList.of(hotServer, coldServer, brokerServer1, brokerServer2, peonServer))
@@ -432,25 +440,25 @@ public class DruidCoordinatorTest
 
     serviceEmitter.coordinatorRunLatch.await();
 
-    Assert.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
-    Assert.assertEquals(dataSegments, coordinator.getBroadcastSegments());
+    Assertions.assertEquals(ImmutableMap.of(dataSource, 100.0), coordinator.getDatasourceToLoadStatus());
+    Assertions.assertEquals(dataSegments, coordinator.getBroadcastSegments());
 
     // Under-replicated counts are updated only after the next coordinator run
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.getTierToDatasourceToUnderReplicatedCount(false);
-    Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTier.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName1).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
+    Assertions.assertEquals(4, underReplicationCountsPerDataSourcePerTier.size());
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(hotTierName).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(coldTierName).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName1).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTier.get(tierName2).getLong(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTierUsingClusterView =
         coordinator.getTierToDatasourceToUnderReplicatedCount(true);
-    Assert.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName1).getLong(dataSource));
-    Assert.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource));
+    Assertions.assertEquals(4, underReplicationCountsPerDataSourcePerTierUsingClusterView.size());
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(hotTierName).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(coldTierName).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName1).getLong(dataSource));
+    Assertions.assertEquals(0L, underReplicationCountsPerDataSourcePerTierUsingClusterView.get(tierName2).getLong(dataSource));
 
     coordinator.stop();
 
@@ -491,18 +499,18 @@ public class DruidCoordinatorTest
 
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     final List<DutyGroupStatus> duties = coordinator.getStatusOfDuties();
-    Assert.assertEquals(3, duties.size());
+    Assertions.assertEquals(3, duties.size());
 
-    Assert.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
-    Assert.assertEquals("IndexingServiceDuties", duties.get(1).getName());
-    Assert.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
+    Assertions.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
+    Assertions.assertEquals("IndexingServiceDuties", duties.get(1).getName());
+    Assertions.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
 
     final String compactDutyName = CompactSegments.class.getName();
-    Assert.assertTrue(duties.get(1).getDutyNames().contains(compactDutyName));
+    Assertions.assertTrue(duties.get(1).getDutyNames().contains(compactDutyName));
 
     // CompactSegments should not exist in other duty groups
-    Assert.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
-    Assert.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
+    Assertions.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
+    Assertions.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
 
     coordinator.stop();
   }
@@ -541,19 +549,19 @@ public class DruidCoordinatorTest
     coordinator.start();
     // Since CompactSegments is not enabled in Custom Duty Group, then CompactSegments must be created in IndexingServiceDuties
     final List<DutyGroupStatus> duties = coordinator.getStatusOfDuties();
-    Assert.assertEquals(4, duties.size());
+    Assertions.assertEquals(4, duties.size());
 
-    Assert.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
-    Assert.assertEquals("IndexingServiceDuties", duties.get(1).getName());
-    Assert.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
-    Assert.assertEquals("group1", duties.get(3).getName());
+    Assertions.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
+    Assertions.assertEquals("IndexingServiceDuties", duties.get(1).getName());
+    Assertions.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
+    Assertions.assertEquals("group1", duties.get(3).getName());
 
     final String compactDutyName = CompactSegments.class.getName();
-    Assert.assertTrue(duties.get(1).getDutyNames().contains(compactDutyName));
+    Assertions.assertTrue(duties.get(1).getDutyNames().contains(compactDutyName));
 
     // CompactSegments should not exist in other duty groups
-    Assert.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
-    Assert.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
+    Assertions.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
+    Assertions.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
 
     coordinator.stop();
   }
@@ -593,26 +601,27 @@ public class DruidCoordinatorTest
 
     // Since CompactSegments is enabled in Custom Duty Group, then CompactSegments must not be created in IndexingServiceDuties
     final List<DutyGroupStatus> duties = coordinator.getStatusOfDuties();
-    Assert.assertEquals(4, duties.size());
+    Assertions.assertEquals(4, duties.size());
 
-    Assert.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
-    Assert.assertEquals("IndexingServiceDuties", duties.get(1).getName());
-    Assert.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
-    Assert.assertEquals("group1", duties.get(3).getName());
+    Assertions.assertEquals("HistoricalManagementDuties", duties.get(0).getName());
+    Assertions.assertEquals("IndexingServiceDuties", duties.get(1).getName());
+    Assertions.assertEquals("MetadataStoreManagementDuties", duties.get(2).getName());
+    Assertions.assertEquals("group1", duties.get(3).getName());
 
     // CompactSegments should exist in Custom Duty Group
     final String compactDutyName = CompactSegments.class.getName();
-    Assert.assertTrue(duties.get(3).getDutyNames().contains(compactDutyName));
+    Assertions.assertTrue(duties.get(3).getDutyNames().contains(compactDutyName));
 
     // CompactSegments should not exist in other duty groups
-    Assert.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
-    Assert.assertFalse(duties.get(1).getDutyNames().contains(compactDutyName));
-    Assert.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
+    Assertions.assertFalse(duties.get(0).getDutyNames().contains(compactDutyName));
+    Assertions.assertFalse(duties.get(1).getDutyNames().contains(compactDutyName));
+    Assertions.assertFalse(duties.get(2).getDutyNames().contains(compactDutyName));
 
     coordinator.stop();
   }
 
-  @Test(timeout = 3000)
+  @Test
+  @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorCustomDutyGroupsRunAsExpected() throws Exception
   {
     // Some nessesary setup to start the Coordinator
@@ -710,7 +719,8 @@ public class DruidCoordinatorTest
     }
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testCoordinatorRun_queryFromDeepStorage() throws Exception
   {
     String dataSource = "dataSource1";
@@ -721,8 +731,8 @@ public class DruidCoordinatorTest
     // Setup MetadataRuleManager
     Rule intervalLoadRule = new IntervalLoadRule(Intervals.of("2010-02-01/P1M"), ImmutableMap.of(hotTier, 1), null);
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(coldTier, 0), null);
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-        .andReturn(ImmutableList.of(intervalLoadRule, foreverLoadRule)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+        .andReturn(clusterDefaultRules(intervalLoadRule, foreverLoadRule)).atLeastOnce();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
@@ -783,39 +793,39 @@ public class DruidCoordinatorTest
     // Wait for this coordinator to become leader
 
     // This coordinator should be leader by now
-    Assert.assertTrue(coordinator.isLeader());
-    Assert.assertEquals(druidNode.getHostAndPort(), coordinator.getCurrentLeader());
+    Assertions.assertTrue(coordinator.isLeader());
+    Assertions.assertEquals(druidNode.getHostAndPort(), coordinator.getCurrentLeader());
 
     serviceEmitter.coordinatorRunLatch.await();
 
     Object2IntMap<String> numsUnavailableUsedSegmentsPerDataSource =
         coordinator.getDatasourceToUnavailableSegmentCount();
-    Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
+    Assertions.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.size());
     // The cold tier segment should not be unavailable, the hot one should be unavailable
-    Assert.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
+    Assertions.assertEquals(1, numsUnavailableUsedSegmentsPerDataSource.getInt(dataSource));
 
     Map<String, Object2LongMap<String>> underReplicationCountsPerDataSourcePerTier =
         coordinator.getTierToDatasourceToUnderReplicatedCount(false);
-    Assert.assertNotNull(underReplicationCountsPerDataSourcePerTier);
-    Assert.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
+    Assertions.assertNotNull(underReplicationCountsPerDataSourcePerTier);
+    Assertions.assertEquals(2, underReplicationCountsPerDataSourcePerTier.size());
 
     Object2LongMap<String> underRepliicationCountsPerDataSourceHotTier = underReplicationCountsPerDataSourcePerTier.get(hotTier);
-    Assert.assertNotNull(underRepliicationCountsPerDataSourceHotTier);
-    Assert.assertEquals(1, underRepliicationCountsPerDataSourceHotTier.getLong(dataSource));
+    Assertions.assertNotNull(underRepliicationCountsPerDataSourceHotTier);
+    Assertions.assertEquals(1, underRepliicationCountsPerDataSourceHotTier.getLong(dataSource));
 
     Object2LongMap<String> underRepliicationCountsPerDataSourceColdTier = underReplicationCountsPerDataSourcePerTier.get(coldTier);
-    Assert.assertNotNull(underRepliicationCountsPerDataSourceColdTier);
-    Assert.assertEquals(0, underRepliicationCountsPerDataSourceColdTier.getLong(dataSource));
+    Assertions.assertNotNull(underRepliicationCountsPerDataSourceColdTier);
+    Assertions.assertEquals(0, underRepliicationCountsPerDataSourceColdTier.getLong(dataSource));
 
     Object2IntMap<String> numsDeepStorageOnlySegmentsPerDataSource =
             coordinator.getDatasourceToDeepStorageQueryOnlySegmentCount();
 
-    Assert.assertEquals(1, numsDeepStorageOnlySegmentsPerDataSource.getInt(dataSource));
+    Assertions.assertEquals(1, numsDeepStorageOnlySegmentsPerDataSource.getInt(dataSource));
 
     coordinator.stop();
 
-    Assert.assertFalse(coordinator.isLeader());
-    Assert.assertNull(coordinator.getCurrentLeader());
+    Assertions.assertFalse(coordinator.isLeader());
+    Assertions.assertNull(coordinator.getCurrentLeader());
 
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(metadataRuleManager);
@@ -833,7 +843,19 @@ public class DruidCoordinatorTest
     CompactionSimulateResult result = coordinator.simulateRunWithConfigUpdate(
         new ClusterCompactionConfig(0.2, null, null, null, null, null)
     );
-    Assert.assertEquals(Collections.emptyMap(), result.getCompactionStates());
+    Assertions.assertEquals(Collections.emptyMap(), result.getCompactionStates());
+  }
+
+  /**
+   * A rules snapshot in which the given rules are the cluster defaults, so that they
+   * apply to every datasource.
+   */
+  private static RetentionRulesSnapshot clusterDefaultRules(Rule... rules)
+  {
+    return new RetentionRulesSnapshot(
+        Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, List.of(rules)),
+        MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+    );
   }
 
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)

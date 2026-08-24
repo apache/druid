@@ -31,10 +31,11 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,8 +43,8 @@ import java.util.Objects;
 
 public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testFetchOnReadCleanupAfterExhaustingIterator() throws IOException
@@ -57,7 +58,7 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
     );
     FetchingFileEntity entity = new FetchingFileEntity(new File("example/wiki/wiki.parquet"));
     ParquetInputFormat parquet = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, new Configuration());
-    File tempDir = newFolder(temporaryFolder, "junit");
+    File tempDir = temporaryFolder.newFolder();
     InputEntityReader reader = parquet.createReader(schema, entity, tempDir);
     Assertions.assertEquals(0, Objects.requireNonNull(tempDir.list()).length);
     try (CloseableIterator<InputRow> iterator = reader.read()) {
@@ -115,8 +116,4 @@ public class ParquetReaderResourceLeakTest extends BaseParquetReaderTest
 
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
-  }
 }

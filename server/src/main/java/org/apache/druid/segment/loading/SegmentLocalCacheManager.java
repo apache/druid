@@ -318,7 +318,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       // Partial-segment layout is signaled by a {targetFilename}.header file in the segment dir
       final File partialDir = cacheEntry.toPotentialLocation(location.getPath());
       if (partialDir.exists()
-          && PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME)) {
+          && PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME)) {
         if (!config.isVirtualStoragePartialDownloadsEnabled()) {
           // Partial downloads are disabled but a partial-load layout (header + sparse containers) is on disk, e.g. the
           // operator toggled druid.segmentCache.virtualStoragePartialDownloadsEnabled off. The eager path can't serve
@@ -336,61 +336,19 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           atomicMoveAndDeleteCacheEntryDirectory(partialDir);
           continue;
         }
-        SegmentRangeReader rangeReader;
-        try {
-          rangeReader = tryOpenRangeReader(segment);
-        }
-        catch (Exception e) {
-          log.warn(e, "Failed to open a range reader for partial segment[%s] during bootstrap", segment.getId());
-          rangeReader = null;
-        }
-        if (rangeReader == null) {
-          // Anomalous: a layout on disk means range reads worked when it was written, so this should not happen (the
-          // loadSpec is now non-range-capable, or no longer converts to a known type). Reclaim it and let the segment
-          // re-load fresh on next access rather than failing bootstrap or reserving an entry that could never fetch.
-          // Leave removeInfo true so it's treated as uncached.
-          log.warn(
-              "On-disk partial-load layout for segment[%s] in [%s] has no usable range reader (this should not "
-              + "happen); deleting it so bootstrap can continue.",
-              segment.getId(),
-              partialDir
-          );
-          atomicMoveAndDeleteCacheEntryDirectory(partialDir);
-          continue;
-        }
+        // Nothing is reserved here: partial entries are reserved (and immediately mounted, which is what sizes them)
+        // one at a time in bootstrap().
         removeInfo = false;
-        try {
-          PartialSegmentCacheBootstrap.reserveFromDisk(
-              segment.getId(),
-              partialDir,
-              IndexIO.V10_FILE_NAME,
-              List.of(),
-              rangeReader,
-              jsonMapper,
-              virtualStorageLoadingThreadPool,
-              location,
-              config.getVirtualStorageCoalesceGapBytes(),
-              config.getVirtualStorageMaxFetchRunBytes()
-          );
-          cachedSegments.add(segment);
-        }
-        catch (Throwable t) {
-          // Reservation failed (header missing, location full, etc.)
-          log.warn(t, "Failed to reserve partial segment[%s] from disk; cold fetch on next access", segment.getId());
-        }
+        cachedSegments.add(segment);
         // do not fall through to 'complete' path since this was a partial
         continue;
       }
 
       if (cacheEntry.checkExists(location.getPath())) {
         removeInfo = false;
-        final boolean reserveResult;
-        if (config.isVirtualStorage()) {
-          reserveResult = location.reserveWeak(cacheEntry);
-        } else {
-          reserveResult = location.reserve(cacheEntry);
-        }
-        if (!reserveResult) {
+        // Under virtual storage nothing is reserved here: as with the partial layout above, bootstrap() reserves this
+        // segment and mounts it under the resulting hold. The legacy path reserves it statically, up front.
+        if (!config.isVirtualStorage() && !location.reserve(cacheEntry)) {
           log.makeAlert(
               "storage[%s:%,d] has more segments than it is allowed. Currently loading Segment[%s:%,d]. Please increase druid.segmentCache.locations maxSize param",
               location.getPath(),
@@ -878,66 +836,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private ReservedPartial reservePartial(DataSegment dataSegment, SegmentRangeReader rangeReader)
   {
-    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
     final Iterator<StorageLocation> iterator = strategy.getLocations();
     while (iterator.hasNext()) {
-      final StorageLocation location = iterator.next();
-      final File partialDir = new File(location.getPath(), dataSegment.getId().toString());
-      try {
-        FileUtils.mkdirp(partialDir);
-      }
-      catch (IOException e) {
-        // Location is unwritable, fall through to next location rather than failing the whole reservation
-        log.warn(
-            e,
-            "Failed to create partial cache dir on location[%s] for segment[%s]; trying next location",
-            location.getPath(),
-            dataSegment.getId()
-        );
-        continue;
-      }
-      final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
-          id,
-          () -> new PartialSegmentMetadataCacheEntry(
-              dataSegment.getId(),
-              partialDir,
-              IndexIO.V10_FILE_NAME,
-              List.of(),
-              rangeReader,
-              jsonMapper,
-              virtualStorageLoadingThreadPool,
-              config.getVirtualStorageMetadataReservationEstimate(),
-              config.getVirtualStorageCoalesceGapBytes(),
-              config.getVirtualStorageMaxFetchRunBytes()
-          )
-      );
-      if (hold == null) {
-        atomicMoveAndDeleteCacheEntryDirectory(partialDir);
-        continue;
-      }
-      try {
-        if (!(hold.getEntry() instanceof PartialSegmentMetadataCacheEntry partial)) {
-          throw DruidException.defensive(
-              "Unexpected non-partial cache entry[%s] at id[%s] on location[%s]",
-              hold.getEntry().getClass().getSimpleName(),
-              id,
-              location.getPath()
-          );
-        }
-        rewriteInfoFile(dataSegment);
-        partial.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
-        return new ReservedPartial(partial, location, hold);
-      }
-      catch (Throwable t) {
-        // Close the hold (which removes the never-mounted weak entry unless a concurrent acquire is also holding it,
-        // in which case that acquire owns it and will re-create this directory on its own mount), then nuke the
-        // on-disk dir.
-        try {
-          throw CloseableUtils.closeAndWrapInCatch(t, hold);
-        }
-        finally {
-          atomicMoveAndDeleteCacheEntryDirectory(partialDir);
-        }
+      final ReservedPartial reserved = tryReservePartialAt(dataSegment, rangeReader, iterator.next(), true);
+      if (reserved != null) {
+        return reserved;
       }
     }
     throw DruidException.forPersona(DruidException.Persona.USER)
@@ -946,6 +849,100 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                             "Unable to reserve partial metadata for segment[%s]; ensure enough disk space has been allocated",
                             dataSegment.getId()
                         );
+  }
+
+  /**
+   * Reserve a partial metadata entry for {@code dataSegment} on one specific location, returning {@code null} if that
+   * location can't take it (unwritable, or no capacity) so a caller walking locations can try the next one.
+   *
+   * @param writeInfoFile write the segment info file now. False for bootstrap restores, where it already exists and is
+   *                      what told us about this segment in the first place
+   */
+  @Nullable
+  private ReservedPartial tryReservePartialAt(
+      DataSegment dataSegment,
+      SegmentRangeReader rangeReader,
+      StorageLocation location,
+      boolean writeInfoFile
+  )
+  {
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
+    final File partialDir = new File(location.getPath(), dataSegment.getId().toString());
+    // A pre-existing directory (e.g. bootstrap) will restore in place
+    final boolean createdPartialDir = !partialDir.exists();
+    try {
+      FileUtils.mkdirp(partialDir);
+    }
+    catch (IOException e) {
+      // Location is unwritable, let the caller fall through to the next location rather than failing the reservation
+      log.warn(
+          e,
+          "Failed to create partial cache dir on location[%s] for segment[%s]",
+          location.getPath(),
+          dataSegment.getId()
+      );
+      return null;
+    }
+    final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
+        id,
+        () -> new PartialSegmentMetadataCacheEntry(
+            dataSegment.getId(),
+            partialDir,
+            IndexIO.V10_FILE_NAME,
+            List.of(),
+            rangeReader,
+            jsonMapper,
+            virtualStorageLoadingThreadPool,
+            config.getVirtualStorageMetadataReservationEstimate(),
+            config.getVirtualStorageCoalesceGapBytes(),
+            config.getVirtualStorageMaxFetchRunBytes()
+        )
+    );
+    if (hold == null) {
+      if (createdPartialDir) {
+        atomicMoveAndDeleteCacheEntryDirectory(partialDir);
+      } else {
+        // A layout is already on disk here but the location has no room for its metadata entry and nothing
+        // reclaimable, which most likely means the location's configured maxSize shrank since the layout was written.
+        // Worth saying out loud either way: bootstrap fails the segment on this, and an on-demand acquire moves on to
+        // another location, leaving the files here with no entry behind them.
+        log.warn(
+            "Location[%s] with available bytes[%,d] cannot reserve metadata estimate[%,d] bytes for segment[%s], "
+            + "which already has partial cache state on disk there; check druid.segmentCache.locations maxSize.",
+            location.getPath(),
+            location.availableSizeBytes(),
+            config.getVirtualStorageMetadataReservationEstimate(),
+            dataSegment.getId()
+        );
+      }
+      return null;
+    }
+    try {
+      if (!(hold.getEntry() instanceof PartialSegmentMetadataCacheEntry partial)) {
+        throw DruidException.defensive(
+            "Unexpected non-partial cache entry[%s] at id[%s] on location[%s]",
+            hold.getEntry().getClass().getSimpleName(),
+            id,
+            location.getPath()
+        );
+      }
+      if (writeInfoFile) {
+        rewriteInfoFile(dataSegment);
+      }
+      partial.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
+      return new ReservedPartial(partial, location, hold);
+    }
+    catch (Throwable t) {
+      // Close the hold (removing the never-mounted weak entry), then nuke the dir if we created it.
+      try {
+        throw CloseableUtils.closeAndWrapInCatch(t, hold);
+      }
+      finally {
+        if (createdPartialDir) {
+          atomicMoveAndDeleteCacheEntryDirectory(partialDir);
+        }
+      }
+    }
   }
 
   /**
@@ -1425,14 +1422,23 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
             "bootstrap() should not be called when virtualStorageIsEphemeral is true"
         );
       }
-      // during bootstrap, check if the segment exists in a location and mount it; getCachedSegments already
-      // did the reserving for us
+      // During bootstrap, reserve whatever this segment left on disk and mount it. getCachedSegments only recognizes
+      // the layout; the reservation is made here, one segment at a time, so that a partial's pessimistic metadata
+      // estimate is only outstanding until its mount shrinks it, and so that every mount runs under a hold. That hold
+      // matters: reclaim passes over held entries only, so an unheld entry can be evicted by a parallel bootstrap
+      // thread's reservation while this one is still mounting it.
       final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(dataSegment.getId());
       // Assemble the loaded-profile inside the segment lock (null = no partial materialized)
       PartialLoadProfile loadedProfile = null;
       final ReferenceCountingLock lock = lock(dataSegment);
       synchronized (lock) {
+        StorageLocation.ReservationHold<SegmentCacheEntry> bootstrapHold = null;
         try {
+          // A segment has either a partial layout or a complete one, so at most one of these reserves anything
+          bootstrapHold = reservePartialForBootstrap(dataSegment, id);
+          if (bootstrapHold == null) {
+            bootstrapHold = reserveCompleteForBootstrap(dataSegment, id);
+          }
           for (StorageLocation location : locations) {
             final CacheEntry entry = location.getCacheEntry(id);
             if (entry == null) {
@@ -1485,6 +1491,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           }
         }
         finally {
+          if (bootstrapHold != null) {
+            CloseableUtils.closeAndSuppressExceptions(
+                bootstrapHold,
+                t -> log.warn(t, "Failed to release bootstrap reservation hold for segment[%s]", dataSegment.getId())
+            );
+          }
           unlock(dataSegment, lock);
         }
       }
@@ -1610,6 +1622,134 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   }
 
   /**
+   * Whether any location already has a cache entry for {@code id}
+   */
+  private boolean isRegisteredAtAnyLocation(SegmentCacheEntryIdentifier id)
+  {
+    for (StorageLocation location : locations) {
+      if (location.getCacheEntry(id) != null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Reserve a metadata entry for a partial-load layout that survived on disk, so {@link #bootstrap} has something to
+   * mount, and hand back the hold it was reserved under. Returns {@code null} when this segment has no on-disk partial
+   * layout, or already has an entry, in which case bootstrap proceeds as it does for complete segments.
+   * <p>
+   * Restoring reads the local layout rather than deep storage: the mount parses the on-disk header and picks up
+   * whichever bundles still have all their container files (see
+   * {@link PartialSegmentMetadataCacheEntry#mount}). The exception is a header that turns out to be damaged, which is
+   * deleted and re-fetched, leaving the entry mounted with nothing marked as downloaded.
+   *
+   * @throws SegmentLoadingException if the layout exists but cannot be restored, so the segment is marked failed and
+   *                                 the coordinator re-issues a load for it rather than it being announced with
+   *                                 nothing behind it
+   */
+  @Nullable
+  private StorageLocation.ReservationHold<SegmentCacheEntry> reservePartialForBootstrap(
+      DataSegment dataSegment,
+      SegmentCacheEntryIdentifier id
+  ) throws SegmentLoadingException
+  {
+    if (isRegisteredAtAnyLocation(id)) {
+      return null;
+    }
+    for (StorageLocation location : locations) {
+      final File partialDir = new File(location.getPath(), dataSegment.getId().toString());
+      if (!PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME)) {
+        continue;
+      }
+      SegmentRangeReader rangeReader;
+      try {
+        rangeReader = tryOpenRangeReader(dataSegment);
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to open a range reader for partial segment[%s] during bootstrap", dataSegment.getId());
+        rangeReader = null;
+      }
+      if (rangeReader == null) {
+        // Anomalous: a layout on disk means range reads worked when it was written, so this should not happen (the
+        // loadSpec is now non-range-capable, or no longer converts to a known type). Reclaim the layout so the next
+        // load fetches it fresh rather than reserving an entry that could never fetch anything. The info file goes
+        // with it: it asserts that this segment has local cache state, which stops being true here, and nothing else
+        // will remove it (no entry was reserved, so there is no unmount hook to fire).
+        log.warn(
+            "On-disk partial-load layout for segment[%s] in [%s] has no usable range reader (this should not "
+            + "happen); deleting it so the segment can be re-loaded.",
+            dataSegment.getId(),
+            partialDir
+        );
+        atomicMoveAndDeleteCacheEntryDirectory(partialDir);
+        deleteSegmentInfoFile(dataSegment);
+        throw new SegmentLoadingException(
+            "No usable range reader for partial segment[%s]; its local layout has been reclaimed",
+            dataSegment.getId()
+        );
+      }
+      final ReservedPartial reserved = tryReservePartialAt(dataSegment, rangeReader, location, false);
+      if (reserved == null) {
+        throw new SegmentLoadingException(
+            "Failed to reserve partial metadata for segment[%s] on location[%s] during bootstrap",
+            dataSegment.getId(),
+            location.getPath()
+        );
+      }
+      return reserved.hold;
+    }
+    return null;
+  }
+
+  /**
+   * Reserve a {@link CompleteSegmentCacheEntry} for an eagerly-downloaded segment whose files are on disk, so
+   * {@link #bootstrap} has something to mount, and hand back the hold it was reserved under. Returns {@code null} when
+   * this segment has no complete layout on disk, or already has an entry. Virtual storage only: the legacy path
+   * reserves these statically in {@link #getCachedSegments} and never evicts them.
+   * <p>
+   * Reserving under a hold is what makes the mount safe: reclaim skips held entries only, so an unheld entry can be
+   * selected as a victim while a parallel bootstrap thread is still mounting it. Releasing the hold once mounted
+   * leaves the entry as evictable as any other weak entry.
+   *
+   * @throws SegmentLoadingException if the location cannot accept the reservation, which used to be an alert followed
+   *                                 by mounting the segment unreserved, leaving the location under-counting the disk
+   *                                 it was actually using
+   */
+  @Nullable
+  private StorageLocation.ReservationHold<SegmentCacheEntry> reserveCompleteForBootstrap(
+      DataSegment dataSegment,
+      SegmentCacheEntryIdentifier id
+  ) throws SegmentLoadingException
+  {
+    if (isRegisteredAtAnyLocation(id)) {
+      return null;
+    }
+    for (StorageLocation location : locations) {
+      final CacheEntry cacheEntry = new CompleteSegmentCacheEntry(dataSegment);
+      if (!((CompleteSegmentCacheEntry) cacheEntry).checkExists(location.getPath())) {
+        continue;
+      }
+      final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
+          id,
+          () -> new CompleteSegmentCacheEntry(dataSegment)
+      );
+      if (hold == null) {
+        throw new SegmentLoadingException(
+            "Location[%s] with available bytes[%,d] cannot reserve segment[%s] of size[%,d] during bootstrap; check "
+            + "druid.segmentCache.locations maxSize",
+            location.getPath(),
+            location.availableSizeBytes(),
+            dataSegment.getId(),
+            dataSegment.getSize()
+        );
+      }
+      return hold;
+    }
+    return null;
+  }
+
+  /**
    * Reapply the persisted partial-load rule to a bootstrap-restored metadata entry. Reads the wrapper from the
    * segment's info-file {@code loadSpec}, resolves the selected bundle names against the just-parsed on-disk
    * metadata header, calls {@link PartialSegmentMetadataCacheEntry#applyRule}, then drives eager downloads for any
@@ -1631,11 +1771,6 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           "Bootstrap-restored partial metadata for segment[%s] has no file mapper", dataSegment.getId()
       );
     }
-    // Register the info-file cleanup hook BEFORE anything that could throw. reserveFromDisk does NOT install an
-    // onUnmount hook on bootstrap-restored entries, so without this ordering a throw from getSelectedBundleNames
-    // or applyRule would leave the entry with no cleanup path. Setting the hook first ensures every teardown path
-    // deletes the info file consistently.
-    partial.setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
     final Set<String> selected = Set.copyOf(
         wrapper.getSelectedBundleNames(dataSegment, mapper.getSegmentFileMetadata())
     );

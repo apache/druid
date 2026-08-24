@@ -17,31 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.error;
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.TimeUnit;
-
-/**
- * This Rule is based on {@link org.junit.rules.Timeout}, additionally deadlocked threads are detected.
- */
-public final class DeadlockDetectingTimeout implements TestRule
+public class ThrowableMatcherTest
 {
-  private final long timeout;
-  private final TimeUnit timeoutUnit;
-
-  public DeadlockDetectingTimeout(long timeout, TimeUnit timeoutUnit)
+  @Test
+  public void testAssertThrowsAndMatches()
   {
-    this.timeout = timeout;
-    this.timeoutUnit = timeoutUnit;
-  }
-
-  @Override
-  public Statement apply(Statement base, Description description)
-  {
-    return new DeadlockDetectingFailOnTimeout(timeout, timeoutUnit, base);
+    ThrowableMatcher.of(IllegalStateException.class)
+                    .expectMessage(message -> message.startsWith("bad state"))
+                    .expectCause(cause -> cause instanceof IllegalArgumentException)
+                    .assertThrowsAndMatches(
+                        () -> {
+                          throw new IllegalStateException("bad state", new IllegalArgumentException());
+                        }
+      );
   }
 }

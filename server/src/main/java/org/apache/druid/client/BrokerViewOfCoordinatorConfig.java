@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.CoordinatorClientImpl;
@@ -39,7 +40,6 @@ import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.BrokerDynamicConfigResource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;

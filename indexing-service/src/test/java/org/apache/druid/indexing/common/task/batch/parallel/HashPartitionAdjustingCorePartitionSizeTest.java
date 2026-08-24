@@ -87,7 +87,7 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
   @Test
   public void testLessPartitionsThanBuckets() throws IOException
   {
-    final File inputDir = createTempDir();
+    final File inputDir = temporaryFolder.newFolder();
     for (int i = 0; i < 3; i++) {
       try (final Writer writer =
                Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {
@@ -129,7 +129,7 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
   @Test
   public void testEqualNumberOfPartitionsToBuckets() throws IOException
   {
-    final File inputDir = createTempDir();
+    final File inputDir = temporaryFolder.newFolder();
     for (int i = 0; i < 10; i++) {
       try (final Writer writer =
                Files.newBufferedWriter(new File(inputDir, "test_" + i).toPath(), StandardCharsets.UTF_8)) {

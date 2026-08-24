@@ -60,16 +60,16 @@ import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderator
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.security.AuthTestUtils;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.JvmUtils;
 import org.apache.druid.utils.RuntimeInfo;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
-import java.io.File;
 import java.io.IOException;
 
 @SuppressWarnings("DoNotMock")
@@ -77,8 +77,8 @@ public class TaskToolboxTest
 {
 
   private TaskToolboxFactory taskToolbox = null;
-  @TempDir
-  private File baseDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private TaskActionClientFactory mockTaskActionClientFactory = EasyMock.createMock(TaskActionClientFactory.class);
   private ServiceEmitter mockEmitter = EasyMock.createMock(ServiceEmitter.class);
   private DataSegmentPusher mockSegmentPusher = EasyMock.createMock(DataSegmentPusher.class);
@@ -117,7 +117,7 @@ public class TaskToolboxTest
     EasyMock.replay(task, mockHandoffNotifierFactory, mockIndexMergerV9);
 
     TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBaseDir(baseDir.toString())
+        .setBaseDir(temporaryFolder.getRoot().toString())
         .build();
 
     taskToolbox = new TaskToolboxFactory(
