@@ -60,7 +60,9 @@ jobs:
             dependency-check-data-${{ runner.os }}-odc-${{ env.DEPENDENCY_CHECK_CACHE_VERSION }}-
 
       - name: Report Dependency-Check cache status
-        run: echo "Dependency-Check cache-hit=${{ steps.dependency-check-cache.outputs.cache-hit }}"
+        run: |
+          echo "Dependency-Check cache-hit=${{ steps.dependency-check-cache.outputs.cache-hit }}"
+          echo "Dependency-Check cache-matched-key=${{ steps.dependency-check-cache.outputs.cache-matched-key }}"
 
       - name: maven build # needed to rebuild in case of maven snapshot resolution fails
         run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
