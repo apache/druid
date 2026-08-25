@@ -281,7 +281,7 @@ public class GroupByStatsProvider
       if (Double.isNaN(proximity)) {
         return;
       }
-      final double clamped = proximity < 0.0 ? 0.0 : (proximity > 1.0 ? 1.0 : proximity);
+      final double clamped = proximity < 0.0 ? 0.0 : Math.min(proximity, 1.0);
       maxSpillProximity.accumulate(clamped);
     }
 
