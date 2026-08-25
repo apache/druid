@@ -465,7 +465,7 @@ public class ByteBufferHashTable
    * Denominator for {@link #maxSpillProximity}: the {@code regrowthThreshold} at the terminal growth level, where
    * {@link #findBucketWithAutoGrowth} can no longer allocate a bucket. Computed once from fixed geometry and cached.
    */
-  protected final int getSpillRegrowthThreshold()
+  private int getSpillRegrowthThreshold()
   {
     if (spillRegrowthThreshold == 0) {
       spillRegrowthThreshold = computeSpillRegrowthThreshold();
@@ -479,10 +479,10 @@ public class ByteBufferHashTable
    * {@link #maxSizeForBuckets} of its bucket count. Allocates no buffers.
    *
    * <p>Valid only for the standard grow-by-doubling layout. Fixed-layout variants (the alternating limit-pushdown
-   * table) must never reach this — guaranteed by {@link #recordsFillProximity()} == false — and must override it if
-   * they ever need a spill denominator.
+   * table) never reach this — guaranteed by {@link #recordsFillProximity()} == false — so one that ever needs a spill
+   * denominator would have to revisit this method.
    */
-  protected int computeSpillRegrowthThreshold()
+  private int computeSpillRegrowthThreshold()
   {
     int buckets = Math.min(tableArenaSize / bucketSizeWithHash, initialBuckets);
     int start = initialTableStart(buckets);
