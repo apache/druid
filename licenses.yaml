@@ -5536,7 +5536,7 @@ name: GraalVM
 license_category: binary
 license_name: Universal Permissive License, Version 1.0
 license_file_path: licenses/bin/graal.UPL
-version: 25.1.3
+version: 25.2.4
 module: core
 libraries:
   - org.graalvm.js: js
@@ -5558,7 +5558,7 @@ libraries:
 name: GraalVM Shadowed ICU4J
 license_category: binary
 license_name: Unicode/ICU License
-version: 25.1.3
+version: 25.2.4
 copyright: Unicode, Inc.
 license_file_path: licenses/bin/icu4j.ICU
 module: core
