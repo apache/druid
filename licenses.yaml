@@ -2183,7 +2183,7 @@ name: Apache Maven
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6.0
+version: 3.9.16
 libraries:
   - org.apache.maven: maven-repository-metadata
   - org.apache.maven: maven-builder-support
@@ -2200,7 +2200,7 @@ name: Maven Artifact Resolver Provider
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6.0
+version: 3.9.16
 libraries:
   - org.apache.maven: maven-resolver-provider
   - org.apache.maven: maven-model
@@ -2234,7 +2234,7 @@ name: Maven Artifact Resolver Connector Basic
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.1
+version: 1.9.27
 libraries:
   - org.apache.maven.resolver: maven-resolver-connector-basic
   - org.apache.maven.resolver: maven-resolver-spi
@@ -2259,7 +2259,7 @@ name: Maven Artifact Resolver Transport HTTP
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.1
+version: 1.9.27
 libraries:
   - org.apache.maven.resolver: maven-resolver-transport-http
 notices:
@@ -2273,7 +2273,7 @@ name: Maven Artifact Resolver Implementation
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.1
+version: 1.9.27
 libraries:
   - org.apache.maven.resolver: maven-resolver-impl
 notices:

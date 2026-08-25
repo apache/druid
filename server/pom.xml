@@ -130,12 +130,12 @@
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-connector-basic</artifactId>
-            <version>1.3.1</version>
+            <version>1.9.27</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven.resolver</groupId>
             <artifactId>maven-resolver-transport-http</artifactId>
-            <version>1.3.1</version>
+            <version>1.9.27</version>
         </dependency>
         <dependency>
             <groupId>org.apache.maven</groupId>
