@@ -51,7 +51,7 @@ public class FilterSegmentPruner implements SegmentPruner
   private final Set<String> filterFields;
   private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
-  private final Map<VirtualColumns.Node, Optional<VirtualColumn>> shardEquivalenceCache;
+  private final Map<VirtualColumns.Node, Optional<VirtualColumn>> virtualColumnEquivalenceCache;
 
   public FilterSegmentPruner(
       DimFilter filter,
@@ -63,7 +63,7 @@ public class FilterSegmentPruner implements SegmentPruner
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.rangeCache = new HashMap<>();
-    this.shardEquivalenceCache = new HashMap<>();
+    this.virtualColumnEquivalenceCache = new HashMap<>();
   }
 
 
@@ -231,7 +231,7 @@ public class FilterSegmentPruner implements SegmentPruner
   @Nullable
   private VirtualColumn getQueryEquivalent(VirtualColumns.Node node)
   {
-    final Optional<VirtualColumn> cached = shardEquivalenceCache.computeIfAbsent(
+    final Optional<VirtualColumn> cached = virtualColumnEquivalenceCache.computeIfAbsent(
         node,
         n -> Optional.ofNullable(virtualColumns.findEquivalent(n))
     );

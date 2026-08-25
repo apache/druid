@@ -284,7 +284,7 @@ class FilterSegmentPrunerTest
   {
     EqualsVerifier.forClass(FilterSegmentPruner.class)
                   .usingGetClass()
-                  .withIgnoredFields("rangeCache", "shardEquivalenceCache")
+                  .withIgnoredFields("rangeCache", "virtualColumnEquivalenceCache")
                   .verify();
   }
 
@@ -362,6 +362,41 @@ class FilterSegmentPrunerTest
     final DimFilter filter = new EqualityFilter("id", ColumnType.LONG, 999L, null);
 
     Assertions.assertTrue(new FilterSegmentPruner(filter, null, null).include(seg));
+  }
+
+  @Test
+  void testPruneClusterGroupTuplesVirtualColumn()
+  {
+    final VirtualColumns clusterVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final RowSignature clusteringColumns = RowSignature.builder().add("vdim1", ColumnType.STRING).build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(
+        clusteringColumns,
+        clusterVirtualColumns,
+        List.of(List.of("abcfoo"), List.of("xyzfoo"))
+    );
+
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+
+    // same expression, same name
+    VirtualColumns queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final DimFilter matchingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "abcfoo", null);
+    final DimFilter nonMatchingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "deffoo", null);
+    Assertions.assertTrue(new FilterSegmentPruner(matchingFilter, null, queryVirtualColumns).include(seg));
+    Assertions.assertFalse(new FilterSegmentPruner(nonMatchingFilter, null, queryVirtualColumns).include(seg));
+
+    // same expression, different name: still resolved via virtual column equivalence
+    queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final DimFilter matchingFilterDifferentName = new EqualityFilter("v0", ColumnType.STRING, "abcfoo", null);
+    final DimFilter nonMatchingFilterDifferentName = new EqualityFilter("v0", ColumnType.STRING, "deffoo", null);
+    Assertions.assertTrue(new FilterSegmentPruner(matchingFilterDifferentName, null, queryVirtualColumns).include(seg));
+    Assertions.assertFalse(new FilterSegmentPruner(nonMatchingFilterDifferentName, null, queryVirtualColumns).include(seg));
   }
 
   private ShardSpec makeRange(
