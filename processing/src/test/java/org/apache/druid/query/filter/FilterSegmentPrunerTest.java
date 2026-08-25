@@ -26,8 +26,10 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -329,6 +331,39 @@ class FilterSegmentPrunerTest
     Assertions.assertTrue(pruner.include(seg));
   }
 
+  @Test
+  void testPruneClusterGroupTuples()
+  {
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final RowSignature clusteringColumns = RowSignature.builder().add("dim1", ColumnType.STRING).build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(
+        clusteringColumns,
+        List.of(List.of("abc"), List.of("xyz"))
+    );
+
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+
+    final DimFilter matchingFilter = new EqualityFilter("dim1", ColumnType.STRING, "abc", null);
+    final DimFilter nonMatchingFilter = new EqualityFilter("dim1", ColumnType.STRING, "foo", null);
+
+    Assertions.assertTrue(new FilterSegmentPruner(matchingFilter, null, null).include(seg));
+    Assertions.assertFalse(new FilterSegmentPruner(nonMatchingFilter, null, null).include(seg));
+  }
+
+  @Test
+  void testClusterGroupTuplesSkipsNonStringColumns()
+  {
+    // Numeric columns are skipped for pruning (see druid issue #19408), so this must not prune.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final RowSignature clusteringColumns = RowSignature.builder().add("id", ColumnType.LONG).build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(clusteringColumns, List.of(List.of(100L), List.of(200L)));
+
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+    final DimFilter filter = new EqualityFilter("id", ColumnType.LONG, 999L, null);
+
+    Assertions.assertTrue(new FilterSegmentPruner(filter, null, null).include(seg));
+  }
+
   private ShardSpec makeRange(
       String column,
       int partitionNumber,
@@ -383,6 +418,15 @@ class FilterSegmentPrunerTest
     Interval interval = Intervals.of(intervalString);
     return DataSegment.builder(SegmentId.of("prune-test", interval, "0", shardSpec))
                       .shardSpec(shardSpec)
+                      .build();
+  }
+
+  private DataSegment makeDataSegment(String intervalString, ShardSpec shardSpec, ClusterGroupTuples clusterGroups)
+  {
+    Interval interval = Intervals.of(intervalString);
+    return DataSegment.builder(SegmentId.of("prune-test", interval, "0", shardSpec))
+                      .shardSpec(shardSpec)
+                      .clusterGroups(clusterGroups)
                       .build();
   }
 }

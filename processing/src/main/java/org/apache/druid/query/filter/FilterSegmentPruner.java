@@ -19,10 +19,14 @@
 
 package org.apache.druid.query.filter;
 
+import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 
@@ -73,39 +77,72 @@ public class FilterSegmentPruner implements SegmentPruner
   public boolean include(DataSegment segment)
   {
     final ShardSpec shard = segment.getShardSpec();
-    boolean include = true;
 
     if (shard != null) {
       final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
-      final List<String> dimensions = shard.getDomainDimensions();
-      for (String dimension : dimensions) {
-        final VirtualColumns.Node shardNode = shard.getDomainVirtualColumns().getNode(dimension);
-        if (shardNode != null) {
-          final VirtualColumn queryEquivalent = getQueryEquivalent(shardNode);
-          if (queryEquivalent != null) {
-            if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
-              final Optional<RangeSet<String>> optFilterRangeSet = rangeCache
-                  .computeIfAbsent(
-                      queryEquivalent.getOutputName(),
-                      d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
-                  );
-              optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
-                  shardNode.getVirtualColumn().getOutputName(),
-                  stringRangeSet
-              ));
-            }
-          }
-        } else if (filterFields == null || filterFields.contains(dimension)) {
-          final Optional<RangeSet<String>> optFilterRangeSet =
-              rangeCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
-          optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(dimension, stringRangeSet));
-        }
+      for (String dimension : shard.getDomainDimensions()) {
+        addToFilterDomain(dimension, shard.getDomainVirtualColumns(), filterDomain);
       }
       if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
-        include = false;
+        return false;
       }
     }
-    return include;
+
+    final ClusterGroupTuples clusterGroups = segment.getClusterGroups();
+    if (clusterGroups != null && !possibleInClusterGroups(clusterGroups)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private boolean possibleInClusterGroups(ClusterGroupTuples clusterGroups)
+  {
+    final RowSignature clusteringColumns = clusterGroups.clusteringColumns();
+    final int numColumns = clusteringColumns.size();
+
+    final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
+    for (int i = 0; i < numColumns; i++) {
+      final String column = clusteringColumns.getColumnName(i);
+      if (!ColumnType.STRING.equals(clusteringColumns.getColumnType(i).orElse(null))) {
+        continue;
+      }
+      addToFilterDomain(column, clusterGroups.virtualColumns(), filterDomain);
+    }
+
+    if (filterDomain.isEmpty()) {
+      // Filter doesn't constrain any string clustering column.
+      return true;
+    }
+
+    for (final List<Object> tuple : clusterGroups.tuples()) {
+      if (tupleMatchesDomain(clusteringColumns, tuple, filterDomain)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private static boolean tupleMatchesDomain(
+      RowSignature clusteringColumns,
+      List<Object> tuple,
+      Map<String, RangeSet<String>> filterDomain
+  )
+  {
+    for (int i = 0; i < clusteringColumns.size(); i++) {
+      final RangeSet<String> domainRangeSet = filterDomain.get(clusteringColumns.getColumnName(i));
+      if (domainRangeSet == null) {
+        continue;
+      }
+      final Object rawValue = tuple.get(i);
+      // Nulls are less than empty String in segments
+      final Range<String> valueRange = rawValue == null ? Range.lessThan("") : Range.singleton((String) rawValue);
+      if (domainRangeSet.subRangeSet(valueRange).isEmpty()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -162,6 +199,33 @@ public class FilterSegmentPruner implements SegmentPruner
            ", filterFields=" + filterFields +
            ", virtualColumns=" + virtualColumns +
            '}';
+  }
+
+  /**
+   * Adds the filter's {@link RangeSet} for {@code column} to {@code filterDomain}, resolving through
+   * {@code domainVirtualColumns} to the query's equivalent virtual column if {@code column} is virtual there.
+   */
+  private void addToFilterDomain(
+      String column,
+      VirtualColumns domainVirtualColumns,
+      Map<String, RangeSet<String>> filterDomain
+  )
+  {
+    final VirtualColumns.Node domainNode = domainVirtualColumns.getNode(column);
+    if (domainNode != null) {
+      final VirtualColumn queryEquivalent = getQueryEquivalent(domainNode);
+      if (queryEquivalent != null && filterFields.contains(queryEquivalent.getOutputName())) {
+        final Optional<RangeSet<String>> optFilterRangeSet = rangeCache.computeIfAbsent(
+            queryEquivalent.getOutputName(),
+            d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
+        );
+        optFilterRangeSet.ifPresent(rangeSet -> filterDomain.put(column, rangeSet));
+      }
+    } else if (filterFields.contains(column)) {
+      final Optional<RangeSet<String>> optFilterRangeSet =
+          rangeCache.computeIfAbsent(column, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
+      optFilterRangeSet.ifPresent(rangeSet -> filterDomain.put(column, rangeSet));
+    }
   }
 
   @Nullable
