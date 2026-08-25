@@ -19,9 +19,12 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import org.apache.druid.client.DataSourcesSnapshot;
@@ -33,16 +36,23 @@ import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.core.Event;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.compaction.CompactionSimulateResult;
@@ -53,6 +63,7 @@ import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
 import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDuty;
@@ -74,9 +85,15 @@ import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
 import org.apache.druid.server.http.CoordinatorDynamicConfigSyncer;
+import org.apache.druid.server.http.SegmentLoadingCapabilities;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -85,11 +102,14 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -908,6 +928,173 @@ public class DruidCoordinatorTest
     };
   }
 
+  /**
+   * End-to-end check via a real {@link DruidCoordinator} and {@link LoadQueueTaskMaster}:
+   * a single server returning HTTP 503 on {@code loadCapabilities} must not abort the
+   * {@code HistoricalManagementDuties} group. Asserts the group completes a run, no
+   * capabilities-related failure alert is emitted, and the healthy servers are still managed.
+   */
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
+  public void testUnhealthyHistoricalDoesNotAbortDutyGroup() throws Exception
+  {
+    EmittingLogger.registerEmitter(serviceEmitter);
+
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(new ForeverLoadRule(ImmutableMap.of("tier1", 1), null)))
+            .anyTimes();
+    EasyMock.replay(metadataRuleManager);
+
+    final DruidDataSource dataSource = new DruidDataSource("ds", Collections.emptyMap());
+    dataSource.addSegment(new DataSegment("ds", Intervals.of("2010-01-01/P1D"), "v1", null, null, null, null, 0x9, 0));
+    setupSegmentsMetadataMock(dataSource);
+
+    // A cluster of healthy historicals plus a single unhealthy one that 503s on the
+    // loadCapabilities endpoint. The healthy servers must keep being managed.
+    final DruidServer healthy1 = new DruidServer("healthy1", "healthy1:8088", null, 100L, null, ServerType.HISTORICAL, "tier1", 0);
+    final DruidServer unhealthy = new DruidServer("unhealthy", "unhealthy:8088", null, 100L, null, ServerType.HISTORICAL, "tier1", 0);
+    final DruidServer healthy2 = new DruidServer("healthy2", "healthy2:8088", null, 100L, null, ServerType.HISTORICAL, "tier1", 0);
+    EasyMock.expect(serverInventoryView.getInventory())
+            .andReturn(ImmutableList.of(healthy1, unhealthy, healthy2))
+            .anyTimes();
+    EasyMock.expect(serverInventoryView.isStarted()).andReturn(true).anyTimes();
+    EasyMock.replay(serverInventoryView);
+
+    // Build a coordinator wired with a REAL LoadQueueTaskMaster so that peon
+    // creation (and the failing capabilities fetch) actually happens. Only the
+    // unhealthy server 503s; the healthy ones answer normally.
+    final ScheduledExecutorService peonExec = Execs.scheduledSingleThreaded("Coordinator-peon-%s");
+    final ExecutorService callbackExec = Execs.singleThreaded("Coordinator-cb-%s");
+    final LoadQueueTaskMaster realTaskMaster = new LoadQueueTaskMaster(
+        TestHelper.makeJsonMapper(),
+        peonExec,
+        callbackExec,
+        new HttpLoadQueuePeonConfig(null, null, 10),
+        new SelectivelyFailingHttpClient("unhealthy"),
+        () -> CoordinatorDynamicConfig.builder().build()
+    );
+
+    final JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    EasyMock.expect(configManager.watch(EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY), EasyMock.anyObject(Class.class), EasyMock.anyObject()))
+            .andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    EasyMock.expect(configManager.watch(EasyMock.eq(DruidCompactionConfig.CONFIG_KEY), EasyMock.anyObject(Class.class), EasyMock.anyObject()))
+            .andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
+    EasyMock.replay(configManager);
+
+    final DruidCoordinator coordinatorWithRealTaskMaster = new DruidCoordinator(
+        druidCoordinatorConfig,
+        createMetadataManager(configManager),
+        serverInventoryView,
+        serviceEmitter,
+        scheduledExecutorFactory,
+        overlordClient,
+        realTaskMaster,
+        new SegmentLoadQueueManager(serverInventoryView, realTaskMaster),
+        new CoordinatorCustomDutyGroups(ImmutableSet.of()),
+        EasyMock.createNiceMock(LookupCoordinatorManager.class),
+        new TestDruidLeaderSelector(),
+        null,
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(),
+        EasyMock.niceMock(CoordinatorDynamicConfigSyncer.class),
+        EasyMock.niceMock(BrokerDynamicConfigSyncer.class),
+        new CloneStatusManager()
+    );
+
+    try {
+      coordinatorWithRealTaskMaster.start();
+
+      // The HistoricalManagementDuties group must actually complete a run despite the
+      // sick historical. GROUP_RUN_TIME is emitted only at the end of a full group run,
+      // so this latch (2 runs) only trips if the group is not being aborted.
+      Assertions.assertTrue(
+          serviceEmitter.coordinatorRunLatch.await(30, java.util.concurrent.TimeUnit.SECONDS),
+          "HistoricalManagementDuties group did not complete a run; one unhealthy historical aborted it"
+      );
+
+      // And the coordinator must not have hit the catch-all that logs
+      // "Caught exception, ignoring so that schedule keeps going." for a failure in the
+      // load-queue/peon-preparation path.
+      Assertions.assertNull(
+          serviceEmitter.dutyGroupFailureAlert.get(),
+          "Coordinator aborted the duty group with an exception for a single unhealthy historical"
+      );
+
+      Assertions.assertTrue(coordinatorWithRealTaskMaster.isLeader());
+
+      // The healthy servers must still be managed (they have peons); only the
+      // unhealthy one may be missing.
+      Assertions.assertNotNull(
+          realTaskMaster.getPeonForServer(healthy1.toImmutableDruidServer()),
+          "Healthy server healthy1 was never managed because an unhealthy server aborted the reconcile"
+      );
+      Assertions.assertNotNull(
+          realTaskMaster.getPeonForServer(healthy2.toImmutableDruidServer()),
+          "Healthy server healthy2 was never managed because an unhealthy server aborted the reconcile"
+      );
+    }
+    finally {
+      coordinatorWithRealTaskMaster.stop();
+      peonExec.shutdownNow();
+      callbackExec.shutdownNow();
+    }
+  }
+
+  /**
+   * HttpClient that answers the {@code loadCapabilities} call, returning HTTP 503 for a
+   * single named server and a valid capabilities payload for everyone else.
+   */
+  private static class SelectivelyFailingHttpClient implements HttpClient
+  {
+    private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+
+    private final String failingServer;
+
+    SelectivelyFailingHttpClient(String failingServer)
+    {
+      this.failingServer = failingServer;
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler
+    )
+    {
+      return go(request, handler, null);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration duration
+    )
+    {
+      final String url = request.getUrl().toString();
+      final boolean isFailing = failingServer != null && url.contains(failingServer);
+
+      final HttpResponseStatus status = isFailing
+                                        ? HttpResponseStatus.SERVICE_UNAVAILABLE
+                                        : HttpResponseStatus.OK;
+      final HttpResponse httpResponse = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+      httpResponse.setContent(ChannelBuffers.buffer(0));
+      handler.handleResponse(httpResponse, null);
+
+      try {
+        final byte[] body = isFailing
+                            ? new byte[0]
+                            : MAPPER.writerFor(SegmentLoadingCapabilities.class)
+                                    .writeValueAsBytes(new SegmentLoadingCapabilities(1, 3));
+        return (ListenableFuture<Final>) Futures.immediateFuture(new ByteArrayInputStream(body));
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
   private static class TestDruidLeaderSelector implements DruidLeaderSelector
   {
     private volatile Listener listener;
@@ -951,6 +1138,13 @@ public class DruidCoordinatorTest
   {
     private final CountDownLatch coordinatorRunLatch = new CountDownLatch(2);
 
+    /**
+     * Set when {@code DruidCoordinator.DutiesRunnable.run()} catches an exception thrown
+     * while preparing the balancer / load queues (peon creation + capabilities fetch) and
+     * emits its "Caught exception, ignoring so that schedule keeps going." alert.
+     */
+    private final AtomicReference<String> dutyGroupFailureAlert = new AtomicReference<>();
+
     private LatchableServiceEmitter()
     {
       super("", "", null);
@@ -967,6 +1161,22 @@ public class DruidCoordinatorTest
         if (Stats.CoordinatorRun.GROUP_RUN_TIME.getMetricName().equals(metricEvent.getMetric())
             && "HistoricalManagementDuties".equals(dutyGroupName)) {
           coordinatorRunLatch.countDown();
+        }
+      } else if (event instanceof AlertEvent) {
+        final AlertEvent alert = (AlertEvent) event;
+        // The coordinator's top-level catch logs this exact description for a failure in ANY duty
+        // group. This test's harness intentionally leaves several collaborators (audit manager,
+        // supervisor manager, etc.) null, so unrelated duty groups such as IndexingServiceDuties emit
+        // this alert too. Scope detection to the bug under test: an exception thrown while preparing
+        // the balancer / load queues (peon creation + capabilities fetch) for HistoricalManagementDuties.
+        if ("Caught exception, ignoring so that schedule keeps going.".equals(alert.getDescription())) {
+          final Object stackTrace = alert.getDataMap().get("exceptionStackTrace");
+          if (stackTrace != null
+              && (stackTrace.toString().contains("HttpLoadQueuePeon")
+                  || stackTrace.toString().contains("PrepareBalancerAndLoadQueues")
+                  || stackTrace.toString().contains("resetPeonsForNewServers"))) {
+            dutyGroupFailureAlert.set(alert.getDescription());
+          }
         }
       }
     }
