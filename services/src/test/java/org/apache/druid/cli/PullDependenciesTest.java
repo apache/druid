@@ -76,7 +76,7 @@ public class PullDependenciesTest
   private static File localRepo; // a mock local repository that stores jars
   private static Map<Artifact, List<String>> extensionToDependency;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private final Artifact extension_A = new DefaultArtifact(EXTENSION_A_COORDINATE);
   private final Artifact extension_B = new DefaultArtifact(EXTENSION_B_COORDINATE);
   private PullDependencies pullDependencies;

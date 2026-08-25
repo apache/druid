@@ -120,18 +120,6 @@ public class DatasourceDefn extends TableDefn
     super.validate(table);
     final DatasourceBaseTableMetadata baseTable = table.decodeProperty(BASE_TABLE_PROPERTY);
     if (baseTable != null) {
-      // A base table layout derives the physical segment schema from the declared columns, so a column the query
-      // produces but the table does not declare cannot be stored; require 'sealed' so ingestion rejects such columns
-      // instead of silently dropping them. Requiring the flag allows us to someday support non-sealed definitions,
-      // which could work by appending undeclared columns to the derived schema.
-      if (!table.booleanProperty(SEALED_PROPERTY)) {
-        throw InvalidInput.exception(
-            "Datasource with a [%s] layout must also set [%s] to true; the declared columns define the physical"
-            + " segment schema, so columns not declared in the table cannot be ingested",
-            BASE_TABLE_PROPERTY,
-            SEALED_PROPERTY
-        );
-      }
       // Cross-validate the layout against the declared columns by deriving the physical spec, so that catalog writes
       // fail fast instead of surfacing layout problems at ingest time.
       baseTable.createSpec(table.spec().columns());

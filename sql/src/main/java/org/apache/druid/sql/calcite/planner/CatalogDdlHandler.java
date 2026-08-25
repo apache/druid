@@ -280,21 +280,6 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
         .translateBaseTable(tableName, columns, projection.getBody(), projection.getClusteredBy());
   }
 
-  /**
-   * A base table layout derives the physical segment schema from the declared columns, so a column that is not
-   * declared cannot be stored. The catalog enforces this too, but saying it here names the clause that is missing.
-   */
-  protected static void requireSealed(boolean sealed)
-  {
-    if (!sealed) {
-      throw InvalidSqlInput.exception(
-          "A table with a [%s] projection must be declared SEALED: its columns define the physical segment schema,"
-          + " so columns that are not declared cannot be ingested",
-          BASE_PROJECTION_NAME
-      );
-    }
-  }
-
   protected static String simpleName(SqlIdentifier identifier, String what)
   {
     if (!identifier.isSimple()) {
@@ -402,7 +387,8 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
             throw InvalidSqlInput.exception("Projection [%s] is declared more than once", name);
           }
           if (BASE_PROJECTION_NAME.equals(name)) {
-            requireSealed(createTable.isSealed());
+            // SEALED is a choice, not a requirement: a column the table does not declare is appended after the
+            // declared layout at ingest time; declaring SEALED rejects such columns instead.
             properties.put(
                 DatasourceDefn.BASE_TABLE_PROPERTY,
                 translateBaseTable(handlerContext, tableId.name(), columns, projection)
@@ -583,7 +569,6 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
         // This read is still needed for the layout itself, which is derived from the declared columns. A concurrent
         // column change would make it stale, but the Coordinator validates the resulting spec against the columns it
         // commits against, so a stale layout is rejected rather than stored.
-        requireSealed(Boolean.TRUE.equals(existing.spec().properties().get(DatasourceDefn.SEALED_PROPERTY)));
         writer.setBaseTable(
             tableId,
             translateBaseTable(handlerContext, tableId.name(), columns, alterTable.getProjection()),

@@ -26,6 +26,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.coordination.ServerType;
@@ -40,6 +41,7 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.CannotMatchBehavior;
 import org.apache.druid.server.coordinator.rules.ForeverPartialLoadRule;
 import org.apache.druid.server.coordinator.rules.PeriodPartialLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.rules.WildcardClusterGroupPartialLoadMatcher;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -206,11 +208,17 @@ public class RunRulesPartialLoadPlacementTest
   private CoordinatorRunStats runRules(DruidCluster cluster, Rule rule, DataSegment... segments)
   {
     final List<Rule> rules = Collections.singletonList(rule);
-    final RunRules ruleRunner = new RunRules((ds, set) -> set.size(), datasource -> rules);
+    final RunRules ruleRunner = new RunRules((ds, set) -> set.size());
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
         .withDruidCluster(cluster)
+        .withRetentionRulesSnapshot(
+            new RetentionRulesSnapshot(
+                Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, rules),
+                MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+            )
+        )
         .withUsedSegments(segments)
         .withBalancerStrategy(balancerStrategy)
         .withDynamicConfigs(

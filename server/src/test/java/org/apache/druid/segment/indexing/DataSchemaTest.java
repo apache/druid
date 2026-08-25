@@ -63,6 +63,7 @@ import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -839,6 +840,34 @@ class DataSchemaTest extends InitializedNullHandlingTest
     Assertions.assertEquals(ARBITRARY_GRANULARITY, ((AdaptedBaseTableProjectionSpec) effective).getGranularitySpec());
     Assertions.assertEquals(schema.getDimensionsSpec(), effective.getDimensionsSpec());
     Assertions.assertArrayEquals(schema.getAggregators(), effective.getMetrics());
+  }
+
+  @Test
+  void testLegacyModeEffectiveBaseTableSpecAppendsAdditionalColumns()
+  {
+    final BaseTableProjectionSpec effective = DataSchema.builder()
+                                                       .withDataSource("datasource")
+                                                       .withTimestamp(TIMESTAMP_SPEC)
+                                                       .withDimensions(new StringDimensionSchema("tenant"))
+                                                       .withAggregators(new CountAggregatorFactory("rows"))
+                                                       .withGranularity(ARBITRARY_GRANULARITY)
+                                                       .build()
+                                                       .getEffectiveBaseTableSpec();
+
+    Assertions.assertSame(effective, effective.withAdditionalColumns(null));
+    Assertions.assertSame(effective, effective.withAdditionalColumns(Collections.emptyList()));
+
+    final BaseTableProjectionSpec appended =
+        effective.withAdditionalColumns(ImmutableList.of(new StringDimensionSchema("region")));
+    Assertions.assertEquals(
+        ImmutableList.of(new StringDimensionSchema("tenant"), new StringDimensionSchema("region")),
+        appended.getDimensionsSpec().getDimensions()
+    );
+    Assertions.assertArrayEquals(effective.getMetrics(), appended.getMetrics());
+    Assertions.assertEquals(
+        ARBITRARY_GRANULARITY,
+        ((AdaptedBaseTableProjectionSpec) appended).getGranularitySpec()
+    );
   }
 
   @Test

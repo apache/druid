@@ -57,7 +57,7 @@ public class SegmentCacheBootstrapperCacheTest
   private static final long MAX_SIZE = 1000L;
   private static final long SEGMENT_SIZE = 100L;
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File infoDir;
   private File cacheDir;

@@ -168,8 +168,8 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
     }
 
     {
-      // A base table layout requires 'sealed': the declared columns define the physical segment schema, so
-      // undeclared columns cannot be ingested.
+      // A base table layout does not require 'sealed': columns the table does not declare are appended after the
+      // declared ones at ingest time rather than dropped.
       TableSpec spec = new TableSpec(
           DatasourceDefn.TABLE_TYPE,
           ImmutableMap.of(
@@ -178,9 +178,7 @@ public class DatasourceTableTest extends InitializedNullHandlingTest
           ),
           columns
       );
-      ResolvedTable table = registry.resolve(spec);
-      DruidException e = Assertions.assertThrows(DruidException.class, table::validate);
-      Assertions.assertTrue(e.getMessage().contains("must also set [sealed] to true"));
+      expectValidationSucceeds(spec);
     }
 
     {

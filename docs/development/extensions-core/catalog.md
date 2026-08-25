@@ -182,8 +182,8 @@ SEALED
 ```
 
 The clustering columns must be the leading columns of the table, because the declared order is the physical order.
-`SEALED` is required: the declared columns define the physical segment schema, so a column that is not declared
-cannot be stored.
+`SEALED` is optional: a column the query produces but the table does not declare is stored after the declared
+layout, in the order it arrives. Declare `SEALED` to reject such columns instead.
 
 A computed column is written by the expression, not by the ingestion query, so an `INSERT` must supply the
 expression's inputs and leave the computed column out. Above, that means supplying `user_id` and letting `bucket`

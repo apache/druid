@@ -26,9 +26,7 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -45,16 +43,20 @@ import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -64,7 +66,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-class PartialSegmentCacheBootstrapTest
+class PartialSegmentRestoreFromDiskTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
   private static final SegmentId SEGMENT_ID = SegmentId.of("test", Intervals.of("2025/2026"), "v1", 0);
@@ -94,20 +96,20 @@ class PartialSegmentCacheBootstrapTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File deepStorageDir;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cacheDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     deepStorageDir = IndexBuilder.create()
                                  .useV10()
                                  .tmpDir(tmp)
@@ -137,8 +139,7 @@ class PartialSegmentCacheBootstrapTest
   @BeforeEach
   void setupPerTest() throws IOException
   {
-    cacheDir = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheDir);
+    cacheDir = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @Test
@@ -296,13 +297,14 @@ class PartialSegmentCacheBootstrapTest
         cacheDir,
         IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
     );
-    // size location exactly to the header size: metadata reservation fits, but the first bundle's weak reservation
-    // has 0 bytes of remaining budget and no weak entries to reclaim, so addWeakReservationHold returns null
+    // Size the location and the reservation estimate exactly to the header size: the metadata reservation fits (and
+    // needs no shrink at mount), but the first bundle's weak reservation has 0 bytes of remaining budget and no weak
+    // entries to reclaim, so addWeakReservationHold returns null.
     final StorageLocation location = new StorageLocation(cacheDir, headerFile.length(), null);
 
     Assertions.assertThrows(
         Throwable.class,
-        () -> restoreFromDisk(location)
+        () -> restoreFromDisk(location, new DirectoryBackedRangeReader(deepStorageDir), headerFile.length())
     );
 
     // rollback must release the metadata reservation and leave no static/weak entries behind
@@ -317,6 +319,40 @@ class PartialSegmentCacheBootstrapTest
     Assertions.assertFalse(headerFile.exists(), "bootstrap failure deletes the header via the unmount cleanup path");
   }
 
+  /**
+   * The restore mounts {@code __base} before the bundles that depend on it, so a failure on a later bundle has to
+   * unwind one that already mounted. Unmounting it is not enough: its cache entry would stay registered with its
+   * reservation, while its containers are gone, and a later acquire reuses a registered entry by id, re-mounting a
+   * bundle bound to the metadata entry this failure tears down.
+   */
+  @Test
+  void testRollbackRemovesBundlesItAlreadyMounted() throws IOException
+  {
+    primeOnDiskState();
+
+    final StorageLocation location = Mockito.spy(new StorageLocation(cacheDir, ESTIMATE * 8, null));
+    final PartialSegmentBundleCacheEntryIdentifier aggId =
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE);
+    // Refuse only the aggregate bundle's reservation, so the restore fails with __base already mounted.
+    Mockito.doReturn(null)
+           .when(location)
+           .addWeakReservationHold(ArgumentMatchers.eq(aggId), ArgumentMatchers.any());
+
+    Assertions.assertThrows(Throwable.class, () -> restoreFromDisk(location));
+
+    // Pins that __base really did mount and then got removed, rather than the rollback loop being empty because the
+    // restore failed before mounting anything.
+    Mockito.verify(location).removeUnheldWeakEntry(
+        new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, Projections.BASE_TABLE_PROJECTION_NAME)
+    );
+    Assertions.assertEquals(
+        0,
+        location.getWeakEntryCount(),
+        "rollback must remove the bundle entries it registered, not just unmount them"
+    );
+    Assertions.assertEquals(0, location.currentSizeBytes(), "rollback must release every reservation it took");
+  }
+
   @Test
   void testMountFailureRemovesLingeringWeakEntry() throws IOException
   {
@@ -324,24 +360,10 @@ class PartialSegmentCacheBootstrapTest
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
 
-    // Reserve the metadata entry weakly, exactly as the bootstrap path does (no protecting hold), but with a range
-    // reader that fails every fetch so we can force a mount failure below.
+    // A range reader that fails every fetch, so the mount below cannot rebuild the file mapper.
     final SegmentRangeReader failingReader = (filename, offset, length) -> {
       throw new IOException("simulated deep-storage fetch failure during mount");
     };
-    final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
-        SEGMENT_ID,
-        cacheDir,
-        IndexIO.V10_FILE_NAME,
-        List.of(),
-        failingReader,
-        JSON_MAPPER,
-        null,
-        location,
-        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
-        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
-    );
-    Assertions.assertTrue(location.isWeakReserved(id));
 
     // Delete the header so the mount's file-mapper build must re-fetch it from deep storage; the failing reader throws,
     // failing the mount (the same poison that arises when create() detects header corruption and the deep-storage
@@ -352,7 +374,7 @@ class PartialSegmentCacheBootstrapTest
     );
     Assertions.assertTrue(headerFile.delete());
 
-    Assertions.assertThrows(Throwable.class, () -> metadata.mount(location));
+    Assertions.assertThrows(Throwable.class, () -> restoreFromDisk(location, failingReader, ESTIMATE));
 
     // The failed mount must not leave the lingering weak entry behind: a later findExistingPartialWithHold would
     // otherwise resurrect it and re-mount would fail forever (failing reader + deleted header). It must be gone so
@@ -365,9 +387,9 @@ class PartialSegmentCacheBootstrapTest
   @Test
   void testRestoredEntryCanFetchUndownloadedFile() throws IOException
   {
-    // a bootstrap-restored entry must keep the segment's real deep-storage range reader so a later query can
-    // fetch a bundle/column that wasn't on disk at startup. Previously the entry held a throwing disk-only reader, so
-    // this fetch failed with "bootstrap should only read from local disk".
+    // a restored entry keeps the segment's real deep-storage range reader, so a later query can fetch a bundle or
+    // column that wasn't on disk at startup. The local layout is a head start, never the limit of what the entry can
+    // read.
     primeOnDiskState();
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
     final PartialSegmentMetadataCacheEntry metadata = restoreFromDisk(location);
@@ -394,38 +416,71 @@ class PartialSegmentCacheBootstrapTest
   }
 
   @Test
-  void testReserveFailsWhenHeaderMissing()
+  void testMountShrinksEstimateToHeaderFootprint() throws IOException
   {
-    // no priming: cacheDir is empty
+    primeOnDiskState();
+
     final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
-    Assertions.assertThrows(
-        DruidException.class,
-        () -> PartialSegmentCacheBootstrap.reserveFromDisk(
-            SEGMENT_ID,
-            cacheDir,
-            IndexIO.V10_FILE_NAME,
-            List.of(),
-            new DirectoryBackedRangeReader(deepStorageDir),
-            JSON_MAPPER,
-            null,
-            location,
-            PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
-            PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
-        )
-    );
+    final PartialSegmentMetadataCacheEntry metadata = restoreFromDisk(location);
+
+    // The entry is reserved with the pessimistic estimate and shrunk by mount, which is the only place an entry's
+    // size is computed. Restoring an existing layout is no exception: it goes through the same reserve-then-shrink,
+    // so there is no second, pre-mount size that the mount could disagree with.
+    final long headerFootprint = metadata.getFileMapper().getOnDiskHeaderSize();
+    Assertions.assertTrue(headerFootprint < ESTIMATE);
+    Assertions.assertEquals(headerFootprint, metadata.getSize());
+
+    // Re-mounting the same entry measures the same footprint, so the shrink is a no-op rather than a grow
+    metadata.unmount();
+    metadata.mount(location);
+    Assertions.assertEquals(headerFootprint, metadata.getFileMapper().getOnDiskHeaderSize());
+    Assertions.assertEquals(headerFootprint, metadata.getSize());
   }
 
   @Test
-  void testIsPartialSegmentLayoutDetectsHeader() throws IOException
+  void testRestoreWithoutLocalHeaderColdFetches() throws IOException
   {
-    Assertions.assertFalse(PartialSegmentCacheBootstrap.isPartialSegmentLayout(cacheDir, IndexIO.V10_FILE_NAME));
+    // no priming: cacheDir is empty, so the mount fetches the header from deep storage like a fresh acquire
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = restoreFromDisk(location);
+
+    Assertions.assertTrue(metadata.isMounted());
+    Assertions.assertEquals(metadata.getFileMapper().getOnDiskHeaderSize(), metadata.getSize());
+  }
+
+  /**
+   * A header file whose bitmap region never made it to disk (a crash, or an interrupt, between persisting the header
+   * bytes and extending the file) must be treated as corrupt and re-fetched. Before the header and its bitmap region
+   * were published together, this state was silently repaired by growing the file, which meant the same segment
+   * measured one size before the mount and a larger one after it, and a reservation sized from the short file was
+   * asked to grow, which storage locations do not support.
+   */
+  @Test
+  void testHeaderMissingBitmapRegionDoesNotGrowReservation() throws IOException
+  {
     primeOnDiskState();
-    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(cacheDir, IndexIO.V10_FILE_NAME));
-    Assertions.assertFalse(PartialSegmentCacheBootstrap.isPartialSegmentLayout(null, IndexIO.V10_FILE_NAME));
-    Assertions.assertFalse(PartialSegmentCacheBootstrap.isPartialSegmentLayout(
-        new File(perTestTempDir, "nonexistent"),
-        IndexIO.V10_FILE_NAME
-    ));
+
+    final File headerFile = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+    final int numFiles;
+    try (PartialSegmentFileMapperV10 introspect = createMapper(deepStorageDir, cacheDir)) {
+      numFiles = introspect.getSegmentFileMetadata().getFiles().size();
+    }
+    final long fullLength = headerFile.length();
+    final int bitmapBytes = (numFiles + 7) / 8;
+    Assertions.assertTrue(bitmapBytes > 0);
+    try (RandomAccessFile raf = new RandomAccessFile(headerFile, "rw")) {
+      raf.setLength(fullLength - bitmapBytes);
+    }
+
+    final StorageLocation location = new StorageLocation(cacheDir, ESTIMATE * 8, null);
+    final PartialSegmentMetadataCacheEntry metadata = restoreFromDisk(location);
+
+    Assertions.assertTrue(metadata.isMounted());
+    Assertions.assertEquals(fullLength, headerFile.length(), "the truncated header must have been re-fetched");
+    Assertions.assertEquals(fullLength, metadata.getSize());
   }
 
   @Test
@@ -523,32 +578,54 @@ class PartialSegmentCacheBootstrapTest
     // state. Instead, we want containers ON disk, so leave bundles mounted but close the file mapper. Since the
     // restore path re-opens via PartialSegmentFileMapperV10.create which is idempotent w.r.t. on-disk files,
     // un-mount on the SEED side AFTER files are sparse-allocated would also delete them. So we just leave the
-    // seed mounted: at test end @TempDir cleans up.
+    // seed mounted: TemporaryFolderExtension cleans up at test end.
     aggHold.close();
     baseHold.close();
   }
 
   /**
-   * Two-step restore helper that mirrors what {@code SegmentLocalCacheManager} does in production: reserve the metadata
-   * entry via {@link PartialSegmentCacheBootstrap#reserveFromDisk}, then drive {@link PartialSegmentMetadataCacheEntry#mount}
-   * to trigger the file-mapper build + bundle restore. On a mount failure, {@code mount}'s own rollback removes the
-   * (unheld) weak entry from the location, so tests can assert on a clean location without any extra cleanup here.
+   * Two-step restore helper that mirrors what {@code SegmentLocalCacheManager} does in production: reserve the
+   * metadata entry with the up-front estimate under a hold (exactly as {@code bootstrap()} does when it finds a
+   * partial layout on disk), drive {@link PartialSegmentMetadataCacheEntry#mount} to trigger the file-mapper build,
+   * reservation shrink, and bundle restore, then release the hold. On a mount failure, releasing the hold removes the
+   * never-mounted weak entry, so tests can assert on a clean location without any extra cleanup here.
    */
   private PartialSegmentMetadataCacheEntry restoreFromDisk(StorageLocation location) throws IOException
   {
-    final PartialSegmentMetadataCacheEntry metadata = PartialSegmentCacheBootstrap.reserveFromDisk(
+    return restoreFromDisk(location, new DirectoryBackedRangeReader(deepStorageDir), ESTIMATE);
+  }
+
+  private PartialSegmentMetadataCacheEntry restoreFromDisk(
+      StorageLocation location,
+      SegmentRangeReader rangeReader,
+      long reservationEstimate
+  ) throws IOException
+  {
+    final PartialSegmentMetadataCacheEntry metadata = new PartialSegmentMetadataCacheEntry(
         SEGMENT_ID,
         cacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(),
-        new DirectoryBackedRangeReader(deepStorageDir),
+        rangeReader,
         JSON_MAPPER,
         null,
-        location,
+        reservationEstimate,
         PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
         PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
-    metadata.mount(location);
+    final StorageLocation.ReservationHold<SegmentCacheEntry> hold = location.addWeakReservationHold(
+        metadata.getId(),
+        () -> metadata
+    );
+    if (hold == null) {
+      throw new IOException("location has no capacity for the metadata reservation");
+    }
+    try {
+      metadata.mount(location);
+    }
+    finally {
+      hold.close();
+    }
     return metadata;
   }
 

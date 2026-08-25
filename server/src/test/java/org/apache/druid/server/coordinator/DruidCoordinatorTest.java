@@ -39,6 +39,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -68,6 +69,7 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
 import org.apache.druid.server.coordinator.rules.IntervalLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
 import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.BrokerDynamicConfigSyncer;
@@ -210,8 +212,8 @@ public class DruidCoordinatorTest
 
     // Setup MetadataRuleManager
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2), null);
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-            .andReturn(ImmutableList.of(foreverLoadRule)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(foreverLoadRule)).atLeastOnce();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
@@ -341,8 +343,8 @@ public class DruidCoordinatorTest
 
     setupSegmentsMetadataMock(druidDataSources[0]);
 
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-            .andReturn(ImmutableList.of(hotTier, coldTier)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(hotTier, coldTier)).atLeastOnce();
 
     EasyMock.expect(serverInventoryView.getInventory())
             .andReturn(ImmutableList.of(hotServer, coldServer))
@@ -424,8 +426,8 @@ public class DruidCoordinatorTest
     setupSegmentsMetadataMock(druidDataSource);
 
     final Rule broadcastDistributionRule = new ForeverBroadcastDistributionRule();
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-            .andReturn(ImmutableList.of(broadcastDistributionRule)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+            .andReturn(clusterDefaultRules(broadcastDistributionRule)).atLeastOnce();
 
     EasyMock.expect(serverInventoryView.getInventory())
             .andReturn(ImmutableList.of(hotServer, coldServer, brokerServer1, brokerServer2, peonServer))
@@ -729,8 +731,8 @@ public class DruidCoordinatorTest
     // Setup MetadataRuleManager
     Rule intervalLoadRule = new IntervalLoadRule(Intervals.of("2010-02-01/P1M"), ImmutableMap.of(hotTier, 1), null);
     Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(coldTier, 0), null);
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
-        .andReturn(ImmutableList.of(intervalLoadRule, foreverLoadRule)).atLeastOnce();
+    EasyMock.expect(metadataRuleManager.getRulesSnapshot())
+        .andReturn(clusterDefaultRules(intervalLoadRule, foreverLoadRule)).atLeastOnce();
 
     metadataRuleManager.stop();
     EasyMock.expectLastCall().once();
@@ -842,6 +844,18 @@ public class DruidCoordinatorTest
         new ClusterCompactionConfig(0.2, null, null, null, null, null)
     );
     Assertions.assertEquals(Collections.emptyMap(), result.getCompactionStates());
+  }
+
+  /**
+   * A rules snapshot in which the given rules are the cluster defaults, so that they
+   * apply to every datasource.
+   */
+  private static RetentionRulesSnapshot clusterDefaultRules(Rule... rules)
+  {
+    return new RetentionRulesSnapshot(
+        Map.of(MetadataRuleManagerConfig.DEFAULT_RULE_NAME, List.of(rules)),
+        MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+    );
   }
 
   private void setupSegmentsMetadataMock(DruidDataSource dataSource)

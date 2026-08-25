@@ -59,7 +59,7 @@ import java.util.List;
 public class StringColumnAggregationTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final String singleValue = "singleValue";
   private final String multiValue = "multiValue";
@@ -97,7 +97,7 @@ public class StringColumnAggregationTest
       ));
     }
 
-    aggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+    aggregationTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         new GroupByQueryConfig(),
         tempFolder
@@ -239,7 +239,7 @@ public class StringColumnAggregationTest
                                   )
                                   .build();
 
-    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+    Sequence seq = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         Collections.emptyList(),
         tempFolder
     )

@@ -660,17 +660,21 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     assertEquals(1, ((List<?>) spec.properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY)).size());
   }
 
+  /**
+   * SEALED is a choice, not a requirement for a base table layout: undeclared columns are appended after the declared
+   * layout at ingest time, and declaring SEALED rejects them instead.
+   */
   @Test
-  public void testBaseProjectionRequiresSealed()
+  public void testBaseProjectionWithoutSealed()
   {
-    final DruidException e = assertThrows(
-        DruidException.class,
-        () -> execute(
-            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP,"
-            + " PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant))"
-        )
+    execute(
+        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP,"
+        + " PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant))"
     );
-    assertTrue(e.getMessage().contains("must be declared SEALED"), e.getMessage());
+
+    final TableSpec spec = WRITER.calls.get(0).spec;
+    assertNotNull(spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+    assertNull(spec.properties().get(DatasourceDefn.SEALED_PROPERTY));
   }
 
   /**

@@ -97,7 +97,7 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
   private SegmentManager virtualSegmentManager;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setup() throws IOException

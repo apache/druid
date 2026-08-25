@@ -70,7 +70,7 @@ public class DoubleMeanAggregationTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final AggregationTestHelper groupByQueryTestHelper;
   private final AggregationTestHelper timeseriesQueryTestHelper;
@@ -81,13 +81,13 @@ public class DoubleMeanAggregationTest
   public DoubleMeanAggregationTest()
   {
 
-    groupByQueryTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+    groupByQueryTestHelper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         new GroupByQueryConfig(),
         tempFolder
     );
 
-    timeseriesQueryTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTemporaryFolderExtension(
+    timeseriesQueryTestHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
         Collections.emptyList(),
         tempFolder
     );
