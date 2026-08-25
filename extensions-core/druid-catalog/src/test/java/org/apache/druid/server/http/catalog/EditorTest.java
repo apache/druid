@@ -610,15 +610,6 @@ public class EditorTest
     );
   }
 
-  private String columnType(String tableName, String columnName) throws CatalogException
-  {
-    return catalog.tables().read(TableId.datasource(tableName)).spec().columns().stream()
-                  .filter(c -> columnName.equals(c.name()))
-                  .findFirst()
-                  .orElseThrow(() -> new AssertionError("No column [" + columnName + "]"))
-                  .dataType();
-  }
-
   /**
    * A property edit is validated against the parts of the spec it does not touch. Segment granularity and the declared
    * projections are only meaningful together, so coarsening the segments under a projection has to be caught here
@@ -780,11 +771,20 @@ public class EditorTest
     assertTrue(new TableEditor(catalog, table.id(), new DropColumns(ImmutableList.of("met"))).go() > 0);
   }
 
+
+  private String columnType(String tableName, String columnName) throws CatalogException
+  {
+    return catalog.tables().read(TableId.datasource(tableName)).spec().columns().stream()
+                  .filter(c -> columnName.equals(c.name()))
+                  .findFirst()
+                  .orElseThrow(() -> new AssertionError("No column [" + columnName + "]"))
+                  .dataType();
+  }
+
   private List<DatasourceProjectionMetadata> projectionsOf(String tableName) throws CatalogException
   {
     return catalog.tableRegistry()
                   .resolve(catalog.tables().read(TableId.datasource(tableName)).spec())
                   .decodeProperty(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY);
   }
-
 }

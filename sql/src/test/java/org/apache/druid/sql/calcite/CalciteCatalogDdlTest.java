@@ -562,18 +562,6 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     assertTrue(e.getMessage().contains("declared more than once"), e.getMessage());
   }
 
-  @SuppressWarnings("unchecked")
-  private DatasourceProjectionMetadata projection(int index)
-  {
-    return ((List<DatasourceProjectionMetadata>) WRITER.calls.get(0).spec.properties().get("projections")).get(index);
-  }
-
-  private String projectionsJson() throws Exception
-  {
-    return queryFramework().queryJsonMapper()
-                           .writeValueAsString(WRITER.calls.get(0).spec.properties().get("projections"));
-  }
-
   /**
    * The reserved {@code __base} projection describes the table's own layout, so it becomes the baseTable property
    * rather than one of the projections. A computed column becomes a virtual column materializing the declared column
@@ -802,6 +790,19 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     // Whether there is one to drop is likewise the Coordinator's call; the statement only carries IF EXISTS.
     execute("ALTER TABLE tbl DROP PROJECTION IF EXISTS __base");
     assertTrue(WRITER.lastCall("dropBaseTable").ifExists);
+  }
+
+
+  @SuppressWarnings("unchecked")
+  private DatasourceProjectionMetadata projection(int index)
+  {
+    return ((List<DatasourceProjectionMetadata>) WRITER.calls.get(0).spec.properties().get("projections")).get(index);
+  }
+
+  private String projectionsJson() throws Exception
+  {
+    return queryFramework().queryJsonMapper()
+                           .writeValueAsString(WRITER.calls.get(0).spec.properties().get("projections"));
   }
 
   private ClusteredValueGroupsBaseTableMetadata baseTable()

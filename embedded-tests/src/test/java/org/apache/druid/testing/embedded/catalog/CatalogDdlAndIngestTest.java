@@ -333,15 +333,6 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
     cluster.callApi().runSql("ALTER TABLE \"%s\" DROP PROJECTION IF EXISTS p", tableName);
   }
 
-  private List<DatasourceProjectionMetadata> projectionsOf(String tableName)
-  {
-    return TestHelper.JSON_MAPPER.convertValue(
-        client.readTable(TableId.datasource(tableName))
-              .spec().properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY),
-        new TypeReference<List<DatasourceProjectionMetadata>>() {}
-    );
-  }
-
   /**
    * A clustered table defined entirely in SQL. The declared column order is the physical segment order, so rows come
    * back grouped by the clustering column, and a computed column is materialized at ingest time from the expression
@@ -399,6 +390,54 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
   }
 
   /**
+   * The same layout without SEALED: a column the query produces but the table does not declare is stored after the
+   * declared layout rather than rejected or dropped, and the clustering the table declared is unchanged.
+   */
+  @Test
+  public void testCreateNonSealedClusteredBaseTableThenIngestExtraColumn()
+  {
+    final String tableName = dataSource;
+
+    cluster.callApi().runSql(
+        "CREATE TABLE \"%s\" (\n"
+        + "  tenant VARCHAR,\n"
+        + "  __time TIMESTAMP,\n"
+        + "  v BIGINT,\n"
+        + "  PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY tenant)\n"
+        + ")\n"
+        + "PARTITIONED BY DAY",
+        tableName
+    );
+
+    final TableMetadata table = client.readTable(TableId.datasource(tableName));
+    assertNull(table.spec().properties().get(DatasourceDefn.SEALED_PROPERTY));
+    assertNotNull(table.spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
+
+    // 'extra_col' is not declared by the table.
+    ingest(
+        "INSERT INTO \"%s\"\n"
+        + "SELECT TIME_PARSE(a) AS __time, b AS tenant, c AS v, d AS extra_col\n"
+        + "FROM TABLE(\n"
+        + "  EXTERN(\n"
+        + "    '{\"type\":\"inline\",\"data\":\"2022-12-26T12:34:56,bbb,1,x"
+        + "\\n2022-12-26T12:34:56,aaa,2,y\\n2022-12-26T12:34:56,aaa,3,z\"}',\n"
+        + "    '{\"type\":\"csv\",\"findColumnsFromHeader\":false,\"columns\":[\"a\",\"b\",\"c\",\"d\"]}'\n"
+        + "  )\n"
+        + ") EXTEND (a VARCHAR, b VARCHAR, c BIGINT, d VARCHAR)\n",
+        tableName
+    );
+
+    // Declared columns first, the appended extra last; rows still grouped by the clustering column.
+    cluster.callApi().verifySqlQuery(
+        "SELECT * FROM %s",
+        tableName,
+        "aaa,2022-12-26T12:34:56.000Z,2,y\n"
+        + "aaa,2022-12-26T12:34:56.000Z,3,z\n"
+        + "bbb,2022-12-26T12:34:56.000Z,1,x"
+    );
+  }
+
+  /**
    * A column the base table computes cannot be written directly: the catalog rejects the INSERT and says to supply
    * the expression's inputs instead.
    */
@@ -448,6 +487,15 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
     assertNull(
         client.readTable(TableId.datasource(tableName))
               .spec().properties().get(DatasourceDefn.BASE_TABLE_PROPERTY)
+    );
+  }
+
+  private List<DatasourceProjectionMetadata> projectionsOf(String tableName)
+  {
+    return TestHelper.JSON_MAPPER.convertValue(
+        client.readTable(TableId.datasource(tableName))
+              .spec().properties().get(DatasourceDefn.PROJECTIONS_KEYS_PROPERTY),
+        new TypeReference<List<DatasourceProjectionMetadata>>() {}
     );
   }
 

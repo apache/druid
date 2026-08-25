@@ -78,7 +78,7 @@ public class Columns
   }
 
   /**
-   * The Druid type of a column, which for {@code __time} is always {@link ColumnType#LONG} whatever was declared.
+   * The Druid type of a column ({@code __time} is always {@link ColumnType#LONG} regardless of what was declared).
    * Use {@link #druidTypeFromString} to resolve a declared type on its own terms.
    */
   public static ColumnType druidType(ColumnSpec spec)
