@@ -585,6 +585,41 @@ class StorageLocationTest
   }
 
   @Test
+  public void testInternalHoldsAreNotCountedAsHitsButAreCountedAsPinned()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final UnmountTrackingCacheEntry entry = new UnmountTrackingCacheEntry("a", 10);
+    final StorageLocation.ReservationHold<?> reserver =
+        location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(reserver);
+
+    // A demand hold: somebody is waiting on this entry, so it is a cache hit.
+    final StorageLocation.ReservationHold<?> query = location.addWeakReservationHoldIfExists(entry.getId());
+    Assertions.assertNotNull(query);
+    Assertions.assertEquals(1, location.getWeakStats().getHitCount());
+    Assertions.assertEquals(0, location.getWeakStats().getInternalHoldCount());
+
+    // A structural hold: another entry pinning this one. It pins against reclaim just the same, so it counts in the
+    // totals, but it is not demand and must not move the hit rate.
+    final StorageLocation.ReservationHold<?> internal =
+        location.addInternalWeakReservationHoldIfExists(entry.getId());
+    Assertions.assertNotNull(internal);
+    Assertions.assertEquals(1, location.getWeakStats().getHitCount(), "a structural hold is not a cache hit");
+    Assertions.assertEquals(3, location.getWeakStats().getHoldCount(), "but it does pin the entry");
+    Assertions.assertEquals(1, location.getWeakStats().getInternalHoldCount());
+    Assertions.assertEquals(10, location.getWeakStats().getInternalHoldBytes());
+
+    internal.close();
+    Assertions.assertEquals(0, location.getWeakStats().getInternalHoldCount());
+    Assertions.assertEquals(0, location.getWeakStats().getInternalHoldBytes());
+    Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
+
+    query.close();
+    reserver.close();
+    Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
+  }
+
+  @Test
   public void testEphemeralWeakEntryUnmountCascadeDoesNotThrowConcurrentModification()
   {
     final StorageLocation location = new StorageLocation(tempDir, 10_000L, null);

@@ -123,6 +123,14 @@ public class StorageLocation
   private final AtomicLong currWeakSizeBytes = new AtomicLong(0);
   private final AtomicLong currHoldCount = new AtomicLong(0);
   private final AtomicLong currHoldBytes = new AtomicLong(0);
+  /**
+   * The subset of {@link #currHoldCount}/{@link #currHoldBytes} that is structural rather than demand (a bundle
+   * pinning its metadata entry or a parent bundle, a partial-load rule pinning what it selected, bootstrap restoring
+   * a bundle). These pin an entry against {@link #reclaim} exactly as a query hold does, so they belong in the totals,
+   * but they are not somebody waiting on an entry, broken out so the two can be told apart.
+   */
+  private final AtomicLong currInternalHoldCount = new AtomicLong(0);
+  private final AtomicLong currInternalHoldBytes = new AtomicLong(0);
 
   private final AtomicReference<StaticStats> staticStats = new AtomicReference<>();
   private final AtomicReference<WeakStats> weakStats = new AtomicReference<>();
@@ -296,6 +304,25 @@ public class StorageLocation
   @Nullable
   public <T extends CacheEntry> ReservationHold<T> addWeakReservationHoldIfExists(CacheEntryIdentifier entryId)
   {
+    return addWeakReservationHoldIfExists(entryId, false);
+  }
+
+  /**
+   * Effectively the same as {@link #addWeakReservationHoldIfExists(CacheEntryIdentifier)} only accounted differently,
+   * for internal use to protect an entry from {@link #reclaim}.
+   */
+  @Nullable
+  public <T extends CacheEntry> ReservationHold<T> addInternalWeakReservationHoldIfExists(CacheEntryIdentifier entryId)
+  {
+    return addWeakReservationHoldIfExists(entryId, true);
+  }
+
+  @Nullable
+  private <T extends CacheEntry> ReservationHold<T> addWeakReservationHoldIfExists(
+      CacheEntryIdentifier entryId,
+      boolean internal
+  )
+  {
     lock.readLock().lock();
     try {
       if (staticCacheEntries.containsKey(entryId)) {
@@ -304,12 +331,16 @@ public class StorageLocation
 
       WeakCacheEntry existingEntry = weakCacheEntries.get(entryId);
       if (existingEntry != null && existingEntry.hold()) {
+        // visited is set for internal holds too: an entry a live dependency is pinning genuinely is in use, and that
+        // is what this flag tells the reclaim scan.
         existingEntry.visited = true;
-        trackWeakHold(existingEntry);
-        weakStats.getAndUpdate(s -> s.hit(existingEntry.cacheEntry.getSize()));
+        trackWeakHold(existingEntry, internal);
+        if (!internal) {
+          weakStats.getAndUpdate(s -> s.hit(existingEntry.cacheEntry.getSize()));
+        }
         return new ReservationHold<>(
             (T) existingEntry.cacheEntry,
-            createWeakEntryReleaseRunnable(existingEntry, false)
+            createWeakEntryReleaseRunnable(existingEntry, false, internal)
         );
       }
       return null;
@@ -333,7 +364,30 @@ public class StorageLocation
       Supplier<? extends CacheEntry> entrySupplier
   )
   {
-    final ReservationHold<T> existingEntry = addWeakReservationHoldIfExists(entryId);
+    return addWeakReservationHold(entryId, entrySupplier, false);
+  }
+
+  /**
+   * Internal version of {@link #addWeakReservationHold(CacheEntryIdentifier, Supplier)}, see
+   * {@link #addInternalWeakReservationHoldIfExists}.
+   */
+  @Nullable
+  public <T extends CacheEntry> ReservationHold<T> addInternalWeakReservationHold(
+      CacheEntryIdentifier entryId,
+      Supplier<? extends CacheEntry> entrySupplier
+  )
+  {
+    return addWeakReservationHold(entryId, entrySupplier, true);
+  }
+
+  @Nullable
+  private <T extends CacheEntry> ReservationHold<T> addWeakReservationHold(
+      CacheEntryIdentifier entryId,
+      Supplier<? extends CacheEntry> entrySupplier,
+      boolean internal
+  )
+  {
+    final ReservationHold<T> existingEntry = addWeakReservationHoldIfExists(entryId, internal);
     if (existingEntry != null) {
       return existingEntry;
     }
@@ -343,11 +397,13 @@ public class StorageLocation
       WeakCacheEntry retryExistingEntry = weakCacheEntries.get(entryId);
       if (retryExistingEntry != null && retryExistingEntry.hold()) {
         retryExistingEntry.visited = true;
-        trackWeakHold(retryExistingEntry);
-        weakStats.getAndUpdate(s -> s.hit(retryExistingEntry.cacheEntry.getSize()));
+        trackWeakHold(retryExistingEntry, internal);
+        if (!internal) {
+          weakStats.getAndUpdate(s -> s.hit(retryExistingEntry.cacheEntry.getSize()));
+        }
         return new ReservationHold<>(
             (T) retryExistingEntry.cacheEntry,
-            createWeakEntryReleaseRunnable(retryExistingEntry, false)
+            createWeakEntryReleaseRunnable(retryExistingEntry, false, internal)
         );
       }
       final CacheEntry newEntry = entrySupplier.get();
@@ -359,11 +415,11 @@ public class StorageLocation
         newWeakEntry.hold();
         linkNewWeakEntry(newWeakEntry);
         weakCacheEntries.put(newEntry.getId(), newWeakEntry);
-        trackWeakHold(newWeakEntry);
+        trackWeakHold(newWeakEntry, internal);
         weakStats.getAndUpdate(s -> s.loadBegin(newEntry.getSize()));
         hold = new ReservationHold<>(
             (T) newEntry,
-            createWeakEntryReleaseRunnable(newWeakEntry, true)
+            createWeakEntryReleaseRunnable(newWeakEntry, true, internal)
         );
       } else {
         weakStats.getAndUpdate(WeakStats::reject);
@@ -444,6 +500,12 @@ public class StorageLocation
         if (activeHolds > 0) {
           final long holdDelta = delta * activeHolds;
           currHoldBytes.updateAndGet(v -> Math.max(0L, v - holdDelta));
+        }
+        // Same correction for internal holds
+        final long activeInternalHolds = weak.internalHolds.get();
+        if (activeInternalHolds > 0) {
+          final long internalHoldDelta = delta * activeInternalHolds;
+          currInternalHoldBytes.updateAndGet(v -> Math.max(0L, v - internalHoldDelta));
         }
       }
     }
@@ -538,12 +600,13 @@ public class StorageLocation
    */
   private Runnable createWeakEntryReleaseRunnable(
       final WeakCacheEntry weakEntry,
-      final boolean isNewEntry
+      final boolean isNewEntry,
+      final boolean internal
   )
   {
     return () -> {
       weakEntry.release();
-      trackWeakRelease(weakEntry);
+      trackWeakRelease(weakEntry, internal);
 
       if (!isNewEntry && !areWeakEntriesEphemeral) {
         // No need to consider removal from weakCacheEntries on hold release.
@@ -783,16 +846,26 @@ public class StorageLocation
     weakStats.getAndUpdate(s -> s.rangeRead(bytes, nanos));
   }
 
-  private void trackWeakHold(WeakCacheEntry entry)
+  private void trackWeakHold(WeakCacheEntry entry, boolean internal)
   {
     currHoldCount.getAndIncrement();
     currHoldBytes.getAndAdd(entry.cacheEntry.getSize());
+    if (internal) {
+      entry.internalHolds.getAndIncrement();
+      currInternalHoldCount.getAndIncrement();
+      currInternalHoldBytes.getAndAdd(entry.cacheEntry.getSize());
+    }
   }
 
-  private void trackWeakRelease(WeakCacheEntry entry)
+  private void trackWeakRelease(WeakCacheEntry entry, boolean internal)
   {
     currHoldCount.getAndDecrement();
     currHoldBytes.getAndAdd(-entry.cacheEntry.getSize());
+    if (internal) {
+      entry.internalHolds.getAndDecrement();
+      currInternalHoldCount.getAndDecrement();
+      currInternalHoldBytes.getAndAdd(-entry.cacheEntry.getSize());
+    }
   }
 
   @VisibleForTesting
@@ -839,6 +912,8 @@ public class StorageLocation
     currStaticSizeBytes.set(0);
     currHoldCount.set(0);
     currHoldBytes.set(0);
+    currInternalHoldCount.set(0);
+    currInternalHoldBytes.set(0);
     resetStaticStats();
     resetWeakStats();
   }
@@ -855,7 +930,9 @@ public class StorageLocation
 
   public WeakStats resetWeakStats()
   {
-    return weakStats.getAndSet(new WeakStats(currWeakSizeBytes, currHoldCount, currHoldBytes));
+    return weakStats.getAndSet(
+        new WeakStats(currWeakSizeBytes, currHoldCount, currHoldBytes, currInternalHoldCount, currInternalHoldBytes)
+    );
   }
 
   /**
@@ -1049,6 +1126,12 @@ public class StorageLocation
      */
     private volatile boolean visited;
 
+    /**
+     * How many of this entry's holds are internal, so {@code adjustReservation} can correct the internal byte total
+     * by the same per-hold delta it applies to the overall one.
+     */
+    private final AtomicLong internalHolds = new AtomicLong(0);
+
     private WeakCacheEntry(CacheEntry cacheEntry)
     {
       this.cacheEntry = cacheEntry;
@@ -1219,6 +1302,8 @@ public class StorageLocation
     private final AtomicLong sizeUsed;
     private final AtomicLong holdCount;
     private final AtomicLong holdBytes;
+    private final AtomicLong internalHoldCount;
+    private final AtomicLong internalHoldBytes;
     private final AtomicLong loadBeginCount = new AtomicLong(0);
     private final AtomicLong loadBeginBytes = new AtomicLong(0);
     private final AtomicLong loadCount = new AtomicLong(0);
@@ -1233,11 +1318,19 @@ public class StorageLocation
     private final AtomicLong readBytes = new AtomicLong(0);
     private final AtomicLong readTimeNanos = new AtomicLong(0);
 
-    public WeakStats(AtomicLong sizeUsed, AtomicLong holdCount, AtomicLong holdBytes)
+    public WeakStats(
+        AtomicLong sizeUsed,
+        AtomicLong holdCount,
+        AtomicLong holdBytes,
+        AtomicLong internalHoldCount,
+        AtomicLong internalHoldBytes
+    )
     {
       this.sizeUsed = sizeUsed;
       this.holdCount = holdCount;
       this.holdBytes = holdBytes;
+      this.internalHoldCount = internalHoldCount;
+      this.internalHoldBytes = internalHoldBytes;
     }
 
     public WeakStats hit(long size)
@@ -1315,6 +1408,18 @@ public class StorageLocation
     public long getHoldBytes()
     {
       return holdBytes.get();
+    }
+
+    @Override
+    public long getInternalHoldCount()
+    {
+      return internalHoldCount.get();
+    }
+
+    @Override
+    public long getInternalHoldBytes()
+    {
+      return internalHoldBytes.get();
     }
 
     @Override
