@@ -914,7 +914,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               longsColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
             } else {
               final int[] offsets = offset.getOffsets();
-                  if (offsets[0] < offsetMark) {
+              if (offsets[0] < offsetMark) {
                 nullIterator = nullBitmap.peekableIterator();
               }
               offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
@@ -969,7 +969,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               doublesColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
             } else {
               final int[] offsets = offset.getOffsets();
-                  if (offsets[0] < offsetMark) {
+              if (offsets[0] < offsetMark) {
                 nullIterator = nullBitmap.peekableIterator();
               }
               offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
@@ -1028,7 +1028,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
             column.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
           } else {
             final int[] offsets = offset.getOffsets();
-              if (offsets[0] < offsetMark) {
+            if (offsets[0] < offsetMark) {
               nullIterator = nullBitmap.peekableIterator();
             }
             offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;

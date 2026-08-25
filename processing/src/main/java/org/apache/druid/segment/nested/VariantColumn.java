@@ -831,7 +831,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
             encodedValueColumn.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
           } else {
             final int[] offsets = offset.getOffsets();
-              if (offsets[0] < offsetMark) {
+            if (offsets[0] < offsetMark) {
               nullIterator = nullValueBitmap.peekableIterator();
             }
             offsetMark = offsets[offset.getCurrentVectorSize() - 1] + 1;
