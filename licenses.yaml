@@ -465,7 +465,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.6.0-jre
+version: 33.7.1-jre
 libraries:
   - com.google.guava: guava
 
@@ -1171,7 +1171,7 @@ name: org.jspecify jspecify
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.0.0
+version: 1.0.1
 libraries:
   - org.jspecify: jspecify
 
