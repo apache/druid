@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
@@ -128,8 +129,8 @@ public class S3Utils
   };
 
   /**
-   * Restores {@code Content-MD5} request checksums on every given builder, for S3-compatible stores that reject the
-   * CRC32 checksums the SDK sends by default since 2.30.0.
+   * Restores {@code Content-MD5} for required request checksums and disables optional request checksums on every given
+   * builder, for S3-compatible stores that reject the CRC32 checksums the SDK sends by default since 2.30.0.
    * <p>
    * Takes all the builders for one client set rather than one builder per call, so the sync and async clients cannot
    * end up disagreeing about checksum behavior, and so the switch is logged once per client set.
@@ -141,8 +142,10 @@ public class S3Utils
   {
     if (clientConfig.isEnableLegacyMd5()) {
       log.info("Legacy MD5 compatibility mode is enabled for the S3 client.");
-      for (S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
-        s3ClientBuilder.addPlugin(LegacyMd5Plugin.create());
+      for (final S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
+        s3ClientBuilder
+            .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+            .addPlugin(LegacyMd5Plugin.create());
       }
     }
   }

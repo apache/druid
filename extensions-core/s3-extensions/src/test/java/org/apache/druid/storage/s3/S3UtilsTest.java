@@ -27,21 +27,35 @@ import org.easymock.CaptureType;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.http.ExecutableHttpRequest;
+import software.amazon.awssdk.http.HttpExecuteRequest;
+import software.amazon.awssdk.http.HttpExecuteResponse;
+import software.amazon.awssdk.http.SdkHttpClient;
+import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.utils.Md5Utils;
 
 import javax.crypto.AEADBadTagException;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -76,6 +90,94 @@ public class S3UtilsTest
     Assertions.assertEquals(1, s3AsyncClientBuilder.plugins().size());
     Assertions.assertInstanceOf(LegacyMd5Plugin.class, s3ClientBuilder.plugins().get(0));
     Assertions.assertInstanceOf(LegacyMd5Plugin.class, s3AsyncClientBuilder.plugins().get(0));
+    try (
+        final S3Client s3Client = s3ClientBuilder
+            .credentialsProvider(AnonymousCredentialsProvider.create())
+            .region(Region.US_EAST_1)
+            .build();
+        final S3AsyncClient s3AsyncClient = s3AsyncClientBuilder
+            .credentialsProvider(AnonymousCredentialsProvider.create())
+            .region(Region.US_EAST_1)
+            .build()
+    ) {
+      Assertions.assertSame(
+          RequestChecksumCalculation.WHEN_REQUIRED,
+          s3Client.serviceClientConfiguration().requestChecksumCalculation()
+      );
+      Assertions.assertSame(
+          RequestChecksumCalculation.WHEN_REQUIRED,
+          s3AsyncClient.serviceClientConfiguration().requestChecksumCalculation()
+      );
+    }
+    EasyMock.verify(clientConfig);
+  }
+
+  @Test
+  public void testConfigureLegacyMd5UsesMd5ForRequiredChecksumsOnly() throws IOException
+  {
+    final AWSClientConfig clientConfig = EasyMock.createMock(AWSClientConfig.class);
+    EasyMock.expect(clientConfig.isEnableLegacyMd5()).andReturn(true).once();
+    EasyMock.replay(clientConfig);
+    final List<HttpExecuteRequest> requests = new ArrayList<>();
+    final SdkHttpClient httpClient = new SdkHttpClient()
+    {
+      @Override
+      public ExecutableHttpRequest prepareRequest(final HttpExecuteRequest request)
+      {
+        requests.add(request);
+        return new ExecutableHttpRequest()
+        {
+          @Override
+          public HttpExecuteResponse call()
+          {
+            return HttpExecuteResponse.builder()
+                                      .response(SdkHttpResponse.builder().statusCode(200).build())
+                                      .build();
+          }
+
+          @Override
+          public void abort()
+          {
+            // Nothing to abort in this test client.
+          }
+        };
+      }
+
+      @Override
+      public void close()
+      {
+        // No resources to close in this test client.
+      }
+    };
+    final S3ClientBuilder s3ClientBuilder = S3Client.builder()
+                                                    .credentialsProvider(AnonymousCredentialsProvider.create())
+                                                    .region(Region.US_EAST_1)
+                                                    .endpointOverride(URI.create("http://localhost"))
+                                                    .forcePathStyle(true)
+                                                    .httpClient(httpClient);
+    S3Utils.configureLegacyMd5(clientConfig, s3ClientBuilder);
+
+    try (final S3Client s3Client = s3ClientBuilder.build()) {
+      s3Client.putObject(
+          PutObjectRequest.builder().bucket("bucket").key("key").build(),
+          RequestBody.fromString("payload")
+      );
+      s3Client.deleteObjects(
+          DeleteObjectsRequest.builder()
+                              .bucket("bucket")
+                              .delete(Delete.builder().objects(ObjectIdentifier.builder().key("key").build()).build())
+                              .build()
+      );
+    }
+
+    Assertions.assertEquals(2, requests.size());
+    Assertions.assertTrue(requests.get(0).httpRequest().firstMatchingHeader("Content-MD5").isEmpty());
+    Assertions.assertTrue(requests.get(0).httpRequest().firstMatchingHeader("x-amz-checksum-crc32").isEmpty());
+    final HttpExecuteRequest deleteObjectsRequest = requests.get(1);
+    Assertions.assertEquals(
+        Md5Utils.md5AsBase64(deleteObjectsRequest.contentStreamProvider().orElseThrow().newStream()),
+        deleteObjectsRequest.httpRequest().firstMatchingHeader("Content-MD5").orElseThrow()
+    );
     EasyMock.verify(clientConfig);
   }
 
