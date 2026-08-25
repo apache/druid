@@ -384,17 +384,29 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void storeInfoFile(final DataSegment segment) throws IOException
   {
+    writeInfoFile(segment, false);
+  }
+
+  /**
+   * Internal info file writer, where {@code overwrite} can be set to force writing the file to disk unconditionally.
+   *
+   * @return whether this call wrote the file
+   */
+  private boolean writeInfoFile(final DataSegment segment, final boolean overwrite) throws IOException
+  {
     final File segmentInfoCacheFile = getSegmentInfoFile(segment);
-    if (!segmentInfoCacheFile.exists()) {
-      FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
-      FileUtils.writeAtomically(
-          segmentInfoCacheFile,
-          out -> {
-            jsonMapper.writeValue(out, segment);
-            return null;
-          }
-      );
+    if (!overwrite && segmentInfoCacheFile.exists()) {
+      return false;
     }
+    FileUtils.mkdirp(getEffectiveInfoDir());
+    FileUtils.writeAtomically(
+        segmentInfoCacheFile,
+        out -> {
+          jsonMapper.writeValue(out, segment);
+          return null;
+        }
+    );
+    return true;
   }
 
   @Override
@@ -444,12 +456,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private void rewriteInfoFile(DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
-    FileUtils.mkdirp(getEffectiveInfoDir());
-    FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
-      jsonMapper.writeValue(out, segment);
-      return null;
-    });
+    writeInfoFile(segment, true);
   }
 
   @Override
@@ -501,13 +508,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           try {
             if (hold != null) {
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
-              final File segmentInfoCacheFile = getSegmentInfoFile(dataSegment);
-              if (!segmentInfoCacheFile.exists()) {
-                FileUtils.mkdirp(getEffectiveInfoDir());
-                FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
-                  jsonMapper.writeValue(out, dataSegment);
-                  return null;
-                });
+              if (writeInfoFile(dataSegment, false)) {
+                // if we wrote it, set the hook to clean it up too
                 hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
               }
 
@@ -959,9 +961,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     final ReservedPartial existing = findExistingPartialWithHold(dataSegment.getId());
     if (existing != null) {
       if (!existing.metadata().isMounted()) {
-        // rewrite the info file if it is missing
+        // Restore the info file if it is missing
         try {
-          storeInfoFile(dataSegment);
+          if (writeInfoFile(dataSegment, false)) {
+            existing.metadata().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
+          }
         }
         catch (IOException e) {
           log.warn(e, "Failed to restore info file for cached segment[%s]", dataSegment.getId());
