@@ -249,11 +249,10 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
   public void close()
   {
     perQueryStats.dictionarySize(getDictionarySizeEstimate());
-    final long sliceUsedBytes = getMaxMergeBufferUsedBytes();
-    perQueryStats.addMergeBufferUsedBytes(sliceUsedBytes);
     if (grouper.isInitialized()) {
-      // This slice's peak fill ratio (1.0 iff it spilled). Only reported when initialized, so an untouched slice
-      // contributes nothing.
+      // Merge-buffer usage and spill proximity are only meaningful once the grouper touched the buffer;
+      // an untouched slice contributes nothing.
+      perQueryStats.addMergeBufferUsedBytes(grouper.getMaxMergeBufferUsedBytes());
       perQueryStats.spillProximity(grouper.getMaxSpillProximity());
     }
     // Record spilled bytes before deleteFiles() decrements bytesUsed in temporaryStorage.
@@ -271,11 +270,6 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     pendingSpillBytes = 0;
     pendingDictionaryEntries.clear();
     deleteFiles();
-  }
-
-  private long getMaxMergeBufferUsedBytes()
-  {
-    return grouper.isInitialized() ? grouper.getMaxMergeBufferUsedBytes() : 0L;
   }
 
   private long getDictionarySizeEstimate()
