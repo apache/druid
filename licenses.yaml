@@ -2282,6 +2282,15 @@ notices:
       Copyright 2001-2018 The Apache Software Foundation
 ---
 
+name: Maven Artifact Resolver Named Locks
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.9.27
+libraries:
+  - org.apache.maven.resolver: maven-resolver-named-locks
+---
+
 name: Plexus Component Annotations
 license_category: binary
 module: java-core
@@ -2388,7 +2397,7 @@ name: Plexus Interpolation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.25
+version: 1.29
 libraries:
   - org.codehaus.plexus: plexus-interpolation
 
@@ -2424,6 +2433,15 @@ license_name: Apache License version 2.0
 version: 3.1.0
 libraries:
   - org.codehaus.plexus: plexus-xml
+---
+
+name: Eclipse Sisu Inject
+license_category: binary
+module: java-core
+license_name: Eclipse Public License 2.0
+version: 1.0.0
+libraries:
+  - org.eclipse.sisu: org.eclipse.sisu.inject
 ---
 
 name: Jetty
