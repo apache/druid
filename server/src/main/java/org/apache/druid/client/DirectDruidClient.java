@@ -51,6 +51,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
@@ -243,6 +244,68 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           trafficCopRef.set(trafficCop);
           checkQueryTimeout();
+          // Handle 429/503 HTML before JSON parse to avoid JsonParseException 0x3c ('<')
+          final int statusCode = response.getStatus().getCode();
+          final String contentType = response.headers().get(HttpHeaders.Names.CONTENT_TYPE);
+          final ChannelBuffer contentBuffer = response.getContent();
+          boolean isHtmlContentType = contentType != null && contentType.toLowerCase().contains("text/html");
+          boolean isHtmlBody = false;
+          if (contentBuffer.readableBytes() > 0) {
+            int readerIndex = contentBuffer.readerIndex();
+            int readable = contentBuffer.readableBytes();
+            for (int i = 0; i < readable; i++) {
+              byte b = contentBuffer.getByte(readerIndex + i);
+              if (b == ' ' || b == '\n' || b == '\r' || b == '\t') {
+                continue;
+              }
+              if (b == '<') {
+                isHtmlBody = true;
+              } else if (b != '{' && b != '[') {
+                // Not JSON start, but only treat '<' as HTML indicator
+              }
+              break;
+            }
+          }
+          if (statusCode == 429 || statusCode == 503) {
+            String msg = StringUtils.format(
+                "Query[%s] url[%s] failed with status[%s] [%s]",
+                query.getId(),
+                url,
+                statusCode,
+                response.getStatus().getReasonPhrase()
+            );
+            if (contentBuffer.readableBytes() > 0) {
+              int len = Math.min(contentBuffer.readableBytes(), 512);
+              byte[] previewBytes = new byte[len];
+              contentBuffer.getBytes(contentBuffer.readerIndex(), previewBytes);
+              String preview = StringUtils.fromUtf8(previewBytes);
+              preview = preview.substring(0, Math.min(preview.length(), 256));
+              msg = StringUtils.format("%s: %s", msg, preview);
+            }
+            throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(msg);
+          }
+          if (isHtmlContentType || isHtmlBody) {
+            int len = Math.min(contentBuffer.readableBytes(), 512);
+            byte[] previewBytes = new byte[len];
+            if (len > 0) {
+              contentBuffer.getBytes(contentBuffer.readerIndex(), previewBytes);
+            }
+            String preview = len > 0 ? StringUtils.fromUtf8(previewBytes) : "";
+            preview = preview.substring(0, Math.min(preview.length(), 256));
+            throw new org.apache.druid.query.QueryInterruptedException(
+                org.apache.druid.query.QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+                StringUtils.format(
+                    "Query[%s] url[%s] returned HTML response instead of JSON with status[%s] contentType[%s] preview[%s]",
+                    query.getId(),
+                    url,
+                    statusCode,
+                    contentType,
+                    preview
+                ),
+                org.apache.druid.query.QueryInterruptedException.class.getName(),
+                host
+            );
+          }
           checkTotalBytesLimit(response.getContent().readableBytes());
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
