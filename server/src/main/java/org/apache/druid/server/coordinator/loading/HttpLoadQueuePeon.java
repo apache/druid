@@ -178,7 +178,13 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
         return defaultCapabilities;
       } else if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
         log.makeAlert("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
-        throw new RE("Received status[%s] when fetching loading capabilities from server[%s]", responseHandler.getStatus(), serverId);
+        int batchSize = config.getBatchSize() == null ? 1 : config.getBatchSize();
+        SegmentLoadingCapabilities defaultCapabilities = new SegmentLoadingCapabilities(batchSize, batchSize);
+        log.warn(
+            "Failed to fetch loading capabilities from server[%s]. Received status[%s]. Using default capabilities[%s].",
+            serverId, responseHandler.getStatus(), defaultCapabilities
+        );
+        return defaultCapabilities;
       }
 
       return jsonMapper.readValue(
@@ -187,7 +193,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       );
     }
     catch (Throwable th) {
-      throw new RE(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
+      log.warn(th, "Failed to fetch loading capabilities from server[%s]. Using default capabilities.", serverId);
+      int batchSize = config.getBatchSize() == null ? 1 : config.getBatchSize();
+      return new SegmentLoadingCapabilities(batchSize, batchSize);
     }
   }
 
