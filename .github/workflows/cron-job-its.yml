@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Keep this in sync with dependency-check-maven in pom.xml.
-      DEPENDENCY_CHECK_CACHE_VERSION: 12.2.2
+      DEPENDENCY_CHECK_CACHE_VERSION: 13.0.0
     steps:
       - name: Checkout branch
         uses: actions/checkout@v6
@@ -67,7 +67,23 @@ jobs:
       - name: maven build # needed to rebuild in case of maven snapshot resolution fails
         run: mvn clean install -P dist -P skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -Dcyclonedx.skip=true -Dweb.console.skip=true
 
+      - name: Update Dependency-Check data
+        id: dependency-check-update
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY || secrets.NIST_NVD_API_KEY }}
+        run: |
+          if [ -n "$NVD_API_KEY" ]; then
+            echo "NVD API key is available to the update"
+          else
+            echo "NVD API key is unavailable to the update"
+          fi
+          mvn -B dependency-check:update-only \
+            -DdataDirectory="$HOME/.cache/dependency-check" \
+            -DnvdValidForHours=24 \
+            -DnvdApiKey="$NVD_API_KEY"
+
       - name: security vulnerabilities check
+        if: always()
         env:
           OSS_INDEX_USERNAME: ${{ secrets.OSS_INDEX_USERNAME }}
           OSS_INDEX_PASSWORD: ${{ secrets.OSS_INDEX_PASSWORD }}
@@ -78,7 +94,7 @@ jobs:
           else
             echo "NVD API key is unavailable to the scan"
           fi
-          mvn -B --fail-at-end dependency-check:check -DdataDirectory="$HOME/.cache/dependency-check" -DnvdValidForHours=24 -DnvdApiKey="$NVD_API_KEY" -DossIndexUsername="$OSS_INDEX_USERNAME" -DossIndexPassword="$OSS_INDEX_PASSWORD" || { echo "
+          mvn -B --fail-at-end dependency-check:check -DautoUpdate=false -DdataDirectory="$HOME/.cache/dependency-check" -DnvdApiKey="$NVD_API_KEY" -DossIndexUsername="$OSS_INDEX_USERNAME" -DossIndexPassword="$OSS_INDEX_PASSWORD" || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           `mvn dependency-check:check`
@@ -90,7 +106,7 @@ jobs:
       - name: Save Dependency-Check data
         # A pull_request run uses an isolated merge-ref cache that cannot be
         # reused by branch, scheduled, or workflow_dispatch runs.
-        if: always() && github.event_name != 'pull_request'
+        if: steps.dependency-check-update.outcome == 'success' && github.event_name != 'pull_request'
         uses: actions/cache/save@v4
         with:
           path: ~/.cache/dependency-check
