@@ -912,10 +912,11 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               longsColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
             } else {
               final int[] offsets = offset.getOffsets();
-              if (offsets[offsets.length - 1] < offsetMark) {
+              final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
+              if (maxOffset < offsetMark) {
                 nullIterator = nullBitmap.peekableIterator();
               }
-              offsetMark = offsets[offsets.length - 1];
+              offsetMark = maxOffset;
               longsColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
             }
 
@@ -967,10 +968,11 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
               doublesColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
             } else {
               final int[] offsets = offset.getOffsets();
-              if (offsets[offsets.length - 1] < offsetMark) {
+              final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
+              if (maxOffset < offsetMark) {
                 nullIterator = nullBitmap.peekableIterator();
               }
-              offsetMark = offsets[offsets.length - 1];
+              offsetMark = maxOffset;
               doublesColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
             }
 
@@ -1026,10 +1028,11 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
             column.get(idVector, offset.getStartOffset(), offset.getCurrentVectorSize());
           } else {
             final int[] offsets = offset.getOffsets();
-            if (offsets[offsets.length - 1] < offsetMark) {
+            final int maxOffset = offsets[offset.getCurrentVectorSize() - 1];
+            if (maxOffset < offsetMark) {
               nullIterator = nullBitmap.peekableIterator();
             }
-            offsetMark = offsets[offsets.length - 1];
+            offsetMark = maxOffset;
             column.get(idVector, offsets, offset.getCurrentVectorSize());
           }
           for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
