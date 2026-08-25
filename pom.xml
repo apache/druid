@@ -203,6 +203,7 @@
         <module>sql</module>
         <module>benchmarks</module>
         <module>web-console</module>
+        <module>jdbc-driver</module>
         <!-- Core cloud functionality -->
         <module>cloud/aws-common</module>
         <module>cloud/gcp-common</module>

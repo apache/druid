@@ -130,7 +130,7 @@ public abstract class AbstractStatement implements Closeable
   {
     plannerContext = planner.getPlannerContext();
     plannerContext.setAuthenticationResult(queryPlus.authResult());
-    plannerContext.setParameters(queryPlus.parameters());
+    plannerContext.setParameters(queryPlus.resolveParameters(plannerContext.getTimeZone()));
     planner.validate();
   }
 

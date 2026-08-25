@@ -357,7 +357,7 @@ public class SqlResource
                        .sql(sqlQuery.getQuery())
                        .systemDefaultContext(defaultQueryConfig)
                        .queryContext(sqlQuery.getContext())
-                       .parameters(sqlQuery.getParameterList())
+                       .parameters(sqlQuery.getParameters())
                        .auth(AuthorizationUtils.authenticationResultFromRequest(req))
                        .build();
   }

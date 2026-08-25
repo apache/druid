@@ -2659,3 +2659,9 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+
+- ../docs/querying/sql-jdbc.md
+getters
+savepoints
+Scrollable
+updatable

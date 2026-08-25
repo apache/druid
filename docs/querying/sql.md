@@ -45,7 +45,8 @@ For more information and SQL querying options see:
 
 For information about APIs, see:
 - [Druid SQL API](../api-reference/sql-api.md) for information on the HTTP API.
-- [SQL JDBC driver API](../api-reference/sql-jdbc.md) for information about the JDBC driver API.
+- [Druid JDBC driver](./sql-jdbc.md) for information about the recommended JDBC driver.
+- [Avatica JDBC driver](./sql-jdbc-avatica.md) for information about the alternative Avatica JDBC driver.
 - [SQL query context](./sql-query-context.md) for information about the query context parameters that affect SQL planning.
 
 ## Syntax
@@ -381,7 +382,7 @@ Request logs show the exact native query that will be run. Alternatively, to see
 
 ## SET
 
-SET statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. You can include one or more SET statements before the main SQL query. Druid supports using SET in the Druid SQL [JSON API](../api-reference/sql-api.md) and the [web console](../operations/web-console.md). 
+SET statements allow you to specify SQL query context parameters that modify the behavior of a Druid SQL query. You can include one or more SET statements before the main SQL query. Druid supports using SET in the Druid SQL [JSON API](../api-reference/sql-api.md), the [web console](../operations/web-console.md), and the [Druid JDBC driver](./sql-jdbc.md#set-statements). 
 
 The syntax of a `SET` statement is:
 
@@ -398,7 +399,7 @@ SET timeout = 90000;
 SELECT some_column, COUNT(*) FROM druid.foo WHERE other_column = 'foo' GROUP BY 1 ORDER BY 2 DESC
 ```
 
-SET statements only apply to the query in the same request. Subsequent requests are not affected.
+In the JSON API and the web console, SET statements only apply to the query in the same request. Subsequent requests are not affected. With the [Druid JDBC driver](./sql-jdbc.md#set-statements), they apply to all subsequent queries on the same connection.
 
 SET statements work with SELECT, INSERT, and REPLACE queries.
 
@@ -426,7 +427,8 @@ written like `INTERVAL '1' HOUR`, `INTERVAL '1 02:03' DAY TO MINUTE`, `INTERVAL 
 Druid SQL supports dynamic parameters using question mark (`?`) syntax, where parameters are bound to `?` placeholders
 at execution time. To use dynamic parameters, replace any literal in the query with a `?` character and provide a
 corresponding parameter value when you execute the query. Parameters are bound to the placeholders in the order in
-which they are passed. Parameters are supported in both the [HTTP POST](../api-reference/sql-api.md) and [JDBC](../api-reference/sql-jdbc.md) APIs.
+which they are passed. Parameters are supported in the [HTTP POST](../api-reference/sql-api.md) API and by both the
+[Druid](./sql-jdbc.md) and [Avatica](./sql-jdbc-avatica.md) JDBC drivers.
 
 Druid supports double and null values in arrays for dynamic queries.
 The following example query uses the [ARRAY_CONTAINS](./sql-functions.md#array_contains) function to return `doubleArrayColumn` when the reference array `[-25.7, null, 36.85]` contains all elements of the value of `doubleArrayColumn`:
@@ -462,7 +464,7 @@ SELECT arrayColumn from druid.table where ARRAY_CONTAINS(arrayColumn, ?)
 ```
 
 You can replace an IN filter with many values by dynamically passing a parameter into [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array).
-For example Java queries, see [Dynamic parameters](../api-reference/sql-jdbc.md#dynamic-parameters).
+For example Java queries, see [Dynamic parameters](./sql-jdbc-avatica.md#dynamic-parameters).
 
 ```sql
 SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)

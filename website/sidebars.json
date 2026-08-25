@@ -173,7 +173,9 @@
           "querying/sql-json-functions",
           "querying/sql-query-context",
           "querying/sql-metadata-tables",
-          "querying/sql-translation"
+          "querying/sql-translation",
+          "querying/sql-jdbc",
+          "querying/sql-jdbc-avatica"
         ]
       },
       "querying/querying",
@@ -264,13 +266,6 @@
           "api-reference/service-status-api",
           "api-reference/dynamic-configuration-api",
           "api-reference/legacy-metadata-api"
-        ]
-      },
-      {
-        "type": "category",
-        "label": "Java APIs",
-        "items": [
-          "api-reference/sql-jdbc"
         ]
       }
     ]
