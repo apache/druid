@@ -19,6 +19,7 @@
 
 package org.apache.druid.emitter.prometheus;
 
+import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
@@ -100,6 +101,20 @@ public class MetricsTest
     String actualMessage = exception.getMessage();
 
     Assertions.assertTrue(actualMessage.contains(expectedMessage));
+  }
+
+  @Test
+  public void testMergeBufferMaxSpillProximityRegisteredAsGauge()
+  {
+    // mergeBuffer/maxSpillProximity must be in the default mapping (a no-dimension gauge); otherwise the default
+    // Prometheus configuration would silently drop the metric.
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_spill", null, null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
+    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("mergeBuffer/maxSpillProximity", "broker");
+    Assertions.assertNotNull(dimensionsAndCollector);
+    Assertions.assertTrue(dimensionsAndCollector.getCollector() instanceof Gauge);
+    // No metric-specific dimensions, only the standard service/host labels.
+    Assertions.assertArrayEquals(new String[]{"druid_service", "host_name"}, dimensionsAndCollector.getDimensions());
   }
 
   @Test
