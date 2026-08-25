@@ -247,7 +247,7 @@ public class GroupByStatsProvider
      */
     private final AtomicLong mergeBufferUsedBytes = new AtomicLong(0);
     /**
-     * Spill proximity of the fullest slice this query held, in [0.0, 1.0]. Each {@link #sliceUsage} call contributes
+     * Spill proximity of the fullest slice this query held, in [0.0, 1.0]. Each {@link #spillProximity} call contributes
      * one slice's peak fill ratio and this keeps the MAX across slices: a query spills as soon as its hottest slice
      * fills, so proximity is driven by that slice, not the byte sum in {@link #mergeBufferUsedBytes}. Keeping each
      * slice's ratio intact (rather than maxing numerator and denominator separately) stays correct when a query mixes
@@ -276,7 +276,7 @@ public class GroupByStatsProvider
      * Records one slice's peak fill ratio (1.0 iff it spilled), kept as a max across the query's slices; see
      * {@link #maxSpillProximity}. Clamped to [0, 1]; NaN is ignored so a never-initialized grouper contributes nothing.
      */
-    public void sliceUsage(double proximity)
+    public void spillProximity(double proximity)
     {
       if (Double.isNaN(proximity)) {
         return;

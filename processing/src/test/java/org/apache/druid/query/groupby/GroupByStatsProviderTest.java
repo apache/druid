@@ -40,9 +40,9 @@ public class GroupByStatsProviderTest
     // Two slices of the same query: usage SUMS to 80, while spill proximity is the per-slice MAX. Both slices report
     // their own peak fill ratio (bucket-count based, in [0,1]); the fullest (0.05) drives proximity.
     stats1.addMergeBufferUsedBytes(50);
-    stats1.sliceUsage(0.05);
+    stats1.spillProximity(0.05);
     stats1.addMergeBufferUsedBytes(30);
-    stats1.sliceUsage(0.03);
+    stats1.spillProximity(0.03);
     stats1.spilledBytes(200);
     stats1.spilledBytes(400);
     stats1.dictionarySize(100);
@@ -55,7 +55,7 @@ public class GroupByStatsProviderTest
     stats2.mergeBufferAcquisitionTime(600);
     // Single slice at 0.05.
     stats2.addMergeBufferUsedBytes(100);
-    stats2.sliceUsage(0.05);
+    stats2.spillProximity(0.05);
     stats2.spilledBytes(400);
     stats2.spilledBytes(600);
     stats2.dictionarySize(300);
@@ -104,7 +104,7 @@ public class GroupByStatsProviderTest
     GroupByStatsProvider.PerQueryStats stats1 = statsProvider.getPerQueryStatsContainer(r1);
     stats1.mergeBufferAcquisitionTime(2000);
     stats1.addMergeBufferUsedBytes(50);
-    stats1.sliceUsage(0.05);
+    stats1.spillProximity(0.05);
     stats1.spilledBytes(100);
     stats1.dictionarySize(200);
 
@@ -112,7 +112,7 @@ public class GroupByStatsProviderTest
     GroupByStatsProvider.PerQueryStats stats2 = statsProvider.getPerQueryStatsContainer(r2);
     stats2.mergeBufferAcquisitionTime(100);
     stats2.addMergeBufferUsedBytes(500);
-    stats2.sliceUsage(0.5);
+    stats2.spillProximity(0.5);
     stats2.spilledBytes(150);
     stats2.dictionarySize(250);
 
@@ -120,7 +120,7 @@ public class GroupByStatsProviderTest
     GroupByStatsProvider.PerQueryStats stats3 = statsProvider.getPerQueryStatsContainer(r3);
     stats3.mergeBufferAcquisitionTime(200);
     stats3.addMergeBufferUsedBytes(100);
-    stats3.sliceUsage(0.1);
+    stats3.spillProximity(0.1);
     stats3.spilledBytes(3000);
     stats3.dictionarySize(300);
 
@@ -128,7 +128,7 @@ public class GroupByStatsProviderTest
     GroupByStatsProvider.PerQueryStats stats4 = statsProvider.getPerQueryStatsContainer(r4);
     stats4.mergeBufferAcquisitionTime(300);
     stats4.addMergeBufferUsedBytes(75);
-    stats4.sliceUsage(0.075);
+    stats4.spillProximity(0.075);
     stats4.spilledBytes(200);
     stats4.dictionarySize(1500);
 
@@ -162,13 +162,13 @@ public class GroupByStatsProviderTest
     // Simulate a ConcurrentGrouper closing four equally-sized slices. Each slice reports its own peak fill ratio (in
     // [0, 1]) and its own peak used bytes. Used bytes accumulate (sum); spill proximity is driven by the fullest slice.
     stats.addMergeBufferUsedBytes(10);
-    stats.sliceUsage(0.01);
+    stats.spillProximity(0.01);
     stats.addMergeBufferUsedBytes(20);
-    stats.sliceUsage(0.02);
+    stats.spillProximity(0.02);
     stats.addMergeBufferUsedBytes(30);
-    stats.sliceUsage(0.03);
+    stats.spillProximity(0.03);
     stats.addMergeBufferUsedBytes(40);
-    stats.sliceUsage(0.04);
+    stats.spillProximity(0.04);
 
     // Used bytes are summed across slices.
     Assertions.assertEquals(100L, stats.getMergeBufferUsedBytes());
@@ -181,22 +181,22 @@ public class GroupByStatsProviderTest
   {
     // A slice at exactly the spill point.
     GroupByStatsProvider.PerQueryStats atSpill = new GroupByStatsProvider.PerQueryStats();
-    atSpill.sliceUsage(1.0);
+    atSpill.spillProximity(1.0);
     Assertions.assertEquals(1.0, atSpill.getSpillProximity(), DELTA);
 
     // Defensive clamping: a caller that somehow passes >1.0 must not produce >1.0.
     GroupByStatsProvider.PerQueryStats over = new GroupByStatsProvider.PerQueryStats();
-    over.sliceUsage(1.5);
+    over.spillProximity(1.5);
     Assertions.assertEquals(1.0, over.getSpillProximity(), DELTA);
 
     // Defensive clamping on the low end: a negative ratio is treated as 0.0 (never contributes to the max).
     GroupByStatsProvider.PerQueryStats neg = new GroupByStatsProvider.PerQueryStats();
-    neg.sliceUsage(-0.25);
+    neg.spillProximity(-0.25);
     Assertions.assertEquals(0.0, neg.getSpillProximity(), DELTA);
 
     // NaN is ignored entirely so a never-initialized grouper does not corrupt the accumulator.
     GroupByStatsProvider.PerQueryStats nan = new GroupByStatsProvider.PerQueryStats();
-    nan.sliceUsage(Double.NaN);
+    nan.spillProximity(Double.NaN);
     Assertions.assertEquals(0.0, nan.getSpillProximity(), DELTA);
   }
 
@@ -204,7 +204,7 @@ public class GroupByStatsProviderTest
   public void testSpillProximityZeroWhenNoSliceUsageRecorded()
   {
     GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
-    // No sliceUsage() call: proximity stays at its initial 0.0.
+    // No spillProximity() call: proximity stays at its initial 0.0.
     stats.addMergeBufferUsedBytes(500);
     Assertions.assertEquals(0.0, stats.getSpillProximity(), DELTA);
   }
@@ -214,9 +214,9 @@ public class GroupByStatsProviderTest
   {
     GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
     // Three slices with differing fill; proximity is the fullest.
-    stats.sliceUsage(0.2);
-    stats.sliceUsage(0.9);
-    stats.sliceUsage(0.1);
+    stats.spillProximity(0.2);
+    stats.spillProximity(0.9);
+    stats.spillProximity(0.1);
     Assertions.assertEquals(0.9, stats.getSpillProximity(), DELTA);
   }
 
@@ -225,11 +225,11 @@ public class GroupByStatsProviderTest
   {
     // A single query can pass one PerQueryStats through both small sliced groupers (from a ConcurrentGrouper) and a
     // full-buffer SpillingGrouper (subtotal/nested processing). A small slice can saturate (proximity 1.0) while a much
-    // larger full-buffer grouper stays lightly filled (proximity ~0.005). Because sliceUsage records the ratio directly,
+    // larger full-buffer grouper stays lightly filled (proximity ~0.005). Because spillProximity records the ratio directly,
     // the saturated slice's 1.0 is preserved verbatim — there is no shared byte threshold to dilute it.
     GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
-    stats.sliceUsage(1.0);        // small sliced grouper at its spill point
-    stats.sliceUsage(0.005);      // large full-buffer grouper barely filled
+    stats.spillProximity(1.0);        // small sliced grouper at its spill point
+    stats.spillProximity(0.005);      // large full-buffer grouper barely filled
     Assertions.assertEquals(1.0, stats.getSpillProximity(), DELTA);
   }
 
@@ -287,17 +287,17 @@ public class GroupByStatsProviderTest
 
     GroupByStatsProvider.PerQueryStats low = new GroupByStatsProvider.PerQueryStats();
     low.mergeBufferAcquisitionTime(10);
-    low.sliceUsage(0.3);
+    low.spillProximity(0.3);
     agg.addQueryStats(low);
 
     GroupByStatsProvider.PerQueryStats high = new GroupByStatsProvider.PerQueryStats();
     high.mergeBufferAcquisitionTime(10);
-    high.sliceUsage(0.8);
+    high.spillProximity(0.8);
     agg.addQueryStats(high);
 
     GroupByStatsProvider.PerQueryStats mid = new GroupByStatsProvider.PerQueryStats();
     mid.mergeBufferAcquisitionTime(10);
-    mid.sliceUsage(0.5);
+    mid.spillProximity(0.5);
     agg.addQueryStats(mid);
 
     Assertions.assertEquals(0.8, agg.getMaxSpillProximity(), DELTA);
@@ -311,7 +311,7 @@ public class GroupByStatsProviderTest
     // GroupByResourcesReservationPool.reserve() before any grouper initializes.
     GroupByStatsProvider.AggregateStats agg = new GroupByStatsProvider.AggregateStats();
     GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
-    stats.sliceUsage(0.9);
+    stats.spillProximity(0.9);
     agg.addQueryStats(stats);
 
     Assertions.assertEquals(0L, agg.getMergeBufferQueries());
@@ -343,7 +343,7 @@ public class GroupByStatsProviderTest
       final long sliceUsed = (i == 0) ? sliceSize / 2 : sliceSize / 20;
       final double sliceProximity = (i == 0) ? 1.0 : 0.1;
       stats.addMergeBufferUsedBytes(sliceUsed);
-      stats.sliceUsage(sliceProximity);
+      stats.spillProximity(sliceProximity);
       expectedUsed += sliceUsed;
     }
     stats.spilledBytes(1_000_000L);

@@ -254,7 +254,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
     if (grouper.isInitialized()) {
       // This slice's peak fill ratio (1.0 iff it spilled). Only reported when initialized, so an untouched slice
       // contributes nothing.
-      perQueryStats.sliceUsage(grouper.getMaxSpillProximity());
+      perQueryStats.spillProximity(grouper.getMaxSpillProximity());
     }
     // Record spilled bytes before deleteFiles() decrements bytesUsed in temporaryStorage.
     long spilledBytes = 0;

@@ -413,7 +413,7 @@ public class SpillingGrouperTest extends InitializedNullHandlingTest
     );
     grouper.close();
 
-    // No sliceUsage() call was made, so proximity stays at its initial 0.0.
+    // No spillProximity() call was made, so proximity stays at its initial 0.0.
     Assertions.assertEquals(0.0, stats.getSpillProximity(), 1e-9);
   }
 
