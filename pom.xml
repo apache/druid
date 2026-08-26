@@ -135,10 +135,10 @@
         <kubernetes.client.version>25.0.0-legacy</kubernetes.client.version>
         <zookeeper.version>3.8.6</zookeeper.version>
         <checkerframework.version>4.2.2</checkerframework.version>
-        <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
+        <com.google.apis.client.version>2.7.2</com.google.apis.client.version>
         <com.google.http.client.apis.version>2.2.0</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
-        <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
+        <com.google.cloud.storage.version>2.71.0</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine>
             <!-- Strong encapsulation parameters -->
             <!-- When updating this list, update all four locations: -->
@@ -1396,6 +1396,12 @@
                         <artifactId>httpclient</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <!-- Transitive dependency of google-api-client. -->
+            <dependency>
+                <groupId>com.google.auto.value</groupId>
+                <artifactId>auto-value-annotations</artifactId>
+                <version>1.11.0</version>
             </dependency>
             <dependency>
                 <groupId>com.google.http-client</groupId>
