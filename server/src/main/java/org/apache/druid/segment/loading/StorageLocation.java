@@ -556,11 +556,14 @@ public class StorageLocation
         weakCacheEntries.computeIfPresent(
             weakEntry.cacheEntry.getId(),
             (cacheEntryIdentifier, weakCacheEntry) -> {
+              if (weakCacheEntry != weakEntry || weakCacheEntry.isHeld()) {
+                // Someone else's entry, or someone else is still using ours; either way, theirs to clean up.
+                return weakCacheEntry;
+              }
               // If we never successfully mounted, go ahead and remove so we don't have a dead entry.
               // Furthermore, if evictImmediatelyOnHoldRelease is set, evict on release if all holds are gone.
               final boolean isMounted = weakCacheEntry.cacheEntry.isMounted();
-              if ((isNewEntry && !isMounted)
-                  || (areWeakEntriesEphemeral && !weakCacheEntry.isHeld())) {
+              if ((isNewEntry && !isMounted) || areWeakEntriesEphemeral) {
                 unlinkWeakEntry(weakCacheEntry);
                 if (isMounted) {
                   weakStats.getAndUpdate(s -> s.evict(weakCacheEntry.cacheEntry.getSize()));

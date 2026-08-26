@@ -384,17 +384,29 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Override
   public void storeInfoFile(final DataSegment segment) throws IOException
   {
+    writeInfoFile(segment, false);
+  }
+
+  /**
+   * Internal info file writer, where {@code overwrite} can be set to force writing the file to disk unconditionally.
+   *
+   * @return whether this call wrote the file
+   */
+  private boolean writeInfoFile(final DataSegment segment, final boolean overwrite) throws IOException
+  {
     final File segmentInfoCacheFile = getSegmentInfoFile(segment);
-    if (!segmentInfoCacheFile.exists()) {
-      FileUtils.mkdirp(segmentInfoCacheFile.getParentFile());
-      FileUtils.writeAtomically(
-          segmentInfoCacheFile,
-          out -> {
-            jsonMapper.writeValue(out, segment);
-            return null;
-          }
-      );
+    if (!overwrite && segmentInfoCacheFile.exists()) {
+      return false;
     }
+    FileUtils.mkdirp(getEffectiveInfoDir());
+    FileUtils.writeAtomically(
+        segmentInfoCacheFile,
+        out -> {
+          jsonMapper.writeValue(out, segment);
+          return null;
+        }
+    );
+    return true;
   }
 
   @Override
@@ -444,12 +456,7 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    */
   private void rewriteInfoFile(DataSegment segment) throws IOException
   {
-    final File segmentInfoCacheFile = getSegmentInfoFile(segment);
-    FileUtils.mkdirp(getEffectiveInfoDir());
-    FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
-      jsonMapper.writeValue(out, segment);
-      return null;
-    });
+    writeInfoFile(segment, true);
   }
 
   @Override
@@ -501,13 +508,8 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
           try {
             if (hold != null) {
               // write the segment info file if it doesn't exist. this can happen if we are loading after a drop
-              final File segmentInfoCacheFile = getSegmentInfoFile(dataSegment);
-              if (!segmentInfoCacheFile.exists()) {
-                FileUtils.mkdirp(getEffectiveInfoDir());
-                FileUtils.writeAtomically(segmentInfoCacheFile, out -> {
-                  jsonMapper.writeValue(out, dataSegment);
-                  return null;
-                });
+              if (writeInfoFile(dataSegment, false)) {
+                // if we wrote it, set the hook to clean it up too
                 hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
               }
 
@@ -654,7 +656,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 try {
                   reserved.metadata.mount(reserved.location);
                 }
-                catch (IOException e) {
+                catch (IOException | RuntimeException e) {
+                  // only fail if caller was expecting this to finish
+                  if (holdHolder.isClosed()) {
+                    log.debug(e, "Mount of segment[%s] failed after its acquire was abandoned", dataSegment.getId());
+                    return AcquireSegmentResult.empty();
+                  }
                   throw DruidException.defensive(
                       e,
                       "Failed to mount partial metadata for segment[%s]",
@@ -667,12 +674,15 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   taskMetadataRef = reserved.metadata.acquireMetadataReference();
                 }
                 catch (DruidException raceLost) {
-                  throw DruidException.defensive(
-                      raceLost,
-                      "Partial metadata for segment[%s] was dropped before %s task could complete",
-                      dataSegment.getId(),
-                      fullDownload ? "full-download" : "lazy mount"
-                  );
+                  // The entry was evicted between mounting it and pinning it. What keeps it resident across that
+                  // window is the hold in holdHolder, so an acquire that still holds one is entitled to its segment
+                  // and getting here means that guarantee has been broken so rethrow
+                  if (!holdHolder.isClosed()) {
+                    throw raceLost;
+                  }
+                  // hold is release so we have an abandoned acquire; nothing is waiting on this result, report
+                  // the segment as unavailable rather than failing a query that is already on its way down
+                  return AcquireSegmentResult.empty();
                 }
                 try {
                   final PartialSegmentFileMapperV10 mapper = reserved.metadata.getFileMapper();
@@ -950,6 +960,17 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     final ReservedPartial existing = findExistingPartialWithHold(dataSegment.getId());
     if (existing != null) {
+      if (!existing.metadata().isMounted()) {
+        // Restore the info file if it is missing
+        try {
+          if (writeInfoFile(dataSegment, false)) {
+            existing.metadata().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
+          }
+        }
+        catch (IOException e) {
+          log.warn(e, "Failed to restore info file for cached segment[%s]", dataSegment.getId());
+        }
+      }
       return existing;
     }
     return reservePartial(dataSegment, rangeReader);
@@ -2458,12 +2479,24 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   {
     @GuardedBy("this")
     private final Closer holds = Closer.create();
-    @GuardedBy("this")
-    private boolean closed = false;
+    /**
+     * Volatile rather than guarded, so {@link #isClosed} can be answered without queueing behind a {@link #close}
+     * that is working through a hold-release cascade (location write lock, unmount, unmap, file deletion).
+     */
+    private volatile boolean closed = false;
 
     private HoldHolder(Closeable initialHold)
     {
       holds.register(initialHold);
+    }
+
+    /**
+     * Whether the {@link AcquireSegmentAction} these holds belong to has been closed, i.e. whoever wanted the segment
+     * has stopped waiting for it and every hold taken so far is being (or has been) released.
+     */
+    private boolean isClosed()
+    {
+      return closed;
     }
 
     private void add(Closeable hold)

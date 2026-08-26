@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -79,6 +81,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -960,6 +963,188 @@ class SegmentLocalCacheManagerPartialAcquireTest
         manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
         "no cache entry should be reserved for the deleted partial layout"
     );
+  }
+
+  @Test
+  void testAbandonedAcquireLeavesAConcurrentAcquiresEntryAlone()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final StorageLocation location = manager.getLocations().get(0);
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+
+    // Two acquires holding the same freshly reserved entry, neither of which resolves its future, so nothing mounts
+    // it. The acquire that created the entry gives up first - a canceled or timed out query, say.
+    final PartialSegmentMetadataCacheEntry entry;
+    final Closer acquires = Closer.create();
+    try {
+      // The first acquire reserves the entry; the second joins it. Both are registered with the closer so a failed
+      // assertion cannot leak a hold into the shared manager fixture; AcquireSegmentAction.close() is idempotent, so
+      // closing the first one early below is safe.
+      final AcquireSegmentAction creator = acquires.register(
+          manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)
+      );
+      acquires.register(manager.acquireSegment(partialSegment, AcquireMode.PARTIAL));
+      entry = Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, location.getCacheEntry(id));
+      Assertions.assertFalse(entry.isMounted());
+
+      creator.close();
+      Assertions.assertSame(
+          entry,
+          location.getCacheEntry(id),
+          "the entry the second acquire is holding must survive the first giving up"
+      );
+    }
+    finally {
+      acquires.close();
+    }
+    // The second acquire letting go does not remove it either - removal is the creating hold's job - so it is left
+    // registered and unmounted, reclaimable, and reusable by the next acquire.
+    Assertions.assertSame(entry, location.getCacheEntry(id));
+    Assertions.assertFalse(entry.isMounted());
+
+    // A later acquire mounts that same entry and serves the segment from it.
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+      final AcquireSegmentResult result = action.getSegmentFuture().get();
+      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        Assertions.assertEquals(SEGMENT_ID, segment.getId());
+        final TimeBoundaryInspector inspector = segment.as(TimeBoundaryInspector.class);
+        Assertions.assertNotNull(inspector);
+        Assertions.assertEquals(TIME, inspector.getMinTime());
+        Assertions.assertEquals(TIME.plusMinutes(3), inspector.getMaxTime());
+      }
+      Assertions.assertSame(entry, location.getCacheEntry(id));
+      Assertions.assertTrue(entry.isMounted());
+    }
+  }
+
+  @Test
+  void testAbandonedAcquireWhoseMountFailsResolvesToAnUnavailableSegmentToo() throws Exception
+  {
+    // Deep storage that can produce a range reader now but not serve a read later: openRangeReader() checks the V10
+    // file at acquire time, and the test deletes it before the load task gets to run.
+    final File vanishingStorage = temporaryFolder.newFolder("vanishing_storage");
+    final File v10File = new File(vanishingStorage, IndexIO.V10_FILE_NAME);
+    Files.copy(new File(DEEP_STORAGE_DIR, IndexIO.V10_FILE_NAME).toPath(), v10File.toPath());
+    final DataSegment vanishingSegment = DataSegment.builder(SEGMENT_ID)
+                                                    .shardSpec(NoneShardSpec.instance())
+                                                    .loadSpec(Map.of("type", "local", "path", vanishingStorage.getAbsolutePath()))
+                                                    .size(0)
+                                                    .build();
+
+    final File gatedCacheRoot = temporaryFolder.newFolder("gated_cache_mount_failure");
+    final SegmentLoaderConfig gatedConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(gatedCacheRoot, 1024L * 1024L * 1024L, null))
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .virtualStorageUseVirtualThreads(false)
+        .virtualStorageLoadThreads(1)
+        .build();
+    final List<StorageLocation> storageLocations = gatedConfig.toStorageLocations();
+    final StorageLoadingThreadPool gatedPool = StorageLoadingThreadPool.createFromConfig(gatedConfig);
+    final SegmentLocalCacheManager gatedManager = new SegmentLocalCacheManager(
+        storageLocations,
+        gatedConfig,
+        gatedPool,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final CountDownLatch atGate = new CountDownLatch(1);
+    final CountDownLatch openGate = new CountDownLatch(1);
+    try {
+      // (intentionally unused) local so errorprone's CheckReturnValue is satisfied
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedPool.getExecutorService().submit(() -> {
+        atGate.countDown();
+        return openGate.await(30, TimeUnit.SECONDS);
+      });
+      Assertions.assertTrue(atGate.await(30, TimeUnit.SECONDS), "loading thread must reach the gate");
+
+      final ListenableFuture<AcquireSegmentResult> future;
+      try (AcquireSegmentAction action = gatedManager.acquireSegment(vanishingSegment, AcquireMode.PARTIAL)) {
+        future = action.getSegmentFuture();
+      }
+      // The mount will now fail on its header read rather than rolling back cleanly, so the loss surfaces from
+      // mount() instead of from the pin - which is no reason to fail a query that has already given up.
+      Assertions.assertTrue(v10File.delete(), "test needs the deep-storage file gone before the mount runs");
+      openGate.countDown();
+
+      final AcquireSegmentResult result = future.get(30, TimeUnit.SECONDS);
+      Assertions.assertTrue(
+          result.getReferenceProvider().acquireReference().isEmpty(),
+          "an abandoned acquire whose mount failed must resolve to an unavailable segment"
+      );
+    }
+    finally {
+      openGate.countDown();
+      gatedManager.drop(vanishingSegment);
+      gatedManager.shutdown();
+      gatedPool.stop();
+    }
+  }
+
+  @Test
+  void testAbandonedAcquireResolvesToAnUnavailableSegmentRatherThanFailing() throws Exception
+  {
+    // One fixed loading thread, so the test can hold the load task at a gate while it abandons the acquire.
+    final File gatedCacheRoot = temporaryFolder.newFolder("gated_cache");
+    final SegmentLoaderConfig gatedConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(gatedCacheRoot, 1024L * 1024L * 1024L, null))
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .virtualStorageUseVirtualThreads(false)
+        .virtualStorageLoadThreads(1)
+        .build();
+    final List<StorageLocation> storageLocations = gatedConfig.toStorageLocations();
+    final StorageLoadingThreadPool gatedPool = StorageLoadingThreadPool.createFromConfig(gatedConfig);
+    final SegmentLocalCacheManager gatedManager = new SegmentLocalCacheManager(
+        storageLocations,
+        gatedConfig,
+        gatedPool,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final CountDownLatch atGate = new CountDownLatch(1);
+    final CountDownLatch openGate = new CountDownLatch(1);
+    try {
+      // (intentionally unused) local so errorprone's CheckReturnValue is satisfied
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedPool.getExecutorService().submit(() -> {
+        atGate.countDown();
+        return openGate.await(30, TimeUnit.SECONDS);
+      });
+      Assertions.assertTrue(atGate.await(30, TimeUnit.SECONDS), "loading thread must reach the gate");
+
+      // Start the acquire (its load task queues behind the gate) and then abandon it (like a canceled or timed
+      // out query does); closing the action releases the hold that was keeping the reserved entry resident.
+      final ListenableFuture<AcquireSegmentResult> future;
+      try (AcquireSegmentAction action = gatedManager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+        future = action.getSegmentFuture();
+      }
+      openGate.countDown();
+
+      // The task now mounts an entry the location no longer knows about, so it can never pin it. Nothing is waiting
+      // on the result, and a segment that is not there is not a reason to fail a query.
+      final AcquireSegmentResult result = future.get(30, TimeUnit.SECONDS);
+      Assertions.assertTrue(
+          result.getReferenceProvider().acquireReference().isEmpty(),
+          "an abandoned acquire must resolve to an unavailable segment"
+      );
+      Assertions.assertNull(
+          gatedManager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+          "the abandoned entry must not be left behind in the cache"
+      );
+    }
+    finally {
+      openGate.countDown();
+      gatedManager.drop(partialSegment);
+      gatedManager.shutdown();
+      // shutdown() only stops the manager's own executor; the loading pool is stopped through its lifecycle hook
+      gatedPool.stop();
+    }
   }
 
   /**
