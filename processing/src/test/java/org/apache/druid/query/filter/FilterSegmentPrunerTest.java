@@ -351,6 +351,47 @@ class FilterSegmentPrunerTest
   }
 
   @Test
+  void testPruneClusterGroupTuplesMultipleColumns()
+  {
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final RowSignature clusteringColumns = RowSignature.builder()
+                                                         .add("dim1", ColumnType.STRING)
+                                                         .add("dim2", ColumnType.STRING)
+                                                         .build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(
+        clusteringColumns,
+        List.of(List.of("abc", "xyz"), List.of("def", "uvw"))
+    );
+
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+
+    // matches the first tuple on both columns
+    final DimFilter matchingFilter = new AndDimFilter(
+        new EqualityFilter("dim1", ColumnType.STRING, "abc", null),
+        new EqualityFilter("dim2", ColumnType.STRING, "xyz", null)
+    );
+    Assertions.assertTrue(new FilterSegmentPruner(matchingFilter, null, null).include(seg));
+
+    // each value individually matches a tuple, but not the same tuple, so the combination must prune
+    final DimFilter mismatchedCombinationFilter = new AndDimFilter(
+        new EqualityFilter("dim1", ColumnType.STRING, "abc", null),
+        new EqualityFilter("dim2", ColumnType.STRING, "uvw", null)
+    );
+    Assertions.assertFalse(new FilterSegmentPruner(mismatchedCombinationFilter, null, null).include(seg));
+
+    // constraining only one of the two clustering columns still matches via the second tuple
+    final DimFilter singleColumnFilter = new EqualityFilter("dim2", ColumnType.STRING, "uvw", null);
+    Assertions.assertTrue(new FilterSegmentPruner(singleColumnFilter, null, null).include(seg));
+
+    // neither tuple matches
+    final DimFilter nonMatchingFilter = new AndDimFilter(
+        new EqualityFilter("dim1", ColumnType.STRING, "abc", null),
+        new EqualityFilter("dim2", ColumnType.STRING, "foo", null)
+    );
+    Assertions.assertFalse(new FilterSegmentPruner(nonMatchingFilter, null, null).include(seg));
+  }
+
+  @Test
   void testClusterGroupTuplesSkipsNonStringColumns()
   {
     // Numeric columns are skipped for pruning (see druid issue #19408), so this must not prune.
@@ -397,6 +438,88 @@ class FilterSegmentPrunerTest
     final DimFilter nonMatchingFilterDifferentName = new EqualityFilter("v0", ColumnType.STRING, "deffoo", null);
     Assertions.assertTrue(new FilterSegmentPruner(matchingFilterDifferentName, null, queryVirtualColumns).include(seg));
     Assertions.assertFalse(new FilterSegmentPruner(nonMatchingFilterDifferentName, null, queryVirtualColumns).include(seg));
+  }
+
+  @Test
+  void testPruneClusterGroupTuplesVirtualColumnSameNameDifferentExpressionNeverPrunes()
+  {
+    final VirtualColumns clusterVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final RowSignature clusteringColumns = RowSignature.builder().add("vdim1", ColumnType.STRING).build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(
+        clusteringColumns,
+        clusterVirtualColumns,
+        List.of(List.of("abcfoo"), List.of("xyzfoo"))
+    );
+
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+
+    // query's vdim1 is a different expression, so it has no equivalent on the segment side and must never prune,
+    // even though the filter value would not match any tuple if it were (incorrectly) compared directly
+    final VirtualColumns queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'bar')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final DimFilter nonMatchingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "nomatch", null);
+    Assertions.assertTrue(new FilterSegmentPruner(nonMatchingFilter, null, queryVirtualColumns).include(seg));
+
+    final DimFilter matchingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "abcfoo", null);
+    Assertions.assertTrue(new FilterSegmentPruner(matchingFilter, null, queryVirtualColumns).include(seg));
+  }
+
+  @Test
+  void testPruneClusterGroupTuplesVirtualColumnNoQueryVirtualColumnNeverPrunes()
+  {
+    // The segment's cluster groups record "vdim1" as derived from an expression. A query with no virtual column
+    // of its own named "vdim1" has no way to prove it means the same expression, so pruning must not assume the
+    // filter value can be compared against the tuple's virtual-column-derived value: never prune.
+    final VirtualColumns clusterVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final RowSignature clusteringColumns = RowSignature.builder().add("vdim1", ColumnType.STRING).build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(
+        clusteringColumns,
+        clusterVirtualColumns,
+        List.of(List.of("abcfoo"), List.of("xyzfoo"))
+    );
+
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+
+    final DimFilter matchingLookingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "abcfoo", null);
+    final DimFilter nonMatchingLookingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "deffoo", null);
+
+    // no query virtual columns at all: neither filter value can be resolved against the domain's virtual column
+    Assertions.assertTrue(new FilterSegmentPruner(matchingLookingFilter, null, null).include(seg));
+    Assertions.assertTrue(new FilterSegmentPruner(nonMatchingLookingFilter, null, null).include(seg));
+  }
+
+  @Test
+  void testPruneClusterGroupTuplesShadowedByQueryVirtualColumnNeverPrunes()
+  {
+    // "dim1" is a plain materialized clustering column with no virtual columns on the segment side. If the query
+    // defines its own virtual column named "dim1", it shadows the real column, so the query is no longer
+    // referring to the materialized clustering values and the segment must never prune, even for a filter value
+    // that looks like it wouldn't match any of the real tuple values.
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final RowSignature clusteringColumns = RowSignature.builder().add("dim1", ColumnType.STRING).build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(
+        clusteringColumns,
+        List.of(List.of("abc"), List.of("xyz"))
+    );
+
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+
+    final VirtualColumns queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("dim1", "concat(dim2, 'zzz')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    final DimFilter nonMatchingLookingFilter = new EqualityFilter("dim1", ColumnType.STRING, "nomatch", null);
+    Assertions.assertTrue(new FilterSegmentPruner(nonMatchingLookingFilter, null, queryVirtualColumns).include(seg));
+
+    final DimFilter matchingLookingFilter = new EqualityFilter("dim1", ColumnType.STRING, "abc", null);
+    Assertions.assertTrue(new FilterSegmentPruner(matchingLookingFilter, null, queryVirtualColumns).include(seg));
   }
 
   private ShardSpec makeRange(

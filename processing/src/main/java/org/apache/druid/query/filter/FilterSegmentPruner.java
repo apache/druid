@@ -202,8 +202,12 @@ public class FilterSegmentPruner implements SegmentPruner
   }
 
   /**
-   * Adds the filter's {@link RangeSet} for {@code column} to {@code filterDomain}, resolving through
-   * {@code domainVirtualColumns} to the query's equivalent virtual column if {@code column} is virtual there.
+   * Adds the filter's {@link RangeSet} for {@code column} to {@code filterDomain}, if the filter constrains it.
+   * <p>
+   * If {@code domainVirtualColumns} considers {@code column} virtual, only a query virtual column with an
+   * equivalent expression can be matched against it, if none exists, nothing is added and this column is never pruned on.
+   * <p>
+   * Otherwise, {@code column} is a plain physical column, it can only be used for pruning if it's a non-virtual column in the query.
    */
   private void addToFilterDomain(
       String column,
@@ -214,18 +218,23 @@ public class FilterSegmentPruner implements SegmentPruner
     final VirtualColumns.Node domainNode = domainVirtualColumns.getNode(column);
     if (domainNode != null) {
       final VirtualColumn queryEquivalent = getQueryEquivalent(domainNode);
-      if (queryEquivalent != null && filterFields.contains(queryEquivalent.getOutputName())) {
-        final Optional<RangeSet<String>> optFilterRangeSet = rangeCache.computeIfAbsent(
-            queryEquivalent.getOutputName(),
-            d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
-        );
-        optFilterRangeSet.ifPresent(rangeSet -> filterDomain.put(column, rangeSet));
+      if (queryEquivalent != null) {
+        addRangeSetIfPresent(queryEquivalent.getOutputName(), column, filterDomain);
       }
-    } else if (filterFields.contains(column)) {
-      final Optional<RangeSet<String>> optFilterRangeSet =
-          rangeCache.computeIfAbsent(column, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
-      optFilterRangeSet.ifPresent(rangeSet -> filterDomain.put(column, rangeSet));
+    } else if (virtualColumns.getNode(column) == null) {
+      // Query doesn't shadow the materialized column with its own virtual column of the same name.
+      addRangeSetIfPresent(column, column, filterDomain);
     }
+  }
+
+  private void addRangeSetIfPresent(String filterField, String domainColumn, Map<String, RangeSet<String>> filterDomain)
+  {
+    if (!filterFields.contains(filterField)) {
+      return;
+    }
+    final Optional<RangeSet<String>> optFilterRangeSet =
+        rangeCache.computeIfAbsent(filterField, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
+    optFilterRangeSet.ifPresent(rangeSet -> filterDomain.put(domainColumn, rangeSet));
   }
 
   @Nullable
