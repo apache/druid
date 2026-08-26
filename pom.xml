@@ -100,11 +100,12 @@
         <errorprone.version>2.50.0</errorprone.version>
         <fabric8.version>7.8.0</fabric8.version>
         <fastutil.version>8.5.4</fastutil.version>
-        <guava.version>33.6.0-jre</guava.version>
+        <guava.version>33.7.1-jre</guava.version>
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
         <iceberg.core.version>1.11.0</iceberg.core.version>
         <jetty.version>12.1.12</jetty.version>
+        <jspecify.version>1.0.1</jspecify.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.22.2</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -659,6 +660,11 @@
                         <artifactId>listenablefuture</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.jspecify</groupId>
+                <artifactId>jspecify</artifactId>
+                <version>${jspecify.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.inject</groupId>
