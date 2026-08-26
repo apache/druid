@@ -234,7 +234,7 @@
         <dependency>
             <groupId>org.codehaus.plexus</groupId>
             <artifactId>plexus-xml</artifactId>
-            <version>3.1.0</version>
+            <version>4.2.0</version>
             <scope>runtime</scope>
         </dependency>
         <dependency>
