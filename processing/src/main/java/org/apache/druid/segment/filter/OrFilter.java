@@ -372,7 +372,7 @@ public class OrFilter implements BooleanFilter
     }
   }
 
-  private static VectorValueMatcher convertIndexToVectorValueMatcher(
+  static VectorValueMatcher convertIndexToVectorValueMatcher(
       final ReadableVectorOffset vectorOffset,
       final ImmutableBitmap bitmap
   )
