@@ -41,10 +41,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 class StorageLocationTest
 {
@@ -549,12 +551,12 @@ class StorageLocationTest
     Assertions.assertEquals(1, location.getWeakStats().getHoldCount());
     Assertions.assertEquals(80, location.getWeakStats().getHoldBytes());
 
-    // Shrink to 30: hold-bytes contribution from the active hold must shrink in lockstep so the eventual
-    // trackWeakRelease (which subtracts the new smaller size) leaves currHoldBytes at 0.
+    // Shrink to 30. The live hold keeps contributing the 80 it was taken at - it subtracts that same 80 on release,
+    // which is what keeps the total balanced without the resize having to reach into it.
     location.adjustReservation(entry.getId(), 30);
     Assertions.assertEquals(30, entry.getSize());
     Assertions.assertEquals(30, location.currentWeakSizeBytes());
-    Assertions.assertEquals(30, location.getWeakStats().getHoldBytes());
+    Assertions.assertEquals(80, location.getWeakStats().getHoldBytes());
 
     hold.close();
     Assertions.assertEquals(0, location.getWeakStats().getHoldCount());
@@ -574,14 +576,66 @@ class StorageLocationTest
     Assertions.assertEquals(2, location.getWeakStats().getHoldCount());
     Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
 
-    // Shrink by 30 (50 → 20): each of the two active holds contributes -30, so currHoldBytes drops by 60.
+    // Shrink by 30 (50 -> 20). Both holds were taken at 50 and keep contributing it, so the total is untouched here
+    // and each release takes its own 50 back off.
     location.adjustReservation(entry.getId(), 20);
-    Assertions.assertEquals(40, location.getWeakStats().getHoldBytes());
+    Assertions.assertEquals(100, location.getWeakStats().getHoldBytes());
 
     hold1.close();
-    Assertions.assertEquals(20, location.getWeakStats().getHoldBytes());
+    Assertions.assertEquals(50, location.getWeakStats().getHoldBytes());
     hold2.close();
     Assertions.assertEquals(0, location.getWeakStats().getHoldBytes());
+  }
+
+  @Test
+  public void testConcurrentResizeAndReleaseLeavesHoldBytesBalanced() throws Exception
+  {
+    // A resize racing a release: the release runs outside the location lock, so it can land either side of the
+    // resize. Whichever way it interleaves, a hold subtracts exactly what it added, so the totals return to zero.
+    for (int i = 0; i < 500; i++) {
+      final StorageLocation location = new StorageLocation(tempDir, 1000L, null);
+      final TestResizableCacheEntry entry = new TestResizableCacheEntry("a" + i, 80);
+      final StorageLocation.ReservationHold<?> reserver =
+          location.addWeakReservationHold(entry.getId(), () -> entry);
+      Assertions.assertNotNull(reserver);
+      final StorageLocation.ReservationHold<?> queryHold =
+          location.addWeakReservationHoldIfExists(entry.getId());
+      final StorageLocation.ReservationHold<?> internalHold =
+          location.addInternalWeakReservationHoldIfExists(entry.getId());
+      Assertions.assertNotNull(queryHold);
+      Assertions.assertNotNull(internalHold);
+
+      final CountDownLatch start = new CountDownLatch(1);
+      final Future<?> resizer = executorService.submit(() -> {
+        awaitUninterruptibly(start);
+        location.adjustReservation(entry.getId(), 30);
+      });
+      final Future<?> releaser = executorService.submit(() -> {
+        awaitUninterruptibly(start);
+        queryHold.close();
+        internalHold.close();
+      });
+      start.countDown();
+      resizer.get();
+      releaser.get();
+      reserver.close();
+
+      Assertions.assertEquals(0, location.getWeakStats().getHoldCount(), "iteration " + i);
+      Assertions.assertEquals(0, location.getWeakStats().getHoldBytes(), "iteration " + i);
+      Assertions.assertEquals(0, location.getWeakStats().getInternalHoldCount(), "iteration " + i);
+      Assertions.assertEquals(0, location.getWeakStats().getInternalHoldBytes(), "iteration " + i);
+    }
+  }
+
+  private static void awaitUninterruptibly(CountDownLatch latch)
+  {
+    try {
+      Assertions.assertTrue(latch.await(30, TimeUnit.SECONDS));
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new RuntimeException(e);
+    }
   }
 
   @Test
