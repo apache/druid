@@ -435,7 +435,7 @@
             <dependency>
                 <groupId>io.projectreactor</groupId>
                 <artifactId>reactor-core</artifactId>
-                <version>3.7.19</version>
+                <version>3.8.7</version>
             </dependency>
 
             <!-- transitive dependency of kafka-clients and kubernetes client
