@@ -350,7 +350,7 @@
     <dependency>
       <groupId>io.grpc</groupId>
       <artifactId>grpc-context</artifactId>
-      <version>1.82.2</version>
+      <version>1.83.1</version>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.woodstox</groupId>
