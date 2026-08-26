@@ -19,34 +19,22 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.apache.calcite.schema.Schema;
-import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.server.security.AuthenticationResult;
 
-public class NamedViewSchema implements NamedSchema
+/**
+ * Provides root schema wrappers in the form of {@link DruidSchemaCatalog} instances.
+ */
+public interface DruidSchemaCatalogProvider
 {
-  public static final String NAME = "view";
-  private final ViewSchema viewSchema;
+  /**
+   * Constructs a root schema for the provided user. This root schema contains the objects that are visible to
+   * the provided user. The user is not necessarily authorized to perform all operations, or even any operations,
+   * on these objects. Authorization must be checked separately.
+   */
+  DruidSchemaCatalog createRootSchema(AuthenticationResult authenticationResult);
 
-  public NamedViewSchema(ViewSchema viewSchema)
-  {
-    this.viewSchema = viewSchema;
-  }
-
-  @Override
-  public String getSchemaName()
-  {
-    return NAME;
-  }
-
-  @Override
-  public String getSchemaResourceType(String resourceName)
-  {
-    return ResourceType.VIEW;
-  }
-
-  @Override
-  public Schema getSchema()
-  {
-    return viewSchema;
-  }
+  /**
+   * Constructs an escalated root schema. Typically this contains all objects.
+   */
+  DruidSchemaCatalog createEscalatedRootSchema();
 }

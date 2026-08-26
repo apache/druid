@@ -620,6 +620,46 @@ class StorageLocationTest
   }
 
   @Test
+  public void testReleasingReserversHoldDoesNotEvictAnEntryAnotherHolderIsStillUsing()
+  {
+    final StorageLocation location = new StorageLocation(tempDir, 100L, null);
+    final UnmountTrackingCacheEntry entry = new UnmountTrackingCacheEntry("a", 10);
+
+    // One acquirer reserves the entry, a second takes its own hold on the same entry, and then the first gives up
+    // before anything has managed to mount it
+    final StorageLocation.ReservationHold<?> reserver = location.addWeakReservationHold(entry.getId(), () -> entry);
+    final StorageLocation.ReservationHold<?> other = location.addWeakReservationHold(entry.getId(), () -> entry);
+    Assertions.assertNotNull(reserver);
+    Assertions.assertNotNull(other);
+    Assertions.assertFalse(entry.isMounted());
+
+    reserver.close();
+
+    // The second holder is still using the entry (e.g. mid-mount) and evicting it out from under a hold
+    // is what the hold exists to prevent: a mount that completes to find its entry unregistered rolls itself back,
+    // leaving the holder with a reference to an entry it was promised would stay alive.
+    Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
+    Assertions.assertFalse(entry.unmountCalled);
+
+    // A later acquirer for this id reuses the registered entry rather than registering a second one alongside it,
+    // which is what keeps the on-disk state two entries for the same id would share owned by exactly one of them.
+    final UnmountTrackingCacheEntry replacement = new UnmountTrackingCacheEntry("a", 10);
+    final StorageLocation.ReservationHold<?> reacquire =
+        location.addWeakReservationHold(entry.getId(), () -> replacement);
+    Assertions.assertNotNull(reacquire);
+    Assertions.assertSame(entry, reacquire.getEntry());
+    Assertions.assertFalse(replacement.unmountCalled);
+    reacquire.close();
+    Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
+
+    // Releasing that hold does not remove it either - removal is the creating hold's job - so it is left registered
+    // and unmounted, for reclaim to take when the space is wanted.
+    other.close();
+    Assertions.assertSame(entry, location.getCacheEntry(entry.getId()));
+    Assertions.assertFalse(entry.unmountCalled);
+  }
+
+  @Test
   public void testEphemeralWeakEntryUnmountCascadeDoesNotThrowConcurrentModification()
   {
     final StorageLocation location = new StorageLocation(tempDir, 10_000L, null);
@@ -857,9 +897,6 @@ class StorageLocationTest
     }
   }
 
-  /**
-   * A {@link CacheEntry} that tracks mount/unmount so tests can assert that lifecycle hooks fired.
-   */
   private static final class UnmountTrackingCacheEntry implements CacheEntry
   {
     private final StringCacheIdentifier id;

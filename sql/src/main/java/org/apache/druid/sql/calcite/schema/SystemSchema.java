@@ -22,12 +22,9 @@ package org.apache.druid.sql.calcite.schema;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
-import com.google.inject.Inject;
 import com.google.inject.Provider;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -42,7 +39,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.ProjectableFilterableTable;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.Table;
-import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
@@ -54,7 +50,7 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.guice.annotations.EscalatedClient;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.ISE;
@@ -76,8 +72,8 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.http.GetQueriesResponse;
@@ -96,20 +92,19 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class SystemSchema extends AbstractSchema
+public class SystemSchema extends AbstractTableSchema
 {
-  private static final String SEGMENTS_TABLE = "segments";
-  private static final String SERVERS_TABLE = "servers";
-  private static final String SERVER_SEGMENTS_TABLE = "server_segments";
-  private static final String TASKS_TABLE = "tasks";
-  private static final String SUPERVISOR_TABLE = "supervisors";
-  private static final String QUERIES_TABLE = "queries";
+  public static final String SEGMENTS_TABLE = "segments";
+  public static final String SERVERS_TABLE = "servers";
+  public static final String SERVER_SEGMENTS_TABLE = "server_segments";
+  public static final String TASKS_TABLE = "tasks";
+  public static final String SUPERVISOR_TABLE = "supervisors";
+  public static final String QUERIES_TABLE = "queries";
 
   private static final Function<SegmentStatusInCluster, Iterable<ResourceAction>>
       SEGMENT_STATUS_IN_CLUSTER_RA_GENERATOR = segment ->
@@ -254,11 +249,23 @@ public class SystemSchema extends AbstractSchema
    */
   private static final int[] QUERIES_PROJECT_ALL = IntStream.range(0, QUERIES_SIGNATURE.size()).toArray();
 
-  private final Map<String, Table> tableMap;
+  private final BrokerSegmentMetadataCache segmentMetadataCache;
+  private final MetadataSegmentView metadataView;
+  private final TimelineServerView serverView;
+  private final FilteredServerInventoryView serverInventoryView;
+  private final AuthorizerMapper authorizerMapper;
+  private final CoordinatorClient coordinatorClient;
+  private final OverlordClient overlordClient;
+  private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
+  private final ObjectMapper jsonMapper;
+  private final HttpClient httpClient;
+  private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
+  private final PlannerConfig plannerConfig;
+  private final AuthenticationResult authenticationResult;
+  private final Set<String> allTableNames;
 
-  @Inject
   public SystemSchema(
-      final DruidSchema druidSchema,
+      final BrokerSegmentMetadataCache segmentMetadataCache,
       final MetadataSegmentView metadataView,
       final TimelineServerView serverView,
       final FilteredServerInventoryView serverInventoryView,
@@ -267,45 +274,109 @@ public class SystemSchema extends AbstractSchema
       final OverlordClient overlordClient,
       final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
       final ObjectMapper jsonMapper,
-      @EscalatedClient final HttpClient httpClient,
+      final HttpClient httpClient,
       final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
-      final PlannerConfig plannerConfig
+      final PlannerConfig plannerConfig,
+      final AuthenticationResult authenticationResult,
+      final Set<String> allTableNames
   )
   {
-    Preconditions.checkNotNull(serverView, "serverView");
-
-    final ImmutableMap.Builder<String, Table> builder = ImmutableMap.builder();
-    builder.put(SEGMENTS_TABLE, new SegmentsTable(druidSchema, metadataView, jsonMapper, authorizerMapper));
-    builder.put(
-        SERVERS_TABLE,
-        new ServersTable(
-            druidNodeDiscoveryProvider,
-            serverInventoryView,
-            authorizerMapper,
-            overlordClient,
-            coordinatorClient,
-            jsonMapper
-        )
-    );
-    builder.put(SERVER_SEGMENTS_TABLE, new ServerSegmentsTable(serverView, authorizerMapper));
-    builder.put(TASKS_TABLE, new TasksTable(overlordClient, authorizerMapper));
-    builder.put(SUPERVISOR_TABLE, new SupervisorsTable(overlordClient, authorizerMapper));
-    builder.put(
-        SystemServerPropertiesTable.TABLE_NAME,
-        new SystemServerPropertiesTable(druidNodeDiscoveryProvider, authorizerMapper, httpClient, jsonMapper)
-    );
-
-    if (plannerConfig.isEnableSysQueriesTable()) {
-      builder.put(QUERIES_TABLE, new QueriesTable(sqlEngineRegistryProvider, jsonMapper, authorizerMapper));
-    }
-
-    this.tableMap = builder.build();
+    this.segmentMetadataCache = segmentMetadataCache;
+    this.metadataView = metadataView;
+    this.serverView = serverView;
+    this.serverInventoryView = serverInventoryView;
+    this.authorizerMapper = authorizerMapper;
+    this.coordinatorClient = coordinatorClient;
+    this.overlordClient = overlordClient;
+    this.druidNodeDiscoveryProvider = druidNodeDiscoveryProvider;
+    this.jsonMapper = jsonMapper;
+    this.httpClient = httpClient;
+    this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
+    this.plannerConfig = plannerConfig;
+    this.authenticationResult = authenticationResult;
+    this.allTableNames = allTableNames;
   }
 
   @Override
-  public Map<String, Table> getTableMap()
+  @Nullable
+  public Table getTable(String name)
   {
-    return tableMap;
+    if (!isTableVisible(name)) {
+      return null;
+    }
+
+    return switch (name) {
+      case SEGMENTS_TABLE -> new SegmentsTable(
+          segmentMetadataCache,
+          metadataView,
+          jsonMapper,
+          authorizerMapper,
+          authenticationResult
+      );
+      case SERVERS_TABLE -> new ServersTable(
+          druidNodeDiscoveryProvider,
+          serverInventoryView,
+          authorizerMapper,
+          overlordClient,
+          coordinatorClient,
+          jsonMapper,
+          authenticationResult
+      );
+      case SERVER_SEGMENTS_TABLE -> new ServerSegmentsTable(serverView, authorizerMapper, authenticationResult);
+      case TASKS_TABLE -> new TasksTable(overlordClient, authorizerMapper, authenticationResult);
+      case SUPERVISOR_TABLE -> new SupervisorsTable(overlordClient, authorizerMapper, authenticationResult);
+      case SystemServerPropertiesTable.TABLE_NAME -> new SystemServerPropertiesTable(
+          druidNodeDiscoveryProvider,
+          authorizerMapper,
+          httpClient,
+          jsonMapper,
+          authenticationResult
+      );
+      case QUERIES_TABLE -> new QueriesTable(
+          sqlEngineRegistryProvider,
+          jsonMapper,
+          authorizerMapper,
+          authenticationResult
+      );
+      case null, default -> throw DruidException.defensive("Unrecognized table name[%s]", name);
+    };
+  }
+
+  @Override
+  public Set<String> getTableNames()
+  {
+    if (plannerConfig.isAuthorizeTableVisibility()) {
+      return SchemaUtils.filterVisibleTables(
+          authorizerMapper,
+          authenticationResult,
+          allTableNames,
+          _ -> plannerConfig.isAuthorizeSystemTablesDirectly() ? ResourceType.SYSTEM_TABLE : null
+      );
+    } else {
+      // sys table authorization is not enabled, so all sys tables are visible to all users.
+      return allTableNames;
+    }
+  }
+
+  /**
+   * Returns whether a sys table with a particular name should be visible to the provided user.
+   */
+  private boolean isTableVisible(final String sysTableName)
+  {
+    if (!allTableNames.contains(sysTableName)) {
+      // Short circuit that hides sys.queries if it is disabled server-wide.
+      return false;
+    } else if (plannerConfig.isAuthorizeTableVisibility()) {
+      return SchemaUtils.isTableVisible(
+          authorizerMapper,
+          authenticationResult,
+          sysTableName,
+          _ -> plannerConfig.isAuthorizeSystemTablesDirectly() ? ResourceType.SYSTEM_TABLE : null
+      );
+    } else {
+      // sys table authorization is not enabled, so all sys tables are visible to all users.
+      return true;
+    }
   }
 
   /**
@@ -315,22 +386,25 @@ public class SystemSchema extends AbstractSchema
   {
     private static final int DATASOURCE_COLUMN = SEGMENTS_SIGNATURE.indexOf("datasource");
 
-    private final DruidSchema druidSchema;
+    private final BrokerSegmentMetadataCache segmentMetadataCache;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
     private final MetadataSegmentView metadataView;
+    private final AuthenticationResult authenticationResult;
 
     public SegmentsTable(
-        DruidSchema druidSchemna,
+        BrokerSegmentMetadataCache segmentMetadataCache,
         MetadataSegmentView metadataView,
         ObjectMapper jsonMapper,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        AuthenticationResult authenticationResult
     )
     {
-      this.druidSchema = druidSchemna;
+      this.segmentMetadataCache = segmentMetadataCache;
       this.metadataView = metadataView;
       this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
+      this.authenticationResult = authenticationResult;
     }
 
     @Override
@@ -352,9 +426,6 @@ public class SystemSchema extends AbstractSchema
         @Nullable final int[] projects
     )
     {
-      // get available segments from druidSchema
-      final BrokerSegmentMetadataCache availableMetadataCache = druidSchema.cache();
-
       // Best-effort push-down of a `datasource` equality/IN filter so we scan only the matching
       // datasources instead of every segment in the cluster. Null => no usable filter => full scan.
       // The filters are intentionally left in the list, so Calcite still applies them and correctness
@@ -366,18 +437,18 @@ public class SystemSchema extends AbstractSchema
       // datasources' segments, so avoid pre-sizing to the whole-cluster segment count (a huge, wasted allocation).
       final Set<SegmentId> segmentsAlreadySeen =
           dataSourceFilter == null
-          ? Sets.newHashSetWithExpectedSize(availableMetadataCache.getTotalSegments())
+          ? Sets.newHashSetWithExpectedSize(segmentMetadataCache.getTotalSegments())
           : new HashSet<>();
 
       // Get segments from metadata segment cache (if enabled in SQL planner config), else directly from
       // Coordinator. This may include both published and realtime segments.
       final Iterator<SegmentStatusInCluster> metadataStoreSegments = metadataView.getSegments(dataSourceFilter);
       final FluentIterable<Object[]> publishedSegments = FluentIterable
-          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments, root))
+          .from(() -> getAuthorizedPublishedSegments(metadataStoreSegments))
           .transform(val -> {
             final DataSegment segment = val.getDataSegment();
             final AvailableSegmentMetadata availableSegmentMetadata =
-                availableMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
+                segmentMetadataCache.getAvailableSegmentMetadata(segment.getDataSource(), segment.getId());
             segmentsAlreadySeen.add(segment.getId());
 
             long numReplicas = 0L, isAvailable = 0L;
@@ -440,7 +511,7 @@ public class SystemSchema extends AbstractSchema
       // If druid.centralizedDatasourceSchema.enabled is set on the Coordinator, all the segments in this loop
       // would be covered in the previous iteration since Coordinator would return realtime segments as well.
       final FluentIterable<Object[]> availableSegments = FluentIterable
-          .from(() -> getAuthorizedAvailableSegments(availableMetadataCache.iterateSegmentMetadata(dataSourceFilter), root))
+          .from(() -> getAuthorizedAvailableSegments(segmentMetadataCache.iterateSegmentMetadata(dataSourceFilter)))
           .transform(val -> {
             final DataSegment segment = val.getSegment();
             if (segmentsAlreadySeen.contains(segment.getId())) {
@@ -483,16 +554,8 @@ public class SystemSchema extends AbstractSchema
                    .select(row -> projectSegmentsRow(row, projects, jsonMapper));
     }
 
-    private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(
-        Iterator<SegmentStatusInCluster> it,
-        DataContext root
-    )
+    private Iterator<SegmentStatusInCluster> getAuthorizedPublishedSegments(Iterator<SegmentStatusInCluster> it)
     {
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
-      );
-
       final Iterable<SegmentStatusInCluster> authorizedSegments = AuthorizationUtils
           .filterAuthorizedResources(
               authenticationResult,
@@ -504,15 +567,9 @@ public class SystemSchema extends AbstractSchema
     }
 
     private Iterator<AvailableSegmentMetadata> getAuthorizedAvailableSegments(
-        Iterator<AvailableSegmentMetadata> availableSegmentEntries,
-        DataContext root
+        Iterator<AvailableSegmentMetadata> availableSegmentEntries
     )
     {
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
-      );
-
       Function<AvailableSegmentMetadata, Iterable<ResourceAction>> raGenerator = segment ->
           Collections.singletonList(
               AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(segment.getSegment().getDataSource())
@@ -605,6 +662,7 @@ public class SystemSchema extends AbstractSchema
     private final OverlordClient overlordClient;
     private final CoordinatorClient coordinatorClient;
     private final ObjectMapper jsonMapper;
+    private final AuthenticationResult authenticationResult;
 
     public ServersTable(
         DruidNodeDiscoveryProvider druidNodeDiscoveryProvider,
@@ -612,7 +670,8 @@ public class SystemSchema extends AbstractSchema
         AuthorizerMapper authorizerMapper,
         OverlordClient overlordClient,
         CoordinatorClient coordinatorClient,
-        ObjectMapper jsonMapper
+        ObjectMapper jsonMapper,
+        AuthenticationResult authenticationResult
     )
     {
       this.authorizerMapper = authorizerMapper;
@@ -621,6 +680,7 @@ public class SystemSchema extends AbstractSchema
       this.overlordClient = overlordClient;
       this.coordinatorClient = coordinatorClient;
       this.jsonMapper = jsonMapper;
+      this.authenticationResult = authenticationResult;
     }
 
     @Override
@@ -639,10 +699,6 @@ public class SystemSchema extends AbstractSchema
     public Enumerable<Object[]> scan(DataContext root)
     {
       final Iterator<DiscoveryDruidNode> druidServers = getDruidServers(druidNodeDiscoveryProvider);
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
-      );
       checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
       String tmpCoordinatorLeader = "";
@@ -837,12 +893,18 @@ public class SystemSchema extends AbstractSchema
   static class ServerSegmentsTable extends AbstractTable implements ScannableTable
   {
     private final TimelineServerView serverView;
-    final AuthorizerMapper authorizerMapper;
+    private final AuthorizerMapper authorizerMapper;
+    private final AuthenticationResult authenticationResult;
 
-    public ServerSegmentsTable(TimelineServerView serverView, AuthorizerMapper authorizerMapper)
+    public ServerSegmentsTable(
+        TimelineServerView serverView,
+        AuthorizerMapper authorizerMapper,
+        AuthenticationResult authenticationResult
+    )
     {
       this.serverView = serverView;
       this.authorizerMapper = authorizerMapper;
+      this.authenticationResult = authenticationResult;
     }
 
     @Override
@@ -860,10 +922,6 @@ public class SystemSchema extends AbstractSchema
     @Override
     public Enumerable<Object[]> scan(DataContext root)
     {
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
-      );
       checkStateReadAccessForServers(authenticationResult, authorizerMapper);
 
       final List<Object[]> rows = new ArrayList<>();
@@ -895,14 +953,17 @@ public class SystemSchema extends AbstractSchema
   {
     private final OverlordClient overlordClient;
     private final AuthorizerMapper authorizerMapper;
+    private final AuthenticationResult authenticationResult;
 
     public TasksTable(
         OverlordClient overlordClient,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        AuthenticationResult authenticationResult
     )
     {
       this.overlordClient = overlordClient;
       this.authorizerMapper = authorizerMapper;
+      this.authenticationResult = authenticationResult;
     }
 
     @Override
@@ -926,7 +987,7 @@ public class SystemSchema extends AbstractSchema
 
         public TasksEnumerable(CloseableIterator<TaskStatusPlus> tasks)
         {
-          this.it = getAuthorizedTasks(tasks, root);
+          this.it = getAuthorizedTasks(tasks);
         }
 
         @Override
@@ -992,16 +1053,8 @@ public class SystemSchema extends AbstractSchema
       return new TasksEnumerable(FutureUtils.getUnchecked(overlordClient.taskStatuses(null, null, null), true));
     }
 
-    private CloseableIterator<TaskStatusPlus> getAuthorizedTasks(
-        CloseableIterator<TaskStatusPlus> it,
-        DataContext root
-    )
+    private CloseableIterator<TaskStatusPlus> getAuthorizedTasks(CloseableIterator<TaskStatusPlus> it)
     {
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
-      );
-
       Function<TaskStatusPlus, Iterable<ResourceAction>> raGenerator = task -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(task.getDataSource()));
 
@@ -1024,14 +1077,17 @@ public class SystemSchema extends AbstractSchema
   {
     private final OverlordClient overlordClient;
     private final AuthorizerMapper authorizerMapper;
+    private final AuthenticationResult authenticationResult;
 
     public SupervisorsTable(
         OverlordClient overlordClient,
-        AuthorizerMapper authorizerMapper
+        AuthorizerMapper authorizerMapper,
+        AuthenticationResult authenticationResult
     )
     {
       this.overlordClient = overlordClient;
       this.authorizerMapper = authorizerMapper;
+      this.authenticationResult = authenticationResult;
     }
 
 
@@ -1056,7 +1112,7 @@ public class SystemSchema extends AbstractSchema
 
         public SupervisorsEnumerable(CloseableIterator<SupervisorStatus> tasks)
         {
-          this.it = getAuthorizedSupervisors(tasks, root);
+          this.it = getAuthorizedSupervisors(tasks);
         }
 
         @Override
@@ -1116,16 +1172,8 @@ public class SystemSchema extends AbstractSchema
       return new SupervisorsEnumerable(FutureUtils.getUnchecked(overlordClient.supervisorStatuses(), true));
     }
 
-    private CloseableIterator<SupervisorStatus> getAuthorizedSupervisors(
-        CloseableIterator<SupervisorStatus> it,
-        DataContext root
-    )
+    private CloseableIterator<SupervisorStatus> getAuthorizedSupervisors(CloseableIterator<SupervisorStatus> it)
     {
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
-      );
-
       Function<SupervisorStatus, Iterable<ResourceAction>> raGenerator = supervisor -> Collections.singletonList(
           AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR.apply(supervisor.getDataSource()));
 
@@ -1262,16 +1310,19 @@ public class SystemSchema extends AbstractSchema
     private final Provider<SqlEngineRegistry> sqlEngineRegistryProvider;
     private final ObjectMapper jsonMapper;
     private final AuthorizerMapper authorizerMapper;
+    private final AuthenticationResult authenticationResult;
 
     public QueriesTable(
         final Provider<SqlEngineRegistry> sqlEngineRegistryProvider,
         final ObjectMapper jsonMapper,
-        final AuthorizerMapper authorizerMapper
+        final AuthorizerMapper authorizerMapper,
+        final AuthenticationResult authenticationResult
     )
     {
       this.sqlEngineRegistryProvider = sqlEngineRegistryProvider;
       this.jsonMapper = jsonMapper;
       this.authorizerMapper = authorizerMapper;
+      this.authenticationResult = authenticationResult;
     }
 
     @Override
@@ -1293,11 +1344,6 @@ public class SystemSchema extends AbstractSchema
         @Nullable final int[] projects
     )
     {
-      final AuthenticationResult authenticationResult = (AuthenticationResult) Preconditions.checkNotNull(
-          root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT),
-          "authenticationResult in dataContext"
-      );
-
       // Check STATE READ authorization
       final AuthorizationResult stateReadAuthorization = AuthorizationUtils.authorizeAllResourceActions(
           authenticationResult,
