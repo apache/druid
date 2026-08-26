@@ -494,9 +494,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
    * <p>
    * The fresh-load candidates are the classifier's empty servers together with {@code canceledStaleServers}.
    * {@link ServerHolder#cancelOperation} clears the queued action and restores the projected size, so a server whose
-   * stale in-flight load {@link #cancelLoadsOnServers} canceled can take a fresh load. Both sources pass through
-   * {@link #serversToLoadSegment}, which filters them by {@link ServerHolder#canLoadSegment} and orders them the way
-   * {@link #loadReplicas} orders the full-load path.
+   * stale in-flight load {@link #cancelLoadsOnServers} canceled can take a fresh load. {@link #serversToLoadSegment}
+   * returns an iterator over fresh load candidates.
+   * <p>
+   * An iterator over candidates that can additive reload the segment is there for backup in case we can't fully
+   * replicate on our priority one fresh load path.
    */
   private int loadPartialReplicas(
       int numToLoad,
