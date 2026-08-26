@@ -121,7 +121,7 @@
         <jna.version>5.19.1</jna.version>
         <jna-platform.version>5.19.1</jna-platform.version>
         <hadoop.compile.version>3.5.0</hadoop.compile.version>
-        <graaljs.version>25.2.4</graaljs.version>
+        <graaljs.version>25.3.4.1</graaljs.version>
         <mockito.version>5.23.0</mockito.version>
         <!-- AWS SDK v1 is still used as a transitive dependency by Hadoop and Ranger extensions.
              It should be removed once those extensions are upgraded or dropped (see #19109). -->
