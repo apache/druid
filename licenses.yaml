@@ -2398,7 +2398,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6.1
+version: 4.1.0
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -2414,6 +2414,16 @@ notices:
 
       This product includes software developed by
       Rome (https://rome.dev.java.net/).
+
+---
+
+name: Plexus XML
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.1.0
+libraries:
+  - org.codehaus.plexus: plexus-xml
 ---
 
 name: Jetty
