@@ -72,14 +72,13 @@ import org.apache.druid.server.mocks.MockAsyncContext;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlToolbox;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -107,7 +106,6 @@ import org.mockito.quality.Strictness;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
-
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -186,7 +184,7 @@ public class DartSqlResourceTest extends MSQTestBase
   @BeforeEach
   void setUp()
   {
-    final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+    final DruidSchemaCatalogProvider schemaProvider = QueryFrameworkUtils.createMockRootSchemaProvider(
         CalciteTests.INJECTOR,
         queryFramework().conglomerate(),
         queryFramework().walker(),
@@ -198,7 +196,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         queryFramework().operatorTable(),
         queryFramework().macroTable(),
         PLANNER_CONFIG_DEFAULT,
@@ -558,7 +556,7 @@ public class DartSqlResourceTest extends MSQTestBase
     Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
     Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
     Assertions.assertEquals(
-        "[[\"INFORMATION_SCHEMA\"],[\"druid\"],[\"lookup\"],[\"sys\"],[\"view\"]]\n",
+        "[[\"INFORMATION_SCHEMA\"],[\"druid\"],[\"lookup\"],[\"sys\"]]\n",
         StringUtils.fromUtf8(asyncResponse.baos.toByteArray())
     );
   }
@@ -594,7 +592,7 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   @Test
-  public void test_doPost_regularUser_forbidden()
+  public void test_doPost_regularUser_unauthorizedTable()
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();
     final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
@@ -615,10 +613,18 @@ public class DartSqlResourceTest extends MSQTestBase
         Collections.emptyList()
     );
 
-    Assertions.assertThrows(
-        ForbiddenException.class,
-        () -> sqlResource.doPost(sqlQuery, httpServletRequest)
+    // 400 Bad Request: the table is not visible to this user, so it cannot be resolved.
+    final Response response = sqlResource.doPost(sqlQuery, httpServletRequest);
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+
+    final Map<String, Object> e = objectMapper.convertValue(
+        response.getEntity(),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
+
+    Assertions.assertEquals("invalidInput", e.get("errorCode"));
+    Assertions.assertEquals("INVALID_INPUT", e.get("category"));
+    Assertions.assertTrue(((String) e.get("errorMessage")).startsWith("Object 'forbiddenDatasource' not found"));
   }
 
   @Test

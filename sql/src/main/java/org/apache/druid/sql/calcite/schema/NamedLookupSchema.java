@@ -21,10 +21,12 @@ package org.apache.druid.sql.calcite.schema;
 
 import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
+import org.apache.druid.guice.LazySingleton;
 
 /**
  * The schema for Druid lookup tables to be accessible via SQL.
  */
+@LazySingleton
 public class NamedLookupSchema implements NamedSchema
 {
   public static final String NAME = "lookup";
