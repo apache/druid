@@ -19,12 +19,14 @@
 
 package org.apache.druid.math.expr.vector.simd;
 
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.vector.ExprEvalDoubleVector;
 import org.apache.druid.math.expr.vector.ExprEvalLongVector;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorTestAssertions;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateDoubleFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction;
 import org.junit.Assert;
@@ -52,10 +54,13 @@ public class SimdVoMathlibParityTest
   // Small integer multiple of any reasonable DoubleVector.SPECIES_PREFERRED length (2/4/8) so the SIMD
   // loop takes multiple iterations per invocation.
   private static final int INPUT_LANES = 64;
-  // Small ulp bound is looser than Java's spec for Math (usually 1 ulp) but tight enough to catch a
-  // meaningful regression. sinh/cosh/tanh are spec'd for 2.5 ulps in Math itself, so we give a bit of
-  // margin for the SIMD dispatch to match.
-  private static final int MAX_ULPS = 4;
+  // 2 ulps is spec-defensible for the SIMD-vs-scalar comparison: Java's Math is spec'd to be within 1 ulp
+  // of the correctly-rounded result for most transcendentals (sin/cos/tan/log/exp/asin/acos/atan/cbrt/...);
+  // the SIMD path targets the same tolerance, so the SIMD-vs-scalar delta can be up to 2 ulps just from
+  // both landing at opposite ends of their independent 1-ulp windows. sinh/cosh/tanh have no strict Math
+  // bound but historically fit within this too on the JVM/hardware combos we ship for. If a future
+  // JVM/hardware combo drifts past this, widen the bound (or split it per op) rather than deleting the test.
+  private static final int MAX_ULPS = 2;
 
   private static final Expr.VectorInputBinding STUB_BINDING = new StubBinding(INPUT_LANES);
 
@@ -79,6 +84,49 @@ public class SimdVoMathlibParityTest
 
       assertStable(op, warmed, () -> processor.evalVector(STUB_BINDING).values());
       assertParityDouble(op, inputs, warmed, scalar);
+    }
+  }
+
+  @Test
+  public void doubleInputTailBypassesScalarFallback()
+  {
+    final DoubleUnivariateDoubleFunction poison = x -> {
+      throw new IllegalStateException("scalar fallback called for x=" + x);
+    };
+    for (SimdSupportedUnaryOp op : SimdSupportedUnaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final double[] inputs = inDomainDoubleInputs(op);
+      final ExprVectorProcessor<double[]> processor =
+          SimdProcessors.makeDoubleUnary(fixedDoubleInput(inputs), op, poison);
+      for (int size : partialTailSizes()) {
+        final Expr.VectorInputBinding partial = new StubBinding(INPUT_LANES, size);
+        // Would throw here if the tail path invoked the poisoned scalarFallback for any lane.
+        final double[] out = processor.evalVector(partial).values();
+        Assert.assertEquals("op=" + op + " size=" + size + " unexpected output length", INPUT_LANES, out.length);
+      }
+    }
+  }
+
+  @Test
+  public void longInputTailBypassesScalarFallback()
+  {
+    final DoubleUnivariateLongFunction poison = x -> {
+      throw new IllegalStateException("scalar fallback called for x=" + x);
+    };
+    for (SimdSupportedUnaryOp op : SimdSupportedUnaryOp.values()) {
+      if (!op.isMathLib()) {
+        continue;
+      }
+      final long[] inputs = inDomainLongInputs(op);
+      final ExprVectorProcessor<double[]> processor =
+          SimdProcessors.makeLongToDoubleUnary(fixedLongInput(inputs), op, poison);
+      for (int size : partialTailSizes()) {
+        final Expr.VectorInputBinding partial = new StubBinding(INPUT_LANES, size);
+        final double[] out = processor.evalVector(partial).values();
+        Assert.assertEquals("op=" + op + " size=" + size + " unexpected output length", INPUT_LANES, out.length);
+      }
     }
   }
 
@@ -126,9 +174,12 @@ public class SimdVoMathlibParityTest
   )
   {
     for (int i = 0; i < inputs.length; i++) {
-      final double expected = scalar.process(inputs[i]);
-      final double actual = simd[i];
-      assertWithinUlps(op, i, inputs[i], expected, actual);
+      VectorTestAssertions.assertDoublesEquivalent(
+          StringUtils.format("op=%s lane=%d input=%s SIMD-vs-Math", op, i, inputs[i]),
+          scalar.process(inputs[i]),
+          simd[i],
+          MAX_ULPS
+      );
     }
   }
 
@@ -140,27 +191,12 @@ public class SimdVoMathlibParityTest
   )
   {
     for (int i = 0; i < inputs.length; i++) {
-      final double expected = scalar.process(inputs[i]);
-      final double actual = simd[i];
-      assertWithinUlps(op, i, (double) inputs[i], expected, actual);
-    }
-  }
-
-  private static void assertWithinUlps(SimdSupportedUnaryOp op, int lane, double input, double expected, double actual)
-  {
-    if (Double.isNaN(expected) && Double.isNaN(actual)) {
-      return;
-    }
-    if (Double.doubleToRawLongBits(expected) == Double.doubleToRawLongBits(actual)) {
-      return;
-    }
-    final double ulp = Math.ulp(expected);
-    final double diff = Math.abs(actual - expected);
-    if (Double.isNaN(diff) || diff > MAX_ULPS * ulp) {
-      Assert.fail(String.format(
-          "op=%s lane=%d input=%s: SIMD result %s differs from Math=%s by %s ulps (>%d allowed)",
-          op, lane, input, actual, expected, diff / ulp, MAX_ULPS
-      ));
+      VectorTestAssertions.assertDoublesEquivalent(
+          StringUtils.format("op=%s lane=%d input=%s SIMD-vs-Math", op, i, inputs[i]),
+          scalar.process(inputs[i]),
+          simd[i],
+          MAX_ULPS
+      );
     }
   }
 
@@ -190,6 +226,16 @@ public class SimdVoMathlibParityTest
   {
     final DoubleUnivariateDoubleFunction dbl = doubleScalarFor(op);
     return x -> dbl.process((double) x);
+  }
+
+
+  /**
+   * Sizes chosen so that at least one leaves a partial-tail regardless of whether the runtime picks a
+   * 2/4/8-lane SIMD species. Primes avoid accidentally dividing the lane count evenly.
+   */
+  private static int[] partialTailSizes()
+  {
+    return new int[]{5, 7, 11, 13, INPUT_LANES - 1};
   }
 
   /**
@@ -306,23 +352,30 @@ public class SimdVoMathlibParityTest
 
   private static final class StubBinding implements Expr.VectorInputBinding
   {
-    private final int size;
+    private final int maxSize;
+    private final int currentSize;
 
     StubBinding(int size)
     {
-      this.size = size;
+      this(size, size);
+    }
+
+    StubBinding(int maxSize, int currentSize)
+    {
+      this.maxSize = maxSize;
+      this.currentSize = currentSize;
     }
 
     @Override
     public int getMaxVectorSize()
     {
-      return size;
+      return maxSize;
     }
 
     @Override
     public int getCurrentVectorSize()
     {
-      return size;
+      return currentSize;
     }
 
     @Override

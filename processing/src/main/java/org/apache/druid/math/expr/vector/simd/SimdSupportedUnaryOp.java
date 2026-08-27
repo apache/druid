@@ -19,6 +19,8 @@
 
 package org.apache.druid.math.expr.vector.simd;
 
+import org.apache.druid.math.expr.ExpressionProcessing;
+
 /**
  * Identifies which unary math operations have a {@code jdk.incubator.vector} (SIMD) specialization. Used by
  * {@link org.apache.druid.math.expr.vector.SimpleVectorMathUnivariateProcessorFactory} subclasses to declare that
@@ -117,5 +119,17 @@ public enum SimdSupportedUnaryOp
   public boolean isMathLib()
   {
     return mathLib;
+  }
+
+  /**
+   * Whether SIMD dispatch is currently enabled for this op according to the runtime
+   * {@link ExpressionProcessing#useVectorApi()} / {@link ExpressionProcessing#useVectorMathApi()} flags.
+   */
+  public boolean isSimdEnabled()
+  {
+    if (!ExpressionProcessing.useVectorApi()) {
+      return false;
+    }
+    return !mathLib || ExpressionProcessing.useVectorMathApi();
   }
 }

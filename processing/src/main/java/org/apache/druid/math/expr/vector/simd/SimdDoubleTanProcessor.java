@@ -20,6 +20,7 @@
 package org.apache.druid.math.expr.vector.simd;
 
 import jdk.incubator.vector.DoubleVector;
+import jdk.incubator.vector.VectorMask;
 import jdk.incubator.vector.VectorOperators;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateDoubleFunction;
@@ -46,8 +47,9 @@ public final class SimdDoubleTanProcessor extends SimdDoubleUnaryProcessor
     for (; i < upperBound; i += laneCount) {
       DoubleVector.fromArray(SPECIES, input, i).lanewise(VectorOperators.TAN).intoArray(outValues, i);
     }
-    for (; i < currentSize; i++) {
-      outValues[i] = scalarFallback.process(input[i]);
+    if (i < currentSize) {
+      final VectorMask<Double> mask = SPECIES.indexInRange(i, currentSize);
+      DoubleVector.fromArray(SPECIES, input, i, mask).lanewise(VectorOperators.TAN).intoArray(outValues, i, mask);
     }
     if (inputNulls == null) {
       Arrays.fill(outNulls, 0, currentSize, false);

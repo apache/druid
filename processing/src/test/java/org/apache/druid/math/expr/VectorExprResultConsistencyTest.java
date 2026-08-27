@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.vector.ExprEvalVector;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorTestAssertions;
 import org.apache.druid.query.expression.LookupExprMacro;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
@@ -827,11 +828,17 @@ public class VectorExprResultConsistencyTest extends InitializedNullHandlingTest
               (Object[]) vectorEval.valueOrThrow()[i]
           );
         } else {
-          Assert.assertEquals(
-              message,
-              nonVectorEval.valueOrThrow()[i],
-              vectorEval.valueOrThrow()[i]
-          );
+          final Object expected = nonVectorEval.valueOrThrow()[i];
+          final Object actual = vectorEval.valueOrThrow()[i];
+          // Double values compared with ulp-tolerance so the VO_MATHLIB SIMD path can differ from the
+          // scalar Math.<op> by up to 2 ulps (see the useVectorMathApi javadoc and SimdVoMathlibParityTest).
+          // Scalar-vs-scalar comparisons are still bit-identical in practice, so the tolerance never
+          // triggers when useVectorApi is off.
+          if (expected instanceof Double && actual instanceof Double) {
+            VectorTestAssertions.assertDoublesEquivalent(message, (Double) expected, (Double) actual, 2);
+          } else {
+            Assert.assertEquals(message, expected, actual);
+          }
         }
       }
     }

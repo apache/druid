@@ -66,20 +66,10 @@ public class SimpleVectorMathUnivariateDoubleProcessorFactory extends VectorMath
     this.simdOp = simdOp;
   }
 
-  private boolean simdEnabled()
-  {
-    if (simdOp == null || !ExpressionProcessing.useVectorApi()) {
-      return false;
-    }
-    // VO_MATHLIB ops (SVML/SLEEF-backed transcendentals) sit behind the additional useVectorMathApi opt-in
-    // because they can produce different bits than Math.<op> once JIT tier transitions the loop from C1 to C2.
-    return !simdOp.isMathLib() || ExpressionProcessing.useVectorMathApi();
-  }
-
   @Override
   public final ExprVectorProcessor<double[]> longProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
-    if (simdEnabled()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeLongToDoubleUnary(arg.asVectorProcessor(inspector), simdOp, longFunction);
     }
     return new DoubleUnivariateLongFunctionVectorProcessor(
@@ -91,7 +81,7 @@ public class SimpleVectorMathUnivariateDoubleProcessorFactory extends VectorMath
   @Override
   public final ExprVectorProcessor<double[]> doubleProcessor(Expr.VectorInputBindingInspector inspector, Expr arg)
   {
-    if (simdEnabled()) {
+    if (simdOp != null && simdOp.isSimdEnabled()) {
       return SimdProcessors.makeDoubleUnary(arg.asVectorProcessor(inspector), simdOp, doubleFunction);
     }
     return new DoubleUnivariateDoubleFunctionVectorProcessor(

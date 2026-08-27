@@ -75,7 +75,7 @@ public class ExpressionProcessingConfig
         "true"
     );
     this.useVectorApi = getWithPropertyFallbackFalse(useVectorApi, USE_VECTOR_API);
-    this.useVectorMathApi = getWithPropertyFallbackFalse(useVectorMathApi, USE_VECTOR_MATH_API);
+    this.useVectorMathApi = getWithPropertyFallback(useVectorMathApi, USE_VECTOR_MATH_API, "true");
   }
 
   public boolean processArraysAsMultiValueStrings()

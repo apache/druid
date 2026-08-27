@@ -21,6 +21,7 @@ package org.apache.druid.math.expr.vector.simd;
 
 import jdk.incubator.vector.DoubleVector;
 import jdk.incubator.vector.LongVector;
+import jdk.incubator.vector.VectorMask;
 import jdk.incubator.vector.VectorOperators;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction;
@@ -49,8 +50,12 @@ public final class SimdLongToDoubleCbrtProcessor extends SimdLongToDoubleUnaryPr
           (DoubleVector) LongVector.fromArray(LONG_SPECIES, input, i).castShape(DOUBLE_SPECIES, 0);
       va.lanewise(VectorOperators.CBRT).intoArray(outValues, i);
     }
-    for (; i < currentSize; i++) {
-      outValues[i] = scalarFallback.process(input[i]);
+    if (i < currentSize) {
+      final VectorMask<Long> longMask = LONG_SPECIES.indexInRange(i, currentSize);
+      final VectorMask<Double> doubleMask = DOUBLE_SPECIES.indexInRange(i, currentSize);
+      final DoubleVector va =
+          (DoubleVector) LongVector.fromArray(LONG_SPECIES, input, i, longMask).castShape(DOUBLE_SPECIES, 0);
+      va.lanewise(VectorOperators.CBRT).intoArray(outValues, i, doubleMask);
     }
     if (inputNulls == null) {
       Arrays.fill(outNulls, 0, currentSize, false);
