@@ -40,6 +40,17 @@ public interface VirtualStorageLocationStats
   long getHoldBytes();
 
   /**
+   * internal holds, such as those which one cache entry places on another it depends on, or that a partial-load rule
+   * places on what it selected, rather than a caller waiting on the entry.
+   */
+  long getInternalHoldCount();
+
+  /**
+   * Total bytes from the holds counted by {@link #getInternalHoldCount()}.
+   */
+  long getInternalHoldBytes();
+
+  /**
    * Number of operations for which an entry was already present during the measurement period
    */
   long getHitCount();

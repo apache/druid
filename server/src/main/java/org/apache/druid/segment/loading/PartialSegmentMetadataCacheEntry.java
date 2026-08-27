@@ -362,7 +362,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     try {
       final StorageLocation.ReservationHold<PartialSegmentMetadataCacheEntry> newSelfHold;
       if (needsSelfHold) {
-        newSelfHold = loc.addWeakReservationHoldIfExists(id);
+        newSelfHold = loc.addInternalWeakReservationHoldIfExists(id);
         if (newSelfHold == null) {
           throw DruidException.defensive(
               "Failed to acquire self-referential rule-hold on partial metadata entry[%s]; entry is not weak-reserved",
@@ -376,7 +376,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> acquired = new HashMap<>();
       for (String name : namesToAcquire) {
         final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h =
-            loc.addWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
+            loc.addInternalWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
         if (h != null) {
           acquired.put(name, h);
           uncommittedHolds.add(h);
@@ -463,7 +463,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> acquired = new HashMap<>();
     for (String name : reconcileNames) {
       final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h =
-          loc.addWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
+          loc.addInternalWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
       if (h != null) {
         acquired.put(name, h);
         uncommittedHolds.add(h);
@@ -967,7 +967,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         // restore hold immediately after, if the entry should remain alive for query-side access, the runtime hold
         // chain (transitive parents from aggregates, segment-level holds from acquire APIs) keeps it pinned.
         try (StorageLocation.ReservationHold<?> restoreHold =
-                 location.addWeakReservationHold(bundle.getId(), () -> bundle)) {
+                 location.addInternalWeakReservationHold(bundle.getId(), () -> bundle)) {
           if (restoreHold == null) {
             throw DruidException.defensive(
                 "Failed to reserve bundle entry[%s] in location[%s] while restoring from disk",
@@ -1618,7 +1618,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     // ReservationHold on this bundle, so the weak entry is guaranteed present and this acquire cannot return null
     // for a "just evicted" reason.
     final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> hold =
-        loc.addWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, bundleName));
+        loc.addInternalWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, bundleName));
     if (hold == null) {
       return;
     }
