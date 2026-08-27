@@ -41,9 +41,9 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -56,7 +56,7 @@ public class DataSegmentWithLocationTest
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   private static final int TEST_VERSION = 0x9;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     InjectableValues.Std injectableValues = new InjectableValues.Std();
@@ -115,7 +115,7 @@ public class DataSegmentWithLocationTest
         MAPPER.writeValueAsString(segmentWithLocation),
         DataSegmentWithLocation.class
     );
-    Assert.assertEquals(deserialized.toString(), segmentWithLocation.toString());
-    Assert.assertEquals(Set.of(serverMetadata), segmentWithLocation.getServers());
+    Assertions.assertEquals(deserialized.toString(), segmentWithLocation.toString());
+    Assertions.assertEquals(Set.of(serverMetadata), segmentWithLocation.getServers());
   }
 }

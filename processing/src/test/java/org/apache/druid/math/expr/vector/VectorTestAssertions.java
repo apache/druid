@@ -20,7 +20,7 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Shared assertions for tests that compare vectorized (SIMD or otherwise) expression outputs against a
@@ -51,7 +51,7 @@ public final class VectorTestAssertions
     final double ulp = Math.ulp(expected);
     final double diff = Math.abs(actual - expected);
     if (Double.isNaN(diff) || diff > (double) maxUlps * ulp) {
-      Assert.fail(StringUtils.format(
+      Assertions.fail(StringUtils.format(
           "%s: %s differs from expected %s by %s ulps (>%d allowed)",
           message == null ? "double parity" : message,
           actual,

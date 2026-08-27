@@ -22,10 +22,10 @@ package org.apache.druid.server.router;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.client.DruidServer;
 import org.joda.time.Period;
 
-import javax.validation.constraints.NotNull;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;

@@ -17,31 +17,33 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.sql.calcite.schema;
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
-import java.util.concurrent.TimeUnit;
+import org.apache.druid.server.security.AuthenticationResult;
 
 /**
- * This Rule is based on {@link org.junit.rules.Timeout}, additionally deadlocked threads are detected.
+ * Implementation of {@link DruidSchemaCatalogProvider} that always returns the same catalog. Not suitable for
+ * security-related tests because the user catalog and escalated catalog are the same; in a real environment these
+ * would be different.
  */
-public final class DeadlockDetectingTimeout implements TestRule
+public class ConstantDruidSchemaCatalogProvider implements DruidSchemaCatalogProvider
 {
-  private final long timeout;
-  private final TimeUnit timeoutUnit;
+  private final DruidSchemaCatalog theCatalog;
 
-  public DeadlockDetectingTimeout(long timeout, TimeUnit timeoutUnit)
+  public ConstantDruidSchemaCatalogProvider(DruidSchemaCatalog theCatalog)
   {
-    this.timeout = timeout;
-    this.timeoutUnit = timeoutUnit;
+    this.theCatalog = theCatalog;
   }
 
   @Override
-  public Statement apply(Statement base, Description description)
+  public DruidSchemaCatalog createRootSchema(AuthenticationResult authenticationResult)
   {
-    return new DeadlockDetectingFailOnTimeout(timeout, timeoutUnit, base);
+    return theCatalog;
+  }
+
+  @Override
+  public DruidSchemaCatalog createEscalatedRootSchema()
+  {
+    return theCatalog;
   }
 }

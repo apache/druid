@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.delta.kernel.data.Row;
 import io.delta.kernel.defaults.internal.data.DefaultJsonRow;
 import io.delta.kernel.engine.Engine;
+import io.delta.kernel.internal.types.DataTypeJsonSerDe;
 import io.delta.kernel.internal.util.VectorUtils;
 import io.delta.kernel.types.ArrayType;
 import io.delta.kernel.types.BooleanType;
@@ -90,7 +91,7 @@ public class RowSerde
     try {
       JsonNode jsonNode = OBJECT_MAPPER.readTree(jsonRowWithSchema);
       JsonNode schemaNode = jsonNode.get("schema");
-      StructType schema = engine.getJsonHandler().deserializeStructType(schemaNode.asText());
+      StructType schema = DataTypeJsonSerDe.deserializeStructType(schemaNode.asText());
       return parseRowFromJsonWithSchema((ObjectNode) jsonNode.get("row"), schema);
     }
     catch (JsonProcessingException e) {

@@ -20,11 +20,11 @@
 package org.apache.druid.sql.http;
 
 import com.google.inject.Inject;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 
-import javax.validation.constraints.NotNull;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;

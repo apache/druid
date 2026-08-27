@@ -24,14 +24,14 @@ import com.google.common.base.Optional;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class ChatHandlerResourceTest extends EasyMockSupport
 {
 
@@ -50,7 +50,7 @@ public class ChatHandlerResourceTest extends EasyMockSupport
 
     replayAll();
     chatHandlerResource = new ChatHandlerResource(handlers, taskHolder);
-    Assert.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.doTaskChat(handlerId, null));
+    Assertions.assertThrows(ServiceUnavailableException.class, () -> chatHandlerResource.doTaskChat(handlerId, null));
     verifyAll();
   }
 }

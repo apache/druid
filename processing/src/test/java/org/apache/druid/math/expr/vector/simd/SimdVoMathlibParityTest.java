@@ -29,8 +29,8 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorTestAssertions;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateDoubleFunction;
 import org.apache.druid.math.expr.vector.functional.DoubleUnivariateLongFunction;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Verifies that the SIMD processors for VO_MATHLIB unary ops (SVML/SLEEF-backed transcendentals) are
@@ -104,7 +104,7 @@ public class SimdVoMathlibParityTest
         final Expr.VectorInputBinding partial = new StubBinding(INPUT_LANES, size);
         // Would throw here if the tail path invoked the poisoned scalarFallback for any lane.
         final double[] out = processor.evalVector(partial).values();
-        Assert.assertEquals("op=" + op + " size=" + size + " unexpected output length", INPUT_LANES, out.length);
+        Assertions.assertEquals(INPUT_LANES, out.length, "op=" + op + " size=" + size + " unexpected output length");
       }
     }
   }
@@ -125,7 +125,7 @@ public class SimdVoMathlibParityTest
       for (int size : partialTailSizes()) {
         final Expr.VectorInputBinding partial = new StubBinding(INPUT_LANES, size);
         final double[] out = processor.evalVector(partial).values();
-        Assert.assertEquals("op=" + op + " size=" + size + " unexpected output length", INPUT_LANES, out.length);
+        Assertions.assertEquals(INPUT_LANES, out.length, "op=" + op + " size=" + size + " unexpected output length");
       }
     }
   }
@@ -157,10 +157,10 @@ public class SimdVoMathlibParityTest
     for (int i = 0; i < STABILITY_ITERATIONS; i++) {
       final double[] again = rerun.get();
       for (int j = 0; j < warmed.length; j++) {
-        Assert.assertEquals(
-            "op=" + op + " lane=" + j + " bit-unstable after warmup at iter=" + i,
+        Assertions.assertEquals(
             Double.doubleToRawLongBits(warmed[j]),
-            Double.doubleToRawLongBits(again[j])
+            Double.doubleToRawLongBits(again[j]),
+            "op=" + op + " lane=" + j + " bit-unstable after warmup at iter=" + i
         );
       }
     }

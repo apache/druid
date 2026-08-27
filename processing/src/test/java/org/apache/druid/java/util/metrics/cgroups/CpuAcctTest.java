@@ -36,7 +36,7 @@ import java.util.stream.LongStream;
 public class CpuAcctTest
 {
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File procDir;
   private File cgroupDir;
   private CgroupDiscoverer discoverer;

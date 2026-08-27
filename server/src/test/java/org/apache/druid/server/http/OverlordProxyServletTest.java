@@ -22,8 +22,8 @@ package org.apache.druid.server.http;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -47,7 +47,7 @@ public class OverlordProxyServletTest
     EasyMock.replay(overlordClient, request);
 
     URI uri = URI.create(new OverlordProxyServlet(overlordClient, null, null).rewriteTarget(request));
-    Assert.assertEquals("https://overlord:port/druid/over%3Alord/worker?param1=test&param2=test2", uri.toString());
+    Assertions.assertEquals("https://overlord:port/druid/over%3Alord/worker?param1=test&param2=test2", uri.toString());
 
     EasyMock.verify(overlordClient, request);
   }
