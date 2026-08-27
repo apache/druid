@@ -290,8 +290,12 @@ public class NettyHttpClient extends AbstractHttpClient
             catch (Exception ex) {
               log.warn(ex, "[%s] Exception thrown while processing message, closing channel.", requestDesc);
 
+              // Complete the future with the exception itself rather than null: a handler (e.g. handleResponse)
+              // may throw a specific, meaningful exception (query capacity exceeded, interrupted, etc.) and
+              // completing with null discards it, leaving callers with a successful-looking null result instead
+              // of the real failure.
               if (!retVal.isDone()) {
-                retVal.set(null);
+                retVal.setException(ex);
               }
               channel.close();
               channelResourceContainer.returnResource();
