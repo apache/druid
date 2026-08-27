@@ -2162,6 +2162,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return;
       }
 
+      // Hold this entry against reclaim for the duration of the mount, including the post-mount reservation check
+      // below. reclaim passes over held entries only, and evicting one mid-mount unmounts a storage directory this
+      // mount is filling, or when the directory was already resident, one it is about to serve.
+      final StorageLocation.ReservationHold<SegmentCacheEntry> selfHold =
+          mountLocation.addInternalWeakReservationHoldIfExists(this.id);
       try {
         entryLock.lock();
         try {
@@ -2261,6 +2266,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       catch (Throwable t) {
         unmount();
         throw t;
+      }
+      finally {
+        CloseableUtils.closeAndSuppressExceptions(selfHold, e -> log.warn(e, "Failed to release mount hold[%s]", id));
       }
     }
 

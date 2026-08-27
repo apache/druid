@@ -281,7 +281,11 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
       if (!mountFuture.compareAndSet(null, ours)) {
         continue;
       }
-      try {
+      // Hold this entry against reclaim while the mount establishes state; reclaim passes over held entries only,
+      // and an entry evicted mid-mount finishes into a location that no longer knows about it. Internal, since a
+      // mount is not somebody waiting on the bundle, and null when the entry is already gone - nothing to protect.
+      try (StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> selfHold =
+               mountLocation.addInternalWeakReservationHoldIfExists(id)) {
         doMount(mountLocation);
         ours.set(null);
       }
