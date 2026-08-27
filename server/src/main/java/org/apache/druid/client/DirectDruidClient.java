@@ -43,6 +43,7 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
@@ -51,7 +52,6 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
-import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
@@ -186,6 +186,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         // handleResponse). Once set, incoming chunks are dropped rather than buffered.
         private final AtomicBoolean discard = new AtomicBoolean(false);
         private final AtomicBoolean nodeMetricsEmitted = new AtomicBoolean(false);
+        // Tracks whether the response body's leading (non-whitespace) byte has been classified as JSON or
+        // HTML. For chunked responses the initial HttpResponse can arrive with an empty or all-whitespace body,
+        // in which case the check is retried against each subsequent HttpChunk until it resolves.
+        private final AtomicBoolean bodyPrefixResolved = new AtomicBoolean(false);
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
 
@@ -239,6 +243,33 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           return holder.getStream();
         }
 
+        /**
+         * Scans past leading whitespace in {@code buffer} looking for the first content byte, without consuming
+         * (advancing the reader index of) the buffer. Once a non-whitespace byte is found, the prefix is considered
+         * resolved (see {@link #bodyPrefixResolved}) and this returns whether that byte indicates an HTML response
+         * ('&lt;') rather than a JSON one. If {@code buffer} is empty or entirely whitespace, the prefix remains
+         * unresolved so a later call (from a subsequent chunk) can retry the check; this matters for chunked
+         * responses, where the initial {@link HttpResponse} can carry an empty body and the real content, HTML or
+         * otherwise, only arrives via {@link #handleChunk}.
+         */
+        private boolean isHtmlBodyPrefix(ChannelBuffer buffer)
+        {
+          if (bodyPrefixResolved.get()) {
+            return false;
+          }
+          final int readerIndex = buffer.readerIndex();
+          final int readable = buffer.readableBytes();
+          for (int i = 0; i < readable; i++) {
+            byte b = buffer.getByte(readerIndex + i);
+            if (b == ' ' || b == '\n' || b == '\r' || b == '\t') {
+              continue;
+            }
+            bodyPrefixResolved.set(true);
+            return b == '<';
+          }
+          return false;
+        }
+
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
@@ -249,23 +280,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final String contentType = response.headers().get(HttpHeaders.Names.CONTENT_TYPE);
           final ChannelBuffer contentBuffer = response.getContent();
           boolean isHtmlContentType = contentType != null && contentType.toLowerCase().contains("text/html");
-          boolean isHtmlBody = false;
-          if (contentBuffer.readableBytes() > 0) {
-            int readerIndex = contentBuffer.readerIndex();
-            int readable = contentBuffer.readableBytes();
-            for (int i = 0; i < readable; i++) {
-              byte b = contentBuffer.getByte(readerIndex + i);
-              if (b == ' ' || b == '\n' || b == '\r' || b == '\t') {
-                continue;
-              }
-              if (b == '<') {
-                isHtmlBody = true;
-              } else if (b != '{' && b != '[') {
-                // Not JSON start, but only treat '<' as HTML indicator
-              }
-              break;
-            }
-          }
+          boolean isHtmlBody = isHtmlBodyPrefix(contentBuffer);
           if (statusCode == 429 || statusCode == 503) {
             String msg = StringUtils.format(
                 "Query[%s] url[%s] failed with status[%s] [%s]",
@@ -432,6 +447,31 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final int bytes = channelBuffer.readableBytes();
 
           checkTotalBytesLimit(bytes);
+
+          // The initial HttpResponse for a chunked reply can have an empty body, so the HTML-vs-JSON prefix check
+          // done in handleResponse may not have resolved yet. Retry it here, against this chunk, before the bytes
+          // are enqueued for JSON parsing: otherwise an HTML error page (for example from a load balancer or
+          // reverse proxy) delivered as chunked content is enqueued blind and only surfaces later as a confusing
+          // JsonParseException.
+          if (isHtmlBodyPrefix(channelBuffer)) {
+            int len = Math.min(bytes, 512);
+            byte[] previewBytes = new byte[len];
+            channelBuffer.getBytes(channelBuffer.readerIndex(), previewBytes);
+            String preview = StringUtils.fromUtf8(previewBytes);
+            preview = preview.substring(0, Math.min(preview.length(), 256));
+            throw new org.apache.druid.query.QueryInterruptedException(
+                org.apache.druid.query.QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+                StringUtils.format(
+                    "Query[%s] url[%s] returned HTML response instead of JSON (detected in chunk[%d]) preview[%s]",
+                    query.getId(),
+                    url,
+                    chunkNum,
+                    preview
+                ),
+                org.apache.druid.query.QueryInterruptedException.class.getName(),
+                host
+            );
+          }
 
           boolean continueReading = true;
           if (bytes > 0) {

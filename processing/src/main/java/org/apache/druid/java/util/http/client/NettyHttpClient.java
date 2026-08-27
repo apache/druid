@@ -290,8 +290,11 @@ public class NettyHttpClient extends AbstractHttpClient
             catch (Exception ex) {
               log.warn(ex, "[%s] Exception thrown while processing message, closing channel.", requestDesc);
 
+              // Propagate the failure to the caller instead of silently resolving to null: handleResponse()/
+              // handleChunk() can throw to signal a transport-level failure (e.g. an unexpected HTTP status or
+              // content type), and that exception must not be lost.
               if (!retVal.isDone()) {
-                retVal.set(null);
+                retVal.setException(ex);
               }
               channel.close();
               channelResourceContainer.returnResource();
