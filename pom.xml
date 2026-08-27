@@ -1926,6 +1926,13 @@
                         </goals>
                     </execution>
                 </executions>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bcpkix-jdk18on</artifactId>
+                        <version>1.84</version>
+                    </dependency>
+                </dependencies>
                 <configuration>
                     <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
                     <dateFormatTimeZone>Etc/UTC</dateFormatTimeZone>
