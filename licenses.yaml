@@ -4033,7 +4033,7 @@ name: ICU4J
 license_category: binary
 module: java-core
 license_name: Unicode/ICU License
-version: 77.1
+version: 78.3
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
