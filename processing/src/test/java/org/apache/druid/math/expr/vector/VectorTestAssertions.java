@@ -37,8 +37,10 @@ public final class VectorTestAssertions
 
   /**
    * Assert that two doubles agree to within {@code maxUlps} ulps of each other. NaN is treated as equal to
-   * NaN and bit-identical values pass trivially. On failure, the message identifies the expected/actual bits
-   * and the measured ulp delta.
+   * NaN and bit-identical values pass trivially. Non-finite values (±Infinity, or a NaN mixed with a
+   * non-NaN) must match exactly, they cannot be ulp-compared because {@code Math.ulp(Infinity) = Infinity}
+   * inflates the threshold to infinity and would let any mismatch pass. On failure, the message identifies
+   * the expected/actual bits and (for finite mismatches) the measured ulp delta.
    */
   public static void assertDoublesEquivalent(String message, double expected, double actual, int maxUlps)
   {
@@ -47,6 +49,16 @@ public final class VectorTestAssertions
     }
     if (Double.doubleToRawLongBits(expected) == Double.doubleToRawLongBits(actual)) {
       return;
+    }
+    // Bit-identical infinities and matching-NaN cases have already passed above. Anything non-finite that
+    // reaches here is a real mismatch: fail rather than dividing by an infinite ulp.
+    if (!Double.isFinite(expected) || !Double.isFinite(actual)) {
+      Assertions.fail(StringUtils.format(
+          "%s: %s differs from expected %s (non-finite mismatch)",
+          message == null ? "double parity" : message,
+          actual,
+          expected
+      ));
     }
     final double ulp = Math.ulp(expected);
     final double diff = Math.abs(actual - expected);
