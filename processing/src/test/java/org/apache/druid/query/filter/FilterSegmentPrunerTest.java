@@ -522,6 +522,44 @@ class FilterSegmentPrunerTest
     Assertions.assertTrue(new FilterSegmentPruner(matchingLookingFilter, null, queryVirtualColumns).include(seg));
   }
 
+  @Test
+  void testPruneClusterGroupTuplesTransitivelyShadowedByQueryVirtualColumnNeverPrunes()
+  {
+    // The segment's cluster group is keyed by virtual column "v0" = "dim1", i.e. the real physical "dim1" column.
+    // The query defines its own virtual column "dim1" = "dim2", which shadows the physical column, plus a second
+    // virtual column "q" = "dim1" that therefore transitively reads "dim2", not the real "dim1". Matching "q"
+    // against "v0" by comparing raw, unresolved expression text ("dim1" == "dim1") would wrongly treat them as
+    // equivalent, even though "q" doesn't actually read the column "v0" reads. Equivalence must be resolved
+    // through the query's own virtual column dependency graph, so pruning on "q" must never occur here.
+    final VirtualColumns clusterVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("v0", "dim1", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+    final RowSignature clusteringColumns = RowSignature.builder().add("v0", ColumnType.STRING).build();
+    final ClusterGroupTuples tuples = new ClusterGroupTuples(
+        clusteringColumns,
+        clusterVirtualColumns,
+        List.of(List.of("abc"), List.of("xyz"))
+    );
+
+    final String interval = "2026-01-01T00:00:00Z/2026-01-02T00:00:00Z";
+    final DataSegment seg = makeDataSegment(interval, makeRange("dim1", 0, null, null), tuples);
+
+    final VirtualColumns queryVirtualColumns = VirtualColumns.create(
+        new ExpressionVirtualColumn("dim1", "dim2", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+        new ExpressionVirtualColumn("q", "dim1", ColumnType.STRING, TestExprMacroTable.INSTANCE)
+    );
+
+    // A filter value that matches none of the tuple's "v0" values must still never prune, since "q" doesn't
+    // actually read what "v0" reads.
+    final DimFilter nonMatchingLookingFilter = new EqualityFilter("q", ColumnType.STRING, "nomatch", null);
+    Assertions.assertTrue(new FilterSegmentPruner(nonMatchingLookingFilter, null, queryVirtualColumns).include(seg));
+
+    // Nor should a filter value that happens to match one of the tuple's "v0" values: that match is coincidental
+    // and says nothing about "dim2", which is what "q" actually reads.
+    final DimFilter matchingLookingFilter = new EqualityFilter("q", ColumnType.STRING, "abc", null);
+    Assertions.assertTrue(new FilterSegmentPruner(matchingLookingFilter, null, queryVirtualColumns).include(seg));
+  }
+
   private ShardSpec makeRange(
       String column,
       int partitionNumber,
