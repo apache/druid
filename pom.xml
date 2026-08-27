@@ -766,6 +766,11 @@
             </dependency>
             <dependency>
                 <groupId>org.glassfish.grizzly</groupId>
+                <artifactId>grizzly-http</artifactId>
+                <version>5.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.grizzly</groupId>
                 <artifactId>grizzly-http-server</artifactId>
                 <version>5.0.2</version>
             </dependency>
