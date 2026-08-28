@@ -469,11 +469,11 @@ class FilterSegmentPrunerTest
   }
 
   @Test
-  void testPruneClusterGroupTuplesVirtualColumnNoQueryVirtualColumnNeverPrunes()
+  void testPruneClusterGroupTuplesVirtualColumnNoQueryVirtualColumnPrunesDirectly()
   {
-    // The segment's cluster groups record "vdim1" as derived from an expression. A query with no virtual column
-    // of its own named "vdim1" has no way to prove it means the same expression, so pruning must not assume the
-    // filter value can be compared against the tuple's virtual-column-derived value: never prune.
+    // The segment's cluster groups record "vdim1" as derived from an expression, but cluster group virtual
+    // columns are directly queryable. A query with no virtual column of its own named "vdim1" doesn't shadow it,
+    // so the filter value can be compared directly against the tuple's virtual-column-derived value.
     final VirtualColumns clusterVirtualColumns = VirtualColumns.create(
         new ExpressionVirtualColumn("vdim1", "concat(dim1, 'foo')", ColumnType.STRING, TestExprMacroTable.INSTANCE)
     );
@@ -490,9 +490,9 @@ class FilterSegmentPrunerTest
     final DimFilter matchingLookingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "abcfoo", null);
     final DimFilter nonMatchingLookingFilter = new EqualityFilter("vdim1", ColumnType.STRING, "deffoo", null);
 
-    // no query virtual columns at all: neither filter value can be resolved against the domain's virtual column
+    // no query virtual columns at all, and "vdim1" isn't shadowed, so it's matched directly by name
     Assertions.assertTrue(new FilterSegmentPruner(matchingLookingFilter, null, null).include(seg));
-    Assertions.assertTrue(new FilterSegmentPruner(nonMatchingLookingFilter, null, null).include(seg));
+    Assertions.assertFalse(new FilterSegmentPruner(nonMatchingLookingFilter, null, null).include(seg));
   }
 
   @Test

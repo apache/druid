@@ -81,7 +81,7 @@ public class FilterSegmentPruner implements SegmentPruner
     if (shard != null) {
       final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
       for (String dimension : shard.getDomainDimensions()) {
-        addToFilterDomain(dimension, shard.getDomainVirtualColumns(), filterDomain);
+        addToFilterDomain(dimension, shard.getDomainVirtualColumns(), filterDomain, false);
       }
       if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
         return false;
@@ -107,7 +107,10 @@ public class FilterSegmentPruner implements SegmentPruner
       if (!ColumnType.STRING.equals(clusteringColumns.getColumnType(i).orElse(null))) {
         continue;
       }
-      addToFilterDomain(column, clusterGroups.virtualColumns(), filterDomain);
+      // Cluster group virtual columns are wired into real query execution (they're merged into the segment's
+      // live VirtualColumns at cursor construction time), so "column" is directly queryable by that exact name
+      // as long as the query doesn't shadow it with a differently-defined virtual column of its own.
+      addToFilterDomain(column, clusterGroups.virtualColumns(), filterDomain, true);
     }
 
     if (filterDomain.isEmpty()) {
@@ -202,17 +205,16 @@ public class FilterSegmentPruner implements SegmentPruner
   }
 
   /**
-   * Adds the filter's {@link RangeSet} for {@code column} to {@code filterDomain}, if the filter constrains it.
-   * <p>
-   * If {@code domainVirtualColumns} considers {@code column} virtual, only a query virtual column with an
-   * equivalent expression can be matched against it, if none exists, nothing is added and this column is never pruned on.
-   * <p>
-   * Otherwise, {@code column} is a plain physical column, it can only be used for pruning if it's a non-virtual column in the query.
+   * Adds the filter's {@link RangeSet} for {@code column} to {@code filterDomain}, if the filter constrains it and
+   * {@code column} can be safely matched: as a query virtual column with an equivalent expression, directly by name
+   * when {@code allowDirectAccess} (only valid for domain virtual columns that are themselves directly queryable,
+   * e.g. clustering groups), or as an unshadowed physical column. Otherwise, nothing is added.
    */
   private void addToFilterDomain(
       String column,
       VirtualColumns domainVirtualColumns,
-      Map<String, RangeSet<String>> filterDomain
+      Map<String, RangeSet<String>> filterDomain,
+      boolean allowDirectAccess
   )
   {
     final VirtualColumns.Node domainNode = domainVirtualColumns.getNode(column);
@@ -220,6 +222,8 @@ public class FilterSegmentPruner implements SegmentPruner
       final VirtualColumn queryEquivalent = getQueryEquivalent(domainNode);
       if (queryEquivalent != null) {
         addRangeSetIfPresent(queryEquivalent.getOutputName(), column, filterDomain);
+      } else if (allowDirectAccess && virtualColumns.getNode(column) == null) {
+        addRangeSetIfPresent(column, column, filterDomain);
       }
     } else if (virtualColumns.getNode(column) == null) {
       // Query doesn't shadow the materialized column with its own virtual column of the same name.
