@@ -842,32 +842,32 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       }
       checkClosed();
 
-      int from = 0;
-      int to = runFiles.size();
-      while (from < to && downloadedFiles.contains(runFiles.get(from))) {
-        from++;
-      }
-      while (to > from && downloadedFiles.contains(runFiles.get(to - 1))) {
-        to--;
-      }
-      if (from == to) {
-        // the whole run became resident while we were waiting on the locks
-        return;
-      }
-      final List<String> remaining = runFiles.subList(from, to);
-      final SegmentInternalFileMetadata first = metadata.getFiles().get(remaining.get(0));
-      final long startOffset = first.getStartOffset();
-      // scan for the span end rather than assuming the last file ends last: shrinking the read below any covered
-      // file's end would mark that file downloaded without its bytes on disk (zero-length files share start offsets)
-      long endOffset = startOffset;
-      for (String name : remaining) {
-        final SegmentInternalFileMetadata fileMeta = metadata.getFiles().get(name);
-        endOffset = Math.max(endOffset, fileMeta.getStartOffset() + fileMeta.getSize());
-      }
-      final long length = endOffset - startOffset;
-
       beginContainerFetch(containerIndex);
       try {
+        int from = 0;
+        int to = runFiles.size();
+        while (from < to && downloadedFiles.contains(runFiles.get(from))) {
+          from++;
+        }
+        while (to > from && downloadedFiles.contains(runFiles.get(to - 1))) {
+          to--;
+        }
+        if (from == to) {
+          // the whole run became resident while we were waiting on the locks
+          return;
+        }
+        final List<String> remaining = runFiles.subList(from, to);
+        final SegmentInternalFileMetadata first = metadata.getFiles().get(remaining.get(0));
+        final long startOffset = first.getStartOffset();
+        // scan for the span end rather than assuming the last file ends last: shrinking the read below any covered
+        // file's end would mark that file downloaded without its bytes on disk (zero-length files share start offsets)
+        long endOffset = startOffset;
+        for (String name : remaining) {
+          final SegmentInternalFileMetadata fileMeta = metadata.getFiles().get(name);
+          endOffset = Math.max(endOffset, fileMeta.getStartOffset() + fileMeta.getSize());
+        }
+        final long length = endOffset - startOffset;
+
         ensureContainerInitialized(containerIndex);
         streamRangeIntoContainer(
             containerIndex,
@@ -1084,27 +1084,25 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         );
       }
       containerFiles[containerIndex] = null;
+
+      // clear bitmap bits + downloadedFiles entries for files that lived in this container.
+      for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
+        if (entry.getValue().getContainer() != containerIndex) {
+          continue;
+        }
+        final String fileName = entry.getKey();
+        if (downloadedFiles.remove(fileName)) {
+          downloadedBytes.addAndGet(-entry.getValue().getSize());
+        }
+        clearBitmapBit(fileName);
+      }
+
+      // last: readers that observe the bumped generation must also observe the cleared residency above
+      containerGenerations.incrementAndGet(containerIndex);
     }
     finally {
       containerLocks[containerIndex].unlock();
     }
-
-    // clear bitmap bits + downloadedFiles entries for files that lived in this container. Iterates
-    // metadata.getFiles() without external synchronization: SegmentFileMetadata is constructed once at mapper
-    // creation and its file map is effectively immutable for the mapper's lifetime, so concurrent iteration is safe.
-    for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
-      if (entry.getValue().getContainer() != containerIndex) {
-        continue;
-      }
-      final String fileName = entry.getKey();
-      if (downloadedFiles.remove(fileName)) {
-        downloadedBytes.addAndGet(-entry.getValue().getSize());
-      }
-      clearBitmapBit(fileName);
-    }
-
-    // last: readers that observe the bumped generation must also observe the cleared residency above
-    containerGenerations.incrementAndGet(containerIndex);
   }
 
   /**
