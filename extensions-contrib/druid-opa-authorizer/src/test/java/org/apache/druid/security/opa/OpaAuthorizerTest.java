@@ -24,9 +24,9 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -85,7 +85,7 @@ public class OpaAuthorizerTest
     return sb.toString();
   }
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     httpClient = Mockito.mock(HttpClient.class);
@@ -106,7 +106,7 @@ public class OpaAuthorizerTest
     final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
     final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
   }
 
   @Test
@@ -123,8 +123,8 @@ public class OpaAuthorizerTest
     final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
     final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
-    Assert.assertFalse(access.isAllowed());
-    Assert.assertEquals(Access.DENIED.getMessage(), access.getMessage());
+    Assertions.assertFalse(access.isAllowed());
+    Assertions.assertEquals(Access.DENIED.getMessage(), access.getMessage());
   }
 
   @Test
@@ -137,8 +137,8 @@ public class OpaAuthorizerTest
     final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
     final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
-    Assert.assertFalse(access.isAllowed());
-    Assert.assertTrue(access.getMessage().contains("Unauthorized, An error occurred: java.lang.RuntimeException: Network error"));
+    Assertions.assertFalse(access.isAllowed());
+    Assertions.assertTrue(access.getMessage().contains("Unauthorized, An error occurred: java.lang.RuntimeException: Network error"));
   }
 
   @Test
@@ -155,15 +155,17 @@ public class OpaAuthorizerTest
     final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
     final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
-    Assert.assertFalse(access.isAllowed());
-    Assert.assertTrue(access.getMessage().contains("OPA request failed with status code [500]"));
+    Assertions.assertFalse(access.isAllowed());
+    Assertions.assertTrue(access.getMessage().contains("OPA request failed with status code [500]"));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidUri()
   {
-    final OpaAuthorizer ignored = new OpaAuthorizer("opa", "invalid uri", null, httpClient);
-    Assert.assertNotNull(ignored);
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new OpaAuthorizer("opa", "invalid uri", null, httpClient)
+    );
   }
 
   @Test
@@ -195,16 +197,16 @@ public class OpaAuthorizerTest
     final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
     final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
 
     final HttpRequest capturedRequest = requestCaptor.getValue();
     final String requestBody = getBody(capturedRequest);
 
-    Assert.assertTrue(requestBody.contains("\"name\":\"uid=user\""));
-    Assert.assertTrue(requestBody.contains("\"nameInNamespace\":\"dc=example,dc=org\""));
-    Assert.assertTrue(requestBody.contains("\"uid\":[\"user\"]"));
-    Assert.assertTrue(requestBody.contains("\"memberof\":[\"cn=group1,ou=Groups,dc=example,dc=org\",\"cn=group2,ou=Groups,dc=example,dc=org\"]"));
-    Assert.assertTrue(requestBody.contains("\"jpegphoto\":[\"AQID\"]")); // Base64 for [1, 2, 3]
+    Assertions.assertTrue(requestBody.contains("\"name\":\"uid=user\""));
+    Assertions.assertTrue(requestBody.contains("\"nameInNamespace\":\"dc=example,dc=org\""));
+    Assertions.assertTrue(requestBody.contains("\"uid\":[\"user\"]"));
+    Assertions.assertTrue(requestBody.contains("\"memberof\":[\"cn=group1,ou=Groups,dc=example,dc=org\",\"cn=group2,ou=Groups,dc=example,dc=org\"]"));
+    Assertions.assertTrue(requestBody.contains("\"jpegphoto\":[\"AQID\"]")); // Base64 for [1, 2, 3]
   }
 
   @Test
@@ -217,21 +219,21 @@ public class OpaAuthorizerTest
     final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
     final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
 
-    Assert.assertFalse(access.isAllowed());
-    Assert.assertTrue(access.getMessage().contains("HttpTimeoutException"));
+    Assertions.assertFalse(access.isAllowed());
+    Assertions.assertTrue(access.getMessage().contains("HttpTimeoutException"));
   }
 
   @Test
   public void testCustomTimeout()
   {
     final OpaAuthorizer customTimeout = new OpaAuthorizer("opa", OPA_URI, 5000L, httpClient);
-    Assert.assertNotNull(customTimeout);
+    Assertions.assertNotNull(customTimeout);
   }
 
   @Test
   public void testDefaultTimeout()
   {
     final OpaAuthorizer defaultTimeout = new OpaAuthorizer("opa", OPA_URI, null, httpClient);
-    Assert.assertNotNull(defaultTimeout);
+    Assertions.assertNotNull(defaultTimeout);
   }
 }

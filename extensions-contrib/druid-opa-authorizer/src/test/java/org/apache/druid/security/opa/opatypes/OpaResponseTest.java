@@ -21,8 +21,8 @@ package org.apache.druid.security.opa.opatypes;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class OpaResponseTest
 {
@@ -34,7 +34,7 @@ public class OpaResponseTest
   {
     final String json = "{\"result\": true}";
     final OpaResponse response = mapper.readValue(json, OpaResponse.class);
-    Assert.assertTrue(response.isResult());
+    Assertions.assertTrue(response.isResult());
   }
 
   @Test
@@ -42,7 +42,7 @@ public class OpaResponseTest
   {
     final String json = "{\"result\": false}";
     final OpaResponse response = mapper.readValue(json, OpaResponse.class);
-    Assert.assertFalse(response.isResult());
+    Assertions.assertFalse(response.isResult());
   }
 
   @Test
@@ -50,6 +50,6 @@ public class OpaResponseTest
   {
     final String json = "{\"result\": true, \"decision_id\": \"12345\", \"unknown\": { \"foo\": \"bar\" }}";
     final OpaResponse response = mapper.readValue(json, OpaResponse.class);
-    Assert.assertTrue(response.isResult());
+    Assertions.assertTrue(response.isResult());
   }
 }

@@ -22,8 +22,8 @@ package org.apache.druid.security.opa.opatypes;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 
@@ -42,16 +42,16 @@ public class OpaMessageTest
 
     // Verify the structure: {"input":{"authenticationResult":{"identity":"user",...},"action":"READ","resource":{"name":"resource","type":"type"}}}
     final Map<String, Object> map = mapper.readValue(json, new TypeReference<>() {});
-    Assert.assertTrue(map.containsKey("input"));
+    Assertions.assertTrue(map.containsKey("input"));
 
     final Map<String, Object> input = (Map<String, Object>) map.get("input");
-    Assert.assertEquals("READ", input.get("action"));
+    Assertions.assertEquals("READ", input.get("action"));
 
     final Map<String, Object> resource = (Map<String, Object>) input.get("resource");
-    Assert.assertEquals("resource", resource.get("name"));
-    Assert.assertEquals("type", resource.get("type"));
+    Assertions.assertEquals("resource", resource.get("name"));
+    Assertions.assertEquals("type", resource.get("type"));
 
     final Map<String, Object> authenticationResult = (Map<String, Object>) input.get("authenticationResult");
-    Assert.assertEquals("user", authenticationResult.get("identity"));
+    Assertions.assertEquals("user", authenticationResult.get("identity"));
   }
 }
