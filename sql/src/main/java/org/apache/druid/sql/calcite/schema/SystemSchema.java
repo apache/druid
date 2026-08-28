@@ -74,7 +74,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.server.system.table.SystemTasksTableDescriptor;
+import org.apache.druid.server.system.table.TaskTableDescriptor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
@@ -330,7 +330,7 @@ public class SystemSchema extends AbstractTableSchema
           authenticationResult
       );
       case SERVER_SEGMENTS_TABLE -> new ServerSegmentsTable(serverView, authorizerMapper, authenticationResult);
-      case SystemTasksTableDescriptor.TABLE_NAME -> new TasksTable(overlordClient, authorizerMapper, authenticationResult);
+      case TaskTableDescriptor.TABLE_NAME -> new TasksTable(overlordClient, authorizerMapper, authenticationResult);
       case SUPERVISOR_TABLE -> new SupervisorsTable(overlordClient, authorizerMapper, authenticationResult);
       case SystemServerPropertiesTable.TABLE_NAME -> new SystemServerPropertiesTable(
           druidNodeDiscoveryProvider,
@@ -976,7 +976,7 @@ public class SystemSchema extends AbstractTableSchema
     @Override
     public RelDataType getRowType(RelDataTypeFactory typeFactory)
     {
-      return RowSignatures.toRelDataType(SystemTasksTableDescriptor.ROW_SIGNATURE, typeFactory);
+      return RowSignatures.toRelDataType(TaskTableDescriptor.ROW_SIGNATURE, typeFactory);
     }
 
     @Override

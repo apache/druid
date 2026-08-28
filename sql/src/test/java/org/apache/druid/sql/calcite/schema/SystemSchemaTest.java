@@ -107,7 +107,7 @@ import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.server.system.table.SystemTasksTableDescriptor;
+import org.apache.druid.server.system.table.TaskTableDescriptor;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.SystemSchema.QueriesTable;
@@ -1483,7 +1483,7 @@ public class SystemSchemaTest extends CalciteTestBase
     Assertions.assertNull(row1[13]);
 
     // Verify value types.
-    verifyTypes(rows, SystemTasksTableDescriptor.ROW_SIGNATURE);
+    verifyTypes(rows, TaskTableDescriptor.ROW_SIGNATURE);
   }
 
   @Test

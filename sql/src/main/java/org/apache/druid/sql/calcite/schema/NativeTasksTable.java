@@ -25,7 +25,7 @@ import org.apache.calcite.rel.logical.LogicalTableScan;
 import org.apache.calcite.schema.Schema;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.SystemTableDataSource;
-import org.apache.druid.server.system.table.SystemTasksTableDescriptor;
+import org.apache.druid.server.system.table.TaskTableDescriptor;
 import org.apache.druid.sql.calcite.table.DruidTable;
 
 /** Native-query representation of {@code sys.tasks}. */
@@ -35,7 +35,7 @@ class NativeTasksTable extends DruidTable
 
   NativeTasksTable()
   {
-    super(SystemTasksTableDescriptor.ROW_SIGNATURE);
+    super(TaskTableDescriptor.ROW_SIGNATURE);
   }
 
   @Override

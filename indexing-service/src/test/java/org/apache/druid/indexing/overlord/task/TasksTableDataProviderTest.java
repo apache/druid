@@ -48,7 +48,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.system.SystemTableNotLeaderException;
 import org.apache.druid.server.system.table.SystemTablePushdownFilter;
-import org.apache.druid.server.system.table.SystemTasksTableDescriptor;
+import org.apache.druid.server.system.table.TaskTableDescriptor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -58,7 +58,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
-public class SystemTasksTableDataProviderTest
+public class TasksTableDataProviderTest
 {
   @Test
   public void testAdvertisesAllPushdownFiltersForSupportingStorage()
@@ -96,7 +96,7 @@ public class SystemTasksTableDataProviderTest
         )
     )
            .thenReturn(Collections.emptyList());
-    final SystemTasksTableDataProvider supplier = new SystemTasksTableDataProvider(
+    final TasksTableDataProvider supplier = new TasksTableDataProvider(
         taskQueryTool,
         taskMaster
     );
@@ -113,7 +113,7 @@ public class SystemTasksTableDataProviderTest
   public void testRejectsRowsOnStandbyOverlord()
   {
     final TaskMaster taskMaster = Mockito.mock(TaskMaster.class);
-    final SystemTasksTableDataProvider provider = new SystemTasksTableDataProvider(
+    final TasksTableDataProvider provider = new TasksTableDataProvider(
         Mockito.mock(TaskQueryTool.class),
         taskMaster
     );
@@ -137,7 +137,7 @@ public class SystemTasksTableDataProviderTest
         taskMaster,
         null
     );
-    final SystemTasksTableDataProvider provider = new SystemTasksTableDataProvider(
+    final TasksTableDataProvider provider = new TasksTableDataProvider(
         taskQueryTool,
         taskMaster
     );
@@ -170,7 +170,7 @@ public class SystemTasksTableDataProviderTest
         taskMaster,
         null
     );
-    final SystemTasksTableDataProvider provider = new SystemTasksTableDataProvider(
+    final TasksTableDataProvider provider = new TasksTableDataProvider(
         taskQueryTool,
         taskMaster
     );
@@ -291,19 +291,19 @@ public class SystemTasksTableDataProviderTest
   {
     final TaskQueryTool taskQueryTool = Mockito.mock(TaskQueryTool.class);
     Mockito.when(taskQueryTool.supportsTaskStatusQueryFilter()).thenReturn(true);
-    final SystemTasksTableDataProvider dataSupplier = dataProvider(taskQueryTool);
+    final TasksTableDataProvider dataSupplier = dataProvider(taskQueryTool);
     return SystemTablePushdownFilter.extract(query, dataSupplier.getPushdownFilters());
   }
 
-  private static SystemTasksTableDataProvider dataProvider(final TaskQueryTool taskQueryTool)
+  private static TasksTableDataProvider dataProvider(final TaskQueryTool taskQueryTool)
   {
-    return new SystemTasksTableDataProvider(taskQueryTool, null);
+    return new TasksTableDataProvider(taskQueryTool, null);
   }
 
   private static ScanQuery scanQuery(final DimFilter filter)
   {
     return Druids.newScanQueryBuilder()
-                 .dataSource(new SystemTableDataSource(SystemTasksTableDescriptor.TABLE_NAME))
+                 .dataSource(new SystemTableDataSource(TaskTableDescriptor.TABLE_NAME))
                  .intervals(new LegacySegmentSpec(Intervals.ETERNITY))
                  .filters(filter)
                  .build();

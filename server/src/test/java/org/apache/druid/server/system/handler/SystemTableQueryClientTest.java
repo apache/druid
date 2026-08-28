@@ -83,7 +83,7 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.system.SystemTableNotLeaderException;
 import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.server.system.table.SystemTableDescriptor;
-import org.apache.druid.server.system.table.SystemTasksTableDescriptor;
+import org.apache.druid.server.system.table.TaskTableDescriptor;
 import org.joda.time.Duration;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -933,7 +933,7 @@ public class SystemTableQueryClientTest
   @Test
   public void testLeaderOnlyQueryRetriesAfterLeadershipChange()
   {
-    final SystemTableDescriptor descriptor = new SystemTasksTableDescriptor();
+    final SystemTableDescriptor descriptor = new TaskTableDescriptor();
     final SystemTableNode oldLeader = systemTableNode(testNode(8081));
     final SystemTableNode newLeader = systemTableNode(testNode(8082));
     final SystemTableNodeLocator nodeLocator = Mockito.mock(SystemTableNodeLocator.class);

@@ -35,7 +35,7 @@ import org.apache.druid.server.system.table.SystemTablePushdownFilter;
 import java.util.List;
 
 /** Native row supplier for {@code sys.tasks}. */
-public class SystemTasksTableDataProvider implements SystemTableDataProvider
+public class TasksTableDataProvider implements SystemTableDataProvider
 {
   private static final List<SystemTablePushdownFilter> METADATA_STORAGE_PUSHDOWN_FILTERS = List.of(
       new SystemTablePushdownFilter("task_id", "id"),
@@ -53,7 +53,7 @@ public class SystemTasksTableDataProvider implements SystemTableDataProvider
   private final TaskMaster taskMaster;
 
   @Inject
-  public SystemTasksTableDataProvider(
+  public TasksTableDataProvider(
       final TaskQueryTool taskQueryTool,
       final TaskMaster taskMaster
   )
@@ -83,7 +83,7 @@ public class SystemTasksTableDataProvider implements SystemTableDataProvider
         TaskStateLookup.ALL,
         new TaskStorageQueryFilter(filters)
     );
-    return Iterables.transform(tasks, SystemTasksTableDataProvider::taskToRow);
+    return Iterables.transform(tasks, TasksTableDataProvider::taskToRow);
   }
 
   private static Object[] taskToRow(final TaskStatusPlus task)

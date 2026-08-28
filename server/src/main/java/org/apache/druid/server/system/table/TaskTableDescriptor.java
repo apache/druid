@@ -30,7 +30,7 @@ import java.util.Collections;
 import java.util.Set;
 
 /** Descriptor for the native {@code sys.tasks} table. */
-public class SystemTasksTableDescriptor implements SystemTableDescriptor
+public class TaskTableDescriptor implements SystemTableDescriptor
 {
   public static final String TABLE_NAME = "tasks";
   public static final RowSignature ROW_SIGNATURE = RowSignature
