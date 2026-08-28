@@ -690,11 +690,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   if (fullDownload) {
                     // Delta of internal-file bytes downloaded by this task
                     final long downloadedBefore = mapper.getDownloadedBytes();
-                    // Mount every bundle so the containers it owns are reserved on the location
-                    for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
-                      holdHolder.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
+                    // Mount every bundle so the containers it owns are reserved on the location, and keep those
+                    // references here for the duration of the download instead of handing them straight to
+                    // holdHolder so that the caller abandoning a load doesn't release the holds until load is
+                    // finished.
+                    final List<Closeable> bundleRefs = new ArrayList<>();
+                    try {
+                      for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
+                        bundleRefs.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
+                      }
+                      mapper.ensureAllDownloaded();
                     }
-                    mapper.ensureAllDownloaded();
+                    finally {
+                      bundleRefs.forEach(holdHolder::add);
+                    }
                     loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
                   } else {
                     // Lazy mount: the header bytes when this task caused the mount; 0 when the entry was already

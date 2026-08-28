@@ -284,8 +284,9 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
       // Hold this entry against reclaim while the mount establishes state; reclaim passes over held entries only,
       // and an entry evicted mid-mount finishes into a location that no longer knows about it. Internal, since a
       // mount is not somebody waiting on the bundle, and null when the entry is already gone - nothing to protect.
-      try (StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> selfHold =
-               mountLocation.addInternalWeakReservationHoldIfExists(id)) {
+      final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> selfHold =
+          mountLocation.addInternalWeakReservationHoldIfExists(id);
+      try (selfHold) {
         doMount(mountLocation);
         ours.set(null);
       }
@@ -293,6 +294,10 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
         // clear the gate so the next caller gets a fresh attempt
         mountFuture.set(null);
         ours.setException(t);
+        // If it is already gone, no unmount() will follow to sweep them up, so reap them here.
+        if (!isStillRegistered(mountLocation)) {
+          reapContainersOfUncommittedMount();
+        }
         switch (t) {
           case IOException ioException -> throw ioException;
           case RuntimeException runtimeException -> throw runtimeException;
@@ -315,13 +320,72 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
    */
   private void verifyStillReservedOrRollback(StorageLocation mountLocation)
   {
-    if (!mountLocation.isReserved(id) && !mountLocation.isWeakReserved(id)) {
+    if (!isStillRegistered(mountLocation)) {
       LOG.debug(
           "Aborting mount of bundle[%s] in location[%s]; entry was evicted while mounting",
           id,
           mountLocation.getPath()
       );
       unmount();
+    }
+  }
+
+  /**
+   * Whether the cache still knows about this entry.
+   */
+  private boolean isStillRegistered(StorageLocation mountLocation)
+  {
+    return mountLocation.isReserved(id) || mountLocation.isWeakReserved(id);
+  }
+
+  /**
+   * Evict containers left behind by a mount that never committed. A failed mount deliberately keeps the containers it
+   * had already initialized so a retry can reuse them (see {@link #doMount}); this entry being torn down is that retry
+   * never coming, and nothing else will clean them up since {@link #doActualUnmount} runs only for a mount that
+   * committed.
+   */
+  private void reapContainersOfUncommittedMount()
+  {
+    final SettableFuture<Void> ours = SettableFuture.create();
+    if (!mountFuture.compareAndSet(null, ours)) {
+      // something else is mounting, bail out
+      return;
+    }
+    try {
+      // Null once the metadata entry has unmounted, which closes the file mapper; evictContainer would throw on it.
+      final PartialSegmentFileMapperV10 fileMapper = metadataEntry.getFileMapper();
+      if (fileMapper != null) {
+        evictOwnedContainers(fileMapper);
+      }
+    }
+    finally {
+      // Clear the gate before completing it, so a mount that joined while we held it finds a fresh gate to claim
+      // rather than this one. It fails instead of believing a mount happened, which is accurate: it asked to mount an
+      // entry that was being torn down.
+      mountFuture.set(null);
+      ours.setException(DruidException.defensive("Bundle[%s] was torn down while mounting", id));
+    }
+  }
+
+  /**
+   * Evict every container this bundle owns, routing each ref to the mapper that owns it. Best-effort: a container that
+   * fails to evict is logged rather than aborting the rest, since every caller is already tearing down.
+   */
+  private void evictOwnedContainers(PartialSegmentFileMapperV10 fileMapper)
+  {
+    for (BundleContainerRef ref : containerRefs) {
+      try {
+        fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
+      }
+      catch (Throwable t) {
+        LOG.warn(
+            t,
+            "Failed to evict container[%s/%d] for bundle[%s]",
+            ref.externalFilename(),
+            ref.containerIndex(),
+            id
+        );
+      }
     }
   }
 
@@ -436,19 +500,6 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     }
     finally {
       if (!committed) {
-        // Evict any containers that were successfully initialized before the failure. Mirrors the eager
-        // SegmentCacheEntry behavior: retry from a clean slate is simpler than reasoning about partial on-disk state.
-        // evictContainer is a no-op for containers that were never initialized, so we can iterate the full set
-        // without tracking how far the initialization loop got.
-        for (BundleContainerRef ref : containerRefs) {
-          try {
-            fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
-          }
-          catch (Throwable t) {
-            LOG.warn(t, "Failed to evict container[%s/%d] for bundle[%s] during mount rollback",
-                     ref.externalFilename(), ref.containerIndex(), id);
-          }
-        }
         if (registered) {
           try {
             metadataEntry.unregisterBundle(this);
@@ -489,7 +540,11 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     final ReferenceCountingCloseableObject<Closeable> current = references.get();
     if (current != null && !current.isClosed()) {
       current.close();
+      return;
     }
+    // Nothing mounted to tear down, so doActualUnmount will not run for this entry; sweep up after any mount that
+    // failed partway and left containers behind.
+    reapContainersOfUncommittedMount();
   }
 
   /**
@@ -538,14 +593,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
       final PartialSegmentFileMapperV10 fileMapper = metadataEntry.getFileMapper();
       // file mapper may be null if metadata was already unmounted (out-of-order shutdown); evictContainer would NPE
       if (fileMapper != null) {
-        for (BundleContainerRef ref : containerRefs) {
-          try {
-            fileMapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
-          }
-          catch (Throwable t) {
-            LOG.warn(t, "Failed to evict container[%s/%d] for bundle[%s]", ref.externalFilename(), ref.containerIndex(), id);
-          }
-        }
+        evictOwnedContainers(fileMapper);
       }
       refsToRelease = new ArrayList<>(dependencyReferences);
       dependencyReferences.clear();
