@@ -5477,7 +5477,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 6.4.0
+version: 7.2.2
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
