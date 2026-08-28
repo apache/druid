@@ -269,11 +269,61 @@
     <cve>CVE-2022-24823</cve> <!-- We don't decode user HTTP requests nor forward them to remote systems, we also don't support for java 6 or lower - https://github.com/advisories/GHSA-269q-hmxg-m83q -->
     <cve>CVE-2022-41881</cve>
     <cve>CVE-2023-34462</cve>	<!-- Suppressed since netty requests in Druid are internal, and not user-facing -->
+    <!--
+      Dependency-Check maps the generic netty:netty CPE to advisories published for Netty 4 module artifacts.
+      Druid uses this Netty 3 artifact only for internal HTTP client requests; the affected Netty 4 modules and
+      APIs are not used by Druid.
+    -->
+    <cve>CVE-2024-29025</cve>
+    <cve>CVE-2024-47535</cve>
+    <cve>CVE-2025-25193</cve>
     <cve>CVE-2025-55163</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
     <cve>CVE-2025-58056</cve>
     <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
+    <cve>CVE-2025-67735</cve>
     <cve>CVE-2026-33870</cve> <!-- We don't use HttpPostRequestDecoder -->
     <cve>CVE-2026-33871</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
+    <cve>CVE-2026-41417</cve>
+    <cve>CVE-2026-42578</cve>
+    <cve>CVE-2026-42579</cve>
+    <cve>CVE-2026-42580</cve>
+    <cve>CVE-2026-42581</cve>
+    <cve>CVE-2026-42583</cve>
+    <cve>CVE-2026-42584</cve>
+    <cve>CVE-2026-42585</cve>
+    <cve>CVE-2026-42586</cve>
+    <cve>CVE-2026-42587</cve>
+    <cve>CVE-2026-44248</cve>
+    <cve>CVE-2026-44249</cve>
+    <cve>CVE-2026-44250</cve>
+    <cve>CVE-2026-44890</cve>
+    <cve>CVE-2026-44891</cve>
+    <cve>CVE-2026-44893</cve>
+    <cve>CVE-2026-45416</cve>
+    <cve>CVE-2026-45536</cve>
+    <cve>CVE-2026-45673</cve>
+    <cve>CVE-2026-45674</cve>
+    <cve>CVE-2026-46340</cve>
+    <cve>CVE-2026-47244</cve>
+    <cve>CVE-2026-47691</cve>
+    <cve>CVE-2026-48006</cve>
+    <cve>CVE-2026-48043</cve>
+    <cve>CVE-2026-48059</cve>
+    <cve>CVE-2026-50010</cve>
+    <cve>CVE-2026-50011</cve>
+    <cve>CVE-2026-50020</cve>
+    <cve>CVE-2026-50560</cve>
+    <cve>CVE-2026-56820</cve>
+    <cve>CVE-2026-56821</cve>
+    <cve>CVE-2026-56822</cve>
+    <cve>CVE-2026-59898</cve>
+    <cve>CVE-2026-59899</cve>
+    <cve>CVE-2026-59900</cve>
+    <cve>CVE-2026-59901</cve>
+    <cve>CVE-2026-59919</cve>
+    <cve>CVE-2026-59920</cve>
+    <cve>CVE-2026-59921</cve>
+    <cve>CVE-2026-62380</cve>
   </suppress>
 
   <suppress>

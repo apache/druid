@@ -70,7 +70,7 @@ jobs:
       - name: Update Dependency-Check data
         id: dependency-check-update
         env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY || secrets.NIST_NVD_API_KEY }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           if [ -n "$NVD_API_KEY" ]; then
             echo "NVD API key is available to the update"
@@ -79,22 +79,21 @@ jobs:
           fi
           mvn -B dependency-check:update-only \
             -DdataDirectory="$HOME/.cache/dependency-check" \
-            -DnvdValidForHours=24 \
-            -DnvdApiKey="$NVD_API_KEY"
+            -DnvdValidForHours=24
 
       - name: security vulnerabilities check
-        if: always()
+        if: steps.dependency-check-update.outcome == 'success'
         env:
           OSS_INDEX_USERNAME: ${{ secrets.OSS_INDEX_USERNAME }}
           OSS_INDEX_PASSWORD: ${{ secrets.OSS_INDEX_PASSWORD }}
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY || secrets.NIST_NVD_API_KEY }}
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: |
           if [ -n "$NVD_API_KEY" ]; then
             echo "NVD API key is available to the scan"
           else
             echo "NVD API key is unavailable to the scan"
           fi
-          mvn -B --fail-at-end dependency-check:check -DautoUpdate=false -DdataDirectory="$HOME/.cache/dependency-check" -DnvdApiKey="$NVD_API_KEY" -DossIndexUsername="$OSS_INDEX_USERNAME" -DossIndexPassword="$OSS_INDEX_PASSWORD" || { echo "
+          mvn -B --fail-at-end dependency-check:check -DautoUpdate=false -DdataDirectory="$HOME/.cache/dependency-check" -DossIndexUsername="$OSS_INDEX_USERNAME" -DossIndexPassword="$OSS_INDEX_PASSWORD" || { echo "
           The OWASP dependency check has found security vulnerabilities. Please use a newer version
           of the dependency that does not have vulnerabilities. To see a report run
           `mvn dependency-check:check`
