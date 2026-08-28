@@ -253,6 +253,8 @@ def build_compatible_license_names():
     compatible_licenses['Apache License, 2.0'] = 'Apache License version 2.0'
 
     compatible_licenses['Public Domain'] = 'Public Domain'
+    compatible_licenses['0BSD'] = 'Zero-Clause BSD'
+    compatible_licenses['Zero-Clause BSD'] = 'Zero-Clause BSD'
 
     compatible_licenses['BSD-2-Clause License'] = 'BSD-2-Clause License'
     compatible_licenses['BSD-2-Clause'] = 'BSD-2-Clause License'
