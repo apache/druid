@@ -251,14 +251,6 @@ public class SystemTableQueryClient implements DataSourceQueryHandler
     return InlineDataSource.fromIterable(queryRows, descriptor.getRowSignature());
   }
 
-  /**
-   * Creates the private transport query used to fetch one system table from its owning nodes. The SQL planner keeps
-   * the user-facing query type, such as {@code TimeseriesQuery} for {@code COUNT(DISTINCT ...)}, because that query
-   * represents the requested SQL operation. The Broker resolves its {@link SystemTableDataSource} by issuing these
-   * node-local scans, wrapping the returned rows in an {@link InlineDataSource}, and then executing the original query
-   * over that inline datasource. Component endpoints intentionally accept only this scan transport; aggregation and
-   * finalization remain on the Broker until component-side partial aggregation and merge semantics are implemented.
-   */
   private ScanQuery makeNodeQuery(
       final SystemTableDataSource dataSource,
       final SystemTableDescriptor descriptor,
