@@ -26,8 +26,8 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.ordering.StringComparators;
 import org.joda.time.DateTime;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,10 +48,10 @@ public class SearchBinaryFnTest
     while (i1.hasNext() && i2.hasNext()) {
       SearchHit s1 = i1.next();
       SearchHit s2 = i2.next();
-      Assert.assertEquals(s1, s2);
-      Assert.assertEquals(s1.getCount(), s2.getCount());
+      Assertions.assertEquals(s1, s2);
+      Assertions.assertEquals(s1.getCount(), s2.getCount());
     }
-    Assert.assertTrue(!i1.hasNext() && !i2.hasNext());
+    Assertions.assertTrue(!i1.hasNext() && !i2.hasNext());
   }
 
   @Test
@@ -98,7 +98,7 @@ public class SearchBinaryFnTest
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new SearchSortSpec(StringComparators.LEXICOGRAPHIC), Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -146,7 +146,7 @@ public class SearchBinaryFnTest
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new SearchSortSpec(StringComparators.LEXICOGRAPHIC), Granularities.DAY, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -170,7 +170,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> expected = r1;
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new SearchSortSpec(StringComparators.LEXICOGRAPHIC), Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -218,7 +218,7 @@ public class SearchBinaryFnTest
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new SearchSortSpec(StringComparators.LEXICOGRAPHIC), Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -244,7 +244,7 @@ public class SearchBinaryFnTest
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(searchSortSpec, Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -270,7 +270,7 @@ public class SearchBinaryFnTest
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(searchSortSpec, Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -297,7 +297,7 @@ public class SearchBinaryFnTest
 
     Result<SearchResultValue> actual =
         new SearchBinaryFn(searchSortSpec, Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }  
 
@@ -336,7 +336,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> expected = r1;
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new SearchSortSpec(StringComparators.LEXICOGRAPHIC), Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -368,7 +368,7 @@ public class SearchBinaryFnTest
     );
     Result<SearchResultValue> expected = r1;
     Result<SearchResultValue> actual = new SearchBinaryFn(new SearchSortSpec(StringComparators.LEXICOGRAPHIC), Granularities.ALL, 1).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 
@@ -403,7 +403,7 @@ public class SearchBinaryFnTest
     Result<SearchResultValue> expected = r1;
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new SearchSortSpec(StringComparators.LEXICOGRAPHIC), Granularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
-    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    Assertions.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
 }

@@ -60,7 +60,7 @@ public class RetryUtilsTest
   public void testEventualFailure() throws Exception
   {
     final AtomicInteger count = new AtomicInteger();
-    boolean threwExpectedException = false;
+    boolean threwExpectedError = false;
     try {
       RetryUtils.retry(
           () -> {
@@ -72,9 +72,9 @@ public class RetryUtilsTest
       );
     }
     catch (IOException e) {
-      threwExpectedException = e.getMessage().equals("what");
+      threwExpectedError = e.getMessage().equals("what");
     }
-    Assertions.assertTrue(threwExpectedException, "threw expected exception");
+    Assertions.assertTrue(threwExpectedError, "threw expected exception");
     Assertions.assertEquals(2, count.get(), "count");
   }
 

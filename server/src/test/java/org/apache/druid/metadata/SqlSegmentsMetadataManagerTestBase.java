@@ -124,8 +124,9 @@ public class SqlSegmentsMetadataManagerTestBase
       DateTime updateTime
   )
   {
+    final SegmentsMetadataManagerConfig managerConfig = new SegmentsMetadataManagerConfig(null, null, null);
     return connector.retryWithHandle(
-        handle -> SqlSegmentsMetadataQuery.forHandle(handle, connector, storageConfig, jsonMapper)
+        handle -> SqlSegmentsMetadataQuery.forHandle(handle, connector, storageConfig, managerConfig, jsonMapper)
                                           .markSegmentsAsUnused(segmentIds, updateTime)
     );
   }

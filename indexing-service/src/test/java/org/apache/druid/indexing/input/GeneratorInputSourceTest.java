@@ -39,8 +39,8 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorColumnSchema;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -65,7 +65,7 @@ public class GeneratorInputSourceTest
     String serialized = MAPPER.writeValueAsString(inputSource);
     GeneratorInputSource sauce = MAPPER.readValue(serialized, GeneratorInputSource.class);
 
-    Assert.assertEquals(inputSource, sauce);
+    Assertions.assertEquals(inputSource, sauce);
   }
 
   @Test
@@ -96,7 +96,7 @@ public class GeneratorInputSourceTest
     String serialized = MAPPER.writeValueAsString(inputSource);
     GeneratorInputSource sauce = MAPPER.readValue(serialized, GeneratorInputSource.class);
 
-    Assert.assertEquals(inputSource, sauce);
+    Assertions.assertEquals(inputSource, sauce);
   }
 
   @Test
@@ -146,13 +146,13 @@ public class GeneratorInputSourceTest
 
     InputRow first = iterator.next();
     InputRow generatorFirst = MapInputRowParser.parse(rowSchema, generator.nextRaw(rowSchema.getTimestampSpec().getTimestampColumn()));
-    Assert.assertEquals(generatorFirst, first);
-    Assert.assertTrue(iterator.hasNext());
+    Assertions.assertEquals(generatorFirst, first);
+    Assertions.assertTrue(iterator.hasNext());
     int i;
     for (i = 1; iterator.hasNext(); i++) {
       iterator.next();
     }
-    Assert.assertEquals(numRows, i);
+    Assertions.assertEquals(numRows, i);
   }
 
   @Test
@@ -169,10 +169,10 @@ public class GeneratorInputSourceTest
         1.0
     );
 
-    Assert.assertEquals(2, inputSource.estimateNumSplits(null, null));
-    Assert.assertFalse(inputSource.needsFormat());
-    Assert.assertEquals(2, inputSource.createSplits(null, null).count());
-    Assert.assertEquals(
+    Assertions.assertEquals(2, inputSource.estimateNumSplits(null, null));
+    Assertions.assertFalse(inputSource.needsFormat());
+    Assertions.assertEquals(2, inputSource.createSplits(null, null).count());
+    Assertions.assertEquals(
         Long.valueOf(2048L),
         ((GeneratorInputSource) inputSource.withSplit(new InputSplit<>(2048L))).getSeed()
     );
@@ -192,6 +192,6 @@ public class GeneratorInputSourceTest
         1.0
     );
 
-    Assert.assertEquals(ImmutableSet.of(IndexingServiceInputSourceModule.GENERATOR_SCHEME), inputSource.getTypes());
+    Assertions.assertEquals(ImmutableSet.of(IndexingServiceInputSourceModule.GENERATOR_SCHEME), inputSource.getTypes());
   }
 }

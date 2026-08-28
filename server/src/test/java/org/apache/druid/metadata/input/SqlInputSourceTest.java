@@ -44,12 +44,12 @@ import org.apache.druid.metadata.SQLInputSourceDatabaseConnector;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.skife.jdbi.v2.DBI;
 
 import java.io.File;
@@ -76,14 +76,14 @@ public class SqlInputSourceTest
       ColumnsFilter.all()
   );
 
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
   private TestDerbyConnector derbyConnector;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     for (Module jacksonModule : new InputSourceModule().getJacksonModules()) {
@@ -106,7 +106,7 @@ public class SqlInputSourceTest
         new SqlInputSource(SqlTestUtils.selectFrom(TABLE_1), true, serdeInputSourceConnector, mapper);
     final String valueString = mapper.writeValueAsString(sqlInputSource);
     final SqlInputSource inputSourceFromJson = mapper.readValue(valueString, SqlInputSource.class);
-    Assert.assertEquals(sqlInputSource, inputSourceFromJson);
+    Assertions.assertEquals(sqlInputSource, inputSourceFromJson);
   }
 
   @Test
@@ -117,7 +117,7 @@ public class SqlInputSourceTest
         new MetadataStorageConnectorConfig());
     final SqlInputSource sqlInputSource =
         new SqlInputSource(SqlTestUtils.selectFrom(TABLE_1), true, serdeInputSourceConnector, mapper);
-    Assert.assertEquals(Collections.singleton(SqlInputSource.TYPE_KEY), sqlInputSource.getTypes());
+    Assertions.assertEquals(Collections.singleton(SqlInputSource.TYPE_KEY), sqlInputSource.getTypes());
   }
 
   @Test
@@ -141,8 +141,8 @@ public class SqlInputSourceTest
 
     // Records for each split are written to a temp file as a json array
     // file size = 1B (array open char) + 10 records * 60B (including trailing comma)
-    Assert.assertEquals(601, inputStats.getProcessedBytes());
-    Assert.assertEquals(expectedRows, rows);
+    Assertions.assertEquals(601, inputStats.getProcessedBytes());
+    Assertions.assertEquals(expectedRows, rows);
 
     testUtils.dropTable(TABLE_1);
   }
@@ -168,9 +168,9 @@ public class SqlInputSourceTest
     CloseableIterator<InputRow> resultIterator = sqlReader.read(inputStats);
     final List<InputRow> rows = Lists.newArrayList(resultIterator);
 
-    Assert.assertEquals(expectedRowsTable1, rows.subList(0, 10));
-    Assert.assertEquals(expectedRowsTable2, rows.subList(10, 20));
-    Assert.assertEquals(1202, inputStats.getProcessedBytes());
+    Assertions.assertEquals(expectedRowsTable1, rows.subList(0, 10));
+    Assertions.assertEquals(expectedRowsTable2, rows.subList(10, 20));
+    Assertions.assertEquals(1202, inputStats.getProcessedBytes());
 
     testUtils.dropTable(TABLE_1);
     testUtils.dropTable(TABLE_2);
@@ -186,8 +186,8 @@ public class SqlInputSourceTest
         new SqlInputSource(sqls, true, testUtils.getDerbyInputSourceConnector(), mapper);
     InputFormat inputFormat = EasyMock.createMock(InputFormat.class);
     Stream<InputSplit<String>> sqlSplits = sqlInputSource.createSplits(inputFormat, null);
-    Assert.assertEquals(sqls, sqlSplits.map(InputSplit::get).collect(Collectors.toList()));
-    Assert.assertEquals(2, sqlInputSource.estimateNumSplits(inputFormat, null));
+    Assertions.assertEquals(sqls, sqlSplits.map(InputSplit::get).collect(Collectors.toList()));
+    Assertions.assertEquals(2, sqlInputSource.estimateNumSplits(inputFormat, null));
   }
 
   @Test
@@ -205,10 +205,10 @@ public class SqlInputSourceTest
       final List<InputRow> rows = new ArrayList<>();
       while (resultIterator.hasNext()) {
         InputRowListPlusRawValues row = resultIterator.next();
-        Assert.assertNull(row.getParseException());
+        Assertions.assertNull(row.getParseException());
         rows.addAll(row.getInputRows());
       }
-      Assert.assertEquals(expectedRows, rows);
+      Assertions.assertEquals(expectedRows, rows);
     }
     finally {
       testUtils.dropTable(TABLE_1);
@@ -219,7 +219,7 @@ public class SqlInputSourceTest
   public void testConnectorValidationInvalidUri()
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new SqlTestUtils(
             derbyConnector,
@@ -233,14 +233,14 @@ public class SqlInputSourceTest
             }
         )
     );
-    Assert.assertEquals("connectURI cannot be null or empty", t.getMessage());
+    Assertions.assertEquals("connectURI cannot be null or empty", t.getMessage());
   }
 
   @Test
   public void testConnectorValidationAllowedProperties()
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> new SqlTestUtils(
             derbyConnector,
@@ -248,7 +248,7 @@ public class SqlInputSourceTest
             new JdbcAccessSecurityConfig()
         )
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "The property [user] is not in the allowed list [useSSL, requireSSL, ssl, sslmode]",
         t.getMessage()
     );
@@ -270,7 +270,7 @@ public class SqlInputSourceTest
           }
         }
     );
-    Assert.assertNotNull(testUtils);
+    Assertions.assertNotNull(testUtils);
   }
 
   @Test

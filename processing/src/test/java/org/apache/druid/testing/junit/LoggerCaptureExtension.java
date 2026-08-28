@@ -28,38 +28,41 @@ import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.config.LoggerConfig;
-import org.junit.rules.ExternalResource;
+import org.apache.logging.log4j.core.config.Property;
+import org.junit.jupiter.api.extension.AfterEachCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * JUnit rule to capture a class's logger output to an in-memory buffer to allow verification of log messages in tests.
+ * JUnit 5 extension that captures Log4j events emitted by a target class.
+ * Register it with {@code new LoggerCaptureExtension(TargetClass.class)} and inspect {@link #getLogEvents()}.
  */
-public class LoggerCaptureRule extends ExternalResource
+public class LoggerCaptureExtension implements BeforeEachCallback, AfterEachCallback
 {
   private final Class<?> targetClass;
-
   private InMemoryAppender inMemoryAppender;
   private LoggerConfig targetClassLoggerConfig;
 
-  public LoggerCaptureRule(Class<?> targetClass)
+  public LoggerCaptureExtension(final Class<?> targetClass)
   {
     this.targetClass = targetClass;
   }
 
   @Override
-  public void before()
+  public void beforeEach(final ExtensionContext context)
   {
     inMemoryAppender = new InMemoryAppender(targetClass);
-    LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
-    Configuration configuration = loggerContext.getConfiguration();
+    final LoggerContext loggerContext = (LoggerContext) LogManager.getContext(false);
+    final Configuration configuration = loggerContext.getConfiguration();
     targetClassLoggerConfig = configuration.getLoggerConfig(targetClass.getName());
     targetClassLoggerConfig.addAppender(inMemoryAppender, Level.ALL, null);
   }
 
   @Override
-  public void after()
+  public void afterEach(final ExtensionContext context)
   {
     clearLogEvents();
     targetClassLoggerConfig.removeAppender(InMemoryAppender.NAME);
@@ -75,9 +78,6 @@ public class LoggerCaptureRule extends ExternalResource
     inMemoryAppender.clearLogEvents();
   }
 
-  /**
-   * Wait for the captured
-   */
   public void awaitLogEvents() throws InterruptedException
   {
     inMemoryAppender.awaitLogEvents();
@@ -85,23 +85,19 @@ public class LoggerCaptureRule extends ExternalResource
 
   private static class InMemoryAppender extends AbstractAppender
   {
-    static final String NAME = InMemoryAppender.class.getName();
-
+    private static final String NAME = InMemoryAppender.class.getName();
     private final String targetLoggerName;
-
-    // logEvents has concurrent iteration and modification in CuratorModuleTest::exitsJvmWhenMaxRetriesExceeded(), needs to be thread safe
     @GuardedBy("logEvents")
-    private final List<LogEvent> logEvents;
+    private final List<LogEvent> logEvents = new ArrayList<>();
 
-    InMemoryAppender(Class<?> targetClass)
+    InMemoryAppender(final Class<?> targetClass)
     {
-      super(NAME, null, null);
+      super(NAME, null, null, true, Property.EMPTY_ARRAY);
       targetLoggerName = targetClass.getName();
-      logEvents = new ArrayList<>();
     }
 
     @Override
-    public void append(LogEvent logEvent)
+    public void append(final LogEvent logEvent)
     {
       synchronized (logEvents) {
         if (logEvent.getLoggerName().equals(targetLoggerName)) {
@@ -125,9 +121,6 @@ public class LoggerCaptureRule extends ExternalResource
       }
     }
 
-    /**
-     * Wait for "logEvents" to be nonempty. If it is already nonempty, return immediately.
-     */
     void awaitLogEvents() throws InterruptedException
     {
       synchronized (logEvents) {

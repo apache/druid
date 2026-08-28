@@ -32,19 +32,16 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,20 +51,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipFile;
 
-@RunWith(Parameterized.class)
 public class TimestampGroupByAggregationTest
 {
   private AggregationTestHelper helper;
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private ColumnSelectorFactory selectorFactory;
   private TestObjectColumnSelector selector;
 
   private Timestamp[] values = new Timestamp[10];
 
-  @Parameterized.Parameters(name = "{index}: Test for {0}, config = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -78,7 +73,7 @@ public class TimestampGroupByAggregationTest
     );
 
     for (final List<Object> partialConstructor : partialConstructors) {
-      for (GroupByQueryConfig config : GroupByQueryRunnerTest.testConfigs()) {
+      for (GroupByQueryConfig config : GroupByQueryRunnerTestHelper.testConfigs()) {
         final List<Object> constructor = Lists.newArrayList(partialConstructor);
         constructor.add(config);
         constructors.add(constructor.toArray());
@@ -88,13 +83,13 @@ public class TimestampGroupByAggregationTest
     return constructors;
   }
 
-  private final String aggType;
-  private final String aggField;
-  private final String groupByField;
-  private final DateTime expected;
-  private final GroupByQueryConfig config;
+  private String aggType;
+  private String aggField;
+  private String groupByField;
+  private DateTime expected;
+  private GroupByQueryConfig config;
 
-  public TimestampGroupByAggregationTest(
+  public void initTimestampGroupByAggregationTest(
       String aggType,
       String aggField,
       String groupByField,
@@ -109,8 +104,7 @@ public class TimestampGroupByAggregationTest
     this.config = config;
   }
 
-  @Before
-  public void setup()
+  private void setup()
   {
     helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new TimestampMinMaxModule().getJacksonModules(),
@@ -124,7 +118,7 @@ public class TimestampGroupByAggregationTest
     EasyMock.replay(selectorFactory);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     helper.close();
@@ -137,9 +131,18 @@ public class TimestampGroupByAggregationTest
         : new TimestampMaxAggregatorFactory(name, fieldName, null);
   }
 
-  @Test
-  public void testSimpleDataIngestionAndGroupByTest() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{index}: Test for {0}, config = {1}")
+  public void testSimpleDataIngestionAndGroupByTest(
+      String aggType,
+      String aggField,
+      String groupByField,
+      DateTime expected,
+      GroupByQueryConfig config
+  ) throws Exception
   {
+    initTimestampGroupByAggregationTest(aggType, aggField, groupByField, expected, config);
+    setup();
     List<AggregatorFactory> aggregators = List.of(makeTimestampAggregator(aggField, "timestamp"));
 
     GroupByQuery groupByQuery = GroupByQuery.builder()
@@ -176,7 +179,7 @@ public class TimestampGroupByAggregationTest
     int groupByFieldNumber = groupByQuery.getResultRowSignature().indexOf(groupByField);
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(36, results.size());
-    Assert.assertEquals(expected, results.get(0).get(groupByFieldNumber));
+    Assertions.assertEquals(36, results.size());
+    Assertions.assertEquals(expected, results.get(0).get(groupByFieldNumber));
   }
 }

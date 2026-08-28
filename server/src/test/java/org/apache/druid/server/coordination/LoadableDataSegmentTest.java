@@ -41,8 +41,8 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -107,6 +107,6 @@ public class LoadableDataSegmentTest
         MAPPER.writeValueAsString(segment),
         LoadableDataSegment.class
     );
-    Assert.assertEquals(segment.toString(), loadableDataSegment.toString());
+    Assertions.assertEquals(segment.toString(), loadableDataSegment.toString());
   }
 }

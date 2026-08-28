@@ -25,11 +25,11 @@ import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.NoAsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumnsTestBase;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
 import java.util.function.Function;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 /**
  * This base class exists to provide standard parameterization for Semantic interfaces.  The idea is that the test
@@ -37,20 +37,22 @@ import java.util.function.Function;
  * needs with the RowsAndColumns.  By extending this base class, the test will end up running against every
  * independent implementation of RowsAndColumns that has been registered with {@link RowsAndColumnsTestBase}.
  */
-@RunWith(Parameterized.class)
 public abstract class SemanticTestBase
 {
-  @Parameterized.Parameters(name = "{0}")
-  public static Iterable<Object[]> parameterFeed()
+  public static Stream<Object[]> parameterFeed()
   {
-    return FluentIterable.from(RowsAndColumnsTestBase.makerFeeder())
-                         .transformAndConcat(input -> {
-                           final String name = ((Class<?>) input[0]).getSimpleName();
-                           return Arrays.asList(
-                               new Object[]{name, input[1]},
-                               new Object[]{"NoAs-" + name, wrapNoAs(input[1])}
-                           );
-                         });
+    return StreamSupport.stream(
+        FluentIterable.from(RowsAndColumnsTestBase.makerFeeder())
+                      .transformAndConcat(input -> {
+                        final String name = ((Class<?>) input[0]).getSimpleName();
+                        return Arrays.asList(
+                            new Object[]{name, input[1]},
+                            new Object[]{"NoAs-" + name, wrapNoAs(input[1])}
+                        );
+                      })
+                      .spliterator(),
+        false
+    );
   }
 
   private final String name;

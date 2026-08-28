@@ -41,9 +41,9 @@ import org.apache.druid.metadata.MapStringDynamicConfigProvider;
 import org.apache.druid.segment.TestHelper;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -175,7 +175,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     }
   }
 
-  @Before
+  @BeforeEach
   public void setupTest()
   {
     environment = createMock(Environment.class);
@@ -190,11 +190,11 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
   {
     String test = "stream-0";
     String res = RabbitStreamRecordSupplier.getStreamFromSubstream(test);
-    Assert.assertEquals("stream", res);
+    Assertions.assertEquals("stream", res);
 
     test = "test-stream-0";
     res = RabbitStreamRecordSupplier.getStreamFromSubstream(test);
-    Assert.assertEquals("test-stream", res);
+    Assertions.assertEquals("test-stream", res);
 
   }
 
@@ -215,7 +215,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
 
     res = recordSupplier.getAssignment();
 
-    Assert.assertTrue(res.isEmpty());
+    Assertions.assertTrue(res.isEmpty());
 
     EasyMock.expect(environmentBuilder.uri("rabbitmq-stream://localhost:5552")).andReturn(environmentBuilder).once();
     EasyMock.expect(environmentBuilder.build()).andStubReturn(environment);
@@ -235,7 +235,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     recordSupplier.assign(partitions);
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assertions.assertEquals(partitions, recordSupplier.getAssignment());
 
     verifyAll();
   }
@@ -262,7 +262,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
 
     res = recordSupplier.getAssignment();
 
-    Assert.assertTrue(res.isEmpty());
+    Assertions.assertTrue(res.isEmpty());
 
     EasyMock.expect(environmentBuilder.uri("rabbitmq-stream://localhost:5552")).andReturn(environmentBuilder).once();
     EasyMock.expect(environmentBuilder.build()).andStubReturn(environment);
@@ -283,7 +283,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     recordSupplier.assign(partitions);
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assertions.assertEquals(partitions, recordSupplier.getAssignment());
 
     verifyAll();
 
@@ -292,7 +292,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
       recordSupplier.seek(partition1, offset2);
     }
     catch (Exception exc) {
-      Assert.fail("Exception seeking:" + exc.getMessage());
+      Assertions.fail("Exception seeking:" + exc.getMessage());
     }
 
     resetAll();
@@ -304,10 +304,10 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     recordSupplier.assign(ImmutableSet.of(partition0));
-    Assert.assertEquals(ImmutableSet.of(partition0), recordSupplier.getAssignment());
+    Assertions.assertEquals(ImmutableSet.of(partition0), recordSupplier.getAssignment());
   
-    Assert.assertNotNull(recordSupplier.getOffset(partition0));
-    Assert.assertNull(recordSupplier.getOffset(partition1));
+    Assertions.assertNotNull(recordSupplier.getOffset(partition0));
+    Assertions.assertNull(recordSupplier.getOffset(partition1));
 
   }
 
@@ -349,7 +349,7 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     replayAll();
 
     recordSupplier.assign(partitions);
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assertions.assertEquals(partitions, recordSupplier.getAssignment());
 
     verifyAll();
 
@@ -358,31 +358,31 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
       recordSupplier.seek(partition1, offset2);
     }
     catch (Exception exc) {
-      Assert.fail("Exception seeking:" + exc.getMessage());
+      Assertions.fail("Exception seeking:" + exc.getMessage());
     }
 
 
-    Assert.assertEquals(recordSupplier.getOffset(partition0).getOffset(), offset1);
-    Assert.assertEquals(recordSupplier.getOffset(partition1).getOffset(), offset2);
+    Assertions.assertEquals(recordSupplier.getOffset(partition0).getOffset(), offset1);
+    Assertions.assertEquals(recordSupplier.getOffset(partition1).getOffset(), offset2);
 
     try {
       recordSupplier.seekToEarliest(partitions);
     }
     catch (Exception exc) {
-      Assert.fail("Exception seeking:" + exc.getMessage());
+      Assertions.fail("Exception seeking:" + exc.getMessage());
     }
-    Assert.assertEquals(recordSupplier.getOffset(partition0), OffsetSpecification.first());
-    Assert.assertEquals(recordSupplier.getOffset(partition1), OffsetSpecification.first());
+    Assertions.assertEquals(recordSupplier.getOffset(partition0), OffsetSpecification.first());
+    Assertions.assertEquals(recordSupplier.getOffset(partition1), OffsetSpecification.first());
 
     try {
       recordSupplier.seekToLatest(partitions);
     }
     catch (Exception exc) {
-      Assert.fail("Exception seeking:" + exc.getMessage());
+      Assertions.fail("Exception seeking:" + exc.getMessage());
     }
 
-    Assert.assertEquals(recordSupplier.getOffset(partition0), OffsetSpecification.last());
-    Assert.assertEquals(recordSupplier.getOffset(partition1), OffsetSpecification.last());
+    Assertions.assertEquals(recordSupplier.getOffset(partition0), OffsetSpecification.last());
+    Assertions.assertEquals(recordSupplier.getOffset(partition1), OffsetSpecification.last());
 
   }
 
@@ -424,8 +424,8 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     recordSupplier.seek(partition0, 10L);
 
     final List<OrderedPartitionableRecord<String, Long, ByteEntity>> messages = recordSupplier.poll(0);
-    Assert.assertEquals(50, messages.size());
-    Assert.assertTrue(messages.stream().allMatch(message -> PARTITION_ID1.equals(message.getPartitionId())));
+    Assertions.assertEquals(50, messages.size());
+    Assertions.assertTrue(messages.stream().allMatch(message -> PARTITION_ID1.equals(message.getPartitionId())));
 
     recordSupplier.close();
     verifyAll();
@@ -512,11 +512,11 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
       recordSupplier.seek(partition2, offset2);
     }
     catch (Exception exc) {
-      Assert.fail("Exception seeking:" + exc.getMessage());
+      Assertions.fail("Exception seeking:" + exc.getMessage());
     }
 
     List<OrderedPartitionableRecord<String, Long, ByteEntity>> messages = recordSupplier.poll(0);
-    Assert.assertEquals(2, messages.size());
+    Assertions.assertEquals(2, messages.size());
 
     recordSupplier.close();
 
@@ -582,10 +582,10 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     Set<String> partitions = supplier.getPartitionIds(STREAM);
     verifyAll();
 
-    Assert.assertTrue(clientParameters == supplier.sentParameters);
+    Assertions.assertTrue(clientParameters == supplier.sentParameters);
 
-    Assert.assertEquals(2, partitions.size());
-    Assert.assertTrue(partitions.containsAll(ALL_PARTITIONS));
+    Assertions.assertEquals(2, partitions.size());
+    Assertions.assertTrue(partitions.containsAll(ALL_PARTITIONS));
    
     supplier.close();
     
@@ -631,10 +631,10 @@ public class RabbitStreamRecordSupplierTest extends EasyMockSupport
     Set<String> partitions = supplier.getPartitionIds(STREAM);
     verifyAll();
 
-    Assert.assertTrue(clientParameters == supplier.sentParameters);
+    Assertions.assertTrue(clientParameters == supplier.sentParameters);
 
-    Assert.assertEquals(2, partitions.size());
-    Assert.assertTrue(partitions.containsAll(ALL_PARTITIONS));
+    Assertions.assertEquals(2, partitions.size());
+    Assertions.assertTrue(partitions.containsAll(ALL_PARTITIONS));
    
     supplier.close();
     

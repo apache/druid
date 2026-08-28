@@ -39,6 +39,8 @@ public class Tasks
   public static final int DEFAULT_EMBEDDED_KILL_TASK_PRIORITY = 25;
 
   static {
+    // Keep the independently defined indexing and compaction defaults aligned when either constant changes.
+    // codeql[java/constant-comparison]
     Verify.verify(DEFAULT_MERGE_TASK_PRIORITY == DataSourceCompactionConfig.DEFAULT_COMPACTION_TASK_PRIORITY);
   }
 

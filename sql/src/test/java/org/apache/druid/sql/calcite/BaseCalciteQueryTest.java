@@ -96,18 +96,16 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matcher;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -120,12 +118,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -560,7 +558,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       testQuery(plannerConfig, sql, CalciteTests.REGULAR_USER_AUTH_RESULT, ImmutableList.of(), ImmutableList.of());
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           buildUnplannableExceptionMatcher().expectMessageContains(expectedError)
       );
@@ -581,7 +579,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   /**
-   * Provided for tests that wish to check multiple queries instead of relying on ExpectedException.
+   * Provided for tests that wish to check multiple queries instead of relying on a rule-based expected exception.
    */
   public void assertQueryIsForbidden(final String sql, final AuthenticationResult authenticationResult)
   {
@@ -604,7 +602,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
     if (!(e instanceof ForbiddenException)) {
       log.error(e, "Expected ForbiddenException for query: %s with authResult: %s", sql, authenticationResult);
-      Assert.fail(sql);
+      Assertions.fail(sql);
     }
   }
 
@@ -871,9 +869,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
       {
         assertEquals(
-            mismatchMessage(row, column),
             expectedCell,
-            resultCell);
+            resultCell,
+            mismatchMessage(row, column));
       }
     },
     RELAX_NULLS {
@@ -894,17 +892,17 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       {
         if (expectedCell instanceof Float) {
           assertEquals(
-              mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              ASSERTION_EPSILON
+              ASSERTION_EPSILON,
+              mismatchMessage(row, column)
           );
         } else if (expectedCell instanceof Double) {
           assertEquals(
-              mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              ASSERTION_EPSILON
+              ASSERTION_EPSILON,
+              mismatchMessage(row, column)
           );
         } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
           final Object[] expectedCellCasted = homogenizeArray(expectedCell);
@@ -952,18 +950,18 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         if (expectedCell instanceof Float) {
           float eps = ASSERTION_ERROR_ULPS * Math.ulp((Float) expectedCell);
           assertEquals(
-              mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              eps
+              eps,
+              mismatchMessage(row, column)
           );
         } else if (expectedCell instanceof Double) {
           double eps = ASSERTION_ERROR_ULPS * Math.ulp((Double) expectedCell);
           assertEquals(
-              mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              eps
+              eps,
+              mismatchMessage(row, column)
           );
         } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
           final Object[] expectedCellCasted = homogenizeArray(expectedCell);
@@ -1024,7 +1022,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static void assertResultsValid(final ResultMatchMode matchMode, final List<Object[]> expected, final QueryResults queryResults)
   {
     final List<Object[]> results = queryResults.results;
-    Assert.assertEquals("Result count mismatch", expected.size(), results.size());
+    Assertions.assertEquals(expected.size(), results.size(), "Result count mismatch");
 
     final List<ValueType> types = new ArrayList<>();
 
@@ -1041,7 +1039,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     for (int row = 0; row < numRows; row++) {
       final Object[] expectedRow = expected.get(row);
       final Object[] resultRow = results.get(row);
-      assertEquals("column count mismatch; at row#" + row, expectedRow.length, resultRow.length);
+      assertEquals(expectedRow.length, resultRow.length, "column count mismatch; at row#" + row);
 
       for (int i = 0; i < resultRow.length; i++) {
         final Object resultCell = resultRow[i];
@@ -1062,21 +1060,40 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     int minSize = Math.min(results.size(), expectedResults.size());
     for (int i = 0; i < minSize; i++) {
-      Assert.assertArrayEquals(
-          StringUtils.format("result #%d: %s", i + 1, sql),
+      Assertions.assertArrayEquals(
           expectedResults.get(i),
-          results.get(i)
+          results.get(i),
+          StringUtils.format("result #%d: %s", i + 1, sql)
       );
     }
-    Assert.assertEquals(expectedResults.size(), results.size());
+    Assertions.assertEquals(expectedResults.size(), results.size());
   }
 
-  public <T extends Throwable> void testQueryThrows(
+  public void testQueryThrows(
       final String sql,
       final DruidExceptionMatcher exceptionMatcher
   )
   {
-    testQueryThrows(sql, null, DruidException.class, exceptionMatcher);
+    testQueryThrows(sql, null, DruidException.class, e -> assertDruidException(e, exceptionMatcher));
+  }
+
+  public void testQueryThrows(
+      final String sql,
+      final Class<DruidException> exceptionType,
+      final DruidExceptionMatcher exceptionMatcher
+  )
+  {
+    testQueryThrows(sql, null, exceptionType, e -> assertDruidException(e, exceptionMatcher));
+  }
+
+  public void testQueryThrows(
+      final String sql,
+      final Map<String, Object> queryContext,
+      final Class<DruidException> exceptionType,
+      final DruidExceptionMatcher exceptionMatcher
+  )
+  {
+    testQueryThrows(sql, queryContext, exceptionType, e -> assertDruidException(e, exceptionMatcher));
   }
 
   public <T extends Exception> void testQueryThrows(
@@ -1089,24 +1106,24 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         sql,
         null,
         exceptionType,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(exceptionMessage))
+        e -> assertEquals(exceptionMessage, e.getMessage())
     );
   }
 
   public <T extends Exception> void testQueryThrows(
       final String sql,
       final Class<T> exceptionType,
-      final Matcher<Throwable> exceptionMatcher
+      final Consumer<? super T> exceptionVerifier
   )
   {
-    testQueryThrows(sql, null, exceptionType, exceptionMatcher);
+    testQueryThrows(sql, null, exceptionType, exceptionVerifier);
   }
 
   public <T extends Exception> void testQueryThrows(
       final String sql,
       final Map<String, Object> queryContext,
       final Class<T> exceptionType,
-      final Matcher<Throwable> exceptionMatcher
+      final Consumer<? super T> exceptionVerifier
   )
   {
     T e = assertThrows(
@@ -1117,7 +1134,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             .build()
             .run()
     );
-    assertThat(e, exceptionMatcher);
+    exceptionVerifier.accept(e);
+  }
+
+  public static void assertDruidException(
+      final DruidException exception,
+      final DruidExceptionMatcher exceptionMatcher
+  )
+  {
+    DruidExceptionMatcher.assertThat(exception, exceptionMatcher);
   }
 
   public void analyzeResources(
@@ -1163,16 +1188,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .authResult(authenticationResult)
         .expectedResources(expectedActions)
         .run();
-  }
-
-  public SqlStatementFactory getSqlStatementFactory(
-      PlannerConfig plannerConfig
-  )
-  {
-    return getSqlStatementFactory(
-        plannerConfig,
-        new AuthConfig()
-    );
   }
 
   /**
@@ -1413,7 +1428,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public void verifyRowSignature(RowSignature rowSignature)
     {
       if (expectedResultRowSignature != null) {
-        Assert.assertEquals(expectedResultRowSignature, rowSignature);
+        Assertions.assertEquals(expectedResultRowSignature, rowSignature);
       }
     }
 

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
@@ -52,11 +51,18 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.util.Map;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KafkaSupervisorSpecTest
 {
+  private static void assertInvalidInputException(DruidException exception, String message)
+  {
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(message, exception.getMessage());
+  }
+
   private final ObjectMapper mapper;
 
   public KafkaSupervisorSpecTest()
@@ -473,79 +479,53 @@ public class KafkaSupervisorSpecTest
 
     // Proposed spec being non-kafka is not allowed
     TestSupervisorSpec otherSpec = new TestSupervisorSpec("test", new Object());
-    assertThat(
+    assertInvalidInputException(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(otherSpec)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-            StringUtils.format("Cannot change spec from type[%s] to type[%s]", sourceSpec.getClass().getSimpleName(), otherSpec.getClass().getSimpleName())
+        StringUtils.format(
+            "Cannot change spec from type[%s] to type[%s]",
+            sourceSpec.getClass().getSimpleName(),
+            otherSpec.getClass().getSimpleName()
         )
     );
 
     KafkaSupervisorSpec multiTopicProposedSpec = getSpec(null, "metrics-.*");
-    assertThat(
+    assertInvalidInputException(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(multiTopicProposedSpec)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-             "Update of the input source stream from [(single-topic) metrics] to [(multi-topic) metrics-.*] is not supported for a running supervisor."
-             + "\nTo perform the update safely, follow these steps:"
-             + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-             + "\n(2) Create a new supervisor with the new input source stream."
-             + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
-         )
+        "Update of the input source stream from [(single-topic) metrics] to [(multi-topic) metrics-.*] is not supported for a running supervisor."
+        + "\nTo perform the update safely, follow these steps:"
+        + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+        + "\n(2) Create a new supervisor with the new input source stream."
+        + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
     );
 
     KafkaSupervisorSpec singleTopicNewStreamProposedSpec = getSpec("metricsNew", null);
-    assertThat(
+    assertInvalidInputException(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(singleTopicNewStreamProposedSpec)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-            "Update of the input source stream from [metrics] to [metricsNew] is not supported for a running supervisor."
-            + "\nTo perform the update safely, follow these steps:"
-            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-            + "\n(2) Create a new supervisor with the new input source stream."
-            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
-        )
+        "Update of the input source stream from [metrics] to [metricsNew] is not supported for a running supervisor."
+        + "\nTo perform the update safely, follow these steps:"
+        + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+        + "\n(2) Create a new supervisor with the new input source stream."
+        + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
     );
 
     KafkaSupervisorSpec multiTopicMatchingSourceString = getSpec(null, "metrics");
-    assertThat(
+    assertInvalidInputException(
         assertThrows(DruidException.class, () -> sourceSpec.validateSpecUpdateTo(multiTopicMatchingSourceString)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-            "Update of the input source stream from [(single-topic) metrics] to [(multi-topic) metrics] is not supported for a running supervisor."
-            + "\nTo perform the update safely, follow these steps:"
-            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-            + "\n(2) Create a new supervisor with the new input source stream."
-            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
-        )
+        "Update of the input source stream from [(single-topic) metrics] to [(multi-topic) metrics] is not supported for a running supervisor."
+        + "\nTo perform the update safely, follow these steps:"
+        + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+        + "\n(2) Create a new supervisor with the new input source stream."
+        + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
     );
 
     // test the inverse as well
-    assertThat(
+    assertInvalidInputException(
         assertThrows(DruidException.class, () -> multiTopicMatchingSourceString.validateSpecUpdateTo(sourceSpec)),
-        new DruidExceptionMatcher(
-            DruidException.Persona.USER,
-            DruidException.Category.INVALID_INPUT,
-            "invalidInput"
-        ).expectMessageIs(
-            "Update of the input source stream from [(multi-topic) metrics] to [(single-topic) metrics] is not supported for a running supervisor."
-            + "\nTo perform the update safely, follow these steps:"
-            + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
-            + "\n(2) Create a new supervisor with the new input source stream."
-            + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
-        )
+        "Update of the input source stream from [(multi-topic) metrics] to [(single-topic) metrics] is not supported for a running supervisor."
+        + "\nTo perform the update safely, follow these steps:"
+        + "\n(1) Suspend this supervisor, reset its offsets and then terminate it. "
+        + "\n(2) Create a new supervisor with the new input source stream."
+        + "\nNote that doing the reset can cause data duplication or loss if any topic used in the old supervisor is included in the new one too."
     );
 
     // Test valid spec update. This spec changes context vs the sourceSpec

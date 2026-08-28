@@ -19,15 +19,17 @@
 
 package org.apache.druid.metadata.storage.sqlserver;
 
-import junit.framework.Assert;
 import org.apache.druid.metadata.MetadataStorageActionHandler;
 import org.apache.druid.metadata.storage.sqlserver.SQLServerConnector.CustomStatementRewriter;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.skife.jdbi.v2.Binding;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.exceptions.UnableToCreateStatementException;
 import org.skife.jdbi.v2.tweak.RewrittenStatement;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @SuppressWarnings("nls")
 public class CustomStatementRewriterTest
@@ -37,7 +39,7 @@ public class CustomStatementRewriterTest
   private Binding params;
   private StatementContext ctx;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     customStatementRewriter = new CustomStatementRewriter();
@@ -56,13 +58,13 @@ public class CustomStatementRewriterTest
   public void testExactPatternReplacement()
   {
 
-    Assert.assertEquals("BIT NOT NULL DEFAULT (0)", rewrite("BOOLEAN NOT NULL DEFAULT FALSE"));
-    Assert.assertEquals("BIT NOT NULL DEFAULT (1)", rewrite("BOOLEAN NOT NULL DEFAULT TRUE"));
-    Assert.assertEquals("BIT NOT NULL DEFAULT (0)", rewrite("BOOLEAN DEFAULT FALSE"));
-    Assert.assertEquals("BIT NOT NULL DEFAULT (1)", rewrite("BOOLEAN DEFAULT TRUE"));
-    Assert.assertEquals("BIT", rewrite("BOOLEAN"));
-    Assert.assertEquals("1", rewrite("TRUE"));
-    Assert.assertEquals("0", rewrite("FALSE"));
+    assertEquals("BIT NOT NULL DEFAULT (0)", rewrite("BOOLEAN NOT NULL DEFAULT FALSE"));
+    assertEquals("BIT NOT NULL DEFAULT (1)", rewrite("BOOLEAN NOT NULL DEFAULT TRUE"));
+    assertEquals("BIT NOT NULL DEFAULT (0)", rewrite("BOOLEAN DEFAULT FALSE"));
+    assertEquals("BIT NOT NULL DEFAULT (1)", rewrite("BOOLEAN DEFAULT TRUE"));
+    assertEquals("BIT", rewrite("BOOLEAN"));
+    assertEquals("1", rewrite("TRUE"));
+    assertEquals("0", rewrite("FALSE"));
   }
 
   /**
@@ -72,16 +74,16 @@ public class CustomStatementRewriterTest
   public void testCustomStatementRewriter()
   {
 
-    Assert.assertEquals("select column# from table1 where id = ?",
+    assertEquals("select column# from table1 where id = ?",
         rewrite("select column# from table1 where id = :id"));
 
-    Assert.assertEquals("select * from table2\n where id = ?", rewrite("select * from table2\n where id = :id"));
+    assertEquals("select * from table2\n where id = ?", rewrite("select * from table2\n where id = :id"));
 
     try {
       rewrite("select * from table3 where id = :\u0091\u009c"); // Control codes
                                                                 // -
                                                                 // https://en.wikipedia.org/wiki/List_of_Unicode_characters
-      Assert.fail("Expected 'UnableToCreateStatementException'");
+      fail("Expected 'UnableToCreateStatementException'");
     }
     catch (UnableToCreateStatementException e) {
       // expected
@@ -123,7 +125,7 @@ public class CustomStatementRewriterTest
         "  PRIMARY KEY (id)\n" +
         ")";
 
-    Assert.assertEquals(sqlOut, rewrite(sqlIn));
+    assertEquals(sqlOut, rewrite(sqlIn));
 
   }
 
@@ -135,7 +137,7 @@ public class CustomStatementRewriterTest
   @Test
   public void testSQLMetadataStorageActionHandlerSetStatus()
   {
-    Assert.assertEquals("UPDATE %s SET active = ?, status_payload = ? WHERE id = ? AND active = 1",
+    assertEquals("UPDATE %s SET active = ?, status_payload = ? WHERE id = ? AND active = 1",
         rewrite("UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE"));
 
   }

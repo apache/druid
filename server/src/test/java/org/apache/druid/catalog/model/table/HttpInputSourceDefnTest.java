@@ -34,8 +34,9 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.EnvironmentVariablePasswordProvider;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -44,15 +45,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
 
 public class HttpInputSourceDefnTest extends BaseExternTableTest
 {
-  @Before
+  @BeforeEach
   public void setup()
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(
@@ -72,7 +68,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -87,7 +83,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -108,7 +104,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .column("y", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -128,7 +124,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .inputFormat(CSV_FORMAT)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -161,7 +157,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
         .property(HttpInputSourceDefn.URI_TEMPLATE_PROPERTY, "http://example.com/{}")
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertThrows(IAE.class, () -> resolved.validate());
+    Assertions.assertThrows(IAE.class, () -> resolved.validate());
   }
 
   @Test
@@ -173,7 +169,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     Map<String, Object> args = new HashMap<>();
     args.put(HttpInputSourceDefn.URIS_PARAMETER, new String[] {"http://foo.com/my.csv"});
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, "bogus");
-    assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
   }
 
   @Test
@@ -185,7 +181,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     Map<String, Object> args = new HashMap<>();
     args.put(HttpInputSourceDefn.URIS_PARAMETER, new String[] {"bogus"});
     args.put(FormattedInputSourceDefn.FORMAT_PARAMETER, CsvFormatDefn.TYPE_KEY);
-    assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, COLUMNS, mapper));
   }
 
   @Test
@@ -194,9 +190,9 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     InputSourceDefn httpDefn = registry.inputSourceDefnFor(HttpInputSourceDefn.TYPE_KEY);
 
     TableFunction fn = httpDefn.adHocTableFn();
-    assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
-    assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
-    assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
 
     // Convert to an external table. Must provide the URIs plus format and columns.
     Map<String, Object> args = new HashMap<>();
@@ -208,7 +204,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     validateHappyPath(externSpec, true);
 
     // But, it fails if there are no columns.
-    assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", args, Collections.emptyList(), mapper));
   }
 
   @Test
@@ -234,7 +230,7 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Check registry
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertNotNull(resolved);
+    Assertions.assertNotNull(resolved);
 
     // Convert to an external spec
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
@@ -243,14 +239,14 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
-    assertTrue(fn.parameters().isEmpty());
+    Assertions.assertTrue(fn.parameters().isEmpty());
 
     // Convert to an external table.
     externSpec = fn.apply("x", Collections.emptyMap(), Collections.emptyList(), mapper);
     validateHappyPath(externSpec, true);
 
     // But, it fails columns are provided since the table already has them.
-    assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
+    Assertions.assertThrows(IAE.class, () -> fn.apply("x", Collections.emptyMap(), COLUMNS, mapper));
   }
 
   @Test
@@ -267,21 +263,21 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // Check validation
     table.validate();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertNotNull(resolved);
+    Assertions.assertNotNull(resolved);
 
     // Not a full table, can't directly convert
     // Convert to an external spec
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
-    assertEquals(5, fn.parameters().size());
-    assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
-    assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
-    assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_PARAMETER));
-    assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_ENV_VAR_PARAMETER));
-    assertTrue(hasParam(fn, HttpInputSourceDefn.HEADERS));
+    Assertions.assertEquals(5, fn.parameters().size());
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.PASSWORD_ENV_VAR_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.HEADERS));
 
     // Convert to an external table.
     ExternalTableSpec externSpec = fn.apply(
@@ -316,18 +312,18 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
 
     table.validate();
     ResolvedTable resolved = registry.resolve(table.spec());
-    assertNotNull(resolved);
+    Assertions.assertNotNull(resolved);
 
     // Not a full table, can't directly convert
     // Convert to an external spec
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
-    assertEquals(2, fn.parameters().size());
-    assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
-    assertTrue(hasParam(fn, HttpInputSourceDefn.HEADERS));
+    Assertions.assertEquals(2, fn.parameters().size());
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.HEADERS));
 
     // Convert to an external table.
     ExternalTableSpec externSpec = fn.apply(
@@ -365,13 +361,13 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     // Convert to an external spec
     ResolvedTable resolved = registry.resolve(table.spec());
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
-    assertThrows(IAE.class, () -> externDefn.convert(resolved));
+    Assertions.assertThrows(IAE.class, () -> externDefn.convert(resolved));
 
     // Get the partial table function
     TableFunction fn = externDefn.tableFn(resolved);
-    assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
-    assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
-    assertFalse(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
+    Assertions.assertFalse(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
 
     // Convert to an external table. Must provide the URIs plus format and columns.
     Map<String, Object> args = new HashMap<>();
@@ -408,11 +404,11 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     ExternalTableSpec externSpec = externDefn.convert(resolved);
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
-    assertEquals(
+    Assertions.assertEquals(
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
-    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   @Test
@@ -441,8 +437,8 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     ResolvedTable resolved = registry.resolve(table.spec());
     ExternalTableDefn externDefn = (ExternalTableDefn) resolved.defn();
     TableFunction fn = externDefn.tableFn(resolved);
-    assertEquals(1, fn.parameters().size());
-    assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    Assertions.assertEquals(1, fn.parameters().size());
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
 
     // Convert to an external table.
     ExternalTableSpec externSpec = fn.apply(
@@ -454,11 +450,11 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     );
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
-    assertEquals(
+    Assertions.assertEquals(
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/my.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
-    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   @Test
@@ -467,9 +463,9 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     InputSourceDefn httpDefn = registry.inputSourceDefnFor(HttpInputSourceDefn.TYPE_KEY);
 
     TableFunction fn = httpDefn.adHocTableFn();
-    assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
-    assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
-    assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.URIS_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, FormattedInputSourceDefn.FORMAT_PARAMETER));
+    Assertions.assertTrue(hasParam(fn, HttpInputSourceDefn.USER_PARAMETER));
 
     // Convert to an external table. Must provide the URIs plus format and columns.
     Map<String, Object> args = new HashMap<>();
@@ -478,11 +474,11 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     ExternalTableSpec externSpec = fn.apply("x", args, COLUMNS, mapper);
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
-    assertEquals(
+    Assertions.assertEquals(
         CatalogUtils.stringListToUriList(Arrays.asList("http://foo.com/foo.csv", "http://foo.com/bar.csv")),
         sourceSpec.getUris()
     );
-    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   @Test
@@ -512,31 +508,31 @@ public class HttpInputSourceDefnTest extends BaseExternTableTest
     ExternalTableSpec externSpec = externDefn.convert(resolved);
 
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
-    assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
-    assertEquals(
+    Assertions.assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
+    Assertions.assertEquals(
         "SECRET",
         ((EnvironmentVariablePasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getVariable()
     );
-    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   private void validateHappyPath(ExternalTableSpec externSpec, boolean withUser)
   {
     HttpInputSource sourceSpec = (HttpInputSource) externSpec.inputSource;
     if (withUser) {
-      assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
-      assertEquals("secret", ((DefaultPasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getPassword());
+      Assertions.assertEquals("bob", sourceSpec.getHttpAuthenticationUsername());
+      Assertions.assertEquals("secret", ((DefaultPasswordProvider) sourceSpec.getHttpAuthenticationPasswordProvider()).getPassword());
     }
-    assertEquals("http://foo.com/my.csv", sourceSpec.getUris().get(0).toString());
+    Assertions.assertEquals("http://foo.com/my.csv", sourceSpec.getUris().get(0).toString());
     // Just a sanity check: details of CSV conversion are tested elsewhere.
     CsvInputFormat csvFormat = (CsvInputFormat) externSpec.inputFormat;
-    assertEquals(Arrays.asList("x", "y"), csvFormat.getColumns());
+    Assertions.assertEquals(Arrays.asList("x", "y"), csvFormat.getColumns());
 
     RowSignature sig = externSpec.signature;
-    assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
-    assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
-    assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
-    assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
+    Assertions.assertEquals(Arrays.asList("x", "y"), sig.getColumnNames());
+    Assertions.assertEquals(ColumnType.STRING, sig.getColumnType(0).get());
+    Assertions.assertEquals(ColumnType.LONG, sig.getColumnType(1).get());
+    Assertions.assertEquals(Collections.singleton(HttpInputSourceDefn.TYPE_KEY), externSpec.inputSourceTypesSupplier.get());
   }
 
   private Map<String, Object> httpToMap(HttpInputSource source)

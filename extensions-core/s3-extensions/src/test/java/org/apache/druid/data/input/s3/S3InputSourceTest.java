@@ -78,6 +78,7 @@ import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.retries.api.RetryStrategy;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -519,6 +520,10 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
     EasyMock.expect(mockAwsClientConfig.getConnectionTimeoutMillis()).andStubReturn(10_000);
     EasyMock.expect(mockAwsClientConfig.getSocketTimeoutMillis()).andStubReturn(50_000);
     EasyMock.expect(mockAwsClientConfig.getMaxConnections()).andStubReturn(50);
+    // Once for the sync client and once for the async one, since the two must not share a strategy instance.
+    EasyMock.expect(mockAwsClientConfig.getRetryStrategy())
+            .andReturn(EasyMock.createMock(RetryStrategy.class))
+            .times(2);
 
     EasyMock.expect(mockAwsProxyConfig.getHost()).andStubReturn("");
     EasyMock.expect(mockAwsProxyConfig.getPort()).andStubReturn(-1);

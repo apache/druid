@@ -26,7 +26,8 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -34,23 +35,27 @@ import java.util.Map;
 public class MSQPartitionAssignmentTest
 {
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullPartition()
   {
-    new MSQPartitionAssignment(null, Collections.emptyMap());
+    Assertions.assertThrows(NullPointerException.class, () -> {
+      new MSQPartitionAssignment(null, Collections.emptyMap());
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidPartition()
   {
-    SegmentIdWithShardSpec segmentId = new SegmentIdWithShardSpec(
-        "ds",
-        new Interval(0, 1, ISOChronology.getInstanceUTC()),
-        "v1",
-        new NumberedShardSpec(0, 1)
-    );
-    Map<Integer, SegmentIdWithShardSpec> allocations = ImmutableMap.of(-1, segmentId);
-    new MSQPartitionAssignment(ClusterByPartitions.oneUniversalPartition(), allocations);
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+      SegmentIdWithShardSpec segmentId = new SegmentIdWithShardSpec(
+          "ds",
+          new Interval(0, 1, ISOChronology.getInstanceUTC()),
+          "v1",
+          new NumberedShardSpec(0, 1)
+      );
+      Map<Integer, SegmentIdWithShardSpec> allocations = ImmutableMap.of(-1, segmentId);
+      new MSQPartitionAssignment(ClusterByPartitions.oneUniversalPartition(), allocations);
+    });
   }
 
   @Test

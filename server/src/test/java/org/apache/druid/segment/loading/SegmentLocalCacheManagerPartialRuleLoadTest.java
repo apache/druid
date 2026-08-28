@@ -55,6 +55,7 @@ import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -64,7 +65,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -125,22 +126,22 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", 4L))
   );
 
-  @TempDir
-  static File SHARED_TEMP_DIR;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
   private SegmentLocalCacheManager manager;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(SHARED_TEMP_DIR, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     DEEP_STORAGE_DIR = IndexBuilder.create()
                                    .useV10()
                                    .tmpDir(tmp)
@@ -177,6 +178,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     jsonMapper.registerSubtypes(new NamedType(LocalLoadSpec.class, "local"));
     jsonMapper.registerSubtypes(new NamedType(PartialProjectionLoadSpec.class, PartialProjectionLoadSpec.TYPE));
     jsonMapper.registerSubtypes(new NamedType(CompositePartialLoadSpec.class, CompositePartialLoadSpec.TYPE));
+    jsonMapper.registerSubtypes(new NamedType(PartialBaseTableLoadSpec.class, PartialBaseTableLoadSpec.TYPE));
+    jsonMapper.registerSubtypes(new NamedType(PartialFullSegmentLoadSpec.class, PartialFullSegmentLoadSpec.TYPE));
     jsonMapper.registerModule(new SegmentizerModule());
     jsonMapper.registerModules(new LocalDataStorageDruidModule().getJacksonModules());
     jsonMapper.setInjectableValues(
@@ -188,15 +191,15 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheRoot);
+    cacheRoot = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
   }
 
   @AfterEach
   void tearDown()
   {
     if (manager != null) {
-      // Drop the segment to release rule-holds and unmount mmap'd bundle files before @TempDir tries to clean up
+      // Drop the segment to release rule-holds and unmount mmap'd bundle files before
+      // TemporaryFolderExtension cleans up.
       // the cache directory. Without this, on some platforms the temp-dir cleanup fails on still-mapped files.
       try {
         manager.drop(partialWrapperSegment(List.of(AGG_BUNDLE)));
@@ -231,6 +234,75 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
     Assertions.assertTrue(location.isWeakReserved(baseId), "base dependency should be weak-reserved");
     Assertions.assertFalse(location.isReserved(metaId), "metadata entry should NOT be in staticCacheEntries");
     Assertions.assertFalse(location.isReserved(aggId), "selected bundle should NOT be in staticCacheEntries");
+  }
+
+  @Test
+  void testLoadBaseTableWrapperHoldsOnlyTheBaseBundle() throws Exception
+  {
+    // What a projection matcher emits when none of its projections are on the segment. This fixture is unclustered,
+    // so the base table is the single __base bundle and none of the projections come along for the ride. The
+    // clustered branch (every __base$* group) is covered in PartialBaseTableLoadSpecTest.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(baseTableWrapperSegment());
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertTrue(metadata.isRuleHeld(), "rule must be applied to the metadata entry");
+    Assertions.assertEquals(PartialBaseTableLoadSpec.FINGERPRINT, metadata.getRuleFingerprint());
+    Assertions.assertTrue(
+        metadata.isBundleRuleHeld(Projections.BASE_TABLE_PROJECTION_NAME),
+        "__base should be rule-held by a base-table load"
+    );
+
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "metadata mount should produce a file mapper");
+    Assertions.assertTrue(
+        mapper.isBundleFullyDownloaded(Projections.BASE_TABLE_PROJECTION_NAME),
+        "__base must be fully downloaded eagerly"
+    );
+
+    for (String projectionBundle : List.of(AGG_BUNDLE, OTHER_AGG_BUNDLE)) {
+      Assertions.assertFalse(
+          location.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, projectionBundle)),
+          "projection bundle[" + projectionBundle + "] must not be reserved by a base-table load"
+      );
+    }
+  }
+
+  @Test
+  void testLoadFullSegmentWrapperHoldsEveryBundle() throws Exception
+  {
+    // What CannotMatchBehavior.FULL_LOAD emits. Unlike dispatching with no wrapper — which on a virtual-storage
+    // historical only makes the segment available on demand — this pins every bundle up front.
+    manager = makeManager(true, true);
+    final StorageLocation location = manager.getLocations().get(0);
+
+    manager.load(fullSegmentWrapperSegment());
+
+    final PartialSegmentMetadataCacheEntry metadata = weakReservedMetadata(location, SEGMENT_ID);
+    Assertions.assertTrue(metadata.isRuleHeld(), "rule must be applied to the metadata entry");
+    Assertions.assertEquals(PartialFullSegmentLoadSpec.FINGERPRINT, metadata.getRuleFingerprint());
+
+    final PartialSegmentFileMapperV10 mapper = metadata.getFileMapper();
+    Assertions.assertNotNull(mapper, "metadata mount should produce a file mapper");
+    for (String bundleName : List.of(Projections.BASE_TABLE_PROJECTION_NAME, AGG_BUNDLE, OTHER_AGG_BUNDLE)) {
+      Assertions.assertTrue(
+          metadata.isBundleRuleHeld(bundleName),
+          "bundle[" + bundleName + "] should be rule-held by a full-segment load"
+      );
+      Assertions.assertTrue(
+          mapper.isBundleFullyDownloaded(bundleName),
+          "bundle[" + bundleName + "] must be fully downloaded eagerly"
+      );
+    }
+    // Nothing on the segment was left out: not just the three bundles named above, but every bundle the file carries.
+    for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
+      Assertions.assertTrue(
+          metadata.isBundleRuleHeld(bundleName),
+          "bundle[" + bundleName + "] present on the segment but not rule-held"
+      );
+    }
   }
 
   @Test
@@ -741,8 +813,8 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
           "bootstrap must reapply the persisted PartialLoadSpec wrapper's fingerprint"
       );
       // Selected bundle + its base dependency are held after bootstrap restore (they were on disk and got
-      // restored by the metadata mount's PartialSegmentCacheBootstrap.restoreBundlesFromDisk, which register with
-      // the metadata; applyRule picks up their rule-holds from the linkedBundles state).
+      // restored by the metadata mount's own bundle restore, which registers them with the metadata; applyRule picks
+      // up their rule-holds from the linkedBundles state).
       final StorageLocation loc = restarted.getLocations().get(0);
       Assertions.assertTrue(
           loc.isWeakReserved(new PartialSegmentBundleCacheEntryIdentifier(SEGMENT_ID, AGG_BUNDLE)),
@@ -765,17 +837,22 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   {
     // Setup: writable first (so info_dir defaults there), read-only second, dummy reservation on writable so
     // LeastBytesUsed picks the read-only location first. mkdirp on read-only fails → release + continue to writable.
-    final File writable = new File(perTestTempDir, "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    final File readOnly = new File(perTestTempDir, "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(writable);
-    FileUtils.mkdirp(readOnly);
+    final File writable = temporaryFolder.newFolder(
+        "loc_rw_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
+    final File readOnly = temporaryFolder.newFolder(
+        "loc_ro_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     manager = makeManagerAtLocations(true, true, List.of(writable, readOnly));
 
     // Bump writable's usage so LeastBytesUsed picks readOnly first.
     final SegmentId dummy = SegmentId.of("dummy", Intervals.of("2020/2021"), "v", 0);
-    Assertions.assertTrue(
-        manager.getLocations().get(0).reserveWeak(stubCacheEntry(new SegmentCacheEntryIdentifier(dummy), 4096L))
-    );
+    final CacheEntry filler = stubCacheEntry(new SegmentCacheEntryIdentifier(dummy), 4096L);
+    final StorageLocation.ReservationHold<CacheEntry> fillerHold =
+        manager.getLocations().get(0).addWeakReservationHold(filler.getId(), () -> filler);
+    Assertions.assertNotNull(fillerHold);
+    filler.mount(manager.getLocations().get(0));
+    fillerHold.close();
     Assertions.assertTrue(readOnly.setReadOnly(), "test setup must be able to make readOnly location read-only");
     try {
       manager.load(partialWrapperSegment(List.of(AGG_BUNDLE)));
@@ -901,6 +978,43 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   }
 
   /**
+   * A {@code partialFullSegment} wrapper, matching what {@code CannotMatchBehavior.FULL_LOAD} emits.
+   */
+  private DataSegment fullSegmentWrapperSegment()
+  {
+    final Map<String, Object> delegate = Map.of(
+        "type", "local",
+        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+    );
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(
+                          PartialFullSegmentLoadSpec.wireForm(delegate, PartialFullSegmentLoadSpec.FINGERPRINT)
+                      )
+                      .size(0)
+                      .build();
+  }
+
+  /**
+   * A {@code partialBaseTable} wrapper, matching what a projection matcher emits when none of its configured
+   * projections are present on the segment.
+   */
+  private DataSegment baseTableWrapperSegment()
+  {
+    final Map<String, Object> delegate = Map.of(
+        "type", "local",
+        "path", DEEP_STORAGE_DIR.getAbsolutePath()
+    );
+    return DataSegment.builder(SEGMENT_ID)
+                      .shardSpec(NoneShardSpec.instance())
+                      .loadSpec(
+                          PartialBaseTableLoadSpec.wireForm(delegate, PartialBaseTableLoadSpec.FINGERPRINT)
+                      )
+                      .size(0)
+                      .build();
+  }
+
+  /**
    * A {@code partialComposite} wrapper whose members each select one projection, matching what
    * {@code CompositePartialLoadMatcher} emits: the delegate lives once at the top level and members carry none.
    */
@@ -947,11 +1061,9 @@ class SegmentLocalCacheManagerPartialRuleLoadTest
   private DataSegment partialWrapperSegmentWithNullRangeReader(List<String> selectedProjections, String fingerprint)
       throws IOException
   {
-    final File noRangeReaderDir = new File(
-        perTestTempDir,
+    final File noRangeReaderDir = temporaryFolder.newFolder(
         "no_range_reader_" + fingerprint.replace(':', '_').replace('.', '_')
     );
-    FileUtils.mkdirp(noRangeReaderDir);
     final Map<String, Object> delegate = Map.of(
         "type", "local",
         "path", noRangeReaderDir.getAbsolutePath()

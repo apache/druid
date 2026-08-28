@@ -41,6 +41,23 @@ Real-time analytics database. Java, Maven, multi-module project.
 - End every file with a newline.
 - Don't format changes unnecessarily.
 
+## Testing
+
+### JUnit 5 test helpers
+
+When adding or migrating tests, reuse these existing test-scope helpers:
+
+- `TemporaryFolderExtension` (`org.apache.druid.testing`) for tests that need a Druid-managed `File` temporary directory:
+
+  ```java
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+  ```
+
+  Use `getRoot()`, `newFolder(...)`, or `newFile(...)`. Prefer `TemporaryFolderExtension` when Druid-specific temporary-directory behavior or helper methods are needed; use JUnit 5 `@TempDir` when a plain temporary root is sufficient.
+
+- `LoggerCaptureExtension` (`org.apache.druid.testing.junit`) for capturing Log4j events. Register it with the target class and use `getLogEvents()`, `clearLogEvents()`, or `awaitLogEvents()` as needed.
+
 ## Pull Requests
 
 - Before opening a PR, self-review the complete diff against the target branch. Verify that every change is intentional and in scope, check for correctness and regressions, and run the relevant tests or checks.

@@ -22,6 +22,7 @@ package org.apache.druid.segment.loading;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -37,6 +38,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -64,6 +66,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
@@ -74,12 +77,15 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -125,14 +131,14 @@ class SegmentLocalCacheManagerPartialAcquireTest
       SegmentId.of("test_clustered", Intervals.of("2025/2026"), "v1", 0);
   private static final String CLUSTERED_PROJECTION_BUNDLE = "proj";
 
-  @TempDir
-  static File SHARED_TEMP_DIR;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static File DEEP_STORAGE_DIR;
   private static File CLUSTERED_DEEP_STORAGE_DIR;
 
-  @TempDir
-  File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper jsonMapper;
   private File cacheRoot;
@@ -140,9 +146,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
   private DataSegment partialSegment;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmp = new File(SHARED_TEMP_DIR, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     DEEP_STORAGE_DIR = IndexBuilder.create()
                                    .useV10()
                                    .tmpDir(tmp)
@@ -178,7 +184,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
    * {@code sum(x)}). With no shared columns the layout is per-group {@code __base$<ids>} bundles + a self-contained
    * {@code proj} bundle and no {@code __base} bundle.
    */
-  private static File buildClusteredProjectionSegment()
+  private static File buildClusteredProjectionSegment() throws IOException
   {
     final ClusteredValueGroupsBaseTableProjectionSpec clusterSpec =
         ClusteredValueGroupsBaseTableProjectionSpec.builder()
@@ -198,7 +204,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
                                    new LongSumAggregatorFactory("sum_x", "x")
                                )
                                .build();
-    final File tmp = new File(SHARED_TEMP_DIR, "build_clustered_" + ThreadLocalRandom.current().nextInt());
+    final File tmp = SHARED_TEMPORARY_FOLDER.newFolder("build_clustered_" + ThreadLocalRandom.current().nextInt());
     return IndexBuilder.create()
                        .useV10()
                        .tmpDir(tmp)
@@ -249,8 +255,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
             .addValue(ExprMacroTable.class, TestExprMacroTable.INSTANCE)
     );
 
-    cacheRoot = new File(perTestTempDir, "cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(cacheRoot);
+    cacheRoot = temporaryFolder.newFolder("cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
 
     final StorageLocationConfig locConfig = new StorageLocationConfig(cacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
@@ -628,8 +633,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
     // bundle SIEVE-evicted under cache pressure mid-query cleared the mapper's downloaded-file set and the sync
     // makeCursorHolder then failed with "requires the segment to be fully downloaded". Uses a plain manager so we can
     // call acquireCachedSegment(FULL) directly (the shared fixture installs a tripwire that forbids it).
-    final File plainCacheRoot = new File(perTestTempDir, "plain_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(plainCacheRoot);
+    final File plainCacheRoot = temporaryFolder.newFolder(
+        "plain_cache_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
     final StorageLocationConfig locConfig = new StorageLocationConfig(plainCacheRoot, 1024L * 1024L * 1024L, null);
     final SegmentLoaderConfig loaderConfig = SegmentLoaderConfig.builder()
         .locations(locConfig)
@@ -754,9 +760,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
       throws IOException, SegmentLoadingException
   {
     // Simulate process-restart state: prime the partial on-disk layout (header file + sparse-allocated containers)
-    // and the segment info file BEFORE getCachedSegments runs, then verify the new two-phase contract:
-    //   - getCachedSegments() reserves the metadata entry on the location but doesn't mount it
-    //   - bootstrap(DataSegment) is what triggers the actual mount + bundle restore via polymorphic dispatch
+    // and the segment info file BEFORE getCachedSegments runs, then verify the two-phase contract:
+    //   - getCachedSegments() only recognizes the layout as cached; it reserves nothing
+    //   - bootstrap(DataSegment) reserves the metadata entry and mounts it, which is also what sizes it
     final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
     FileUtils.mkdirp(partialDir);
     primePartialOnDiskState(partialDir);
@@ -767,23 +773,29 @@ class SegmentLocalCacheManagerPartialAcquireTest
 
     final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
     final StorageLocation location = manager.getLocations().get(0);
+    Assertions.assertNull(
+        location.getCacheEntry(id),
+        "getCachedSegments must not reserve a partial entry; reservation is deferred to bootstrap()"
+    );
+    Assertions.assertEquals(0, location.currentSizeBytes(), "nothing should be charged to the location yet");
+
+    manager.bootstrap(partialSegment, SegmentLazyLoadFailCallback.NOOP);
+
     final CacheEntry reserved = location.getCacheEntry(id);
     Assertions.assertInstanceOf(
         PartialSegmentMetadataCacheEntry.class,
         reserved,
-        "getCachedSegments must reserve a partial metadata entry on the location"
+        "bootstrap must reserve a partial metadata entry on the location holding the layout"
     );
     final PartialSegmentMetadataCacheEntry partial = (PartialSegmentMetadataCacheEntry) reserved;
-    Assertions.assertFalse(
-        partial.isMounted(),
-        "metadata entry should NOT be mounted after getCachedSegments; mount is deferred to bootstrap()"
-    );
-
-    // bootstrap() dispatches polymorphically: partial entry -> metadata.mount(location), which cascades into bundle
-    // restore via PartialSegmentCacheBootstrap.restoreBundlesFromDisk.
-    manager.bootstrap(partialSegment, SegmentLazyLoadFailCallback.NOOP);
 
     Assertions.assertTrue(partial.isMounted(), "metadata entry must be mounted after bootstrap()");
+    // The estimate the entry was reserved with has been shrunk to the mounted footprint, and the bootstrap hold is
+    // released, so the restored entry is as evictable as any other
+    Assertions.assertEquals(partial.getFileMapper().getOnDiskHeaderSize(), partial.getSize());
+    Assertions.assertTrue(
+        partial.getSize() < manager.getConfig().getVirtualStorageMetadataReservationEstimate()
+    );
     Assertions.assertFalse(
         partial.snapshotLinkedBundles().isEmpty(),
         "bundle restore must have linked at least one bundle to the metadata entry"
@@ -795,6 +807,26 @@ class SegmentLocalCacheManagerPartialAcquireTest
         restoredBundles.contains(Projections.BASE_TABLE_PROJECTION_NAME),
         "base bundle must be restored by bootstrap; got " + restoredBundles
     );
+
+    // A bootstrap-restored entry owns its info file just like an on-demand one: the info file asserts that local
+    // cache state exists, and unmounting deletes that state (header files included), so the two go together.
+    // Without the hook, an evicted restored segment would leave the next startup trying to restore a layout that
+    // isn't there. (Note dropping the segment is not what triggers this: a weak entry survives drop, and reclaim is
+    // left to eviction, which is what the unmount below stands in for.)
+    final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
+    Assertions.assertTrue(infoFile.exists(), "bootstrap must leave the info file it restored from in place");
+
+    // Unmount dependents before parents so each parent hold is released before its bundle tears down, the order
+    // eviction's cascade produces.
+    final List<PartialSegmentBundleCacheEntry> bundles = new ArrayList<>(partial.snapshotLinkedBundles());
+    bundles.sort(Comparator.comparing(b -> Projections.BASE_TABLE_PROJECTION_NAME.equals(b.getBundleName())));
+    for (PartialSegmentBundleCacheEntry bundle : bundles) {
+      bundle.unmount();
+    }
+    partial.unmount();
+
+    Assertions.assertFalse(partial.isMounted(), "the restored entry should be unmounted");
+    Assertions.assertFalse(infoFile.exists(), "unmounting the restored entry must delete its info file");
   }
 
   @Test
@@ -805,7 +837,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
     FileUtils.mkdirp(partialDir);
     primePartialOnDiskState(partialDir);
     manager.storeInfoFile(partialSegment);
-    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
 
     // A manager with partial downloads disabled (operator toggled the flag off) over the same cache dir must reclaim
     // the now-unusable partial layout at bootstrap rather than reserving it and failing at query time.
@@ -846,7 +878,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
-  void testGetCachedSegmentsDeletesPartialLayoutWhenRangeReaderUnavailable() throws IOException
+  void testBootstrapDeletesPartialLayoutWhenRangeReaderUnavailable() throws IOException
   {
     // Prime a valid partial on-disk layout (header written from the real deep-storage dir) as a previous run left it.
     final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
@@ -855,10 +887,9 @@ class SegmentLocalCacheManagerPartialAcquireTest
 
     // ...but record the segment with a loadSpec whose storage can't produce a range reader: an existing directory
     // that holds no V10 file, so LocalLoadSpec.openRangeReader returns null. This is the "shouldn't happen" case — a
-    // partial layout on disk means range reads worked when it was written — so partial-enabled bootstrap must reclaim
-    // the layout rather than reserve an entry that could never lazily fetch.
-    final File noRangeReaderStorage = new File(perTestTempDir, "no_range_reader_storage");
-    FileUtils.mkdirp(noRangeReaderStorage);
+    // partial layout on disk means range reads worked when it was written — so bootstrap must reclaim the layout and
+    // fail the segment rather than reserve an entry that could never lazily fetch.
+    final File noRangeReaderStorage = temporaryFolder.newFolder("no_range_reader_storage");
     final DataSegment unreadableSegment =
         DataSegment.builder(SEGMENT_ID)
                    .shardSpec(NoneShardSpec.instance())
@@ -866,16 +897,26 @@ class SegmentLocalCacheManagerPartialAcquireTest
                    .size(0)
                    .build();
     manager.storeInfoFile(unreadableSegment);
-    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
+    Assertions.assertTrue(infoFile.exists());
 
+    // The layout is on disk, so it still counts as cached; the reader is only needed once bootstrap tries to restore it
     final List<DataSegment> cached = manager.getCachedSegments();
-    Assertions.assertFalse(
-        cached.contains(unreadableSegment),
-        "bootstrap must not return a partial segment whose deep storage can't produce a range reader"
+    Assertions.assertEquals(List.of(unreadableSegment), cached);
+
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> manager.bootstrap(unreadableSegment, SegmentLazyLoadFailCallback.NOOP),
+        "bootstrap must fail the segment so the coordinator re-issues a load for it"
     );
     Assertions.assertFalse(
         partialDir.exists(),
         "bootstrap must delete the unusable partial layout from disk"
+    );
+    Assertions.assertFalse(
+        infoFile.exists(),
+        "the info file must go with the layout; it claims local cache state that no longer exists"
     );
     Assertions.assertNull(
         manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
@@ -884,7 +925,7 @@ class SegmentLocalCacheManagerPartialAcquireTest
   }
 
   @Test
-  void testGetCachedSegmentsDeletesPartialLayoutWhenLoadSpecUnconvertible() throws IOException
+  void testBootstrapDeletesPartialLayoutWhenLoadSpecUnconvertible() throws IOException
   {
     // Prime a valid partial on-disk layout as a previous run left it...
     final File partialDir = new File(cacheRoot, SEGMENT_ID.toString());
@@ -892,8 +933,8 @@ class SegmentLocalCacheManagerPartialAcquireTest
     primePartialOnDiskState(partialDir);
 
     // ...but record the segment with a loadSpec whose type is no longer registered, so converting it to a LoadSpec
-    // throws. Bootstrap must treat that broken segment like a null reader: delete the unusable layout and continue,
-    // rather than aborting or reserving an entry that could never fetch.
+    // throws. Bootstrap must treat that broken segment like a null reader: delete the unusable layout and fail this
+    // segment, rather than aborting the whole bootstrap or reserving an entry that could never fetch.
     final DataSegment unconvertibleSegment =
         DataSegment.builder(SEGMENT_ID)
                    .shardSpec(NoneShardSpec.instance())
@@ -901,18 +942,209 @@ class SegmentLocalCacheManagerPartialAcquireTest
                    .size(0)
                    .build();
     manager.storeInfoFile(unconvertibleSegment);
-    Assertions.assertTrue(PartialSegmentCacheBootstrap.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(partialDir, IndexIO.V10_FILE_NAME));
+    final File infoFile = new File(new File(cacheRoot, "info_dir"), SEGMENT_ID.toString());
+    Assertions.assertTrue(infoFile.exists());
 
     final List<DataSegment> cached = manager.getCachedSegments();
-    Assertions.assertFalse(
-        cached.contains(unconvertibleSegment),
-        "bootstrap must not return a partial segment whose loadSpec can't be converted to a range reader"
+    Assertions.assertEquals(List.of(unconvertibleSegment), cached);
+
+    Assertions.assertThrows(
+        SegmentLoadingException.class,
+        () -> manager.bootstrap(unconvertibleSegment, SegmentLazyLoadFailCallback.NOOP),
+        "bootstrap must fail the segment so the coordinator re-issues a load for it"
     );
     Assertions.assertFalse(partialDir.exists(), "bootstrap must delete the unusable partial layout from disk");
+    Assertions.assertFalse(
+        infoFile.exists(),
+        "the info file must go with the layout; it claims local cache state that no longer exists"
+    );
     Assertions.assertNull(
         manager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
         "no cache entry should be reserved for the deleted partial layout"
     );
+  }
+
+  @Test
+  void testAbandonedAcquireLeavesAConcurrentAcquiresEntryAlone()
+      throws ExecutionException, InterruptedException, IOException
+  {
+    final StorageLocation location = manager.getLocations().get(0);
+    final SegmentCacheEntryIdentifier id = new SegmentCacheEntryIdentifier(SEGMENT_ID);
+
+    // Two acquires holding the same freshly reserved entry, neither of which resolves its future, so nothing mounts
+    // it. The acquire that created the entry gives up first - a canceled or timed out query, say.
+    final PartialSegmentMetadataCacheEntry entry;
+    final Closer acquires = Closer.create();
+    try {
+      // The first acquire reserves the entry; the second joins it. Both are registered with the closer so a failed
+      // assertion cannot leak a hold into the shared manager fixture; AcquireSegmentAction.close() is idempotent, so
+      // closing the first one early below is safe.
+      final AcquireSegmentAction creator = acquires.register(
+          manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)
+      );
+      acquires.register(manager.acquireSegment(partialSegment, AcquireMode.PARTIAL));
+      entry = Assertions.assertInstanceOf(PartialSegmentMetadataCacheEntry.class, location.getCacheEntry(id));
+      Assertions.assertFalse(entry.isMounted());
+
+      creator.close();
+      Assertions.assertSame(
+          entry,
+          location.getCacheEntry(id),
+          "the entry the second acquire is holding must survive the first giving up"
+      );
+    }
+    finally {
+      acquires.close();
+    }
+    // The second acquire letting go does not remove it either - removal is the creating hold's job - so it is left
+    // registered and unmounted, reclaimable, and reusable by the next acquire.
+    Assertions.assertSame(entry, location.getCacheEntry(id));
+    Assertions.assertFalse(entry.isMounted());
+
+    // A later acquire mounts that same entry and serves the segment from it.
+    try (AcquireSegmentAction action = manager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+      final AcquireSegmentResult result = action.getSegmentFuture().get();
+      try (Segment segment = result.getReferenceProvider().acquireReference().orElseThrow()) {
+        Assertions.assertEquals(SEGMENT_ID, segment.getId());
+        final TimeBoundaryInspector inspector = segment.as(TimeBoundaryInspector.class);
+        Assertions.assertNotNull(inspector);
+        Assertions.assertEquals(TIME, inspector.getMinTime());
+        Assertions.assertEquals(TIME.plusMinutes(3), inspector.getMaxTime());
+      }
+      Assertions.assertSame(entry, location.getCacheEntry(id));
+      Assertions.assertTrue(entry.isMounted());
+    }
+  }
+
+  @Test
+  void testAbandonedAcquireWhoseMountFailsResolvesToAnUnavailableSegmentToo() throws Exception
+  {
+    // Deep storage that can produce a range reader now but not serve a read later: openRangeReader() checks the V10
+    // file at acquire time, and the test deletes it before the load task gets to run.
+    final File vanishingStorage = temporaryFolder.newFolder("vanishing_storage");
+    final File v10File = new File(vanishingStorage, IndexIO.V10_FILE_NAME);
+    Files.copy(new File(DEEP_STORAGE_DIR, IndexIO.V10_FILE_NAME).toPath(), v10File.toPath());
+    final DataSegment vanishingSegment = DataSegment.builder(SEGMENT_ID)
+                                                    .shardSpec(NoneShardSpec.instance())
+                                                    .loadSpec(Map.of("type", "local", "path", vanishingStorage.getAbsolutePath()))
+                                                    .size(0)
+                                                    .build();
+
+    final File gatedCacheRoot = temporaryFolder.newFolder("gated_cache_mount_failure");
+    final SegmentLoaderConfig gatedConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(gatedCacheRoot, 1024L * 1024L * 1024L, null))
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .virtualStorageUseVirtualThreads(false)
+        .virtualStorageLoadThreads(1)
+        .build();
+    final List<StorageLocation> storageLocations = gatedConfig.toStorageLocations();
+    final StorageLoadingThreadPool gatedPool = StorageLoadingThreadPool.createFromConfig(gatedConfig);
+    final SegmentLocalCacheManager gatedManager = new SegmentLocalCacheManager(
+        storageLocations,
+        gatedConfig,
+        gatedPool,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final CountDownLatch atGate = new CountDownLatch(1);
+    final CountDownLatch openGate = new CountDownLatch(1);
+    try {
+      // (intentionally unused) local so errorprone's CheckReturnValue is satisfied
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedPool.getExecutorService().submit(() -> {
+        atGate.countDown();
+        return openGate.await(30, TimeUnit.SECONDS);
+      });
+      Assertions.assertTrue(atGate.await(30, TimeUnit.SECONDS), "loading thread must reach the gate");
+
+      final ListenableFuture<AcquireSegmentResult> future;
+      try (AcquireSegmentAction action = gatedManager.acquireSegment(vanishingSegment, AcquireMode.PARTIAL)) {
+        future = action.getSegmentFuture();
+      }
+      // The mount will now fail on its header read rather than rolling back cleanly, so the loss surfaces from
+      // mount() instead of from the pin - which is no reason to fail a query that has already given up.
+      Assertions.assertTrue(v10File.delete(), "test needs the deep-storage file gone before the mount runs");
+      openGate.countDown();
+
+      final AcquireSegmentResult result = future.get(30, TimeUnit.SECONDS);
+      Assertions.assertTrue(
+          result.getReferenceProvider().acquireReference().isEmpty(),
+          "an abandoned acquire whose mount failed must resolve to an unavailable segment"
+      );
+    }
+    finally {
+      openGate.countDown();
+      gatedManager.drop(vanishingSegment);
+      gatedManager.shutdown();
+      gatedPool.stop();
+    }
+  }
+
+  @Test
+  void testAbandonedAcquireResolvesToAnUnavailableSegmentRatherThanFailing() throws Exception
+  {
+    // One fixed loading thread, so the test can hold the load task at a gate while it abandons the acquire.
+    final File gatedCacheRoot = temporaryFolder.newFolder("gated_cache");
+    final SegmentLoaderConfig gatedConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(gatedCacheRoot, 1024L * 1024L * 1024L, null))
+        .virtualStorage(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .virtualStorageUseVirtualThreads(false)
+        .virtualStorageLoadThreads(1)
+        .build();
+    final List<StorageLocation> storageLocations = gatedConfig.toStorageLocations();
+    final StorageLoadingThreadPool gatedPool = StorageLoadingThreadPool.createFromConfig(gatedConfig);
+    final SegmentLocalCacheManager gatedManager = new SegmentLocalCacheManager(
+        storageLocations,
+        gatedConfig,
+        gatedPool,
+        new LeastBytesUsedStorageLocationSelectorStrategy(storageLocations),
+        TestHelper.getTestIndexIO(jsonMapper, ColumnConfig.DEFAULT),
+        jsonMapper
+    );
+
+    final CountDownLatch atGate = new CountDownLatch(1);
+    final CountDownLatch openGate = new CountDownLatch(1);
+    try {
+      // (intentionally unused) local so errorprone's CheckReturnValue is satisfied
+      @SuppressWarnings("unused")
+      ListenableFuture<?> unused = gatedPool.getExecutorService().submit(() -> {
+        atGate.countDown();
+        return openGate.await(30, TimeUnit.SECONDS);
+      });
+      Assertions.assertTrue(atGate.await(30, TimeUnit.SECONDS), "loading thread must reach the gate");
+
+      // Start the acquire (its load task queues behind the gate) and then abandon it (like a canceled or timed
+      // out query does); closing the action releases the hold that was keeping the reserved entry resident.
+      final ListenableFuture<AcquireSegmentResult> future;
+      try (AcquireSegmentAction action = gatedManager.acquireSegment(partialSegment, AcquireMode.PARTIAL)) {
+        future = action.getSegmentFuture();
+      }
+      openGate.countDown();
+
+      // The task now mounts an entry the location no longer knows about, so it can never pin it. Nothing is waiting
+      // on the result, and a segment that is not there is not a reason to fail a query.
+      final AcquireSegmentResult result = future.get(30, TimeUnit.SECONDS);
+      Assertions.assertTrue(
+          result.getReferenceProvider().acquireReference().isEmpty(),
+          "an abandoned acquire must resolve to an unavailable segment"
+      );
+      Assertions.assertNull(
+          gatedManager.getLocations().get(0).getCacheEntry(new SegmentCacheEntryIdentifier(SEGMENT_ID)),
+          "the abandoned entry must not be left behind in the cache"
+      );
+    }
+    finally {
+      openGate.countDown();
+      gatedManager.drop(partialSegment);
+      gatedManager.shutdown();
+      // shutdown() only stops the manager's own executor; the loading pool is stopped through its lifecycle hook
+      gatedPool.stop();
+    }
   }
 
   /**

@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
@@ -66,6 +67,7 @@ import org.apache.druid.utils.CollectionUtils;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -104,8 +106,14 @@ public final class SegmentGenerationUtils
     if (destination.getBaseTable() != null) {
       final Granularity queryGranularity =
           query.context().getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper);
-      final BaseTableProjectionSpec baseTable =
+      final BaseTableProjectionSpec declared =
           destination.getBaseTable().withQueryGranularity(queryGranularity);
+      // The query may produce columns the base table does not declare, which happens when the target table does not
+      // require a strict schema. Store them rather than drop them; they are appended after the declared columns, so
+      // the shape the operator asked for is unchanged.
+      final BaseTableProjectionSpec baseTable = declared.withAdditionalColumns(
+          undeclaredColumns(declared, querySignature, columnMappings, query, destination.getDimensionSchemas())
+      );
       return DataSchema.builder()
                        .withDataSource(destination.getDataSource())
                        .withTimestamp(new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null))
@@ -210,6 +218,62 @@ public final class SegmentGenerationUtils
     return query instanceof GroupByQuery
            && !MultiStageQueryContext.isFinalizeAggregations(query.context())
            && !query.context().getBoolean(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, true);
+  }
+
+  /**
+   * The columns a query produces that a base table does not declare, in query output order, as the
+   * {@link DimensionSchema}s they should be stored with.
+   * <p>
+   * A base table declares the columns an operator asked for. When the target table does not require a strict schema,
+   * a query may produce others; they are stored so that ingesting a column is never silently a no-op.
+   */
+  private static List<DimensionSchema> undeclaredColumns(
+      final BaseTableProjectionSpec baseTable,
+      final RowSignature querySignature,
+      final ColumnMappings columnMappings,
+      final Query<?> query,
+      @Nullable final Map<String, DimensionSchema> dimensionSchemas
+  )
+  {
+    final Set<String> declared = new HashSet<>();
+    for (DimensionSchema dimension : baseTable.getDimensionsSpec().getDimensions()) {
+      declared.add(dimension.getName());
+    }
+    for (AggregatorFactory metric : baseTable.getMetrics() == null ? new AggregatorFactory[0] : baseTable.getMetrics()) {
+      declared.add(metric.getName());
+    }
+    // The time column is positional in a base table, never appended.
+    declared.add(ColumnHolder.TIME_COLUMN_NAME);
+
+    final List<DimensionSchema> undeclared = new ArrayList<>();
+    for (final String outputColumnName : columnMappings.getOutputColumnNames()) {
+      if (!declared.add(outputColumnName)) {
+        continue;
+      }
+      final int outputColumn = CollectionUtils.getOnlyElement(
+          columnMappings.getOutputColumnsByName(outputColumnName),
+          xs -> new ISE("Expected single output column for name [%s], but got [%s]", outputColumnName, xs)
+      );
+      final String queryColumn = columnMappings.getQueryColumnName(outputColumn);
+      final ColumnType type =
+          querySignature.getColumnType(queryColumn)
+                        .orElseThrow(() -> new ISE("No type for column [%s]", outputColumnName));
+
+      if (type.is(ValueType.COMPLEX)) {
+        final String typeName = type.getComplexTypeName();
+        if (typeName == null || !DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.containsKey(typeName)) {
+          // A base table stores columns as dimensions, so a complex type with no dimension handler has nowhere to go
+          throw InvalidInput.exception(
+              "Column [%s] has type [%s], which cannot be stored in a base table that does not declare it. Declare the"
+              + " column in the table, or cast it to a type that can be stored as a dimension",
+              outputColumnName,
+              type
+          );
+        }
+      }
+      undeclared.add(getDimensionSchema(outputColumnName, type, query.context(), dimensionSchemas));
+    }
+    return undeclared;
   }
 
   private static DimensionSchema getDimensionSchema(

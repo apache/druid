@@ -97,13 +97,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 import software.amazon.kinesis.retrieval.KinesisClientRecord;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.time.Instant;
@@ -128,9 +128,6 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
-  @TempDir
-  private File tempFolder;
-
   private static final ObjectMapper OBJECT_MAPPER = TestHelper.makeJsonMapper();
   private static final String STREAM = "stream";
   private static final String SHARD_ID1 = "1";
@@ -213,16 +210,13 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   public void setupTest() throws IOException, InterruptedException
   {
     ExpressionProcessing.initializeForTests();
-    super.tempFolder.create();
-    derby.before();
-    super.setupBase();
     handoffConditionTimeout = 0;
     reportParseExceptions = false;
     logParseExceptions = true;
     maxParseExceptions = null;
     maxSavedParseExceptions = null;
     doHandoff = true;
-    reportsFile = tempFolder.newFile("KinesisIndexTaskTestReports.json");
+    reportsFile = temporaryFolder.newFile("KinesisIndexTaskTestReports.json");
     maxRecordsPerPoll = 1;
     maxBytesPerPoll = 1_000_000;
 
@@ -245,9 +239,6 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     reportsFile.delete();
     destroyToolboxFactory();
-    super.tearDownBase();
-    derby.after();
-    super.tempFolder.delete();
   }
 
   @AfterAll
@@ -2445,7 +2436,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private void makeToolboxFactory() throws IOException
   {
-    directory = newFolder(tempFolder, "junit");
+    directory = newFolder(temporaryFolder.getRoot(), "junit");
     final TestUtils testUtils = new TestUtils();
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
     objectMapper.setInjectableValues(((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(

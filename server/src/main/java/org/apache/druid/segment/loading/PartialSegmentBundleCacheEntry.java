@@ -362,7 +362,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
     try {
       // 1. Cache holds on metadata + parents (prevents cache eviction of weak dependencies)
       final StorageLocation.ReservationHold<?> metadataHold =
-          mountLocation.addWeakReservationHoldIfExists(metadataEntry.getId());
+          mountLocation.addInternalWeakReservationHoldIfExists(metadataEntry.getId());
       if (metadataHold == null) {
         throw DruidException.defensive(
             "Cannot acquire metadata hold for [%s]; metadata entry not registered with location[%s]",
@@ -374,7 +374,7 @@ public class PartialSegmentBundleCacheEntry implements CacheEntry
 
       for (PartialSegmentBundleCacheEntryIdentifier parentId : parentEntryIds) {
         final StorageLocation.ReservationHold<?> parentHold =
-            mountLocation.addWeakReservationHoldIfExists(parentId);
+            mountLocation.addInternalWeakReservationHoldIfExists(parentId);
         if (parentHold == null) {
           throw DruidException.defensive(
               "Cannot acquire parent hold for [%s]; parent entry not registered with location[%s]",

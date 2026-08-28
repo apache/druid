@@ -34,8 +34,8 @@ import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.List;
@@ -84,7 +84,7 @@ public class ShardSpecsTest extends IngestionTestBase
     ShardSpec spec4 = shardSpecs.getShardSpec(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), row2);
     ShardSpec spec5 = shardSpecs.getShardSpec(Intervals.of("2014-01-01T00:00:00.000Z/2014-01-02T00:00:00.000Z"), row3);
 
-    Assert.assertSame(true, spec3 == spec4);
-    Assert.assertSame(false, spec3 == spec5);
+    Assertions.assertSame(spec3, spec4);
+    Assertions.assertNotSame(spec3, spec5);
   }
 }

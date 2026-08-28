@@ -19,11 +19,43 @@
 
 package org.apache.druid.storage.s3;
 
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import org.apache.druid.storage.s3.output.S3OutputConfig;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class S3TransferConfigTest
 {
+  private static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
+
+  @Test
+  public void testPartSizeBelowTheS3MinimumIsRejected()
+  {
+    final S3TransferConfig config = new S3TransferConfig();
+    config.setMinimumUploadPartSize(S3OutputConfig.S3_MULTIPART_UPLOAD_MIN_PART_SIZE_BYTES - 1);
+
+    Assertions.assertFalse(VALIDATOR.validate(new S3StorageConfig(null, config)).isEmpty());
+  }
+
+  @Test
+  public void testPartSizeAboveTheS3MaximumIsRejected()
+  {
+    final S3TransferConfig config = new S3TransferConfig();
+    config.setMinimumUploadPartSize(S3OutputConfig.S3_MULTIPART_UPLOAD_MAX_PART_SIZE_BYTES + 1);
+
+    Assertions.assertFalse(VALIDATOR.validate(new S3StorageConfig(null, config)).isEmpty());
+  }
+
+  @Test
+  public void testThresholdBelowTheS3MinimumPartSizeIsAccepted()
+  {
+    final S3TransferConfig config = new S3TransferConfig();
+    config.setMultipartUploadThreshold(1024L);
+
+    Assertions.assertTrue(VALIDATOR.validate(new S3StorageConfig(null, config)).isEmpty());
+  }
+
   @Test
   public void testDefaultValues()
   {

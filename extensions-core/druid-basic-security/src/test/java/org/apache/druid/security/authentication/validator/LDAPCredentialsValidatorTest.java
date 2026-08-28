@@ -24,8 +24,8 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.BasicAuthLDAPConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authentication.validator.LDAPCredentialsValidator;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -60,7 +60,7 @@ public class LDAPCredentialsValidatorTest
   {
     String input = "user1";
     String encoded = LDAPCredentialsValidator.encodeForLDAP(input, true);
-    Assert.assertEquals(input, encoded);
+    Assertions.assertEquals(input, encoded);
   }
 
   @Test
@@ -71,8 +71,8 @@ public class LDAPCredentialsValidatorTest
     String encodedWildcardFalse = LDAPCredentialsValidator.encodeForLDAP(input, false);
     String expectedWildcardTrue = "user1\\5c\\2a\\28\\29\\00\\2fuser1";
     String expectedWildcardFalse = "user1\\5c*\\28\\29\\00\\2fuser1";
-    Assert.assertEquals(expectedWildcardTrue, encodedWildcardTrue);
-    Assert.assertEquals(expectedWildcardFalse, encodedWildcardFalse);
+    Assertions.assertEquals(expectedWildcardTrue, encodedWildcardTrue);
+    Assertions.assertEquals(expectedWildcardFalse, encodedWildcardFalse);
   }
 
   /**

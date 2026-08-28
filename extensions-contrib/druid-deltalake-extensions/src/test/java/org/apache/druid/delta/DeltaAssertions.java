@@ -17,31 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.delta;
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import org.apache.druid.error.DruidException;
+import org.junit.jupiter.api.Assertions;
 
-import java.util.concurrent.TimeUnit;
-
-/**
- * This Rule is based on {@link org.junit.rules.Timeout}, additionally deadlocked threads are detected.
- */
-public final class DeadlockDetectingTimeout implements TestRule
+public class DeltaAssertions
 {
-  private final long timeout;
-  private final TimeUnit timeoutUnit;
-
-  public DeadlockDetectingTimeout(long timeout, TimeUnit timeoutUnit)
+  private DeltaAssertions()
   {
-    this.timeout = timeout;
-    this.timeoutUnit = timeoutUnit;
   }
 
-  @Override
-  public Statement apply(Statement base, Description description)
+  public static void assertInvalidInput(final DruidException exception, final String expectedMessage)
   {
-    return new DeadlockDetectingFailOnTimeout(timeout, timeoutUnit, base);
+    Assertions.assertAll(
+        () -> Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona()),
+        () -> Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory()),
+        () -> Assertions.assertEquals("invalidInput", exception.getErrorCode()),
+        () -> Assertions.assertEquals(expectedMessage, exception.getMessage())
+    );
   }
 }

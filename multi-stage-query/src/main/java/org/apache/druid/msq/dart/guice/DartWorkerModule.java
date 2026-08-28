@@ -78,8 +78,13 @@ import java.util.concurrent.ExecutorService;
 @LoadScope(roles = NodeRole.HISTORICAL_JSON_NAME)
 public class DartWorkerModule implements DruidModule
 {
-  @Inject
   private Properties properties;
+
+  @Inject
+  public void setProperties(Properties properties)
+  {
+    this.properties = properties;
+  }
 
   @Override
   public void configure(Binder binder)

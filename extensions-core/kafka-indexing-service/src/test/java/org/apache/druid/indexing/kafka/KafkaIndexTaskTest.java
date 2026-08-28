@@ -35,10 +35,13 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Scopes;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.cli.CliPeon;
-import org.apache.druid.cli.CliPeonTest;
 import org.apache.druid.cli.PeonLoadSpecHolder;
 import org.apache.druid.cli.PeonTaskHolder;
 import org.apache.druid.data.input.InputEntity;
@@ -59,6 +62,8 @@ import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.data.input.kafkainput.KafkaStringHeaderFormat;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
@@ -81,6 +86,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTestBase;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
+import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -93,6 +99,7 @@ import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitterModule;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -144,13 +151,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -173,9 +180,6 @@ import java.util.stream.Stream;
 @MethodSource("constructorFeeder")
 public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 {
-  @TempDir
-  public File temporaryFolder;
-
   private static final long POLL_RETRY_MS = 100;
   private static final Iterable<Header> SAMPLE_HEADERS = ImmutableList.of(new Header()
   {
@@ -301,9 +305,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @BeforeEach
   public void setupTest() throws IOException
   {
-    super.tempFolder.create();
-    derby.before();
-    setupBase();
     handoffConditionTimeout = 0;
     reportParseExceptions = false;
     logParseExceptions = true;
@@ -328,9 +329,6 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     reportsFile.delete();
     destroyToolboxFactory();
-    tearDownBase();
-    derby.after();
-    super.tempFolder.delete();
   }
 
   @AfterAll
@@ -3003,7 +3001,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private void makeToolboxFactory() throws IOException
   {
-    directory = newFolder(temporaryFolder, "junit");
+    directory = temporaryFolder.newFolder();
     final TestUtils testUtils = new TestUtils();
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
 
@@ -3430,7 +3428,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    final File file = new File(temporaryFolder, "task.json");
+    final File file = new File(temporaryFolder.getRoot(), "task.json");
 
     FileUtils.write(file, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
 
@@ -3505,7 +3503,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    final Injector peonInjector = CliPeonTest.makePeonInjectorWithStubEmitter(task, super.tempFolder, OBJECT_MAPPER);
+    final Injector peonInjector = makePeonInjectorWithStubEmitter(task);
     Emitter peonEmitter = peonInjector.getInstance(Emitter.class);
     Assertions.assertTrue(peonEmitter instanceof StubServiceEmitter);
     emitter = (StubServiceEmitter) peonEmitter;
@@ -3675,11 +3673,39 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   }
 
-  private static File newFolder(File root, String... subDirs)
+  private Injector makePeonInjectorWithStubEmitter(Task task) throws IOException
   {
-    return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(
-        root.toPath(),
-        String.join("-", subDirs)
+    final File taskFile = new File(temporaryFolder.getRoot(), "task.json");
+    FileUtils.write(taskFile, OBJECT_MAPPER.writeValueAsString(task), StandardCharsets.UTF_8);
+
+    final Properties properties = new Properties();
+    properties.setProperty("druid.emitter", "stub");
+
+    final Injector baseInjector = Guice.createInjector(
+        new JacksonModule(),
+        new LifecycleModule(),
+        binder -> {
+          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+          binder.bind(Properties.class).toInstance(properties);
+        }
     );
+
+    final CliPeon peon = new CliPeon()
+    {
+      @Override
+      protected List<? extends com.google.inject.Module> getModules()
+      {
+        final List<com.google.inject.Module> modules = new ArrayList<>(super.getModules());
+        modules.add(new StubServiceEmitterModule());
+        return modules;
+      }
+    };
+
+    peon.taskAndStatusFile = ImmutableList.of(taskFile.getParent(), "1");
+    peon.configure(properties);
+    peon.configure(properties, baseInjector);
+    return peon.makeInjector(Set.of(NodeRole.PEON));
   }
+
 }

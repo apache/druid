@@ -72,7 +72,7 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -1121,12 +1121,12 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
     }
   }
 
@@ -1138,12 +1138,12 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
     try {
       testQuery(query, ImmutableList.of(), ImmutableList.of());
-      Assert.fail("Expected DruidException but query succeeded");
+      Assertions.fail("Expected DruidException but query succeeded");
     }
     catch (DruidException e) {
-      Assert.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
-      Assert.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
-      Assert.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
+      Assertions.assertEquals(DruidException.Persona.USER, e.getTargetPersona());
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertTrue(e.getMessage().contains("Cannot apply 'APPROX_QUANTILE_DS'"));
     }
   }
 

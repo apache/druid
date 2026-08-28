@@ -27,11 +27,11 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,10 +42,10 @@ import java.util.Collections;
 
 public class SqlEntityTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
   private TestDerbyConnector derbyConnector;
@@ -54,7 +54,7 @@ public class SqlEntityTest
   String VALID_SQL = "SELECT timestamp,a,b FROM FOOS_TABLE";
   String INVALID_SQL = "DONT SELECT timestamp,a,b FROM FOOS_TABLE";
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     for (Module jacksonModule : new InputSourceModule().getJacksonModules()) {
@@ -66,7 +66,7 @@ public class SqlEntityTest
   public void testExecuteQuery() throws IOException
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    final SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     final InputRow expectedRow = testUtils.createTableWithRows(TABLE_NAME_1, 1).get(0);
     final File tmpFile = temporaryFolder.newFile("testQueryResults");
     final String actualJson;
@@ -80,10 +80,10 @@ public class SqlEntityTest
          final InputStream queryInputStream = new FileInputStream(queryResult.file())) {
       actualJson = IOUtils.toString(queryInputStream, StandardCharsets.UTF_8);
     }
-    final String expectedJson = mapper.writeValueAsString(
+    String expectedJson = mapper.writeValueAsString(
         Collections.singletonList(((MapBasedInputRow) expectedRow).getEvent())
     );
-    Assert.assertEquals(actualJson, expectedJson);
+    Assertions.assertEquals(actualJson, expectedJson);
     testUtils.dropTable(TABLE_NAME_1);
   }
 
@@ -91,12 +91,12 @@ public class SqlEntityTest
   public void testFileDeleteOnInvalidQuery() throws IOException
   {
     derbyConnector = derbyConnectorRule.getConnector();
-    final SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
+    SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     testUtils.createTableWithRows(TABLE_NAME_1, 1);
     final File tmpFile = temporaryFolder.newFile("testQueryResults");
-    Assert.assertTrue(tmpFile.exists());
+    Assertions.assertTrue(tmpFile.exists());
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> SqlEntity.openCleanableFile(
             INVALID_SQL,
@@ -108,6 +108,6 @@ public class SqlEntityTest
     );
 
     // Verify that the temporary file is cleaned up
-    Assert.assertFalse(tmpFile.exists());
+    Assertions.assertFalse(tmpFile.exists());
   }
 }

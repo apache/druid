@@ -112,6 +112,11 @@ public class SchemalessIndexTest
     }
   }
 
+  IncrementalIndex createIncrementalIndex()
+  {
+    return makeIncrementalIndex(TEST_FILE, METRIC_AGGS);
+  }
+
   public static QueryableIndex getIncrementalIndex(int index1, int index2)
   {
     synchronized (log) {
@@ -178,45 +183,61 @@ public class SchemalessIndexTest
         return mergedIndex;
       }
 
-      try {
-        IncrementalIndex top = makeIncrementalIndex("druid.sample.json.top", METRIC_AGGS);
-        IncrementalIndex bottom = makeIncrementalIndex("druid.sample.json.bottom", METRIC_AGGS);
+      mergedIndex = createMergedIncrementalIndex();
+      return mergedIndex;
+    }
+  }
 
-        final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
-        tmpFile.deleteOnExit();
+  QueryableIndex createMergedIncrementalIndex()
+  {
+    final IncrementalIndex top = makeIncrementalIndex("druid.sample.json.top", METRIC_AGGS);
+    final IncrementalIndex bottom = makeIncrementalIndex("druid.sample.json.bottom", METRIC_AGGS);
+    QueryableIndex topIndex = null;
+    QueryableIndex bottomIndex = null;
 
-        File topFile = new File(tmpFile, "top");
-        File bottomFile = new File(tmpFile, "bottom");
-        File mergedFile = new File(tmpFile, "merged");
+    try {
+      File tmpFile = FileUtils.createTempDir("yay");
 
-        FileUtils.mkdirp(topFile);
-        FileUtils.mkdirp(bottomFile);
-        FileUtils.mkdirp(mergedFile);
-        topFile.deleteOnExit();
-        bottomFile.deleteOnExit();
-        mergedFile.deleteOnExit();
+      File topFile = new File(tmpFile, "top");
+      File bottomFile = new File(tmpFile, "bottom");
+      File mergedFile = new File(tmpFile, "merged");
 
-        indexMerger.persist(top, topFile, INDEX_SPEC, null);
-        indexMerger.persist(bottom, bottomFile, INDEX_SPEC, null);
+      FileUtils.mkdirp(topFile);
+      FileUtils.mkdirp(bottomFile);
+      FileUtils.mkdirp(mergedFile);
+      topFile.deleteOnExit();
+      bottomFile.deleteOnExit();
+      mergedFile.deleteOnExit();
 
-        mergedIndex = indexIO.loadIndex(
-            indexMerger.mergeQueryableIndex(
-                Arrays.asList(indexIO.loadIndex(topFile), indexIO.loadIndex(bottomFile)),
-                true,
-                METRIC_AGGS,
-                mergedFile,
-                INDEX_SPEC,
-                null,
-                -1
-            )
-        );
+      indexMerger.persist(top, topFile, INDEX_SPEC, null);
+      indexMerger.persist(bottom, bottomFile, INDEX_SPEC, null);
+      topIndex = indexIO.loadIndex(topFile);
+      bottomIndex = indexIO.loadIndex(bottomFile);
 
-        return mergedIndex;
+      return indexIO.loadIndex(
+          indexMerger.mergeQueryableIndex(
+              Arrays.asList(topIndex, bottomIndex),
+              true,
+              METRIC_AGGS,
+              mergedFile,
+              INDEX_SPEC,
+              null,
+              -1
+          )
+      );
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      if (topIndex != null) {
+        topIndex.close();
       }
-      catch (IOException e) {
-        mergedIndex = null;
-        throw new RuntimeException(e);
+      if (bottomIndex != null) {
+        bottomIndex.close();
       }
+      top.close();
+      bottom.close();
     }
   }
 
@@ -239,8 +260,7 @@ public class SchemalessIndexTest
       }
 
       try {
-        final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
-        tmpFile.deleteOnExit();
+        File tmpFile = FileUtils.createTempDir("yay");
 
         File mergedFile = new File(tmpFile, "merged");
 
@@ -277,8 +297,7 @@ public class SchemalessIndexTest
       }
 
       try {
-        final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
-        tmpFile.deleteOnExit();
+        File tmpFile = FileUtils.createTempDir("yay");
 
         File mergedFile = new File(tmpFile, "merged");
 
@@ -364,7 +383,7 @@ public class SchemalessIndexTest
               new MapBasedInputRow(timestamp, dims, event)
           );
 
-          final File tmpFile = FileUtils.createTempDir("schemaless-row-index");
+          File tmpFile = FileUtils.createTempDir("billy");
           tmpFile.deleteOnExit();
 
           indexMerger.persist(rowIndex, tmpFile, INDEX_SPEC, null);
@@ -442,8 +461,7 @@ public class SchemalessIndexTest
   private QueryableIndex makeMergedMMappedIndex(Iterable<Pair<String, AggregatorFactory[]>> files)
   {
     try {
-      final File tmpFile = FileUtils.createTempDir("schemaless-index-merge");
-      tmpFile.deleteOnExit();
+      File tmpFile = FileUtils.createTempDir("yay");
       File mergedFile = new File(tmpFile, "merged");
       FileUtils.mkdirp(mergedFile);
       mergedFile.deleteOnExit();

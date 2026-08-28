@@ -33,6 +33,7 @@ import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.Service;
+import org.apache.commons.io.IOUtils;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.utils.SocketUtil;
@@ -99,9 +100,11 @@ import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.io.EofException;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -112,11 +115,16 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -131,11 +139,13 @@ import java.util.zip.Deflater;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
+  private static final String RESPONSE_CONTEXT = "{\"missingSegments\":[]}";
+
   private static int port1;
   private static int port2;
 
   @Override
-  @Before
+  @BeforeEach
   public void setup() throws Exception
   {
     setProperties();
@@ -181,6 +191,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);
                 Jerseys.addResource(binder, DefaultResource.class);
+                Jerseys.addResource(binder, ResponseContextResource.class);
                 LifecycleModule.register(binder, Server.class);
               }
             }
@@ -195,22 +206,33 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     final HttpURLConnection get = (HttpURLConnection) url.openConnection();
     get.setRequestProperty("Accept-Encoding", "gzip");
-    Assert.assertEquals("gzip", get.getContentEncoding());
+    Assertions.assertEquals("gzip", get.getContentEncoding());
 
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestProperty("Accept-Encoding", "gzip");
     post.setRequestMethod("POST");
-    Assert.assertEquals("gzip", post.getContentEncoding());
+    Assertions.assertEquals("gzip", post.getContentEncoding());
 
     final HttpURLConnection getNoGzip = (HttpURLConnection) url.openConnection();
-    Assert.assertNotEquals("gzip", getNoGzip.getContentEncoding());
+    Assertions.assertNotEquals("gzip", getNoGzip.getContentEncoding());
 
     final HttpURLConnection postNoGzip = (HttpURLConnection) url.openConnection();
     postNoGzip.setRequestMethod("POST");
-    Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
+    Assertions.assertNotEquals("gzip", postNoGzip.getContentEncoding());
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  public void testProxyResponseContextHeader() throws Exception
+  {
+    final URL url = URI.create("http://localhost:" + port + "/proxy/response-context").toURL();
+    final HttpURLConnection get = (HttpURLConnection) url.openConnection();
+
+    Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, IOUtils.toString(get.getInputStream(), StandardCharsets.UTF_8));
+    Assertions.assertEquals(RESPONSE_CONTEXT, get.getHeaderField(QueryResource.HEADER_RESPONSE_CONTEXT));
+  }
+
+  @Test
+  @Timeout(value = 60, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testDeleteBroadcast() throws Exception
   {
     CountDownLatch latch = new CountDownLatch(2);
@@ -221,7 +243,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
     post.setRequestMethod("DELETE");
     int code = post.getResponseCode();
-    Assert.assertEquals(200, code);
+    Assertions.assertEquals(200, code);
 
     latch.await();
   }
@@ -290,10 +312,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         (servlet, request, response, mapper)
             -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
     );
-    Assert.assertTrue(captor.getValue() instanceof QueryException);
-    Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
-    Assert.assertEquals(IllegalStateException.class.getName(), ((QueryException) captor.getValue()).getErrorClass());
+    Assertions.assertTrue(captor.getValue() instanceof QueryException);
+    Assertions.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
+    Assertions.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assertions.assertEquals(IllegalStateException.class.getName(), ((QueryException) captor.getValue()).getErrorClass());
   }
 
   @Test
@@ -319,11 +341,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         (servlet, request, response, mapper)
             -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
     );
-    Assert.assertTrue(captor.getValue() instanceof QueryException);
-    Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertNull(captor.getValue().getMessage());
-    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
-    Assert.assertNull(((QueryException) captor.getValue()).getHost());
+    Assertions.assertTrue(captor.getValue() instanceof QueryException);
+    Assertions.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
+    Assertions.assertNull(captor.getValue().getMessage());
+    Assertions.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assertions.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   @Test
@@ -349,11 +371,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         (servlet, request, response, mapper)
             -> servlet.handleException(response, mapper, new IllegalStateException(errorMessage))
     );
-    Assert.assertTrue(captor.getValue() instanceof QueryException);
-    Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
-    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
-    Assert.assertNull(((QueryException) captor.getValue()).getHost());
+    Assertions.assertTrue(captor.getValue() instanceof QueryException);
+    Assertions.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
+    Assertions.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assertions.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assertions.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   @Test
@@ -366,10 +388,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         (servlet, request, response, mapper)
             -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
     );
-    Assert.assertTrue(captor.getValue() instanceof QueryException);
-    Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
-    Assert.assertEquals(IOException.class.getName(), ((QueryException) captor.getValue()).getErrorClass());
+    Assertions.assertTrue(captor.getValue() instanceof QueryException);
+    Assertions.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
+    Assertions.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assertions.assertEquals(IOException.class.getName(), ((QueryException) captor.getValue()).getErrorClass());
   }
 
   @Test
@@ -394,11 +416,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         (servlet, request, response, mapper)
             -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
     );
-    Assert.assertTrue(captor.getValue() instanceof QueryException);
-    Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertNull(captor.getValue().getMessage());
-    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
-    Assert.assertNull(((QueryException) captor.getValue()).getHost());
+    Assertions.assertTrue(captor.getValue() instanceof QueryException);
+    Assertions.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
+    Assertions.assertNull(captor.getValue().getMessage());
+    Assertions.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assertions.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   @Test
@@ -424,11 +446,11 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         (servlet, request, response, mapper)
             -> servlet.handleQueryParseException(request, response, mapper, new IOException(errorMessage), false)
     );
-    Assert.assertTrue(captor.getValue() instanceof QueryException);
-    Assert.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
-    Assert.assertEquals(errorMessage, captor.getValue().getMessage());
-    Assert.assertNull(((QueryException) captor.getValue()).getErrorClass());
-    Assert.assertNull(((QueryException) captor.getValue()).getHost());
+    Assertions.assertTrue(captor.getValue() instanceof QueryException);
+    Assertions.assertEquals("Unknown exception", ((QueryException) captor.getValue()).getErrorCode());
+    Assertions.assertEquals(errorMessage, captor.getValue().getMessage());
+    Assertions.assertNull(((QueryException) captor.getValue()).getErrorClass());
+    Assertions.assertNull(((QueryException) captor.getValue()).getHost());
   }
 
   @Test
@@ -563,14 +585,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
 
     stubServiceEmitter.verifyEmitted("query/time", 1);
-    Assert.assertEquals("test-query-504", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
-    Assert.assertEquals(
+    Assertions.assertEquals("test-query-504", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    Assertions.assertEquals(
         504,
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
     assertNativeQueryStatusCodeMatchesMetric(requestLogger, getEmittedStatusCode(stubServiceEmitter));
-    Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
-    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
+    Assertions.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assertions.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
   @Test
@@ -636,13 +658,13 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
 
     stubServiceEmitter.verifyEmitted("query/time", 1);
-    Assert.assertEquals("closed-test", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
-    Assert.assertEquals(
+    Assertions.assertEquals("closed-test", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    Assertions.assertEquals(
         500,
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
-    Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
-    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
+    Assertions.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assertions.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
   @Test
@@ -692,14 +714,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
 
     stubServiceEmitter.verifyEmitted("query/time", 1);
-    Assert.assertEquals("zero-status-test", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
-    Assert.assertEquals(
+    Assertions.assertEquals("zero-status-test", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+    Assertions.assertEquals(
         500, // Should default to 500 when status is 0
         stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
     );
     assertNativeQueryStatusCodeMatchesMetric(requestLogger, getEmittedStatusCode(stubServiceEmitter));
-    Assert.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
-    Assert.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
+    Assertions.assertEquals("false", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("success"));
+    Assertions.assertEquals("testUser", stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get("identity"));
   }
 
 
@@ -960,15 +982,15 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     }
     stubServiceEmitter.verifyEmitted("query/time", 1);
     if (!isJDBCSql) {
-      Assert.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
+      Assertions.assertEquals("dummy", stubServiceEmitter.getEvents().get(0).toMap().get("id"));
     }
     if (isFailure) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           500,
           stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
       );
     } else {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           200,
           stubServiceEmitter.getMetricEvents("query/time").get(0).toMap().get(DruidMetrics.STATUS_CODE)
       );
@@ -979,7 +1001,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     // This test is mostly about verifying that the servlet calls the right methods the right number of times.
     EasyMock.verify(hostFinder, requestMock);
-    Assert.assertEquals(1, didService.get());
+    Assertions.assertEquals(1, didService.get());
   }
 
   private static int getEmittedStatusCode(StubServiceEmitter stubServiceEmitter)
@@ -1014,7 +1036,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
   private static void assertStatusCode(RequestLogLine requestLogLine, int metricStatusCode)
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         metricStatusCode,
         requestLogLine.getQueryStats().getStats().get(DruidMetrics.STATUS_CODE)
     );
@@ -1036,6 +1058,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     server.setHandler(servletContextHandler);
     return server;
+  }
+
+  @Path("/response-context")
+  public static class ResponseContextResource
+  {
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public javax.ws.rs.core.Response get()
+    {
+      return javax.ws.rs.core.Response.ok(DEFAULT_RESPONSE_CONTENT)
+                                      .header(QueryResource.HEADER_RESPONSE_CONTEXT, RESPONSE_CONTEXT)
+                                      .build();
+    }
   }
 
   public static class ProxyJettyServerInit implements JettyServerInitializer
@@ -1115,6 +1150,7 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       root.addFilter(GuiceFilter.class, "/slow/*", null);
       root.addFilter(GuiceFilter.class, "/default/*", null);
       root.addFilter(GuiceFilter.class, "/exception/*", null);
+      root.addFilter(GuiceFilter.class, "/response-context/*", null);
 
       final Handler.Sequence handlerList = new Handler.Sequence();
       handlerList.setHandlers(
@@ -1133,14 +1169,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   {
 
     // test params
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "http://localhost:1234/some/path?param=1",
         AsyncQueryForwardingServlet.makeURI("http", "localhost:1234", "/some/path", "param=1")
     );
 
     // HttpServletRequest.getQueryString returns encoded form
     // use ascii representation in case URI is using non-ascii characters
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "http://[2a00:1450:4007:805::1007]:1234/some/path?param=1&param2=%E2%82%AC",
         AsyncQueryForwardingServlet.makeURI(
             "http",
@@ -1151,14 +1187,14 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     );
 
     // test null query
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "http://localhost/",
         AsyncQueryForwardingServlet.makeURI("http", "localhost", "/", null)
     );
 
     // Test reWrite Encoded interval with timezone info
     // decoded parameters 1900-01-01T00:00:00.000+01.00 -> 1900-01-01T00:00:00.000+01:00
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "http://localhost:1234/some/path?intervals=1900-01-01T00%3A00%3A00.000%2B01%3A00%2F3000-01-01T00%3A00%3A00.000%2B01%3A00",
         AsyncQueryForwardingServlet.makeURI(
             "http",
@@ -1201,10 +1237,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
     for (Service.Request request : jsonRequests) {
       final String json = mapper.writeValueAsString(request);
-      Assert.assertEquals(
-          StringUtils.format("Failed %s", json),
+      Assertions.assertEquals(
           connectionId,
-          AsyncQueryForwardingServlet.getAvaticaConnectionId(asMap(json, mapper))
+          AsyncQueryForwardingServlet.getAvaticaConnectionId(asMap(json, mapper)),
+          StringUtils.format("Failed %s", json)
       );
     }
   }
@@ -1240,10 +1276,10 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
 
 
     for (Service.Request request : avaticaRequests) {
-      Assert.assertEquals(
-          "failed",
+      Assertions.assertEquals(
           connectionId,
-          AsyncQueryForwardingServlet.getAvaticaProtobufConnectionId(request)
+          AsyncQueryForwardingServlet.getAvaticaProtobufConnectionId(request),
+          "failed"
       );
     }
   }

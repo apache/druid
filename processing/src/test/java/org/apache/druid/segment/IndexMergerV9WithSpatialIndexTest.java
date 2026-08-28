@@ -52,10 +52,10 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
-import org.junit.AfterClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +69,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTest
 {
 
@@ -84,7 +85,6 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
 
   private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
 
-  @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
     List<Object[]> argumentArrays = new ArrayList<>();
@@ -488,7 +488,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
       indexMergerV9.persist(second, DATA_INTERVAL, secondFile, indexSpec, null);
       indexMergerV9.persist(third, DATA_INTERVAL, thirdFile, indexSpec, null);
 
-      final QueryableIndex mergedRealtime = RESOURCE_CLOSER.register(indexIO.loadIndex(
+      return RESOURCE_CLOSER.register(indexIO.loadIndex(
           indexMergerV9.mergeQueryableIndex(
               Arrays.asList(
                   closer.register(indexIO.loadIndex(firstFile)),
@@ -503,7 +503,6 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
               -1
           )
       ));
-      return mergedRealtime;
 
     }
     catch (IOException e) {
@@ -518,7 +517,7 @@ public class IndexMergerV9WithSpatialIndexTest extends InitializedNullHandlingTe
     return tmpFile;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException
   {
     RESOURCE_CLOSER.close();

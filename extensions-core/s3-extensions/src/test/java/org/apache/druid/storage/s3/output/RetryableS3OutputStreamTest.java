@@ -19,6 +19,8 @@
 
 package org.apache.druid.storage.s3.output;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IOE;
@@ -42,6 +44,7 @@ import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -195,33 +198,105 @@ public class RetryableS3OutputStreamTest
     s3.assertCompleted(chunkSize, Integer.BYTES * 25);
   }
 
+  /**
+   * A part that fails every retry leaves the multipart upload aborted and no object at the key, so close() must report
+   * it. Returning normally would tell the caller its bytes are readable back when they no longer exist anywhere.
+   */
   @Test
-  public void testFailToUploadAfterRetries() throws IOException
+  public void testFailToUploadAfterRetries()
   {
     final TestAmazonS3 s3 = new TestAmazonS3(3);
 
     ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
+    final DruidException e = Assertions.assertThrows(DruidException.class, () -> {
+      try (RetryableS3OutputStream out =
+               new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
+        for (int i = 0; i < 2; i++) {
+          bb.clear();
+          bb.putInt(i);
+          out.write(bb.array());
+        }
+
+        bb.clear();
+        bb.putInt(3);
+        out.write(bb.array());
+      }
+    });
+
+    Assertions.assertTrue(e.getMessage().contains("no object was written"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains(path), e.getMessage());
+    Assertions.assertNotNull(e.getCause());
+    // An aborted upload means S3 rejected the parts, which an operator can act on, rather than a Druid defect.
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, e.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.RUNTIME_FAILURE, e.getCategory());
+    s3.assertCancelled();
+  }
+
+  /**
+   * A multipart upload costs three S3 requests at minimum — create, upload part, complete — so a stream small enough
+   * to need only one part should not use one. A task writes one object per output partition, and every request lands
+   * on the same key prefix, so the per-object floor sets the burst rate against that prefix.
+   */
+  @Test
+  public void testStreamFittingInOneChunkIsUploadedWithASinglePut() throws IOException
+  {
+    chunkSize = 10;
+    ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
     try (RetryableS3OutputStream out =
              new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
-      for (int i = 0; i < 2; i++) {
+      bb.putInt(1);
+      out.write(bb.array());
+    }
+
+    Assertions.assertEquals(0, s3.createMultipartUploadCount);
+    Assertions.assertEquals(0, s3.partRequests.size());
+    Assertions.assertNull(s3.completeRequest);
+    Assertions.assertEquals(ImmutableList.of((long) Integer.BYTES), s3.putObjectContentLengths);
+  }
+
+  /**
+   * Once a stream outgrows a single chunk it must use multipart, costing one create, one request per part, and one
+   * complete.
+   */
+  @Test
+  public void testStreamSpanningMultipleChunksUsesMultipartUpload() throws IOException
+  {
+    chunkSize = 10;
+    ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
+    try (RetryableS3OutputStream out =
+             new RetryableS3OutputStream(config, s3, path, s3UploadManager)) {
+      for (int i = 0; i < 25; i++) {
         bb.clear();
         bb.putInt(i);
         out.write(bb.array());
       }
-
-      bb.clear();
-      bb.putInt(3);
-      out.write(bb.array());
     }
 
-    s3.assertCancelled();
+    Assertions.assertEquals(1, s3.createMultipartUploadCount);
+    Assertions.assertEquals(10, s3.partRequests.size());
+    Assertions.assertEquals(0, s3.putObjectContentLengths.size());
+    s3.assertCompleted(chunkSize, Integer.BYTES * 25);
+  }
+
+  /**
+   * A stream closed without any bytes written produces no object, and should reach S3 not at all to do so.
+   */
+  @Test
+  public void testClosingWithoutWritingCreatesNoObject() throws IOException
+  {
+    chunkSize = 10;
+    new RetryableS3OutputStream(config, s3, path, s3UploadManager).close();
+
+    s3.assertNoRequestsIssued();
   }
 
   private static class TestAmazonS3 extends ServerSideEncryptingAmazonS3
   {
     private final List<UploadPartRequest> partRequests = new ArrayList<>();
+    private final List<Long> putObjectContentLengths = new ArrayList<>();
 
     private int uploadFailuresLeft;
+    private int createMultipartUploadCount = 0;
     private boolean cancelled = false;
     @Nullable
     private CompleteMultipartUploadRequest completeRequest;
@@ -236,9 +311,26 @@ public class RetryableS3OutputStreamTest
     public CreateMultipartUploadResponse createMultipartUpload(CreateMultipartUploadRequest.Builder requestBuilder)
         throws SdkClientException
     {
+      ++createMultipartUploadCount;
       return CreateMultipartUploadResponse.builder()
           .uploadId("uploadId")
           .build();
+    }
+
+    @Override
+    public PutObjectResponse putObject(String bucket, String key, File file)
+    {
+      putObjectContentLengths.add(file.length());
+      return PutObjectResponse.builder().build();
+    }
+
+    private void assertNoRequestsIssued()
+    {
+      Assertions.assertEquals(0, createMultipartUploadCount);
+      Assertions.assertEquals(0, putObjectContentLengths.size());
+      Assertions.assertEquals(0, partRequests.size());
+      Assertions.assertNull(completeRequest);
+      Assertions.assertFalse(cancelled);
     }
 
     @Override

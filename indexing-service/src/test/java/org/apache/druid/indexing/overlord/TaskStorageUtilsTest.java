@@ -22,15 +22,15 @@ package org.apache.druid.indexing.overlord;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.TaskLookup;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TaskStorageUtilsTest
 {
   @Test
   public void test_processTaskLookups_defaultLimit_defaultTime()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             TaskLookup.TaskLookupType.ACTIVE,
             TaskLookup.ActiveTaskLookup.getInstance(),
@@ -52,7 +52,7 @@ public class TaskStorageUtilsTest
   @Test
   public void test_processTaskLookups_zeroCompleteTasks_defaultTime()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             TaskLookup.TaskLookupType.ACTIVE,
             TaskLookup.ActiveTaskLookup.getInstance()
@@ -72,7 +72,7 @@ public class TaskStorageUtilsTest
   @Test
   public void test_processTaskLookups_oneCompleteTask_3000()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             TaskLookup.TaskLookupType.ACTIVE,
             TaskLookup.ActiveTaskLookup.getInstance(),

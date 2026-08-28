@@ -58,21 +58,20 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -81,7 +80,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class DoubleStorageTest extends InitializedNullHandlingTest
 {
 
@@ -134,8 +134,8 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   private final SegmentAnalysis expectedSegmentAnalysis;
   private final String storeDoubleAs;
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public DoubleStorageTest(
       String storeDoubleAs,
@@ -146,8 +146,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     this.expectedSegmentAnalysis = expectedSegmentAnalysis;
   }
 
-  @Parameterized.Parameters
-  public static Collection<?> dataFeeder()
+  public static Stream<Object[]> constructorFeeder()
   {
     SegmentAnalysis expectedSegmentAnalysisDouble = new SegmentAnalysis(
         SEGMENT_ID.toString(),
@@ -252,13 +251,13 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
         null
     );
 
-    return ImmutableList.of(
+    return Stream.of(
         new Object[]{"double", expectedSegmentAnalysisDouble},
         new Object[]{"float", expectedSegmentAnalysisFloat}
     );
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     index = buildIndex(storeDoubleAs, temporaryFolder.newFolder());
@@ -293,7 +292,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
                                                       .build();
     List<SegmentAnalysis> results = runner.run(QueryPlus.wrap(segmentMetadataQuery)).toList();
 
-    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
+    Assertions.assertEquals(Collections.singletonList(expectedSegmentAnalysis), results);
 
   }
 
@@ -361,7 +360,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     return INDEX_IO.loadIndex(indexDirectory);
   }
 
-  @After
+  @AfterEach
   public void cleanUp()
   {
     index.close();

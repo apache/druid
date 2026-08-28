@@ -85,6 +85,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
@@ -460,7 +461,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals
+        intervals,
+        SegmentDetail.none()
     );
   }
 

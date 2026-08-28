@@ -52,8 +52,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.http.SqlParameter;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -62,7 +61,6 @@ import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collections;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
@@ -129,7 +127,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(httpDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -159,7 +157,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", extern)
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -190,7 +188,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .authConfig(AuthConfig.newBuilder().setEnableInputSourceSecurity(true).build())
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), externalRead("http"))
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), externalRead("http"))
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -233,7 +231,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT *\nFROM %s\nPARTITIONED BY ALL TIME", externSqlByName(httpDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -264,7 +262,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -316,7 +314,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "PARTITIONED BY HOUR")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("w000", expectedSig)
-        .expectResources(dataSourceWrite("w000"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("w000"), dataSourceWrite("w000"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -382,7 +380,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             .authResult(CalciteTests.REGULAR_USER_AUTH_RESULT)
             .run()
     );
-    assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo(Access.DEFAULT_ERROR_MESSAGE)));
+    Assertions.assertEquals(Access.DEFAULT_ERROR_MESSAGE, e.getMessage());
   }
 
   @Test
@@ -399,7 +397,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .parameters(Collections.singletonList(new SqlParameter(SqlType.ARRAY, new String[] {"http://foo.com/bar.csv"})))
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -446,7 +444,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -491,7 +489,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", httpDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
@@ -520,14 +518,10 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "     EXTEND (x VARCHAR, z TYPE('complex<json'))\n" +
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
-        .expectValidationError(
-            CoreMatchers.allOf(
-                CoreMatchers.instanceOf(DruidException.class),
-                ThrowableMessageMatcher.hasMessage(
-                    CoreMatchers.containsString("Column [z] has an unsupported type")
-                )
-            )
-        )
+        .expectValidationError(e -> {
+          Assertions.assertInstanceOf(DruidException.class, e);
+          Assertions.assertTrue(e.getMessage().contains("Column [z] has an unsupported type"));
+        })
         .verify();
   }
 
@@ -541,7 +535,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -610,7 +604,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              externClauseFromSig(externalDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -639,7 +633,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", externalDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(externalDataSource)
@@ -663,7 +657,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .sql("INSERT INTO dst SELECT * FROM %s PARTITIONED BY ALL TIME", externSql(localDataSource))
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(localDataSource)
@@ -692,7 +686,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(localDataSource)
@@ -721,7 +715,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
              "PARTITIONED BY ALL TIME")
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(localDataSource)
@@ -752,7 +746,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
          )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(localDataSource)
@@ -783,7 +777,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
          )
         .authentication(CalciteTests.SUPER_USER_AUTH_RESULT)
         .expectTarget("dst", localDataSource.getSignature())
-        .expectResources(dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
+        .expectResources(dataSourceRead("dst"), dataSourceWrite("dst"), Externals.EXTERNAL_RESOURCE_ACTION)
         .expectQuery(
             newScanQueryBuilder()
                 .dataSource(localDataSource)

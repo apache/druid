@@ -92,6 +92,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTime;
@@ -850,6 +851,12 @@ public class TestDataBuilder
                   .build(),
        index1
    ).add(
+        DataSegment.builder(SegmentId.of(CalciteTests.READ_ONLY_DATASOURCE, index1.getDataInterval(), "1", 0))
+                   .shardSpec(new LinearShardSpec(0))
+                   .size(0)
+                   .build(),
+        index1
+    ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
                    .interval(forbiddenIndex.getDataInterval())
