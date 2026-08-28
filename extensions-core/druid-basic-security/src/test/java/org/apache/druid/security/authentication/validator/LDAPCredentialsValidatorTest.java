@@ -24,6 +24,7 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.BasicAuthLDAPConfig;
 import org.apache.druid.security.basic.BasicAuthUtils;
 import org.apache.druid.security.basic.authentication.validator.LDAPCredentialsValidator;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
@@ -129,19 +130,19 @@ public class LDAPCredentialsValidatorTest
         ),
         properties
     );
-    final org.apache.druid.server.security.AuthenticationResult result =
+    final AuthenticationResult result =
         validator.validateCredentials("ldap", "ldap", "validUser", "password".toCharArray());
-    Assert.assertNotNull(result);
-    Assert.assertNotNull(result.getContext());
+    Assertions.assertNotNull(result);
+    Assertions.assertNotNull(result.getContext());
 
     final Object searchResultObj = result.getContext().get(BasicAuthUtils.SEARCH_RESULT_CONTEXT_KEY);
-    Assert.assertNotNull(searchResultObj);
-    Assert.assertTrue(searchResultObj instanceof SearchResult);
+    Assertions.assertNotNull(searchResultObj);
+    Assertions.assertInstanceOf(SearchResult.class, searchResultObj);
 
     final SearchResult sr = (SearchResult) searchResultObj;
     final Attribute memberOf = sr.getAttributes().get("memberOf");
-    Assert.assertNotNull("memberOf should be populated by reverse group search", memberOf);
-    Assert.assertEquals(2, memberOf.size());
+    Assertions.assertNotNull(memberOf, "memberOf should be populated by reverse group search");
+    Assertions.assertEquals(2, memberOf.size());
   }
 
   public static class MockGroupSearchContextFactory implements InitialContextFactory
