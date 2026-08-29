@@ -55,7 +55,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
     os.makedirs(license_ext_path)
     druid_path = os.path.abspath(druid_path)
 
-    script_args = [(druid_path, os.path.join(druid_path, "distribution", "target", "site"), license_core_path)]
+    script_args = [(druid_path, os.path.join(druid_path, "distribution", "target", "reports"), license_core_path)]
 
     if not exclude_ext:
         extensions_core_path = os.path.join(druid_path, "extensions-core")
@@ -70,7 +70,7 @@ def generate_reports(druid_path, tmp_path, exclude_ext, num_threads):
                 continue
 
             extension_report_dir = "{}/{}".format(license_ext_path, extension_dir)
-            script_args.append((extension_path, os.path.join(extension_path, "target", "site"), extension_report_dir))
+            script_args.append((extension_path, os.path.join(extension_path, "target", "reports"), extension_report_dir))
 
     print("Generating dependency reports")
 

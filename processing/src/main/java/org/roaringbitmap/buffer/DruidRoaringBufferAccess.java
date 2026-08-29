@@ -17,31 +17,22 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+//CHECKSTYLE.OFF: PackageName - Must be in RoaringBitmap to reach ImmutableRoaringBitmap.highLowContainer
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
-
-import java.util.concurrent.TimeUnit;
+package org.roaringbitmap.buffer;
 
 /**
- * This Rule is based on {@link org.junit.rules.Timeout}, additionally deadlocked threads are detected.
+ * Exposes {@link ImmutableRoaringBitmap#highLowContainer}, which is package-private. Every method on
+ * {@link PointableRoaringArray} is public; only the field holding it is not.
  */
-public final class DeadlockDetectingTimeout implements TestRule
+public final class DruidRoaringBufferAccess
 {
-  private final long timeout;
-  private final TimeUnit timeoutUnit;
-
-  public DeadlockDetectingTimeout(long timeout, TimeUnit timeoutUnit)
+  private DruidRoaringBufferAccess()
   {
-    this.timeout = timeout;
-    this.timeoutUnit = timeoutUnit;
   }
 
-  @Override
-  public Statement apply(Statement base, Description description)
+  public static PointableRoaringArray highLowContainer(final ImmutableRoaringBitmap bitmap)
   {
-    return new DeadlockDetectingFailOnTimeout(timeout, timeoutUnit, base);
+    return bitmap.highLowContainer;
   }
 }

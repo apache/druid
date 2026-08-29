@@ -58,6 +58,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -233,7 +234,7 @@ public class HttpServerInventoryViewTest
   }
 
   @Test
-  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testSyncSegmentLoadAndDrop()
   {
     httpServerInventoryView.start();
@@ -406,7 +407,7 @@ public class HttpServerInventoryViewTest
   }
 
   @Test
-  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testInitWaitsForServerToSync()
   {
     httpServerInventoryView.start();
@@ -442,7 +443,7 @@ public class HttpServerInventoryViewTest
   }
 
   @Test
-  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 60_000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testInitDoesNotWaitForRemovedServerToSync()
   {
     httpServerInventoryView.start();

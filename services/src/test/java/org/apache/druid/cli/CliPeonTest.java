@@ -78,11 +78,11 @@ import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.LoadSpecHolder;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -99,8 +99,8 @@ import static org.easymock.EasyMock.mock;
 
 public class CliPeonTest
 {
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
@@ -116,7 +116,7 @@ public class CliPeonTest
     properties.setProperty("druid.indexer.runner.type", "k8s");
     final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
-    Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
+    Assertions.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
@@ -126,7 +126,7 @@ public class CliPeonTest
     properties.setProperty("druid.indexer.runner.type", "httpRemote");
     final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
-    Assert.assertTrue(executorLifecycleConfig.isParentStreamDefined());
+    Assertions.assertTrue(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
@@ -136,7 +136,7 @@ public class CliPeonTest
     properties.setProperty("druid.indexer.runner.type", "k8sAndWorker");
     final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
     final ExecutorLifecycleConfig executorLifecycleConfig = peonInjector.getInstance(ExecutorLifecycleConfig.class);
-    Assert.assertFalse(executorLifecycleConfig.isParentStreamDefined());
+    Assertions.assertFalse(executorLifecycleConfig.isParentStreamDefined());
   }
 
   @Test
@@ -145,7 +145,7 @@ public class CliPeonTest
     final Properties properties = new Properties();
     properties.setProperty("druid.policy.enforcer.type", "restrictAllTables");
     final Injector peonInjector = makePeonInjector(NoopTask.create(), properties);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new RestrictAllTablesPolicyEnforcer(null),
         peonInjector.getInstance(PolicyEnforcer.class)
     );
@@ -159,7 +159,7 @@ public class CliPeonTest
     String groupId = "testGroupId";
     String datasource = "testDatasource";
     Map<String, String> tags = ImmutableMap.of("tag1", "value1");
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             DruidMetrics.TASK_ID, taskId,
             DruidMetrics.GROUP_ID, groupId,
@@ -171,7 +171,7 @@ public class CliPeonTest
 
     // streaming task with empty ags
     String supervisor = "testSupervisor";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             DruidMetrics.TASK_ID, taskId,
             DruidMetrics.GROUP_ID, groupId,
@@ -183,7 +183,7 @@ public class CliPeonTest
     );
 
     // streaming task with non-empty ags
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableMap.of(
             DruidMetrics.TASK_ID, taskId,
             DruidMetrics.GROUP_ID, groupId,
@@ -205,7 +205,7 @@ public class CliPeonTest
     final Injector peonInjector = makePeonInjector(file, properties);
 
     LocalTmpStorageConfig localTmpStorageConfig = peonInjector.getInstance(LocalTmpStorageConfig.class);
-    Assert.assertEquals(new File(file.getParent(), "/tmp").getAbsolutePath(), localTmpStorageConfig.getTmpDir().getAbsolutePath());
+    Assertions.assertEquals(new File(file.getParent(), "/tmp").getAbsolutePath(), localTmpStorageConfig.getTmpDir().getAbsolutePath());
   }
 
   @Test
@@ -285,7 +285,7 @@ public class CliPeonTest
     verifyTaskHolder(peonInjector.getInstance(TaskHolder.class), compactionTask);
 
     Emitter instance = peonInjector.getInstance(Emitter.class);
-    Assert.assertTrue(instance instanceof StubServiceEmitter);
+    Assertions.assertTrue(instance instanceof StubServiceEmitter);
     instance.start();
 
     ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
@@ -295,16 +295,16 @@ public class CliPeonTest
     ((StubServiceEmitter) instance).emit(eventBuilder);
 
     StubServiceEmitter stubEmitter = (StubServiceEmitter) instance;
-    Assert.assertEquals(1, stubEmitter.getNumEmittedEvents());
+    Assertions.assertEquals(1, stubEmitter.getNumEmittedEvents());
     List<Event> events = stubEmitter.getEvents();
     for (Event event : events) {
-      Assert.assertTrue(event instanceof ServiceMetricEvent);
+      Assertions.assertTrue(event instanceof ServiceMetricEvent);
       EventMap map = event.toMap();
-      Assert.assertEquals(compactionTask.getDataSource(), map.get("dataSource"));
-      Assert.assertEquals(compactionTask.getId(), map.get("id"));
-      Assert.assertEquals(compactionTask.getId(), map.get("taskId"));
-      Assert.assertEquals(compactionTask.getType(), map.get("taskType"));
-      Assert.assertEquals(compactionTask.getGroupId(), map.get("groupId"));
+      Assertions.assertEquals(compactionTask.getDataSource(), map.get("dataSource"));
+      Assertions.assertEquals(compactionTask.getId(), map.get("id"));
+      Assertions.assertEquals(compactionTask.getId(), map.get("taskId"));
+      Assertions.assertEquals(compactionTask.getType(), map.get("taskType"));
+      Assertions.assertEquals(compactionTask.getGroupId(), map.get("groupId"));
     }
   }
 
@@ -318,7 +318,7 @@ public class CliPeonTest
     return peon.makeInjector(Set.of(NodeRole.PEON));
   }
 
-  public static Injector makePeonInjectorWithStubEmitter(Task task, TemporaryFolder temporaryFolder, ObjectMapper mapper) throws IOException
+  public static Injector makePeonInjectorWithStubEmitter(Task task, TemporaryFolderExtension temporaryFolder, ObjectMapper mapper) throws IOException
   {
     File taskFile = temporaryFolder.newFile("task.json");
     FileUtils.write(taskFile, mapper.writeValueAsString(task), StandardCharsets.UTF_8);
@@ -364,9 +364,9 @@ public class CliPeonTest
 
   private static void verifyLoadSpecHolder(LoadSpecHolder observedLoadSpecHolder, Task task)
   {
-    Assert.assertTrue(observedLoadSpecHolder instanceof PeonLoadSpecHolder);
-    Assert.assertEquals(task.getLookupLoadingSpec(), observedLoadSpecHolder.getLookupLoadingSpec());
-    Assert.assertEquals(
+    Assertions.assertTrue(observedLoadSpecHolder instanceof PeonLoadSpecHolder);
+    Assertions.assertEquals(task.getLookupLoadingSpec(), observedLoadSpecHolder.getLookupLoadingSpec());
+    Assertions.assertEquals(
         task.getBroadcastDatasourceLoadingSpec(),
         observedLoadSpecHolder.getBroadcastDatasourceLoadingSpec()
     );
@@ -374,9 +374,9 @@ public class CliPeonTest
 
   private static void verifyTaskHolder(TaskHolder observedTaskHolder, Task task)
   {
-    Assert.assertTrue(observedTaskHolder instanceof PeonTaskHolder);
-    Assert.assertEquals(task.getId(), observedTaskHolder.getTaskId());
-    Assert.assertEquals(task.getDataSource(), observedTaskHolder.getDataSource());
+    Assertions.assertTrue(observedTaskHolder instanceof PeonTaskHolder);
+    Assertions.assertEquals(task.getId(), observedTaskHolder.getTaskId());
+    Assertions.assertEquals(task.getDataSource(), observedTaskHolder.getDataSource());
   }
 
   private static class TestTask extends NoopTask

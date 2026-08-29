@@ -62,6 +62,7 @@ import org.joda.time.Interval;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.Timeout.ThreadMode;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
@@ -82,7 +83,7 @@ public class CachingClusteredClientPerfTest
 {
 
   @Test
-  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS)
+  @Timeout(value = 10_000, unit = TimeUnit.MILLISECONDS, threadMode = ThreadMode.SEPARATE_THREAD)
   public void testGetQueryRunnerForSegments_singleIntervalLargeSegments()
   {
     final int segmentCount = 30_000;

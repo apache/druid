@@ -61,7 +61,7 @@ import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.easymock.EasyMock;
@@ -538,8 +538,9 @@ public class SqlStatementTest
 
   private SqlStatementFactory buildSqlStatementFactory()
   {
-    final PlannerConfig plannerConfig = PlannerConfig.builder().build();
-    final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
+    // Set authorizeTableVisibility(false) so reads from unauthorized tables are "Forbidden" rather than "Not Found".
+    final PlannerConfig plannerConfig = PlannerConfig.builder().authorizeTableVisibility(false).build();
+    final DruidSchemaCatalogProvider rootSchemaProvider = CalciteTests.createMockRootSchemaProvider(
         conglomerate,
         walker,
         plannerConfig,
@@ -552,7 +553,7 @@ public class SqlStatementTest
     final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        rootSchemaProvider,
         operatorTable,
         macroTable,
         plannerConfig,

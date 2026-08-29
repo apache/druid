@@ -2436,7 +2436,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private void makeToolboxFactory() throws IOException
   {
-    directory = newFolder(tempFolder, "junit");
+    directory = newFolder(temporaryFolder.getRoot(), "junit");
     final TestUtils testUtils = new TestUtils();
     final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
     objectMapper.setInjectableValues(((InjectableValues.Std) objectMapper.getInjectableValues()).addValue(

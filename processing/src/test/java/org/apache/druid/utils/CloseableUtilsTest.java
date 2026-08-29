@@ -20,10 +20,6 @@
 package org.apache.druid.utils;
 
 import com.google.common.base.Throwables;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableCauseMatcher;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -80,11 +76,11 @@ public class CloseableUtilsTest
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
 
     // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
+    Assertions.assertInstanceOf(IOException.class, e);
 
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);
-    MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
+    Assertions.assertInstanceOf(IllegalArgumentException.class, e.getSuppressed()[0]);
   }
 
   @Test
@@ -106,11 +102,11 @@ public class CloseableUtilsTest
     assertClosed(quietCloseable, ioExceptionCloseable, quietCloseable2, runtimeExceptionCloseable);
 
     // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
+    Assertions.assertInstanceOf(IOException.class, e);
 
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);
-    MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
+    Assertions.assertInstanceOf(IllegalArgumentException.class, e.getSuppressed()[0]);
   }
 
   @Test
@@ -139,7 +135,7 @@ public class CloseableUtilsTest
     }
 
     assertClosed(ioExceptionCloseable);
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
+    Assertions.assertInstanceOf(RuntimeException.class, e);
   }
 
   @Test
@@ -154,7 +150,7 @@ public class CloseableUtilsTest
     }
 
     assertClosed(runtimeExceptionCloseable);
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IllegalArgumentException.class));
+    Assertions.assertInstanceOf(IllegalArgumentException.class, e);
   }
 
   @Test
@@ -169,7 +165,7 @@ public class CloseableUtilsTest
     }
 
     assertClosed(assertionErrorCloseable);
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(AssertionError.class));
+    Assertions.assertInstanceOf(AssertionError.class, e);
   }
 
   @Test
@@ -225,11 +221,8 @@ public class CloseableUtilsTest
 
     Assertions.assertTrue(quietCloseable.isClosed());
 
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IllegalStateException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Must be called with non-null caught exception"))
-    );
+    Assertions.assertInstanceOf(IllegalStateException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("Must be called with non-null caught exception"));
   }
 
   @Test
@@ -246,11 +239,8 @@ public class CloseableUtilsTest
 
     Assertions.assertTrue(quietCloseable.isClosed());
 
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
-    );
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("this one was caught"));
   }
 
   @Test
@@ -268,15 +258,12 @@ public class CloseableUtilsTest
     Assertions.assertTrue(ioExceptionCloseable.isClosed());
 
     // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IOException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
-    );
+    Assertions.assertInstanceOf(IOException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("this one was caught"));
 
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);
-    MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IOException.class));
+    Assertions.assertInstanceOf(IOException.class, e.getSuppressed()[0]);
   }
 
   @Test
@@ -294,15 +281,12 @@ public class CloseableUtilsTest
     Assertions.assertTrue(runtimeExceptionCloseable.isClosed());
 
     // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
-    );
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("this one was caught"));
 
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);
-    MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
+    Assertions.assertInstanceOf(IllegalArgumentException.class, e.getSuppressed()[0]);
   }
 
   @Test
@@ -319,11 +303,8 @@ public class CloseableUtilsTest
 
     Assertions.assertTrue(quietCloseable.isClosed());
 
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IllegalStateException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("Must be called with non-null caught exception"))
-    );
+    Assertions.assertInstanceOf(IllegalStateException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("Must be called with non-null caught exception"));
   }
 
   @Test
@@ -340,11 +321,8 @@ public class CloseableUtilsTest
 
     Assertions.assertTrue(quietCloseable.isClosed());
 
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
-    );
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("this one was caught"));
   }
 
   @Test
@@ -362,22 +340,14 @@ public class CloseableUtilsTest
     Assertions.assertTrue(ioExceptionCloseable.isClosed());
 
     // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("java.io.IOException: this one was caught"))
-    );
-    MatcherAssert.assertThat(e, ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(IOException.class)));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableCauseMatcher.hasCause(
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
-        )
-    );
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("java.io.IOException: this one was caught"));
+    final Throwable cause = Assertions.assertInstanceOf(IOException.class, e.getCause());
+    Assertions.assertTrue(cause.getMessage().startsWith("this one was caught"));
 
     // Second exception
     Assertions.assertEquals(1, e.getCause().getSuppressed().length);
-    MatcherAssert.assertThat(e.getCause().getSuppressed()[0], CoreMatchers.instanceOf(IOException.class));
+    Assertions.assertInstanceOf(IOException.class, e.getCause().getSuppressed()[0]);
   }
 
   @Test
@@ -395,15 +365,12 @@ public class CloseableUtilsTest
     Assertions.assertTrue(runtimeExceptionCloseable.isClosed());
 
     // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
-    );
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("this one was caught"));
 
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);
-    MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(IllegalArgumentException.class));
+    Assertions.assertInstanceOf(IllegalArgumentException.class, e.getSuppressed()[0]);
   }
 
   @Test
@@ -421,15 +388,12 @@ public class CloseableUtilsTest
     Assertions.assertTrue(assertionErrorCloseable.isClosed());
 
     // First exception
-    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(RuntimeException.class));
-    MatcherAssert.assertThat(
-        e,
-        ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("this one was caught"))
-    );
+    Assertions.assertInstanceOf(RuntimeException.class, e);
+    Assertions.assertTrue(e.getMessage().startsWith("this one was caught"));
 
     // Second exception
     Assertions.assertEquals(1, e.getSuppressed().length);
-    MatcherAssert.assertThat(e.getSuppressed()[0], CoreMatchers.instanceOf(AssertionError.class));
+    Assertions.assertInstanceOf(AssertionError.class, e.getSuppressed()[0]);
   }
 
   @Test

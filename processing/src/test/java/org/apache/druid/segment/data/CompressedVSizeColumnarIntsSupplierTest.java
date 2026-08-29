@@ -243,6 +243,30 @@ public class CompressedVSizeColumnarIntsSupplierTest
     assertIndexMatchesVals();
   }
 
+  @Test
+  public void testInvalidNumBytesRejected() throws Exception
+  {
+    vals = new int[]{0, 1, 2, 3};
+    CloseableUtils.closeAndWrapExceptions(columnarInts);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    final CompressedVSizeColumnarIntsSupplier serialized = CompressedVSizeColumnarIntsSupplier.fromList(
+        IntArrayList.wrap(vals), Ints.max(vals), 4, byteOrder, compressionStrategy, closer
+    );
+    serialized.writeTo(Channels.newChannel(baos), null);
+    final byte[] bytes = baos.toByteArray();
+
+    for (byte invalidNumBytes : new byte[]{0, 5, 100, -1}) {
+      final byte[] corrupted = bytes.clone();
+      corrupted[1] = invalidNumBytes;
+      final IllegalArgumentException e = Assertions.assertThrows(
+          IllegalArgumentException.class,
+          () -> CompressedVSizeColumnarIntsSupplier.fromByteBuffer(ByteBuffer.wrap(corrupted), byteOrder, null)
+      );
+      Assertions.assertTrue(e.getMessage().contains("numBytes"), e.getMessage());
+    }
+  }
+
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
   // which sucks but I can't think of a way to deterministically cause it...

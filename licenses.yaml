@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.53.1
+version: 2.54.3
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -322,7 +322,7 @@ name: Jackson
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.core: jackson-core
   - com.fasterxml.jackson.core: jackson-databind
@@ -375,7 +375,7 @@ name: Jackson
 license_category: binary
 module: extensions-contrib/druid-deltalake-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.core: jackson-databind
 notice: |
@@ -465,7 +465,7 @@ name: Guava
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 33.6.0-jre
+version: 33.7.1-jre
 libraries:
   - com.google.guava: guava
 
@@ -627,7 +627,7 @@ name: Apache Commons Codec
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.20.0
+version: 1.22.1
 libraries:
   - commons-codec: commons-codec
 notices:
@@ -694,7 +694,7 @@ name: Apache Commons Logging
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.6
+version: 1.4.0
 libraries:
   - commons-logging: commons-logging
 notices:
@@ -988,7 +988,7 @@ name: com.nimbusds content-type
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.2
+version: 2.3
 libraries:
   - com.nimbusds: content-type
 
@@ -998,7 +998,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 10.8
+version: 11.38.2
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -1062,7 +1062,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-properties
 notice: |
@@ -1171,7 +1171,7 @@ name: org.jspecify jspecify
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 1.0.0
+version: 1.0.1
 libraries:
   - org.jspecify: jspecify
 
@@ -1252,7 +1252,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1264,7 +1264,7 @@ name: com.squareup.okhttp3 okhttp
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 5.4.0
+version: 5.5.0
 libraries:
   - com.squareup.okhttp3: okhttp
   - com.squareup.okhttp3: okhttp-jvm
@@ -1352,10 +1352,19 @@ name: org.bouncycastle bcprov-jdk18on
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: MIT License
-version: "1.84"
+version: "1.85.2"
 libraries:
   - org.bouncycastle: bcprov-jdk18on
   - org.bouncycastle: bcprov-ext-jdk18on
+
+---
+
+name: org.bouncycastle bcpkix-jdk18on and bcutil-jdk18on
+license_category: binary
+module: extensions-core/kubernetes-extensions
+license_name: MIT License
+version: "1.85"
+libraries:
   - org.bouncycastle: bcpkix-jdk18on
   - org.bouncycastle: bcutil-jdk18on
 ---
@@ -1385,7 +1394,7 @@ name: Jetbrains kotlin-stdlib
 license_category: binary
 module: extensions/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.2.21
+version: 2.4.10
 libraries:
   - org.jetbrains.kotlin: kotlin-stdlib
 
@@ -1545,7 +1554,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.16.Final
+version: 4.2.17.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2212,13 +2221,13 @@ name: Apache Maven Artifact
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.9.11
+version: 3.9.16
 libraries:
   - org.apache.maven: maven-artifact
 notices:
   - maven-artifact: |
       Maven Artifact
-      Copyright 2001-2025 The Apache Software Foundation
+      Copyright 2001-2026 The Apache Software Foundation
 ---
 
 name: Maven Artifact Resolver Connector Basic
@@ -2389,7 +2398,7 @@ name: Plexus Common Utilities
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.6.1
+version: 4.1.0
 libraries:
   - org.codehaus.plexus: plexus-utils
 notices:
@@ -2405,6 +2414,16 @@ notices:
 
       This product includes software developed by
       Rome (https://rome.dev.java.net/).
+
+---
+
+name: Plexus XML
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.1.0
+libraries:
+  - org.codehaus.plexus: plexus-xml
 ---
 
 name: Jetty
@@ -2579,7 +2598,7 @@ name: SIGAR
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.5.132
+version: 1.6.5.132-6
 libraries:
   - org.hyperic: sigar
 notices:
@@ -2708,7 +2727,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.4.4
+version: 7.5.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -2746,7 +2765,7 @@ name: LZ4 Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.11.1
+version: 1.11.2
 libraries:
   - at.yawk.lz4: lz4-java
 
@@ -2776,7 +2795,7 @@ name: Resilience4j
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.3.1
+version: 2.4.0
 libraries:
   - io.github.resilience4j: resilience4j-core
   - io.github.resilience4j: resilience4j-bulkhead
@@ -3073,7 +3092,7 @@ name: Apache Directory
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 1.0.3
+version: 2.1.8
 libraries:
   - org.apache.directory.api: api-util
 notices:
@@ -3174,7 +3193,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
@@ -3184,7 +3203,7 @@ libraries:
 ---
 
 name: Jackson Dataformat Yaml
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions-core/protobuf-extensions
 license_name: Apache License version 2.0
@@ -3197,7 +3216,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.dataformat: jackson-dataformat-cbor
 notice: |
@@ -3228,7 +3247,7 @@ name: Jackson
 license_category: binary
 module: extensions-core/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.22.1
+version: 2.22.2
 libraries:
   - com.fasterxml.jackson.datatype: jackson-datatype-jsr310
 notice: |
@@ -3624,7 +3643,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 4.3.0
+version: 4.3.1
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3659,7 +3678,7 @@ name: Apache Parquet
 license_category: binary
 module: extensions/druid-parquet-extensions
 license_name: Apache License version 2.0
-version: 1.17.1
+version: 1.18.0
 libraries:
   - org.apache.parquet: parquet-avro
   - org.apache.parquet: parquet-column
@@ -3753,7 +3772,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.63
+version: 1.0.64
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3765,7 +3784,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.2.6
+version: 2.2.7
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
@@ -3800,7 +3819,7 @@ name: JNI binding for Zstd
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 1.5.7-7
+version: 1.5.7-11
 copyright: Luben Karavelov
 license_file_path: licenses/bin/zstd-jni.BSD2
 libraries:
@@ -3835,7 +3854,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.0
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3965,7 +3984,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3977,7 +3996,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3989,7 +4008,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4001,7 +4020,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.0
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4014,7 +4033,7 @@ name: ICU4J
 license_category: binary
 module: java-core
 license_name: Unicode/ICU License
-version: 77.1
+version: 78.3
 copyright: International Business Machines Corporation and others
 license_file_path: licenses/bin/icu4j.ICU
 libraries:
@@ -4456,7 +4475,7 @@ name: Google Cloud Storage JSON API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: v1-rev20231028-2.0.0
+version: v1-rev20260524-2.0.0
 libraries:
   - com.google.apis: google-api-services-storage
 
@@ -4476,7 +4495,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.2.0
+version: 2.7.2
 libraries:
   - com.google.api-client: google-api-client
 
@@ -4486,7 +4505,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.29.1
+version: 2.71.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4496,10 +4515,109 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.20.0
+version: 2.66.0
 libraries:
-  - com.google.cloud: google-cloud-storage
   - com.google.api: api-common
+
+---
+
+name: Google Cloud Monitoring
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 3.52.0
+libraries:
+  - com.google.cloud: google-cloud-monitoring
+
+---
+
+name: proto-google-cloud-monitoring-v3
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 3.52.0
+libraries:
+  - com.google.api.grpc: proto-google-cloud-monitoring-v3
+
+---
+
+name: Google Cloud OpenTelemetry
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 0.33.0
+libraries:
+  - com.google.cloud.opentelemetry: exporter-metrics
+  - com.google.cloud.opentelemetry: detector-resources-support
+  - com.google.cloud.opentelemetry: shared-resourcemapping
+
+---
+
+name: OpenTelemetry
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.62.0
+libraries:
+  - io.opentelemetry: opentelemetry-api
+  - io.opentelemetry: opentelemetry-common
+  - io.opentelemetry: opentelemetry-context
+  - io.opentelemetry: opentelemetry-sdk
+  - io.opentelemetry: opentelemetry-sdk-common
+  - io.opentelemetry: opentelemetry-sdk-extension-autoconfigure-spi
+  - io.opentelemetry: opentelemetry-sdk-logs
+  - io.opentelemetry: opentelemetry-sdk-metrics
+  - io.opentelemetry: opentelemetry-sdk-trace
+
+---
+
+name: OpenTelemetry GCP Resources
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.37.0-alpha
+libraries:
+  - io.opentelemetry.contrib: opentelemetry-gcp-resources
+
+---
+
+name: OpenTelemetry Semantic Conventions
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.29.0-alpha
+libraries:
+  - io.opentelemetry.semconv: opentelemetry-semconv
+
+---
+
+name: Animal Sniffer Annotations
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: MIT License
+version: 1.27
+libraries:
+  - org.codehaus.mojo: animal-sniffer-annotations
+
+---
+
+name: stax2-api
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: BSD-2-Clause License
+version: 4.2.2
+libraries:
+  - org.codehaus.woodstox: stax2-api
+
+---
+
+name: Woodstox
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 7.0.0
+libraries:
+  - com.fasterxml.woodstox: woodstox-core
 
 ---
 
@@ -4507,7 +4625,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.37.0
+version: 2.83.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4519,7 +4637,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.29.1-alpha
+version: 2.71.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4531,18 +4649,43 @@ name: grpc-io
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.59.0
+version: 1.82.2
 libraries:
   - io.grpc: grpc-alts
-  - io.grpc: grpc-api
   - io.grpc: grpc-auth
-  - io.grpc: grpc-context
   - io.grpc: grpc-core
   - io.grpc: grpc-grpclib
   - io.grpc: grpc-inprocess
+  - io.grpc: grpc-googleapis
+  - io.grpc: grpc-netty-shaded
+  - io.grpc: grpc-opentelemetry
   - io.grpc: grpc-protobuf
   - io.grpc: grpc-protobuf-lite
+  - io.grpc: grpc-rls
+  - io.grpc: grpc-services
   - io.grpc: grpc-stub
+  - io.grpc: grpc-util
+  - io.grpc: grpc-xds
+
+---
+
+name: grpc-api
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.83.1
+libraries:
+  - io.grpc: grpc-api
+
+---
+
+name: grpc-context
+license_category: binary
+module: extensions/druid-google-extensions
+license_name: Apache License version 2.0
+version: 1.83.1
+libraries:
+  - io.grpc: grpc-context
 
 ---
 
@@ -4550,7 +4693,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.28.0
+version: 2.74.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4560,7 +4703,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.23.0
+version: 1.69.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4570,7 +4713,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.20.0
+version: 1.50.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4581,7 +4724,7 @@ name: google-auto-value
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.10.4
+version: 1.11.0
 libraries:
   - com.google.auto.value: auto-value-annotations
 
@@ -4591,7 +4734,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.27.0
+version: 2.73.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -4613,7 +4756,7 @@ name: google-http-client
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.43.3
+version: 2.2.0
 libraries:
   - com.google.http-client: google-http-client-apache-v2
   - com.google.http-client: google-http-client-appengine
@@ -4625,7 +4768,7 @@ name: google-protobuf
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 3.24.4
+version: 4.33.6
 libraries:
   - com.google.protobuf: protobuf-java-util
 
@@ -4635,7 +4778,7 @@ name: google-grpc
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.59.0
+version: 1.82.2
 libraries:
   - io.grpc: grpc-grpclb
 
@@ -4656,7 +4799,7 @@ name: conscrypt-openjdk-uber
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.5.2
+version: 2.6.0
 libraries:
   - org.conscrypt: conscrypt-openjdk-uber
 
@@ -4666,7 +4809,7 @@ name: threetenbp
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.6.8
+version: 1.7.0
 libraries:
   - org.threeten: threetenbp
 
@@ -4676,7 +4819,7 @@ name: Google OAuth Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.34.1
+version: 1.39.0
 libraries:
   - com.google.oauth-client: google-oauth-client
 
@@ -4698,7 +4841,7 @@ name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
 license_name: Apache License version 2.0
-version: 4.3.0
+version: 4.3.1
 libraries:
   - org.apache.kafka: kafka-clients
 notices:
@@ -4871,7 +5014,7 @@ name: Reactor Core
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 3.7.19
+version: 3.8.7
 libraries:
   - io.projectreactor: reactor-core
 ---
@@ -4889,7 +5032,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.78.Final
+version: 2.0.81.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -5334,7 +5477,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 6.4.0
+version: 7.2.2
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5509,7 +5652,7 @@ name: GraalVM
 license_category: binary
 license_name: Universal Permissive License, Version 1.0
 license_file_path: licenses/bin/graal.UPL
-version: 25.1.3
+version: 25.3.4.1
 module: core
 libraries:
   - org.graalvm.js: js
@@ -5531,7 +5674,7 @@ libraries:
 name: GraalVM Shadowed ICU4J
 license_category: binary
 license_name: Unicode/ICU License
-version: 25.1.3
+version: 25.3.4.1
 copyright: Unicode, Inc.
 license_file_path: licenses/bin/icu4j.ICU
 module: core
@@ -7406,7 +7549,7 @@ libraries:
 ---
 
 name: Jackson Datatype JDK8
-version: 2.22.1
+version: 2.22.2
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0

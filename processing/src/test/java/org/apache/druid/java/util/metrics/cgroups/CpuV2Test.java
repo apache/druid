@@ -34,7 +34,7 @@ import java.nio.file.Paths;
 public class CpuV2Test
 {
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private File cgroupDir;
   private File procDir;

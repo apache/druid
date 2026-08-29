@@ -19,7 +19,9 @@
 
 package org.apache.druid.sql.calcite.schema;
 
+import com.google.common.base.Preconditions;
 import org.apache.calcite.schema.SchemaPlus;
+import org.apache.druid.server.security.Resource;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -37,9 +39,9 @@ import java.util.Set;
  * planning and execution.
  *
  * {@link #namedSchemas} contains all {@link NamedSchema}, which should be everything except {@link InformationSchema}.
- * These are used primarily for {@link #getResourceType(String, String)}, which given the name of a table or function
+ * These are used primarily for {@link #getResource(String, String)}, which given the name of a table or function
  * that belongs to some {@link NamedSchema}, lookup the most appropriate value to use for
- * {@link org.apache.druid.server.security.Resource#getType()} to use for authorization.
+ * {@link Resource#getType()} to use for authorization.
  */
 public class DruidSchemaCatalog
 {
@@ -48,11 +50,11 @@ public class DruidSchemaCatalog
 
   public DruidSchemaCatalog(
       final SchemaPlus rootSchema,
-      final Map<String, NamedSchema> schemas
+      final Map<String, NamedSchema> namedSchemas
   )
   {
-    this.rootSchema = rootSchema;
-    this.namedSchemas = schemas;
+    this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
+    this.namedSchemas = Preconditions.checkNotNull(namedSchemas, "namedSchemas");
   }
 
   /**
@@ -61,22 +63,6 @@ public class DruidSchemaCatalog
   public SchemaPlus getRootSchema()
   {
     return rootSchema;
-  }
-
-  /**
-   * Get all {@link NamedSchema} which belong to the Druid catalog
-   */
-  public Map<String, NamedSchema> getNamedSchemas()
-  {
-    return namedSchemas;
-  }
-
-  /**
-   * Get a {@link NamedSchema} by {@link NamedSchema#getSchemaName()}
-   */
-  public NamedSchema getNamedSchema(String schemaName)
-  {
-    return namedSchemas.get(schemaName);
   }
 
   /**
@@ -97,7 +83,7 @@ public class DruidSchemaCatalog
 
   /**
    * Given the name of a {@link NamedSchema} and the name of a table or function that belongs to that schema, return
-   * the appropriate value to use for {@link org.apache.druid.server.security.Resource#getType()} during authorization
+   * the appropriate value to use for {@link Resource#getType()} during authorization
    */
   @Nullable
   public String getResourceType(String schema, String resourceName)

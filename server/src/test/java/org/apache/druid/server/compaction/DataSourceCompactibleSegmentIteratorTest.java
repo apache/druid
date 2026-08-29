@@ -36,8 +36,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
 import java.util.List;
@@ -69,7 +69,7 @@ public class DataSourceCompactibleSegmentIteratorTest
         )
     );
 
-    Assert.assertEquals(expectedSkipIntervals, skipIntervals);
+    Assertions.assertEquals(expectedSkipIntervals, skipIntervals);
   }
 
   @Test
@@ -100,8 +100,8 @@ public class DataSourceCompactibleSegmentIteratorTest
     // Expected: Total interval is 2018-01-01T00:00:00/2018-01-01T12:00:00
     // Skip interval: 2018-01-01T08:00:00/2018-01-01T12:00:00 (computed from 4h offset)
     // Search interval should be: [2018-01-01T00:00:00/2018-01-01T08:00:00]
-    Assert.assertEquals(1, searchIntervals.size());
-    Assert.assertEquals(Intervals.of("2018-01-01T00:00:00/2018-01-01T08:00:00"), searchIntervals.get(0));
+    Assertions.assertEquals(1, searchIntervals.size());
+    Assertions.assertEquals(Intervals.of("2018-01-01T00:00:00/2018-01-01T08:00:00"), searchIntervals.get(0));
   }
 
   @Test
@@ -137,7 +137,7 @@ public class DataSourceCompactibleSegmentIteratorTest
     // The three configured skip intervals and the 4h-offset skip interval (18:30-21:00 and
     // 20:00-00:00 merge) leave three search windows. The last window is clipped to 18:00
     // since segments are hourly and the 18:00-19:00 segment overlaps the 18:30 skip start.
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(
             Intervals.of("2018-01-01T00:00:00/PT6H"),
             Intervals.of("2018-01-01T08:00:00/PT4H"),
@@ -177,11 +177,11 @@ public class DataSourceCompactibleSegmentIteratorTest
     );
 
     // The DAY bucket overlaps the skip interval, so none of its segments should be picked up for compaction.
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
     final List<CompactionCandidate> skipped = iterator.getSkippedSegments();
-    Assert.assertEquals(1, skipped.size());
-    Assert.assertEquals(Intervals.of("2018-01-01/2018-01-02"), skipped.getFirst().getUmbrellaInterval());
-    Assert.assertEquals(24, skipped.getFirst().getSegments().size());
+    Assertions.assertEquals(1, skipped.size());
+    Assertions.assertEquals(Intervals.of("2018-01-01/2018-01-02"), skipped.getFirst().getUmbrellaInterval());
+    Assertions.assertEquals(24, skipped.getFirst().getSegments().size());
   }
 
   @Test
@@ -212,11 +212,11 @@ public class DataSourceCompactibleSegmentIteratorTest
         FINGERPRINT_MAPPER
     );
 
-    Assert.assertFalse(iterator.hasNext());
+    Assertions.assertFalse(iterator.hasNext());
     final List<CompactionCandidate> skipped = iterator.getSkippedSegments();
-    Assert.assertEquals(1, skipped.size());
-    Assert.assertEquals(24, skipped.getFirst().getSegments().size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, skipped.size());
+    Assertions.assertEquals(24, skipped.getFirst().getSegments().size());
+    Assertions.assertEquals(
         StringUtils.format("Interval[%s] skipped by compaction config", Intervals.ETERNITY),
         skipped.getFirst().getCurrentStatus().getReason()
     );

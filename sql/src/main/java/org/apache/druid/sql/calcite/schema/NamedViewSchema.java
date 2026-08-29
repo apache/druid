@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
 import org.apache.druid.server.security.ResourceType;
 
@@ -28,7 +27,6 @@ public class NamedViewSchema implements NamedSchema
   public static final String NAME = "view";
   private final ViewSchema viewSchema;
 
-  @Inject
   public NamedViewSchema(ViewSchema viewSchema)
   {
     this.viewSchema = viewSchema;
