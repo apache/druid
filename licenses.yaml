@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.54.2
+version: 2.54.3
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -988,7 +988,7 @@ name: com.nimbusds content-type
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.2
+version: 2.3
 libraries:
   - com.nimbusds: content-type
 
@@ -998,7 +998,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 10.8
+version: 11.38.2
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -3854,7 +3854,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.0
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3984,7 +3984,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3996,7 +3996,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4008,7 +4008,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4020,7 +4020,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.0
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4673,7 +4673,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.83.1
 libraries:
   - io.grpc: grpc-api
 
@@ -4683,7 +4683,7 @@ name: grpc-context
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.83.1
 libraries:
   - io.grpc: grpc-context
 
@@ -5477,7 +5477,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 6.4.0
+version: 7.2.2
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5652,7 +5652,7 @@ name: GraalVM
 license_category: binary
 license_name: Universal Permissive License, Version 1.0
 license_file_path: licenses/bin/graal.UPL
-version: 25.2.4
+version: 25.3.4.1
 module: core
 libraries:
   - org.graalvm.js: js
@@ -5674,7 +5674,7 @@ libraries:
 name: GraalVM Shadowed ICU4J
 license_category: binary
 license_name: Unicode/ICU License
-version: 25.2.4
+version: 25.3.4.1
 copyright: Unicode, Inc.
 license_file_path: licenses/bin/icu4j.ICU
 module: core
