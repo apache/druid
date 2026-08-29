@@ -115,7 +115,7 @@
         <netty3.version>3.10.6.Final</netty3.version>
         <netty4.version>4.2.17.Final</netty4.version>
         <postgresql.version>42.7.13</postgresql.version>
-        <protobuf.version>4.35.1</protobuf.version>
+        <protobuf.version>4.36.0</protobuf.version>
         <resilience4j.version>2.4.0</resilience4j.version>
         <slf4j.version>2.0.18</slf4j.version>
         <jna.version>5.19.1</jna.version>
