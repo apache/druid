@@ -46,6 +46,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
@@ -54,6 +55,7 @@ import org.apache.druid.sql.calcite.parser.StatementAndSetContext;
 import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.hook.DruidHook;
@@ -70,7 +72,7 @@ public class PlannerFactory extends PlannerToolbox
    * Convenience for callers that never execute catalog DDL, such as tests and benchmarks.
    */
   public PlannerFactory(
-      final DruidSchemaCatalog rootSchema,
+      final DruidSchemaCatalogProvider rootSchemaProvider,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
@@ -86,7 +88,7 @@ public class PlannerFactory extends PlannerToolbox
   )
   {
     this(
-        rootSchema,
+        rootSchemaProvider,
         operatorTable,
         macroTable,
         plannerConfig,
@@ -105,7 +107,7 @@ public class PlannerFactory extends PlannerToolbox
 
   @Inject
   public PlannerFactory(
-      final DruidSchemaCatalog rootSchema,
+      final DruidSchemaCatalogProvider rootSchemaProvider,
       final DruidOperatorTable operatorTable,
       final ExprMacroTable macroTable,
       final PlannerConfig plannerConfig,
@@ -126,7 +128,7 @@ public class PlannerFactory extends PlannerToolbox
         macroTable,
         jsonMapper,
         plannerConfig,
-        rootSchema,
+        rootSchemaProvider,
         joinableFactoryWrapper,
         catalog,
         catalogTableWriter,
@@ -157,6 +159,7 @@ public class PlannerFactory extends PlannerToolbox
       final SqlEngine engine,
       final String sql,
       final SqlNode sqlNode,
+      final AuthenticationResult authenticationResult,
       final Set<String> authContextKeys,
       final Map<String, Object> queryContext,
       final PlannerHook hook
@@ -167,13 +170,14 @@ public class PlannerFactory extends PlannerToolbox
         sql,
         sqlNode,
         engine,
+        authenticationResult,
         authContextKeys,
         queryContext,
         hook
     );
     context.dispatchHook(DruidHook.SQL, sql);
 
-    return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook, this);
+    return new DruidPlanner(buildFrameworkConfig(context.getRootSchema(), context), context, engine, hook, this);
   }
 
   /**
@@ -192,14 +196,13 @@ public class PlannerFactory extends PlannerToolbox
         engine,
         sql,
         statementAndSetContext.getMainStatement(),
+        NoopEscalator.getInstance().createEscalatedAuthenticationResult(),
         Set.copyOf(queryContext.keySet()),
         statementAndSetContext.getSetContext().isEmpty()
         ? queryContext
         : QueryContexts.override(queryContext, statementAndSetContext.getSetContext()),
         null
     );
-    thePlanner.getPlannerContext()
-              .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     thePlanner.validate();
     thePlanner.authorize(ra -> AuthorizationResult.ALLOW_NO_RESTRICTION, ImmutableSet.of());
     return thePlanner;
@@ -218,6 +221,7 @@ public class PlannerFactory extends PlannerToolbox
       final SqlEngine engine,
       final String sql,
       final SqlNode sqlNode,
+      final AuthenticationResult authenticationResult,
       final Map<String, Object> queryContext,
       final String tableName,
       final DruidTable table
@@ -228,6 +232,7 @@ public class PlannerFactory extends PlannerToolbox
         sql,
         sqlNode,
         engine,
+        authenticationResult,
         Collections.emptySet(),
         queryContext,
         null
@@ -263,7 +268,10 @@ public class PlannerFactory extends PlannerToolbox
     return authorizerMapper;
   }
 
-  private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext)
+  private FrameworkConfig buildFrameworkConfig(
+      DruidSchemaCatalog rootSchema,
+      PlannerContext plannerContext
+  )
   {
     return buildFrameworkConfig(plannerContext, rootSchema.getSubSchema(druidSchemaName));
   }
@@ -279,7 +287,7 @@ public class PlannerFactory extends PlannerToolbox
             plannerContext.queryContext().getInSubQueryThreshold()
         );
 
-    Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
+    final Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
         .parserConfig(DruidSqlParser.PARSER_CONFIG)
         .traitDefs(ConventionTraitDef.INSTANCE, RelCollationTraitDef.INSTANCE)

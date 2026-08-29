@@ -1189,16 +1189,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .run();
   }
 
-  public SqlStatementFactory getSqlStatementFactory(
-      PlannerConfig plannerConfig
-  )
-  {
-    return getSqlStatementFactory(
-        plannerConfig,
-        new AuthConfig()
-    );
-  }
-
   /**
    * Build the statement factory, which also builds all the infrastructure
    * behind the factory by calling methods on this test class. As a result, each

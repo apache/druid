@@ -232,6 +232,12 @@
             <version>3.6.0</version>
         </dependency>
         <dependency>
+            <groupId>org.codehaus.plexus</groupId>
+            <artifactId>plexus-xml</artifactId>
+            <version>3.1.0</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
         </dependency>

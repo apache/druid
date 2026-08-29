@@ -25,6 +25,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielders;
@@ -55,7 +57,6 @@ import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -313,7 +314,8 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
   @Test
   public void forbiddenTest()
   {
-    Assertions.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), resource.doPost(
+    // The datasource is not visible to this user, so it cannot be resolved.
+    final Response response = resource.doPost(
         new SqlQuery(
             StringUtils.format("select * from %s", CalciteTests.FORBIDDEN_DATASOURCE),
             null,
@@ -324,7 +326,17 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
             null
         ),
         SqlStatementResourceTest.makeOkRequest()
-    ).getStatus());
+    );
+
+    Assertions.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+
+    final DruidException e = ((ErrorResponse) response.getEntity()).getUnderlyingException();
+    DruidExceptionMatcher.assertThat(
+        e,
+        DruidExceptionMatcher.invalidInput().expectMessageContains(
+            StringUtils.format("Object '%s' not found", CalciteTests.FORBIDDEN_DATASOURCE)
+        )
+    );
   }
 
   @Test

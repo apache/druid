@@ -19,34 +19,31 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import org.apache.calcite.schema.Schema;
-import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.server.security.AuthenticationResult;
 
-public class NamedViewSchema implements NamedSchema
+/**
+ * Implementation of {@link DruidSchemaCatalogProvider} that always returns the same catalog. Not suitable for
+ * security-related tests because the user catalog and escalated catalog are the same; in a real environment these
+ * would be different.
+ */
+public class ConstantDruidSchemaCatalogProvider implements DruidSchemaCatalogProvider
 {
-  public static final String NAME = "view";
-  private final ViewSchema viewSchema;
+  private final DruidSchemaCatalog theCatalog;
 
-  public NamedViewSchema(ViewSchema viewSchema)
+  public ConstantDruidSchemaCatalogProvider(DruidSchemaCatalog theCatalog)
   {
-    this.viewSchema = viewSchema;
+    this.theCatalog = theCatalog;
   }
 
   @Override
-  public String getSchemaName()
+  public DruidSchemaCatalog createRootSchema(AuthenticationResult authenticationResult)
   {
-    return NAME;
+    return theCatalog;
   }
 
   @Override
-  public String getSchemaResourceType(String resourceName)
+  public DruidSchemaCatalog createEscalatedRootSchema()
   {
-    return ResourceType.VIEW;
-  }
-
-  @Override
-  public Schema getSchema()
-  {
-    return viewSchema;
+    return theCatalog;
   }
 }

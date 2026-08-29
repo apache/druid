@@ -307,12 +307,11 @@ public class ProjectionSpecTranslator
         engine,
         sql,
         query,
+        NoopEscalator.getInstance().createEscalatedAuthenticationResult(),
         context,
         tableName,
         tableFor(tableName, columns)
     )) {
-      planner.getPlannerContext()
-             .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
       planner.validate();
       planner.authorize(ra -> AuthorizationResult.ALLOW_NO_RESTRICTION, Collections.emptySet());
       planner.plan().run();

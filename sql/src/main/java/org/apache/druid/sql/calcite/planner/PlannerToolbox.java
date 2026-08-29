@@ -26,7 +26,7 @@ import org.apache.druid.query.policy.PolicyEnforcer;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 public class PlannerToolbox
@@ -36,7 +36,7 @@ public class PlannerToolbox
   protected final JoinableFactoryWrapper joinableFactoryWrapper;
   protected final ObjectMapper jsonMapper;
   protected final PlannerConfig plannerConfig;
-  protected final DruidSchemaCatalog rootSchema;
+  protected final DruidSchemaCatalogProvider rootSchemaProvider;
   protected final CatalogResolver catalog;
   protected final CatalogTableWriter catalogTableWriter;
   protected final String druidSchemaName;
@@ -54,7 +54,7 @@ public class PlannerToolbox
       final ExprMacroTable macroTable,
       final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
-      final DruidSchemaCatalog rootSchema,
+      final DruidSchemaCatalogProvider rootSchemaProvider,
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final CatalogResolver catalog,
       final String druidSchemaName,
@@ -70,7 +70,7 @@ public class PlannerToolbox
         macroTable,
         jsonMapper,
         plannerConfig,
-        rootSchema,
+        rootSchemaProvider,
         joinableFactoryWrapper,
         catalog,
         CatalogTableWriter.NOT_AVAILABLE,
@@ -88,7 +88,7 @@ public class PlannerToolbox
       final ExprMacroTable macroTable,
       final ObjectMapper jsonMapper,
       final PlannerConfig plannerConfig,
-      final DruidSchemaCatalog rootSchema,
+      final DruidSchemaCatalogProvider rootSchemaProvider,
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final CatalogResolver catalog,
       final CatalogTableWriter catalogTableWriter,
@@ -104,7 +104,7 @@ public class PlannerToolbox
     this.macroTable = macroTable;
     this.jsonMapper = jsonMapper;
     this.plannerConfig = Preconditions.checkNotNull(plannerConfig, "plannerConfig");
-    this.rootSchema = rootSchema;
+    this.rootSchemaProvider = rootSchemaProvider;
     this.joinableFactoryWrapper = joinableFactoryWrapper;
     this.catalog = catalog;
     this.catalogTableWriter = catalogTableWriter;
@@ -131,11 +131,6 @@ public class PlannerToolbox
     return jsonMapper;
   }
 
-  public DruidSchemaCatalog rootSchema()
-  {
-    return rootSchema;
-  }
-
   public JoinableFactoryWrapper joinableFactoryWrapper()
   {
     return joinableFactoryWrapper;
@@ -154,11 +149,6 @@ public class PlannerToolbox
   public String druidSchemaName()
   {
     return druidSchemaName;
-  }
-
-  public CalciteRulesManager calciteRuleManager()
-  {
-    return calciteRuleManager;
   }
 
   public PlannerConfig plannerConfig()

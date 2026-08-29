@@ -111,12 +111,12 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.DruidSchemaProvider;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchemaProvider;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
@@ -513,19 +513,23 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private DruidSchema makeDruidSchema(
+                private DruidSchemaProvider makeDruidSchemaProvider(
                     final Injector injector,
                     QueryRunnerFactoryConglomerate conglomerate,
                     QuerySegmentWalker walker,
                     Builder builder,
+                    PlannerConfig plannerConfig,
+                    AuthorizerMapper authorizerMapper,
                     TimelineServerView timelineServerView
                 )
                 {
-                  return QueryFrameworkUtils.createMockSchema(
+                  return QueryFrameworkUtils.createMockSchemaProvider(
                       injector,
                       conglomerate,
                       (SpecificSegmentsQuerySegmentWalker) walker,
                       builder.componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
+                      plannerConfig,
+                      authorizerMapper,
                       builder.catalogResolver,
                       timelineServerView
                   );
@@ -533,12 +537,19 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private SystemSchema makeSystemSchema(
+                private SystemSchemaProvider makeSystemSchema(
+                    DruidSchemaProvider druidSchemaProvider,
+                    TimelineServerView timelineServerView,
                     AuthorizerMapper authorizerMapper,
-                    DruidSchema druidSchema,
-                    TimelineServerView timelineServerView)
+                    PlannerConfig plannerConfig
+                )
                 {
-                  return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
+                  return CalciteTests.createMockSystemSchemaProvider(
+                      druidSchemaProvider.getSegmentMetadataCache(),
+                      timelineServerView,
+                      authorizerMapper,
+                      plannerConfig
+                  );
                 }
 
                 @Provides
@@ -557,26 +568,25 @@ public class SqlTestFramework
 
                 @Provides
                 @LazySingleton
-                private DruidSchemaCatalog makeCatalog(
-                    final PlannerConfig plannerConfig,
+                private DruidSchemaCatalogProvider makeCatalogProvider(
                     final ViewManager viewManager,
                     AuthorizerMapper authorizerMapper,
-                    DruidSchema druidSchema,
-                    SystemSchema systemSchema,
+                    DruidSchemaProvider druidSchemaProvider,
+                    SystemSchemaProvider systemSchemaProvider,
                     LookupSchema lookupSchema,
-                    DruidOperatorTable createOperatorTable
+                    DruidOperatorTable createOperatorTable,
+                    PlannerConfig plannerConfig
                 )
                 {
-                  final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
-                      plannerConfig,
+                  return QueryFrameworkUtils.createMockRootSchemaProvider(
                       viewManager,
                       authorizerMapper,
-                      druidSchema,
-                      systemSchema,
+                      druidSchemaProvider,
+                      systemSchemaProvider,
                       lookupSchema,
-                      createOperatorTable
+                      createOperatorTable,
+                      plannerConfig
                   );
-                  return rootSchema;
                 }
               }
           ),
@@ -844,7 +854,7 @@ public class SqlTestFramework
     )
     {
       this.viewManager = componentSupplier.createViewManager();
-      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+      final DruidSchemaCatalogProvider schemaProvider = QueryFrameworkUtils.createMockRootSchemaProvider(
           framework.injector,
           framework.conglomerate(),
           framework.walker(),
@@ -857,7 +867,7 @@ public class SqlTestFramework
       );
 
       this.plannerFactory = new PlannerFactory(
-          rootSchema,
+          schemaProvider,
           framework.operatorTable(),
           framework.macroTable(),
           plannerConfig,
