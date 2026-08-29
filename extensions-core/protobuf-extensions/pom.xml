@@ -236,7 +236,9 @@
         <artifactId>protobuf-maven-plugin</artifactId>
         <version>5.1.8</version>
         <configuration>
-          <protocVersion>${protobuf.version}</protocVersion>
+          <protoc kind="binary-maven">
+            <version>${protobuf.version}</version>
+          </protoc>
           <sourceDirectories>
             <sourceDirectory>${project.basedir}/src/test/resources</sourceDirectory>
           </sourceDirectories>
