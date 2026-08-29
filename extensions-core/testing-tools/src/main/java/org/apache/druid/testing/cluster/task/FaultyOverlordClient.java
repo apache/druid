@@ -141,7 +141,9 @@ public class FaultyOverlordClient extends OverlordClientImpl
     taskStatusDelayEntered.countDown();
     try {
       log.info("Waiting for [%s] before calling Overlord", delay);
-      taskStatusDelayReleased.await(delay.getMillis(), TimeUnit.MILLISECONDS);
+      if (!taskStatusDelayReleased.await(delay.getMillis(), TimeUnit.MILLISECONDS)) {
+        log.info("Task status delay elapsed before release.");
+      }
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
