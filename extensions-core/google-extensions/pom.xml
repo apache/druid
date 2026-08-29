@@ -125,7 +125,7 @@
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-core</artifactId>
-            <version>2.73.0</version>
+            <version>2.74.0</version>
         </dependency>
         <!-- Tests -->
         <dependency>
