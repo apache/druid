@@ -21,8 +21,6 @@ package org.apache.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Suppliers;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -72,11 +70,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Supplier;
 
 /**
  *
@@ -513,9 +511,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                 hold.getEntry().setOnUnmount(() -> deleteSegmentInfoFile(dataSegment));
               }
 
-              return new AcquireSegmentAction(
-                  makeOnDemandLoadSupplier(hold.getEntry(), location),
-                  hold
+              return submitAcquireTask(
+                  hold,
+                  (taskHolds, waitNanos) -> loadCompleteEntry(hold.getEntry(), location, taskHolds, waitNanos)
               );
             }
           }
@@ -587,13 +585,12 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    * {@link PartialSegmentFileMapperV10#ensureAllDownloaded} so the returned segment is fully-materialized).
    * <p>
    * Fast path: {@link #findExistingPartialWithHold} locates an existing entry across locations under a hold. If the
-   * entry is already usable (mounted, and fully-downloaded when required), return an immediate-future action whose
-   * {@code loadCleanup} is the hold (the supplier mints fresh segments per call, each with its own metadata
-   * reference, so no separate cleanup is needed).
+   * entry is already usable (mounted, and fully-downloaded when required), return a completed action whose segment
+   * has the hold folded into its close.
    * <p>
    * Slow path: under the per-segment lock, {@link #findOrReservePartial} reuses an existing not-yet-usable entry or
-   * reserves a fresh weak one, and the action submits mount (+ optional ensureAllDownloaded) to
-   * {@link #virtualStorageLoadingThreadPool} so callers that yield on the future never block a processing thread on
+   * reserves a fresh weak one, and {@link #submitAcquireTask} runs mount (+ optional ensureAllDownloaded) on
+   * {@link #virtualStorageLoadingThreadPool} so callers that wait on the action never block a processing thread on
    * deep-storage I/O.
    */
   private AcquireSegmentAction acquirePartialInternal(
@@ -607,15 +604,13 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       final PartialSegmentMetadataCacheEntry partial = existing.metadata;
       if (!fullDownload && partial.isMounted()) {
         // Lazy/PARTIAL contract: hand back a metadata-anchored segment; bundles mount on demand at query time via the
-        // async cursor factory, so a metadata-only hold is correct here. The full-download fast path is intentionally
-        // omitted: a FULL segment must hold every bundle for its lifetime (the sync cursor factory requires
-        // isFullyDownloaded(), which a metadata-only hold can't guarantee under SIEVE eviction), so it goes through
-        // the slow path's bundle-holding + ensureAllDownloaded dance. The resident full case is already served without
-        // an executor hop upstream by acquireCachedSegment -> acquireCachedInternal -> acquireFullReference.
-        return new AcquireSegmentAction(
-            () -> Futures.immediateFuture(AcquireSegmentResult.cached(partial::acquireReference)),
-            existing.hold
-        );
+        // async cursor factory, so a metadata-only hold (folded into the segment's close by acquireReference) is
+        // correct here. The full-download fast path is intentionally omitted: a FULL segment must hold every bundle
+        // for its lifetime (the sync cursor factory requires isFullyDownloaded(), which a metadata-only hold can't
+        // guarantee under SIEVE eviction), so it goes through the slow path's bundle-holding + ensureAllDownloaded
+        // dance. The resident full case is already served without an executor hop upstream by acquireCachedSegment ->
+        // acquireCachedInternal -> acquireFullReference.
+        return AcquireSegmentAction.completed(AcquireSegmentResult.of(partial.acquireReference(existing.hold)));
       }
       // Entry exists but isn't usable on the fast path (not mounted, or a full download is required). Release the
       // fast-path hold and let the slow path re-find with a fresh hold and drive mount on the executor.
@@ -629,102 +624,73 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         // or reserve a fresh weak entry with a hold if none exists. The metadata entry's mount-future dedup makes a
         // no-op cheap when the entry is already mounted (the typical re-find case after the fast path closed its hold).
         final ReservedPartial reserved = findOrReservePartial(dataSegment, rangeReader);
-        // holdHolder holds the metadata reservation hold immediately; the full-download path adds a hold for every
-        // bundle it mounts, all released together when the AcquireSegmentAction closes.
-        final HoldHolder holdHolder = new HoldHolder(reserved.hold);
-        return new AcquireSegmentAction(
-            // Memoized so repeat getSegmentFuture() calls return the same future rather than scheduling duplicate
-            // executor tasks. The entry's own mount-future dedup would prevent the actual work from being duplicated,
-            // but the executor scheduling and timing capture would still be wasted.
-            Suppliers.memoize(() -> {
-              // Capture submit time on first invocation of getSegmentFuture(). loadTime then covers mount
-              // (+ ensureAllDownloaded for the full-download path).
-              final long submitNanos = System.nanoTime();
-              return virtualStorageLoadingThreadPool.getExecutorService().submit(() -> {
-                // waitNanos is only the executor scheduling delay until this task body starts; it no longer reflects
-                // load-slot contention when using virtual threads. Load permits are acquired inside the deep-storage
-                // reads now, so that wait is folded into loadTime instead, and the query-time bundle/column fetches
-                // (separate permit-bounded tasks) are not reflected here at all. A meaningful load-wait metric would
-                // have to time the permit acquire at the read sites and aggregate it across those fetches.
-                final long taskStartNanos = System.nanoTime();
-                final long waitNanos = taskStartNanos - submitNanos;
-                final boolean wasMounted = reserved.metadata.isMounted();
-                // mount() is idempotent via PartialSegmentMetadataCacheEntry's mount-future dedup; already-mounted
-                // returns immediately, a concurrent mount is awaited, a fresh entry is mounted. The weak entry's
-                // hold-release runnable removes a never-mounted entry from the cache when our loadCleanup hold
-                // closes, so no explicit rollback is needed on failure.
-                try {
-                  reserved.metadata.mount(reserved.location);
-                }
-                catch (IOException | RuntimeException e) {
-                  // only fail if caller was expecting this to finish
-                  if (holdHolder.isClosed()) {
-                    log.debug(e, "Mount of segment[%s] failed after its acquire was abandoned", dataSegment.getId());
-                    return AcquireSegmentResult.empty();
-                  }
-                  throw DruidException.defensive(
-                      e,
-                      "Failed to mount partial metadata for segment[%s]",
-                      dataSegment.getId()
-                  );
-                }
-                // Pin the metadata across the rest of the task
-                final Closeable taskMetadataRef;
-                try {
-                  taskMetadataRef = reserved.metadata.acquireMetadataReference();
-                }
-                catch (DruidException raceLost) {
-                  // The entry was evicted between mounting it and pinning it. What keeps it resident across that
-                  // window is the hold in holdHolder, so an acquire that still holds one is entitled to its segment
-                  // and getting here means that guarantee has been broken so rethrow
-                  if (!holdHolder.isClosed()) {
-                    throw raceLost;
-                  }
-                  // hold is release so we have an abandoned acquire; nothing is waiting on this result, report
-                  // the segment as unavailable rather than failing a query that is already on its way down
-                  return AcquireSegmentResult.empty();
-                }
-                try {
-                  final PartialSegmentFileMapperV10 mapper = reserved.metadata.getFileMapper();
-                  final long loadSizeBytes;
-                  if (fullDownload) {
-                    // Delta of internal-file bytes downloaded by this task
-                    final long downloadedBefore = mapper.getDownloadedBytes();
-                    // Mount every bundle so the containers it owns are reserved on the location, and keep those
-                    // references here for the duration of the download instead of handing them straight to
-                    // holdHolder so that the caller abandoning a load doesn't release the holds until load is
-                    // finished.
-                    final List<Closeable> bundleRefs = new ArrayList<>();
-                    try {
-                      for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
-                        bundleRefs.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
-                      }
-                      mapper.ensureAllDownloaded();
-                    }
-                    finally {
-                      bundleRefs.forEach(holdHolder::add);
-                    }
-                    loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
-                  } else {
-                    // Lazy mount: the header bytes when this task caused the mount; 0 when the entry was already
-                    // mounted (a concurrent acquirer or earlier query did the load).
-                    loadSizeBytes = wasMounted ? 0L : mapper.getOnDiskHeaderSize();
-                  }
-                  final long loadNanos = System.nanoTime() - taskStartNanos;
-                  return new AcquireSegmentResult(
-                      reserved.metadata::acquireReference,
-                      loadSizeBytes,
-                      waitNanos,
-                      loadNanos
-                  );
-                }
-                finally {
-                  CloseableUtils.closeAndSuppressExceptions(taskMetadataRef, ignored -> {});
-                }
-              });
-            }),
-            holdHolder
-        );
+        // The metadata reservation hold seeds the task holds; the full-download path registers a hold for every
+        // bundle it mounts. All of them fold into the delivered segment's close. The task owns every hold until the
+        // fold (or the failure unwind), so a caller closing the action while the task runs cannot release them
+        // mid-mount or mid-download: the entry stays pinned for the task's whole duration.
+        return submitAcquireTask(reserved.hold, (taskHolds, waitNanos) -> {
+          final long taskStartNanos = System.nanoTime();
+          final boolean wasMounted = reserved.metadata.isMounted();
+          // mount() is idempotent via PartialSegmentMetadataCacheEntry's mount-future dedup; already-mounted
+          // returns immediately, a concurrent mount is awaited, a fresh entry is mounted. The weak entry's
+          // hold-release runnable removes a never-mounted entry from the cache when the reservation hold closes,
+          // so no explicit rollback is needed on failure.
+          try {
+            reserved.metadata.mount(reserved.location);
+          }
+          catch (IOException | RuntimeException e) {
+            throw DruidException.defensive(
+                e,
+                "Failed to mount partial metadata for segment[%s]",
+                dataSegment.getId()
+            );
+          }
+          // Pin the metadata across the rest of the task
+          final Closeable taskMetadataRef;
+          try {
+            taskMetadataRef = reserved.metadata.acquireMetadataReference();
+          }
+          catch (DruidException raceLost) {
+            // The reservation hold in taskHolds keeps the entry resident for the task's duration, so an eviction
+            // between mounting and pinning means that guarantee has been broken.
+            throw DruidException.defensive(
+                raceLost,
+                "Partial metadata for segment[%s] was dropped before the [%s] task could complete",
+                dataSegment.getId(),
+                fullDownload ? "full-download" : "lazy mount"
+            );
+          }
+          try {
+            final PartialSegmentFileMapperV10 mapper = reserved.metadata.getFileMapper();
+            final long loadSizeBytes;
+            if (fullDownload) {
+              // Delta of internal-file bytes downloaded by this task
+              final long downloadedBefore = mapper.getDownloadedBytes();
+              // Mount every bundle so the containers it owns are reserved on the location
+              for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
+                taskHolds.register(reserved.metadata.getBundleAcquirer().acquire(bundleName));
+              }
+              mapper.ensureAllDownloaded();
+              loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
+            } else {
+              // Lazy mount: the header bytes when this task caused the mount; 0 when the entry was already
+              // mounted (a concurrent acquirer or earlier query did the load).
+              loadSizeBytes = wasMounted ? 0L : mapper.getOnDiskHeaderSize();
+            }
+            final long loadNanos = System.nanoTime() - taskStartNanos;
+            // Fold as the final act: metadata reservation hold + every bundle hold ride the segment's close (or are
+            // closed by the fold on a miss).
+            return new AcquireSegmentResult(
+                reserved.metadata.acquireReference(taskHolds),
+                loadSizeBytes,
+                waitNanos,
+                loadNanos
+            );
+          }
+          finally {
+            CloseableUtils.closeAndSuppressExceptions(taskMetadataRef, ignored -> {});
+          }
+        });
       }
       finally {
         unlock(dataSegment, lock);
@@ -735,8 +701,10 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   /**
    * Locate an existing partial metadata entry across storage locations and attach a eviction-protective hold to it.
    * Returns {@code null} when no entry exists at any location. Race-safe (the hold prevents eviction from picking
-   * the entry between this lookup and the caller's subsequent use). Caller must close the returned hold (typically
-   * via {@link AcquireSegmentAction#loadCleanup} or by closing it directly when falling through to a reserve path).
+   * the entry between this lookup and the caller's subsequent use). Caller must arrange for the returned hold to be
+   * closed (typically by folding it into an acquired segment's close via
+   * {@link SegmentCacheEntry#acquireReference(Closeable)}, or by closing it directly when falling through to a
+   * reserve path).
    */
   @Nullable
   private ReservedPartial findExistingPartialWithHold(SegmentId segmentId)
@@ -960,10 +928,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
    * Return a handle to a partial metadata entry for the given segment, paired with a eviction-protective hold: either
    * an existing entry (in any mount state, located by {@link #findExistingPartialWithHold}), or a fresh weak
    * reservation from {@link #reservePartial}. The caller is expected to drive
-   * {@link PartialSegmentMetadataCacheEntry#mount} on the returned handle inside the
-   * {@link AcquireSegmentAction}'s future; mount is idempotent via its mount-future dedup, so an already-mounted
-   * entry's mount call is cheap. The hold rides in the action's {@code loadCleanup} and is released when the
-   * action closes.
+   * {@link PartialSegmentMetadataCacheEntry#mount} on the returned handle inside a {@link #submitAcquireTask} task;
+   * mount is idempotent via its mount-future dedup, so an already-mounted entry's mount call is cheap. The hold seeds
+   * the task holds and is folded into the delivered segment's close (or released on failure/cancel).
    */
   private ReservedPartial findOrReservePartial(DataSegment dataSegment, SegmentRangeReader rangeReader)
   {
@@ -987,9 +954,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
 
   /**
    * Pairing of a partial metadata entry (either pre-existing, discovered via {@link #findExistingPartialWithHold}, or
-   * freshly reserved by {@link #reservePartial}) with the storage location it lives on plus a eviction-protective hold.
-   * The hold rides in the {@link AcquireSegmentAction#loadCleanup} so the entry is protected from eviction across
-   * the action's lifetime; closing the action releases the hold.
+   * freshly reserved by {@link #reservePartial}) with the storage location it lives on plus a eviction-protective
+   * hold. The hold protects the entry from eviction across the acquire, and ends up folded into the delivered
+   * segment's close (or released on miss/failure/cancel).
    */
   private record ReservedPartial(
       PartialSegmentMetadataCacheEntry metadata,
@@ -1319,57 +1286,48 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
   @Nullable
   private AcquireSegmentAction acquireExistingSegment(SegmentCacheEntryIdentifier identifier)
   {
-    final Closer safetyNet = Closer.create();
     for (StorageLocation location : locations) {
+      final StorageLocation.ReservationHold<SegmentCacheEntry> hold =
+          location.addWeakReservationHoldIfExists(identifier);
+      if (hold == null) {
+        continue;
+      }
+      final CompleteSegmentCacheEntry complete;
       try {
-        final StorageLocation.ReservationHold<SegmentCacheEntry> hold = safetyNet.register(
-            location.addWeakReservationHoldIfExists(identifier)
-        );
-        if (hold != null) {
-          if (!(hold.getEntry() instanceof CompleteSegmentCacheEntry complete)) {
-            // The eager (complete) acquire path found a non-complete entry under this id. Defensive backstop: when
-            // partial downloads are disabled, getCachedSegments now deletes any on-disk partial layout at bootstrap
-            // rather than reserving it, so a partial entry should not exist on this path. If one somehow does (e.g. a
-            // bootstrap delete failed), surface a clear operator error rather than a ClassCastException.
-            throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                                .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                                .build(
-                                    "Segment[%s] has partial-load cache state on disk but partial downloads are "
-                                    + "disabled; clear the segment cache directory or re-enable "
-                                    + "druid.segmentCache.virtualStoragePartialDownloadsEnabled",
-                                    identifier
-                                );
-          }
-          if (complete.isMounted()) {
-            // the entry is already mounted, so hand back its cached reference provider. Read the volatile
-            // referenceProvider exactly once, inside the supplier, rather than trusting the isMounted() check above and
-            // reading the field again when the supplier runs later: for a static (non-virtual-storage) entry a
-            // concurrent drop (release() -> unmount()) can null it in between. The reservation hold does not prevent
-            // this (it only guards weak entries against reclaim), so a weak entry would stay mounted here, but a
-            // static entry can be unmounted out from under us. A dropped entry is reported as absent (empty) rather
-            // than reloaded.
-            return new AcquireSegmentAction(
-                () -> {
-                  final ReferenceCountedSegmentProvider provider = complete.referenceProvider;
-                  return Futures.immediateFuture(
-                      provider != null ? AcquireSegmentResult.cached(provider) : AcquireSegmentResult.empty()
-                  );
-                },
-                hold
-            );
-          } else {
-            // go ahead and mount it, someone else is probably trying this as well, but mount is done under a segment
-            // lock and is a no-op if already mounted, and if we win we need it to be mounted
-            return new AcquireSegmentAction(
-                makeOnDemandLoadSupplier(complete, location),
-                hold
-            );
-          }
+        if (!(hold.getEntry() instanceof CompleteSegmentCacheEntry completeEntry)) {
+          // The eager (complete) acquire path found a non-complete entry under this id. Defensive backstop: when
+          // partial downloads are disabled, getCachedSegments now deletes any on-disk partial layout at bootstrap
+          // rather than reserving it, so a partial entry should not exist on this path. If one somehow does (e.g. a
+          // bootstrap delete failed), surface a clear operator error rather than a ClassCastException.
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                              .build(
+                                  "Segment[%s] has partial-load cache state on disk but partial downloads are "
+                                  + "disabled; clear the segment cache directory or re-enable "
+                                  + "druid.segmentCache.virtualStoragePartialDownloadsEnabled",
+                                  identifier
+                              );
         }
+        complete = completeEntry;
       }
       catch (Throwable t) {
-        throw CloseableUtils.closeAndWrapInCatch(t, safetyNet);
+        throw CloseableUtils.closeAndWrapInCatch(t, hold);
       }
+      if (complete.isMounted()) {
+        // acquireReference takes ownership of the hold: it is folded into the segment's close on success, and closed
+        // by the callee on a miss or throw. It re-reads referenceProvider under the entry lock rather than trusting
+        // the isMounted() check above: for a static (non-virtual-storage) entry a concurrent drop
+        // (release() -> unmount()) can null it in between (the reservation hold only guards weak entries against
+        // reclaim). A dropped entry is reported as absent (empty) rather than reloaded.
+        return AcquireSegmentAction.completed(AcquireSegmentResult.of(complete.acquireReference(hold)));
+      }
+      // go ahead and mount it, someone else is probably trying this as well, but mount is done under a segment
+      // lock and is a no-op if already mounted, and if we win we need it to be mounted. submitAcquireTask takes
+      // ownership of the hold in all cases.
+      return submitAcquireTask(
+          hold,
+          (taskHolds, waitNanos) -> loadCompleteEntry(complete, location, taskHolds, waitNanos)
+      );
     }
     return null;
   }
@@ -1907,32 +1865,117 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     return infoDir;
   }
 
-  private Supplier<ListenableFuture<AcquireSegmentResult>> makeOnDemandLoadSupplier(
-      final CompleteSegmentCacheEntry entry,
-      final StorageLocation location
-  )
+  /**
+   * Body of an on-demand acquire task submitted via {@link #submitAcquireTask}. Runs on the loading pool.
+   */
+  @FunctionalInterface
+  private interface AcquireTaskBody
   {
-    return Suppliers.memoize(
-        () -> {
-          final long startTime = System.nanoTime();
-          return virtualStorageLoadingThreadPool.getExecutorService().submit(
-              () -> {
-                // waitTime is only the executor scheduling delay; when using virtual threads for the pool, load-slot
-                // contention is folded into loadTime now, since mount acquires the load permit around the deep-storage
-                // read.
-                final long execStartTime = System.nanoTime();
-                final long waitTime = execStartTime - startTime;
-                entry.mount(location);
-                return new AcquireSegmentResult(
-                    entry.referenceProvider,
-                    entry.dataSegment.getSize(),
-                    waitTime,
-                    System.nanoTime() - execStartTime
-                );
-              }
-          );
+    /**
+     * Perform the load and deliver the result. {@code taskHolds} is pre-seeded with the reservation hold placed at
+     * {@link #acquireSegment} time; the body may register additional holds (e.g. per-bundle holds) as it acquires
+     * them. The body MUST make the hold-fold ({@code entry.acquireReference(taskHolds)} or a variant) its final
+     * act: after the fold, ownership of every registered hold lives inside the returned result's segment (or was
+     * closed by the fold on a miss), and nothing that can throw may run between the fold and returning. On any
+     * throw before the fold, {@link #submitAcquireTask} closes {@code taskHolds}.
+     */
+    AcquireSegmentResult load(Closer taskHolds, long waitNanos) throws Exception;
+  }
+
+  /**
+   * Shared scaffolding for on-demand acquires: runs {@code taskBody} on {@link #virtualStorageLoadingThreadPool},
+   * delivering its result to the returned {@link AcquireSegmentAction}. Closing the action before delivery cancels a
+   * still-queued task (it never runs); a task already running is deliberately NOT interrupted (see the
+   * {@code cancel(false)} rationale in the canceler below) — it runs to completion, loses the delivery race, and
+   * closes its own orphaned result.
+   * <p>
+   * Takes ownership of {@code preplacedHold} in all cases, with exactly one owner ever touching it (decided by a
+   * claim token; {@link StorageLocation.ReservationHold#close()} is additionally idempotent as a backstop):
+   * <ul>
+   *   <li>task delivers: the hold is folded into the delivered segment's close (or closed by the fold on a miss)</li>
+   *   <li>task delivers but the action was closed first: the orphaned result is closed here, releasing the folded
+   *   holds along with the segment reference</li>
+   *   <li>task throws: the task closes all accumulated holds and the failure is delivered (or silently absorbed if
+   *   the action was closed first)</li>
+   *   <li>action closed before the task ever runs (canceled while queued): the canceler claims and closes the
+   *   hold</li>
+   *   <li>submitting the task fails synchronously: the hold is closed here and the failure propagates to the
+   *   {@link #acquireSegment} caller</li>
+   * </ul>
+   */
+  private AcquireSegmentAction submitAcquireTask(final Closeable preplacedHold, final AcquireTaskBody taskBody)
+  {
+    final AcquireSegmentAction action = new AcquireSegmentAction();
+    final AtomicBoolean holdClaimed = new AtomicBoolean(false);
+    final long submitNanos = System.nanoTime();
+    final ListenableFuture<?> taskFuture;
+    try {
+      taskFuture = virtualStorageLoadingThreadPool.getExecutorService().submit(() -> {
+        if (!holdClaimed.compareAndSet(false, true)) {
+          // the canceler won the claim and closed the pre-placed hold, nothing to do
+          return null;
         }
-    );
+        final Closer taskHolds = Closer.create();
+        taskHolds.register(preplacedHold);
+        try {
+          // waitNanos is only the executor scheduling delay until the task body starts; it no longer reflects
+          // load-slot contention when using virtual threads. Load permits are acquired inside the deep-storage
+          // reads now, so that wait is folded into loadTime instead, and the query-time bundle/column fetches
+          // (separate permit-bounded tasks) are not reflected here at all. A meaningful load-wait metric would
+          // have to time the permit acquire at the read sites and aggregate it across those fetches.
+          final AcquireSegmentResult result = taskBody.load(taskHolds, System.nanoTime() - submitNanos);
+          if (!action.set(result)) {
+            // the action was closed while the task was completing; close the orphaned result
+            result.close();
+          }
+        }
+        catch (Throwable t) {
+          CloseableUtils.closeAndSuppressExceptions(taskHolds, t::addSuppressed);
+          // silently absorbed if the action was closed first
+          action.setException(t);
+        }
+        return null;
+      });
+    }
+    catch (Throwable t) {
+      throw CloseableUtils.closeAndWrapInCatch(t, preplacedHold);
+    }
+    action.setCanceler(() -> {
+      // cancel(false), NOT cancel(true): a still-queued task is prevented from running (the canceler then wins the
+      // claim CAS below and releases the pre-placed hold); a task already running is left to finish rather than
+      // interrupted. Interrupting a running task is unsafe here for the same reason documented on
+      // awaitEagerDownloadsOrClearRule's cancel(false) — an interrupt landing mid-NIO can raise
+      // ClosedByInterruptException on a shared mapper FD, and interrupting a task that is driving a deduped mount
+      // fails every other query awaiting that same mount. A running task that finishes after close loses the
+      // set() race and closes its own orphaned result, releasing the holds then.
+      taskFuture.cancel(false);
+      if (holdClaimed.compareAndSet(false, true)) {
+        CloseableUtils.closeAndSuppressExceptions(
+            preplacedHold,
+            e -> log.warn(e, "Failed to release reservation hold while canceling a segment acquire")
+        );
+      }
+    });
+    return action;
+  }
+
+  /**
+   * {@link AcquireTaskBody} for a {@link CompleteSegmentCacheEntry}: mount (idempotent, done under the entry lock)
+   * then acquire a reference with the task holds folded into the segment's close.
+   */
+  private AcquireSegmentResult loadCompleteEntry(
+      final CompleteSegmentCacheEntry entry,
+      final StorageLocation location,
+      final Closer taskHolds,
+      final long waitNanos
+  ) throws SegmentLoadingException
+  {
+    final long loadStartNanos = System.nanoTime();
+    entry.mount(location);
+    final long loadSizeBytes = entry.dataSegment.getSize();
+    // Fold as the final act: the reservation hold rides the segment's close (or is closed by the fold on a miss)
+    final Optional<Segment> segment = entry.acquireReference(taskHolds);
+    return new AcquireSegmentResult(segment, loadSizeBytes, waitNanos, System.nanoTime() - loadStartNanos);
   }
 
   private ReferenceCountingLock lock(final DataSegment dataSegment)
@@ -2482,60 +2525,4 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
     }
   }
 
-  /**
-   * The {@link AcquireSegmentAction#close()} cleanup for a partial acquire: a set of cache holds that keep the
-   * acquired segment's entries resident for the action's lifetime. Seeded with the metadata reservation hold at
-   * construction; the full-download path {@link #add adds} a hold per bundle it mounts while the load future runs.
-   * Closing releases everything (LIFO).
-   * <p>
-   * Thread-safe because the future that {@link #add}s bundle holds runs on the load executor while a different thread
-   * may close the action (query cancel / timeout racing a blocked {@code getSegmentFuture().get()}). A hold added
-   * after the action has already been closed is closed immediately rather than leaked.
-   */
-  private static final class HoldHolder implements Closeable
-  {
-    @GuardedBy("this")
-    private final Closer holds = Closer.create();
-    /**
-     * Volatile rather than guarded, so {@link #isClosed} can be answered without queueing behind a {@link #close}
-     * that is working through a hold-release cascade (location write lock, unmount, unmap, file deletion).
-     */
-    private volatile boolean closed = false;
-
-    private HoldHolder(Closeable initialHold)
-    {
-      holds.register(initialHold);
-    }
-
-    /**
-     * Whether the {@link AcquireSegmentAction} these holds belong to has been closed, i.e. whoever wanted the segment
-     * has stopped waiting for it and every hold taken so far is being (or has been) released.
-     */
-    private boolean isClosed()
-    {
-      return closed;
-    }
-
-    private void add(Closeable hold)
-    {
-      final boolean alreadyClosed;
-      synchronized (this) {
-        alreadyClosed = closed;
-        if (!alreadyClosed) {
-          holds.register(hold);
-        }
-      }
-      if (alreadyClosed) {
-        // the action was closed while the load future was still running; release the late hold rather than leak it
-        CloseableUtils.closeAndSuppressExceptions(hold, ignored -> {});
-      }
-    }
-
-    @Override
-    public synchronized void close() throws IOException
-    {
-      closed = true;
-      holds.close();
-    }
-  }
 }

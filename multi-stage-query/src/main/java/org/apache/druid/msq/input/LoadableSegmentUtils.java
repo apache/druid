@@ -19,59 +19,11 @@
 
 package org.apache.druid.msq.input;
 
-import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.segment.RowCountInspector;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.loading.AcquireSegmentAction;
-import org.apache.druid.segment.loading.AcquireSegmentResult;
-
-import javax.annotation.Nullable;
-import java.util.Optional;
 
 public class LoadableSegmentUtils
 {
-  /**
-   * Given a future from {@link AcquireSegmentAction#getSegmentFuture()}, wraps it with logic to increment
-   * counters as follows:
-   *
-   * <ul>
-   *   <li>{@link ChannelCounters#addLoad(AcquireSegmentResult)} when the load completes</li>
-   *   <li>{@link ChannelCounters#addFile(long, long)} each time a reference is acquired from
-   *   {@link AcquireSegmentResult#getReferenceProvider()}. The row count is taken from
-   *   {@link #getSegmentRowCount(Segment)}, and byte count is taken from {@code byteCount}.</li>
-   * </ul>
-   */
-  public static ListenableFuture<AcquireSegmentResult> countedLoad(
-      final ListenableFuture<AcquireSegmentResult> segmentFuture,
-      final long byteCount,
-      @Nullable final ChannelCounters channelCounters
-  )
-  {
-    if (channelCounters == null) {
-      return segmentFuture;
-    } else {
-      return FutureUtils.transform(
-          segmentFuture,
-          result -> {
-            channelCounters.addLoad(result);
-            return new AcquireSegmentResult(
-                () -> {
-                  final Optional<Segment> segment = result.getReferenceProvider().acquireReference();
-                  final int rowCount = segment.map(LoadableSegmentUtils::getSegmentRowCount).orElse(0);
-                  channelCounters.addFile(rowCount, byteCount);
-                  return segment;
-                },
-                result.getLoadSizeBytes(),
-                result.getWaitTimeNanos(),
-                result.getLoadTimeNanos()
-            );
-          }
-      );
-    }
-  }
-
   /**
    * Gets the number of rows for a segment, using a {@link RowCountInspector}. Returns 0 when unknown.
    */

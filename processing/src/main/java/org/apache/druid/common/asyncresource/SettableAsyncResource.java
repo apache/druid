@@ -263,9 +263,12 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
         default -> throw DruidException.defensive("Already closed");
       };
 
-      // Clear result and canceler to allow GC.
+      // Clear result and canceler to allow GC. Drop any pending ready callbacks: per the AsyncResource contract
+      // they are not fired once close() has happened before the resource became ready, and a later set()/setException()
+      // (e.g. a producer losing a cancel/close race) must not replay them.
       result = null;
       canceler = null;
+      readyCallbacks.clear();
       state = State.CLOSED;
     }
 
@@ -306,7 +309,9 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
 
       // Clear canceler to allow GC.
       canceler = null;
-      callbacksToFire = drainCallbacks();
+      // Only fire callbacks when this call actually completed the resource; a set/setException that lost the race with
+      // close() (didSet == false) must not fire callbacks, which close() has already dropped.
+      callbacksToFire = didSet ? drainCallbacks() : List.of();
     }
     fireCallbacks(callbacksToFire);
     return didSet;

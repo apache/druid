@@ -21,19 +21,20 @@ package org.apache.druid.msq.input;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -68,6 +69,13 @@ public class RegularLoadableSegment implements LoadableSegment
   private final DataSegment cachedDataSegment;
 
   /**
+   * DataSegment fetched from the Coordinator by the deferred acquire chain. Written before the inner (stage 2)
+   * acquire starts, so it is always visible to {@link #countDelivered} for a delivered deferred acquire.
+   */
+  @Nullable
+  private volatile DataSegment fetchedDataSegment;
+
+  /**
    * Memoized supplier for the DataSegment future.
    */
   private final Supplier<ListenableFuture<DataSegment>> dataSegmentFutureSupplier;
@@ -78,7 +86,7 @@ public class RegularLoadableSegment implements LoadableSegment
    * @param segmentManager    segment manager for loading and caching segments
    * @param segmentId         the segment ID to load
    * @param descriptor        segment descriptor for querying
-   * @param inputCounters     optional counters for tracking input via {@link LoadableSegmentUtils#countedLoad}
+   * @param inputCounters     optional counters for tracking input, updated at delivery via {@link #countDelivered}
    * @param coordinatorClient optional client for fetching DataSegment from Coordinator when not available locally
    * @param isReindex         true if this is a DML command writing to the same table it's reading from
    */
@@ -138,7 +146,7 @@ public class RegularLoadableSegment implements LoadableSegment
     if (cachedSegment.isPresent()) {
       acquired = true;
 
-      // Update counters in the manner of LoadableSegmentUtils#countedLoad (which we aren't using here).
+      // Update counters inline; the countDelivered hook is only for the acquire() path.
       if (inputCounters != null) {
         final int rowCount = LoadableSegmentUtils.getSegmentRowCount(cachedSegment.get());
         final long byteCount = cachedDataSegment != null ? cachedDataSegment.getSize() : 0;
@@ -158,34 +166,113 @@ public class RegularLoadableSegment implements LoadableSegment
     acquired = true;
 
     if (cachedDataSegment != null) {
-      final AcquireSegmentAction action = segmentManager.acquireSegment(cachedDataSegment, acquireMode);
-      return new AcquireSegmentAction(
-          () -> LoadableSegmentUtils.countedLoad(
-              action.getSegmentFuture(),
-              cachedDataSegment.getSize(),
-              inputCounters
-          ),
-          action
-      );
+      // The SegmentManager handle is already the right shape; counter updates happen at delivery via countDelivered.
+      return segmentManager.acquireSegment(cachedDataSegment, acquireMode);
     } else {
-      // Create a shim AcquireSegmentAction that doesn't acquire a hold (yet). We can't make a real
-      // AcquireSegmentAction yet because we don't have the DataSegment object. It needs to be fetched
-      // from the Coordinator. That call is deferred until we're actually ready to load the segment, because
-      // we don't make the calls all at once when loading a lot of segments.
+      // We can't acquire from the SegmentManager yet because we don't have the DataSegment object; it needs to be
+      // fetched from the Coordinator first. Hand-rolled two-stage chain: an outer handle whose canceler tears down
+      // whichever stage is active, a DataSegment-future callback that starts the inner (cache manager) acquire under
+      // a state guard, and a ready-callback that transfers the inner result to the outer handle.
+      final DeferredAcquireState state = new DeferredAcquireState();
+      final ListenableFuture<DataSegment> dsFuture = dataSegmentFutureSupplier.get();
+      final AcquireSegmentAction outer = new AcquireSegmentAction(() -> {
+        final Runnable closeInner;
+        synchronized (state) {
+          state.closed = true;
+          closeInner = state.closeInnerOnce;
+        }
+        // Cancelling the memoized DataSegment future poisons later dataSegmentFuture() calls, which is safe today:
+        // acquire() is once-only and there are no other production consumers of dataSegmentFuture() after acquire.
+        dsFuture.cancel(true);
+        if (closeInner != null) {
+          closeInner.run();
+        }
+      });
+      Futures.addCallback(
+          dsFuture,
+          new FutureCallback<>()
+          {
+            @Override
+            public void onSuccess(DataSegment dataSegment)
+            {
+              fetchedDataSegment = dataSegment;
+              final AcquireSegmentAction inner;
+              final Runnable closeInnerOnce;
+              try {
+                synchronized (state) {
+                  if (state.closed) {
+                    // outer was closed before stage 2 could start; nothing acquired, nothing to clean up
+                    return;
+                  }
+                }
+                // Acquire OUTSIDE the state lock: acquireSegment can do real work (storage-location reservation,
+                // eviction, info-file writes), and the outer canceler takes the state lock — which a closer (e.g.
+                // ReadableInputQueue.close) may drive — so holding it here would stall cancellation behind
+                // deep-storage-side work. acquireSegment can also throw synchronously (e.g. CAPACITY_EXCEEDED, or a
+                // rejected load-pool submit); a throw escaping this callback would be swallowed by the direct
+                // executor, leaving outer never delivered and its consumer hung — route it to outer.setException.
+                inner = segmentManager.acquireSegment(dataSegment, acquireMode);
+              }
+              catch (Throwable t) {
+                outer.setException(t);
+                return;
+              }
+              closeInnerOnce = AcquireSegmentHandles.closeOnce(inner::close);
+              final boolean closedWhileAcquiring;
+              synchronized (state) {
+                closedWhileAcquiring = state.closed;
+                if (!closedWhileAcquiring) {
+                  state.closeInnerOnce = closeInnerOnce;
+                }
+              }
+              if (closedWhileAcquiring) {
+                // the outer handle was closed while we were acquiring; the canceler ran before closeInnerOnce was
+                // published, so we own the freshly-acquired inner handle and must close it ourselves
+                closeInnerOnce.run();
+                return;
+              }
+              // outside the state lock: ready callbacks can fire immediately on the registering thread
+              AcquireSegmentHandles.transferOnReady(inner, outer, closeInnerOnce);
+            }
 
-      final Closer closer = Closer.create();
-      return new AcquireSegmentAction(
-          Suppliers.memoize(() -> FutureUtils.transformAsync(
-              dataSegmentFutureSupplier.get(),
-              dataSegment -> LoadableSegmentUtils.countedLoad(
-                  closer.register(segmentManager.acquireSegment(dataSegment, acquireMode)).getSegmentFuture(),
-                  dataSegment.getSize(),
-                  inputCounters
-              )
-          )),
-          closer
+            @Override
+            public void onFailure(Throwable t)
+            {
+              // silently absorbed if the outer handle was closed first
+              outer.setException(t);
+            }
+          },
+          MoreExecutors.directExecutor()
       );
+      return outer;
     }
+  }
+
+  @Override
+  public void countDelivered(AcquireSegmentResult result)
+  {
+    if (inputCounters == null) {
+      return;
+    }
+    inputCounters.addLoad(result);
+    final int rowCount = result.getSegment().map(LoadableSegmentUtils::getSegmentRowCount).orElse(0);
+    final DataSegment sizeSource = cachedDataSegment != null ? cachedDataSegment : fetchedDataSegment;
+    // Parity with the old countedLoad: addFile fires even for an empty delivery, with rowCount 0.
+    inputCounters.addFile(rowCount, sizeSource == null ? 0 : sizeSource.getSize());
+  }
+
+  /**
+   * Stage guard for the deferred acquire chain: serializes "outer closed" against "stage 2 started" so the inner
+   * handle is either never created, or is closed exactly once (by the canceler or by the transfer's failure path,
+   * whichever comes first — both go through {@link #closeInnerOnce}).
+   */
+  private static final class DeferredAcquireState
+  {
+    @GuardedBy("this")
+    boolean closed;
+    @GuardedBy("this")
+    @Nullable
+    Runnable closeInnerOnce;
   }
 
   /**

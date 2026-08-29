@@ -461,7 +461,9 @@ public class SegmentManagerTest extends InitializedNullHandlingTest
     );
 
     final AcquireSegmentAction action = virtualSegmentManager.acquireSegment(toLoad, AcquireMode.FULL);
-    AcquireSegmentResult result = action.getSegmentFuture().get();
+    // await but do not release or close: the un-released action keeps the delivered segment reference open so the
+    // entry remains cached for the getSegmentsBundle call below
+    AcquireSegmentResult result = action.await();
     Assertions.assertNotNull(result);
     Assertions.assertEquals(1L, result.getLoadSizeBytes());
     Assertions.assertTrue(result.getLoadTimeNanos() > 0);

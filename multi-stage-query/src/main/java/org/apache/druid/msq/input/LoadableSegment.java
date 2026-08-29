@@ -26,6 +26,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.AcquireMode;
 import org.apache.druid.segment.loading.AcquireSegmentAction;
+import org.apache.druid.segment.loading.AcquireSegmentResult;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.timeline.DataSegment;
 
@@ -76,8 +77,17 @@ public interface LoadableSegment
   Optional<Segment> acquireIfCached(AcquireMode acquireMode);
 
   /**
-   * Acquire the actual segment. Non-blocking operation. Once this is called, callers are responsible for closing the
-   * {@link AcquireSegmentAction}.
+   * Acquire the actual segment. Non-blocking operation; the load (if one is needed) starts immediately. The returned
+   * {@link AcquireSegmentAction} is an async handle: register it with cleanup machinery right away (safe at any
+   * lifecycle point), wait for readiness via {@link AcquireSegmentAction#addReadyCallback} or
+   * {@link AcquireSegmentAction#await}, then {@link AcquireSegmentAction#release()} to take ownership of the
+   * {@link org.apache.druid.segment.loading.AcquireSegmentResult} — closing the delivered {@link Segment} releases
+   * everything associated with the acquisition. Closing the action without releasing cancels an in-flight load or
+   * discards a delivered result; close-after-release is a no-op, and ready callbacks are dropped if the action is
+   * closed before it becomes ready.
+   *
+   * The consumer that successfully releases the result must call {@link #countDelivered} exactly once, at the moment
+   * ownership transfers.
    *
    * The {@code acquireMode} selects how the segment is loaded; see {@link AcquireMode}. With {@link AcquireMode#PARTIAL}
    * the returned {@link Segment} is mounted but, for a partial-download (virtual storage) segment, may not be fully
@@ -88,6 +98,19 @@ public interface LoadableSegment
    * @throws DruidException if the segment has already been acquired
    */
   AcquireSegmentAction acquire(AcquireMode acquireMode);
+
+  /**
+   * Called by the consumer that successfully {@link AcquireSegmentAction#release()}s the result of {@link #acquire},
+   * exactly once, at the moment ownership transfers. Implementations update their {@code ChannelCounters} here. Not
+   * called when the load fails or is cancelled. {@link #acquireIfCached} counts inline and does not use this hook.
+   * <p>
+   * Counting happens post-release (rather than in a producer-registered ready callback) because the blessed
+   * {@code isReady()}-polling consumer idiom can release before producer callbacks fire, at which point a peeking
+   * {@code get()} would throw; post-release counting is exactly-once by construction.
+   */
+  default void countDelivered(AcquireSegmentResult result)
+  {
+  }
 
   /**
    * Returns a future for the {@link DataSegment} object. For {@link RegularLoadableSegment}, the future is created
