@@ -28,10 +28,14 @@ import com.google.common.collect.Ordering;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.DimensionHandlerUtils;
@@ -46,6 +50,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -136,6 +141,70 @@ public class QueryContextTest
     assertTrue(context.getBoolean("key1"));
     assertFalse(context.getBoolean("non-exist", false));
     assertNull(context.getBoolean("non-exist"));
+  }
+
+  @Test
+  public void testGetParameter()
+  {
+    final QueryContext context = QueryContext.of(
+        ImmutableMap.of(
+            QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), "10",
+            QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName(), "false"
+        )
+    );
+
+    assertTrue(context.containsKey(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertEquals(10, context.get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertEquals(Optional.of(10), context.getOptional(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertFalse(context.get(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
+    assertFalse(context.getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
+
+    final QueryContext emptyContext = QueryContext.empty();
+    assertFalse(emptyContext.containsKey(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertNull(emptyContext.get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertEquals(Optional.empty(), emptyContext.getOptional(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertEquals(20, emptyContext.getOrDefault(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 20));
+    assertThrows(ISE.class, () -> emptyContext.getOrDefault(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertTrue(emptyContext.get(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
+    assertEquals(Optional.of(true), emptyContext.getOptional(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
+    assertFalse(emptyContext.getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false));
+    assertTrue(emptyContext.getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
+  }
+
+  @Test
+  public void testGetParameterDistinguishesAbsentFromExplicitNull()
+  {
+    final QueryContextParameter<Integer> nullableWithDefault = QueryContextParameter
+        .builder("nullable", Integer.class, value -> (Integer) value)
+        .defaultValue(10)
+        .build();
+    final QueryContextParameter<Integer> nonNullable = QueryContextParameter
+        .builder("nonNullable", Integer.class, value -> (Integer) value)
+        .nullable(false)
+        .build();
+    final Map<String, Object> values = new HashMap<>();
+    values.put(nullableWithDefault.getName(), null);
+    values.put(nonNullable.getName(), null);
+    final QueryContext context = QueryContext.of(values);
+
+    assertNull(context.get(nullableWithDefault));
+    assertEquals(10, context.getOrDefault(nullableWithDefault));
+    assertEquals(20, context.getOrDefault(nullableWithDefault, 20));
+    assertThrows(IAE.class, () -> context.get(nonNullable));
+    assertThrows(IAE.class, () -> context.getOrDefault(nonNullable, 20));
+    assertThrows(IAE.class, () -> context.getOptional(nonNullable));
+  }
+
+  @Test
+  public void testUseResultLevelCacheExplicitNullUsesDefault()
+  {
+    final Map<String, Object> values = new HashMap<>();
+    values.put(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName(), null);
+    final QueryContext context = QueryContext.of(values);
+
+    assertTrue(context.isUseResultLevelCache());
+    assertFalse(context.isUseResultLevelCache(false));
+    assertTrue(context.isUseResultLevelCache(true));
   }
 
   @Test
@@ -414,6 +483,31 @@ public class QueryContextTest
     Map<String, Object> context = ImmutableMap.of("foo", "bar");
     Query<?> legacy = new LegacyContextQuery(context);
     assertEquals(context, legacy.getContext());
+  }
+
+  @Test
+  public void testWithOverriddenContextParameter()
+  {
+    final Query<?> query = new LegacyContextQuery(ImmutableMap.of());
+
+    final Query<?> overriddenQuery = query.withOverriddenContext(
+        QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
+        10
+    );
+
+    assertEquals(10, overriddenQuery.context().get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+
+    assertThrows(
+        IAE.class,
+        () -> query.withOverriddenContext(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+    );
+
+    final Query<?> nullOverriddenQuery = query.withOverriddenContext(
+        QueryContextParameters.USE_RESULT_LEVEL_CACHE,
+        null
+    );
+    assertTrue(nullOverriddenQuery.getContext().containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
+    assertNull(nullOverriddenQuery.getContext().get(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
   }
 
   @Test

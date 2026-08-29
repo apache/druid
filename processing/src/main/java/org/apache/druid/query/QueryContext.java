@@ -25,10 +25,13 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryContexts.Vectorize;
+import org.apache.druid.query.context.QueryContextParameter;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 
@@ -38,6 +41,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -106,6 +110,11 @@ public class QueryContext
     return context.containsKey(key);
   }
 
+  public boolean containsKey(final QueryContextParameter<?> parameter)
+  {
+    return containsKey(parameter.getName());
+  }
+
   /**
    * Return a value as a generic {@code Object}, returning {@code null} if the
    * context value is not set.
@@ -114,6 +123,52 @@ public class QueryContext
   public Object get(String key)
   {
     return context.get(key);
+  }
+
+  /**
+   * Returns a parsed parameter value, its declared default, or {@code null} when neither is present.
+   */
+  @Nullable
+  public <T> T get(final QueryContextParameter<T> parameter)
+  {
+    if (!containsKey(parameter)) {
+      return parameter.getDefaultValue().orElse(null);
+    }
+    return parameter.parse(get(parameter.getName()));
+  }
+
+  /**
+   * Returns a parsed parameter value or its declared default as an {@link Optional}.
+   */
+  public <T> Optional<T> getOptional(final QueryContextParameter<T> parameter)
+  {
+    return Optional.ofNullable(get(parameter));
+  }
+
+  /**
+   * Returns a parsed parameter value or its declared default, including when the parsed value is {@code null}.
+   *
+   * @throws ISE if the parameter has no declared default
+   */
+  public <T> T getOrDefault(final QueryContextParameter<T> parameter)
+  {
+    return getOrDefault(
+        parameter,
+        parameter.getDefaultValue().orElseThrow(
+            () -> new ISE("Query context parameter [%s] has no declared default", parameter.getName())
+        )
+    );
+  }
+
+  /**
+   * Returns a parsed parameter value or the supplied default, including when the parsed value is {@code null}.
+   */
+  public <T> T getOrDefault(final QueryContextParameter<T> parameter, final T defaultValue)
+  {
+    if (!containsKey(parameter)) {
+      return defaultValue;
+    }
+    return Optional.ofNullable(parameter.parse(get(parameter.getName()))).orElse(defaultValue);
   }
 
   /**
@@ -299,12 +354,12 @@ public class QueryContext
 
   public boolean isUseResultLevelCache()
   {
-    return isUseResultLevelCache(QueryContexts.DEFAULT_USE_RESULTLEVEL_CACHE);
+    return getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE);
   }
 
   public boolean isUseResultLevelCache(boolean defaultValue)
   {
-    return getBoolean(QueryContexts.USE_RESULT_LEVEL_CACHE_KEY, defaultValue);
+    return getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE, defaultValue);
   }
 
   public boolean isFinalize(boolean defaultValue)

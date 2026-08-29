@@ -25,6 +25,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.http.ClientSqlParameter;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
@@ -272,6 +273,7 @@ public class SqlQueryPlus
     public SqlQueryPlus build()
     {
       final StatementAndSetContext statementAndSetContext = DruidSqlParser.parse(sql, true);
+      QueryContextParameters.validate(statementAndSetContext.getSetContext());
       final Map<String, Object> userProvidedContext = statementAndSetContext.getSetContext().isEmpty()
                                                       ? queryContext
                                                       : QueryContexts.override(

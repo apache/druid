@@ -60,6 +60,7 @@ import org.apache.druid.query.CloneQueryMode;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryContexts.RealtimeSegmentsMode;
 import org.apache.druid.query.QueryMetrics;
@@ -297,9 +298,9 @@ public class CachingClusteredClient implements QuerySegmentWalker
       );
     }
 
-    private ImmutableMap<String, Object> makeDownstreamQueryContext()
+    private Map<String, Object> makeDownstreamQueryContext()
     {
-      final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
+      final QueryContextBuilder contextBuilder = new QueryContextBuilder();
 
       final QueryContext queryContext = query.context();
       final int priority = queryContext.getPriority();

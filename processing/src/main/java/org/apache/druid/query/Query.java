@@ -28,6 +28,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -51,6 +52,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -185,6 +187,19 @@ public interface Query<T>
   Ordering<T> getResultOrdering();
 
   Query<T> withOverriddenContext(Map<String, Object> contextOverride);
+
+  /**
+   * Returns a new query with the given typed context parameter overridden.
+   */
+  default <V> Query<T> withOverriddenContext(
+      final QueryContextParameter<V> parameter,
+      final V value
+  )
+  {
+    return withOverriddenContext(
+        Collections.singletonMap(parameter.getName(), parameter.validate(value))
+    );
+  }
 
   /**
    * Returns a new query, identical to this one, but with a different associated {@link QuerySegmentSpec}.

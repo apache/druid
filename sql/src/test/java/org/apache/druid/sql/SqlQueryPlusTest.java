@@ -21,6 +21,7 @@ package org.apache.druid.sql;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
@@ -30,6 +31,27 @@ import java.util.Map;
 
 public class SqlQueryPlusTest
 {
+  @Test
+  public void testSetParametersAreFoldedIntoContext()
+  {
+    final SqlQueryPlus query = SqlQueryPlus.builder("SET lane = 'fast'; SELECT 1")
+                                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                                           .build();
+
+    Assertions.assertEquals("fast", query.context().get("lane"));
+  }
+
+  @Test
+  public void testSetParameterConstraintIsValidated()
+  {
+    Assertions.assertThrows(
+        IAE.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 0; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+  }
+
   @Test
   public void testSyntaxError()
   {
