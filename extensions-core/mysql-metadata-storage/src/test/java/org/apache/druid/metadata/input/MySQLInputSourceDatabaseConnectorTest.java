@@ -33,6 +33,8 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -228,6 +230,26 @@ public class MySQLInputSourceDatabaseConnectorTest
     );
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"useSSL=true", "sslMode=verify-full"})
+  public void testSuccessMariaDbSslPropertyWithDefaultAllowlist(final String sslProperty)
+  {
+    final MetadataStorageConnectorConfig connectorConfig = new MetadataStorageConnectorConfig()
+    {
+      @Override
+      public String getConnectURI()
+      {
+        return "jdbc:mariadb://localhost:3306/test?" + sslProperty;
+      }
+    };
+
+    new MySQLInputSourceDatabaseConnector(
+        connectorConfig,
+        MySQLConnectorDriverConfig.MARIA_DB_DRIVER,
+        new JdbcAccessSecurityConfig(),
+        mySQLConnectorDriverConfig
+    );
+  }
 
   @Test
   public void testFailOnlyInvalidProperty()

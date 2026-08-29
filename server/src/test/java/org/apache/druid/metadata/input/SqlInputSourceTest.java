@@ -264,7 +264,7 @@ public class SqlInputSourceTest
         )
     );
     Assertions.assertEquals(
-        "The property [user] is not in the allowed list [useSSL, requireSSL, ssl, sslmode]",
+        "The property [user] is not in the allowed list [useSSL, requireSSL, sslMode, ssl, sslmode]",
         t.getMessage()
     );
   }
