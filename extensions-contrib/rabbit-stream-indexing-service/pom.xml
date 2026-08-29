@@ -127,6 +127,10 @@
           <groupId>org.lz4</groupId>
           <artifactId>lz4-java</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>com.github.luben</groupId>
+          <artifactId>zstd-jni</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <dependency>
