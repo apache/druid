@@ -2359,9 +2359,17 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.11
+version: 3.0.13
 libraries:
   - org.asynchttpclient: async-http-client
+
+---
+
+name: Public Suffix List bundled by AsyncHttpClient
+license_category: binary
+module: java-core
+license_name: Mozilla Public License Version 2.0
+license_file_path: licenses/bin/public-suffix-list.MPL2
 
 ---
 
