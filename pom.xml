@@ -1615,7 +1615,7 @@
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-jackson</artifactId>
-                        <version>1.28.4</version>
+                        <version>1.29.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
