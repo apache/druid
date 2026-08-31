@@ -38,6 +38,7 @@ import java.util.Set;
 public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
 {
   private static final long SIZE_1TB = 1_000_000;
+  private static final long SEGMENT_SIZE = 500_000_000;
   private static final String ALIAS = "hot";
 
   private DruidServer historicalT1;
@@ -102,6 +103,46 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
         Map.of(Dimension.TIER.reportedName(), Tier.T2, Dimension.TIER_ALIAS.reportedName(), ALIAS),
         1L
     );
+  }
+
+  /**
+   * {@code tier/used/capacity} reports what the tier's historicals have announced as loaded, so it stays at zero
+   * until segments are actually on disk, unlike {@code tier/required/capacity} which reports what the rules demand.
+   */
+  @Test
+  public void testUsedCapacityReportsAnnouncedBytesPerTier()
+  {
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(Segments.WIKI_10X1D)
+                             .withServers(historicalT1, historicalT2)
+                             .withRules(datasource, Load.on(ALIAS, 1).forever())
+                             .withDynamicConfig(
+                                 CoordinatorDynamicConfig.builder()
+                                                         .withHistoricalTierAliases(
+                                                             Map.of(ALIAS, Set.of(Tier.T1, Tier.T2))
+                                                         )
+                                                         .withSmartSegmentLoading(true)
+                                                         .build()
+                             )
+                             .withImmediateSegmentLoading(true)
+                             .build();
+
+    startSimulation(sim);
+
+    runCoordinatorCycle();
+    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T1), 0L);
+    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T2), 0L);
+
+    runCoordinatorCycle();
+    final long loadedBytes = 10 * SEGMENT_SIZE;
+    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T1), loadedBytes);
+    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T2), loadedBytes);
+  }
+
+  private static Map<String, Object> aliasedTier(String tier)
+  {
+    return Map.of(Dimension.TIER.reportedName(), tier, Dimension.TIER_ALIAS.reportedName(), ALIAS);
   }
 
   @Test
