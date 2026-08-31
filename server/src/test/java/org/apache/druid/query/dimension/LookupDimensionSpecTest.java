@@ -264,18 +264,18 @@ public class LookupDimensionSpecTest extends InitializedNullHandlingTest
     );
     final Closeable retainedLookup = (Closeable) extractionFn.getLookup();
 
-    Assert.assertTrue(extractionFn.getLookup() instanceof RetainedLookupExtractor);
-    Assert.assertEquals("bar-v1", extractionFn.apply("foo"));
+    Assertions.assertTrue(extractionFn.getLookup() instanceof RetainedLookupExtractor);
+    Assertions.assertEquals("bar-v1", extractionFn.apply("foo"));
 
     currentMap.set(ImmutableMap.of("foo", "bar-v2"));
 
-    Assert.assertEquals("bar-v1", extractionFn.apply("foo"));
-    Assert.assertEquals(1, retainedAcquisitions.get());
-    Assert.assertEquals(0, retainedCloses.get());
+    Assertions.assertEquals("bar-v1", extractionFn.apply("foo"));
+    Assertions.assertEquals(1, retainedAcquisitions.get());
+    Assertions.assertEquals(0, retainedCloses.get());
 
     retainedLookup.close();
 
-    Assert.assertEquals(1, retainedCloses.get());
+    Assertions.assertEquals(1, retainedCloses.get());
   }
 
   private static @Nullable LookupExtractionFn getLookupExtractionFn(
@@ -332,8 +332,8 @@ public class LookupDimensionSpecTest extends InitializedNullHandlingTest
 
     final LookupExtractionFn extractionFn = (LookupExtractionFn) dimensionSpec.getExtractionFn();
 
-    Assert.assertFalse(extractionFn.getLookup() instanceof RetainedLookupExtractor);
-    Assert.assertEquals("bar", extractionFn.apply("foo"));
+    Assertions.assertFalse(extractionFn.getLookup() instanceof RetainedLookupExtractor);
+    Assertions.assertEquals("bar", extractionFn.apply("foo"));
   }
 
   private static LookupExtractorFactoryContainerProvider makeLookupProvider(final LookupExtractorFactory factory)

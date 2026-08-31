@@ -19,8 +19,8 @@
 
 package org.apache.druid.segment;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -55,9 +55,9 @@ public class SegmentMapFunctionTest
     };
 
     final SegmentMapFunction mapped = resourceHolding.thenMap(segment -> segment).thenMap(segment -> segment);
-    Assert.assertEquals(0, closeCount.get());
+    Assertions.assertEquals(0, closeCount.get());
 
     mapped.close();
-    Assert.assertEquals(1, closeCount.get());
+    Assertions.assertEquals(1, closeCount.get());
   }
 }

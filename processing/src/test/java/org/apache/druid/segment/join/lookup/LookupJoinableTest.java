@@ -329,7 +329,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     final AtomicInteger closeCount = new AtomicInteger(0);
     final LookupJoinable joinable = LookupJoinable.wrap(extractor, closeCount::incrementAndGet);
     joinable.close();
-    Assert.assertEquals(1, closeCount.get());
+    Assertions.assertEquals(1, closeCount.get());
   }
 
   @Test
@@ -339,12 +339,12 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     final LookupJoinable joinable = LookupJoinable.wrap(extractor, closeCount::incrementAndGet);
 
     final Optional<Closeable> reference = joinable.acquireReference();
-    Assert.assertTrue(reference.isPresent());
+    Assertions.assertTrue(reference.isPresent());
     reference.get().close();
-    Assert.assertEquals(0, closeCount.get());
+    Assertions.assertEquals(0, closeCount.get());
 
     joinable.close();
-    Assert.assertEquals(1, closeCount.get());
+    Assertions.assertEquals(1, closeCount.get());
   }
 
   @Test

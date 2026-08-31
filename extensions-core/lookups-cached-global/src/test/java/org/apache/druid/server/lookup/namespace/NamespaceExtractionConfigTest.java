@@ -19,8 +19,8 @@
 
 package org.apache.druid.server.lookup.namespace;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class NamespaceExtractionConfigTest
 {
@@ -29,8 +29,8 @@ public class NamespaceExtractionConfigTest
   {
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
 
-    Assert.assertEquals(1, config.getMaxRetiredCacheEntries());
-    Assert.assertEquals(900_000L, config.getRetiredCacheEntryTimeoutMillis());
+    Assertions.assertEquals(1, config.getMaxRetiredCacheEntries());
+    Assertions.assertEquals(900_000L, config.getRetiredCacheEntryTimeoutMillis());
   }
 
   @Test
@@ -38,7 +38,7 @@ public class NamespaceExtractionConfigTest
   {
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
 
-    Assert.assertThrows(IllegalArgumentException.class, () -> config.setMaxRetiredCacheEntries(0));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> config.setMaxRetiredCacheEntries(0));
   }
 
   @Test
@@ -46,6 +46,6 @@ public class NamespaceExtractionConfigTest
   {
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
 
-    Assert.assertThrows(IllegalArgumentException.class, () -> config.setRetiredCacheEntryTimeoutMillis(-1));
+    Assertions.assertThrows(IllegalArgumentException.class, () -> config.setRetiredCacheEntryTimeoutMillis(-1));
   }
 }

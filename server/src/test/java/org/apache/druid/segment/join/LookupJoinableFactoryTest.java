@@ -154,14 +154,14 @@ public class LookupJoinableFactoryTest
     );
 
     final Joinable joinable = retainingFactory.build(lookupDataSource, makeCondition("x == \"j.k\"")).get();
-    Assert.assertThat(joinable, CoreMatchers.instanceOf(LookupJoinable.class));
+    MatcherAssert.assertThat(joinable, CoreMatchers.instanceOf(LookupJoinable.class));
 
     // retained snapshot must stay pinned until the joinable is closed at the end of the query
-    Assert.assertEquals("Mexico", joinable.getCorrelatedColumnValues("k", "MX", "v", 1, true).get().iterator().next());
-    Assert.assertEquals(0, releaseCount.get());
+    Assertions.assertEquals("Mexico", joinable.getCorrelatedColumnValues("k", "MX", "v", 1, true).get().iterator().next());
+    Assertions.assertEquals(0, releaseCount.get());
 
     ((LookupJoinable) joinable).close();
-    Assert.assertEquals(1, releaseCount.get());
+    Assertions.assertEquals(1, releaseCount.get());
   }
 
   private LookupExtractorFactoryContainerProvider makeProvider(final LookupExtractorFactory lookupExtractorFactory)
