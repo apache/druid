@@ -41,7 +41,7 @@ public class SigarUtil
     try {
       String libName = loader.getLibraryName();
 
-      final URL url = SysMonitor.class.getResource("/" + libName);
+      final URL url = SigarUtil.class.getResource("/" + libName);
       if (url != null) {
         final File tmpDir = FileUtils.createTempDir("sigar");
         // As per java.io.DeleteOnExitHook.runHooks() deletion order is reversed from registration order

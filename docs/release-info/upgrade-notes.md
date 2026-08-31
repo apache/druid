@@ -26,6 +26,14 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
+## 39.0.0
+
+### Incompatible changes
+
+#### Removed deprecated `SysMonitor`
+
+The deprecated `org.apache.druid.java.util.metrics.SysMonitor` monitor and its legacy implementation have been removed. Update configurations that reference `SysMonitor` to use `org.apache.druid.java.util.metrics.OshiSysMonitor` instead.
+
 ## 37.0.0
 
 ### Upgrade notes
