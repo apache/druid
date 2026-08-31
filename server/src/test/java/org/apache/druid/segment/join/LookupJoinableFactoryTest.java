@@ -154,7 +154,7 @@ public class LookupJoinableFactoryTest
     );
 
     final Joinable joinable = retainingFactory.build(lookupDataSource, makeCondition("x == \"j.k\"")).get();
-    MatcherAssert.assertThat(joinable, CoreMatchers.instanceOf(LookupJoinable.class));
+    Assertions.assertInstanceOf(LookupJoinable.class, joinable);
 
     // retained snapshot must stay pinned until the joinable is closed at the end of the query
     Assertions.assertEquals("Mexico", joinable.getCorrelatedColumnValues("k", "MX", "v", 1, true).get().iterator().next());

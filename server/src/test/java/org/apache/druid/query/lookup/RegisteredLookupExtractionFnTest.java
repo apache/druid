@@ -233,7 +233,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
   {
     Throwable exception = Assertions.assertThrows(Exception.class, () -> {
       final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
-      EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
+      EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).times(2);
       EasyMock.replay(manager);
       try {
         new RegisteredLookupExtractionFn(

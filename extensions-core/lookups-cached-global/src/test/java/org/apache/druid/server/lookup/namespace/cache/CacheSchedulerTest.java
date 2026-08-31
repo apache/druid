@@ -69,6 +69,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 
 /**
  *
@@ -521,10 +523,14 @@ public class CacheSchedulerTest
     }
   }
 
-  @Test
+  @MethodSource("data")
+  @ParameterizedTest
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
-  public void testFailedRetiredCacheDisposeIsRetriedOnNextPrune() throws Exception
+  public void testFailedRetiredCacheDisposeIsRetriedOnNextPrune(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
     config.setMaxRetiredCacheEntries(1);
     config.setRetiredCacheEntryTimeoutMillis(0L);
@@ -546,10 +552,14 @@ public class CacheSchedulerTest
     }
   }
 
-  @Test
+  @MethodSource("data")
+  @ParameterizedTest
   @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
-  public void testEntryCloseRetiresActiveCacheUntilReferenceCloses() throws Exception
+  public void testEntryCloseRetiresActiveCacheUntilReferenceCloses(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
     final CountingDisposeCacheManager countingCacheManager = new CountingDisposeCacheManager(
         lifecycle,
