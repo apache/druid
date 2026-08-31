@@ -80,17 +80,21 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
 
     final long expectedCapacity = SIZE_1TB << 20;
 
-    // tier/total/capacity is emitted per physical tier AND tagged with the alias
+    // tier/storage/assignableCapacity is emitted per physical tier AND tagged with the alias
     verifyValue(
-        Stats.Tier.TOTAL_CAPACITY.getMetricName(),
-        Map.of(Dimension.TIER.reportedName(), Tier.T1, Dimension.TIER_ALIAS.reportedName(), ALIAS),
+        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
+        aliasedTier(Tier.T1),
         expectedCapacity
     );
     verifyValue(
-        Stats.Tier.TOTAL_CAPACITY.getMetricName(),
-        Map.of(Dimension.TIER.reportedName(), Tier.T2, Dimension.TIER_ALIAS.reportedName(), ALIAS),
+        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
+        aliasedTier(Tier.T2),
         expectedCapacity
     );
+
+    // The deprecated tier/total/capacity carries the same value while it is still emitted
+    verifyValue(Stats.Tier.TOTAL_CAPACITY.getMetricName(), aliasedTier(Tier.T1), expectedCapacity);
+    verifyValue(Stats.Tier.TOTAL_CAPACITY.getMetricName(), aliasedTier(Tier.T2), expectedCapacity);
 
     // tier/historical/count carries the alias too, so it can be summed across the pair
     verifyValue(
@@ -168,12 +172,12 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
 
     // Without an alias configured, capacity is reported against the physical tier only
     verifyValue(
-        Stats.Tier.TOTAL_CAPACITY.getMetricName(),
+        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
         filterByTier(Tier.T1),
         expectedCapacity
     );
     verifyValue(
-        Stats.Tier.TOTAL_CAPACITY.getMetricName(),
+        Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
         filterByTier(Tier.T2),
         expectedCapacity
     );

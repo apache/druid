@@ -300,10 +300,10 @@ class QueryVirtualStorageTest extends EmbeddedClusterTestBase
         CACHE_SIZE,
         coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.STORAGE_CAPACITY.getMetricName())
     );
-    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.TOTAL_CAPACITY.getMetricName()));
+    coordinatorEmitter.waitForEvent(event -> event.hasMetricName(Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName()));
     Assertions.assertEquals(
         MAX_SIZE,
-        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.TOTAL_CAPACITY.getMetricName())
+        coordinatorEmitter.getLatestMetricEventValue(Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName())
     );
   }
 

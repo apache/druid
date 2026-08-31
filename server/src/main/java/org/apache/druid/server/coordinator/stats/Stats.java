@@ -108,6 +108,11 @@ public class Stats
   {
     public static final CoordinatorStat REQUIRED_CAPACITY
         = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
+    public static final CoordinatorStat ASSIGNABLE_CAPACITY
+        = CoordinatorStat.toDebugAndEmit("assignableCap", "tier/storage/assignableCapacity");
+    // Superseded by ASSIGNABLE_CAPACITY, which carries the same value under a name that does not imply disk size.
+    // Still emitted so that existing dashboards keep working; remove once the deprecation period is over.
+    @Deprecated
     public static final CoordinatorStat TOTAL_CAPACITY
         = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
     public static final CoordinatorStat STORAGE_CAPACITY
