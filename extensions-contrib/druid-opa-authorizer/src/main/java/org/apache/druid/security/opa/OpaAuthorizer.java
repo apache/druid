@@ -173,6 +173,11 @@ public class OpaAuthorizer implements Authorizer
       }
 
     }
+    catch (InterruptedException e) {
+      // Preserve the interrupt flag so that request cancellation and shutdown are not swallowed.
+      Thread.currentThread().interrupt();
+      return Access.deny("An error occurred: " + e);
+    }
     catch (Exception e) {
       return Access.deny("An error occurred: " + e);
     }

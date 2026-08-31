@@ -187,4 +187,3 @@ druid.auth.authorizer.opaAuthorizer.opaUri=http://localhost:8181/v1/data/app/dru
 ### Verify
 
 Log in to the Druid Console as `alice` with password `alice`. OPA will receive the identity `alice` and authorize based on the roles defined in your OPA policy.
-

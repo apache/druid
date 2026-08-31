@@ -128,6 +128,23 @@ public class OpaAuthorizerTest
   }
 
   @Test
+  public void testAuthorizeDeniedOnNonBooleanResult() throws Exception
+  {
+    @SuppressWarnings("unchecked")
+    HttpResponse<String> response = Mockito.mock(HttpResponse.class);
+    Mockito.when(response.statusCode()).thenReturn(200);
+    Mockito.when(response.body()).thenReturn("{\"result\": \"true\"}");
+    Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+           .thenReturn(response);
+
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+
+    Assertions.assertFalse(access.isAllowed());
+  }
+
+  @Test
   public void testAuthorizeError() throws Exception
   {
     Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
@@ -221,6 +238,20 @@ public class OpaAuthorizerTest
 
     Assertions.assertFalse(access.isAllowed());
     Assertions.assertTrue(access.getMessage().contains("HttpTimeoutException"));
+  }
+
+  @Test
+  public void testAuthorizeInterruptedRestoresInterruptStatus() throws Exception
+  {
+    Mockito.when(httpClient.send(ArgumentMatchers.any(HttpRequest.class), ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
+           .thenThrow(new InterruptedException("interrupted"));
+
+    final AuthenticationResult authResult = new AuthenticationResult("user", "authorizer", "authenticator", null);
+    final Resource resource = new Resource("dataSource", ResourceType.DATASOURCE);
+    final Access access = opaAuthorizer.authorize(authResult, resource, Action.READ);
+
+    Assertions.assertFalse(access.isAllowed());
+    Assertions.assertTrue(Thread.interrupted());
   }
 
   @Test

@@ -21,15 +21,19 @@ package org.apache.druid.security.opa.opatypes;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.JsonNode;
 
 public class OpaResponse
 {
   private final boolean result;
 
   @JsonCreator
-  public OpaResponse(@JsonProperty("result") boolean result)
+  public OpaResponse(@JsonProperty("result") JsonNode result)
   {
-    this.result = result;
+    if (result == null || !result.isBoolean()) {
+      throw new IllegalArgumentException("OPA response field [result] must be a JSON boolean");
+    }
+    this.result = result.booleanValue();
   }
 
   @JsonProperty

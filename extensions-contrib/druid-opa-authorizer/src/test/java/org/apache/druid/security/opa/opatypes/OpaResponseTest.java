@@ -19,10 +19,13 @@
 
 package org.apache.druid.security.opa.opatypes;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 public class OpaResponseTest
 {
@@ -51,5 +54,15 @@ public class OpaResponseTest
     final String json = "{\"result\": true, \"decision_id\": \"12345\", \"unknown\": { \"foo\": \"bar\" }}";
     final OpaResponse response = mapper.readValue(json, OpaResponse.class);
     Assertions.assertTrue(response.isResult());
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"{\"result\": \"true\"}", "{\"result\": 1}", "{\"result\": null}", "{}", "{\"result\": []}"})
+  public void testDeserializeRejectsNonBooleanResult(String json)
+  {
+    Assertions.assertThrows(
+        JsonProcessingException.class,
+        () -> mapper.readValue(json, OpaResponse.class)
+    );
   }
 }
