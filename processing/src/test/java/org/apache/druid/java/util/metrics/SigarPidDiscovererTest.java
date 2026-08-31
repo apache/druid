@@ -19,20 +19,18 @@
 
 package org.apache.druid.java.util.metrics;
 
-import org.junit.jupiter.api.Assumptions;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 public class SigarPidDiscovererTest
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
-
   @Test
-  public void simpleTest()
+  public void getPid()
   {
-    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
-
-    // Just make sure we don't crash
-    SigarPidDiscoverer.instance().getPid();
+    MatcherAssert.assertThat(
+        SigarPidDiscoverer.instance().getPid(),
+        Matchers.greaterThan(0L)
+    );
   }
 }

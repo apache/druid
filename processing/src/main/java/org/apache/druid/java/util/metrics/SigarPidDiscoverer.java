@@ -39,6 +39,6 @@ public class SigarPidDiscoverer implements PidDiscoverer
   @Override
   public long getPid()
   {
-    return SigarUtil.getCurrentProcessId();
+    return JvmPidDiscoverer.instance().getPid();
   }
 }
