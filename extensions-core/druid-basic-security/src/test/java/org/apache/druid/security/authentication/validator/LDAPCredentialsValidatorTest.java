@@ -19,6 +19,7 @@
 
 package org.apache.druid.security.authentication.validator;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.security.basic.BasicAuthLDAPConfig;
@@ -143,6 +144,62 @@ public class LDAPCredentialsValidatorTest
     final Attribute memberOf = sr.getAttributes().get("memberOf");
     Assertions.assertNotNull(memberOf, "memberOf should be populated by reverse group search");
     Assertions.assertEquals(2, memberOf.size());
+  }
+
+  @Test
+  public void testGroupSearchWithoutUserDnPlaceholderIsRejected()
+  {
+    // Filters without an unescaped %s, including escaped sequences that String.format emits literally
+    final List<String> invalidFilters = Arrays.asList(
+        "(uniqueMember=*)",
+        "(uniqueMember=%%s*)",
+        "(uniqueMember=%%%%s)",
+        "(uniqueMember=%d)"
+    );
+    for (String groupSearch : invalidFilters) {
+      final DruidException e = Assertions.assertThrows(
+          DruidException.class,
+          () -> configWithGroupSearch(groupSearch),
+          groupSearch
+      );
+      Assertions.assertEquals(DruidException.Category.INVALID_INPUT, e.getCategory());
+      Assertions.assertEquals(
+          StringUtils.format("groupSearch filter[%s] must contain the placeholder[%%s] for the user DN.", groupSearch),
+          e.getMessage()
+      );
+    }
+  }
+
+  @Test
+  public void testGroupSearchWithUserDnPlaceholderIsAccepted()
+  {
+    final List<String> validFilters = Arrays.asList(
+        "(uniqueMember=%s)",
+        "(member=%s)",
+        "(&(uniqueMember=%s)(cn=%%s))",
+        "(uniqueMember=%%%s)"
+    );
+    for (String groupSearch : validFilters) {
+      Assertions.assertEquals(groupSearch, configWithGroupSearch(groupSearch).getGroupSearch());
+    }
+  }
+
+  private static BasicAuthLDAPConfig configWithGroupSearch(String groupSearch)
+  {
+    return new BasicAuthLDAPConfig(
+        "ldaps://my-ldap-url",
+        "bindUser",
+        new DefaultPasswordProvider("bindPassword"),
+        "",
+        "",
+        "",
+        BasicAuthUtils.DEFAULT_KEY_ITERATIONS,
+        BasicAuthUtils.DEFAULT_CREDENTIAL_VERIFY_DURATION_SECONDS,
+        BasicAuthUtils.DEFAULT_CREDENTIAL_MAX_DURATION_SECONDS,
+        BasicAuthUtils.DEFAULT_CREDENTIAL_CACHE_SIZE,
+        "ou=Groups,dc=example,dc=org",
+        groupSearch
+    );
   }
 
   public static class MockGroupSearchContextFactory implements InitialContextFactory

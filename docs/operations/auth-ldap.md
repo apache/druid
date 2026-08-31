@@ -309,7 +309,7 @@ druid.auth.authenticator.ldap.credentialsValidator.groupSearch=(uniqueMember=%s)
 
 Where:
 - `groupBaseDn`: The base DN under which your LDAP groups are stored.
-- `groupSearch`: The LDAP filter to find groups containing a user. The `%s` placeholder is replaced with the user's full DN (for example, `uid=myuser,ou=People,dc=example,dc=com`). Use `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`.
+- `groupSearch`: The LDAP filter to find groups containing a user. The filter must contain an unescaped `%s` placeholder, which is replaced with the user's full DN (for example, `uid=myuser,ou=People,dc=example,dc=com`). Use `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`. Druid fails to start if the filter does not contain `%s`, since such a filter would match every group under `groupBaseDn` and grant all mapped group roles to every user.
 
 When these properties are set and the user search does not return a `memberOf` attribute, Druid automatically performs the reverse group lookup and populates `memberOf` in the authentication result. The authorizer processes these groups as usual, requiring no additional configuration.
 

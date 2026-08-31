@@ -126,13 +126,13 @@ description: druidGroup users
 uniqueMember: uid=druid,ou=Users,dc=example,dc=org
 
 dn: uid=stateOnlyNoLdapGroup,ou=Users,dc=example,dc=org
-uid: druid
-cn: druid
-sn: druid
+uid: stateOnlyNoLdapGroup
+cn: stateOnlyNoLdapGroup
+sn: stateOnlyNoLdapGroup
 objectClass: top
 objectClass: posixAccount
 objectClass: inetOrgPerson
-homeDirectory: /home/druid
+homeDirectory: /home/stateOnlyNoLdapGroup
 uidNumber: 7
 gidNumber: 7
 userPassword: helloworld

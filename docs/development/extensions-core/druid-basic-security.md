@@ -269,7 +269,7 @@ The base DN for searching LDAP groups. When set together with `groupSearch`, Dru
 
 **`druid.auth.authenticator.MyBasicLDAPAuthenticator.credentialsValidator.groupSearch`**
 
-The LDAP search filter for finding groups that contain a user. The `%s` placeholder is replaced with the user's full DN. For example, `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`.<br />
+The LDAP search filter for finding groups that contain a user. The filter must contain an unescaped `%s` placeholder, which is replaced with the user's full DN. For example, `(uniqueMember=%s)` for `groupOfUniqueNames` or `(member=%s)` for `groupOfNames`. A filter without the placeholder is rejected at startup because it would match all groups under `groupBaseDn` for every user.<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Required**: No<br />
 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;**Default**: null
 
