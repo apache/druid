@@ -186,7 +186,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
 
       long totalCapacity = 0;
       long storageCapacity = 0;
-      long usedCapacity = 0;
+      long usedStorage = 0;
       long cloneCount = 0;
       for (ServerHolder holder : historicals) {
         if (holder.isUnmanaged()) {
@@ -196,13 +196,13 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
           storageCapacity += holder.getStorageSize();
           // getCurrSize(), not getSizeUsed(): queued loads are counted at full segment size, which would overstate
           // disk usage on a tier serving partial loads for the duration of every load
-          usedCapacity += holder.getServer().getCurrSize();
+          usedStorage += holder.getServer().getCurrSize();
         }
       }
       stats.add(Stats.Tier.CLONE_COUNT, rowKey, cloneCount);
       stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, totalCapacity);
       stats.add(Stats.Tier.STORAGE_CAPACITY, rowKey, storageCapacity);
-      stats.add(Stats.Tier.USED_CAPACITY, rowKey, usedCapacity);
+      stats.add(Stats.Tier.USED_STORAGE, rowKey, usedStorage);
     });
   }
 

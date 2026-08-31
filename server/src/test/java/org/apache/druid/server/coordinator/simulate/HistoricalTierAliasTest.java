@@ -106,11 +106,11 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
   }
 
   /**
-   * {@code tier/used/capacity} reports what the tier's historicals have announced as loaded, so it stays at zero
+   * {@code tier/storage/used} reports what the tier's historicals have announced as loaded, so it stays at zero
    * until segments are actually on disk, unlike {@code tier/required/capacity} which reports what the rules demand.
    */
   @Test
-  public void testUsedCapacityReportsAnnouncedBytesPerTier()
+  public void testUsedStorageReportsAnnouncedBytesPerTier()
   {
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
@@ -131,13 +131,13 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
 
     runCoordinatorCycle();
-    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T1), 0L);
-    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T2), 0L);
+    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T1), 0L);
+    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T2), 0L);
 
     runCoordinatorCycle();
     final long loadedBytes = 10 * SEGMENT_SIZE;
-    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T1), loadedBytes);
-    verifyValue(Stats.Tier.USED_CAPACITY.getMetricName(), aliasedTier(Tier.T2), loadedBytes);
+    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T1), loadedBytes);
+    verifyValue(Stats.Tier.USED_STORAGE.getMetricName(), aliasedTier(Tier.T2), loadedBytes);
   }
 
   private static Map<String, Object> aliasedTier(String tier)
