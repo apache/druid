@@ -20,6 +20,7 @@
 package org.apache.druid.security.basic;
 
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
 
 import javax.annotation.Nullable;
@@ -98,7 +99,7 @@ public class BasicAuthLDAPConfig
     this.groupBaseDn = groupBaseDn;
     this.groupSearch = groupSearch;
 
-    if (groupSearch != null && !groupSearch.replace("%%", "").contains("%s")) {
+    if (groupSearch != null && !StringUtils.replace(groupSearch, "%%", "").contains("%s")) {
       throw InvalidInput.exception(
           "groupSearch filter[%s] must contain the placeholder[%%s] for the user DN.",
           groupSearch
