@@ -212,6 +212,7 @@ OCF
 OIDC
 OLAP
 OOMs
+OPA
 OpenJDK
 OpenLDAP
 openlineage
@@ -2663,7 +2664,6 @@ NIO
 checksum
 
 - ../docs/development/extensions-contrib/druid-opa-authorizer.md
-OPA
 Rego
 alice
 christy
