@@ -36,6 +36,7 @@ import org.mapdb.HTreeMap;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -170,7 +171,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   {
     super(lifecycle, serviceEmitter, config);
     try {
-      tmpFile = File.createTempFile("druidMapDB", getClass().getName());
+      tmpFile = Files.createTempFile("druidMapDB", getClass().getName()).toFile();
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());
     }
     catch (IOException e) {

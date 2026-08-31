@@ -79,7 +79,7 @@ public class LocalDataSegmentPullerTest
   @Test
   public void simpleGZTest() throws IOException, SegmentLoadingException
   {
-    File zipFile = File.createTempFile("gztest", ".gz");
+    final File zipFile = temporaryFolder.newFile("gztest.gz");
     File unZipFile = new File(
         tmpDir,
         Files.getNameWithoutExtension(

@@ -70,40 +70,42 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
   @Override
   public DataSegment pushToPath(File indexFilesDir, DataSegment segment, String storageDirSuffix) throws IOException
   {
-    String key = JOINER.join(
+    final String key = JOINER.join(
         config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
         storageDirSuffix
-        );
+    );
     // Create index
-    final File compressedIndexFile = File.createTempFile("druid", "index.zip");
-    long indexSize = CompressionUtils.zip(indexFilesDir, compressedIndexFile);
-    log.info("Wrote compressed file [%s] to [%s]", compressedIndexFile.getAbsolutePath(), key);
+    final File compressedIndexFile = Files.createTempFile("druid", "index.zip").toFile();
+    try {
+      final long indexSize = CompressionUtils.zip(indexFilesDir, compressedIndexFile);
+      log.info("Wrote compressed file [%s] to [%s]", compressedIndexFile.getAbsolutePath(), key);
 
-    int version = SegmentUtils.getVersionFromDir(indexFilesDir);
+      final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
 
-    try (final InputStream fileStream = Files.newInputStream(compressedIndexFile.toPath())) {
-      long start = System.currentTimeMillis();
-      ChunkedStorage.newWriter(indexStorage, key, fileStream)
-                    .withConcurrencyLevel(CONCURRENCY).call();
-      byte[] json = jsonMapper.writeValueAsBytes(segment);
-      MutationBatch mutation = this.keyspace.prepareMutationBatch();
-      mutation.withRow(descriptorStorage, key)
-              .putColumn("lastmodified", System.currentTimeMillis(), null)
-              .putColumn("descriptor", json, null);
-      mutation.execute();
-      log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
+      try (final InputStream fileStream = Files.newInputStream(compressedIndexFile.toPath())) {
+        final long start = System.currentTimeMillis();
+        ChunkedStorage.newWriter(indexStorage, key, fileStream)
+                      .withConcurrencyLevel(CONCURRENCY).call();
+        final byte[] json = jsonMapper.writeValueAsBytes(segment);
+        final MutationBatch mutation = this.keyspace.prepareMutationBatch();
+        mutation.withRow(descriptorStorage, key)
+                .putColumn("lastmodified", System.currentTimeMillis(), null)
+                .putColumn("descriptor", json, null);
+        mutation.execute();
+        log.info("Wrote index to C* in [%s] ms", System.currentTimeMillis() - start);
+      }
+      catch (Exception e) {
+        throw new IOException(e);
+      }
+
+      return segment.withSize(indexSize)
+                    .withLoadSpec(ImmutableMap.of("type", "c*", "key", key))
+                    .withBinaryVersion(version);
     }
-    catch (Exception e) {
-      throw new IOException(e);
+    finally {
+      log.info("Deleting zipped index File[%s]", compressedIndexFile);
+      compressedIndexFile.delete();
     }
-
-    segment = segment.withSize(indexSize)
-                     .withLoadSpec(ImmutableMap.of("type", "c*", "key", key))
-                     .withBinaryVersion(version);
-
-    log.info("Deleting zipped index File[%s]", compressedIndexFile);
-    compressedIndexFile.delete();
-    return segment;
   }
 
   @Override
