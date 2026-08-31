@@ -24,7 +24,7 @@ sidebar_label: "Search"
   -->
 
 :::info
- Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ Apache&circledR; Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
  This document describes a query
  type that is only available in the native language.
 :::
@@ -57,7 +57,7 @@ There are several main parts to a search query:
 
 |property|description|required?|
 |--------|-----------|---------|
-|queryType|This String should always be "search"; this is the first thing Apache Druid looks at to figure out how to interpret the query.|yes|
+|queryType|This String should always be "search"; this is the first thing Apache&circledR; Druid looks at to figure out how to interpret the query.|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.md) for more information.|yes|
 |granularity|Defines the granularity of the query. See [Granularities](../querying/granularities.md).|no (default to `all`)|
 |filter|See [Filters](../querying/filters.md).|no|

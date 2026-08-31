@@ -36,6 +36,7 @@ import org.apache.druid.segment.loading.SegmentRangeReader;
 import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -44,22 +45,35 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
+import java.nio.channels.ClosedByInterruptException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * A {@link SegmentFileMapper} that downloads internal files on demand from deep storage via a
- * {@link SegmentRangeReader}. This enables partial segment downloads where only the files needed for a query are
- * fetched, rather than downloading the entire segment.
+ * A {@link SegmentFileMapper} that fetches internal files from deep storage via a {@link SegmentRangeReader},
+ * enabling partial segment downloads where only the files needed for a query are fetched rather than the entire
+ * segment.
+ * <p>
+ * <b>Downloads are always explicit.</b> Callers decide what to load and when: plan coalesced range reads with
+ * {@link #planFetch}/{@link #planParallelFetch}/{@link #planParallelFetchBundle} and execute them via
+ * {@link #fetchFiles}/{@link FetchRun}/{@link PlannedFetch}, or force whole units resident with
+ * {@link #ensureBundleDownloaded}/{@link #ensureAllDownloaded}. {@link #mapFile} never downloads: it only slices
+ * already-resident files and throws for a file that hasn't been fetched, so a caller that forgot to plan fails
+ * loudly instead of triggering a synchronous deep-storage read from whatever thread touched the column.
  * <p>
  * Locally, this mapper mirrors the original V10 container structure: each container from the segment file is
  * represented as a local sparse file at its original size, and only the byte ranges for downloaded internal files are
@@ -71,15 +85,16 @@ import java.util.concurrent.locks.ReentrantLock;
  * instances. The mmap reflects writes through the shared page cache.
  * <p>
  * State is persisted to disk so that the mapper can be restored after a process restart without re-fetching metadata
- * from deep storage. The raw V10 header bytes are written to a local file, and a compact bitmap file is appended to
- * the end of it to track which internal files have been downloaded (one bit per file, updated after each download). On
- * subsequent calls, the metadata is parsed from the local file instead of range-reading from deep storage.
+ * from deep storage. The local header file holds the raw V10 header bytes followed by a compact bitmap region that
+ * tracks which internal files have been downloaded (one bit per file, updated after each download). Both regions are
+ * written together, so the file's length is fixed for its lifetime at {@code headerSize + ceil(numFiles / 8)} bytes.
+ * On subsequent calls, the metadata is parsed from the local file instead of range-reading from deep storage.
  * <p>
  * External segment files are supported via child {@link PartialSegmentFileMapperV10} instances, each targeting a
  * different file in the segment's storage location.
  * <p>
  * Thread-safe for concurrent access from multiple queries. Per-file locks prevent duplicate downloads of the same
- * internal file.
+ * internal file across concurrently executing runs.
  *
  * @see SegmentFileMapperV10
  * @see SegmentRangeReader
@@ -95,6 +110,30 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   public static final String METADATA_HEADER_SUFFIX = ".header";
 
   /**
+   * Default for the maximum number of unrequested bytes a single {@link #fetchFiles} range read will fetch to bridge
+   * two requested files into one deep-storage request. See {@link #fetchFiles} for the tradeoff.
+   */
+  public static final long DEFAULT_COALESCE_GAP_BYTES = 1024L * 1024;
+
+  /**
+   * Default cap on the size of a single range read in a parallel fetch plan; see {@link #planParallelFetch}. Sized
+   * so each read streams for around a second on a typical single deep-storage connection, keeping per-request
+   * overhead small while letting large fetches spread across concurrent connections.
+   */
+  public static final long DEFAULT_MAX_FETCH_RUN_BYTES = 64L * 1024 * 1024;
+
+  /**
+   * Detect if {@code localCacheDir} holds a partial-download header file for {@code targetFilename}.
+   */
+  public static boolean isPartialSegmentLayout(@Nullable File localCacheDir, String targetFilename)
+  {
+    if (localCacheDir == null || !localCacheDir.isDirectory()) {
+      return false;
+    }
+    return new File(localCacheDir, targetFilename + METADATA_HEADER_SUFFIX).exists();
+  }
+
+  /**
    * Create (or restore) a lazy mapper for the main segment file with attached external file mappers. If persisted state
    * exists locally from a previous session, metadata is read from disk. Otherwise, metadata is fetched from deep
    * storage via range reads and persisted locally.
@@ -105,7 +144,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       File localCacheDir,
       String targetFilename,
       List<String> externals,
-      PartialSegmentDownloadListener downloadListener
+      PartialSegmentDownloadListener downloadListener,
+      long coalesceGapBytes,
+      long maxFetchRunBytes
   ) throws IOException
   {
     final PartialSegmentFileMapperV10 entryPoint = createForFile(
@@ -113,7 +154,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         jsonMapper,
         localCacheDir,
         targetFilename,
-        downloadListener
+        downloadListener,
+        coalesceGapBytes,
+        maxFetchRunBytes
     );
 
     final Map<String, PartialSegmentFileMapperV10> externalMappers = new HashMap<>();
@@ -121,7 +164,15 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       for (String filename : externals) {
         externalMappers.put(
             filename,
-            createForFile(rangeReader, jsonMapper, localCacheDir, filename, downloadListener)
+            createForFile(
+                rangeReader,
+                jsonMapper,
+                localCacheDir,
+                filename,
+                downloadListener,
+                coalesceGapBytes,
+                maxFetchRunBytes
+            )
         );
       }
     }
@@ -136,13 +187,14 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     return entryPoint;
   }
 
-  @VisibleForTesting
-  static PartialSegmentFileMapperV10 createForFile(
+  private static PartialSegmentFileMapperV10 createForFile(
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       File localCacheDir,
       String targetFilename,
-      PartialSegmentDownloadListener downloadListener
+      PartialSegmentDownloadListener downloadListener,
+      long coalesceGapBytes,
+      long maxFetchRunBytes
   ) throws IOException
   {
     FileUtils.mkdirp(localCacheDir);
@@ -155,10 +207,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     if (headerFile.exists()) {
       try {
         result = parseHeaderFile(headerFile, jsonMapper);
+        verifyPersistedHeaderLength(headerFile, result);
         bitmapBuffer = mmapBitmap(headerFile, result);
       }
+      catch (ClosedByInterruptException e) {
+        // the header is fine, an interrupt aborted the mapping (see mapUninterruptibly), no need to necessarily delete
+        // let callers determine that
+        throw e;
+      }
       catch (Exception e) {
-        // corrupted file (partial write, truncated bitmap, bad JSON, etc.), delete and re-fetch
+        // corrupted file, delete
         result = null;
         if (!headerFile.delete()) {
           LOG.warn(
@@ -172,10 +230,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     }
 
     if (result == null) {
-      fetchAndPersistHeader(rangeReader, targetFilename, headerFile);
-      result = parseHeaderFile(headerFile, jsonMapper);
+      result = fetchAndPersistHeader(rangeReader, jsonMapper, targetFilename, headerFile);
       bitmapBuffer = mmapBitmap(headerFile, result);
-      downloadListener.onBytesDownloaded(headerFile.length());
+      downloadListener.onBytesDownloaded(headerFileSize(result));
     }
 
     final PartialSegmentFileMapperV10 mapper = new PartialSegmentFileMapperV10(
@@ -185,50 +242,58 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         targetFilename,
         localCacheDir,
         bitmapBuffer,
-        downloadListener
+        downloadListener,
+        coalesceGapBytes,
+        maxFetchRunBytes
     );
 
-    // bitmap-vs-container repair pre-pass: if the bitmap claims a file is downloaded but its container file is
-    // missing on disk, the bitmap is lying (e.g. partial-cache eviction that cleared containers but couldn't atomically
-    // clear bits, or external file-system damage). Clear those bits before the restore loop so we don't spuriously
-    // sparse-allocate empty containers in the restore loop's ensureContainerInitialized call and treat their files as
-    // downloaded.
-    for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
-      final int byteIndex = i / 8;
-      final int bitMask = 1 << (i % 8);
-      if ((bitmapBuffer.get(byteIndex) & bitMask) == 0) {
-        continue;
-      }
-      final String name = mapper.sortedFileNames.get(i);
-      final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
-      if (fileMetadata == null) {
-        continue;
-      }
-      final File containerFile = new File(
-          localCacheDir,
-          StringUtils.format("%s.container.%05d", targetFilename, fileMetadata.getContainer())
-      );
-      if (!containerFile.exists()) {
-        bitmapBuffer.put(byteIndex, (byte) (bitmapBuffer.get(byteIndex) & ~bitMask));
-      }
-    }
-
-    // restore downloaded files from the (now-repaired) bitmap
-    for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
-      final int byteIndex = i / 8;
-      final int bitIndex = i % 8;
-      if ((bitmapBuffer.get(byteIndex) & (1 << bitIndex)) != 0) {
+    try {
+      // if the bitmap claims a file is downloaded but its container file is missing on disk, the bitmap is lying
+      // (e.g. partial-cache eviction that cleared containers but couldn't atomically clear bits, or external
+      // file-system damage). Clear those bits before the restore loop so we don't spuriously sparse-allocate empty
+      // containers in the restore loop's ensureContainerInitialized call and treat their files as downloaded.
+      for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
+        final int byteIndex = i / 8;
+        final int bitMask = 1 << (i % 8);
+        if ((bitmapBuffer.get(byteIndex) & bitMask) == 0) {
+          continue;
+        }
         final String name = mapper.sortedFileNames.get(i);
         final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
-        if (fileMetadata != null) {
-          mapper.ensureContainerInitialized(fileMetadata.getContainer());
-          mapper.downloadedFiles.add(name);
-          mapper.downloadedBytes.addAndGet(fileMetadata.getSize());
+        if (fileMetadata == null) {
+          continue;
+        }
+        final File containerFile = new File(
+            localCacheDir,
+            StringUtils.format("%s.container.%05d", targetFilename, fileMetadata.getContainer())
+        );
+        if (!containerFile.exists()) {
+          bitmapBuffer.put(byteIndex, (byte) (bitmapBuffer.get(byteIndex) & ~bitMask));
         }
       }
-    }
 
-    return mapper;
+      // restore downloaded files from the (now-repaired) bitmap
+      for (int i = 0; i < mapper.sortedFileNames.size(); i++) {
+        final int byteIndex = i / 8;
+        final int bitIndex = i % 8;
+        if ((bitmapBuffer.get(byteIndex) & (1 << bitIndex)) != 0) {
+          final String name = mapper.sortedFileNames.get(i);
+          final SegmentInternalFileMetadata fileMetadata = result.getMetadata().getFiles().get(name);
+          if (fileMetadata != null) {
+            mapper.ensureContainerInitialized(fileMetadata.getContainer());
+            mapper.downloadedFiles.add(name);
+            mapper.downloadedBytes.addAndGet(fileMetadata.getSize());
+          }
+        }
+      }
+
+      return mapper;
+    }
+    catch (Throwable t) {
+      // close a half-built mapper
+      CloseableUtils.closeAndSuppressExceptions(mapper, t::addSuppressed);
+      throw t;
+    }
   }
 
   private final SegmentFileMetadata metadata;
@@ -245,20 +310,26 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   private final MappedByteBuffer[] containers;
   private final File[] containerFiles;
   private final ReentrantLock[] containerLocks;
+  // per-container eviction generation; see getBundleGeneration
+  private final AtomicLongArray containerGenerations;
+  /**
+   * Number of fetches currently writing into each container, and whether an eviction is waiting on them.
+   */
+  private final int[] containerFetchesInFlight;
+  private final boolean[] containerEvictionPending;
 
   // bundle name -> indices (into metadata.getContainers()) of this single mapper's containers in that bundle.
   // Computed once at construction from the immutable container metadata. Single-mapper scope only: stitching bundles
   // across attached external mappers is the cache layer's concern (PartialSegmentBundleCacheEntry).
   private final Map<String, List<Integer>> bundleToContainerIndices;
 
-  // file names per container index (parallel to metadata.getContainers()), for whole-container bulk download. Built
-  // once from the immutable metadata.
+  // file names per container index (parallel to metadata.getContainers()) in ascending start-offset order, for
+  // whole-container bulk download and coalesced range planning (files tile back-to-back within a container, so offset
+  // order is a total order).
   private final List<List<String>> containerFileNames;
 
-  // external file mappers
   private final Map<String, PartialSegmentFileMapperV10> externalMappers = new HashMap<>();
 
-  // track which internal files have been downloaded
   private final Set<String> downloadedFiles = ConcurrentHashMap.newKeySet();
   private final ConcurrentHashMap<String, ReentrantLock> fileLocks = new ConcurrentHashMap<>();
   private final ReentrantLock bitmapLock;
@@ -266,6 +337,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   private final AtomicLong downloadedBytes = new AtomicLong(0);
   private final AtomicBoolean closed = new AtomicBoolean(false);
   private final PartialSegmentDownloadListener downloadListener;
+  private final long coalesceGapBytes;
+  private final long maxFetchRunBytes;
 
   private PartialSegmentFileMapperV10(
       SegmentFileMetadata metadata,
@@ -274,7 +347,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       String targetFilename,
       File localCacheDir,
       MappedByteBuffer bitmapBuffer,
-      PartialSegmentDownloadListener downloadListener
+      PartialSegmentDownloadListener downloadListener,
+      long coalesceGapBytes,
+      long maxFetchRunBytes
   )
   {
     this.metadata = metadata;
@@ -284,6 +359,10 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     this.localCacheDir = localCacheDir;
     this.bitmapBuffer = bitmapBuffer;
     this.downloadListener = downloadListener;
+    // a negative tolerance would fail the gap test even for strictly adjacent files (gap 0), silently disabling ALL
+    // coalescing rather than just bridging; clamp so negative configs mean the documented "0 = adjacent-only"
+    this.coalesceGapBytes = Math.max(0, coalesceGapBytes);
+    this.maxFetchRunBytes = maxFetchRunBytes;
 
     // build stable file name ordering for bitmap indexing
     this.sortedFileNames = new ArrayList<>(new TreeSet<>(metadata.getFiles().keySet()));
@@ -297,6 +376,9 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     this.containers = new MappedByteBuffer[numContainers];
     this.containerFiles = new File[numContainers];
     this.containerLocks = new ReentrantLock[numContainers];
+    this.containerGenerations = new AtomicLongArray(numContainers);
+    this.containerFetchesInFlight = new int[numContainers];
+    this.containerEvictionPending = new boolean[numContainers];
     final Map<String, List<Integer>> bundleIndices = new HashMap<>();
     for (int i = 0; i < numContainers; i++) {
       this.containerLocks[i] = new ReentrantLock();
@@ -312,7 +394,15 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
       perContainer.get(entry.getValue().getContainer()).add(entry.getKey());
     }
-    perContainer.replaceAll(List::copyOf);
+    perContainer.replaceAll(names -> {
+      // sort by (startOffset, size): if any zero-length internal files exist, they share their startOffset with the
+      // next real file, and the size tie-break keeps end offsets non-decreasing in iteration order for the run planners
+      names.sort(
+          Comparator.comparingLong((String name) -> metadata.getFiles().get(name).getStartOffset())
+                    .thenComparingLong(name -> metadata.getFiles().get(name).getSize())
+      );
+      return List.copyOf(names);
+    });
     this.containerFileNames = List.copyOf(perContainer);
 
     this.bitmapLock = new ReentrantLock();
@@ -409,7 +499,16 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       return null;
     }
 
-    ensureFileDownloaded(name, fileMetadata);
+    // Mapping never downloads, every caller is expected to have made the file resident through an explicit plan before
+    // reading it
+    if (!downloadedFiles.contains(name)) {
+      throw DruidException.defensive(
+          "Internal file[%s] of segment file[%s] is not resident; downloads must be planned and fetched explicitly "
+          + "before the file can be mapped",
+          name,
+          targetFilename
+      );
+    }
 
     // slice from the container mmap
     final MappedByteBuffer container = containers[fileMetadata.getContainer()];
@@ -435,106 +534,375 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
    * Download every internal file referenced by this mapper's metadata (and recursively every attached external
    * mapper's metadata) so that {@link #isFullyDownloaded} returns true afterward. Used by the eager
    * {@code acquireSegment} path on partial-eligible segments to force the segment fully resident before returning.
-   * Containers already fully downloaded are skipped.
+   * Each container downloads via {@link #fetchFiles}, so a not-yet-downloaded container fetches in a single range
+   * read (its files tile back-to-back), and a partially-downloaded container skips its already-resident spans.
    */
   public void ensureAllDownloaded() throws IOException
   {
+    fetchAllContainers();
+    if (!isFullyDownloaded()) {
+      throw DruidException.defensive(
+          "Failed to download every file of [%s]; residency was cleared mid-download, which means a container was "
+          + "evicted while a fetch was writing into it",
+          targetFilename
+      );
+    }
+  }
+
+  private void fetchAllContainers() throws IOException
+  {
     for (int containerIndex = 0; containerIndex < containers.length; containerIndex++) {
-      downloadContainer(containerIndex);
+      fetchFiles(containerFileNames.get(containerIndex));
     }
     for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
-      external.ensureAllDownloaded();
+      external.fetchAllContainers();
     }
   }
 
   /**
-   * Download every container belonging to {@code bundleName} in this mapper, each in a single range read (see
-   * {@link #downloadContainer}). No-op for an unknown bundle.
+   * Download every container belonging to {@code bundleName} in this mapper via {@link #fetchFiles}. A bundle name
+   * this mapper doesn't know contributes nothing here, but external mappers are always consulted regardless, since a
+   * bundle's containers can span the main file plus one or more externals.
    */
   public void ensureBundleDownloaded(String bundleName) throws IOException
   {
     checkClosed();
     for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
-      downloadContainer(containerIndex);
+      fetchFiles(containerFileNames.get(containerIndex));
+    }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      external.ensureBundleDownloaded(bundleName);
     }
   }
 
   /**
-   * Download an entire container in a single range read and mark every internal file it holds as downloaded. The whole
-   * region streams straight to the container's local sparse file at offset 0.
+   * Whether every container belonging to {@code bundleName} has all its files present in {@link #downloadedFiles},
+   * across the main mapper AND every attached external mapper.
    * <p>
-   * No-op when every file in the container is already downloaded. A partially-downloaded container is re-fetched in
-   * full (already-present files are overwritten with byte-identical data). Holds the container lock for the whole
-   * fetch so a concurrent {@link #evictContainer} or container-init can't race the write; concurrent per-file
-   * {@link #ensureFileDownloaded} calls write byte-identical data so they remain safe, and the download-bookkeeping is
-   * gated on the atomic {@link #downloadedFiles} add so neither path double-counts.
+   * Returns {@code true} for a bundle name unknown to any mapper (no containers to check).
    */
-  private void downloadContainer(int containerIndex) throws IOException
+  public boolean isBundleFullyDownloaded(String bundleName)
   {
-    final List<String> fileNames = containerFileNames.get(containerIndex);
-    if (fileNames.isEmpty() || downloadedFiles.containsAll(fileNames)) {
-      return;
-    }
-    containerLocks[containerIndex].lock();
-    try {
-      checkClosed();
-      if (downloadedFiles.containsAll(fileNames)) {
-        return;
+    checkClosed();
+    for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
+      final List<String> fileNames = containerFileNames.get(containerIndex);
+      if (!downloadedFiles.containsAll(fileNames)) {
+        return false;
       }
-      ensureContainerInitialized(containerIndex);
+    }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      if (!external.isBundleFullyDownloaded(bundleName)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
-      final SegmentFileContainerMetadata containerMeta = metadata.getContainers().get(containerIndex);
-      streamRangeIntoContainer(
-          containerIndex,
-          headerSize + containerMeta.getStartOffset(),
-          0,
-          containerMeta.getSize(),
-          StringUtils.format("container[%d]", containerIndex)
+  /**
+   * Ensure the given internal files are resident using as few deep-storage range reads as possible. Files are grouped
+   * by container; within a container, requested files that are adjacent (they tile back-to-back with no padding) are
+   * coalesced into a single range read, and two runs separated by unrequested files are merged into one read when the
+   * separating byte gap is at most {@code coalesceGapBytes}. Bridged gap files are whole, valid internal files, so
+   * they are marked downloaded too: the "extra" bytes become useful cached data rather than waste, trading at most
+   * {@code coalesceGapBytes} of extra bandwidth per bridged gap (a run can bridge several gaps) for one fewer
+   * deep-storage round trip each. Already-resident files are never re-fetched; a resident file inside a gap always
+   * splits the run. Unknown names are ignored. Runs never span containers.
+   * <p>
+   * Callers must hold the same eviction-exclusion the {@link #mapFile} contract requires (see {@link #evictContainer});
+   * only per-file locks are held across the wire fetch, deliberately not the container lock, so unrelated container
+   * init/eviction and downloads of non-member files proceed in parallel. A concurrent {@link #mapFile} of a run member
+   * blocks on that member's lock and finds the file resident on wake.
+   */
+  public void fetchFiles(Collection<String> fileNames) throws IOException
+  {
+    for (FetchRun run : planFetch(fileNames)) {
+      fetchRun(run);
+    }
+  }
+
+  /**
+   * Plan the coalesced range reads that {@link #fetchFiles} would execute for the given internal files, without
+   * fetching anything. Callers that want the reads to proceed concurrently (each is an independent deep-storage
+   * request) submit each returned run to an executor as its own {@link #fetchRun} call instead of using the
+   * sequential {@code fetchFiles}; the runs of one plan cover disjoint file sets, so they can execute in any order
+   * and in parallel. Plans are advisory snapshots: files that become resident between planning and fetching are
+   * skipped or trimmed by {@code fetchRun}'s under-lock re-check, so a stale plan costs at most a redundant no-op.
+   */
+  public List<FetchRun> planFetch(Collection<String> fileNames)
+  {
+    checkClosed();
+
+    // group the not-yet-resident requested files by container, ascending container index so a plan's run order is
+    // deterministic (locking happens per-file inside fetchRun; runs are order-independent)
+    final TreeMap<Integer, Set<String>> requestedByContainer = new TreeMap<>();
+    for (String name : fileNames) {
+      final SegmentInternalFileMetadata fileMetadata = metadata.getFiles().get(name);
+      if (fileMetadata != null && !downloadedFiles.contains(name)) {
+        requestedByContainer.computeIfAbsent(fileMetadata.getContainer(), k -> new HashSet<>()).add(name);
+      }
+    }
+
+    final List<FetchRun> runs = new ArrayList<>();
+    for (Map.Entry<Integer, Set<String>> entry : requestedByContainer.entrySet()) {
+      runs.addAll(
+          planFetchRuns(
+              entry.getKey(),
+              containerFileNames.get(entry.getKey()),
+              metadata.getFiles(),
+              entry.getValue(),
+              downloadedFiles,
+              coalesceGapBytes
+          )
       );
+    }
+    return runs;
+  }
 
-      for (String name : fileNames) {
-        markDownloaded(name, metadata.getFiles().get(name).getSize());
+  /**
+   * {@link #planFetch} for callers that execute the runs concurrently: additionally splits any run larger than the
+   * configured maximum at file boundaries, so a large fetch spreads across multiple parallel deep-storage
+   * connections. Do not use for sequential execution — splitting there only adds request overhead; that's why the cap
+   * doesn't apply to {@link #planFetch}/{@link #fetchFiles} and the eager download paths built on them.
+   */
+  public List<FetchRun> planParallelFetch(Collection<String> fileNames)
+  {
+    return splitRuns(planFetch(fileNames), metadata.getFiles(), maxFetchRunBytes);
+  }
+
+  /**
+   * Plan the parallel-capped range reads for every not-yet-resident file in {@code bundleName}'s containers, across
+   * this mapper AND every attached external mapper so runs come back paired with their owning mapper, unlike the
+   * self-scoped {@link #planParallelFetch}. Empty for an unknown bundle.
+   */
+  public List<PlannedFetch> planParallelFetchBundle(String bundleName)
+  {
+    checkClosed();
+    final List<PlannedFetch> fetches = new ArrayList<>();
+    for (int containerIndex : getContainerIndicesForBundle(bundleName)) {
+      // the container's file list is already grouped and offset-sorted, so plan it directly rather than going
+      // through planFetch's group-by-container pass
+      final List<String> fileNames = containerFileNames.get(containerIndex);
+      final List<FetchRun> runs = splitRuns(
+          planFetchRuns(
+              containerIndex,
+              fileNames,
+              metadata.getFiles(),
+              Set.copyOf(fileNames),
+              downloadedFiles,
+              coalesceGapBytes
+          ),
+          metadata.getFiles(),
+          maxFetchRunBytes
+      );
+      for (FetchRun run : runs) {
+        fetches.add(new PlannedFetch(this, run));
+      }
+    }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      fetches.addAll(external.planParallelFetchBundle(bundleName));
+    }
+    return fetches;
+  }
+
+  /**
+   * Split any run larger than {@code maxRunBytes} into consecutive sub-runs of at most that size, cutting only at
+   * file boundaries so each sub-run still marks exactly its own whole files downloaded (the bitmap tracks residency
+   * per file, so a read must never end mid-file). A single file larger than the cap forms its own sub-run since
+   * splitting within a file would need sub-file bookkeeping; internal files are bounded (large columns split into
+   * multiple internal files at write time) so this caps the worst case acceptably. {@code maxRunBytes <= 0} disables
+   * splitting.
+   */
+  @VisibleForTesting
+  static List<FetchRun> splitRuns(
+      List<FetchRun> runs,
+      Map<String, SegmentInternalFileMetadata> fileMetadata,
+      long maxRunBytes
+  )
+  {
+    if (maxRunBytes <= 0) {
+      return runs;
+    }
+    final List<FetchRun> split = new ArrayList<>(runs.size());
+    for (FetchRun run : runs) {
+      if (run.length() <= maxRunBytes) {
+        split.add(run);
+        continue;
+      }
+      List<String> groupFiles = new ArrayList<>();
+      long groupStart = run.startOffset();
+      long groupEnd = groupStart;
+      for (String file : run.files()) {
+        final SegmentInternalFileMetadata fileMeta = fileMetadata.get(file);
+        final long fileEnd = fileMeta.getStartOffset() + fileMeta.getSize();
+        if (!groupFiles.isEmpty() && fileEnd - groupStart > maxRunBytes) {
+          split.add(new FetchRun(run.containerIndex(), groupStart, groupEnd - groupStart, List.copyOf(groupFiles)));
+          groupFiles = new ArrayList<>();
+          groupStart = fileMeta.getStartOffset();
+          groupEnd = groupStart;
+        }
+        groupFiles.add(file);
+        // max, not assignment: a zero-length file sharing a neighbor's start offset must never shrink the sub-run
+        groupEnd = Math.max(groupEnd, fileEnd);
+      }
+      split.add(new FetchRun(run.containerIndex(), groupStart, groupEnd - groupStart, List.copyOf(groupFiles)));
+    }
+    return split;
+  }
+
+  /**
+   * Plan the coalesced range reads for one container. {@code filesByOffset} is the container's complete file list in
+   * ascending start-offset order; a run opens at a requested non-resident file and extends across subsequent files,
+   * bridging unrequested non-resident files whenever the byte gap back to the run's current end is within
+   * {@code gapTolerance} once the next requested file is reached. Resident files always split (their bytes are never
+   * re-fetched), and a run never ends with unfetched trailing gap bytes. Pure function over its arguments; the caller
+   * re-checks residency under per-file locks before fetching since {@code resident} may grow concurrently.
+   */
+  @VisibleForTesting
+  static List<FetchRun> planFetchRuns(
+      int containerIndex,
+      List<String> filesByOffset,
+      Map<String, SegmentInternalFileMetadata> fileMetadata,
+      Set<String> requested,
+      Set<String> resident,
+      long gapTolerance
+  )
+  {
+    final List<FetchRun> runs = new ArrayList<>();
+    List<String> runFiles = null;
+    long runStart = 0;
+    // once a run is open, runEnd only ever grows (Math.max, never plain assignment): zero-length internal files
+    // (all-null columns) share a start offset with a neighboring file, and a plain overwrite could shrink the run
+    // and mark a covered file downloaded without having fetched all of its bytes
+    long runEnd = 0;
+    final List<String> pendingGapFiles = new ArrayList<>();
+
+    for (String name : filesByOffset) {
+      if (resident.contains(name)) {
+        if (runFiles != null) {
+          runs.add(new FetchRun(containerIndex, runStart, runEnd - runStart, List.copyOf(runFiles)));
+          runFiles = null;
+        }
+        pendingGapFiles.clear();
+      } else if (requested.contains(name)) {
+        final SegmentInternalFileMetadata fileMeta = fileMetadata.get(name);
+        final long fileEnd = fileMeta.getStartOffset() + fileMeta.getSize();
+        if (runFiles != null && fileMeta.getStartOffset() - runEnd <= gapTolerance) {
+          for (String gapName : pendingGapFiles) {
+            final SegmentInternalFileMetadata gapMeta = fileMetadata.get(gapName);
+            runEnd = Math.max(runEnd, gapMeta.getStartOffset() + gapMeta.getSize());
+          }
+          runFiles.addAll(pendingGapFiles);
+          runFiles.add(name);
+          runEnd = Math.max(runEnd, fileEnd);
+        } else {
+          if (runFiles != null) {
+            runs.add(new FetchRun(containerIndex, runStart, runEnd - runStart, List.copyOf(runFiles)));
+          }
+          runFiles = new ArrayList<>();
+          runFiles.add(name);
+          runStart = fileMeta.getStartOffset();
+          runEnd = fileEnd;
+        }
+        pendingGapFiles.clear();
+      } else if (runFiles != null) {
+        // unrequested and not resident: bridge candidate while a run is open
+        pendingGapFiles.add(name);
+      }
+    }
+    if (runFiles != null) {
+      runs.add(new FetchRun(containerIndex, runStart, runEnd - runStart, List.copyOf(runFiles)));
+    }
+    return runs;
+  }
+
+  /**
+   * Execute one planned run: take every member's per-file lock in offset order (the canonical acquisition order
+   * shared by all {@link #fetchFiles} callers; this is the only code path that takes file locks, so overlapping
+   * concurrent runs can't deadlock), trim files that became resident since planning off the run's edges, then stream
+   * the remaining span in a single range read and mark each covered file downloaded after the bytes are on disk
+   * (bytes-before-bits, preserving the bitmap corruption invariant). Interior files that became resident mid-plan are
+   * re-fetched with byte-identical data; {@link #markDownloaded}'s add-gate keeps the accounting straight.
+   * <p>
+   * Runs from one {@link #planFetch} cover disjoint files, so callers may execute them concurrently (each is one
+   * deep-storage request); the caller must hold the same eviction-exclusion {@link #mapFile} requires for the
+   * duration of every run.
+   */
+  public void fetchRun(FetchRun run) throws IOException
+  {
+    final int containerIndex = run.containerIndex();
+    final List<String> runFiles = run.files();
+    final List<ReentrantLock> locks = new ArrayList<>(runFiles.size());
+    int locked = 0;
+    try {
+      for (String name : runFiles) {
+        final ReentrantLock lock = fileLocks.computeIfAbsent(name, k -> new ReentrantLock());
+        locks.add(lock);
+        lock.lock();
+        locked++;
+      }
+      checkClosed();
+
+      beginContainerFetch(containerIndex);
+      try {
+        int from = 0;
+        int to = runFiles.size();
+        while (from < to && downloadedFiles.contains(runFiles.get(from))) {
+          from++;
+        }
+        while (to > from && downloadedFiles.contains(runFiles.get(to - 1))) {
+          to--;
+        }
+        if (from == to) {
+          // the whole run became resident while we were waiting on the locks
+          return;
+        }
+        final List<String> remaining = runFiles.subList(from, to);
+        final SegmentInternalFileMetadata first = metadata.getFiles().get(remaining.get(0));
+        final long startOffset = first.getStartOffset();
+        // scan for the span end rather than assuming the last file ends last: shrinking the read below any covered
+        // file's end would mark that file downloaded without its bytes on disk (zero-length files share start offsets)
+        long endOffset = startOffset;
+        for (String name : remaining) {
+          final SegmentInternalFileMetadata fileMeta = metadata.getFiles().get(name);
+          endOffset = Math.max(endOffset, fileMeta.getStartOffset() + fileMeta.getSize());
+        }
+        final long length = endOffset - startOffset;
+
+        ensureContainerInitialized(containerIndex);
+        streamRangeIntoContainer(
+            containerIndex,
+            computeAbsoluteOffset(first),
+            startOffset,
+            length,
+            StringUtils.format("files[%d] in container[%d]", remaining.size(), containerIndex)
+        );
+        for (String name : remaining) {
+          markDownloaded(name, metadata.getFiles().get(name).getSize());
+        }
+      }
+      finally {
+        endContainerFetch(containerIndex);
       }
     }
     finally {
-      containerLocks[containerIndex].unlock();
-    }
-  }
-
-  /**
-   * Pre-download a set of internal files so that subsequent {@link #mapFile(String)} calls for these files will not
-   * trigger individual downloads. Files that are already downloaded are skipped. Useful for batch-downloading all
-   * files in a bundle at once (see {@link SegmentFileBuilder#startFileBundle}).
-   */
-  public void ensureFilesAvailable(Set<String> fileNames) throws IOException
-  {
-    for (String name : fileNames) {
-      final SegmentInternalFileMetadata fileMetadata = metadata.getFiles().get(name);
-      if (fileMetadata != null) {
-        ensureFileDownloaded(name, fileMetadata);
+      for (int i = locked - 1; i >= 0; i--) {
+        locks.get(i).unlock();
+        fileLocks.remove(runFiles.get(i), locks.get(i));
       }
     }
   }
 
   /**
-   * Total on-disk size of the header file(s) backing this mapper, summed across the main file and any external file
-   * mappers. This is the actual reservation size that should be charged against the local cache once the metadata has
-   * been fetched and persisted; callers can compare it against an up-front pessimistic estimate to decide whether to
-   * shrink the reservation.
+   * Computed total on-disk size of the header file(s) backing this mapper, summed across the main file and any
+   * external file mappers.
    */
   public long getOnDiskHeaderSize()
   {
-    long total = headerFileSize(localCacheDir, targetFilename);
+    long total = headerFileSize(headerSize, metadata);
     for (PartialSegmentFileMapperV10 ext : externalMappers.values()) {
-      total += headerFileSize(ext.localCacheDir, ext.targetFilename);
+      total += headerFileSize(ext.headerSize, ext.metadata);
     }
     return total;
-  }
-
-  private static long headerFileSize(File dir, String filename)
-  {
-    final File header = new File(dir, filename + METADATA_HEADER_SUFFIX);
-    return header.exists() ? header.length() : 0;
   }
 
   /**
@@ -609,43 +977,11 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     return headerSize + container.getStartOffset() + fileMetadata.getStartOffset();
   }
 
-  private void ensureFileDownloaded(String name, SegmentInternalFileMetadata fileMetadata) throws IOException
-  {
-    // already downloaded, nothing to do
-    if (downloadedFiles.contains(name)) {
-      return;
-    }
-
-    final ReentrantLock lock = fileLocks.computeIfAbsent(name, k -> new ReentrantLock());
-    lock.lock();
-    try {
-      checkClosed();
-
-      if (downloadedFiles.contains(name)) {
-        return;
-      }
-
-      ensureContainerInitialized(fileMetadata.getContainer());
-      streamRangeIntoContainer(
-          fileMetadata.getContainer(),
-          computeAbsoluteOffset(fileMetadata),
-          fileMetadata.getStartOffset(),
-          fileMetadata.getSize(),
-          StringUtils.format("file[%s]", name)
-      );
-      markDownloaded(name, fileMetadata.getSize());
-    }
-    finally {
-      lock.unlock();
-      fileLocks.remove(name, lock);
-    }
-  }
-
   /**
    * Public entry point for cache-layer code that wants to ensure a container is materialized before any data is
    * downloaded into it (e.g. when a per-bundle cache entry is mounted, the entry pre-allocates its container files
-   * so that subsequent {@link #mapFile} calls have somewhere to write into and the cache layer can charge the
-   * reservation up front).
+   * so that subsequent fetches have somewhere to write into and the cache layer can charge the reservation up
+   * front).
    */
   public void initializeContainer(int containerIndex) throws IOException
   {
@@ -654,21 +990,62 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
+   * Register that a fetch is about to write into this container, so a concurrent {@link #evictContainer} defers
+   * rather than deleting the file out from under it. Paired with {@link #endContainerFetch} in a finally.
+   */
+  private void beginContainerFetch(int containerIndex)
+  {
+    containerLocks[containerIndex].lock();
+    try {
+      containerFetchesInFlight[containerIndex]++;
+    }
+    finally {
+      containerLocks[containerIndex].unlock();
+    }
+  }
+
+  /**
+   * Drop this fetch's claim on the container and, if it was the last one and an eviction was deferred while it ran,
+   * carry that eviction out now.
+   */
+  private void endContainerFetch(int containerIndex)
+  {
+    boolean evictNow = false;
+    containerLocks[containerIndex].lock();
+    try {
+      containerFetchesInFlight[containerIndex]--;
+      if (containerFetchesInFlight[containerIndex] == 0 && containerEvictionPending[containerIndex]) {
+        containerEvictionPending[containerIndex] = false;
+        evictNow = true;
+      }
+    }
+    finally {
+      containerLocks[containerIndex].unlock();
+    }
+    if (evictNow) {
+      // Runs from fetchRun's finally, so it must not throw over whatever brought us here.
+      try {
+        evictContainer(containerIndex);
+      }
+      catch (Throwable t) {
+        LOG.warn(t, "Failed to run deferred eviction of container[%d] for [%s]", containerIndex, targetFilename);
+      }
+    }
+  }
+
+  /**
    * Reverse of {@link #initializeContainer(int)}: unmap the in-memory view of the container, delete the local
    * container file, and clear the bitmap bits + {@link #downloadedFiles} entries for every internal file that lived
    * in this container.
    * <p>
-   * Used by per-bundle cache entries on unmount/eviction to release the disk and memory footprint of one bundle
-   * without affecting other bundles sharing the same {@link PartialSegmentFileMapperV10}. After eviction, subsequent
-   * {@link #mapFile} calls for files in this container will re-trigger downloads via {@link #initializeContainer}
-   * and the bitmap will be repopulated incrementally.
-   * <p>
-   * <b>Concurrency contract.</b> The caller is responsible for ensuring no concurrent {@link #mapFile} (or
-   * {@link #ensureFilesAvailable}) call is in flight for any file in this container. This is enforced one layer up
-   * by the cache-entry refcount: {@code PartialSegmentBundleCacheEntry} only invokes {@code evictContainer} from its
-   * {@code doActualUnmount} callback, which fires only after every reference acquired via {@code acquireReference()}
-   * has been closed. Bypassing that gate is dangerous, {@link ByteBufferUtils#unmap} frees the off-heap mapping, so a
-   * {@link ByteBuffer#slice} from a concurrent reader is a JVM SIGSEGV, not a recoverable error.
+   * <b>Concurrency contract.</b> No concurrent {@link #mapFile} may be in flight for any file in this container;
+   * that is enforced one layer up by the cache-entry refcount, since {@code PartialSegmentBundleCacheEntry} evicts
+   * from its {@code doActualUnmount} callback, which fires only after every reference acquired via
+   * {@code acquireReference()} has been closed. Bypassing that gate is dangerous: {@link ByteBufferUtils#unmap} frees
+   * the off-heap mapping, so a {@link ByteBuffer#slice} from a concurrent reader is a JVM SIGSEGV, not a recoverable
+   * error. An in-flight {@link #fetchFiles}/{@link #fetchRun} is handled here instead of by the caller: the eviction
+   * is deferred to whichever fetch finishes last, because callers can hold the storage location's write lock and must
+   * not block on a deep-storage read.
    * <p>
    * No-op if the container has not been initialized.
    */
@@ -677,6 +1054,12 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
     checkClosed();
     containerLocks[containerIndex].lock();
     try {
+      if (containerFetchesInFlight[containerIndex] > 0) {
+        // A fetch is writing into this container. Deleting the file now would leave it writing to a null File, so
+        // hand the eviction to whichever fetch finishes last rather than blocking here.
+        containerEvictionPending[containerIndex] = true;
+        return;
+      }
       final MappedByteBuffer existing = containers[containerIndex];
       if (existing != null) {
         ByteBufferUtils.unmap(existing);
@@ -701,24 +1084,57 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
         );
       }
       containerFiles[containerIndex] = null;
+
+      // clear bitmap bits + downloadedFiles entries for files that lived in this container.
+      for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
+        if (entry.getValue().getContainer() != containerIndex) {
+          continue;
+        }
+        final String fileName = entry.getKey();
+        if (downloadedFiles.remove(fileName)) {
+          downloadedBytes.addAndGet(-entry.getValue().getSize());
+        }
+        clearBitmapBit(fileName);
+      }
+
+      // last: readers that observe the bumped generation must also observe the cleared residency above
+      containerGenerations.incrementAndGet(containerIndex);
     }
     finally {
       containerLocks[containerIndex].unlock();
     }
+  }
 
-    // clear bitmap bits + downloadedFiles entries for files that lived in this container. Iterates
-    // metadata.getFiles() without external synchronization: SegmentFileMetadata is constructed once at mapper
-    // creation and its file map is effectively immutable for the mapper's lifetime, so concurrent iteration is safe.
-    for (Map.Entry<String, SegmentInternalFileMetadata> entry : metadata.getFiles().entrySet()) {
-      if (entry.getValue().getContainer() != containerIndex) {
-        continue;
+  /**
+   * Monotonic eviction generation for {@code bundleName}: increments every time one of the bundle's containers is
+   * evicted ({@link #evictContainer}), summed across this mapper and every attached external mapper (a bundle's
+   * containers can span them). Readers that cache objects deserialized from container mmaps (e.g.
+   * {@code PartialQueryableIndex}'s memoized column holders) compare generations to detect that a cached object may
+   * reference since-unmapped memory and must be rebuilt. A comparison is only meaningful while the caller holds the
+   * bundle's eviction exclusion (its cache-layer hold): under the hold the generation cannot advance, so a matching
+   * value stays valid for as long as the hold is held.
+   * <p>
+   * A bundle name with no containers in a mapper conservatively reflects every container of that mapper (the name
+   * may resolve to a catch-all bundle at the cache layer, e.g. untagged legacy segments, so any eviction must
+   * invalidate).
+   */
+  public long getBundleGeneration(String bundleName)
+  {
+    long generation = 0;
+    final List<Integer> indices = bundleToContainerIndices.get(bundleName);
+    if (indices == null) {
+      for (int i = 0; i < containerGenerations.length(); i++) {
+        generation += containerGenerations.get(i);
       }
-      final String fileName = entry.getKey();
-      if (downloadedFiles.remove(fileName)) {
-        downloadedBytes.addAndGet(-entry.getValue().getSize());
+    } else {
+      for (int i : indices) {
+        generation += containerGenerations.get(i);
       }
-      clearBitmapBit(fileName);
     }
+    for (PartialSegmentFileMapperV10 external : externalMappers.values()) {
+      generation += external.getBundleGeneration(bundleName);
+    }
+    return generation;
   }
 
   private void clearBitmapBit(String name)
@@ -741,15 +1157,17 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   /**
    * Initialize a local container file if not already done. Creates a sparse file at the original container size
-   * and memory-maps it. The channel is closed immediately after mapping, the mmap persists independently, backed by
-   * the kernel page cache. This avoids the risk of channel closure from thread interruption.
+   * and memory-maps it via {@link #mapUninterruptibly}. The channel is closed immediately after mapping, the mmap
+   * persists independently, backed by the kernel page cache, so once established it is immune to channel closure from
+   * thread interruption.
    */
   private void ensureContainerInitialized(int containerIndex) throws IOException
   {
-    if (containers[containerIndex] != null) {
-      return;
-    }
-
+    // always take the container lock, even to discover the container is already initialized: containers[] and
+    // containerFiles[] are plain arrays, so an unlocked read has no happens-before edge with another thread's
+    // initializing writes (broken double-checked locking) — concurrent fetches of the same container holding only
+    // disjoint per-file locks could then see a non-null container but a stale null/partial containerFiles entry.
+    // The lock is uncontended after initialization, so the fast path this replaces saved nothing measurable.
     containerLocks[containerIndex].lock();
     try {
       if (containers[containerIndex] != null) {
@@ -762,18 +1180,15 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
           StringUtils.format("%s.container.%05d", targetFilename, containerIndex)
       );
 
-      // create sparse file at original container size, mmap it, then close the channel immediately.
-      // set containerFiles before containers so that when another thread sees containers[i] != null
-      // (the fast-path check), containerFiles[i] is guaranteed to be set already.
-      try (RandomAccessFile raf = new RandomAccessFile(localFile, "rw"); FileChannel channel = raf.getChannel()) {
-        raf.setLength(containerMeta.getSize());
-        containerFiles[containerIndex] = localFile;
-        containers[containerIndex] = channel.map(
-            FileChannel.MapMode.READ_ONLY,
-            0,
-            containerMeta.getSize()
-        );
-      }
+      // create sparse file at original container size, mmap it, then close the channel immediately
+      final MappedByteBuffer container = mapUninterruptibly(() -> {
+        try (RandomAccessFile raf = new RandomAccessFile(localFile, "rw"); FileChannel channel = raf.getChannel()) {
+          raf.setLength(containerMeta.getSize());
+          return channel.map(FileChannel.MapMode.READ_ONLY, 0, containerMeta.getSize());
+        }
+      });
+      containerFiles[containerIndex] = localFile;
+      containers[containerIndex] = container;
     }
     finally {
       containerLocks[containerIndex].unlock();
@@ -825,9 +1240,8 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
 
   /**
    * Record an internal file as downloaded once its bytes are on disk: gate on the atomic {@link #downloadedFiles} add
-   * so a concurrent download of the same file via the other path (whole-container {@link #downloadContainer} vs
-   * per-file {@link #ensureFileDownloaded}) doesn't double-count its size (both write byte-identical data), then add
-   * its size and set its bitmap bit.
+   * so a concurrent download of the same file via the other path doesn't double-count its size (both write
+   * byte-identical data), then add its size and set its bitmap bit.
    */
   private void markDownloaded(String name, long size)
   {
@@ -862,12 +1276,32 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Fetch the raw V10 header bytes from deep storage and write them to a local file. The bitmap region is not
-   * included, it is created by {@link #mmapBitmap} after parsing. The file is parseable by
-   * {@link SegmentFileMetadataReader#read(InputStream, ObjectMapper)}.
+   * On-disk footprint of a single header file: the raw V10 header followed by one bit per internal file.
    */
-  private static void fetchAndPersistHeader(
+  private static long headerFileSize(long headerSize, SegmentFileMetadata metadata)
+  {
+    return headerSize + numBitmapBytes(metadata);
+  }
+
+  private static long headerFileSize(SegmentFileMetadataReader.Result result)
+  {
+    return headerFileSize(result.getHeaderSize(), result.getMetadata());
+  }
+
+  private static int numBitmapBytes(SegmentFileMetadata metadata)
+  {
+    return (metadata.getFiles().size() + 7) / 8;
+  }
+
+  /**
+   * Fetch the raw V10 header bytes from deep storage and persist them locally at the header file's final length: the
+   * raw header followed by the zeroed bitmap region.
+   *
+   * @return the parsed metadata of the header just persisted
+   */
+  private static SegmentFileMetadataReader.Result fetchAndPersistHeader(
       SegmentRangeReader rangeReader,
+      ObjectMapper jsonMapper,
       String targetFilename,
       File headerFile
   ) throws IOException
@@ -901,20 +1335,47 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
       actualHeaderSize = fixedHeader.length;
     }
 
-    // write fixed header + remaining metadata bytes to a local file atomically (write to temp, then rename)
-    // to avoid leaving a partial file on disk if the process crashes mid-write
+    // Matches how SegmentFileMetadataReader reports malformed header bytes (bad version, bad lengths): these bytes
+    // cannot be a V10 header at all, so there is nothing to recover by re-reading them.
+    if (remainingBytes < 0) {
+      throw DruidException.defensive(
+          "Header of [%s] declares [%d] metadata bytes",
+          targetFilename,
+          remainingBytes
+      );
+    }
+
+    // Read the header in full: the fixed part already in hand, plus the metadata bytes that follow it.
+    final byte[] rawHeader = new byte[actualHeaderSize + (int) remainingBytes];
+    System.arraycopy(fixedHeader, 0, rawHeader, 0, actualHeaderSize);
+    try (InputStream remainingStream = rangeReader.readRange(targetFilename, actualHeaderSize, remainingBytes)) {
+      ByteStreams.readFully(remainingStream, rawHeader, actualHeaderSize, (int) remainingBytes);
+    }
+
+    final SegmentFileMetadataReader.Result result;
+    try (InputStream headerBytes = new ByteArrayInputStream(rawHeader)) {
+      result = SegmentFileMetadataReader.read(headerBytes, jsonMapper);
+    }
+    if (rawHeader.length != result.getHeaderSize()) {
+      throw DruidException.defensive(
+          "Read [%d] header bytes for [%s] but its metadata describes a [%d] byte header",
+          rawHeader.length,
+          targetFilename,
+          result.getHeaderSize()
+      );
+    }
+
+    // zeroed bitmap region (nothing is downloaded yet).
+    final byte[] emptyBitmap = new byte[numBitmapBytes(result.getMetadata())];
+
+    // writeAtomically fsyncs before the rename, so a crash leaves either no header file or a complete one.
     FileUtils.mkdirp(headerFile.getParentFile());
     FileUtils.writeAtomically(headerFile, out -> {
-      out.write(fixedHeader, 0, actualHeaderSize);
-      try (InputStream remainingStream = rangeReader.readRange(
-               targetFilename,
-               actualHeaderSize,
-               remainingBytes
-           )) {
-        ByteStreams.limit(remainingStream, remainingBytes).transferTo(out);
-      }
+      out.write(rawHeader);
+      out.write(emptyBitmap);
       return null;
     });
+    return result;
   }
 
   /**
@@ -931,22 +1392,123 @@ public class PartialSegmentFileMapperV10 implements SegmentFileMapper
   }
 
   /**
-   * Mmap the bitmap region of the header file as read-write. Extends the file if the bitmap region doesn't exist yet.
-   * The channel is closed immediately after mapping.
+   * Mmap the bitmap region of the header file as read-write. The channel is closed immediately after mapping.
    */
   private static MappedByteBuffer mmapBitmap(
       File headerFile,
       SegmentFileMetadataReader.Result result
   ) throws IOException
   {
-    final int numBitmapBytes = (result.getMetadata().getFiles().size() + 7) / 8;
-    final long expectedSize = result.getHeaderSize() + numBitmapBytes;
-    try (RandomAccessFile raf = new RandomAccessFile(headerFile, "rw");
-         FileChannel channel = raf.getChannel()) {
-      if (raf.length() < expectedSize) {
-        raf.setLength(expectedSize);
+    final int numBitmapBytes = numBitmapBytes(result.getMetadata());
+    return mapUninterruptibly(() -> {
+      try (RandomAccessFile raf = new RandomAccessFile(headerFile, "rw");
+           FileChannel channel = raf.getChannel()) {
+        return channel.map(FileChannel.MapMode.READ_WRITE, result.getHeaderSize(), numBitmapBytes);
       }
-      return channel.map(FileChannel.MapMode.READ_WRITE, result.getHeaderSize(), numBitmapBytes);
+    });
+  }
+
+  /**
+   * Corruption check for a header file restored from a previous session: its length must be exactly the header plus
+   * one bit per internal file, since {@link #fetchAndPersistHeader} only ever publishes both regions together.
+   */
+  private static void verifyPersistedHeaderLength(File headerFile, SegmentFileMetadataReader.Result result)
+      throws IOException
+  {
+    final long expectedSize = headerFileSize(result);
+    final long actualSize = headerFile.length();
+    if (actualSize != expectedSize) {
+      throw new IOException(
+          StringUtils.format(
+              "Header file[%s] is [%d] bytes on disk but its metadata describes [%d] bytes (header[%d] plus "
+              + "bitmap[%d]); treating it as corrupt",
+              headerFile,
+              actualSize,
+              expectedSize,
+              result.getHeaderSize(),
+              numBitmapBytes(result.getMetadata())
+          )
+      );
+    }
+  }
+
+  /**
+   * Establish a memory mapping, shielding it from the calling thread's interrupt status.
+   * <p>
+   * {@link FileChannel#map} is an interruptible channel operation: an interrupt (a canceled query, a stage tearing
+   * down, {@code shutdownNow} on the processing pool) closes the channel mid-call and surfaces as
+   * {@link ClosedByInterruptException}. This class already avoids that hazard for container data by reading and
+   * writing through plain {@link RandomAccessFile} rather than NIO channels, but mapping has no non-NIO equivalent, so
+   * it is handled here instead: the interrupt status is parked for the duration of the call and the mapping is retried
+   * once on a fresh channel if an interrupt lands inside the call itself.
+   * <p>
+   * The flag is always restored before returning, so an interrupt is never swallowed, the caller still observes it at
+   * its next cancellation checkpoint.
+   */
+  private static MappedByteBuffer mapUninterruptibly(MmapOperation operation) throws IOException
+  {
+    boolean interrupted = Thread.interrupted();
+    boolean retried = false;
+
+    try {
+      while (true) {
+        try {
+          return operation.run();
+        }
+        catch (ClosedByInterruptException e) {
+          // An interrupt arrived after the clear above, retry once
+          interrupted = true;
+
+          if (retried) {
+            throw e;
+          }
+
+          retried = true;
+          Thread.interrupted();
+        }
+      }
+    }
+    finally {
+      if (interrupted) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  /**
+   * A mapping attempt for {@link #mapUninterruptibly}. Opens its own channel so that each attempt is independent.
+   */
+  @FunctionalInterface
+  private interface MmapOperation
+  {
+    MappedByteBuffer run() throws IOException;
+  }
+
+  /**
+   * One planned coalesced range read: {@code containerIndex} identifies the container within the mapper that planned
+   * it (runs are only meaningful to their planning mapper), {@code startOffset}/{@code length} are container-local,
+   * {@code files} are the covered internal files in ascending offset order (requested plus any bridged gap files).
+   */
+  public record FetchRun(int containerIndex, long startOffset, long length, List<String> files)
+  {
+  }
+
+  /**
+   * A {@link FetchRun} paired with the mapper that planned it, since runs are mapper-relative and a segment's files
+   * span the entry-point mapper plus any attached external mappers (each is its own
+   * {@link PartialSegmentFileMapperV10}, reachable via {@link #getExternalMapper}). Callers plan against each mapper
+   * and keep the association; {@link #fetch()} executes the run against its owner.
+   * <p>
+   * Record equality compares the mapper component by reference (the mapper doesn't override {@code equals}), which
+   * matches runs being meaningful only to their planning mapper — but it means two value-identical plans built from
+   * different mapper instances over the same segment never compare equal, so don't use {@code PlannedFetch} for
+   * cross-mapper dedup or comparison.
+   */
+  public record PlannedFetch(PartialSegmentFileMapperV10 mapper, FetchRun run)
+  {
+    public void fetch() throws IOException
+    {
+      mapper.fetchRun(run);
     }
   }
 }

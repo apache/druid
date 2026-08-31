@@ -22,12 +22,14 @@ package org.apache.druid.sql.avatica;
 import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.http.HttpURI;
+import org.eclipse.jetty.server.ConnectionMetaData;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Response;
 import org.eclipse.jetty.util.Callback;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
@@ -62,7 +64,11 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
     Response response = EasyMock.mock(Response.class);
     Callback callback = EasyMock.mock(Callback.class);
     HttpURI httpURI = EasyMock.mock(HttpURI.class);
+    ConnectionMetaData connectionMetaData = EasyMock.mock(ConnectionMetaData.class);
 
+    EasyMock.expect(request.getConnectionMetaData()).andReturn(connectionMetaData);
+    EasyMock.expect(connectionMetaData.getRemoteSocketAddress())
+            .andReturn(new InetSocketAddress("127.0.0.1", 12345));
     EasyMock.expect(request.getHttpURI()).andReturn(httpURI);
     EasyMock.expect(httpURI.getPath()).andReturn(DruidAvaticaProtobufHandler.AVATICA_PATH_NO_TRAILING_SLASH);
     EasyMock.expect(request.getMethod()).andReturn("GET");
@@ -77,11 +83,11 @@ public class DruidAvaticaJsonHandlerTest extends DruidAvaticaHandlerTest
     );
     EasyMock.expectLastCall();
 
-    EasyMock.replay(request, response, callback, httpURI);
+    EasyMock.replay(request, response, callback, httpURI, connectionMetaData);
 
     boolean handled = handler.handle(request, response, callback);
 
     Assertions.assertTrue(handled, "Handler should have handled the request");
-    EasyMock.verify(request, response, callback, httpURI);
+    EasyMock.verify(request, response, callback, httpURI, connectionMetaData);
   }
 }

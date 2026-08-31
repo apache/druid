@@ -32,7 +32,7 @@ To use this Apache Druid extension, [include](../../configuration/extensions.md#
 2. Create a druid database and user
 
   Create the druid user
-  - Microsoft SQL Server Management Studio - Security - Logins - New Login...
+  - Microsoft&circledR; SQL Server Management Studio - Security - Logins - New Login...
   - Create a druid user, enter `diurd` when prompted for the password.
 
   Create a druid database owned by the user we just created

@@ -100,6 +100,14 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
       FilePopulator populator
   )
   {
+    // Hold a load permit only around the actual populate (the deep-storage read), not the reservation/hold or the
+    // per-identifier population lock below (the permit is acquired inside populate, which runs on mount).
+    final FilePopulator permittedPopulator = file -> {
+      try (StorageLoadingThreadPool.LoadPermit ignored = loadingThreadPool.acquireLoadPermit()) {
+        populator.populate(file);
+      }
+    };
+
     // Get or create lock for this identifier
     final PopulationLock lock = populationLocks.computeIfAbsent(identifier, ignored -> new PopulationLock());
 
@@ -125,7 +133,7 @@ public class StorageLocationVirtualStorageManager implements VirtualStorageManag
             // Reserve space and acquire a hold, using a cache entry that will call the populator on mount.
             final StorageLocation.ReservationHold<CacheEntry> hold = location.addWeakReservationHold(
                 cacheId,
-                () -> new DownloadableCacheEntry(cacheId, sizeBytes, populator, locationFile)
+                () -> new DownloadableCacheEntry(cacheId, sizeBytes, permittedPopulator, locationFile)
                 {
                   final AtomicBoolean mounted = new AtomicBoolean(false);
 

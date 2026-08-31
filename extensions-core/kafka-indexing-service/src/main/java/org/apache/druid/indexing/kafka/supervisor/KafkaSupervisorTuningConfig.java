@@ -30,6 +30,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     implements SeekableStreamSupervisorTuningConfig
@@ -214,6 +215,29 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
            ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
            ", numPersistThreads=" + getNumPersistThreads() +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    KafkaSupervisorTuningConfig that = (KafkaSupervisorTuningConfig) o;
+    return Objects.equals(workerThreads, that.workerThreads)
+           && Objects.equals(chatRetries, that.chatRetries)
+           && Objects.equals(httpTimeout, that.httpTimeout)
+           && Objects.equals(shutdownTimeout, that.shutdownTimeout)
+           && Objects.equals(offsetFetchPeriod, that.offsetFetchPeriod);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), workerThreads, chatRetries, httpTimeout, shutdownTimeout, offsetFetchPeriod);
   }
 
   @Override

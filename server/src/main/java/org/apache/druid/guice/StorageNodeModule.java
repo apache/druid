@@ -28,11 +28,13 @@ import com.google.inject.name.Named;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.DruidServerConfig;
 import org.apache.druid.discovery.DataNodeService;
+import org.apache.druid.guice.annotations.EphemeralStorageLoading;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
@@ -64,6 +66,7 @@ public class StorageNodeModule implements Module
     JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexing.formats", DefaultColumnFormatConfig.class);
+    JsonConfigProvider.bind(binder, "druid.segment.timeline", SegmentTimelineConfig.class);
     bindLocationSelectorStrategy(binder);
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
     binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
@@ -132,6 +135,20 @@ public class StorageNodeModule implements Module
   public StorageLoadingThreadPool getStorageLoadingThreadPool(SegmentLoaderConfig config)
   {
     return StorageLoadingThreadPool.createFromConfig(config);
+  }
+
+  /**
+   * Process-wide, always-virtual on-demand loading pool shared by the ephemeral per-task segment caches built via
+   * {@code SegmentCacheManagerFactory} (tasks and MSQ workers).
+   */
+  @Provides
+  @LazySingleton
+  @EphemeralStorageLoading
+  public StorageLoadingThreadPool getEphemeralStorageLoadingThreadPool(SegmentLoaderConfig config)
+  {
+    // Force virtual-storage mode: this pool serves per-task caches even when the node itself is not in virtual-storage
+    // mode. Threads are created lazily, so an unused pool on a non-task process is cheap.
+    return StorageLoadingThreadPool.createFromConfig(config.toEphemeralVirtualStorage());
   }
 
   @Provides

@@ -21,15 +21,21 @@ package org.apache.druid.indexing.kinesis.supervisor;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.kinesis.KinesisIndexingServiceModule;
 import org.apache.druid.indexing.kinesis.KinesisRegion;
+import org.apache.druid.indexing.seekablestream.supervisor.LagAggregator;
+import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.hamcrest.CoreMatchers;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.joda.time.Period;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
+import static org.easymock.EasyMock.createMock;
 
 public class KinesisSupervisorIOConfigTest
 {
@@ -40,9 +46,6 @@ public class KinesisSupervisorIOConfigTest
     mapper = new DefaultObjectMapper();
     mapper.registerModules(new KinesisIndexingServiceModule().getJacksonModules());
   }
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -57,23 +60,23 @@ public class KinesisSupervisorIOConfigTest
         KinesisSupervisorIOConfig.class
     );
 
-    Assert.assertEquals("my-stream", config.getStream());
-    Assert.assertEquals(KinesisRegion.US_EAST_1.getEndpoint(), config.getEndpoint());
-    Assert.assertEquals(1, (int) config.getReplicas());
-    Assert.assertEquals(1, (int) config.getTaskCount());
-    Assert.assertNull(config.getStopTaskCount());
-    Assert.assertEquals((int) config.getTaskCount(), config.getMaxAllowedStops());
-    Assert.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
-    Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
-    Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
-    Assert.assertFalse(config.isUseEarliestSequenceNumber());
-    Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
-    Assert.assertFalse("lateMessageRejectionPeriod", config.getLateMessageRejectionPeriod().isPresent());
-    Assert.assertFalse("earlyMessageRejectionPeriod", config.getEarlyMessageRejectionPeriod().isPresent());
-    Assert.assertFalse("lateMessageRejectionStartDateTime", config.getLateMessageRejectionStartDateTime().isPresent());
-    Assert.assertEquals(0, config.getFetchDelayMillis());
-    Assert.assertNull(config.getAwsAssumedRoleArn());
-    Assert.assertNull(config.getAwsExternalId());
+    Assertions.assertEquals("my-stream", config.getStream());
+    Assertions.assertEquals(KinesisRegion.US_EAST_1.getEndpoint(), config.getEndpoint());
+    Assertions.assertEquals(1, (int) config.getReplicas());
+    Assertions.assertEquals(1, (int) config.getTaskCount());
+    Assertions.assertNull(config.getStopTaskCount());
+    Assertions.assertEquals((int) config.getTaskCount(), config.getMaxAllowedStops());
+    Assertions.assertEquals(Duration.standardMinutes(60), config.getTaskDuration());
+    Assertions.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardSeconds(30), config.getPeriod());
+    Assertions.assertFalse(config.isUseEarliestSequenceNumber());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
+    Assertions.assertFalse(config.getLateMessageRejectionPeriod().isPresent(), "lateMessageRejectionPeriod");
+    Assertions.assertFalse(config.getEarlyMessageRejectionPeriod().isPresent(), "earlyMessageRejectionPeriod");
+    Assertions.assertFalse(config.getLateMessageRejectionStartDateTime().isPresent(), "lateMessageRejectionStartDateTime");
+    Assertions.assertEquals(0, config.getFetchDelayMillis());
+    Assertions.assertNull(config.getAwsAssumedRoleArn());
+    Assertions.assertNull(config.getAwsExternalId());
   }
 
   @Test
@@ -103,20 +106,20 @@ public class KinesisSupervisorIOConfigTest
         KinesisSupervisorIOConfig.class
     );
 
-    Assert.assertEquals("my-stream", config.getStream());
-    Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
-    Assert.assertEquals(3, (int) config.getReplicas());
-    Assert.assertEquals(9, (int) config.getTaskCount());
-    Assert.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
-    Assert.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
-    Assert.assertEquals(Duration.standardSeconds(10), config.getPeriod());
-    Assert.assertTrue(config.isUseEarliestSequenceNumber());
-    Assert.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
-    Assert.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
-    Assert.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
-    Assert.assertEquals(1000, config.getFetchDelayMillis());
-    Assert.assertEquals("role", config.getAwsAssumedRoleArn());
-    Assert.assertEquals("awsexternalid", config.getAwsExternalId());
+    Assertions.assertEquals("my-stream", config.getStream());
+    Assertions.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
+    Assertions.assertEquals(3, (int) config.getReplicas());
+    Assertions.assertEquals(9, (int) config.getTaskCount());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getTaskDuration());
+    Assertions.assertEquals(Duration.standardMinutes(1), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardSeconds(10), config.getPeriod());
+    Assertions.assertTrue(config.isUseEarliestSequenceNumber());
+    Assertions.assertEquals(Duration.standardMinutes(45), config.getCompletionTimeout());
+    Assertions.assertEquals(Duration.standardHours(1), config.getLateMessageRejectionPeriod().get());
+    Assertions.assertEquals(Duration.standardHours(1), config.getEarlyMessageRejectionPeriod().get());
+    Assertions.assertEquals(1000, config.getFetchDelayMillis());
+    Assertions.assertEquals("role", config.getAwsAssumedRoleArn());
+    Assertions.assertEquals("awsexternalid", config.getAwsExternalId());
   }
 
   @Test
@@ -126,10 +129,12 @@ public class KinesisSupervisorIOConfigTest
                      + "  \"type\": \"kinesis\"\n"
                      + "}";
 
-    exception.expect(JsonMappingException.class);
-    exception.expectCause(CoreMatchers.isA(NullPointerException.class));
-    exception.expectMessage(CoreMatchers.containsString("stream"));
-    mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
+    JsonMappingException exception = Assertions.assertThrows(
+        JsonMappingException.class,
+        () -> mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class)
+    );
+    Assertions.assertInstanceOf(NullPointerException.class, exception.getCause());
+    Assertions.assertTrue(exception.getMessage().contains("stream"));
   }
 
   @Test
@@ -146,10 +151,10 @@ public class KinesisSupervisorIOConfigTest
 
     KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
 
-    Assert.assertTrue(config.isBounded());
-    Assert.assertNotNull(config.getBoundedStreamConfig());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+    Assertions.assertTrue(config.isBounded());
+    Assertions.assertNotNull(config.getBoundedStreamConfig());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
   }
 
   @Test
@@ -166,10 +171,10 @@ public class KinesisSupervisorIOConfigTest
 
     KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
 
-    Assert.assertTrue(config.isBounded());
-    Assert.assertNotNull(config.getBoundedStreamConfig());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
-    Assert.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
+    Assertions.assertTrue(config.isBounded());
+    Assertions.assertNotNull(config.getBoundedStreamConfig());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getStartSequenceNumbers().size());
+    Assertions.assertEquals(2, config.getBoundedStreamConfig().getEndSequenceNumbers().size());
   }
 
   @Test
@@ -186,8 +191,8 @@ public class KinesisSupervisorIOConfigTest
 
     KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
 
-    Assert.assertTrue(config.isBounded());
-    Assert.assertNotNull(config.getBoundedStreamConfig());
+    Assertions.assertTrue(config.isBounded());
+    Assertions.assertNotNull(config.getBoundedStreamConfig());
   }
 
   @Test
@@ -200,8 +205,72 @@ public class KinesisSupervisorIOConfigTest
 
     KinesisSupervisorIOConfig config = mapper.readValue(jsonStr, KinesisSupervisorIOConfig.class);
 
-    Assert.assertFalse(config.isBounded());
-    Assert.assertNull(config.getBoundedStreamConfig());
+    Assertions.assertFalse(config.isBounded());
+    Assertions.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static KinesisIOConfigBuilder ioConfigBuilder()
+  {
+    return new KinesisIOConfigBuilder()
+        .withStream("stream")
+        .withEndpoint("awsEndpoint")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"));
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final KinesisSupervisorIOConfig config = ioConfigBuilder().build();
+    Assertions.assertEquals(config, ioConfigBuilder().build());
+    Assertions.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assertions.assertNotEquals(config, null);
+    Assertions.assertNotEquals(config, "not an io config");
+    Assertions.assertNotEquals(config, ioConfigBuilder().withEndpoint("other").build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withFetchDelayMillis(999).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withDeaggregate(true).build());
+  }
+
+  @Test
+  public void testTuningConfigEqualsAndHashCode()
+  {
+    final KinesisSupervisorTuningConfig config = KinesisSupervisorTuningConfig.defaultConfig();
+    Assertions.assertEquals(config, KinesisSupervisorTuningConfig.defaultConfig());
+    Assertions.assertEquals(config.hashCode(), KinesisSupervisorTuningConfig.defaultConfig().hashCode());
+    Assertions.assertNotEquals(config, null);
+    Assertions.assertNotEquals(config, "not a tuning config");
+  }
+
+  /**
+   * Drift guard for this class's own fields (base fields are covered by SeekableStreamSupervisorIOConfigTest):
+   * a field omitted from {@code equals} would let a changed spec persist without restarting the supervisor.
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(KinesisSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(Optional.class, Optional.of("a"), Optional.of("b"))
+                  .withPrefabValues(InputFormat.class, createMock(InputFormat.class), createMock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, createMock(AutoScalerConfig.class), createMock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, createMock(LagAggregator.class), createMock(LagAggregator.class))
+                  .verify();
+  }
+
+  @Test
+  public void testTuningConfigEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(KinesisSupervisorTuningConfig.class)
+                  .usingGetClass()
+                  .withRedefinedSuperclass()
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .verify();
   }
 
 }

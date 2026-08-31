@@ -71,13 +71,13 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void load(DataSegment segment)
+  public DataSegment load(DataSegment segment)
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public void bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
+  public DataSegment bootstrap(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     throw new UnsupportedOperationException();
   }

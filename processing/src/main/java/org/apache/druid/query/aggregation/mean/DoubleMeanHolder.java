@@ -107,6 +107,12 @@ public class DoubleMeanHolder
     writeCount(buf, position, getCount(buf, position) + 1);
   }
 
+  public static void update(final ByteBuffer buf, final int position, final double sum, final long count)
+  {
+    writeSum(buf, position, getSum(buf, position) + sum);
+    writeCount(buf, position, getCount(buf, position) + count);
+  }
+
   public static void update(ByteBuffer buf, int position, DoubleMeanHolder other)
   {
     writeSum(buf, position, getSum(buf, position) + other.sum);

@@ -23,10 +23,10 @@ sidebar_label: Supervisor
   ~ under the License.
   -->
 
-Apache Druid uses supervisors to manage streaming ingestion from external streaming sources into Druid.
+Apache&circledR; Druid uses supervisors to manage streaming ingestion from external streaming sources into Druid.
 Supervisors oversee the state of indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. They can also be used to perform [automatic compaction](../data-management/automatic-compaction.md) after data has been ingested.
 
-This topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
+This topic uses the Apache Kafka&circledR; term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 ## Supervisor spec
 
@@ -83,7 +83,7 @@ The following table outlines the configuration properties for `autoScalerConfig`
 |`minScaleUpDelay`|Minimum cooldown duration between scale-up actions, specified as an ISO-8601 duration string. Falls back to `minTriggerScaleActionFrequencyMillis` if not set.|No||
 |`minScaleDownDelay`|Minimum cooldown duration between scale-down actions, specified as an ISO-8601 duration string. Falls back to `minTriggerScaleActionFrequencyMillis` if not set.|No||
 |`minTriggerScaleActionFrequencyMillis`|**Deprecated.** Use `minScaleUpDelay` and `minScaleDownDelay` instead. Minimum time interval in milliseconds between scale actions, used as the fallback when the Duration-based fields are not set.|No|600000|
-|`autoScalerStrategy`|The algorithm of autoscaler. Druid only supports the `lagBased` strategy. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
+|`autoScalerStrategy`|The autoscaler algorithm. Druid supports the `lagBased` and `costBased` strategies. See [Autoscaler strategy](#autoscaler-strategy) for more information.|No|`lagBased`|
 |`stopTaskCountRatio`|A variable version of `ioConfig.stopTaskCount` with a valid range of (0.0, 1.0]. Allows the maximum number of stoppable tasks in steady state to be proportional to the number of tasks currently running.|No||
 
 ##### Autoscaler strategy
@@ -206,16 +206,20 @@ At every evaluation interval, Druid computes the score for each candidate task c
 
 The following table outlines the configuration properties related to the `costBased` autoscaler strategy:
 
+The cost-based autoscaler uses aggregate lag, which is the sum of the lag across all partitions. For Kafka and Rabbit, lag is measured in records. For Kinesis, lag is measured in milliseconds. Set `criticalLagThreshold` in the units reported by the stream type.
+
 | Property | Description | Required | Default                   |
 |----------|-------------|----------|---------------------------|
-|`scaleActionPeriodMillis`|How often, in milliseconds, Druid evaluates whether to scale.|No| `600000` (10 min)         |
+|`scaleActionPeriodMillis`|How often, in milliseconds, Druid evaluates whether to scale.|No| `120000` (2 min)          |
 |`lagWeight`|How much weight to give the lag cost relative to the idle cost. Higher values make the autoscaler more aggressive about adding tasks to drain backlog.|No| `0.4`                     |
 |`idleWeight`|How much weight to give the idle cost relative to the lag cost. Higher values make the autoscaler more aggressive about removing over-provisioned tasks.|No| `0.6`                     |
 |`useTaskCountBoundariesOnScaleUp`|Limits scale-up to a small step relative to the current task count, preventing large jumps. Disable to allow the autoscaler to jump directly to any task count.|No| `false`                   |
 |`useTaskCountBoundariesOnScaleDown`|Limits scale-down to a small step relative to the current task count, preventing large drops. Disable to allow the autoscaler to drop directly to any task count.|No| `true`                    |
-|`minScaleUpDelay`|Minimum cooldown after a scale-up before the next scale-up is allowed. Specified as an ISO-8601 duration.|No| `scaleActionPeriodMillis` |
+|`minScaleUpDelay`|Minimum cooldown after a scale-up before the next scale-up is allowed. Specified as an ISO-8601 duration.|No| `PT15M`                   |
 |`minScaleDownDelay`|Minimum cooldown after a scale-down before the next scale-down is allowed. Specified as an ISO-8601 duration.|No| `PT30M`                   |
 |`scaleDownDuringTaskRolloverOnly`|If `true`, scale-down actions are deferred until the next task rollover. This avoids disrupting in-progress ingestion.|No| `false`                   |
+|`criticalLagThreshold`|Sets the aggregate-lag threshold for the high-lag and critical-lag controls. At 75%, the autoscaler uses `highLagCostFactor` and bypasses the scale-up task-count boundary. At 100%, it skips cost minimization and jumps to `taskCountMax`. Must be greater than 0 when set. The threshold uses aggregate lag units: records for Kafka and Rabbit, and milliseconds for Kinesis.|No|`null` (disabled)|
+|`highLagCostFactor`|Cost factor applied when aggregate lag reaches 75% of `criticalLagThreshold`. Higher values increase the lag cost during high lag. Must be greater than or equal to 0. This property has no effect when `criticalLagThreshold` is `null`.|No|`6.0`|
 
 The following example shows a supervisor spec with `costBased` autoscaler:
 
@@ -234,7 +238,9 @@ The following example shows a supervisor spec with `costBased` autoscaler:
       "lagWeight": 0.4,
       "idleWeight": 0.6,
       "minScaleUpDelay": "PT10M",
-      "minScaleDownDelay": "PT30M"
+      "minScaleDownDelay": "PT30M",
+      "criticalLagThreshold": 1000000,
+      "highLagCostFactor": 6.0
     }
   }
 }

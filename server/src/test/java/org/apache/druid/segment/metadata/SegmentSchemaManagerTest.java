@@ -35,9 +35,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -50,7 +50,7 @@ import java.util.Set;
 
 public class SegmentSchemaManagerTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.enabled(true));
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
@@ -62,7 +62,7 @@ public class SegmentSchemaManagerTest
   FingerprintGenerator fingerprintGenerator;
   SegmentSchemaTestUtils segmentSchemaTestUtils;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     derbyConnector = derbyConnectorRule.getConnector();

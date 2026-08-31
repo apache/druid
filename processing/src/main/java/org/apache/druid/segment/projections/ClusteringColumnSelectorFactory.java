@@ -33,6 +33,7 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.RowIdSupplier;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -48,6 +49,12 @@ import java.util.function.Supplier;
  * carrying the group's constant value, while delegating all other column lookups to a wrapped factory. This is the
  * mechanism by which a cluster group's clustering columns, which are NOT stored in the per-group column data since
  * they're constant across the group, are made visible to query engines as if they were ordinary columns.
+ * <p>
+ * A clustering column whose name is also a query virtual column's output is NOT intercepted; it is left to the delegate
+ * (which resolves virtual columns before physical columns), so a shadowing VC — and anything reading it — observes the
+ * computed value rather than the constant. Names that were remapped away (a query VC equivalent to a materialized
+ * column) never reach this wrapper: the enclosing {@code RemapColumnSelectorFactory} rewrites them to their materialized
+ * target first.
  */
 public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
 {
@@ -80,11 +87,14 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   };
 
   private final RowSignature clusteringColumns;
+  // Query virtual columns whose output names shadow a clustering column are deferred to the delegate; see class doc.
+  private final VirtualColumns queryVirtualColumns;
   private ColumnSelectorFactory delegate;
   private Object[] clusteringValues;
   // Bumped on every setDelegate(...) so per-call selector wrappers can detect group transitions and rebuild their
   // cached inner state
   private long generation;
+  private final RowIdSupplier rowIdSupplier = new DelegatingRowIdSupplier(this);
 
   public ClusteringColumnSelectorFactory(
       ColumnSelectorFactory delegate,
@@ -92,8 +102,28 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
       Object[] clusteringValues
   )
   {
+    this(delegate, clusteringColumns, clusteringValues, VirtualColumns.EMPTY);
+  }
+
+  public ClusteringColumnSelectorFactory(
+      ColumnSelectorFactory delegate,
+      RowSignature clusteringColumns,
+      Object[] clusteringValues,
+      VirtualColumns queryVirtualColumns
+  )
+  {
     this.clusteringColumns = clusteringColumns;
+    this.queryVirtualColumns = queryVirtualColumns;
     setDelegate(delegate, clusteringValues);
+  }
+
+  /**
+   * Whether {@code name} should be served as this group's clustering constant: a clustering column not shadowed by a
+   * query virtual column of the same output name (see class doc).
+   */
+  private boolean servesClusteringConstant(String name)
+  {
+    return clusteringColumns.indexOf(name) >= 0 && !queryVirtualColumns.exists(name);
   }
 
   /**
@@ -128,20 +158,20 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
   {
-    final int idx = clusteringColumns.indexOf(dimensionSpec.getDimension());
-    if (idx < 0) {
+    final String name = dimensionSpec.getDimension();
+    if (!servesClusteringConstant(name)) {
       return new DelegatingDimensionSelector(this, dimensionSpec);
     }
-    return new ClusteringDimensionSelector(this, idx, dimensionSpec);
+    return new ClusteringDimensionSelector(this, clusteringColumns.indexOf(name), dimensionSpec);
   }
 
   @Override
   public ColumnValueSelector makeColumnValueSelector(String columnName)
   {
-    final int idx = clusteringColumns.indexOf(columnName);
-    if (idx < 0) {
+    if (!servesClusteringConstant(columnName)) {
       return new DelegatingColumnValueSelector(this, columnName);
     }
+    final int idx = clusteringColumns.indexOf(columnName);
     return new ClusteringColumnValueSelector(this, idx, clusteringColumns.getColumnType(idx).orElseThrow());
   }
 
@@ -149,9 +179,9 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    final int idx = clusteringColumns.indexOf(column);
-    if (idx < 0) {
-      // Non-clustering columns are stored per cluster group, each with its own local dictionary. The
+    if (!servesClusteringConstant(column)) {
+      // Non-clustering columns (or a clustering column shadowed by a query VC, resolved by the delegate) are stored
+      // per cluster group, each with its own local dictionary. The
       // ConcatenatingCursor walks those groups behind a single cursor, so a column's dictionary IDs are NOT stable
       // across the whole cursor. We therefore must not advertise dictionary encoding here: otherwise the group-by
       // engine keys on the (per-group-local) IDs and conflates distinct values from different groups. Reporting the
@@ -166,6 +196,7 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
                                    .setDictionaryValuesUnique(false)
                                    .setHasBitmapIndexes(false);
     }
+    final int idx = clusteringColumns.indexOf(column);
     final ColumnType type = clusteringColumns.getColumnType(idx).orElseThrow();
     if (type.is(ValueType.STRING)) {
       return ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities();
@@ -177,12 +208,51 @@ public class ClusteringColumnSelectorFactory implements ColumnSelectorFactory
   @Override
   public RowIdSupplier getRowIdSupplier()
   {
-    return delegate.getRowIdSupplier();
+    // A delegate may not support row-id caching; mirror that so callers skip caching (null)
+    return delegate.getRowIdSupplier() == null ? null : rowIdSupplier;
   }
 
   Object currentValue(int idx)
   {
     return clusteringValues[idx];
+  }
+
+  /**
+   * A {@link RowIdSupplier} bound to the factory, {@link #getRowId} follows whichever delegate is current, so a
+   * supplier grabbed once keeps tracking the active group across {@code ConcatenatingCursor} transitions.
+   */
+  private static final class DelegatingRowIdSupplier implements RowIdSupplier
+  {
+    private final ClusteringColumnSelectorFactory parent;
+    private long rowId = INIT;
+    private long lastDelegateRowId = INIT;
+    private RowIdSupplier lastDelegate;
+
+    private DelegatingRowIdSupplier(ClusteringColumnSelectorFactory parent)
+    {
+      this.parent = parent;
+    }
+
+    @Override
+    public long getRowId()
+    {
+      final RowIdSupplier delegate = parent.getDelegate().getRowIdSupplier();
+      if (delegate == null) {
+        // getRowIdSupplier() only hands out this wrapper when the delegate supports row ids; clustered groups are
+        // homogeneous, so a null here would mean a group mid-cursor stopped supporting them.
+        throw DruidException.defensive("delegate row id supplier became null across a cluster-group transition");
+      }
+      final long id = delegate.getRowId();
+      if (id == INIT) {
+        return INIT;
+      }
+      if (delegate != lastDelegate || id != lastDelegateRowId) {
+        lastDelegate = delegate;
+        lastDelegateRowId = id;
+        rowId++;
+      }
+      return rowId;
+    }
   }
 
   /**

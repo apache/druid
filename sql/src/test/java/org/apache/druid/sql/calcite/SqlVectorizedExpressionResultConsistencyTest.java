@@ -48,26 +48,28 @@ import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass(name = "query = {0}")
+@MethodSource("constructorFeeder")
 public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNullHandlingTest
 {
   private static final Logger log = new Logger(SqlVectorizedExpressionResultConsistencyTest.class);
@@ -111,7 +113,7 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
   @Nullable
   private static PlannerFactory PLANNER_FACTORY;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass()
   {
     CLOSER = Closer.create();
@@ -139,12 +141,12 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
     CLOSER.register(WALKER);
 
     final PlannerConfig plannerConfig = new PlannerConfig();
-    final DruidSchemaCatalog rootSchema =
-        CalciteTests.createMockRootSchema(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+    final DruidSchemaCatalogProvider rootSchemaProvider =
+        CalciteTests.createMockRootSchemaProvider(CONGLOMERATE, WALKER, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     final JoinableFactoryWrapper joinableFactoryWrapper = CalciteTests.createJoinableFactoryWrapper();
     ENGINE = CalciteTests.createMockSqlEngine(WALKER, CONGLOMERATE);
     PLANNER_FACTORY = new PlannerFactory(
-        rootSchema,
+        rootSchemaProvider,
         CalciteTests.createOperatorTable(),
         CalciteTests.createExprMacroTable(),
         plannerConfig,
@@ -160,19 +162,18 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
     );
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
   }
 
-  @Parameterized.Parameters(name = "query = {0}")
   public static Iterable<?> constructorFeeder()
   {
     return QUERIES.stream().map(x -> new Object[]{x}).collect(Collectors.toList());
   }
 
-  private String query;
+  private final String query;
 
   public SqlVectorizedExpressionResultConsistencyTest(String query)
   {
@@ -213,32 +214,32 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
         Object[] nonVectorizedGet = nonVectorizedYielder.get();
 
         try {
-          Assert.assertEquals(vectorGet.length, nonVectorizedGet.length);
+          Assertions.assertEquals(vectorGet.length, nonVectorizedGet.length);
           for (int i = 0; i < vectorGet.length; i++) {
             Object nonVectorObject = nonVectorizedGet[i];
             Object vectorObject = vectorGet[i];
             if (vectorObject instanceof Float || vectorObject instanceof Double) {
-              Assert.assertEquals(
+              Assertions.assertEquals(
+                  ((Number) nonVectorObject).doubleValue(),
+                  ((Number) vectorObject).doubleValue(),
+                  0.01,
                   StringUtils.format(
                       "Double results differed at row %s (%s : %s)",
                       row,
                       nonVectorObject,
                       vectorObject
-                  ),
-                  ((Double) nonVectorObject).doubleValue(),
-                  ((Double) vectorObject).doubleValue(),
-                  0.01
+                  )
               );
             } else {
-              Assert.assertEquals(
+              Assertions.assertEquals(
+                  nonVectorObject,
+                  vectorObject,
                   StringUtils.format(
                       "Results differed at row %s (%s : %s)",
                       row,
                       nonVectorObject,
                       vectorObject
-                  ),
-                  nonVectorObject,
-                  vectorObject
+                  )
               );
             }
           }
@@ -251,9 +252,9 @@ public class SqlVectorizedExpressionResultConsistencyTest extends InitializedNul
         nonVectorizedYielder = nonVectorizedYielder.next(nonVectorizedGet);
         row++;
       }
-      Assert.assertEquals("Expected no mismatched results", 0, misMatch);
-      Assert.assertTrue(vectorizedYielder.isDone());
-      Assert.assertTrue(nonVectorizedYielder.isDone());
+      Assertions.assertEquals(0, misMatch, "Expected no mismatched results");
+      Assertions.assertTrue(vectorizedYielder.isDone());
+      Assertions.assertTrue(nonVectorizedYielder.isDone());
     }
   }
 }

@@ -26,10 +26,8 @@ import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 
 public class CalciteTableAppendTest extends BaseCalciteQueryTest
 {
@@ -221,10 +219,10 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       testBuilder()
           .sql("select dim1 from TABLE(APPEND()) u")
           .run();
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("No match found for function signature APPEND() (line [1], column [24])")
       );
@@ -238,10 +236,10 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       testBuilder()
           .sql("select dim1 from TABLE(APPEND('foo',111)) u")
           .run();
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs(
               "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
@@ -257,10 +255,10 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       testBuilder()
           .sql("select dim1 from TABLE(APPEND('foo',null)) u")
           .run();
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs(
               "All arguments to APPEND should be literal strings. Argument #2 is not string (line [1], column [37])"
@@ -276,10 +274,10 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       testBuilder()
           .sql("select dim1 from TABLE(APPEND('foo','nonexistent')) u")
           .run();
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("Table [nonexistent] not found (line [1], column [37])")
       );
@@ -294,10 +292,10 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
       testBuilder()
           .sql("with t0 as (select * from foo) select dim3 from TABLE(APPEND('t0','foo')) u")
           .run();
-      Assert.fail("query execution should fail");
+      Assertions.fail("query execution should fail");
     }
     catch (DruidException e) {
-      assertThat(
+      assertDruidException(
           e,
           invalidSqlIs("Table [t0] not found (line [1], column [62])")
       );

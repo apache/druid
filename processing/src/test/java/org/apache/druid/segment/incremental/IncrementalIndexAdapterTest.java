@@ -22,7 +22,7 @@ package org.apache.druid.segment.incremental;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.segment.CloserRule;
+import org.apache.druid.segment.CloserExtension;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.IndexableAdapter;
 import org.apache.druid.segment.RowIterator;
@@ -33,18 +33,20 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.data.IncrementalIndexTest;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("constructorFeeder")
 public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 {
   private static final IndexSpec INDEX_SPEC =
@@ -57,8 +59,8 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
 
   public final IncrementalIndexCreator indexCreator;
 
-  @Rule
-  public final CloserRule closer = new CloserRule(false);
+  @RegisterExtension
+  public final CloserExtension closer = new CloserExtension(false);
 
   public IncrementalIndexAdapterTest(String indexType) throws JsonProcessingException
   {
@@ -69,7 +71,6 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
     ));
   }
 
-  @Parameterized.Parameters(name = "{index}: {0}")
   public static Collection<?> constructorFeeder()
   {
     return IncrementalIndexCreator.getAppendableIndexTypes();
@@ -90,7 +91,7 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
     try (CloseableIndexed<String> dimValueLookup = adapter.getDimValueLookup(dimension)) {
       for (int i = 0; i < dimValueLookup.size(); i++) {
         BitmapValues bitmapValues = adapter.getBitmapValues(dimension, i);
-        Assert.assertEquals(1, bitmapValues.size());
+        Assertions.assertEquals(1, bitmapValues.size());
       }
     }
   }
@@ -114,9 +115,9 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
     while (rows.moveToNext()) {
       rowNums.add(rows.getPointer().getRowNum());
     }
-    Assert.assertEquals(2, rowNums.size());
-    Assert.assertEquals(0, (long) rowNums.get(0));
-    Assert.assertEquals(1, (long) rowNums.get(1));
+    Assertions.assertEquals(2, rowNums.size());
+    Assertions.assertEquals(0, (long) rowNums.get(0));
+    Assertions.assertEquals(1, (long) rowNums.get(1));
   }
 
   @Test
@@ -183,16 +184,16 @@ public class IncrementalIndexAdapterTest extends InitializedNullHandlingTest
     //    RowPointer{indexNum=0, rowNumber=4, timestamp=1533347361396, dimensions={dim1=3, dim2=4}, metrics={count=1}}
     //    RowPointer{indexNum=0, rowNumber=5, timestamp=1533347361396, dimensions={dim1=3, dim2=4}, metrics={count=1}}
 
-    Assert.assertEquals(6, rowStrings.size());
+    Assertions.assertEquals(6, rowStrings.size());
     for (int i = 0; i < 6; i++) {
       if (i % 2 == 0) {
-        Assert.assertEquals(0, (long) dim1Vals.get(i));
-        Assert.assertEquals(0, (long) dim2Vals.get(i));
+        Assertions.assertEquals(0, (long) dim1Vals.get(i));
+        Assertions.assertEquals(0, (long) dim2Vals.get(i));
       } else {
-        Assert.assertEquals(1, (long) dim1Vals.get(i));
-        Assert.assertEquals(1, (long) dim2Vals.get(i));
+        Assertions.assertEquals(1, (long) dim1Vals.get(i));
+        Assertions.assertEquals(1, (long) dim2Vals.get(i));
       }
-      Assert.assertEquals(getExpected.apply(i), rowStrings.get(i));
+      Assertions.assertEquals(getExpected.apply(i), rowStrings.get(i));
     }
   }
 }

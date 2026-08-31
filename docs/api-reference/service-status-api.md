@@ -28,7 +28,7 @@ import TabItem from '@theme/TabItem';
   -->
 
 
-This document describes the API endpoints to retrieve service status, cluster information for Apache Druid.
+This document describes the API endpoints to retrieve service status, cluster information for Apache&circledR; Druid.
 
 In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server address of deployment and the service port. For example, on the quickstart configuration, replace `http://ROUTER_IP:ROUTER_PORT` with `http://localhost:8888`.
 

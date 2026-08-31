@@ -95,6 +95,29 @@ public class Bitmap64ExactCountMergeAggregatorTest
 
     EasyMock.verify(mockSelector);
   }
+
+  @Test
+  public void testAggregateCountersAcrossSignedHighBoundary()
+  {
+    RoaringBitmap64Counter negativeHighCounter = new RoaringBitmap64Counter();
+    negativeHighCounter.add(-1L);
+
+    RoaringBitmap64Counter nonNegativeHighCounter = new RoaringBitmap64Counter();
+    nonNegativeHighCounter.add(0L);
+    nonNegativeHighCounter.add(1L);
+
+    EasyMock.expect(mockSelector.getObject()).andReturn(negativeHighCounter).once();
+    EasyMock.expect(mockSelector.getObject()).andReturn(nonNegativeHighCounter).once();
+    EasyMock.replay(mockSelector);
+
+    aggregator.aggregate();
+    aggregator.aggregate();
+
+    Bitmap64 resultCounter = (Bitmap64) aggregator.get();
+    Assertions.assertEquals(3, resultCounter.getCardinality());
+
+    EasyMock.verify(mockSelector);
+  }
   
   @Test
   public void testAggregateMultipleCountersIncludingNull()

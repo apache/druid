@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
@@ -41,14 +42,13 @@ import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -69,13 +69,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
 
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class CacheSchedulerTest
 {
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_ON_HEAP_CACHE_MANAGER =
@@ -107,7 +104,6 @@ public class CacheSchedulerTest
         }
       };
 
-  @Parameterized.Parameters
   public static Collection<Object[]> data()
   {
     return Arrays.asList(new Object[][]{{CREATE_ON_HEAP_CACHE_MANAGER}});
@@ -122,28 +118,26 @@ public class CacheSchedulerTest
   private static final String KEY = "foo";
   private static final String VALUE = "bar";
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-  private final Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
+  @TempDir
+  public File temporaryFolder;
+  private Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager;
   private Lifecycle lifecycle;
   private NamespaceExtractionCacheManager cacheManager;
   private CacheScheduler scheduler;
   private File tmpFile;
 
-  public CacheSchedulerTest(
+  public void initCacheSchedulerTest(
       Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
-  )
+  ) throws Exception
   {
     this.createCacheManager = createCacheManager;
+    initializeCacheScheduler();
   }
 
-  @Before
-  public void setUp() throws Exception
+  private void initializeCacheScheduler() throws Exception
   {
-    lifecycle = new Lifecycle();
-    lifecycle.start();
     cacheManager = createCacheManager.apply(lifecycle);
-    final Path tmpDir = temporaryFolder.newFolder().toPath();
+    final Path tmpDir = newFolder(temporaryFolder, "junit").toPath();
     final CacheGenerator<UriExtractionNamespace> cacheGenerator = (extractionNamespace, id, lastVersion, cache) -> {
       Thread.sleep(2); // To make absolutely sure there is a unique currentTimeMillis
       String version = Long.toString(System.currentTimeMillis());
@@ -172,15 +166,25 @@ public class CacheSchedulerTest
     }
   }
 
-  @After
+  @BeforeEach
+  public void setUp() throws Exception
+  {
+    lifecycle = new Lifecycle();
+    lifecycle.start();
+  }
+
+  @AfterEach
   public void tearDown()
   {
     lifecycle.stop();
   }
 
-  @Test(timeout = 60_000L)
-  public void testSimpleSubmission() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testSimpleSubmission(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
@@ -193,12 +197,15 @@ public class CacheSchedulerTest
     );
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
     waitFor(entry);
-    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
+    Assertions.assertEquals(VALUE, entry.getCache().get(KEY));
   }
 
-  @Test(timeout = 60_000L)
-  public void testInitialization() throws InterruptedException, TimeoutException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testInitialization(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
@@ -211,12 +218,15 @@ public class CacheSchedulerTest
     );
     CacheScheduler.Entry entry = scheduler.schedule(namespace);
     entry.awaitTotalUpdatesWithTimeout(1, 2000);
-    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
+    Assertions.assertEquals(VALUE, entry.getCache().get(KEY));
   }
 
-  @Test(timeout = 60_000L)
-  public void testPeriodicUpdatesScheduled() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testPeriodicUpdatesScheduled(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final int repeatCount = 5;
     final long delay = 5;
     try {
@@ -224,19 +234,19 @@ public class CacheSchedulerTest
       final long start = System.currentTimeMillis();
       try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
 
-        Assert.assertFalse(entry.getUpdaterFuture().isDone());
-        Assert.assertFalse(entry.getUpdaterFuture().isCancelled());
+        Assertions.assertFalse(entry.getUpdaterFuture().isDone());
+        Assertions.assertFalse(entry.getUpdaterFuture().isCancelled());
 
         entry.awaitTotalUpdates(repeatCount);
 
         long minEnd = start + ((repeatCount - 1) * delay);
         long end = System.currentTimeMillis();
-        Assert.assertTrue(
-            StringUtils.format(
+        Assertions.assertTrue(
+            minEnd <= end, StringUtils.format(
                 "Didn't wait long enough between runs. Expected more than %d was %d",
                 minEnd - start,
                 end - start
-            ), minEnd <= end
+            )
         );
       }
     }
@@ -248,9 +258,12 @@ public class CacheSchedulerTest
   }
 
 
-  @Test(timeout = 60_000L) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
-  public void testConcurrentAddDelete() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS) // This is very fast when run locally. Speed on Travis completely depends on noisy neighbors.
+  public void testConcurrentAddDelete(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final int threads = 10;
     final int deletesPerThread = 5;
     ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
@@ -321,9 +334,12 @@ public class CacheSchedulerTest
     checkNoMoreRunning();
   }
 
-  @Test(timeout = 60_000L)
-  public void testSimpleDelete() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testSimpleDelete(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     testDelete();
   }
 
@@ -332,17 +348,17 @@ public class CacheSchedulerTest
     final long period = 1_000L; // Give it some time between attempts to update
     final UriExtractionNamespace namespace = getUriExtractionNamespace(period);
     CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000);
-    Assert.assertNotNull(entry);
+    Assertions.assertNotNull(entry);
     final Future<?> future = entry.getUpdaterFuture();
-    Assert.assertFalse(future.isCancelled());
-    Assert.assertFalse(future.isDone());
+    Assertions.assertFalse(future.isCancelled());
+    Assertions.assertFalse(future.isDone());
     entry.awaitTotalUpdates(1);
 
-    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
+    Assertions.assertEquals(VALUE, entry.getCache().get(KEY));
     entry.close();
 
     try {
-      Assert.assertNull(future.get());
+      Assertions.assertNull(future.get());
     }
     catch (CancellationException e) {
       // Ignore
@@ -353,8 +369,8 @@ public class CacheSchedulerTest
       }
     }
 
-    Assert.assertTrue(future.isCancelled());
-    Assert.assertTrue(future.isDone());
+    Assertions.assertTrue(future.isCancelled());
+    Assertions.assertTrue(future.isDone());
   }
 
   private UriExtractionNamespace getUriExtractionNamespace(long period)
@@ -371,9 +387,14 @@ public class CacheSchedulerTest
     );
   }
 
-  @Test(timeout = 60_000L)
-  public void testRetainedRetiredCacheSkipsPollUntilReferenceCloses() throws Exception
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRetainedRetiredCacheSkipsPollUntilReferenceCloses(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
     config.setMaxRetiredCacheEntries(1);
     config.setRetiredCacheEntryTimeoutMillis(60_000L);
@@ -390,21 +411,26 @@ public class CacheSchedulerTest
 
       try {
         entry.awaitTotalUpdatesWithTimeout(3, 100L);
-        Assert.fail("Expected the third cache load to be skipped while the retired cache is retained");
+        Assertions.fail("Expected the third cache load to be skipped while the retired cache is retained");
       }
       catch (TimeoutException expected) {
         // expected
       }
-      Assert.assertEquals(updatesStartedAfterSecondVersion, scheduler.updatesStarted());
+      Assertions.assertEquals(updatesStartedAfterSecondVersion, scheduler.updatesStarted());
 
       retainedFirstVersion.close();
       entry.awaitTotalUpdatesWithTimeout(3, 10_000L);
     }
   }
 
-  @Test(timeout = 60_000L)
-  public void testRetiredCacheRejectsNewReference() throws Exception
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRetiredCacheRejectsNewReference(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
     config.setMaxRetiredCacheEntries(1);
     config.setRetiredCacheEntryTimeoutMillis(60_000L);
@@ -420,7 +446,7 @@ public class CacheSchedulerTest
         waitForCondition(() -> entry.pruneAndCountRetiredCaches() == 1, 10_000L);
         final Closeable staleRetainedFirstVersion = firstVersion.acquireReference();
         staleRetainedFirstVersion.close();
-        Assert.fail("Expected retired cache to reject a new reference");
+        Assertions.fail("Expected retired cache to reject a new reference");
       }
       catch (ISE expected) {
         // expected
@@ -431,9 +457,14 @@ public class CacheSchedulerTest
     }
   }
 
-  @Test(timeout = 60_000L)
-  public void testRetiredCacheTimeoutForceDisposesActiveReference() throws Exception
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRetiredCacheTimeoutForceDisposesActiveReference(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
     config.setMaxRetiredCacheEntries(1);
     config.setRetiredCacheEntryTimeoutMillis(0L);
@@ -450,9 +481,14 @@ public class CacheSchedulerTest
     }
   }
 
-  @Test(timeout = 60_000L)
-  public void testMaxRetiredCacheEntriesAllowsConfiguredNumberBeforeSkipping() throws Exception
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testMaxRetiredCacheEntriesAllowsConfiguredNumberBeforeSkipping(
+      Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager
+  ) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
     config.setMaxRetiredCacheEntries(2);
     config.setRetiredCacheEntryTimeoutMillis(60_000L);
@@ -472,12 +508,12 @@ public class CacheSchedulerTest
 
       try {
         entry.awaitTotalUpdatesWithTimeout(4, 100L);
-        Assert.fail("Expected the fourth cache load to be skipped while two retired caches are retained");
+        Assertions.fail("Expected the fourth cache load to be skipped while two retired caches are retained");
       }
       catch (TimeoutException expected) {
         // expected
       }
-      Assert.assertEquals(updatesStartedAfterThirdVersion, scheduler.updatesStarted());
+      Assertions.assertEquals(updatesStartedAfterThirdVersion, scheduler.updatesStarted());
 
       retainedFirstVersion.close();
       entry.awaitTotalUpdatesWithTimeout(4, 10_000L);
@@ -485,7 +521,8 @@ public class CacheSchedulerTest
     }
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testFailedRetiredCacheDisposeIsRetriedOnNextPrune() throws Exception
   {
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
@@ -505,11 +542,12 @@ public class CacheSchedulerTest
       waitForCondition(() -> failingCacheManager.getDisposeAttempts() >= 2, 10_000L);
 
       entry.awaitTotalUpdatesWithTimeout(3, 10_000L);
-      Assert.assertTrue(failingCacheManager.getDisposeAttempts() >= 3);
+      Assertions.assertTrue(failingCacheManager.getDisposeAttempts() >= 3);
     }
   }
 
-  @Test(timeout = 60_000L)
+  @Test
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
   public void testEntryCloseRetiresActiveCacheUntilReferenceCloses() throws Exception
   {
     final NamespaceExtractionConfig config = new NamespaceExtractionConfig();
@@ -529,11 +567,11 @@ public class CacheSchedulerTest
 
       entry.close();
       entryClosed = true;
-      Assert.assertEquals(0, entry.pruneAndCountRetiredCaches());
-      Assert.assertEquals(0, countingCacheManager.getDisposeAttempts());
+      Assertions.assertEquals(0, entry.pruneAndCountRetiredCaches());
+      Assertions.assertEquals(0, countingCacheManager.getDisposeAttempts());
 
       retainedLookup.close();
-      Assert.assertEquals(1, countingCacheManager.getDisposeAttempts());
+      Assertions.assertEquals(1, countingCacheManager.getDisposeAttempts());
     }
     finally {
       if (retainedLookup != null) {
@@ -564,10 +602,13 @@ public class CacheSchedulerTest
     );
   }
 
-  @Test(timeout = 60_000L)
-  public void testShutdown()
-      throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testShutdown(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager)
+      throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final long period = 5L;
     try {
 
@@ -577,12 +618,12 @@ public class CacheSchedulerTest
         final Future<?> future = entry.getUpdaterFuture();
         entry.awaitNextUpdates(1);
 
-        Assert.assertFalse(future.isCancelled());
-        Assert.assertFalse(future.isDone());
+        Assertions.assertFalse(future.isCancelled());
+        Assertions.assertFalse(future.isDone());
 
         final long prior = scheduler.updatesStarted();
         entry.awaitNextUpdates(1);
-        Assert.assertTrue(scheduler.updatesStarted() > prior);
+        Assertions.assertTrue(scheduler.updatesStarted() > prior);
       }
     }
     finally {
@@ -594,20 +635,23 @@ public class CacheSchedulerTest
 
     checkNoMoreRunning();
 
-    Assert.assertTrue(cacheManager.scheduledExecutorService().isShutdown());
-    Assert.assertTrue(cacheManager.scheduledExecutorService().isTerminated());
+    Assertions.assertTrue(cacheManager.scheduledExecutorService().isShutdown());
+    Assertions.assertTrue(cacheManager.scheduledExecutorService().isTerminated());
   }
 
-  @Test(timeout = 60_000L)
-  public void testRunCount() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testRunCount(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     final int numWaits = 5;
     try {
       final UriExtractionNamespace namespace = getUriExtractionNamespace((long) 5);
       try (CacheScheduler.Entry entry = scheduler.schedule(namespace)) {
         final Future<?> future = entry.getUpdaterFuture();
         entry.awaitNextUpdates(numWaits);
-        Assert.assertFalse(future.isDone());
+        Assertions.assertFalse(future.isDone());
       }
     }
     finally {
@@ -616,7 +660,7 @@ public class CacheSchedulerTest
     while (!cacheManager.waitForServiceToEnd(1_000, TimeUnit.MILLISECONDS)) {
       // keep waiting
     }
-    Assert.assertTrue(scheduler.updatesStarted() >= numWaits);
+    Assertions.assertTrue(scheduler.updatesStarted() >= numWaits);
     checkNoMoreRunning();
   }
 
@@ -624,21 +668,27 @@ public class CacheSchedulerTest
    * Tests that even if entry.close() wasn't called, the scheduled task is cancelled when the entry becomes
    * unreachable.
    */
-  @Test(timeout = 60_000L)
-  public void testEntryCloseForgotten() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testEntryCloseForgotten(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     scheduleDanglingEntry();
-    Assert.assertEquals(1, scheduler.getActiveEntries());
+    Assertions.assertEquals(1, scheduler.getActiveEntries());
     while (scheduler.getActiveEntries() > 0) {
       System.gc();
       Thread.sleep(1000);
     }
-    Assert.assertEquals(0, scheduler.getActiveEntries());
+    Assertions.assertEquals(0, scheduler.getActiveEntries());
   }
 
-  @Test(timeout = 60_000L)
-  public void testSimpleSubmissionSuccessWithWait() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 60_000L, unit = TimeUnit.MILLISECONDS)
+  public void testSimpleSubmissionSuccessWithWait(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     UriExtractionNamespace namespace = new UriExtractionNamespace(
         tmpFile.toURI(),
         null, null,
@@ -651,13 +701,16 @@ public class CacheSchedulerTest
     );
     CacheScheduler.Entry entry = scheduler.scheduleAndWait(namespace, 10_000L);
     waitFor(entry);
-    Assert.assertEquals(VALUE, entry.getCache().get(KEY));
+    Assertions.assertEquals(VALUE, entry.getCache().get(KEY));
   }
 
 
-  @Test(timeout = 20_000L)
-  public void testSimpleSubmissionFailureWithWait() throws InterruptedException
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(value = 20_000L, unit = TimeUnit.MILLISECONDS)
+  public void testSimpleSubmissionFailureWithWait(Function<Lifecycle, NamespaceExtractionCacheManager> createCacheManager) throws Exception
   {
+    initCacheSchedulerTest(createCacheManager);
     JdbcExtractionNamespace namespace = new JdbcExtractionNamespace(
         new MetadataStorageConnectorConfig()
         {
@@ -702,17 +755,22 @@ public class CacheSchedulerTest
 
   private void checkNoMoreRunning() throws InterruptedException
   {
-    Assert.assertEquals(0, scheduler.getActiveEntries());
+    Assertions.assertEquals(0, scheduler.getActiveEntries());
     final long pre = scheduler.updatesStarted();
     Thread.sleep(100L);
-    Assert.assertEquals(pre, scheduler.updatesStarted());
+    Assertions.assertEquals(pre, scheduler.updatesStarted());
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 
   private static void waitForCondition(BooleanSupplier condition, long timeoutMillis) throws InterruptedException
   {
     final long start = System.currentTimeMillis();
     while (!condition.getAsBoolean()) {
-      Assert.assertTrue(System.currentTimeMillis() - start < timeoutMillis);
+      Assertions.assertTrue(System.currentTimeMillis() - start < timeoutMillis);
       Thread.sleep(10L);
     }
   }

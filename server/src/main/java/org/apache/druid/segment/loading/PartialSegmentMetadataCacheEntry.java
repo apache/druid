@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.PartialBundleAcquirer;
@@ -48,7 +49,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -97,6 +104,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   private final SegmentRangeReader rangeReader;
   private final ObjectMapper jsonMapper;
   private final long reservationEstimate;
+  private final long coalesceGapBytes;
+  private final long maxFetchRunBytes;
 
   @Nullable
   private final StorageLoadingThreadPool storagePool;
@@ -112,9 +121,11 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   @GuardedBy("entryLock")
   @Nullable
   private StorageLocation location;
-  @GuardedBy("entryLock")
+  // volatile so isMounted() can read it without blocking behind a concurrent doActualUnmount() holding entryLock
+  // across fileMapper.close() + deleteHeaderFiles() (real file I/O). Other reads of this field still go through
+  // entryLock because they do more than a single null-check (e.g. isFullyDownloaded() also calls a method on it).
   @Nullable
-  private PartialSegmentFileMapperV10 fileMapper;
+  private volatile PartialSegmentFileMapperV10 fileMapper;
   // Cached PartialQueryableIndex for the mounted file mapper. Built lazily on first {@code acquireReference} call
   // so concurrent acquireReference calls share the same memoized column-holder suppliers. first read of a column
   // deserializes once and the ColumnHolder stays cached for subsequent queries against the same entry. Cleared
@@ -132,8 +143,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
 
   // bundle entries that are currently mounted against this segment, registered by PartialSegmentBundleCacheEntry on
   // successful mount and removed on unmount. Lets the drop path enumerate bundles for cascade-close without scanning
-  // the StorageLocation's entry maps.
-  private final Set<PartialSegmentBundleCacheEntry> linkedBundles = ConcurrentHashMap.newKeySet();
+  // the StorageLocation's entry maps. Keyed by bundle name (one bundle per name per segment).
+  private final ConcurrentHashMap<String, PartialSegmentBundleCacheEntry> linkedBundles = new ConcurrentHashMap<>();
 
   // Reference-counted gate over the actual cleanup work (close file mapper, delete header files). Set on
   // successful mount; unmount() closes the wrapper which defers running cleanup until all outstanding references
@@ -147,6 +158,33 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   // cleared so retries get a fresh attempt; on success the gate stays set until doActualUnmount clears it.
   private final AtomicReference<SettableFuture<Void>> mountFuture = new AtomicReference<>();
 
+  /**
+   * Rule-holds state machine (all guarded by {@link #entryLock}). A partial-load rule is applied via
+   * {@link #applyRule(String, Set)} after {@link #mount(StorageLocation)}. While a rule is applied
+   * ({@code ruleFingerprint != null}):
+   * <ul>
+   *   <li>The entry holds a self-referential {@link StorageLocation.ReservationHold} on its own weak reservation,
+   *       preventing cache from evicting the metadata entry.</li>
+   *   <li>For each bundle name in {@link #ruleSelectedBundleNames} that has registered with this entry via
+   *       {@link #registerBundle}, the entry holds a {@link StorageLocation.ReservationHold} on the bundle's weak
+   *       reservation, preventing cache from evicting the bundle.</li>
+   * </ul>
+   * {@link #clearRule()} releases the holds and clears the state. {@link #applyRule(String, Set)} with a different
+   * fingerprint / selection set diffs the current state and closes / acquires only the deltas, so overlapping bundle
+   * holds stay live across a rule swap.
+   */
+  @GuardedBy("entryLock")
+  @Nullable
+  private String ruleFingerprint;
+  @GuardedBy("entryLock")
+  private Set<String> ruleSelectedBundleNames = Set.of();
+  @GuardedBy("entryLock")
+  private final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> ruleBundleHolds =
+      new HashMap<>();
+  @GuardedBy("entryLock")
+  @Nullable
+  private StorageLocation.ReservationHold<PartialSegmentMetadataCacheEntry> metadataSelfHold;
+
   public PartialSegmentMetadataCacheEntry(
       SegmentId segmentId,
       File localCacheDir,
@@ -155,7 +193,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       SegmentRangeReader rangeReader,
       ObjectMapper jsonMapper,
       @Nullable StorageLoadingThreadPool storagePool,
-      long reservationEstimate
+      long reservationEstimate,
+      long coalesceGapBytes,
+      long maxFetchRunBytes
   )
   {
     if (reservationEstimate <= 0) {
@@ -175,6 +215,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     this.storagePool = storagePool;
     this.reservationEstimate = reservationEstimate;
     this.currentSize = reservationEstimate;
+    this.coalesceGapBytes = coalesceGapBytes;
+    this.maxFetchRunBytes = maxFetchRunBytes;
     this.bundleAcquirer = createBundleAcquirer();
   }
 
@@ -191,12 +233,381 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   }
 
   /**
-   * The per-segment cache directory this entry reads from and writes to. Exposed for the bundle-restore helper in
-   * {@link PartialSegmentCacheBootstrap#restoreBundlesFromDisk} so it can locate the on-disk container files.
+   * The fingerprint of the partial-load rule currently applied to this entry, or {@code null} if no rule has been
+   * applied. Set by {@link #applyRule(String, Set)} and cleared by {@link #clearRule()}. {@link #doActualUnmount()}
+   * asserts that this field is {@code null} at unmount time, the {@code metadataSelfHold} taken by applyRule pins
+   * the entry's phaser and prevents eviction reclaim / doActualUnmount from firing while a rule is applied. A fresh
+   * mount therefore always starts with no rule applied.
    */
-  File getLocalCacheDir()
+  @Nullable
+  public String getRuleFingerprint()
   {
-    return localCacheDir;
+    entryLock.lock();
+    try {
+      return ruleFingerprint;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  /**
+   * The set of bundle names currently pinned by an applied partial-load rule, or an empty set if no rule is applied.
+   * Return value is immutable; safe to inspect without further synchronization.
+   */
+  public Set<String> getRuleSelectedBundleNames()
+  {
+    entryLock.lock();
+    try {
+      return ruleSelectedBundleNames;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  /**
+   * Whether a partial-load rule is currently applied to this entry. Equivalent to {@code getRuleFingerprint() != null}.
+   * While {@code true}, this entry holds a self-referential {@link StorageLocation.ReservationHold} that prevents cache
+   * from evicting it, so the metadata's V10 header stays resident until {@link #clearRule()} runs.
+   */
+  public boolean isRuleHeld()
+  {
+    entryLock.lock();
+    try {
+      return ruleFingerprint != null;
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  /**
+   * Apply (or replace) a partial-load rule on this entry. Must be called after {@link #mount(StorageLocation)}, the
+   * entry must be registered with its {@link StorageLocation} so it can acquire holds on itself and on its bundles.
+   * <p>
+   * <b>Concurrency contract.</b> The caller MUST serialize {@code applyRule} and {@link #clearRule} for a given
+   * segment id through an external per-segment lock ({@code SegmentLocalCacheManager} uses its
+   * {@code ReferenceCountingLock segmentLocks}). This method releases {@link #entryLock} between Phase 2 (acquire
+   * holds outside the lock) and Phase 4 (release holds outside the lock); a concurrent invocation of
+   * {@code applyRule}/{@code clearRule} on the same entry can observe intermediate state during those windows and
+   * silently miss rule-hold installations or leak them. {@link #entryLock} alone is insufficient because it is
+   * released across the acquire/release phases by design (holding it across {@link StorageLocation} lock acquisition
+   * would invert the writeLock &rarr; entryLock ordering the storage layer already uses for eviction).
+   * <p>
+   * On first application ({@code ruleFingerprint} transitions from {@code null}), a self-referential
+   * {@link StorageLocation.ReservationHold} is taken to pin the metadata entry in-cache. On repeat calls with the same
+   * {@code fingerprint} and matching {@code selectedBundleNames}, this is a no-op. On a genuine rule swap, only the
+   * delta between the previous and new selection is applied: bundle holds for names dropped from the selection are
+   * closed, and holds for names newly added are acquired for any bundle already registered with this entry (later
+   * arrivals get their hold via {@link #registerBundle}).
+   * <p>
+   * Bundles whose {@link StorageLocation.ReservationHold} is currently zero-refcount (never mounted, or evicted but
+   * unregistered before this call) will not appear in {@link #linkedBundles} yet, so no hold is taken for them here;
+   * the caller is expected to drive an on-demand acquire per selected bundle name to trigger a fresh mount, which will
+   * call {@link #registerBundle} and pick up the rule-hold at that point.
+   *
+   * @throws DruidException if the entry is not currently mounted
+   */
+  public void applyRule(String fingerprint, Set<String> selectedBundleNames)
+  {
+    Objects.requireNonNull(fingerprint, "fingerprint");
+    Objects.requireNonNull(selectedBundleNames, "selectedBundleNames");
+    final Set<String> newSelection = Set.copyOf(selectedBundleNames);
+
+    // Phase 1: snapshot under entryLock and compute the diff. Do NOT call StorageLocation methods here — that would
+    // acquire the location's readLock while holding entryLock and could deadlock with a concurrent writeLock holder
+    // that needs entryLock
+    final StorageLocation loc;
+    final boolean needsSelfHold;
+    final List<String> namesToRelease;
+    final List<String> namesToAcquire;
+    entryLock.lock();
+    try {
+      if (location == null) {
+        throw DruidException.defensive(
+            "applyRule on partial metadata entry[%s] requires the entry to be mounted",
+            id
+        );
+      }
+      if (fingerprint.equals(ruleFingerprint) && newSelection.equals(ruleSelectedBundleNames)) {
+        return;
+      }
+      loc = location;
+      needsSelfHold = (metadataSelfHold == null);
+      namesToRelease = new ArrayList<>();
+      for (String name : ruleBundleHolds.keySet()) {
+        if (!newSelection.contains(name)) {
+          namesToRelease.add(name);
+        }
+      }
+      namesToAcquire = new ArrayList<>();
+      for (String name : newSelection) {
+        if (!ruleBundleHolds.containsKey(name) && findLinkedBundleByName(name) != null) {
+          namesToAcquire.add(name);
+        }
+      }
+    }
+    finally {
+      entryLock.unlock();
+    }
+
+    // Phase 2 + 3: acquire outside entryLock, then commit under entryLock. Track every hold this call acquires in
+    // `uncommittedHolds`; when a hold's ownership transfers into `metadataSelfHold` or `ruleBundleHolds`, it is
+    // removed from the list. Any throw between acquire and commit (or a race-lose at commit) leaves the hold in
+    // `uncommittedHolds`, and the finally at Phase 4 releases it. This is what makes applyRule all-or-nothing at
+    // the ReservationHold level: no leaks on partial failure, no stranded self-hold under a stale fingerprint.
+    final List<StorageLocation.ReservationHold<?>> uncommittedHolds = new ArrayList<>();
+    final List<StorageLocation.ReservationHold<?>> displacedHolds = new ArrayList<>();
+    try {
+      final StorageLocation.ReservationHold<PartialSegmentMetadataCacheEntry> newSelfHold;
+      if (needsSelfHold) {
+        newSelfHold = loc.addInternalWeakReservationHoldIfExists(id);
+        if (newSelfHold == null) {
+          throw DruidException.defensive(
+              "Failed to acquire self-referential rule-hold on partial metadata entry[%s]; entry is not weak-reserved",
+              id
+          );
+        }
+        uncommittedHolds.add(newSelfHold);
+      } else {
+        newSelfHold = null;
+      }
+      final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> acquired = new HashMap<>();
+      for (String name : namesToAcquire) {
+        final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h =
+            loc.addInternalWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
+        if (h != null) {
+          acquired.put(name, h);
+          uncommittedHolds.add(h);
+        }
+      }
+
+      // Phase 3: commit under entryLock. Ownership transfers are done by removing from `uncommittedHolds` after
+      // installing into the field. Anything left in `uncommittedHolds` at the end lost a race and gets released
+      // in Phase 4 alongside `displacedHolds` (the pre-existing holds diffed out of ruleBundleHolds).
+      entryLock.lock();
+      try {
+        if (newSelfHold != null) {
+          if (metadataSelfHold == null) {
+            metadataSelfHold = newSelfHold;
+            uncommittedHolds.remove(newSelfHold);
+          }
+        }
+        for (String name : namesToRelease) {
+          final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h = ruleBundleHolds.remove(name);
+          if (h != null) {
+            displacedHolds.add(h);
+          }
+        }
+        for (var e : acquired.entrySet()) {
+          if (!ruleBundleHolds.containsKey(e.getKey())) {
+            ruleBundleHolds.put(e.getKey(), e.getValue());
+            uncommittedHolds.remove(e.getValue());
+          }
+        }
+        ruleFingerprint = fingerprint;
+        ruleSelectedBundleNames = newSelection;
+      }
+      finally {
+        entryLock.unlock();
+      }
+
+      // Phase 3b: close the narrow race with concurrent registerBundle
+      reconcileLinkedBundlesWithSelection(loc, uncommittedHolds);
+    }
+    finally {
+      // Phase 4: release outside entryLock. `uncommittedHolds` contains every hold this call acquired but did not
+      // successfully transfer into a field (race-lose, mid-acquire failure, or commit failure). `displacedHolds`
+      // contains pre-existing holds that the diff removed from ruleBundleHolds after successful commit.
+      releaseHolds(uncommittedHolds);
+      releaseHolds(displacedHolds);
+    }
+  }
+
+  /**
+   * Post-{@link #applyRule} reconciliation: scan {@link #linkedBundles} against the freshly-committed
+   * {@link #ruleSelectedBundleNames} and install a rule-hold for any selected bundle that's present in
+   * {@code linkedBundles} but missing from {@link #ruleBundleHolds}.
+   * <p>
+   * Closes a race that can occur when bundle mounts triggered by concurrent queries run on the storage-loading pool
+   * <em>without</em> the per-segment lock, and can call {@link #registerBundle} concurrently with
+   * {@link #applyRule}. If the bundle lands in {@link #linkedBundles} <em>after</em> {@link #applyRule}'s Phase 1
+   * snapshot but its {@code registerBundle} Phase 1 runs <em>before</em> Phase 3 has committed {@code newSelection},
+   * {@code registerBundle} observes the OLD selection and bails without installing a hold, and Phase 1's
+   * {@code namesToAcquire} also missed it (it wasn't in {@code linkedBundles} at snapshot time). Without this
+   * reconciliation, the entry would incorrectly be evictable despite the rule.
+   */
+  private void reconcileLinkedBundlesWithSelection(
+      StorageLocation loc,
+      List<StorageLocation.ReservationHold<?>> uncommittedHolds
+  )
+  {
+    final List<String> reconcileNames;
+    entryLock.lock();
+    try {
+      reconcileNames = new ArrayList<>();
+      for (String name : ruleSelectedBundleNames) {
+        if (!ruleBundleHolds.containsKey(name) && findLinkedBundleByName(name) != null) {
+          reconcileNames.add(name);
+        }
+      }
+    }
+    finally {
+      entryLock.unlock();
+    }
+    if (reconcileNames.isEmpty()) {
+      return;
+    }
+
+    final Map<String, StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry>> acquired = new HashMap<>();
+    for (String name : reconcileNames) {
+      final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> h =
+          loc.addInternalWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, name));
+      if (h != null) {
+        acquired.put(name, h);
+        uncommittedHolds.add(h);
+      }
+    }
+
+    entryLock.lock();
+    try {
+      for (var e : acquired.entrySet()) {
+        if (ruleSelectedBundleNames.contains(e.getKey()) && !ruleBundleHolds.containsKey(e.getKey())) {
+          ruleBundleHolds.put(e.getKey(), e.getValue());
+          uncommittedHolds.remove(e.getValue());
+        }
+      }
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  /**
+   * Release the partial-load rule applied to this entry. Closes every {@link StorageLocation.ReservationHold} taken by
+   * {@link #applyRule(String, Set)} (the metadata self-hold and every bundle hold) and clears the rule state. Bundle
+   * entries that were kept resident only by the rule become eviction eligible; the metadata entry itself becomes
+   * eviction eligible as well (unless a concurrent query holds a reference). Safe to call when no rule is applied, no-op.
+   * <p>
+   * <b>Concurrency contract.</b> Must be serialized against {@link #applyRule} for a given segment id via an external
+   * per-segment lock (see {@code applyRule}'s Concurrency contract). Hold releases run OUTSIDE {@link #entryLock}, so
+   * a concurrent {@code applyRule}/{@code clearRule} on the same entry can observe intermediate state.
+   * <p>
+   * Snapshot-under-lock, release-outside-lock. Closing a {@link StorageLocation.ReservationHold} eventually acquires
+   * the location's writeLock (via {@code createWeakEntryReleaseRunnable}), so it must not run under {@link #entryLock}
+   * lest it invert the writeLock &rarr; entryLock ordering the storage layer already relies on.
+   */
+  public void clearRule()
+  {
+    final List<StorageLocation.ReservationHold<?>> toClose = new ArrayList<>();
+    entryLock.lock();
+    try {
+      toClose.addAll(ruleBundleHolds.values());
+      ruleBundleHolds.clear();
+      if (metadataSelfHold != null) {
+        toClose.add(metadataSelfHold);
+        metadataSelfHold = null;
+      }
+      ruleFingerprint = null;
+      ruleSelectedBundleNames = Set.of();
+    }
+    finally {
+      entryLock.unlock();
+    }
+    releaseHolds(toClose);
+  }
+
+  private void releaseHolds(List<StorageLocation.ReservationHold<?>> holds)
+  {
+    for (StorageLocation.ReservationHold<?> h : holds) {
+      CloseableUtils.closeAndSuppressExceptions(
+          h,
+          t -> LOG.warn(t, "Failed releasing rule-hold on partial segment[%s]", segmentId)
+      );
+    }
+  }
+
+  @Nullable
+  private PartialSegmentBundleCacheEntry findLinkedBundleByName(String bundleName)
+  {
+    return linkedBundles.get(bundleName);
+  }
+
+  /**
+   * Whether every container belonging to {@code bundleName} has been downloaded.
+   * <p>
+   * Returns {@code false} when the entry is not mounted (no file mapper yet).
+   */
+  public boolean isBundleFullyDownloaded(String bundleName)
+  {
+    final PartialSegmentFileMapperV10 mapper = getFileMapper();
+    return mapper != null && mapper.isBundleFullyDownloaded(bundleName);
+  }
+
+  /**
+   * Whether {@code bundleName} is currently held by an applied partial-load rule on this entry (i.e. present in
+   * {@link #ruleBundleHolds}).
+   * <p>
+   * NOT the same as "is the bundle linked": a bundle can be linked ({@link #linkedBundles}) without being rule-held,
+   * because {@link #linkedBundles} is a lock-free {@link ConcurrentHashMap} keyset that
+   * {@link #registerBundle}/{@link #unregisterBundle} mutate outside {@link #entryLock} (to preserve lock ordering
+   * against the storage layer's writeLock &rarr; entryLock chain).
+   */
+  public boolean isBundleRuleHeld(String bundleName)
+  {
+    entryLock.lock();
+    try {
+      return ruleBundleHolds.containsKey(bundleName);
+    }
+    finally {
+      entryLock.unlock();
+    }
+  }
+
+  /**
+   * Mount and eagerly download the named bundle. Drives an acquire through the internal
+   * {@link #bundleAcquirer} (which mounts the bundle if needed, causing {@link #registerBundle} to fire), downloads
+   * every container in the bundle via {@link PartialSegmentFileMapperV10#ensureBundleDownloaded}, then releases the
+   * transient acquire hold. When a partial-load rule selects this bundle, the metadata's own rule-hold (installed by
+   * {@link #registerBundle} on the mount that this call drives) keeps the bundle resident after the transient hold
+   * releases. When no rule selects this bundle, the transient hold's release leaves the bundle eviction eligible; the
+   * caller should already have driven {@link #applyRule} first to install the rule state before calling this.
+   */
+  public void ensureBundleResidentForRule(String bundleName) throws IOException
+  {
+    entryLock.lock();
+    try {
+      if (location == null || fileMapper == null) {
+        throw DruidException.defensive(
+            "ensureBundleResidentForRule on unmounted partial metadata entry[%s]",
+            id
+        );
+      }
+    }
+    finally {
+      entryLock.unlock();
+    }
+    final Closeable acquired = bundleAcquirer.acquire(bundleName);
+    try {
+      final PartialSegmentFileMapperV10 mapper = getFileMapper();
+      if (mapper == null) {
+        throw DruidException.defensive(
+            "Partial metadata entry[%s] lost its file mapper mid-acquire for bundle[%s]",
+            id,
+            bundleName
+        );
+      }
+      mapper.ensureBundleDownloaded(bundleName);
+    }
+    finally {
+      CloseableUtils.closeAndSuppressExceptions(acquired, t -> LOG.warn(
+          t,
+          "Failed to release transient bundle-acquire hold for bundle[%s] on segment[%s]",
+          bundleName,
+          segmentId
+      ));
+    }
   }
 
   @Override
@@ -211,16 +622,47 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     }
   }
 
-  @Override
-  public boolean isMounted()
+  /**
+   * The rule-declared on-disk footprint for this segment: this metadata entry's own reservation (V10 header plus
+   * post-mount adjustment) plus the sum of every rule-held bundle's reservation, plus every transitive dependency
+   * indirectly pinned by those rule-holds. A projection rule pins the projection bundle in {@link #ruleBundleHolds}
+   * and indirectly pins {@code __base} too. Both contribute to what the rule caused to be on disk, so both are
+   * included here. Deliberately excludes bundles linked for reasons unrelated to the rule (e.g. on-demand-loaded by
+   * queries), which are evictable and would inflate the report with transient state. Used by the historical to stamp
+   * accurate {@code loadedBytes} on partial-load announcements.
+   */
+  public long getRealizedBytes()
   {
     entryLock.lock();
     try {
-      return fileMapper != null;
+      long total = currentSize;
+      // Rule-selected bundles PLUS their transitive dependency closure. Each bundle's getSize() covers only that
+      // bundle's own containers, deps like __base are separate entries whose sizes need to be added explicitly.
+      for (String name : bundlesInMountOrder(ruleBundleHolds.keySet())) {
+        final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> hold = ruleBundleHolds.get(name);
+        if (hold != null) {
+          // Rule-selected: size from the hold's entry (guaranteed non-null; final long field, no lock nesting).
+          total += hold.getEntry().getSize();
+        } else {
+          // Transitive dependency of a rule-selected bundle: pinned via parent-hold on the dependent, not present
+          // in ruleBundleHolds. Look up in linkedBundles.
+          final PartialSegmentBundleCacheEntry dep = linkedBundles.get(name);
+          if (dep != null) {
+            total += dep.getSize();
+          }
+        }
+      }
+      return total;
     }
     finally {
       entryLock.unlock();
     }
+  }
+
+  @Override
+  public boolean isMounted()
+  {
+    return fileMapper != null;
   }
 
   @Override
@@ -273,9 +715,12 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         ours.set(null);
       }
       catch (Throwable t) {
-        // clear the future so the next caller gets a fresh attempt
+        // Clear the future so the next caller gets a fresh attempt. Signal awaiters with the exception BEFORE firing
+        // the onUnmount hook so any thread observing the failure via awaitMount(future) sees the exception before
+        // observing the hook's file-system side effect (info-file deletion).
         mountFuture.set(null);
         ours.setException(t);
+        runOnUnmountHookOnce();
         Throwables.propagateIfInstanceOf(t, IOException.class);
         Throwables.propagateIfPossible(t);
         throw DruidException.defensive(t, "Failed to mount metadata entry[%s]", id);
@@ -312,6 +757,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     // blocked on it. adjustReservation also runs outside entryLock: StorageLocation.release goes
     // writeLock -> entryLock (via release -> unmount), so entryLock -> writeLock here would be a deadlock-prone
     // lock-order inversion.
+    // Hold this entry against reclaim for as long as the mount is establishing state. reclaim passes over held
+    // entries only, and an entry evicted mid-mount finishes into a location that no longer knows about it: the
+    // post-mount check then rolls the whole thing back, or worse commits it if a fresh entry has taken the id in the
+    // meantime, leaving a mapper nothing will ever unmount. Released before the cleanup in the catch below, which only
+    // acts on an entry no one holds.
+    final StorageLocation.ReservationHold<SegmentCacheEntry> selfHold =
+        mountLocation.addInternalWeakReservationHoldIfExists(id);
     try {
       entryLock.lock();
       try {
@@ -337,7 +789,9 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
           localCacheDir,
           targetFilename,
           externalFilenames,
-          new WeakLoadTracker(mountLocation)
+          new WeakLoadTracker(mountLocation),
+          coalesceGapBytes,
+          maxFetchRunBytes
       );
 
       final long sizeToAdjust;
@@ -360,11 +814,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
         entryLock.lock();
         try {
           location = mountLocation;
-          fileMapper = mapper;
           // Install (or re-install, after a previous mount/unmount cycle terminated the prior Phaser) the
           // reference-counted gate over cleanup. Future acquireMetadataReference() / unmount() calls operate on this
-          // instance.
+          // instance. Must be set before fileMapper is published below: fileMapper is volatile and isMounted() reads
+          // it without entryLock, so a lock-free caller must never be able to observe isMounted() == true before the
+          // reference gate exists.
           references.set(new ReferenceCountingCloseableObject<Closeable>(this::doActualUnmount) {});
+          fileMapper = mapper;
         }
         finally {
           entryLock.unlock();
@@ -404,7 +860,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       // we just installed the gate and no external caller has had a chance to acquire a reference yet. The location
       // reservation release stays the caller's responsibility (matches mount's overall contract).
       try {
-        PartialSegmentCacheBootstrap.restoreBundlesFromDisk(this, mountLocation);
+        restoreBundlesFromDisk(mountLocation);
       }
       catch (Throwable t) {
         try {
@@ -419,15 +875,11 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
     }
     catch (Throwable t) {
-      // A failed mount must not leave a lingering, un-re-mountable weak entry in the location. The inner rollbacks
-      // above close the mapper and delete the on-disk header, so any weak entry left behind is poison: a later
-      // findExistingPartialWithHold would resurrect it and re-mount would fail again (the header is gone and the
-      // bootstrap reserve path's entry uses a disk-only range reader). Remove it here so the next acquire rebuilds a
-      // fresh, deep-storage-capable entry via reservePartial. This is keyed on the entry being unheld: the runtime
-      // acquire path holds the entry via the AcquireSegmentAction's loadCleanup, so removeUnheldWeakEntry is a no-op
-      // there and the holder's release runnable performs cleanup instead. The bootstrap reserve path
-      // (StorageLocation.reserveWeak) places no hold, so this is what cleans it up. Runs outside entryLock (the
-      // inner blocks released it) so the writeLock -> entryLock order inside removeUnheldWeakEntry is respected.
+      // Reclaim the reservation of an entry that is still registered here but no longer held, which the rollbacks
+      // above have just left with a closed mapper and no header on disk. No-op if anything holds this (including
+      // bundle entries), so the mount's own hold has to go first. Runs outside entryLock (the inner blocks released
+      // it) so the writeLock -> entryLock order inside removeUnheldWeakEntry is respected.
+      CloseableUtils.closeAndSuppressExceptions(selfHold, e -> LOG.warn(e, "Failed to release mount hold[%s]", id));
       try {
         mountLocation.removeUnheldWeakEntry(id);
       }
@@ -436,6 +888,168 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
       throw t;
     }
+    finally {
+      CloseableUtils.closeAndSuppressExceptions(selfHold, e -> LOG.warn(e, "Failed to release mount hold[%s]", id));
+    }
+  }
+
+  /**
+   * Discover, reserve, and mount any bundles whose container files survived on disk for this segment, so a restart (or
+   * an acquire that follows an eviction which left container files behind) doesn't re-fetch bytes that are already
+   * local. Invoked from {@link #doMount} once the file mapper is installed; safe to call unconditionally, on the
+   * fresh-acquire path there are no container files yet and this is a no-op.
+   * <p>
+   * A bundle whose inferred dependency set includes a bundle that is <i>not</i> itself present on disk is treated as
+   * <b>orphaned</b>: restoring it would only produce a degenerate state where column reads that resolve into the
+   * missing parent fail at query time, so its container files are deleted (via
+   * {@link PartialSegmentFileMapperV10#evictContainer}, which also clears the matching bitmap bits) and the bundle is
+   * left unrestored. The next access through the acquire path then triggers a clean cold re-fetch, the same fall-back
+   * as when the cache manager finds a segment in the info directory but missing on disk.
+   * <p>
+   * On any failure, bundles mounted so far are rolled back before the throw propagates. This entry's own rollback is
+   * {@link #doMount}'s responsibility, not this method's.
+   */
+  private void restoreBundlesFromDisk(StorageLocation location) throws IOException
+  {
+    final PartialSegmentFileMapperV10 mapper = getFileMapper();
+    if (mapper == null) {
+      // not mounted yet (or already unmounted); nothing to restore
+      return;
+    }
+
+    // Discover bundle names across the main file and every external file, then keep only those whose owned container
+    // files actually exist on disk. Walks via the file mapper so the external mappers' SegmentFileMetadata are visited
+    // too; bundles can legitimately span the main file and one or more externals when the writer propagates
+    // startFileBundle across them.
+    final List<String> presentBundleNames = filterByContainerPresence(
+        PartialSegmentBundleCacheEntry.bundleNames(mapper),
+        mapper
+    );
+    if (presentBundleNames.isEmpty()) {
+      // Fresh acquire path or a partial whose containers were all evicted: nothing to do.
+      return;
+    }
+
+    final List<String> mountableBundleNames = new ArrayList<>();
+    final Set<String> orphanedBundleNames = new HashSet<>();
+    for (String name : presentBundleNames) {
+      boolean orphaned = false;
+      for (PartialSegmentBundleCacheEntryIdentifier dep : inferBundleDependencies(name)) {
+        if (!presentBundleNames.contains(dep.bundleName())) {
+          orphaned = true;
+          break;
+        }
+      }
+      if (orphaned) {
+        orphanedBundleNames.add(name);
+      } else {
+        mountableBundleNames.add(name);
+      }
+    }
+
+    for (String orphanName : orphanedBundleNames) {
+      for (PartialSegmentBundleCacheEntry.BundleContainerRef ref :
+          PartialSegmentBundleCacheEntry.findContainersForBundle(mapper, orphanName)) {
+        mapper.mapperForContainer(ref.externalFilename()).evictContainer(ref.containerIndex());
+      }
+      LOG.debug(
+          "Deleted on-disk state of orphaned bundle[%s] for segment[%s] (dependency unrestorable); next access "
+          + "will trigger cold re-fetch",
+          orphanName,
+          segmentId
+      );
+    }
+
+    // Mount the base bundle before any dependent bundle so its hold is available when dependents acquire deps.
+    mountableBundleNames.sort(Comparator.comparing(name -> !Projections.BASE_TABLE_PROJECTION_NAME.equals(name)));
+
+    final List<PartialSegmentBundleCacheEntry> mountedBundles = new ArrayList<>();
+    boolean success = false;
+    try {
+      for (String bundleName : mountableBundleNames) {
+        // Mountable bundles have all dependencies present by construction (orphans were filtered out above), so the
+        // inferred dependency set is exactly what we want, no further filtering needed.
+        final PartialSegmentBundleCacheEntry bundle = PartialSegmentBundleCacheEntry.forBundle(
+            this,
+            bundleName,
+            inferBundleDependencies(bundleName)
+        );
+        // weak-reserve with a temporary hold so the mount call's own parent-hold acquisition can succeed; release the
+        // restore hold immediately after, if the entry should remain alive for query-side access, the runtime hold
+        // chain (transitive parents from aggregates, segment-level holds from acquire APIs) keeps it pinned.
+        try (StorageLocation.ReservationHold<?> restoreHold =
+                 location.addInternalWeakReservationHold(bundle.getId(), () -> bundle)) {
+          if (restoreHold == null) {
+            throw DruidException.defensive(
+                "Failed to reserve bundle entry[%s] in location[%s] while restoring from disk",
+                bundle.getId(),
+                location.getPath()
+            );
+          }
+          bundle.mount(location);
+        }
+        mountedBundles.add(bundle);
+      }
+      success = true;
+      LOG.debug(
+          "Restored bundles for partial segment[%s] from [%s]: bundles[%s], orphans[%s]",
+          segmentId,
+          localCacheDir,
+          mountableBundleNames,
+          orphanedBundleNames
+      );
+    }
+    finally {
+      if (!success) {
+        // Roll back the bundles, dependents before parents, so a parent is unheld (its dependent's holds released) by
+        // the time we try to remove it.
+        for (int i = mountedBundles.size() - 1; i >= 0; i--) {
+          final PartialSegmentBundleCacheEntry bundle = mountedBundles.get(i);
+          try {
+            bundle.unmount();
+            location.removeUnheldWeakEntry(bundle.getId());
+          }
+          catch (Throwable t) {
+            LOG.warn(t, "Failed to roll back bundle[%s] during restore failure for [%s]", bundle.getId(), segmentId);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * The subset of {@code candidateBundleNames} whose every owned container file is present in the local cache
+   * directory. A bundle with no containers at all, or with only some of them on disk, is not restorable.
+   */
+  private List<String> filterByContainerPresence(
+      Set<String> candidateBundleNames,
+      PartialSegmentFileMapperV10 mapper
+  )
+  {
+    final List<String> restorable = new ArrayList<>();
+    for (String bundleName : candidateBundleNames) {
+      final List<PartialSegmentBundleCacheEntry.BundleContainerRef> refs =
+          PartialSegmentBundleCacheEntry.findContainersForBundle(mapper, bundleName);
+      if (refs.isEmpty()) {
+        continue;
+      }
+      boolean allPresent = true;
+      for (PartialSegmentBundleCacheEntry.BundleContainerRef ref : refs) {
+        final String mapperFilename = mapper.mapperForContainer(ref.externalFilename()).getTargetFilename();
+        final File containerFile = new File(
+            localCacheDir,
+            StringUtils.format("%s.container.%05d", mapperFilename, ref.containerIndex())
+        );
+        if (!containerFile.exists()) {
+          allPresent = false;
+          break;
+        }
+      }
+      if (allPresent) {
+        restorable.add(bundleName);
+      }
+    }
+    return restorable;
   }
 
   private static void awaitMount(SettableFuture<Void> future) throws IOException
@@ -463,6 +1077,17 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    * outstanding, the actual unmap-and-delete work is deferred until the last reference releases; in that case this
    * method returns immediately and {@link #doActualUnmount} will fire later on the thread that closes the last
    * reference. With no outstanding references, cleanup runs synchronously on the caller's thread.
+   * <p>
+   * If this entry was reserved but never mounted, there is no reference-counted gate to close; instead run the
+   * {@link #setOnUnmount onUnmount} hook directly so external cleanup (e.g. info-file deletion) still fires.
+   * <p>
+   * <b>Mid-mount race guard.</b> A concurrent reclaim can invoke {@code unmount()} while {@link #doMount} is still
+   * running its slow deep-storage header fetch and has not yet installed {@link #references}. Firing the hook here
+   * would race with {@code doMount}. Detect this via {@link #mountFuture} (set by {@link #mount} before
+   * {@code doMount} runs; cleared by {@code doMount}'s failure path and by {@link #doActualUnmount}) and defer
+   * hook-firing to the mount path: on success {@code verifyStillReservedOrRollback} calls {@code unmount()} again
+   * with {@link #references} installed and the hook fires via {@link #doActualUnmount}; on failure {@link #mount}'s
+   * catch block fires the hook directly (see below).
    */
   @Override
   public void unmount()
@@ -470,6 +1095,30 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
     final ReferenceCountingCloseableObject<Closeable> current = references.get();
     if (current != null && !current.isClosed()) {
       current.close();
+      return;
+    }
+    if (mountFuture.get() != null) {
+      // doMount is in flight and has not yet installed `references`; hook-firing is deferred to the mount path.
+      return;
+    }
+    // Never-mounted (or already-completed-cleanup) release: doActualUnmount won't run, so fire the hook here.
+    runOnUnmountHookOnce();
+  }
+
+  /**
+   * Atomically extract and run the {@link #setOnUnmount onUnmount} hook if one is set. Idempotent across concurrent
+   * callers, the {@code getAndSet(null)} ensures exactly one caller ever observes a non-null hook.
+   */
+  private void runOnUnmountHookOnce()
+  {
+    final Runnable hook = onUnmount.getAndSet(null);
+    if (hook != null) {
+      try {
+        hook.run();
+      }
+      catch (Throwable t) {
+        LOG.warn(t, "onUnmount hook failed for partial segment metadata entry[%s]", segmentId);
+      }
     }
   }
 
@@ -634,11 +1283,20 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    */
   private void doActualUnmount()
   {
-    final Runnable hook;
     entryLock.lock();
     try {
       if (fileMapper == null) {
         return;
+      }
+      // doActualUnmount must never fire while a partial-load rule is applied.
+      if (ruleFingerprint != null) {
+        throw DruidException.defensive(
+            "doActualUnmount fired for partial segment[%s] with rule state still applied (fingerprint=%s, "
+            + "selectedBundles=%s); the metadata self-hold invariant has been broken",
+            segmentId,
+            ruleFingerprint,
+            ruleSelectedBundleNames
+        );
       }
       try {
         fileMapper.close();
@@ -654,21 +1312,13 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       // Clear the mount-dedup gate so a subsequent mount() on this same instance starts a fresh attempt.
       mountFuture.set(null);
       deleteHeaderFiles();
-      hook = onUnmount.getAndSet(null);
     }
     finally {
       entryLock.unlock();
     }
     // Run the hook outside entryLock so it can touch the file system / cache manager without contending with
     // concurrent status reads, and so a slow or buggy hook can't deadlock against acquireReference paths.
-    if (hook != null) {
-      try {
-        hook.run();
-      }
-      catch (Throwable t) {
-        LOG.warn(t, "onUnmount hook failed for partial segment metadata entry[%s]", segmentId);
-      }
-    }
+    runOnUnmountHookOnce();
   }
 
   /**
@@ -679,13 +1329,10 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   @Override
   public boolean isFullyDownloaded()
   {
-    entryLock.lock();
-    try {
-      return fileMapper != null && fileMapper.isFullyDownloaded();
-    }
-    finally {
-      entryLock.unlock();
-    }
+    // Lock-free like isMounted(): fileMapper is volatile, and its isFullyDownloaded() shares no mutable state with
+    // close(), so it's safe to call on a mapper that's concurrently unmounting.
+    final PartialSegmentFileMapperV10 mapper = fileMapper;
+    return mapper != null && mapper.isFullyDownloaded();
   }
 
   /**
@@ -804,7 +1451,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
                 () -> PartialSegmentBundleCacheEntry.forBundle(
                     PartialSegmentMetadataCacheEntry.this,
                     bundleName,
-                    inferParentBundles(bundleName)
+                    inferBundleDependencies(bundleName)
                 )
             );
         if (hold == null) {
@@ -847,8 +1494,8 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
       }
 
       /**
-       * Mount the bundle on the supplied location, closing the bootstrap hold and propagating a {@link DruidException}
-       * if the mount fails. Used by both the fresh-build and re-mount branches.
+       * Mount the bundle on the supplied location, closing the transient reservation hold and propagating a
+       * {@link DruidException} if the mount fails. Used by both the fresh-build and re-mount branches.
        */
       private void mountBundleOrClose(
           PartialSegmentBundleCacheEntry bundle,
@@ -857,17 +1504,14 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
           String bundleName
       )
       {
-        // Mount this bundle's parents (e.g. __base for a projection bundle) FIRST: the bundle's own mount() takes
-        // holds + references on each parent and fails with a defensive error if a parent isn't registered+mounted at
-        // the location. The bootstrap restore path orders base-before-dependents; this is the equivalent ordering for
-        // the runtime acquire path, which would otherwise reach a projection bundle directly with no __base mounted.
-        // The bundle keeps its own parent holds/refs for its lifetime, so we hold these transient ones only across the
-        // mount and release them immediately after a successful mount (acquire() is acyclic: base/root have no
-        // parents, so the recursion terminates).
+        // Mount this bundle's parents first: the bundle's own mount() takes holds + references on each parent and
+        // fails with a defensive error if a parent isn't registered+mounted at the location. The bundle keeps its own
+        // dependency holds/refs for its lifetime, so we hold these transient ones only across the mount and release
+        // them immediately after a successful mount.
         final Closer parentHolds = Closer.create();
         try {
-          for (PartialSegmentBundleCacheEntryIdentifier parentId : inferParentBundles(bundleName)) {
-            parentHolds.register(acquire(parentId.bundleName()));
+          for (PartialSegmentBundleCacheEntryIdentifier depId : inferBundleDependencies(bundleName)) {
+            parentHolds.register(acquire(depId.bundleName()));
           }
           bundle.mount(loc);
         }
@@ -885,17 +1529,19 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
   }
 
   /**
-   * Inference of the parent bundles that the given {@code bundleName} depends on within this segment.
+   * The bundles that {@code bundleName} depends on within this segment. Depending here means: at mount time, this
+   * bundle's file mapper must be able to acquire a hold on each dependency, and the dependency's containers must
+   * remain resident for as long as this bundle is mounted.
    * <p>
    * The rule is uniform: the base bundle and the {@link SegmentFileBuilder#ROOT_BUNDLE_NAME root bundle} have no
-   * parents (the root bundle owns everything written without an explicit {@code startFileBundle} call, for older
-   * fileGroup-less segments, or any future shared internal metadata and is structurally a peer of the base);
+   * dependencies (the root bundle owns everything written without an explicit {@code startFileBundle} call, for
+   * older fileGroup-less segments, or any future shared internal metadata and is structurally a peer of the base);
    * every other bundle depends on the base bundle, but only if this segment actually carries one.
    * <p>
    * If future writers introduce richer dependency graphs, the rule will need to grow, likely by reading dependency
    * metadata the writer records explicitly.
    */
-  public List<PartialSegmentBundleCacheEntryIdentifier> inferParentBundles(String bundleName)
+  public List<PartialSegmentBundleCacheEntryIdentifier> inferBundleDependencies(String bundleName)
   {
     if (Projections.BASE_TABLE_PROJECTION_NAME.equals(bundleName)
         || SegmentFileBuilder.ROOT_BUNDLE_NAME.equals(bundleName)
@@ -908,6 +1554,34 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
             Projections.BASE_TABLE_PROJECTION_NAME
         )
     );
+  }
+
+  /**
+   * Return {@code roots} plus every transitive dependency (as inferred by {@link #inferBundleDependencies}) in
+   * dependency-first order.
+   * <p>
+   * No cycle guard: {@link #inferBundleDependencies} only returns {@code []} or {@code [__base]}, and {@code __base}
+   * itself has no dependencies, so the graph is at most one level deep by construction. A richer future dependency
+   * graph should revisit this.
+   */
+  public List<String> bundlesInMountOrder(Iterable<String> roots)
+  {
+    final LinkedHashSet<String> ordered = new LinkedHashSet<>();
+    for (String root : roots) {
+      visitDependenciesFirst(root, ordered);
+    }
+    return List.copyOf(ordered);
+  }
+
+  private void visitDependenciesFirst(String bundleName, LinkedHashSet<String> ordered)
+  {
+    if (ordered.contains(bundleName)) {
+      return;
+    }
+    for (PartialSegmentBundleCacheEntryIdentifier dep : inferBundleDependencies(bundleName)) {
+      visitDependenciesFirst(dep.bundleName(), ordered);
+    }
+    ordered.add(bundleName);
   }
 
   /**
@@ -925,19 +1599,71 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    * Register a bundle entry as a current dependent of this metadata entry. Called by
    * {@link PartialSegmentBundleCacheEntry} after a successful mount; the drop path uses {@link #snapshotLinkedBundles}
    * to enumerate dependents for cascade-close.
+   * <p>
+   * If a partial-load rule is currently applied and {@code bundle}'s name is in the rule's selection set, take a
+   * {@link StorageLocation.ReservationHold} on the bundle so it stays resident until the rule is cleared or swapped
+   * away. The hold acquisition uses a snapshot-under-lock, acquire-outside-lock, commit-under-lock pattern to avoid
+   * holding {@link #entryLock} while calling into {@link StorageLocation}'s read/write locks.
    */
   void registerBundle(PartialSegmentBundleCacheEntry bundle)
   {
-    linkedBundles.add(bundle);
+    final String bundleName = bundle.getBundleName();
+    linkedBundles.put(bundleName, bundle);
+
+    // Phase 1: snapshot under entryLock.
+    final StorageLocation loc;
+    entryLock.lock();
+    try {
+      if (location == null
+          || !ruleSelectedBundleNames.contains(bundleName)
+          || ruleBundleHolds.containsKey(bundleName)) {
+        return;
+      }
+      loc = location;
+    }
+    finally {
+      entryLock.unlock();
+    }
+
+    // Phase 2: acquire outside entryLock. Caller's mount path (via bundleAcquirer.acquire) already holds a transient
+    // ReservationHold on this bundle, so the weak entry is guaranteed present and this acquire cannot return null
+    // for a "just evicted" reason.
+    final StorageLocation.ReservationHold<PartialSegmentBundleCacheEntry> hold =
+        loc.addInternalWeakReservationHoldIfExists(new PartialSegmentBundleCacheEntryIdentifier(segmentId, bundleName));
+    if (hold == null) {
+      return;
+    }
+
+    // Phase 3: commit under entryLock, or discard if the rule state moved under us.
+    boolean stored = false;
+    entryLock.lock();
+    try {
+      if (ruleSelectedBundleNames.contains(bundleName) && !ruleBundleHolds.containsKey(bundleName)) {
+        ruleBundleHolds.put(bundleName, hold);
+        stored = true;
+      }
+    }
+    finally {
+      entryLock.unlock();
+    }
+    if (!stored) {
+      CloseableUtils.closeAndSuppressExceptions(
+          hold,
+          t -> LOG.warn(t, "Failed releasing discarded rule-hold for bundle[%s] on segment[%s]", bundleName, segmentId)
+      );
+    }
   }
 
   /**
    * Reverse of {@link #registerBundle}. Called by {@link PartialSegmentBundleCacheEntry#unmount} so the metadata's
-   * view stays consistent with which bundles are actually mounted.
+   * view stays consistent with which bundles are actually mounted. Bookkeeping-only: never touches {@link
+   * #ruleBundleHolds}.
    */
   void unregisterBundle(PartialSegmentBundleCacheEntry bundle)
   {
-    linkedBundles.remove(bundle);
+    // Remove only if the exact same instance is still registered under this name. A late-arriving unregister for a
+    // stale bundle instance (e.g. one that was replaced by a fresh remount) must not evict the fresh instance.
+    linkedBundles.remove(bundle.getBundleName(), bundle);
   }
 
   /**
@@ -947,7 +1673,7 @@ public class PartialSegmentMetadataCacheEntry implements SegmentCacheEntry, Resi
    */
   public Collection<PartialSegmentBundleCacheEntry> snapshotLinkedBundles()
   {
-    return new ArrayList<>(linkedBundles);
+    return new ArrayList<>(linkedBundles.values());
   }
 
   /**

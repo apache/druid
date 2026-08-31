@@ -27,10 +27,10 @@ import com.google.common.collect.Sets;
 import org.apache.commons.dbcp2.BasicDataSource;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.exceptions.CallbackFailedException;
@@ -52,13 +52,13 @@ import java.util.stream.Collectors;
 
 public class SQLMetadataConnectorTest
 {
-  @Rule
+  @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private TestDerbyConnector connector;
   private MetadataStorageTablesConfig tablesConfig;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     connector = derbyConnectorRule.getConnector();
@@ -89,17 +89,17 @@ public class SQLMetadataConnectorTest
     connector.getDBI().withHandle(
         handle -> {
           for (String table : tables) {
-            Assert.assertTrue(
-                StringUtils.format("table %s was not created!", table),
-                connector.tableExists(handle, table)
+            Assertions.assertTrue(
+                connector.tableExists(handle, table),
+                StringUtils.format("table %s was not created!", table)
             );
           }
 
           String taskTable = tablesConfig.getTasksTable();
           for (String column : Arrays.asList("type", "group_id")) {
-            Assert.assertTrue(
-                StringUtils.format("Tasks table column %s was not created!", column),
-                connector.tableHasColumn(taskTable, column)
+            Assertions.assertTrue(
+                connector.tableHasColumn(taskTable, column),
+                StringUtils.format("Tasks table column %s was not created!", column)
             );
           }
 
@@ -124,9 +124,9 @@ public class SQLMetadataConnectorTest
     ).stream().map(StringUtils::toUpperCase).collect(Collectors.toSet());
 
     for (String expectedIndex : expectedIndexSet) {
-      Assert.assertTrue(
-          StringUtils.format("Failed to find the expected Index %s on entry table", expectedIndex),
-          createdIndexSet.contains(expectedIndex)
+      Assertions.assertTrue(
+          createdIndexSet.contains(expectedIndex),
+          StringUtils.format("Failed to find the expected Index %s on entry table", expectedIndex)
       );
     }
     connector.createTaskTables();
@@ -145,7 +145,7 @@ public class SQLMetadataConnectorTest
       );
     }
     catch (Exception e) {
-      Assert.fail("Index creation should never throw an exception");
+      Assertions.fail("Index creation should never throw an exception");
     }
   }
 
@@ -155,10 +155,10 @@ public class SQLMetadataConnectorTest
     String tableName = "noTable";
     try {
       Set<String> res = connector.getIndexOnTable(tableName);
-      Assert.assertEquals(0, res.size());
+      Assertions.assertEquals(0, res.size());
     }
     catch (Exception e) {
-      Assert.fail("getIndexOnTable should never throw an exception");
+      Assertions.fail("getIndexOnTable should never throw an exception");
     }
   }
 
@@ -173,17 +173,17 @@ public class SQLMetadataConnectorTest
     derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN USED_STATUS_LAST_UPDATED");
 
     connector.alterSegmentTable();
-    Assert.assertTrue(connector.tableHasColumn(
+    Assertions.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "USED_STATUS_LAST_UPDATED"
     ));
 
-    Assert.assertFalse(connector.tableHasColumn(
+    Assertions.assertFalse(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "SCHEMA_FINGERPRINT"
     ));
 
-    Assert.assertFalse(connector.tableHasColumn(
+    Assertions.assertFalse(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "NUM_ROWS"
     ));
@@ -199,7 +199,7 @@ public class SQLMetadataConnectorTest
     connector.createSegmentTable();
     derbyConnectorRule.segments().update("ALTER TABLE %1$s DROP COLUMN INDEXING_STATE_FINGERPRINT");
     connector.alterSegmentTable();
-    Assert.assertTrue(connector.tableHasColumn(
+    Assertions.assertTrue(connector.tableHasColumn(
         derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
         "INDEXING_STATE_FINGERPRINT"
     ));
@@ -211,7 +211,7 @@ public class SQLMetadataConnectorTest
     final String tableName = "test";
     connector.createConfigTable(tableName);
 
-    Assert.assertNull(connector.lookup(tableName, "name", "payload", "emperor"));
+    Assertions.assertNull(connector.lookup(tableName, "name", "payload", "emperor"));
 
     connector.insertOrUpdate(
         tableName,
@@ -220,7 +220,7 @@ public class SQLMetadataConnectorTest
         "emperor",
         StringUtils.toUtf8("penguin")
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         StringUtils.toUtf8("penguin"),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
@@ -233,7 +233,7 @@ public class SQLMetadataConnectorTest
         StringUtils.toUtf8("penguin chick")
     );
 
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         StringUtils.toUtf8("penguin chick"),
         connector.lookup(tableName, "name", "payload", "emperor")
     );
@@ -265,8 +265,8 @@ public class SQLMetadataConnectorTest
         CentralizedDatasourceSchemaConfig.create()
     );
     BasicDataSource dataSource = testSQLMetadataConnector.getDatasource();
-    Assert.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
-    Assert.assertEquals(dataSource.getDefaultQueryTimeout().intValue(), 30000);
+    Assertions.assertEquals(dataSource.getMaxConnLifetimeMillis(), 1200000);
+    Assertions.assertEquals(dataSource.getDefaultQueryTimeout().intValue(), 30000);
   }
 
   @Test
@@ -281,40 +281,40 @@ public class SQLMetadataConnectorTest
     );
 
     // Transient exceptions
-    Assert.assertTrue(metadataConnector.isTransientException(new RetryTransactionException("")));
-    Assert.assertTrue(metadataConnector.isTransientException(new SQLRecoverableException()));
-    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientException()));
-    Assert.assertTrue(metadataConnector.isTransientException(new SQLTransientConnectionException()));
+    Assertions.assertTrue(metadataConnector.isTransientException(new RetryTransactionException("")));
+    Assertions.assertTrue(metadataConnector.isTransientException(new SQLRecoverableException()));
+    Assertions.assertTrue(metadataConnector.isTransientException(new SQLTransientException()));
+    Assertions.assertTrue(metadataConnector.isTransientException(new SQLTransientConnectionException()));
 
     // Non transient exceptions
-    Assert.assertFalse(metadataConnector.isTransientException(null));
-    Assert.assertFalse(metadataConnector.isTransientException(new SQLException()));
-    Assert.assertFalse(metadataConnector.isTransientException(new UnableToExecuteStatementException("")));
+    Assertions.assertFalse(metadataConnector.isTransientException(null));
+    Assertions.assertFalse(metadataConnector.isTransientException(new SQLException()));
+    Assertions.assertFalse(metadataConnector.isTransientException(new UnableToExecuteStatementException("")));
 
     // Nested transient exceptions
-    Assert.assertTrue(
+    Assertions.assertTrue(
         metadataConnector.isTransientException(
             new CallbackFailedException(new SQLTransientException())
         )
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         metadataConnector.isTransientException(
             new UnableToObtainConnectionException(new SQLException())
         )
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         metadataConnector.isTransientException(
             new UnableToExecuteStatementException(new SQLTransientException())
         )
     );
 
     // Nested non-transient exceptions
-    Assert.assertFalse(
+    Assertions.assertFalse(
         metadataConnector.isTransientException(
             new CallbackFailedException(new SQLException())
         )
     );
-    Assert.assertFalse(
+    Assertions.assertFalse(
         metadataConnector.isTransientException(
             new UnableToExecuteStatementException(new SQLException())
         )
@@ -337,8 +337,11 @@ public class SQLMetadataConnectorTest
     connector.createSegmentTable(segmentsTable);
     connector.alterSegmentTable();
     connector.getDBI().withHandle(handle -> {
-      handle.execute("DROP INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0");
-      handle.execute("CREATE INDEX IDX_DRUIDTEST_SEGMENTS_USED ON druidTest_segments(used)");
+      handle.execute("DROP INDEX IDX_93A18EE829B37C5F38FC6DAFB070261D88503835");
+      handle.execute(
+          "CREATE INDEX IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE"
+          + " ON druidTest_segments(used,used_status_last_updated,dataSource,id)"
+      );
       return null;
     });
 
@@ -346,7 +349,7 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_DRUIDTEST_SEGMENTS_USED",
+        "IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE",
         "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
         "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
     );
@@ -372,8 +375,11 @@ public class SQLMetadataConnectorTest
     connector.createSegmentTable(segmentsTable);
     connector.alterSegmentTable();
     connector.getDBI().withHandle(handle -> {
-      handle.execute("DROP INDEX IDX_DRUIDTEST_SEGMENTS_USED");
-      handle.execute("CREATE INDEX IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0 ON druidTest_segments(used)");
+      handle.execute("DROP INDEX IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE");
+      handle.execute(
+          "CREATE INDEX IDX_93A18EE829B37C5F38FC6DAFB070261D88503835"
+          + " ON druidTest_segments(used,used_status_last_updated,dataSource,id)"
+      );
       return null;
     });
 
@@ -381,7 +387,7 @@ public class SQLMetadataConnectorTest
     connector.alterSegmentTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_93A18EE829B37C5F38FC6DAFB070261D88503835",
         "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
         "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
     );
@@ -405,7 +411,7 @@ public class SQLMetadataConnectorTest
     final String segmentsTable = tablesConfig.getSegmentsTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_8FE3D20EC8C9CA932EA3FF6AC497D1A9E75ADDA0",
+        "IDX_93A18EE829B37C5F38FC6DAFB070261D88503835",
         "IDX_D011BD6ED76268701273CE512704C5AFA060D672",
         "IDX_6381EF2DB4824C35C0E72EF9E166626ADB2B21A3"
     );
@@ -431,9 +437,9 @@ public class SQLMetadataConnectorTest
     final String segmentsTable = tablesConfig.getSegmentsTable();
 
     final Set<String> expectedIndices = Sets.newHashSet(
-        "IDX_DRUIDTEST_SEGMENTS_USED",
         "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_USED_END_START",
-        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID"
+        "IDX_DRUIDTEST_SEGMENTS_DATASOURCE_UPGRADED_FROM_SEGMENT_ID",
+        "IDX_DRUIDTEST_SEGMENTS_USED_USLU_DATASOURCE"
     );
 
     connector.createSegmentTable(segmentsTable);
@@ -451,15 +457,15 @@ public class SQLMetadataConnectorTest
                                                .stream()
                                                .filter(name -> !name.startsWith("SQL"))
                                                .collect(Collectors.toSet());
-    Assert.assertEquals(
+    Assertions.assertEquals(
+        actualIndices,
+        expectedIndices,
         StringUtils.format(
             "Received unexpected table index set for table[%s]. Got [%s], expected [%s].",
             tableName,
             actualIndices,
             expectedIndices
-        ),
-        actualIndices,
-        expectedIndices
+        )
     );
   }
 

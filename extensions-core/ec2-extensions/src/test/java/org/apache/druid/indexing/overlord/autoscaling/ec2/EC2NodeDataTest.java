@@ -21,8 +21,8 @@ package org.apache.druid.indexing.overlord.autoscaling.ec2;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -37,23 +37,23 @@ public class EC2NodeDataTest
                         + " \"associatePublicIpAddress\" : true, \"iamProfile\" : { \"name\" : \"john\", \"arn\" : \"xxx:abc:1234/xyz\" } }";
     EC2NodeData nodeData = objectMapper.readValue(json, EC2NodeData.class);
 
-    Assert.assertEquals("abc123", nodeData.getAmiId());
-    Assert.assertEquals("k2.9xsmall", nodeData.getInstanceType());
-    Assert.assertEquals(2, nodeData.getMaxInstances());
-    Assert.assertEquals(1, nodeData.getMinInstances());
-    Assert.assertEquals(Collections.singletonList("sg-abc321"), nodeData.getSecurityGroupIds());
-    Assert.assertEquals("opensesame", nodeData.getKeyName());
-    Assert.assertEquals("darknet2", nodeData.getSubnetId());
-    Assert.assertEquals("john", nodeData.getIamProfile().getName());
-    Assert.assertEquals("xxx:abc:1234/xyz", nodeData.getIamProfile().getArn());
-    Assert.assertEquals(true, nodeData.getAssociatePublicIpAddress());
+    Assertions.assertEquals("abc123", nodeData.getAmiId());
+    Assertions.assertEquals("k2.9xsmall", nodeData.getInstanceType());
+    Assertions.assertEquals(2, nodeData.getMaxInstances());
+    Assertions.assertEquals(1, nodeData.getMinInstances());
+    Assertions.assertEquals(Collections.singletonList("sg-abc321"), nodeData.getSecurityGroupIds());
+    Assertions.assertEquals("opensesame", nodeData.getKeyName());
+    Assertions.assertEquals("darknet2", nodeData.getSubnetId());
+    Assertions.assertEquals("john", nodeData.getIamProfile().getName());
+    Assertions.assertEquals("xxx:abc:1234/xyz", nodeData.getIamProfile().getArn());
+    Assertions.assertEquals(true, nodeData.getAssociatePublicIpAddress());
 
     EC2NodeData nodeData2 = objectMapper.readValue("{}", EC2NodeData.class);
     // default is not always false, null has to be a valid value
-    Assert.assertNull(nodeData2.getAssociatePublicIpAddress());
+    Assertions.assertNull(nodeData2.getAssociatePublicIpAddress());
 
     // round trip
-    Assert.assertEquals(
+    Assertions.assertEquals(
         nodeData,
         objectMapper.readValue(
             objectMapper.writeValueAsBytes(nodeData),

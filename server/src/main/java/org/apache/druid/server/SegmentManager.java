@@ -36,6 +36,7 @@ import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.indexing.SegmentTimelineConfig;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountedIndexedTableProvider;
 import org.apache.druid.segment.loading.AcquireMode;
@@ -71,12 +72,21 @@ public class SegmentManager
 
   private final SegmentCacheManager cacheManager;
 
+  private final SegmentTimelineConfig segmentTimelineConfig;
+
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
-  @Inject
   public SegmentManager(SegmentCacheManager cacheManager)
   {
+    this(cacheManager, new SegmentTimelineConfig(false));
+  }
+
+
+  @Inject
+  public SegmentManager(SegmentCacheManager cacheManager, SegmentTimelineConfig segmentTimelineConfig)
+  {
     this.cacheManager = cacheManager;
+    this.segmentTimelineConfig = segmentTimelineConfig;
   }
 
   @VisibleForTesting
@@ -271,22 +281,30 @@ public class SegmentManager
    * @param loadFailed callback to execute when segment lazy load fails. This applies only
    *                   when lazy loading is enabled.
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegmentOnBootstrap(
+  public DataSegment loadSegmentOnBootstrap(
       final DataSegment dataSegment,
       final SegmentLazyLoadFailCallback loadFailed
   ) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.bootstrap(dataSegment, loadFailed);
+      loaded = cacheManager.bootstrap(dataSegment, loadFailed);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
 
@@ -298,19 +316,27 @@ public class SegmentManager
    *
    * @param dataSegment segment to load
    *
+   * @return the input {@code dataSegment}, or a
+   *         {@link org.apache.druid.client.DataSegmentAndLoadProfile} wrapping it when the historical actually
+   *         materialized a partial-load footprint. Callers pass the returned value to the announcement layer so
+   *         partial-load announcements carry accurate {@code loadedBytes}.
    * @throws SegmentLoadingException if the segment cannot be loaded
    * @throws IOException if the segment info cannot be cached on disk
    */
-  public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
+  public DataSegment loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
+    final DataSegment loaded;
     try {
-      cacheManager.load(dataSegment);
+      loaded = cacheManager.load(dataSegment);
     }
     catch (SegmentLoadingException e) {
       cacheManager.drop(dataSegment);
       throw e;
     }
+    // Pass the plain dataSegment (not the potentially-wrapped `loaded`) to loadSegmentInternal: the wrapper is a
+    // load-time announcement-path artifact only
     loadSegmentInternal(dataSegment);
+    return loaded;
   }
 
   private void loadSegmentInternal(
@@ -323,7 +349,7 @@ public class SegmentManager
     dataSources.compute(
         dataSegment.getDataSource(),
         (k, v) -> {
-          final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
+          final DataSourceState dataSourceState = v == null ? new DataSourceState(segmentTimelineConfig) : v;
           final VersionedIntervalTimeline<String, DataSegment> loadedIntervals =
               dataSourceState.getTimeline();
           final PartitionChunk<DataSegment> entry = loadedIntervals.findChunk(
@@ -500,14 +526,18 @@ public class SegmentManager
    */
   public static class DataSourceState
   {
-    private final VersionedIntervalTimeline<String, DataSegment> timeline =
-        new VersionedIntervalTimeline<>(Ordering.natural());
+    private final VersionedIntervalTimeline<String, DataSegment> timeline;
 
     private final ConcurrentHashMap<SegmentId, ReferenceCountedIndexedTableProvider> tablesLookup = new ConcurrentHashMap<>();
     private long totalSegmentSize;
     private long numSegments;
     private long rowCount;
     private final SegmentRowCountDistribution segmentRowCountDistribution = new SegmentRowCountDistribution();
+
+    public DataSourceState(SegmentTimelineConfig segmentTimelineConfig)
+    {
+      timeline = new VersionedIntervalTimeline<>(Ordering.natural(), false, segmentTimelineConfig.isFastIntervalSearch());
+    }
 
     private void addSegment(DataSegment segment, long numOfRows)
     {

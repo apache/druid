@@ -26,7 +26,7 @@ sidebar_label: Data management
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This topic describes the data management API endpoints for Apache Druid.
+This topic describes the data management API endpoints for Apache&circledR; Druid.
 This includes information on how to mark segments as used or unused and delete them from Druid.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port.

@@ -23,13 +23,13 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.asyncresource.AsyncResource;
 import org.apache.druid.common.asyncresource.AsyncResources;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.file.CountingRangeReader;
 import org.apache.druid.segment.file.PartialSegmentDownloadListener;
 import org.apache.druid.segment.file.PartialSegmentFileMapperV10;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.jupiter.api.io.TempDir;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.Closeable;
 import java.io.File;
@@ -46,25 +46,39 @@ abstract class PartialQueryableIndexCursorFactoryTestBase extends InitializedNul
 {
   protected static final ColumnConfig COLUMN_CONFIG = ColumnConfig.DEFAULT;
 
-  @TempDir
-  protected File perTestTempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   /**
    * Mount a fresh partial index over the (already built) segment via a {@link PartialSegmentFileMapperV10} backed by
    * {@code rangeReader}, into a per-test cache subdirectory named {@code cacheName}. Only the V10 header is read up
    * front; no internal column files are downloaded until a cursor requires them.
+   * <p>
+   * The mapper is opened with a coalesce gap tolerance of zero: these tests' segments are tiny, so any nonzero
+   * tolerance would bridge over every unrequested file and defeat the download-set assertions (adjacent requested
+   * files still coalesce into single reads). Tests that exercise gap bridging itself pass an explicit tolerance.
    */
   protected IndexAndMapper openIndex(CountingRangeReader rangeReader, String cacheName) throws IOException
   {
-    final File cacheDir = new File(perTestTempDir, cacheName);
-    FileUtils.mkdirp(cacheDir);
+    return openIndex(rangeReader, cacheName, 0);
+  }
+
+  protected IndexAndMapper openIndex(
+      CountingRangeReader rangeReader,
+      String cacheName,
+      long coalesceGapBytes
+  ) throws IOException
+  {
+    final File cacheDir = temporaryFolder.newFolder(cacheName);
     final PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
         rangeReader,
         TestHelper.makeJsonMapper(),
         cacheDir,
         IndexIO.V10_FILE_NAME,
         Collections.emptyList(),
-        PartialSegmentDownloadListener.NOOP
+        PartialSegmentDownloadListener.NOOP,
+        coalesceGapBytes,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
     return new IndexAndMapper(
         new PartialQueryableIndex(mapper.getSegmentFileMetadata(), mapper, COLUMN_CONFIG),

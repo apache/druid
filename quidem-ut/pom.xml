@@ -30,7 +30,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>38.0.0-SNAPSHOT</version>
+        <version>39.0.0-SNAPSHOT</version>
     </parent>
 
     <repositories>
@@ -351,7 +351,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-schema-registry-client</artifactId>
-            <version>6.2.12</version>
+            <version>8.3.1</version>
             <exclusions>
                 <exclusion>
                     <groupId>org.slf4j</groupId>
@@ -386,7 +386,7 @@
         <dependency>
             <groupId>io.confluent</groupId>
             <artifactId>kafka-protobuf-provider</artifactId>
-            <version>6.2.12</version>
+            <version>8.3.1</version>
         </dependency>
         <dependency>
             <groupId>com.google.protobuf</groupId>
@@ -450,17 +450,8 @@
             <artifactId>junit-jupiter</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.junit.vintage</groupId>
-            <artifactId>junit-vintage-engine</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.calcite.avatica</groupId>
@@ -478,7 +469,7 @@
         <dependency>
             <groupId>com.github.os72</groupId>
             <artifactId>protobuf-dynamic</artifactId>
-            <version>0.9.3</version>
+            <version>1.0.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -494,12 +485,12 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest</artifactId>
-            <scope>compile</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-core</artifactId>
-            <scope>compile</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>

@@ -34,6 +34,7 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -42,19 +43,21 @@ import org.apache.druid.query.lookup.namespace.UriExtractionNamespace;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.lookup.namespace.cache.CacheScheduler;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentMatchers;
 
 import javax.ws.rs.core.Response;
+
 import java.io.Closeable;
+import java.io.File;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -71,8 +74,8 @@ import static org.mockito.Mockito.when;
 public class NamespaceLookupExtractorFactoryTest
 {
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @TempDir
+  public File temporaryFolder;
 
   private final CacheScheduler scheduler = mock(CacheScheduler.class);
   private final CacheScheduler.Entry entry = mock(CacheScheduler.Entry.class);
@@ -80,7 +83,7 @@ public class NamespaceLookupExtractorFactoryTest
       mock(CacheScheduler.VersionedCache.class);
 
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper.setInjectableValues(
@@ -110,7 +113,7 @@ public class NamespaceLookupExtractorFactoryTest
   public void testSimpleSerde() throws Exception
   {
     final UriExtractionNamespace uriExtractionNamespace = new UriExtractionNamespace(
-        temporaryFolder.newFolder().toURI(),
+        newFolder(temporaryFolder, "junit").toURI(),
         null, null,
         new UriExtractionNamespace.ObjectMapperFlatDataParser(mapper),
         Period.millis(0),
@@ -121,7 +124,7 @@ public class NamespaceLookupExtractorFactoryTest
         uriExtractionNamespace,
         scheduler
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         uriExtractionNamespace,
         mapper.readValue(
             mapper.writeValueAsString(namespaceLookupExtractorFactory),
@@ -133,9 +136,10 @@ public class NamespaceLookupExtractorFactoryTest
   @Test
   public void testMissingSpec()
   {
-    Assert.assertThrows(
-        "extractionNamespace should be specified", NullPointerException.class,
-        () -> new NamespaceLookupExtractorFactory(null, null)
+    Assertions.assertThrows(
+        NullPointerException.class,
+        () -> new NamespaceLookupExtractorFactory(null, null),
+        "extractionNamespace should be specified"
     );
   }
 
@@ -149,8 +153,8 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    Assert.assertTrue(namespaceLookupExtractorFactory.close());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.close());
 
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
     verify(entry).close();
@@ -169,8 +173,8 @@ public class NamespaceLookupExtractorFactoryTest
         false,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    Assert.assertTrue(namespaceLookupExtractorFactory.close());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.close());
 
     verify(scheduler).schedule(any());
     verify(entry).close();
@@ -190,7 +194,7 @@ public class NamespaceLookupExtractorFactoryTest
         false,
         scheduler
     );
-    Assert.assertFalse(namespaceLookupExtractorFactory.start());
+    Assertions.assertFalse(namespaceLookupExtractorFactory.start());
 
     verify(scheduler).scheduleAndWait(extractionNamespace, 1L);
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
@@ -206,9 +210,9 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    Assert.assertTrue(namespaceLookupExtractorFactory.close());
-    Assert.assertTrue(namespaceLookupExtractorFactory.close());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.close());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.close());
 
     verify(entry).close();
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
@@ -225,8 +229,8 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
   }
@@ -246,10 +250,10 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
     final LookupExtractor extractor = namespaceLookupExtractorFactory.get();
-    Assert.assertNull(extractor.apply("foo"));
-    Assert.assertTrue(namespaceLookupExtractorFactory.close());
+    Assertions.assertNull(extractor.apply("foo"));
+    Assertions.assertTrue(namespaceLookupExtractorFactory.close());
 
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
     verify(entry).getCacheState();
@@ -278,13 +282,13 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
 
     final RetainedLookupExtractor retainedLookupExtractor =
         namespaceLookupExtractorFactory.acquireRetainedLookupExtractor().orElseThrow(AssertionError::new);
 
-    Assert.assertNotSame(lookupExtractor, retainedLookupExtractor);
-    Assert.assertEquals("bar", retainedLookupExtractor.apply("foo"));
+    Assertions.assertNotSame(lookupExtractor, retainedLookupExtractor);
+    Assertions.assertEquals("bar", retainedLookupExtractor.apply("foo"));
     retainedLookupExtractor.close();
 
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
@@ -295,6 +299,7 @@ public class NamespaceLookupExtractorFactoryTest
     verify(retainedReference).close();
     verifyNoMoreInteractions(scheduler, entry, versionedCache, retainedReference);
   }
+
 
   @Test
   public void testSimpleStartRacyGetDuringDelete() throws Exception
@@ -314,8 +319,8 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    Assert.assertThrows(ISE.class, () -> namespaceLookupExtractorFactory.get());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertThrows(ISE.class, () -> namespaceLookupExtractorFactory.get());
 
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
     verify(entry).getCacheState();
@@ -346,9 +351,9 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(namespaceLookupExtractorFactory.start());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.start());
     namespaceLookupExtractorFactory.awaitInitialization();
-    Assert.assertThrows(ISE.class, () -> namespaceLookupExtractorFactory.get());
+    Assertions.assertThrows(ISE.class, () -> namespaceLookupExtractorFactory.get());
     verify(scheduler).scheduleAndWait(extractionNamespace, 60000L);
     verify(entry, times(2)).getCacheState();
     verify(entry).awaitTotalUpdatesWithTimeout(1, 1);
@@ -395,9 +400,9 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertFalse(namespaceLookupExtractorFactory.start());
+    Assertions.assertFalse(namespaceLookupExtractorFactory.start());
     // true because it never fully started
-    Assert.assertTrue(namespaceLookupExtractorFactory.close());
+    Assertions.assertTrue(namespaceLookupExtractorFactory.close());
 
     verify(scheduler).scheduleAndWait(
         extractionNamespace,
@@ -422,27 +427,29 @@ public class NamespaceLookupExtractorFactoryTest
         en1,
         scheduler
     );
-    Assert.assertTrue(f1.replaces(f2));
-    Assert.assertTrue(f2.replaces(f1));
-    Assert.assertFalse(f1.replaces(f1b));
-    Assert.assertFalse(f1b.replaces(f1));
-    Assert.assertFalse(f1.replaces(f1));
-    Assert.assertTrue(f1.replaces(mock(LookupExtractorFactory.class)));
+    Assertions.assertTrue(f1.replaces(f2));
+    Assertions.assertTrue(f2.replaces(f1));
+    Assertions.assertFalse(f1.replaces(f1b));
+    Assertions.assertFalse(f1b.replaces(f1));
+    Assertions.assertFalse(f1.replaces(f1));
+    Assertions.assertTrue(f1.replaces(mock(LookupExtractorFactory.class)));
 
     verifyNoInteractions(en1, en2);
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testMustBeStarted()
   {
-    final ExtractionNamespace extractionNamespace = () -> 0;
+    assertThrows(ISE.class, () -> {
+      final ExtractionNamespace extractionNamespace = () -> 0;
 
-    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
-        extractionNamespace,
-        scheduler
-    );
+      final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+          extractionNamespace,
+          scheduler
+      );
 
-    namespaceLookupExtractorFactory.get();
+      namespaceLookupExtractorFactory.get();
+    });
   }
 
   // Note this does NOT catch problems with returning factories as failed in error messages.
@@ -454,24 +461,24 @@ public class NamespaceLookupExtractorFactoryTest
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
     final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\", \"maxHeapPercentage\": 10 } } }";
     final LookupExtractorFactory factory = mapper.readValue(str, LookupExtractorFactory.class);
-    Assert.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
+    Assertions.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = (NamespaceLookupExtractorFactory) factory;
-    Assert.assertNotNull(mapper.writeValueAsString(factory));
-    Assert.assertFalse(factory.replaces(mapper.readValue(
+    Assertions.assertNotNull(mapper.writeValueAsString(factory));
+    Assertions.assertFalse(factory.replaces(mapper.readValue(
         mapper.writeValueAsString(factory),
         LookupExtractorFactory.class
     )));
-    Assert.assertEquals(
+    Assertions.assertEquals(
         UriExtractionNamespace.class,
         namespaceLookupExtractorFactory.getExtractionNamespace().getClass()
     );
-    Assert.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));
+    Assertions.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));
     final Map<String, Object> map = new HashMap<>(mapper.readValue(
         str,
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     ));
     map.put("firstCacheTimeout", "1");
-    Assert.assertTrue(namespaceLookupExtractorFactory.replaces(mapper.convertValue(map, LookupExtractorFactory.class)));
+    Assertions.assertTrue(namespaceLookupExtractorFactory.replaces(mapper.convertValue(map, LookupExtractorFactory.class)));
   }
 
   @Test
@@ -482,24 +489,24 @@ public class NamespaceLookupExtractorFactoryTest
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
     final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"staticMap\", \"map\": {\"foo\":\"bar\"} }, \"firstCacheTimeout\":10000 }";
     final LookupExtractorFactory lookupExtractorFactory = mapper.readValue(str, LookupExtractorFactory.class);
-    Assert.assertTrue(lookupExtractorFactory.start());
+    Assertions.assertTrue(lookupExtractorFactory.start());
     try {
       final LookupIntrospectHandler handler = lookupExtractorFactory.getIntrospectHandler();
-      Assert.assertNotNull(handler);
+      Assertions.assertNotNull(handler);
       final Class<? extends LookupIntrospectHandler> clazz = handler.getClass();
-      Assert.assertNotNull(clazz.getMethod("getVersion").invoke(handler));
-      Assert.assertEquals(ImmutableSet.of("foo"), ((Response) clazz.getMethod("getKeys").invoke(handler)).getEntity());
-      Assert.assertEquals(
+      Assertions.assertNotNull(clazz.getMethod("getVersion").invoke(handler));
+      Assertions.assertEquals(ImmutableSet.of("foo"), ((Response) clazz.getMethod("getKeys").invoke(handler)).getEntity());
+      Assertions.assertEquals(
           ImmutableList.of("bar"),
           ImmutableList.copyOf((Collection) ((Response) clazz.getMethod("getValues").invoke(handler)).getEntity())
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           ImmutableMap.builder().put("foo", "bar").build(),
           ((Response) clazz.getMethod("getMap").invoke(handler)).getEntity()
       );
     }
     finally {
-      Assert.assertTrue(lookupExtractorFactory.close());
+      Assertions.assertTrue(lookupExtractorFactory.close());
     }
   }
 
@@ -516,7 +523,7 @@ public class NamespaceLookupExtractorFactoryTest
     final NamespaceLookupExtractorFactory factory2 =
         (NamespaceLookupExtractorFactory) mapper.readValue(str2, LookupExtractorFactory.class);
 
-    Assert.assertSame(factory1.getCacheScheduler(), factory2.getCacheScheduler());
+    Assertions.assertSame(factory1.getCacheScheduler(), factory2.getCacheScheduler());
   }
 
   private Injector makeInjector()
@@ -543,10 +550,10 @@ public class NamespaceLookupExtractorFactoryTest
         extractionNamespace,
         scheduler
     );
-    Assert.assertTrue(lookupExtractorFactory.start());
+    Assertions.assertTrue(lookupExtractorFactory.start());
 
     final LookupIntrospectHandler handler = lookupExtractorFactory.getIntrospectHandler();
-    Assert.assertNotNull(handler);
+    Assertions.assertNotNull(handler);
     final Class<? extends LookupIntrospectHandler> clazz = handler.getClass();
 
     verify(scheduler).scheduleAndWait(eq(extractionNamespace), anyLong());
@@ -557,7 +564,7 @@ public class NamespaceLookupExtractorFactoryTest
     when(entry.getCacheState()).thenReturn(CacheScheduler.NoCache.CACHE_NOT_INITIALIZED);
 
     final Response response = (Response) clazz.getMethod("getVersion").invoke(handler);
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
 
     verify(entry).getCacheState();
     validateNotFound("getKeys", handler, clazz);
@@ -581,12 +588,17 @@ public class NamespaceLookupExtractorFactoryTest
     when(versionedCache.getVersion()).thenThrow(new ISE("some exception"));
 
     final Response response = (Response) clazz.getMethod(method).invoke(handler);
-    Assert.assertEquals(404, response.getStatus());
+    Assertions.assertEquals(404, response.getStatus());
 
     verify(entry).getCacheState();
     verify(entry, atMostOnce()).getCache();
     verify(versionedCache, atMostOnce()).getCache();
     verify(versionedCache).getVersion();
     verifyNoMoreInteractions(scheduler, entry, versionedCache);
+  }
+
+  private static File newFolder(File root, String... subDirs)
+  {
+    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
   }
 }

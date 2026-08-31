@@ -29,15 +29,31 @@
   <parent>
     <artifactId>druid</artifactId>
     <groupId>org.apache.druid</groupId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <properties>
+    <hive-storage-api.version>2.8.1</hive-storage-api.version>
     <hive.version>3.1.3</hive.version>
   </properties>
   <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
@@ -285,6 +301,13 @@
       <artifactId>glue</artifactId>
       <version>${aws.sdk.v2.version}</version>
     </dependency>
+    <!-- Iceberg AWS still loads the Apache 4 client reflectively. -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>apache-client</artifactId>
+      <version>${aws.sdk.v2.version}</version>
+      <scope>runtime</scope>
+    </dependency>
     <!-- software/amazon/awssdk/services/sts/model/Tag needed for GlueCatalog initialize -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
@@ -318,6 +341,26 @@
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
       <version>${com.google.cloud.storage.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-api</artifactId>
+      <version>1.83.1</version>
+    </dependency>
+    <dependency>
+      <groupId>io.grpc</groupId>
+      <artifactId>grpc-context</artifactId>
+      <version>1.83.1</version>
+    </dependency>
+    <dependency>
+      <groupId>com.fasterxml.woodstox</groupId>
+      <artifactId>woodstox-core</artifactId>
+      <version>7.2.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.woodstox</groupId>
+      <artifactId>stax2-api</artifactId>
+      <version>4.3.0</version>
     </dependency>
 
     <dependency>
@@ -606,6 +649,14 @@
       </exclusions>
     </dependency>
 
+    <!-- Hive 3.1.3 calls APIs that were removed from Hive Storage API 4.x. -->
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-storage-api</artifactId>
+      <version>${hive-storage-api.version}</version>
+      <scope>runtime</scope>
+    </dependency>
+
     <dependency>
       <groupId>org.apache.druid</groupId>
       <artifactId>druid-processing</artifactId>
@@ -774,11 +825,6 @@
     </dependency>
 
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>nl.jqno.equalsverifier</groupId>
       <artifactId>equalsverifier</artifactId>
       <scope>test</scope>
@@ -811,6 +857,11 @@
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:kms</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-gcp</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>com.google.cloud:google-cloud-storage</ignoredUnusedDeclaredDependency>
+              <!-- Transitive dependencies explicitly added to propagate aligned versions -->
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-api</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>io.grpc:grpc-context</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>com.fasterxml.woodstox:woodstox-core</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>org.codehaus.woodstox:stax2-api</ignoredUnusedDeclaredDependency>
             </ignoredUnusedDeclaredDependencies>
           </configuration>
         </plugin>

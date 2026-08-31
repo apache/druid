@@ -2172,7 +2172,6 @@ public interface Function extends NamedFunction
       return "case_searched";
     }
 
-    @SuppressFBWarnings("IM_BAD_CHECK_FOR_ODD")
     @Override
     public ExprEval apply(final List<Expr> args, final Expr.ObjectBinding bindings)
     {
@@ -2193,6 +2192,17 @@ public interface Function extends NamedFunction
     public void validateArguments(List<Expr> args)
     {
       validationHelperCheckMinArgumentCount(args, 2);
+    }
+
+    @Override
+    public Set<Expr> getScalarInputs(List<Expr> args)
+    {
+      // Only the WHEN args must be scalars. The THEN and ELSE args can be arrays.
+      final ImmutableSet.Builder<Expr> conditions = ImmutableSet.builder();
+      for (int i = 0; i + 1 < args.size(); i += 2) {
+        conditions.add(args.get(i));
+      }
+      return conditions.build();
     }
 
     @Nullable

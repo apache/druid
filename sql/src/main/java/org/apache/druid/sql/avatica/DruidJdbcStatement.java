@@ -26,6 +26,7 @@ import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 /**
@@ -57,11 +58,17 @@ public class DruidJdbcStatement extends AbstractDruidJdbcStatement
     this.lifecycleFactory = Preconditions.checkNotNull(lifecycleFactory, "lifecycleFactory");
   }
 
-  public synchronized void execute(SqlQueryPlus queryPlus, long maxRowCount)
+  /**
+   * Executes the given query. The {@code remoteAddress} is read from the calling
+   * (execute) request rather than captured when the statement was created, so that
+   * a statement reused after a reconnect or from a different remote is attributed
+   * to the actual caller of this execution.
+   */
+  public synchronized void execute(SqlQueryPlus queryPlus, long maxRowCount, @Nullable String remoteAddress)
   {
     closeResultSet();
     this.sqlQuery = queryPlus.withContext(defaultContext, queryContext).freshCopy();
-    DirectStatement stmt = lifecycleFactory.directStatement(this.sqlQuery);
+    DirectStatement stmt = lifecycleFactory.directStatement(this.sqlQuery, remoteAddress);
     resultSet = new DruidJdbcResultSet(this, stmt, Long.MAX_VALUE, fetcherFactory);
     try {
       resultSet.execute();

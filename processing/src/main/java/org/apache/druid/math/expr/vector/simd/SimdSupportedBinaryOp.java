@@ -30,7 +30,29 @@ package org.apache.druid.math.expr.vector.simd;
  */
 public enum SimdSupportedBinaryOp
 {
-  ADD,
-  SUB,
-  MUL
+  ADD(true),
+  SUB(true),
+  MUL(true),
+  /**
+   * {@code jdk.incubator.vector} has no long-integer division intrinsic (SIMD hardware lacks it), and long
+   * division by zero would throw {@link ArithmeticException} in the middle of a chunk. So the {@code long × long}
+   * combo falls through to the scalar processor for DIV; only the double-output combos are SIMD-specialized.
+   */
+  DIV(false);
+
+  private final boolean supportsLongLong;
+
+  SimdSupportedBinaryOp(boolean supportsLongLong)
+  {
+    this.supportsLongLong = supportsLongLong;
+  }
+
+  /**
+   * Whether this op has a SIMD specialization for the {@code long × long -> long} type combo. Callers can use
+   * this to decide whether to route the {@code longsProcessor} path to SIMD or fall back to scalar.
+   */
+  public boolean supportsLongLong()
+  {
+    return supportsLongLong;
+  }
 }

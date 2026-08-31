@@ -24,41 +24,31 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.ExecutionVertexTest;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
-import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentMapFunction;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.Joinable;
-import org.apache.druid.segment.join.JoinableClause;
-import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopJoinableFactory;
-import org.apache.druid.segment.join.lookup.LookupJoinable;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.easymock.Mock;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -101,63 +91,63 @@ public class JoinDataSourceTest
   @Test
   public void test_getTableNames_tableToTable()
   {
-    Assert.assertEquals(ImmutableSet.of("foo", "bar"), joinTableToTable.getTableNames());
+    Assertions.assertEquals(ImmutableSet.of("foo", "bar"), joinTableToTable.getTableNames());
   }
 
   @Test
   public void test_getTableNames_tableToLookup()
   {
-    Assert.assertEquals(Collections.singleton("foo"), joinTableToLookup.getTableNames());
+    Assertions.assertEquals(Collections.singleton("foo"), joinTableToLookup.getTableNames());
   }
 
   @Test
   public void test_getChildren_tableToTable()
   {
-    Assert.assertEquals(ImmutableList.of(fooTable, barTable), joinTableToTable.getChildren());
+    Assertions.assertEquals(ImmutableList.of(fooTable, barTable), joinTableToTable.getChildren());
   }
 
   @Test
   public void test_getChildren_tableToLookup()
   {
-    Assert.assertEquals(ImmutableList.of(fooTable, lookylooLookup), joinTableToLookup.getChildren());
+    Assertions.assertEquals(ImmutableList.of(fooTable, lookylooLookup), joinTableToLookup.getChildren());
   }
 
   @Test
   public void test_isCacheable_tableToTable()
   {
-    Assert.assertTrue(joinTableToTable.isCacheable(true));
-    Assert.assertTrue(joinTableToTable.isCacheable(false));
+    Assertions.assertTrue(joinTableToTable.isCacheable(true));
+    Assertions.assertTrue(joinTableToTable.isCacheable(false));
   }
 
   @Test
   public void test_isCacheable_lookup()
   {
-    Assert.assertFalse(joinTableToLookup.isCacheable(true));
-    Assert.assertFalse(joinTableToLookup.isCacheable(false));
+    Assertions.assertFalse(joinTableToLookup.isCacheable(true));
+    Assertions.assertFalse(joinTableToLookup.isCacheable(false));
   }
 
   @Test
   public void test_isProcessable_tableToTable()
   {
-    Assert.assertFalse(joinTableToTable.isProcessable());
+    Assertions.assertFalse(joinTableToTable.isProcessable());
   }
 
   @Test
   public void test_isProcessable_tableToLookup()
   {
-    Assert.assertTrue(joinTableToLookup.isProcessable());
+    Assertions.assertTrue(joinTableToLookup.isProcessable());
   }
 
   @Test
   public void test_isGlobal_tableToTable()
   {
-    Assert.assertFalse(joinTableToTable.isGlobal());
+    Assertions.assertFalse(joinTableToTable.isGlobal());
   }
 
   @Test
   public void test_isGlobal_tableToLookup()
   {
-    Assert.assertFalse(joinTableToLookup.isGlobal());
+    Assertions.assertFalse(joinTableToLookup.isGlobal());
   }
 
   @Test
@@ -175,7 +165,7 @@ public class JoinDataSourceTest
   {
     final DataSource transformed = joinTableToTable.withChildren(ImmutableList.of(fooTable, lookylooLookup));
 
-    Assert.assertEquals(joinTableToLookup, transformed);
+    Assertions.assertEquals(joinTableToLookup, transformed);
   }
 
   @Test
@@ -209,7 +199,7 @@ public class JoinDataSourceTest
         DataSource.class
     );
 
-    Assert.assertEquals(joinDataSource, deserialized);
+    Assertions.assertEquals(joinDataSource, deserialized);
   }
 
   @Test
@@ -249,7 +239,7 @@ public class JoinDataSourceTest
         null,
         JoinAlgorithm.BROADCAST
     );
-    Assert.assertEquals(null, dataSource.getLeftFilter());
+    Assertions.assertEquals(null, dataSource.getLeftFilter());
   }
 
   @Test
@@ -266,7 +256,7 @@ public class JoinDataSourceTest
         null,
         JoinAlgorithm.BROADCAST
     );
-    Assert.assertEquals(dataSource.getVirtualColumnCandidates(), ImmutableSet.of("x"));
+    Assertions.assertEquals(dataSource.getVirtualColumnCandidates(), ImmutableSet.of("x"));
   }
 
   @Test
@@ -286,7 +276,7 @@ public class JoinDataSourceTest
 
     Optional<byte[]> cacheKey = Optional.ofNullable(dataSource.getCacheKey());
 
-    Assert.assertTrue(cacheKey.isPresent());
+    Assertions.assertTrue(cacheKey.isPresent());
   }
 
   @Test
@@ -321,9 +311,9 @@ public class JoinDataSourceTest
     byte[] cacheKey1 = joinDataSource.getCacheKey();
     byte[] cacheKey2 = joinDataSource1.getCacheKey();
 
-    Assert.assertNotEquals(cacheKey1.length, 0);
-    Assert.assertNotEquals(cacheKey2.length, 0);
-    Assert.assertTrue(Arrays.equals(cacheKey1, cacheKey2));
+    Assertions.assertNotEquals(cacheKey1.length, 0);
+    Assertions.assertNotEquals(cacheKey2.length, 0);
+    Assertions.assertTrue(Arrays.equals(cacheKey1, cacheKey2));
   }
 
   @Test
@@ -358,9 +348,9 @@ public class JoinDataSourceTest
     byte[] cacheKey1 = joinDataSource.getCacheKey();
     byte[] cacheKey2 = joinDataSource1.getCacheKey();
 
-    Assert.assertNotEquals(cacheKey1.length, 0);
-    Assert.assertNotEquals(cacheKey2.length, 0);
-    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+    Assertions.assertNotEquals(cacheKey1.length, 0);
+    Assertions.assertNotEquals(cacheKey2.length, 0);
+    Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
   }
 
   @Test
@@ -395,9 +385,9 @@ public class JoinDataSourceTest
     byte[] cacheKey1 = joinDataSource.getCacheKey();
     byte[] cacheKey2 = joinDataSource1.getCacheKey();
 
-    Assert.assertNotEquals(cacheKey1.length, 0);
-    Assert.assertNotEquals(cacheKey2.length, 0);
-    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+    Assertions.assertNotEquals(cacheKey1.length, 0);
+    Assertions.assertNotEquals(cacheKey2.length, 0);
+    Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
   }
 
   @Test
@@ -432,9 +422,9 @@ public class JoinDataSourceTest
     byte[] cacheKey1 = joinDataSource.getCacheKey();
     byte[] cacheKey2 = joinDataSource1.getCacheKey();
 
-    Assert.assertNotEquals(cacheKey1.length, 0);
-    Assert.assertNotEquals(cacheKey2.length, 0);
-    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+    Assertions.assertNotEquals(cacheKey1.length, 0);
+    Assertions.assertNotEquals(cacheKey2.length, 0);
+    Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
   }
 
   @Test
@@ -469,9 +459,9 @@ public class JoinDataSourceTest
     byte[] cacheKey1 = joinDataSource.getCacheKey();
     byte[] cacheKey2 = joinDataSource1.getCacheKey();
 
-    Assert.assertNotEquals(cacheKey1.length, 0);
-    Assert.assertNotEquals(cacheKey2.length, 0);
-    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+    Assertions.assertNotEquals(cacheKey1.length, 0);
+    Assertions.assertNotEquals(cacheKey2.length, 0);
+    Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
   }
 
   @Test
@@ -493,7 +483,7 @@ public class JoinDataSourceTest
         JoinAlgorithm.BROADCAST
     );
     JoinDataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
-    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+    Assertions.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
   }
 
   @Test
@@ -518,7 +508,7 @@ public class JoinDataSourceTest
         JoinAlgorithm.BROADCAST
     );
     JoinDataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
-    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+    Assertions.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
   }
 
   @Test
@@ -540,8 +530,8 @@ public class JoinDataSourceTest
         JoinAlgorithm.BROADCAST
     );
     JoinDataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
-    Assert.assertEquals(left, analysis.getBaseDataSource());
-    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+    Assertions.assertEquals(left, analysis.getBaseDataSource());
+    Assertions.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
   }
 
   @Test
@@ -577,9 +567,9 @@ public class JoinDataSourceTest
     byte[] cacheKey1 = joinDataSource.getCacheKey();
     byte[] cacheKey2 = joinDataSource1.getCacheKey();
 
-    Assert.assertNotEquals(cacheKey1.length, 0);
-    Assert.assertNotEquals(cacheKey2.length, 0);
-    Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+    Assertions.assertNotEquals(cacheKey1.length, 0);
+    Assertions.assertNotEquals(cacheKey2.length, 0);
+    Assertions.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
   }
 
   @Test
@@ -600,20 +590,7 @@ public class JoinDataSourceTest
     );
 
     byte[] cacheKey1 = joinDataSource.getCacheKey();
-    Assert.assertNull(cacheKey1);
-  }
-
-  private static class JoinableFactoryWithCacheKey extends NoopJoinableFactory
-  {
-    @Override
-    public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
-    {
-      if (dataSource.isCacheable(false) && condition.canHashJoin()) {
-        String tableName = Iterators.getOnlyElement(dataSource.getTableNames().iterator());
-        return Optional.of(StringUtils.toUtf8(tableName));
-      }
-      return Optional.empty();
-    }
+    Assertions.assertNull(cacheKey1);
   }
 
   @Test
@@ -641,7 +618,6 @@ public class JoinDataSourceTest
       }
     };
 
-    // QueryDataSource base cannot create a segment map function, so setup throws after the joinable was built.
     final JoinDataSource joinDataSource = JoinDataSource.create(
         new QueryDataSource(Druids.newScanQueryBuilder()
                                   .dataSource("foo")
@@ -662,8 +638,8 @@ public class JoinDataSourceTest
                                  .intervals(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY))
                                  .build();
 
-    Assert.assertThrows(DruidException.class, () -> joinDataSource.createSegmentMapFunction(query));
-    Assert.assertEquals(1, joinableCloseCount.get());
+    Assertions.assertThrows(DruidException.class, () -> joinDataSource.createSegmentMapFunction(query));
+    Assertions.assertEquals(1, joinableCloseCount.get());
   }
 
   @Test
@@ -705,12 +681,25 @@ public class JoinDataSourceTest
         baseFn
     );
 
-    Assert.assertEquals(0, joinableCloseCount.get());
-    Assert.assertEquals(0, baseFnCloseCount.get());
+    Assertions.assertEquals(0, joinableCloseCount.get());
+    Assertions.assertEquals(0, baseFnCloseCount.get());
 
     segmentMapFn.close();
 
-    Assert.assertEquals(1, joinableCloseCount.get());
-    Assert.assertEquals(1, baseFnCloseCount.get());
+    Assertions.assertEquals(1, joinableCloseCount.get());
+    Assertions.assertEquals(1, baseFnCloseCount.get());
+  }
+
+  private static class JoinableFactoryWithCacheKey extends NoopJoinableFactory
+  {
+    @Override
+    public Optional<byte[]> computeJoinCacheKey(DataSource dataSource, JoinConditionAnalysis condition)
+    {
+      if (dataSource.isCacheable(false) && condition.canHashJoin()) {
+        String tableName = Iterators.getOnlyElement(dataSource.getTableNames().iterator());
+        return Optional.of(StringUtils.toUtf8(tableName));
+      }
+      return Optional.empty();
+    }
   }
 }

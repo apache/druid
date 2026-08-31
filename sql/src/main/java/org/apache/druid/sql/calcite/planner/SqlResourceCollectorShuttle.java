@@ -31,21 +31,27 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.AuthorizableOperator;
 import org.apache.druid.sql.calcite.schema.NamedLookupSchema;
+import org.apache.druid.sql.calcite.view.ViewManager;
 
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 /**
- * Walks an {@link SqlNode} to collect a set of {@link Resource} for {@link ResourceType#DATASOURCE} and
- * {@link ResourceType#VIEW} to use for authorization during query planning.
+ * Walks an {@link SqlNode} to collect a set of {@link Resource} to use for authorization during query planning.
+ * Two mechanisms are used to gather resources:
  *
- * It works by looking for {@link SqlIdentifier} which correspond to a {@link IdentifierNamespace}, where
+ * <p>First, look for {@link SqlIdentifier} which correspond to a {@link IdentifierNamespace}, where
  * {@link SqlValidatorNamespace} is calcite-speak for sources of data and {@link IdentifierNamespace} specifically are
- * namespaces which are identified by a single variable, e.g. table names.
+ * namespaces which are identified by a single variable, e.g. table names. These are translated into resources
+ * using {@link PlannerContext#getSchemaResourceType}.
+ *
+ * <p>Second, look for {@link AuthorizableOperator} and call {@link AuthorizableOperator#computeResources}.
+ *
+ * <p>Resources are collected prior to view expansion, which makes views a security boundary. Resources accessed
+ * solely through views are exempt from authorization. See {@link ViewManager} for details on the security model.
  */
 public class SqlResourceCollectorShuttle extends SqlShuttle
 {

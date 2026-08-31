@@ -27,12 +27,11 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -50,9 +49,6 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
   private static final LookupExtractor LOOKUP_EXTRACTOR = new MapLookupExtractor(MAP, true);
   private static final String LOOKUP_NAME = "some lookup";
 
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testSimpleDelegation()
   {
@@ -69,18 +65,18 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
     );
     EasyMock.verify(manager);
 
-    Assert.assertSame(LOOKUP_EXTRACTOR, fn.getDelegate().getLookup());
+    Assertions.assertSame(LOOKUP_EXTRACTOR, fn.getDelegate().getLookup());
 
-    Assert.assertEquals(false, fn.isInjective());
-    Assert.assertFalse(fn.getDelegate().isInjective());
+    Assertions.assertEquals(false, fn.isInjective());
+    Assertions.assertFalse(fn.getDelegate().isInjective());
 
-    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getExtractionType());
-    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getDelegate().getExtractionType());
+    Assertions.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getExtractionType());
+    Assertions.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getDelegate().getExtractionType());
 
     for (String orig : Arrays.asList(null, "foo", "bat")) {
-      Assert.assertEquals(LOOKUP_EXTRACTOR.apply(orig), fn.apply(orig));
+      Assertions.assertEquals(LOOKUP_EXTRACTOR.apply(orig), fn.apply(orig));
     }
-    Assert.assertEquals("not in the map", fn.apply("not in the map"));
+    Assertions.assertEquals("not in the map", fn.apply("not in the map"));
   }
 
   @Test
@@ -99,8 +95,8 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
     );
     EasyMock.verify(manager);
 
-    Assert.assertNull(fn.isInjective());
-    Assert.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, fn.getExtractionType());
+    Assertions.assertNull(fn.isInjective());
+    Assertions.assertEquals(ExtractionFn.ExtractionType.ONE_TO_ONE, fn.getExtractionType());
   }
 
   @Test
@@ -126,11 +122,11 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
 
     final RegisteredLookupExtractionFn fn = getRegisteredLookupExtractionFn(factory);
 
-    Assert.assertEquals("bar-v1", fn.apply((Object) "foo"));
+    Assertions.assertEquals("bar-v1", fn.apply((Object) "foo"));
     currentMap.set(ImmutableMap.of("foo", "bar-v2"));
-    Assert.assertEquals("bar-v2", fn.apply("foo"));
-    Assert.assertEquals(2, retainedAcquisitions.get());
-    Assert.assertEquals(2, retainedCloses.get());
+    Assertions.assertEquals("bar-v2", fn.apply("foo"));
+    Assertions.assertEquals(2, retainedAcquisitions.get());
+    Assertions.assertEquals(2, retainedCloses.get());
   }
 
   private static RegisteredLookupExtractionFn getRegisteredLookupExtractionFn(LookupExtractorFactory factory)
@@ -225,71 +221,75 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
         false
     );
 
-    Assert.assertEquals("bar", fn.apply("foo"));
-    Assert.assertEquals("bar", fn.apply("foo"));
-    Assert.assertEquals(3, managerLookups.get());
-    Assert.assertEquals(2, retainedAcquisitions.get());
-    Assert.assertEquals(2, retainedCloses.get());
+    Assertions.assertEquals("bar", fn.apply("foo"));
+    Assertions.assertEquals("bar", fn.apply("foo"));
+    Assertions.assertEquals(3, managerLookups.get());
+    Assertions.assertEquals(2, retainedAcquisitions.get());
+    Assertions.assertEquals(2, retainedCloses.get());
   }
 
   @Test
   public void testMissingDelegation()
   {
-    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
-    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).times(2);
-    EasyMock.replay(manager);
-
-    expectedException.expectMessage("Lookup [some lookup] not found");
-    try {
-      new RegisteredLookupExtractionFn(
-          manager,
-          LOOKUP_NAME,
-          true,
-          null,
-          true,
-          false
-      ).apply("foo");
-    }
-    finally {
-      EasyMock.verify(manager);
-    }
+    Throwable exception = Assertions.assertThrows(Exception.class, () -> {
+      final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+      EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
+      EasyMock.replay(manager);
+      try {
+        new RegisteredLookupExtractionFn(
+            manager,
+            LOOKUP_NAME,
+            true,
+            null,
+            true,
+            false
+        ).apply("foo");
+      }
+      finally {
+        EasyMock.verify(manager);
+      }
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Lookup [some lookup] not found"));
   }
 
   @Test
   public void testMissingLookupCacheKeyFails()
   {
-    final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
-    EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
-    EasyMock.replay(manager);
-
-    expectedException.expectMessage("Lookup [some lookup] not found");
-    try {
-      new RegisteredLookupExtractionFn(
-          manager,
-          LOOKUP_NAME,
-          true,
-          "missing",
-          true,
-          false
-      ).getCacheKey();
-    }
-    finally {
-      EasyMock.verify(manager);
-    }
+    final Throwable exception = Assertions.assertThrows(Exception.class, () -> {
+      final LookupExtractorFactoryContainerProvider manager = EasyMock.createStrictMock(LookupReferencesManager.class);
+      EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(Optional.empty()).once();
+      EasyMock.replay(manager);
+      try {
+        new RegisteredLookupExtractionFn(
+            manager,
+            LOOKUP_NAME,
+            true,
+            "missing",
+            true,
+            false
+        ).getCacheKey();
+      }
+      finally {
+        EasyMock.verify(manager);
+      }
+    });
+    Assertions.assertTrue(exception.getMessage().contains("Lookup [some lookup] not found"));
   }
 
   @Test
   public void testNullLookup()
   {
-    expectedException.expectMessage("`lookup` required");
-    new RegisteredLookupExtractionFn(
-        null,
-        null,
-        true,
-        null,
-        true,
-        false
-    );
+    Throwable exception = Assertions.assertThrows(Exception.class, () -> {
+      new RegisteredLookupExtractionFn(
+          null,
+          null,
+          true,
+          null,
+          true,
+          false
+      );
+    });
+    Assertions.assertTrue(exception.getMessage().contains("`lookup` required"));
   }
 
   @Test
@@ -314,12 +314,12 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
         mapper.writeValueAsString(fn),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertEquals(mapper.convertValue(fn, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT), result);
-    Assert.assertEquals(LOOKUP_NAME, result.get("lookup"));
-    Assert.assertEquals(true, result.get("retainMissingValue"));
-    Assert.assertEquals(true, result.get("injective"));
-    Assert.assertNull(result.get("replaceMissingValueWith"));
-    Assert.assertEquals(false, result.get("optimize"));
+    Assertions.assertEquals(mapper.convertValue(fn, JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT), result);
+    Assertions.assertEquals(LOOKUP_NAME, result.get("lookup"));
+    Assertions.assertEquals(true, result.get("retainMissingValue"));
+    Assertions.assertEquals(true, result.get("injective"));
+    Assertions.assertNull(result.get("replaceMissingValueWith"));
+    Assertions.assertEquals(false, result.get("optimize"));
   }
 
   @Test
@@ -336,7 +336,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
         true,
         false
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         fn,
         new RegisteredLookupExtractionFn(
             manager,
@@ -347,7 +347,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
             false
         )
     );
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         fn,
         new RegisteredLookupExtractionFn(
             manager,
@@ -359,7 +359,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
         )
     );
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         fn,
         new RegisteredLookupExtractionFn(
             manager,
@@ -372,7 +372,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
     );
 
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         fn,
         new RegisteredLookupExtractionFn(
             manager,
@@ -384,7 +384,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
         )
     );
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         fn,
         new RegisteredLookupExtractionFn(
             manager,
@@ -397,7 +397,7 @@ public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTes
     );
 
 
-    Assert.assertNotEquals(
+    Assertions.assertNotEquals(
         fn,
         new RegisteredLookupExtractionFn(
             manager,

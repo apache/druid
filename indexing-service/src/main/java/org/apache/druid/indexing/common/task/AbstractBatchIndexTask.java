@@ -81,6 +81,7 @@ import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -94,6 +95,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -303,9 +305,9 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   public abstract Granularity getSegmentGranularity();
 
   @Override
-  public int getPriority()
+  public int getDefaultPriority()
   {
-    return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+    return Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY;
   }
 
   public TaskLockHelper getTaskLockHelper()
@@ -697,13 +699,12 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected static List<DataSegment> findInputSegments(
       String dataSource,
       TaskActionClient actionClient,
-      List<Interval> intervalsToRead
+      List<Interval> intervalsToRead,
+      EnumSet<SegmentDetail> details
   ) throws IOException
   {
     return ImmutableList.copyOf(
-        actionClient.submit(
-            new RetrieveUsedSegmentsAction(dataSource, intervalsToRead)
-        )
+        actionClient.submit(new RetrieveUsedSegmentsAction(dataSource, intervalsToRead, details))
     );
   }
 

@@ -21,8 +21,8 @@ package org.apache.druid.server.coordinator;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ServerCloneStatusTest
 {
@@ -32,7 +32,7 @@ public class ServerCloneStatusTest
     ServerCloneStatus metrics = new ServerCloneStatus("host2", "host1", ServerCloneStatus.State.IN_PROGRESS, 3012, 10, 100);
     byte[] bytes = DefaultObjectMapper.INSTANCE.writeValueAsBytes(metrics);
     ServerCloneStatus deserialized = DefaultObjectMapper.INSTANCE.readValue(bytes, ServerCloneStatus.class);
-    Assert.assertEquals(deserialized, metrics);
+    Assertions.assertEquals(deserialized, metrics);
   }
 
   @Test

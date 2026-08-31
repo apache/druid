@@ -159,7 +159,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public DimensionSchema getColumnSchema(String columnName)
     {
-      return new NestedDataColumnSchema(columnName, 5);
+      return new NestedDataColumnSchema(columnName, NestedDataColumnSchema.DEFAULT_FORMAT_VERSION);
     }
 
     @Override

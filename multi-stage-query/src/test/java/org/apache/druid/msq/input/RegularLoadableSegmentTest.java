@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -62,6 +61,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.utils.CompressionUtils;
@@ -71,6 +71,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
@@ -94,8 +95,10 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   private static final int THREADS = 8;
   private static File SEGMENT_ZIP_FILE;
 
-  @TempDir
-  public Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
+  private Path tempDir;
 
   private List<DataSegment> segments;
   private File cacheDir;
@@ -122,6 +125,7 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
   @BeforeEach
   public void setUp() throws Exception
   {
+    tempDir = temporaryFolder.getRoot().toPath();
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     jsonMapper.registerSubtypes(TestLoadSpec.class);
     jsonMapper.registerModule(new SegmentizerModule());
@@ -164,11 +168,12 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // SegmentManager with virtualStorage for dynamically-loaded data tests
     cacheDir = tempDir.resolve("cache").toFile();
-    final SegmentLoaderConfig virtualLoaderConfig = new SegmentLoaderConfig()
-        .setLocations(ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null)))
-        .setVirtualStorage(true)
-        .setVirtualStorageIsEphemeral(true)
-        .setVirtualStoragePartialDownloadsEnabled(true);
+    final SegmentLoaderConfig virtualLoaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
+        .virtualStorage(true)
+        .virtualStorageIsEphemeral(true)
+        .virtualStoragePartialDownloadsEnabled(true)
+        .build();
     final List<StorageLocation> virtualLocations = virtualLoaderConfig.toStorageLocations();
     segmentManagerDynamic = new SegmentManager(
         new SegmentLocalCacheManager(
@@ -183,8 +188,9 @@ class RegularLoadableSegmentTest extends InitializedNullHandlingTest
 
     // SegmentManager without virtualStorage for pre-loaded data tests
     preLoadCacheDir = tempDir.resolve("localCache").toFile();
-    final SegmentLoaderConfig localLoaderConfig = new SegmentLoaderConfig()
-        .setLocations(ImmutableList.of(new StorageLocationConfig(preLoadCacheDir, 10_000_000_000L, null)));
+    final SegmentLoaderConfig localLoaderConfig = SegmentLoaderConfig.builder()
+        .locations(new StorageLocationConfig(preLoadCacheDir, 10_000_000_000L, null))
+        .build();
     final List<StorageLocation> localLocations = localLoaderConfig.toStorageLocations();
     segmentManagerPreLoad = new SegmentManager(
         new SegmentLocalCacheManager(

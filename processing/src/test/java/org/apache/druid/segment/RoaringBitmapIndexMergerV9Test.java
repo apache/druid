@@ -23,10 +23,12 @@ import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+
+@MethodSource("org.apache.druid.segment.IndexMergerTestBase#data")
 public class RoaringBitmapIndexMergerV9Test extends IndexMergerTestBase
 {
   public RoaringBitmapIndexMergerV9Test(

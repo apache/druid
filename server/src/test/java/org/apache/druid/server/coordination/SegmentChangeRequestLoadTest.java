@@ -21,16 +21,18 @@ package org.apache.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.client.DataSegmentAndLoadProfile;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
@@ -68,17 +70,17 @@ public class SegmentChangeRequestLoadTest
         mapper.writeValueAsString(segmentDrop), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
 
-    Assert.assertEquals(11, objectMap.size());
-    Assert.assertEquals("load", objectMap.get("action"));
-    Assert.assertEquals("something", objectMap.get("dataSource"));
-    Assert.assertEquals(interval.toString(), objectMap.get("interval"));
-    Assert.assertEquals("1", objectMap.get("version"));
-    Assert.assertEquals(loadSpec, objectMap.get("loadSpec"));
-    Assert.assertEquals("dim1,dim2", objectMap.get("dimensions"));
-    Assert.assertEquals("met1,met2", objectMap.get("metrics"));
-    Assert.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
-    Assert.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
-    Assert.assertEquals(1, objectMap.get("size"));
+    Assertions.assertEquals(11, objectMap.size());
+    Assertions.assertEquals("load", objectMap.get("action"));
+    Assertions.assertEquals("something", objectMap.get("dataSource"));
+    Assertions.assertEquals(interval.toString(), objectMap.get("interval"));
+    Assertions.assertEquals("1", objectMap.get("version"));
+    Assertions.assertEquals(loadSpec, objectMap.get("loadSpec"));
+    Assertions.assertEquals("dim1,dim2", objectMap.get("dimensions"));
+    Assertions.assertEquals("met1,met2", objectMap.get("metrics"));
+    Assertions.assertEquals(ImmutableMap.of("type", "none"), objectMap.get("shardSpec"));
+    Assertions.assertEquals(IndexIO.CURRENT_VERSION_ID, objectMap.get("binaryVersion"));
+    Assertions.assertEquals(1, objectMap.get("size"));
   }
 
   @Test
@@ -97,8 +99,8 @@ public class SegmentChangeRequestLoadTest
         mapper.writeValueAsString(load),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
-    Assert.assertFalse(objectMap.containsKey("fingerprint"));
-    Assert.assertFalse(objectMap.containsKey("loadedBytes"));
+    Assertions.assertFalse(objectMap.containsKey("fingerprint"));
+    Assertions.assertFalse(objectMap.containsKey("loadedBytes"));
   }
 
   @Test
@@ -119,9 +121,9 @@ public class SegmentChangeRequestLoadTest
     );
     String json = mapper.writeValueAsString(load);
     SegmentChangeRequestLoad reread = mapper.readValue(json, SegmentChangeRequestLoad.class);
-    Assert.assertEquals(load, reread);
-    Assert.assertEquals("v1:abcdef0123456789", reread.getFingerprint());
-    Assert.assertEquals(Long.valueOf(12345L), reread.getLoadedBytes());
+    Assertions.assertEquals(load, reread);
+    Assertions.assertEquals("v1:abcdef0123456789", reread.getFingerprint());
+    Assertions.assertEquals(Long.valueOf(12345L), reread.getLoadedBytes());
   }
 
   @Test
@@ -135,16 +137,17 @@ public class SegmentChangeRequestLoadTest
         .size(100)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertNull(announcement.getFingerprint());
-    Assert.assertNull(announcement.getLoadedBytes());
+    Assertions.assertNull(announcement.getFingerprint());
+    Assertions.assertNull(announcement.getLoadedBytes());
   }
 
   @Test
   public void testForAnnouncementPartialProjectionWrapperProducesFullFallback()
   {
-    // When the segment's loadSpec is a partialProjection wrapper, the announcement stamps the wrapper's fingerprint
-    // and the segment's full size as loadedBytes — coordinator reads this as a full-fallback profile and counts the
-    // replica as matching, avoiding reload thrash on historicals that don't (yet) do real partial loading.
+    // Plain DataSegment carrying a partial-load wrapper (i.e. the historical didn't attach a
+    // DataSegmentAndLoadProfile) is the full-fallback case: the wrapper's fingerprint rides along, but loadedBytes
+    // is the segment's full size. Coordinator reads this as a fallback and counts the replica as matching,
+    // avoiding reload thrash on historicals that don't (yet) do real partial loading.
     Map<String, Object> wrapped = Map.of(
         "type", "partialProjection",
         "delegate", Map.of("type", "local", "path", "/var/druid/segments/foo"),
@@ -158,8 +161,40 @@ public class SegmentChangeRequestLoadTest
         .size(12345)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
-    Assert.assertEquals(Long.valueOf(12345L), announcement.getLoadedBytes());
+    Assertions.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
+    Assertions.assertEquals(Long.valueOf(12345L), announcement.getLoadedBytes());
+  }
+
+  @Test
+  public void testForAnnouncementDataSegmentAndLoadProfileReportsProfileLoadedBytes()
+  {
+    // When the historical actually materialized a partial-load footprint, load() returns a DataSegmentAndLoadProfile
+    // carrying a PartialLoadProfile.forLoaded(...) with the realized bytes. forAnnouncement must stamp the profile's
+    // loadedBytes so HttpServerInventoryView detects it and capacity accounting sees the actual on-disk footprint
+    // instead of the full segment size.
+    Map<String, Object> wrapped = Map.of(
+        "type", "partialProjection",
+        "delegate", Map.of("type", "local", "path", "/var/druid/segments/foo"),
+        "projections", List.of("revenue"),
+        "fingerprint", "v1:abcdef0123456789"
+    );
+    DataSegment segment = segmentBuilder("ds", Intervals.of("2024-01-01/2024-02-01"), "v1")
+        .loadSpec(wrapped)
+        .dimensions(List.of("d"))
+        .metrics(List.of("m"))
+        .size(12345)
+        .build();
+    DataSegmentAndLoadProfile wrappedSegment = new DataSegmentAndLoadProfile(
+        segment,
+        PartialLoadProfile.forLoaded(wrapped, "v1:abcdef0123456789", 4321L)
+    );
+    SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(wrappedSegment);
+    Assertions.assertEquals("v1:abcdef0123456789", announcement.getFingerprint());
+    Assertions.assertEquals(
+        Long.valueOf(4321L),
+        announcement.getLoadedBytes(),
+        "loadedBytes must come from the DataSegmentAndLoadProfile's PartialLoadProfile, not segment.getSize()"
+    );
   }
 
   @Test
@@ -180,8 +215,8 @@ public class SegmentChangeRequestLoadTest
         .size(7777)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertEquals("v1:1111111111111111", announcement.getFingerprint());
-    Assert.assertEquals(Long.valueOf(7777L), announcement.getLoadedBytes());
+    Assertions.assertEquals("v1:1111111111111111", announcement.getFingerprint());
+    Assertions.assertEquals(Long.valueOf(7777L), announcement.getLoadedBytes());
   }
 
   @Test
@@ -202,8 +237,8 @@ public class SegmentChangeRequestLoadTest
         .size(100)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertNull(announcement.getFingerprint());
-    Assert.assertNull(announcement.getLoadedBytes());
+    Assertions.assertNull(announcement.getFingerprint());
+    Assertions.assertNull(announcement.getLoadedBytes());
   }
 
   @Test
@@ -223,8 +258,8 @@ public class SegmentChangeRequestLoadTest
         .size(100)
         .build();
     SegmentChangeRequestLoad announcement = SegmentChangeRequestLoad.forAnnouncement(segment);
-    Assert.assertNull(announcement.getFingerprint());
-    Assert.assertNull(announcement.getLoadedBytes());
+    Assertions.assertNull(announcement.getFingerprint());
+    Assertions.assertNull(announcement.getLoadedBytes());
   }
 
   @Test
@@ -240,7 +275,7 @@ public class SegmentChangeRequestLoadTest
         .build();
     String oldJson = mapper.writeValueAsString(new SegmentChangeRequestLoad(segment));
     SegmentChangeRequestLoad reread = mapper.readValue(oldJson, SegmentChangeRequestLoad.class);
-    Assert.assertNull(reread.getFingerprint());
-    Assert.assertNull(reread.getLoadedBytes());
+    Assertions.assertNull(reread.getFingerprint());
+    Assertions.assertNull(reread.getLoadedBytes());
   }
 }

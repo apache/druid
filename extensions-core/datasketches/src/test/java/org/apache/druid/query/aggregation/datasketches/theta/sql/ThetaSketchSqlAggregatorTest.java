@@ -76,7 +76,6 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
-import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -379,7 +378,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
   {
-    DruidException druidException = Assert.assertThrows(
+    DruidException druidException = Assertions.assertThrows(
         DruidException.class,
         () -> testQuery(
             "SELECT APPROX_COUNT_DISTINCT_DS_THETA(double_first_added) FROM druid.wikipedia_first_last",
@@ -387,7 +386,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
             ImmutableList.of()
         )
     );
-    Assert.assertTrue(druidException.getMessage().contains(
+    Assertions.assertTrue(druidException.getMessage().contains(
         "Cannot apply 'APPROX_COUNT_DISTINCT_DS_THETA' to arguments of type 'APPROX_COUNT_DISTINCT_DS_THETA(<COMPLEX<SERIALIZABLEPAIRLONGDOUBLE>>)'"
     ));
   }
@@ -1148,7 +1147,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
       );
     }
     catch (IllegalArgumentException e) {
-      Assert.assertTrue(
+      Assertions.assertTrue(
           e.getMessage().contains("requires a ThetaSketch as the argument")
       );
     }

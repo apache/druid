@@ -20,13 +20,14 @@
 package org.apache.druid.java.util.common.concurrent;
 
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -74,14 +75,14 @@ public class ScheduledExecutorsTest
     boolean completed = latch.await(5, TimeUnit.SECONDS);
     exec.shutdown();
 
-    Assert.assertTrue("Should complete within timeout", completed);
-    Assert.assertEquals("Should have exactly 4 executions", 4, executionCount.get());
+    Assertions.assertTrue(completed, "Should complete within timeout");
+    Assertions.assertEquals(4, executionCount.get(), "Should have exactly 4 executions");
 
     // Verify first task starts at approximately the initial delay, in real life this is greater than 100ms due to overhead.
     long firstTaskStart = taskStartTimes.get(0) - startTime;
-    Assert.assertTrue(
-        "First task should start at approximately initial delay (100ms), was: " + firstTaskStart,
-        firstTaskStart > 100 && firstTaskStart < 500
+    Assertions.assertTrue(
+        firstTaskStart > 100 && firstTaskStart < 500,
+        "First task should start at approximately initial delay (100ms), was: " + firstTaskStart
     );
 
     // Verify subsequent tasks wait for delay from previous task end
@@ -90,9 +91,9 @@ public class ScheduledExecutorsTest
       long previousTaskEnd = taskStartTimes.get(i - 1) + taskDuration;
       long delayBetweenTasks = taskStartTimes.get(i) - previousTaskEnd;
       // Should be approximately 500ms (the delay between task end and next task start)
-      Assert.assertTrue(
-          "Delay from task " + (i - 1) + " end to task " + i + " start should be ~500ms, was: " + delayBetweenTasks,
-          delayBetweenTasks >= 450 && delayBetweenTasks <= 650
+      Assertions.assertTrue(
+          delayBetweenTasks >= 450 && delayBetweenTasks <= 650,
+          "Delay from task " + (i - 1) + " end to task " + i + " start should be ~500ms, was: " + delayBetweenTasks
       );
     }
   }
@@ -127,8 +128,8 @@ public class ScheduledExecutorsTest
     final boolean completed = latch.await(5, TimeUnit.SECONDS);
     exec.shutdown();
 
-    Assert.assertTrue("Should continue executing after exception", completed);
-    Assert.assertEquals("Should have exactly 3 executions", 3, executionCount.get());
+    Assertions.assertTrue(completed, "Should continue executing after exception");
+    Assertions.assertEquals(3, executionCount.get(), "Should have exactly 3 executions");
   }
 
   @Test
@@ -153,11 +154,7 @@ public class ScheduledExecutorsTest
     Thread.sleep(500);
     exec.shutdown();
 
-    Assert.assertEquals(
-        "Should execute exactly once before stopping",
-        1,
-        executionCount.get()
-    );
+    Assertions.assertEquals(1, executionCount.get(), "Should execute exactly once before stopping");
   }
 
   @Test
@@ -207,24 +204,24 @@ public class ScheduledExecutorsTest
     boolean completed = latch.await(10, TimeUnit.SECONDS);
     exec.shutdown();
 
-    Assert.assertTrue("Should complete within timeout", completed);
-    Assert.assertEquals("Should have exactly 4 executions", 4, executionStartTimes.size());
+    Assertions.assertTrue(completed, "Should complete within timeout");
+    Assertions.assertEquals(4, executionStartTimes.size(), "Should have exactly 4 executions");
 
     // Verify first task took longer than period (no pileup should occur)
     // Second task should start immediately after first task finishes (not during)
     long timeBetweenFirstAndSecond = executionStartTimes.get(1) - executionStartTimes.get(0);
     // Should be at least 800ms (first task duration), but not much more since it schedules immediately
-    Assert.assertTrue(
-        "Second task should start after first task completes (~800ms), was: " + timeBetweenFirstAndSecond,
-        timeBetweenFirstAndSecond >= 750 && timeBetweenFirstAndSecond <= 950
+    Assertions.assertTrue(
+        timeBetweenFirstAndSecond >= 750 && timeBetweenFirstAndSecond <= 950,
+        "Second task should start after first task completes (~800ms), was: " + timeBetweenFirstAndSecond
     );
 
     // Verify subsequent tasks maintain the period (no catch-up burst)
     long timeBetweenSecondAndThird = executionStartTimes.get(2) - executionStartTimes.get(1);
     // Should be approximately 500ms (the period), since tasks now finish quickly
-    Assert.assertTrue(
-        "Subsequent tasks should maintain period (~500ms), was: " + timeBetweenSecondAndThird,
-        timeBetweenSecondAndThird >= 450 && timeBetweenSecondAndThird <= 600
+    Assertions.assertTrue(
+        timeBetweenSecondAndThird >= 450 && timeBetweenSecondAndThird <= 600,
+        "Subsequent tasks should maintain period (~500ms), was: " + timeBetweenSecondAndThird
     );
   }
 
@@ -274,12 +271,8 @@ public class ScheduledExecutorsTest
     final boolean completed = latch.await(10, TimeUnit.SECONDS);
     exec.shutdown();
 
-    Assert.assertTrue("Should complete within timeout", completed);
-    Assert.assertEquals(
-        "Should never have more than 1 concurrent execution",
-        1,
-        maxConcurrentCount.get()
-    );
+    Assertions.assertTrue(completed, "Should complete within timeout");
+    Assertions.assertEquals(1, maxConcurrentCount.get(), "Should never have more than 1 concurrent execution");
   }
 
   @Test
@@ -305,11 +298,7 @@ public class ScheduledExecutorsTest
     Thread.sleep(500);
     exec.shutdown();
 
-    Assert.assertEquals(
-        "Should execute exactly once before stopping",
-        1,
-        executionCount.get()
-    );
+    Assertions.assertEquals(1, executionCount.get(), "Should execute exactly once before stopping");
   }
 
   @Test
@@ -342,7 +331,34 @@ public class ScheduledExecutorsTest
     final boolean completed = latch.await(5, TimeUnit.SECONDS);
     exec.shutdown();
 
-    Assert.assertTrue("Should continue executing after exception", completed);
-    Assert.assertEquals("Should have exactly 3 executions", 3, executionCount.get());
+    Assertions.assertTrue(completed, "Should continue executing after exception");
+    Assertions.assertEquals(3, executionCount.get(), "Should have exactly 3 executions");
+  }
+
+  @Test
+  public void testFixedWithKeepAliveTimeReclaimsIdleThreads() throws Exception
+  {
+    final ScheduledThreadPoolExecutor exec = ScheduledExecutors.fixedWithKeepAliveTime(8, "testKeepAlive-%d", 100);
+    try {
+      // Core threads must be eligible for timeout, otherwise a large corePoolSize would pin that many
+      // threads for the lifetime of the pool even when idle.
+      Assertions.assertTrue(exec.allowsCoreThreadTimeOut(), "Core threads should be allowed to time out");
+
+      final CountDownLatch latch = new CountDownLatch(4);
+      for (int i = 0; i < 4; i++) {
+        exec.submit(latch::countDown);
+      }
+      Assertions.assertTrue(latch.await(5, TimeUnit.SECONDS), "Submitted tasks should run");
+
+      // Once idle past the keep-alive, all workers should be reclaimed and the pool shrink back to zero.
+      final long deadline = System.currentTimeMillis() + 5000;
+      while (exec.getPoolSize() > 0 && System.currentTimeMillis() < deadline) {
+        Thread.sleep(50);
+      }
+      Assertions.assertEquals(0, exec.getPoolSize(), "Idle core threads should be reclaimed");
+    }
+    finally {
+      exec.shutdownNow();
+    }
   }
 }

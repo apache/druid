@@ -24,17 +24,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
-import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import org.apache.calcite.DataContext;
 import org.apache.calcite.linq4j.Enumerable;
 import org.apache.calcite.linq4j.Linq4j;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
-import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.schema.ScannableTable;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.schema.Statistic;
@@ -43,19 +39,15 @@ import org.apache.calcite.schema.Table;
 import org.apache.calcite.schema.TableMacro;
 import org.apache.calcite.schema.impl.AbstractSchema;
 import org.apache.calcite.schema.impl.AbstractTable;
+import org.apache.calcite.schema.lookup.LikePattern;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
-import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Resource;
-import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 
@@ -71,9 +63,9 @@ public class InformationSchema extends AbstractSchema
 {
   private static final EmittingLogger log = new EmittingLogger(InformationSchema.class);
 
-  private static final String CATALOG_NAME = "druid";
-  private static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
+  public static final String INFORMATION_SCHEMA_NAME = "INFORMATION_SCHEMA";
 
+  private static final String CATALOG_NAME = "druid";
   private static final String SCHEMATA_TABLE = "SCHEMATA";
   private static final String TABLES_TABLE = "TABLES";
   private static final String COLUMNS_TABLE = "COLUMNS";
@@ -146,36 +138,47 @@ public class InformationSchema extends AbstractSchema
       .add("IS_AGGREGATOR", SqlTypeName.VARCHAR)
       .add("SIGNATURES", SqlTypeName.VARCHAR, true)
       .build();
-  private static final RelDataTypeSystem TYPE_SYSTEM = RelDataTypeSystem.DEFAULT;
 
   private static final String INFO_TRUE = "YES";
   private static final String INFO_FALSE = "NO";
 
   private final DruidSchemaCatalog rootSchema;
-  private final Map<String, Table> tableMap;
   private final AuthorizerMapper authorizerMapper;
+  private final AuthenticationResult authenticationResult;
+  private final Map<String, Table> tableMap;
 
-  @Inject
   public InformationSchema(
-      @Named(DruidCalciteSchemaModule.INCOMPLETE_SCHEMA) final DruidSchemaCatalog rootSchema,
+      final DruidSchemaCatalog rootSchema,
+      final DruidOperatorTable operatorTable,
       final AuthorizerMapper authorizerMapper,
-      final DruidOperatorTable operatorTable
+      final AuthenticationResult authenticationResult
   )
   {
     this.rootSchema = Preconditions.checkNotNull(rootSchema, "rootSchema");
+    this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
+    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
     this.tableMap = ImmutableMap.of(
         SCHEMATA_TABLE, new SchemataTable(),
         TABLES_TABLE, new TablesTable(),
         COLUMNS_TABLE, new ColumnsTable(),
         ROUTINES_TABLE, new RoutinesTable(operatorTable)
     );
-    this.authorizerMapper = authorizerMapper;
   }
 
   @Override
   protected Map<String, Table> getTableMap()
   {
     return tableMap;
+  }
+
+  private Set<String> getVisibleNames(final Iterable<String> allNames, final Function<String, String> resourceTypeFn)
+  {
+    return SchemaUtils.filterVisibleTables(
+        authorizerMapper,
+        authenticationResult,
+        allNames,
+        resourceTypeFn
+    );
   }
 
   class SchemataTable extends AbstractTable implements ScannableTable
@@ -185,22 +188,25 @@ public class InformationSchema extends AbstractSchema
     {
       final FluentIterable<Object[]> results = FluentIterable
           .from(rootSchema.getSubSchemaNames())
-          .transform(
-              new Function<>()
-              {
-                @Override
-                public Object[] apply(final String schemaName)
-                {
-                  final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
-                  return new Object[]{
-                      CATALOG_NAME, // CATALOG_NAME
-                      subSchema.getName(), // SCHEMA_NAME
-                      null, // SCHEMA_OWNER
-                      null, // DEFAULT_CHARACTER_SET_CATALOG
-                      null, // DEFAULT_CHARACTER_SET_SCHEMA
-                      null, // DEFAULT_CHARACTER_SET_NAME
-                      null  // SQL_PATH
-                  };
+          .transformAndConcat(
+              schemaName -> {
+                final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
+                if (subSchema.tables().getNames(LikePattern.any()).isEmpty()
+                    && subSchema.getFunctionNames().isEmpty()) {
+                  // Skip schemata that have no tables or functions.
+                  return List.of();
+                } else {
+                  return List.<Object[]>of(
+                      new Object[]{
+                          CATALOG_NAME, // CATALOG_NAME
+                          subSchema.getName(), // SCHEMA_NAME
+                          null, // SCHEMA_OWNER
+                          null, // DEFAULT_CHARACTER_SET_CATALOG
+                          null, // DEFAULT_CHARACTER_SET_SCHEMA
+                          null, // DEFAULT_CHARACTER_SET_NAME
+                          null  // SQL_PATH
+                      }
+                  );
                 }
               }
           );
@@ -241,23 +247,18 @@ public class InformationSchema extends AbstractSchema
                 public Iterable<Object[]> apply(final String schemaName)
                 {
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
-
-                  final AuthenticationResult authenticationResult =
-                      (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-
-                  final Set<String> authorizedTableNames = getAuthorizedTableNamesFromSubSchema(
-                      subSchema,
-                      authenticationResult
+                  final Set<String> tableNames = getVisibleNames(
+                      subSchema.tables().getNames(LikePattern.any()),
+                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
                   );
-
-                  final Set<String> authorizedFunctionNames = getAuthorizedFunctionNamesFromSubSchema(
-                      subSchema,
-                      authenticationResult
+                  final Set<String> functionNames = getVisibleNames(
+                      subSchema.getFunctionNames(),
+                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
                   );
 
                   return Iterables.filter(
                       Iterables.concat(
-                          FluentIterable.from(authorizedTableNames).transform(
+                          FluentIterable.from(tableNames).transform(
                               tableName -> {
                                 final Table table = subSchema.getTable(tableName);
                                 final boolean isJoinable;
@@ -281,7 +282,7 @@ public class InformationSchema extends AbstractSchema
                                 };
                               }
                           ),
-                          FluentIterable.from(authorizedFunctionNames).transform(
+                          FluentIterable.from(functionNames).transform(
                               new Function<>()
                               {
                                 @Override
@@ -346,24 +347,19 @@ public class InformationSchema extends AbstractSchema
                 {
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
                   final RelDataTypeFactory typeFactory = root.getTypeFactory();
-
-                  final AuthenticationResult authenticationResult =
-                      (AuthenticationResult) root.get(PlannerContext.DATA_CTX_AUTHENTICATION_RESULT);
-
-                  final Set<String> authorizedTableNames = getAuthorizedTableNamesFromSubSchema(
-                      subSchema,
-                      authenticationResult
+                  final Set<String> tableNames = getVisibleNames(
+                      subSchema.tables().getNames(LikePattern.any()),
+                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
                   );
-
-                  final Set<String> authorizedFunctionNames = getAuthorizedFunctionNamesFromSubSchema(
-                      subSchema,
-                      authenticationResult
+                  final Set<String> functionNames = getVisibleNames(
+                      subSchema.getFunctionNames(),
+                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
                   );
 
                   return Iterables.concat(
                       Iterables.filter(
                           Iterables.concat(
-                              FluentIterable.from(authorizedTableNames).transform(
+                              FluentIterable.from(tableNames).transform(
                                   new Function<>()
                                   {
                                     @Override
@@ -377,13 +373,12 @@ public class InformationSchema extends AbstractSchema
                                       return generateColumnMetadata(
                                           schemaName,
                                           tableName,
-                                           table.getRowType(typeFactory),
-                                          typeFactory
+                                          table.getRowType(typeFactory)
                                       );
                                     }
                                   }
                               ),
-                              FluentIterable.from(authorizedFunctionNames).transform(
+                              FluentIterable.from(functionNames).transform(
                                   new Function<>()
                                   {
                                     @Override
@@ -395,8 +390,7 @@ public class InformationSchema extends AbstractSchema
                                           return generateColumnMetadata(
                                               schemaName,
                                               functionName,
-                                              viewMacro.apply(Collections.emptyList()).getRowType(typeFactory),
-                                              typeFactory
+                                              viewMacro.apply(Collections.emptyList()).getRowType(typeFactory)
                                           );
                                         }
                                         catch (Exception e) {
@@ -442,8 +436,7 @@ public class InformationSchema extends AbstractSchema
     private Iterable<Object[]> generateColumnMetadata(
         final String schemaName,
         final String tableName,
-        final RelDataType tableSchema,
-        final RelDataTypeFactory typeFactory
+        final RelDataType tableSchema
     )
     {
       return FluentIterable
@@ -566,57 +559,5 @@ public class InformationSchema extends AbstractSchema
     }
 
     return null;
-  }
-
-  private Set<String> getAuthorizedTableNamesFromSubSchema(
-      final SchemaPlus subSchema,
-      final AuthenticationResult authenticationResult
-  )
-  {
-    return getAuthorizedNamesFromNamedSchema(
-        authenticationResult,
-        rootSchema.getNamedSchema(subSchema.getName()),
-        subSchema.getTableNames()
-    );
-  }
-
-  private Set<String> getAuthorizedFunctionNamesFromSubSchema(
-      final SchemaPlus subSchema,
-      final AuthenticationResult authenticationResult
-  )
-  {
-    return getAuthorizedNamesFromNamedSchema(
-        authenticationResult,
-        rootSchema.getNamedSchema(subSchema.getName()),
-        subSchema.getFunctionNames()
-    );
-  }
-
-  private Set<String> getAuthorizedNamesFromNamedSchema(
-      final AuthenticationResult authenticationResult,
-      final NamedSchema schema,
-      final Set<String> names
-  )
-  {
-    if (schema == null) {
-      // for schemas with no resource type, or that are not named schemas, we don't filter anything
-      return names;
-    }
-    return ImmutableSet.copyOf(
-        AuthorizationUtils.filterAuthorizedResources(
-            authenticationResult,
-            names,
-            name -> {
-              final String resourseType = schema.getSchemaResourceType(name);
-              if (resourseType == null) {
-                return Collections.emptyList();
-              }
-              return Collections.singletonList(
-                  new ResourceAction(new Resource(name, resourseType), Action.READ)
-              );
-            },
-            authorizerMapper
-        )
-    );
   }
 }

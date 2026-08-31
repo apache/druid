@@ -190,8 +190,9 @@ public class SegmentCacheBootstrapper
                     "Loading segment[%d/%d][%s]",
                     counter.incrementAndGet(), numSegments, segment.getId()
                 );
+                final DataSegment loaded;
                 try {
-                  segmentManager.loadSegmentOnBootstrap(
+                  loaded = segmentManager.loadSegmentOnBootstrap(
                       segment,
                       () -> loadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
                   );
@@ -201,7 +202,10 @@ public class SegmentCacheBootstrapper
                   throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
                 }
                 try {
-                  backgroundSegmentAnnouncer.announceSegment(segment);
+                  // loadSegmentOnBootstrap returns a PartialLoadedDataSegment wrapper when the historical
+                  // materialized a partial-load footprint on restart; enqueue that so the announcement carries
+                  // accurate loadedBytes (see PartialLoadedDataSegment + SegmentChangeRequestLoad.forAnnouncement).
+                  backgroundSegmentAnnouncer.announceSegment(loaded);
                 }
                 catch (InterruptedException e) {
                   Thread.currentThread().interrupt();

@@ -67,13 +67,14 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -117,7 +118,7 @@ public class CoordinatorClientImplTest
                                                          .size(1)
                                                          .build();
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     jsonMapper = new DefaultObjectMapper();
@@ -132,7 +133,7 @@ public class CoordinatorClientImplTest
     coordinatorClient = new CoordinatorClientImpl(serviceClient, jsonMapper);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     serviceClient.verify();
@@ -154,7 +155,7 @@ public class CoordinatorClientImplTest
         StringUtils.toUtf8("true")
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         true,
         coordinatorClient.isHandoffComplete(
             "xyz",
@@ -185,7 +186,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segment)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segment,
         coordinatorClient.fetchSegment("xyz", "def", false).get()
     );
@@ -213,7 +214,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(segment)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segment,
         coordinatorClient.fetchSegment("xyz", "def", true).get()
     );
@@ -240,7 +241,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(Collections.singletonList(segment))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList(segment),
         coordinatorClient.fetchUsedSegments("xyz", intervals).get()
     );
@@ -259,11 +260,11 @@ public class CoordinatorClientImplTest
     );
 
     final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
 
     final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
     for (int idx = 0; idx < expectedSegments.size(); idx++) {
-      Assert.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
+      Assertions.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
     }
   }
 
@@ -292,12 +293,12 @@ public class CoordinatorClientImplTest
     );
 
     final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
 
     final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
-    Assert.assertEquals(expectedSegments, observedDataSegments);
+    Assertions.assertEquals(expectedSegments, observedDataSegments);
     for (int idx = 0; idx < expectedSegments.size(); idx++) {
-      Assert.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
+      Assertions.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
     }
   }
 
@@ -314,9 +315,9 @@ public class CoordinatorClientImplTest
     );
 
     final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
-    Assert.assertNotNull(response);
+    Assertions.assertNotNull(response);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segments,
         ImmutableList.copyOf(response.get().getIterator())
     );
@@ -343,7 +344,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(Collections.singletonList(fooInfo))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Collections.singletonList(fooInfo),
         coordinatorClient.fetchDataSourceInformation(Collections.singleton(foo)).get()
     );
@@ -417,7 +418,7 @@ public class CoordinatorClientImplTest
     List<ImmutableSegmentLoadInfo> segmentLoadInfoList =
         ImmutableList.of(immutableSegmentLoadInfo1, immutableSegmentLoadInfo2);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segmentLoadInfoList,
         coordinatorClient.fetchServerViewSegments("xyz", intervals)
     );
@@ -442,7 +443,7 @@ public class CoordinatorClientImplTest
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionStatusResponse(compactionSnapshots))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new CompactionStatusResponse(compactionSnapshots),
         coordinatorClient.getCompactionSnapshots(null).get()
     );
@@ -461,7 +462,7 @@ public class CoordinatorClientImplTest
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionStatusResponse(compactionSnapshots))
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new CompactionStatusResponse(compactionSnapshots),
         coordinatorClient.getCompactionSnapshots("ds1").get()
     );
@@ -487,7 +488,7 @@ public class CoordinatorClientImplTest
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(config)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         config,
         coordinatorClient.getCoordinatorDynamicConfig().get()
     );
@@ -511,7 +512,7 @@ public class CoordinatorClientImplTest
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(null)
     );
 
-    Assert.assertNull(coordinatorClient.updateCoordinatorDynamicConfig(config).get());
+    Assertions.assertNull(coordinatorClient.updateCoordinatorDynamicConfig(config).get());
   }
 
   @Test
@@ -525,7 +526,7 @@ public class CoordinatorClientImplTest
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(null)
     );
 
-    Assert.assertNull(coordinatorClient.updateAllLookups(Map.of()).get());
+    Assertions.assertNull(coordinatorClient.updateAllLookups(Map.of()).get());
   }
 
   @Test
@@ -553,7 +554,7 @@ public class CoordinatorClientImplTest
         DefaultObjectMapper.INSTANCE.writeValueAsBytes(lookups)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         lookups,
         coordinatorClient.fetchLookupsForTierSync("default_tier")
     );
@@ -582,7 +583,7 @@ public class CoordinatorClientImplTest
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
     }
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segments,
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
@@ -613,7 +614,7 @@ public class CoordinatorClientImplTest
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
     }
-    Assert.assertEquals(
+    Assertions.assertEquals(
         segments,
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
@@ -643,7 +644,7 @@ public class CoordinatorClientImplTest
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
     }
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(SEGMENT3),
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
@@ -674,7 +675,7 @@ public class CoordinatorClientImplTest
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
     }
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableList.of(SEGMENT1, SEGMENT2, SEGMENT3),
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
@@ -704,7 +705,7 @@ public class CoordinatorClientImplTest
     while (iterator.hasNext()) {
       actualSegments.add(iterator.next());
     }
-    Assert.assertEquals(
+    Assertions.assertEquals(
         List.of(SEGMENT3),
         actualSegments.stream()
                       .map(SegmentStatusInCluster::getDataSegment)
@@ -738,7 +739,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(rules)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         rules,
         coordinatorClient.getRulesForAllDatasources().get()
     );
@@ -755,7 +756,7 @@ public class CoordinatorClientImplTest
         StringUtils.toUtf8(leaderUrl)
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         leaderUrl,
         FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true).toString()
     );
@@ -771,7 +772,7 @@ public class CoordinatorClientImplTest
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.TEXT_PLAIN),
         StringUtils.toUtf8(invalidLeaderUrl)
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         RuntimeException.class,
         () -> FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true)
     );
@@ -785,7 +786,7 @@ public class CoordinatorClientImplTest
         new RuntimeException("Simulated runtime error")
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         RuntimeException.class,
         () -> FutureUtils.getUnchecked(coordinatorClient.findCurrentLeader(), true)
     );
@@ -809,7 +810,7 @@ public class CoordinatorClientImplTest
     }
     catch (Exception e) {
       Throwable throwable = Throwables.getRootCause(e);
-      Assert.assertTrue(throwable instanceof HttpResponseException);
+      Assertions.assertTrue(throwable instanceof HttpResponseException);
     }
   }
 
@@ -832,7 +833,7 @@ public class CoordinatorClientImplTest
         jsonMapper.writeValueAsBytes(null)
     );
 
-    Assert.assertNull(coordinatorClient.updateRulesForDatasource("xyz", rules).get());
+    Assertions.assertNull(coordinatorClient.updateRulesForDatasource("xyz", rules).get());
   }
 
   @Test
@@ -850,7 +851,7 @@ public class CoordinatorClientImplTest
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(brokerDynamicConfig)
     );
-    Assert.assertEquals(brokerDynamicConfig, coordinatorClient.getBrokerDynamicConfig().get());
+    Assertions.assertEquals(brokerDynamicConfig, coordinatorClient.getBrokerDynamicConfig().get());
   }
 
   @Test
@@ -865,6 +866,6 @@ public class CoordinatorClientImplTest
             )
         )
     );
-    Assert.assertEquals(BrokerDynamicConfig.builder().build(), coordinatorClient.getBrokerDynamicConfig().get());
+    Assertions.assertEquals(BrokerDynamicConfig.builder().build(), coordinatorClient.getBrokerDynamicConfig().get());
   }
 }

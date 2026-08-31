@@ -31,8 +31,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class CursorBuildSpecTest
 {
@@ -56,21 +56,21 @@ public class CursorBuildSpecTest
                                            )
                                            .build();
     // fail if cursor isn't fully ordered by the preferred ordering of the spec
-    Assert.assertFalse(spec1.isCompatibleOrdering(ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME))));
+    Assertions.assertFalse(spec1.isCompatibleOrdering(ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME))));
     // pass if the cursor ordering exactly matches
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec1.isCompatibleOrdering(
             ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("x"))
         )
     );
     // pass if the cursor ordering is exactly the reverse
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec1.isCompatibleOrdering(
             ImmutableList.of(OrderBy.descending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.descending("x"))
         )
     );
     // pass if the cursor ordering includes additional ordering not specified by the spec preferred ordering
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec1.isCompatibleOrdering(
             ImmutableList.of(
                 OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME),
@@ -80,7 +80,7 @@ public class CursorBuildSpecTest
         )
     );
     // fail if the cursor ordering is different
-    Assert.assertFalse(
+    Assertions.assertFalse(
         spec1.isCompatibleOrdering(
             ImmutableList.of(
                 OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME),
@@ -90,7 +90,7 @@ public class CursorBuildSpecTest
         )
     );
     // fail if the cursor ordering is different
-    Assert.assertFalse(
+    Assertions.assertFalse(
         spec1.isCompatibleOrdering(
             ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.descending("x"))
         )
@@ -100,7 +100,7 @@ public class CursorBuildSpecTest
     CursorBuildSpec spec2 = CursorBuildSpec.builder()
                                            .setPhysicalColumns(ImmutableSet.of(ColumnHolder.TIME_COLUMN_NAME, "x", "y"))
                                            .build();
-    Assert.assertTrue(
+    Assertions.assertTrue(
         spec2.isCompatibleOrdering(
             ImmutableList.of(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME), OrderBy.ascending("x"))
         )
@@ -126,8 +126,8 @@ public class CursorBuildSpecTest
 
     builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
-    Assert.assertEquals(
+    Assertions.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y", "z"),
         builder.getPhysicalColumns()
     );
@@ -152,8 +152,8 @@ public class CursorBuildSpecTest
 
     builder.andFilter(new EqualityFilter("x", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(new EqualityFilter("x", ColumnType.STRING, "hello", null), builder.getFilter());
-    Assert.assertEquals(
+    Assertions.assertEquals(new EqualityFilter("x", ColumnType.STRING, "hello", null), builder.getFilter());
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y"),
         builder.getPhysicalColumns()
     );
@@ -179,7 +179,7 @@ public class CursorBuildSpecTest
 
     builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new AndFilter(
             ImmutableList.of(
                 new EqualityFilter("x", ColumnType.STRING, "foo", null),
@@ -188,7 +188,7 @@ public class CursorBuildSpecTest
         ),
         builder.getFilter()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y", "z"),
         builder.getPhysicalColumns()
     );
@@ -202,8 +202,8 @@ public class CursorBuildSpecTest
 
     builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
-    Assert.assertNull(
+    Assertions.assertEquals(new EqualityFilter("z", ColumnType.STRING, "hello", null), builder.getFilter());
+    Assertions.assertNull(
         builder.getPhysicalColumns()
     );
   }
@@ -216,7 +216,7 @@ public class CursorBuildSpecTest
 
     builder.andFilter(new EqualityFilter("z", ColumnType.STRING, "hello", null));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new AndFilter(
             ImmutableList.of(
                 new EqualityFilter("x", ColumnType.STRING, "foo", null),
@@ -225,7 +225,7 @@ public class CursorBuildSpecTest
         ),
         builder.getFilter()
     );
-    Assert.assertNull(
+    Assertions.assertNull(
         builder.getPhysicalColumns()
     );
   }
@@ -248,11 +248,11 @@ public class CursorBuildSpecTest
                        );
     builder.andFilter(new RangeFilter("v0", ColumnType.LONG, 1L, 3L, true, true, null));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new RangeFilter("v0", ColumnType.LONG, 1L, 3L, true, true, null),
         builder.getFilter()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y"),
         builder.getPhysicalColumns()
     );
@@ -277,7 +277,7 @@ public class CursorBuildSpecTest
                        );
     builder.andFilter(new RangeFilter("v0", ColumnType.LONG, 1L, 3L, true, true, null));
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         new AndFilter(
             ImmutableList.of(
                 new EqualityFilter("x", ColumnType.STRING, "foo", null),
@@ -286,7 +286,7 @@ public class CursorBuildSpecTest
         ),
         builder.getFilter()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("x", "y"),
         builder.getPhysicalColumns()
     );
@@ -297,11 +297,11 @@ public class CursorBuildSpecTest
   {
     CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder();
 
-    Throwable t = Assert.assertThrows(
+    Throwable t = Assertions.assertThrows(
         DruidException.class,
         () -> builder.andFilter(null)
     );
 
-    Assert.assertEquals("filterToAdd must not be null", t.getMessage());
+    Assertions.assertEquals("filterToAdd must not be null", t.getMessage());
   }
 }

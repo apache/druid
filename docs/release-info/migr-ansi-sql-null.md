@@ -25,7 +25,7 @@ sidebar_label: SQL compliant mode
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-In Apache Druid 32.0.0, legacy configurations which were incompatible with the ANSI SQL standard were removed. 
+In Apache&circledR; Druid 32.0.0, legacy configurations which were incompatible with the ANSI SQL standard were removed. 
 
 These configurations were:
 * `druid.generic.useDefaultValueForNull`

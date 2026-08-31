@@ -27,8 +27,8 @@ import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -64,7 +64,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ),
         NoopTask.forDatasource("foo")
     );
-    Assert.assertEquals("localhost", worker.getWorker().getHost());
+    Assertions.assertEquals("localhost", worker.getWorker().getHost());
   }
 
   @Test
@@ -95,7 +95,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ),
         NoopTask.create()
     );
-    Assert.assertEquals("lhost", worker.getWorker().getHost());
+    Assertions.assertEquals("lhost", worker.getWorker().getHost());
   }
 
   @Test
@@ -119,7 +119,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ),
         NoopTask.create()
     );
-    Assert.assertNull(worker);
+    Assertions.assertNull(worker);
   }
 
   @Test
@@ -158,7 +158,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ),
         noopTask
     );
-    Assert.assertNotNull(worker);
+    Assertions.assertNotNull(worker);
 
     ImmutableWorkerInfo worker1 = strategy.findWorkerForTask(
         new HttpRemoteTaskRunnerConfig(),
@@ -185,7 +185,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         noopTask
     );
 
-    Assert.assertNull(worker1);
+    Assertions.assertNull(worker1);
 
   }
 
@@ -225,7 +225,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ),
         noopTask
     );
-    Assert.assertNotNull(worker);
+    Assertions.assertNotNull(worker);
 
     ImmutableWorkerInfo worker1 = strategy.findWorkerForTask(
         new HttpRemoteTaskRunnerConfig(),
@@ -252,7 +252,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         noopTask
     );
 
-    Assert.assertNull(worker1);
+    Assertions.assertNull(worker1);
 
   }
 }

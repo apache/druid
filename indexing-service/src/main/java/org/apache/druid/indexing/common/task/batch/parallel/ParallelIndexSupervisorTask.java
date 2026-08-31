@@ -85,6 +85,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
@@ -460,7 +461,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals
+        intervals,
+        SegmentDetail.none()
     );
   }
 
@@ -1841,7 +1843,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
           DeepStorageIntermediaryDataManager.retrieveShuffleDataStoragePath(getId())
       );
     }
-    catch (IOException e) {
+    catch (Exception e) {
+      // Best effort cleanup, do not fail the task if cleanup fails
       LOG.warn(e, "Failed recursive deep storage cleanup for intermediary path for task[%s]", getId());
     }
 

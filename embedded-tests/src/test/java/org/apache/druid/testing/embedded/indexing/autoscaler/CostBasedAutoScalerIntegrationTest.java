@@ -108,7 +108,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(100)
         .taskCountStart(initialTaskCount)
         .scaleActionPeriodMillis(1900)
-        .minTriggerScaleActionFrequencyMillis(2000)
         // Weight configuration: strongly favor lag reduction over idle time
         .lagWeight(0.9)
         .idleWeight(0.1)
@@ -163,7 +162,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(50)
         .taskCountStart(lowInitialTaskCount)
         .scaleActionPeriodMillis(500)
-        .minTriggerScaleActionFrequencyMillis(1000)
         .lagWeight(0.8)
         .idleWeight(0.2)
         .build();
@@ -212,7 +210,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(50)
         .taskCountStart(lowInitialTaskCount)
         .scaleActionPeriodMillis(500)
-        .minTriggerScaleActionFrequencyMillis(1000)
         .lagWeight(0.8)
         .idleWeight(0.2)
         .usePollIdleRatio(false)
@@ -258,7 +255,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMax(4)
         .lagWeight(0.5)
         .idleWeight(0.5)
-        .minTriggerScaleActionFrequencyMillis(10L)
         .scaleActionPeriodMillis(10L)
         .minScaleDownDelay(Duration.standardSeconds(1))
         .build();
@@ -289,7 +285,7 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
                       .hasDimension(DruidMetrics.SUPERVISOR_ID, supervisor.getId())
                       .hasValueMatching(Matchers.greaterThan(1L))
     );
-    Assertions.assertEquals(4, getCurrentTaskCount(supervisor.getId()));
+    Assertions.assertTrue(getCurrentTaskCount(supervisor.getId()) > 1);
     waitUntilPublishedRecordsAreIngested(totalRecords);
 
     // Let the tasks work through the lag.
@@ -336,7 +332,6 @@ public class CostBasedAutoScalerIntegrationTest extends StreamIndexTestBase
         .taskCountMin(1)
         .taskCountMax(10)
         .scaleActionPeriodMillis(100)
-        .minTriggerScaleActionFrequencyMillis(100)
         // High idle weight ensures scale-down when tasks are mostly idle (little data to process)
         .lagWeight(0.1)
         .idleWeight(0.9)

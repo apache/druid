@@ -22,6 +22,7 @@ package org.apache.druid.segment.file;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -30,36 +31,46 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.loading.DirectoryBackedRangeReader;
 import org.apache.druid.segment.loading.SegmentRangeReader;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 class PartialSegmentFileMapperV10Test
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
 
-  @TempDir
-  File tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
-  void testMapFileDownloadsOnDemand() throws IOException
+  void testMapFileThrowsUntilFetchedThenSlices() throws IOException
   {
     final File segmentFile = buildTestSegment(20, CompressionStrategy.NONE);
-    final File cacheDir = newCacheDir("demand");
+    final File cacheDir = newCacheDir("explicit");
 
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
 
@@ -67,16 +78,21 @@ class PartialSegmentFileMapperV10Test
       // reset count after create fetched metadata
       rangeReader.resetCount();
 
-      // access a single file - should trigger exactly one download
+      // mapFile never downloads: a known-but-unfetched file fails loudly (a silent slice would be all zeros)
+      Assertions.assertThrows(DruidException.class, () -> mapper.mapFile("5"));
+      Assertions.assertEquals(0, rangeReader.getReadCount(), "the failed map must not have downloaded anything");
+
+      mapper.fetchFiles(Set.of("5"));
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+      Assertions.assertEquals(4, mapper.getDownloadedBytes());
+
       ByteBuffer buf = mapper.mapFile("5");
       Assertions.assertNotNull(buf);
       Assertions.assertEquals(0, buf.position());
       Assertions.assertEquals(4, buf.remaining());
       Assertions.assertEquals(5, buf.getInt());
-      Assertions.assertEquals(1, rangeReader.getReadCount());
-      Assertions.assertEquals(4, mapper.getDownloadedBytes());
 
-      // access the same file again - should NOT trigger another download
+      // mapping again slices the same resident bytes without any further reads
       ByteBuffer buf2 = mapper.mapFile("5");
       Assertions.assertNotNull(buf2);
       Assertions.assertEquals(5, buf2.getInt());
@@ -93,6 +109,7 @@ class PartialSegmentFileMapperV10Test
     final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
 
     try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      mapper.ensureAllDownloaded();
       for (int i = 0; i < 20; ++i) {
         ByteBuffer buf = mapper.mapFile(String.valueOf(i));
         Assertions.assertNotNull(buf);
@@ -132,7 +149,7 @@ class PartialSegmentFileMapperV10Test
   }
 
   @Test
-  void testEnsureFilesAvailable() throws IOException
+  void testFetchFilesWithDefaultGapTolerance() throws IOException
   {
     final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
     final File cacheDir = newCacheDir("ensure");
@@ -143,11 +160,13 @@ class PartialSegmentFileMapperV10Test
       rangeReader.resetCount();
 
       Set<String> filesToLoad = Set.of("2", "5", "7");
-      mapper.ensureFilesAvailable(filesToLoad);
+      mapper.fetchFiles(filesToLoad);
 
-      // should have downloaded exactly 3 files
-      Assertions.assertEquals(3, rangeReader.getReadCount());
-      Assertions.assertEquals(12, mapper.getDownloadedBytes());
+      // the tiny gaps (files 3, 4, and 6) are far below the default coalesce tolerance, so the whole span [2..7]
+      // fetches in a single range read, and the bridged gap files become resident too
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+      Assertions.assertEquals(24, mapper.getDownloadedBytes());
+      Assertions.assertEquals(Set.of("2", "3", "4", "5", "6", "7"), mapper.getDownloadedFiles());
 
       // accessing these files should not trigger additional downloads
       for (String name : filesToLoad) {
@@ -155,7 +174,507 @@ class PartialSegmentFileMapperV10Test
         Assertions.assertNotNull(buf);
         Assertions.assertEquals(Integer.parseInt(name), buf.getInt());
       }
-      Assertions.assertEquals(3, rangeReader.getReadCount());
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+    }
+  }
+
+  @Test
+  void testFetchFilesCoalescesAdjacentFiles() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("fetch_adjacent");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    // gap tolerance 0: only strictly adjacent files coalesce
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, 0)) {
+      rangeReader.resetCount();
+
+      mapper.fetchFiles(Set.of("3", "4", "5"));
+
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+      Assertions.assertEquals(12, rangeReader.getReadBytes());
+      Assertions.assertEquals(12, mapper.getDownloadedBytes());
+      Assertions.assertEquals(Set.of("3", "4", "5"), mapper.getDownloadedFiles());
+    }
+  }
+
+  @Test
+  void testFetchFilesGapExceedsToleranceSplitsRuns() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("fetch_split");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, 0)) {
+      rangeReader.resetCount();
+
+      mapper.fetchFiles(Set.of("2", "7"));
+
+      // 16 gap bytes (files 3-6) exceed tolerance 0, so two separate reads with no gap bytes fetched
+      Assertions.assertEquals(2, rangeReader.getReadCount());
+      Assertions.assertEquals(8, rangeReader.getReadBytes());
+      Assertions.assertEquals(8, mapper.getDownloadedBytes());
+      Assertions.assertEquals(Set.of("2", "7"), mapper.getDownloadedFiles());
+    }
+  }
+
+  @Test
+  void testFetchFilesBridgesGapWithinTolerance() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("fetch_bridge");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, 16)) {
+      rangeReader.resetCount();
+
+      mapper.fetchFiles(Set.of("2", "7"));
+
+      // the 16 gap bytes (files 3-6) are within tolerance: one read covering [2..7], bridged files become resident
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+      Assertions.assertEquals(24, rangeReader.getReadBytes());
+      Assertions.assertEquals(24, mapper.getDownloadedBytes());
+      Assertions.assertEquals(Set.of("2", "3", "4", "5", "6", "7"), mapper.getDownloadedFiles());
+
+      // bridged files map without further reads, with correct content
+      final ByteBuffer buf = mapper.mapFile("4");
+      Assertions.assertNotNull(buf);
+      Assertions.assertEquals(4, buf.getInt());
+      Assertions.assertEquals(1, rangeReader.getReadCount());
+    }
+
+    // bridged files persist in the bitmap: a restored mapper sees them as resident
+    final CountingRangeReader freshReader = new CountingRangeReader(segmentFile.getParentFile());
+    try (PartialSegmentFileMapperV10 restored = createMapper(freshReader, cacheDir, 16)) {
+      freshReader.resetCount();
+      Assertions.assertEquals(Set.of("2", "3", "4", "5", "6", "7"), restored.getDownloadedFiles());
+      final ByteBuffer buf = restored.mapFile("6");
+      Assertions.assertNotNull(buf);
+      Assertions.assertEquals(6, buf.getInt());
+      Assertions.assertEquals(0, freshReader.getReadCount());
+    }
+  }
+
+  @Test
+  void testFetchFilesSkipsResidentSpans() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("fetch_resident");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    // large tolerance so only residency, not gaps, can split the span
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, 1024)) {
+      mapper.fetchFiles(Set.of("4"));
+      rangeReader.resetCount();
+
+      mapper.fetchFiles(Set.of("2", "3", "4", "5", "6", "7"));
+
+      // resident file 4 splits the span into [2,3] and [5,6,7]; its bytes are never re-fetched
+      Assertions.assertEquals(2, rangeReader.getReadCount());
+      Assertions.assertEquals(20, rangeReader.getReadBytes());
+      Assertions.assertEquals(24, mapper.getDownloadedBytes());
+      Assertions.assertEquals(Set.of("2", "3", "4", "5", "6", "7"), mapper.getDownloadedFiles());
+    }
+  }
+
+  @Test
+  void testFetchFilesFullyResidentOrUnknownIsNoOp() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("fetch_noop");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      mapper.fetchFiles(Set.of("2", "3"));
+      rangeReader.resetCount();
+
+      mapper.fetchFiles(Set.of("2", "3"));
+      Assertions.assertEquals(0, rangeReader.getReadCount());
+
+      mapper.fetchFiles(Set.of("does-not-exist"));
+      Assertions.assertEquals(0, rangeReader.getReadCount());
+
+      mapper.fetchFiles(Set.of());
+      Assertions.assertEquals(0, rangeReader.getReadCount());
+    }
+  }
+
+  @Test
+  void testConcurrentFetchFilesSameSet() throws Exception
+  {
+    final File segmentFile = buildTestSegment(20, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("concurrent_fetch");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    // tolerance 0 so the request plans as exactly two runs ({3,4,5} and {9,10,11}) with no gap bridging; this test
+    // is about concurrent same-set fetches not double-downloading, and exact expectations keep that sharp
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, 0)) {
+      rangeReader.resetCount();
+
+      final int numThreads = 8;
+      final ExecutorService exec = Execs.multiThreaded(numThreads, "fetch-test-%d");
+      try {
+        final CountDownLatch startLatch = new CountDownLatch(1);
+        final List<Future<Void>> futures = new ArrayList<>();
+        for (int t = 0; t < numThreads; t++) {
+          futures.add(exec.submit(() -> {
+            startLatch.await();
+            mapper.fetchFiles(Set.of("3", "4", "5", "9", "10", "11"));
+            return null;
+          }));
+        }
+        startLatch.countDown();
+        for (Future<Void> f : futures) {
+          f.get();
+        }
+
+        // whichever thread won each run downloaded it; every file is resident exactly once
+        Assertions.assertEquals(24, mapper.getDownloadedBytes());
+        Assertions.assertEquals(Set.of("3", "4", "5", "9", "10", "11"), mapper.getDownloadedFiles());
+        for (String name : mapper.getDownloadedFiles()) {
+          final ByteBuffer buf = mapper.mapFile(name);
+          Assertions.assertNotNull(buf);
+          Assertions.assertEquals(Integer.parseInt(name), buf.getInt());
+        }
+      }
+      finally {
+        exec.shutdownNow();
+      }
+    }
+  }
+
+  @Test
+  void testMapFileDuringInFlightFetch() throws Exception
+  {
+    final File segmentFile = buildTestSegment(20, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("concurrent_mixed");
+
+    // Gate the second fetch mid-flight so concurrent mapFile calls genuinely observe an in-progress run.
+    // Discriminate by thread identity, not offset: createMapper's header fetch also reads at offset > 0 (the
+    // metadata bytes after the fixed preamble) on this thread, and gating that would self-deadlock the test.
+    final Thread mainThread = Thread.currentThread();
+    final CountDownLatch fetchStarted = new CountDownLatch(1);
+    final CountDownLatch releaseFetch = new CountDownLatch(1);
+    final AtomicBoolean gated = new AtomicBoolean(true);
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile())
+    {
+      @Override
+      public InputStream readRange(String filename, long offset, long length) throws IOException
+      {
+        if (Thread.currentThread() != mainThread && gated.compareAndSet(true, false)) {
+          fetchStarted.countDown();
+          try {
+            releaseFetch.await();
+          }
+          catch (InterruptedException e) {
+            throw new RuntimeException(e);
+          }
+        }
+        return super.readRange(filename, offset, length);
+      }
+    };
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir, 1024)) {
+      // make a file outside the run resident up front (on this thread, which the gate ignores)
+      mapper.fetchFiles(Set.of("10"));
+      rangeReader.resetCount();
+      final ExecutorService exec = Execs.multiThreaded(2, "mixed-test-%d");
+      try {
+        final Future<Void> fetchFuture = exec.submit(() -> {
+          mapper.fetchFiles(Set.of("3", "4", "5"));
+          return null;
+        });
+        Assertions.assertTrue(fetchStarted.await(10, TimeUnit.SECONDS));
+
+        // reads never wait on downloads: a resident file slices immediately while the run is parked, and a run
+        // member that isn't resident yet fails fast instead of blocking for it
+        final ByteBuffer outside = mapper.mapFile("10");
+        Assertions.assertNotNull(outside);
+        Assertions.assertEquals(10, outside.getInt());
+        Assertions.assertThrows(DruidException.class, () -> mapper.mapFile("4"));
+
+        releaseFetch.countDown();
+        fetchFuture.get(10, TimeUnit.SECONDS);
+        final ByteBuffer member = mapper.mapFile("4");
+        Assertions.assertNotNull(member);
+        Assertions.assertEquals(4, member.getInt());
+
+        // one read for the run; the throwing mapFile and the resident reads downloaded nothing
+        Assertions.assertEquals(1, rangeReader.getReadCount());
+        Assertions.assertEquals(16, mapper.getDownloadedBytes());
+      }
+      finally {
+        exec.shutdownNow();
+      }
+    }
+  }
+
+  @Test
+  void testFetchFilesListenerAccounting() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("fetch_listener");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+    final AtomicInteger rangeReads = new AtomicInteger();
+    final AtomicLong rangeReadBytes = new AtomicLong();
+    final AtomicInteger fileDownloads = new AtomicInteger();
+    final AtomicLong fileDownloadBytes = new AtomicLong();
+    final PartialSegmentDownloadListener listener = new PartialSegmentDownloadListener()
+    {
+      @Override
+      public void onBytesDownloaded(long bytes)
+      {
+        fileDownloads.incrementAndGet();
+        fileDownloadBytes.addAndGet(bytes);
+      }
+
+      @Override
+      public void onRangeRead(long bytes, long durationNanos)
+      {
+        rangeReads.incrementAndGet();
+        rangeReadBytes.addAndGet(bytes);
+      }
+    };
+
+    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
+        rangeReader,
+        JSON_MAPPER,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        listener,
+        16,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    )) {
+      // ignore the header-fetch onBytesDownloaded event
+      fileDownloads.set(0);
+      fileDownloadBytes.set(0);
+
+      mapper.fetchFiles(Set.of("2", "7"));
+
+      // one wire request for the whole bridged span; one per-file resident event for each of the 6 covered files
+      Assertions.assertEquals(1, rangeReads.get());
+      Assertions.assertEquals(24, rangeReadBytes.get());
+      Assertions.assertEquals(6, fileDownloads.get());
+      Assertions.assertEquals(24, fileDownloadBytes.get());
+    }
+  }
+
+  @Test
+  void testPlanFetchRuns()
+  {
+    // synthetic single-container layout: files a..f tile back-to-back, 10 bytes each
+    final Map<String, SegmentInternalFileMetadata> files = new HashMap<>();
+    final List<String> byOffset = List.of("a", "b", "c", "d", "e", "f");
+    for (int i = 0; i < byOffset.size(); i++) {
+      files.put(byOffset.get(i), new SegmentInternalFileMetadata(0, i * 10L, 10));
+    }
+
+    // adjacent requested files coalesce regardless of tolerance
+    Assertions.assertEquals(
+        List.of(new PartialSegmentFileMapperV10.FetchRun(0, 0, 20, List.of("a", "b"))),
+        PartialSegmentFileMapperV10.planFetchRuns(0, byOffset, files, Set.of("a", "b"), Set.of(), 0)
+    );
+
+    // gap over tolerance splits; trailing gap bytes are never fetched
+    Assertions.assertEquals(
+        List.of(
+            new PartialSegmentFileMapperV10.FetchRun(0, 0, 10, List.of("a")),
+            new PartialSegmentFileMapperV10.FetchRun(0, 30, 10, List.of("d"))
+        ),
+        PartialSegmentFileMapperV10.planFetchRuns(0, byOffset, files, Set.of("a", "d"), Set.of(), 10)
+    );
+
+    // gap within tolerance bridges, and the bridged files ride along in the run
+    Assertions.assertEquals(
+        List.of(new PartialSegmentFileMapperV10.FetchRun(0, 0, 40, List.of("a", "b", "c", "d"))),
+        PartialSegmentFileMapperV10.planFetchRuns(0, byOffset, files, Set.of("a", "d"), Set.of(), 20)
+    );
+
+    // a resident file always splits, even when the gap around it is within tolerance
+    Assertions.assertEquals(
+        List.of(
+            new PartialSegmentFileMapperV10.FetchRun(0, 0, 10, List.of("a")),
+            new PartialSegmentFileMapperV10.FetchRun(0, 30, 10, List.of("d"))
+        ),
+        PartialSegmentFileMapperV10.planFetchRuns(0, byOffset, files, Set.of("a", "d"), Set.of("b", "c"), 100)
+    );
+
+    // requested-but-resident files are skipped entirely
+    Assertions.assertEquals(
+        List.of(),
+        PartialSegmentFileMapperV10.planFetchRuns(0, byOffset, files, Set.of("a"), Set.of("a"), 100)
+    );
+
+    // mixed: run bridges over unrequested c but is split by resident e
+    Assertions.assertEquals(
+        List.of(
+            new PartialSegmentFileMapperV10.FetchRun(0, 0, 40, List.of("a", "b", "c", "d")),
+            new PartialSegmentFileMapperV10.FetchRun(0, 50, 10, List.of("f"))
+        ),
+        PartialSegmentFileMapperV10.planFetchRuns(0, byOffset, files, Set.of("a", "b", "d", "f"), Set.of("e"), 100)
+    );
+  }
+
+  @Test
+  void testSplitRuns()
+  {
+    // synthetic layout: files of sizes 10, 10, 25, 10, 10 tiling one container
+    final Map<String, SegmentInternalFileMetadata> files = new HashMap<>();
+    files.put("a", new SegmentInternalFileMetadata(0, 0, 10));
+    files.put("b", new SegmentInternalFileMetadata(0, 10, 10));
+    files.put("big", new SegmentInternalFileMetadata(0, 20, 25));
+    files.put("c", new SegmentInternalFileMetadata(0, 45, 10));
+    files.put("d", new SegmentInternalFileMetadata(0, 55, 10));
+    final PartialSegmentFileMapperV10.FetchRun whole =
+        new PartialSegmentFileMapperV10.FetchRun(0, 0, 65, List.of("a", "b", "big", "c", "d"));
+
+    // under the cap: unchanged
+    Assertions.assertEquals(
+        List.of(whole),
+        PartialSegmentFileMapperV10.splitRuns(List.of(whole), files, 65)
+    );
+
+    // disabled: unchanged
+    Assertions.assertEquals(
+        List.of(whole),
+        PartialSegmentFileMapperV10.splitRuns(List.of(whole), files, 0)
+    );
+
+    // cap 20: cuts at file boundaries; the oversized file forms its own sub-run; sub-runs tile the original span
+    Assertions.assertEquals(
+        List.of(
+            new PartialSegmentFileMapperV10.FetchRun(0, 0, 20, List.of("a", "b")),
+            new PartialSegmentFileMapperV10.FetchRun(0, 20, 25, List.of("big")),
+            new PartialSegmentFileMapperV10.FetchRun(0, 45, 20, List.of("c", "d"))
+        ),
+        PartialSegmentFileMapperV10.splitRuns(List.of(whole), files, 20)
+    );
+  }
+
+  @Test
+  void testPlanFetchRunsZeroLengthFiles()
+  {
+    // all-null columns serialize no payload bytes, leaving zero-length internal files that share a start offset with
+    // a neighboring file; run-end tracking must never let one shrink a run below a covered file's bytes (a file must
+    // never be marked downloaded without its bytes fetched)
+    final Map<String, SegmentInternalFileMetadata> files = new HashMap<>();
+    files.put("a", new SegmentInternalFileMetadata(0, 0, 10));
+    files.put("nullCol", new SegmentInternalFileMetadata(0, 10, 0));
+    files.put("b", new SegmentInternalFileMetadata(0, 10, 20));
+
+    // canonical (startOffset, size) order: the zero-length file rides along between its neighbors
+    Assertions.assertEquals(
+        List.of(new PartialSegmentFileMapperV10.FetchRun(0, 0, 30, List.of("a", "nullCol", "b"))),
+        PartialSegmentFileMapperV10.planFetchRuns(
+            0,
+            List.of("a", "nullCol", "b"),
+            files,
+            Set.of("a", "nullCol", "b"),
+            Set.of(),
+            0
+        )
+    );
+
+    // adversarial order (zero-length file after the real file whose start it shares): the run must still cover the
+    // real file's bytes rather than shrinking to the zero-length file's end
+    Assertions.assertEquals(
+        List.of(new PartialSegmentFileMapperV10.FetchRun(0, 0, 30, List.of("a", "b", "nullCol"))),
+        PartialSegmentFileMapperV10.planFetchRuns(
+            0,
+            List.of("a", "b", "nullCol"),
+            files,
+            Set.of("a", "b", "nullCol"),
+            Set.of(),
+            0
+        )
+    );
+
+    // a zero-length file alone plans a zero-length run: nothing to read, but it still gets marked downloaded
+    Assertions.assertEquals(
+        List.of(new PartialSegmentFileMapperV10.FetchRun(0, 10, 0, List.of("nullCol"))),
+        PartialSegmentFileMapperV10.planFetchRuns(
+            0,
+            List.of("a", "nullCol", "b"),
+            files,
+            Set.of("nullCol"),
+            Set.of(),
+            0
+        )
+    );
+  }
+
+  @Test
+  void testSplitRunsZeroLengthFiles()
+  {
+    // sub-run end tracking has the same never-shrink obligation as planFetchRuns when a zero-length file shares a
+    // start offset with the real file before it
+    final Map<String, SegmentInternalFileMetadata> files = new HashMap<>();
+    files.put("a", new SegmentInternalFileMetadata(0, 0, 10));
+    files.put("b", new SegmentInternalFileMetadata(0, 10, 20));
+    files.put("nullCol", new SegmentInternalFileMetadata(0, 10, 0));
+    final PartialSegmentFileMapperV10.FetchRun whole =
+        new PartialSegmentFileMapperV10.FetchRun(0, 0, 30, List.of("a", "b", "nullCol"));
+
+    Assertions.assertEquals(
+        List.of(
+            new PartialSegmentFileMapperV10.FetchRun(0, 0, 10, List.of("a")),
+            new PartialSegmentFileMapperV10.FetchRun(0, 10, 20, List.of("b", "nullCol"))
+        ),
+        PartialSegmentFileMapperV10.splitRuns(List.of(whole), files, 15)
+    );
+  }
+
+  @Test
+  void testPlanParallelFetchSplitsLargeRuns() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("parallel_split");
+
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    // gap tolerance covers everything, but the parallel plan caps runs at 8 bytes (two 4-byte files each)
+    try (PartialSegmentFileMapperV10 mapper = PartialSegmentFileMapperV10.create(
+        rangeReader,
+        JSON_MAPPER,
+        cacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        PartialSegmentDownloadListener.NOOP,
+        1024,
+        8
+    )) {
+      rangeReader.resetCount();
+
+      final List<PartialSegmentFileMapperV10.FetchRun> runs =
+          mapper.planParallelFetch(Set.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
+      Assertions.assertEquals(5, runs.size(), "40 bytes at an 8-byte cap must plan as 5 runs");
+
+      // the sequential plan for the same request stays maximal
+      Assertions.assertEquals(
+          1,
+          mapper.planFetch(Set.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")).size(),
+          "sequential plan must not split"
+      );
+
+      for (PartialSegmentFileMapperV10.FetchRun run : runs) {
+        mapper.fetchRun(run);
+      }
+      Assertions.assertEquals(5, rangeReader.getReadCount());
+      Assertions.assertEquals(40, mapper.getDownloadedBytes());
+      for (int i = 0; i < 10; i++) {
+        final ByteBuffer buf = mapper.mapFile(String.valueOf(i));
+        Assertions.assertNotNull(buf);
+        Assertions.assertEquals(i, buf.getInt());
+      }
+      Assertions.assertEquals(5, rangeReader.getReadCount(), "mapFile must find everything resident");
     }
   }
 
@@ -169,8 +688,8 @@ class PartialSegmentFileMapperV10Test
 
     try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
       // download just 2 files
-      mapper.mapFile("3");
-      mapper.mapFile("7");
+      mapper.fetchFiles(Set.of("3"));
+      mapper.fetchFiles(Set.of("7"));
 
       // verify local container files exist (all files share one container in this test)
       File containerFile = new File(cacheDir, IndexIO.V10_FILE_NAME + ".container.00000");
@@ -186,62 +705,14 @@ class PartialSegmentFileMapperV10Test
   }
 
   @Test
-  void testConcurrentMapFile() throws Exception
-  {
-    final File segmentFile = buildTestSegment(20, CompressionStrategy.NONE);
-    final File cacheDir = newCacheDir("concurrent");
-
-    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
-
-    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
-      rangeReader.resetCount();
-
-      final int numThreads = 8;
-      final ExecutorService exec = Execs.multiThreaded(numThreads, "lazy-test-%d");
-      try {
-        final CountDownLatch startLatch = new CountDownLatch(1);
-        final List<Future<Void>> futures = new ArrayList<>();
-
-        // all threads try to access all 20 files concurrently
-        for (int t = 0; t < numThreads; t++) {
-          futures.add(exec.submit(() -> {
-            startLatch.await();
-            for (int i = 0; i < 20; ++i) {
-              ByteBuffer buf = mapper.mapFile(String.valueOf(i));
-              Assertions.assertNotNull(buf);
-              Assertions.assertEquals(4, buf.remaining());
-              Assertions.assertEquals(i, buf.getInt());
-            }
-            return null;
-          }));
-        }
-
-        startLatch.countDown();
-
-        for (Future<Void> f : futures) {
-          f.get();
-        }
-
-        // each file should have been downloaded exactly once despite concurrent access
-        Assertions.assertEquals(20, rangeReader.getReadCount());
-        Assertions.assertEquals(80, mapper.getDownloadedBytes());
-      }
-      finally {
-        exec.shutdownNow();
-      }
-    }
-  }
-
-  @Test
   void testProjectionStyleFileNames() throws IOException
   {
     // test with names like "projectionName/columnName" which is how V10 projections name their files
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("col-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("col-%s.bin", i));
         Files.write(Ints.toByteArray(i * 100), tmpFile);
         builder.add(StringUtils.format("myProjection/col_%d", i), tmpFile);
       }
@@ -251,6 +722,7 @@ class PartialSegmentFileMapperV10Test
     final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
 
     try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      mapper.ensureAllDownloaded();
       for (int i = 0; i < 5; ++i) {
         ByteBuffer buf = mapper.mapFile(StringUtils.format("myProjection/col_%d", i));
         Assertions.assertNotNull(buf);
@@ -260,85 +732,20 @@ class PartialSegmentFileMapperV10Test
   }
 
   @Test
-  void testMatchesEagerMapper() throws IOException
-  {
-    // verify that the lazy mapper produces identical ByteBuffer contents as the eager mapper
-    final File segmentFile = buildTestSegment(20, CompressionStrategy.NONE);
-    final File cacheDir = newCacheDir("match_eager");
-
-    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
-    try (SegmentFileMapperV10 eager = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER);
-         PartialSegmentFileMapperV10 lazy = createMapper(rangeReader, cacheDir)
-    ) {
-      Assertions.assertEquals(eager.getInternalFilenames(), lazy.getInternalFilenames());
-      for (String name : eager.getInternalFilenames()) {
-        ByteBuffer eagerBuf = eager.mapFile(name);
-        ByteBuffer lazyBuf = lazy.mapFile(name);
-        Assertions.assertNotNull(eagerBuf);
-        Assertions.assertNotNull(lazyBuf);
-        Assertions.assertEquals(eagerBuf, lazyBuf);
-      }
-    }
-
-  }
-
-  @Test
-  void testExternalFiles() throws IOException
-  {
-    final String externalName = "external.segment";
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
-
-    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
-      for (int i = 0; i < 10; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("main-%s.bin", i));
-        Files.write(Ints.toByteArray(i), tmpFile);
-        builder.add(StringUtils.format("%d", i), tmpFile);
-      }
-      SegmentFileBuilder external = builder.getExternalBuilder(externalName);
-      for (int i = 10; i < 20; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("ext-%s.bin", i));
-        Files.write(Ints.toByteArray(i), tmpFile);
-        external.add(StringUtils.format("%d", i), tmpFile);
-      }
-    }
-
-    final File cacheDir = newCacheDir("ext");
-    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
-
-    try (PartialSegmentFileMapperV10 mapper = createMapperWithExternal(rangeReader, cacheDir, externalName)) {
-      // verify main file internal files
-      for (int i = 0; i < 10; ++i) {
-        ByteBuffer buf = mapper.mapFile(String.valueOf(i));
-        Assertions.assertNotNull(buf);
-        Assertions.assertEquals(i, buf.getInt());
-      }
-
-      // verify external file internal files via mapExternalFile
-      for (int i = 10; i < 20; ++i) {
-        ByteBuffer buf = mapper.mapExternalFile(externalName, String.valueOf(i));
-        Assertions.assertNotNull(buf);
-        Assertions.assertEquals(i, buf.getInt());
-      }
-    }
-  }
-
-  @Test
   void testExternalFilesMatchEagerMapper() throws IOException
   {
     final String externalName = "external.segment";
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("main-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("main-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
       SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       for (int i = 5; i < 10; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("ext-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("ext-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         external.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -351,6 +758,7 @@ class PartialSegmentFileMapperV10Test
     try (SegmentFileMapperV10 eager = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER, List.of(externalName));
          PartialSegmentFileMapperV10 lazy = createMapperWithExternal(rangeReader, cacheDir, externalName)
     ) {
+      lazy.ensureAllDownloaded();
       // verify main files match
       for (int i = 0; i < 5; ++i) {
         ByteBuffer eagerBuf = eager.mapFile(String.valueOf(i));
@@ -379,11 +787,11 @@ class PartialSegmentFileMapperV10Test
 
     final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
 
-    // fetches from range reader and persists header + bitmap
+    // fetches from range reader and persists header + bitmap; separate single-file fetches so nothing bridges
     try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
-      mapper.mapFile("2");
-      mapper.mapFile("5");
-      mapper.mapFile("8");
+      mapper.fetchFiles(Set.of("2"));
+      mapper.fetchFiles(Set.of("5"));
+      mapper.fetchFiles(Set.of("8"));
       Assertions.assertEquals(12, mapper.getDownloadedBytes());
     }
 
@@ -411,6 +819,7 @@ class PartialSegmentFileMapperV10Test
       Assertions.assertEquals(8, buf8.getInt());
 
       // downloading a new file should still work after restore
+      restored.fetchFiles(Set.of("0"));
       ByteBuffer buf0 = restored.mapFile("0");
       Assertions.assertNotNull(buf0);
       Assertions.assertEquals(0, buf0.getInt());
@@ -419,21 +828,121 @@ class PartialSegmentFileMapperV10Test
   }
 
   @Test
+  void testFetchWithPendingInterruptStillMapsContainer() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("interrupted-fetch");
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      // A pending interrupt (canceled query, stage teardown, shutdownNow on the processing pool) must not abort the
+      // container mmap: FileChannel.map is an interruptible channel operation, so without the interrupt parking in
+      // mapUninterruptibly this fails with ClosedByInterruptException.
+      Thread.currentThread().interrupt();
+      try {
+        mapper.fetchFiles(Set.of("5"));
+
+        final ByteBuffer buf = mapper.mapFile("5");
+        Assertions.assertNotNull(buf);
+        Assertions.assertEquals(5, buf.getInt());
+
+        // preserved rather than swallowed, so the caller still unwinds at its next cancellation checkpoint
+        Assertions.assertTrue(Thread.currentThread().isInterrupted());
+      }
+      finally {
+        // don't leak the flag into the mapper close below, or into other tests on this thread
+        Thread.interrupted();
+      }
+    }
+  }
+
+  @Test
+  void testRestoreWithPendingInterruptKeepsHeader() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("interrupted-restore");
+    final File headerFile = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+
+    try (PartialSegmentFileMapperV10 mapper =
+             createMapper(new DirectoryBackedRangeReader(segmentFile.getParentFile()), cacheDir)) {
+      mapper.fetchFiles(Set.of("5"));
+      Assertions.assertEquals(4, mapper.getDownloadedBytes());
+    }
+
+    final CountingRangeReader freshReader = new CountingRangeReader(segmentFile.getParentFile());
+    try {
+      Thread.currentThread().interrupt();
+      try (PartialSegmentFileMapperV10 restored = createMapper(freshReader, cacheDir)) {
+        // The bitmap mmap is interrupt-immune too, so a valid local header is restored as-is rather than mistaken for
+        // a corrupt file, deleted, and re-fetched from deep storage.
+        Assertions.assertTrue(Thread.currentThread().isInterrupted());
+
+        // Clear here rather than in the finally below, so the mapper close at the end of this block runs with the
+        // same clear flag its counterpart in testFetchWithPendingInterruptStillMapsContainer does; the finally is
+        // then only a backstop for a failure before this point.
+        Thread.interrupted();
+
+        Assertions.assertTrue(headerFile.exists());
+        Assertions.assertEquals(0, freshReader.getHeaderReadCount(), "header must not have been re-downloaded");
+        Assertions.assertEquals(4, restored.getDownloadedBytes());
+
+        final ByteBuffer buf = restored.mapFile("5");
+        Assertions.assertNotNull(buf);
+        Assertions.assertEquals(5, buf.getInt());
+      }
+    }
+    finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  void testRestoreFailurePropagatesOriginalException() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("restore-failure");
+
+    // Persist a header + bitmap with one file resident, so the restore loop has a container to initialize.
+    try (PartialSegmentFileMapperV10 mapper =
+             createMapper(new DirectoryBackedRangeReader(segmentFile.getParentFile()), cacheDir)) {
+      mapper.fetchFiles(Set.of("5"));
+    }
+
+    // Replace the container file with a directory of the same name: it still passes the repair pre-pass's exists()
+    // check, so the bitmap bit survives, but the restore loop's RandomAccessFile open fails. Doing it this way rather
+    // than with permissions keeps the test deterministic when it runs as root.
+    final File containerFile = new File(cacheDir, StringUtils.format("%s.container.%05d", IndexIO.V10_FILE_NAME, 0));
+    Assertions.assertTrue(containerFile.isFile());
+    Assertions.assertTrue(containerFile.delete());
+    FileUtils.mkdirp(containerFile);
+
+    // createForFile closes the half-built mapper on the way out (releasing the bitmap mmap and any containers already
+    // initialized). The unmap itself isn't observable in-process; what this pins is that the cleanup neither swallows
+    // the failure nor rewraps it into some other type, which is what would hide the real cause from callers.
+    Assertions.assertThrows(
+        IOException.class,
+        () -> createMapper(new DirectoryBackedRangeReader(segmentFile.getParentFile()), cacheDir)
+    );
+  }
+
+  @Test
   void testCreateWithExternals() throws IOException
   {
     final String externalName = "external.segment";
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int i = 0; i < 5; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("main-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("main-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
       SegmentFileBuilder external = builder.getExternalBuilder(externalName);
       for (int i = 5; i < 10; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("ext-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("ext-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         external.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -442,10 +951,10 @@ class PartialSegmentFileMapperV10Test
     final File cacheDir = newCacheDir("ext_persist");
     final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
 
-    // create with externals, download some files
+    // create with externals, download some files (external files fetch through their own mapper)
     try (PartialSegmentFileMapperV10 mapper = createMapperWithExternal(rangeReader, cacheDir, externalName)) {
-      mapper.mapFile("1");
-      mapper.mapExternalFile(externalName, "7");
+      mapper.fetchFiles(Set.of("1"));
+      mapper.getExternalMapper(externalName).fetchFiles(Set.of("7"));
     }
 
     // restore, previously downloaded files should be available
@@ -462,6 +971,143 @@ class PartialSegmentFileMapperV10Test
   }
 
   @Test
+  void testIsPartialSegmentLayout() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("layout");
+
+    // an empty (or absent, or non-directory) cache dir is not a partial layout
+    Assertions.assertFalse(PartialSegmentFileMapperV10.isPartialSegmentLayout(cacheDir, IndexIO.V10_FILE_NAME));
+    Assertions.assertFalse(PartialSegmentFileMapperV10.isPartialSegmentLayout(null, IndexIO.V10_FILE_NAME));
+    Assertions.assertFalse(
+        PartialSegmentFileMapperV10.isPartialSegmentLayout(
+            new File(temporaryFolder.getRoot(), "nonexistent"),
+            IndexIO.V10_FILE_NAME
+        )
+    );
+
+    // persisting the header is what makes the layout recognizable, container files or not
+    try (PartialSegmentFileMapperV10 mapper =
+             createMapper(new DirectoryBackedRangeReader(segmentFile.getParentFile()), cacheDir)) {
+      Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(cacheDir, IndexIO.V10_FILE_NAME));
+      mapper.fetchFiles(Set.of("3"));
+      Assertions.assertTrue(PartialSegmentFileMapperV10.isPartialSegmentLayout(cacheDir, IndexIO.V10_FILE_NAME));
+      // ...and only for the file it was persisted for
+      Assertions.assertFalse(PartialSegmentFileMapperV10.isPartialSegmentLayout(cacheDir, "some-other-file"));
+    }
+  }
+
+  @Test
+  void testHeaderFileLengthMatchesComputedSize() throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("header_size");
+    final File headerFile = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+
+    final long freshSize;
+    // fresh fetch: the header is published at its final length, bitmap region included
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      freshSize = mapper.getOnDiskHeaderSize();
+      Assertions.assertEquals(headerFile.length(), freshSize);
+      // the header is published in one write, so nothing intermediate is left behind to be cleaned up later
+      Assertions.assertArrayEquals(new String[]{headerFile.getName()}, cacheDir.list());
+      // downloading files must not change the header's footprint, only bits inside its bitmap region
+      mapper.fetchFiles(Set.of("3"));
+      Assertions.assertEquals(freshSize, mapper.getOnDiskHeaderSize());
+      Assertions.assertEquals(freshSize, headerFile.length());
+    }
+
+    // restore from the local header: same size, so a reservation made against one measurement is never grown by the
+    // other
+    try (PartialSegmentFileMapperV10 restored = createMapper(rangeReader, cacheDir)) {
+      Assertions.assertEquals(freshSize, restored.getOnDiskHeaderSize());
+      Assertions.assertEquals(freshSize, headerFile.length());
+    }
+  }
+
+  @Test
+  void testHeaderFileLengthMatchesComputedSizeWithExternals() throws IOException
+  {
+    final String externalName = "external.segment";
+    final File baseDir = temporaryFolder.newFolder("ext_size_base_" + ThreadLocalRandom.current().nextInt());
+
+    try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
+      for (int i = 0; i < 5; ++i) {
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("ext-size-main-%s.bin", i));
+        Files.write(Ints.toByteArray(i), tmpFile);
+        builder.add(StringUtils.format("%d", i), tmpFile);
+      }
+      SegmentFileBuilder external = builder.getExternalBuilder(externalName);
+      for (int i = 5; i < 10; ++i) {
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("ext-size-ext-%s.bin", i));
+        Files.write(Ints.toByteArray(i), tmpFile);
+        external.add(StringUtils.format("%d", i), tmpFile);
+      }
+    }
+
+    final File cacheDir = newCacheDir("ext_size");
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(baseDir);
+    final File mainHeader = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+    final File externalHeader = new File(
+        cacheDir,
+        externalName + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+
+    // the computed size covers the entry point plus every attached external mapper's header
+    try (PartialSegmentFileMapperV10 mapper = createMapperWithExternal(rangeReader, cacheDir, externalName)) {
+      Assertions.assertEquals(mainHeader.length() + externalHeader.length(), mapper.getOnDiskHeaderSize());
+    }
+  }
+
+  @ParameterizedTest(name = "bytesMissing={0}")
+  @ValueSource(ints = {1, 2})
+  void testHeaderShorterThanItsMetadataIsRefetched(int bytesMissing) throws IOException
+  {
+    final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("short_header_" + bytesMissing);
+    final File headerFile = new File(
+        cacheDir,
+        IndexIO.V10_FILE_NAME + PartialSegmentFileMapperV10.METADATA_HEADER_SUFFIX
+    );
+    final DirectoryBackedRangeReader rangeReader = new DirectoryBackedRangeReader(segmentFile.getParentFile());
+
+    final long expectedSize;
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      expectedSize = mapper.getOnDiskHeaderSize();
+      // 10 files means a 2 byte bitmap region, and file "3" is bit 3 of the first of those bytes: dropping the last
+      // byte leaves that bit intact on disk, so a mapper that trusted a short file would report it as downloaded
+      Assertions.assertEquals(2, (mapper.getSegmentFileMetadata().getFiles().size() + 7) / 8);
+      mapper.fetchFiles(Set.of("3"));
+      Assertions.assertEquals(4, mapper.getDownloadedBytes());
+    }
+
+    // Shorten the header: the state a crash (or an interrupt) between persisting the header bytes and extending the
+    // file leaves behind, and the shape of a header written before the two were published together. The metadata
+    // still parses, so only the length tells us the file is incomplete. Growing it back instead would mean the same
+    // segment measures two different sizes depending on when it is looked at, and would resurrect whatever bits
+    // happened to survive.
+    try (RandomAccessFile raf = new RandomAccessFile(headerFile, "rw")) {
+      raf.setLength(expectedSize - bytesMissing);
+    }
+
+    try (PartialSegmentFileMapperV10 recovered = createMapper(rangeReader, cacheDir)) {
+      Assertions.assertEquals(expectedSize, recovered.getOnDiskHeaderSize());
+      Assertions.assertEquals(expectedSize, headerFile.length(), "the short header must have been re-fetched");
+      // treated as corrupt and re-fetched, so the download bitmap starts over rather than being partly trusted
+      Assertions.assertEquals(0, recovered.getDownloadedBytes());
+      recovered.fetchFiles(Set.of("3"));
+      Assertions.assertEquals(3, recovered.mapFile("3").getInt());
+    }
+  }
+
+  @Test
   void testCorruptHeaderFileRecovery() throws IOException
   {
     final File segmentFile = buildTestSegment(10, CompressionStrategy.NONE);
@@ -471,7 +1117,7 @@ class PartialSegmentFileMapperV10Test
 
     // populate normally
     try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
-      mapper.mapFile("3");
+      mapper.fetchFiles(Set.of("3"));
     }
 
     // corrupt the header file
@@ -486,6 +1132,7 @@ class PartialSegmentFileMapperV10Test
     try (PartialSegmentFileMapperV10 recovered = createMapper(rangeReader, cacheDir)) {
       Assertions.assertEquals(0, recovered.getDownloadedBytes());
 
+      recovered.fetchFiles(Set.of("3"));
       ByteBuffer buf = recovered.mapFile("3");
       Assertions.assertNotNull(buf);
       Assertions.assertEquals(3, buf.getInt());
@@ -527,9 +1174,66 @@ class PartialSegmentFileMapperV10Test
     try (SegmentFileMapperV10 eager = SegmentFileMapperV10.create(segmentFile, JSON_MAPPER);
          PartialSegmentFileMapperV10 lazy = createMapper(freshReader, newCacheDir("ensure_all_bulk_match"))) {
       lazy.ensureAllDownloaded();
+      Assertions.assertEquals(eager.getInternalFilenames(), lazy.getInternalFilenames());
       for (String name : eager.getInternalFilenames()) {
         Assertions.assertEquals(eager.mapFile(name), lazy.mapFile(name), "file[" + name + "]");
       }
+    }
+  }
+
+  @Test
+  void testEnsureAllDownloadedSkipsResidentSpans() throws IOException
+  {
+    final int numBundles = 3;
+    final int filesPerBundle = 4;
+    final File segmentFile = buildMultiBundleSegment(numBundles, filesPerBundle);
+    final File cacheDir = newCacheDir("ensure_all_partial");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      // make one interior file of the middle container resident first
+      mapper.fetchFiles(Set.of("b1/col_1"));
+      rangeReader.resetCount();
+
+      mapper.ensureAllDownloaded();
+
+      // b0 and b2 fetch in one read each; b1's resident file splits it into two reads, and its 4 bytes
+      // are not re-fetched
+      Assertions.assertEquals(4, rangeReader.getReadCount());
+      final long totalBytes = (long) numBundles * filesPerBundle * Integer.BYTES;
+      Assertions.assertEquals(totalBytes - Integer.BYTES, rangeReader.getReadBytes());
+      Assertions.assertTrue(mapper.isFullyDownloaded());
+      Assertions.assertEquals(totalBytes, mapper.getDownloadedBytes());
+    }
+  }
+
+  @Test
+  void testEvictContainerBumpsBundleGeneration() throws IOException
+  {
+    final File segmentFile = buildMultiBundleSegment(3, 4);
+    final File cacheDir = newCacheDir("generation");
+    final CountingRangeReader rangeReader = new CountingRangeReader(segmentFile.getParentFile());
+
+    try (PartialSegmentFileMapperV10 mapper = createMapper(rangeReader, cacheDir)) {
+      final long b1Before = mapper.getBundleGeneration("b1");
+      final long b0Before = mapper.getBundleGeneration("b0");
+      final long unknownBefore = mapper.getBundleGeneration("no-such-bundle");
+
+      mapper.ensureBundleDownloaded("b1");
+      Assertions.assertEquals(b1Before, mapper.getBundleGeneration("b1"), "downloads must not advance the generation");
+
+      for (int containerIndex : mapper.getContainerIndicesForBundle("b1")) {
+        mapper.evictContainer(containerIndex);
+      }
+
+      Assertions.assertTrue(
+          mapper.getBundleGeneration("b1") > b1Before,
+          "eviction must advance the evicted bundle's generation"
+      );
+      Assertions.assertEquals(b0Before, mapper.getBundleGeneration("b0"), "other bundles' generations must not move");
+      // a name with no containers in this mapper (the cache layer can resolve names to a catch-all bundle)
+      // conservatively reflects every eviction
+      Assertions.assertTrue(mapper.getBundleGeneration("no-such-bundle") > unknownBefore);
     }
   }
 
@@ -572,9 +1276,7 @@ class PartialSegmentFileMapperV10Test
 
   private File newCacheDir(String name) throws IOException
   {
-    final File dir = new File(tempDir, name + "_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(dir);
-    return dir;
+    return temporaryFolder.newFolder(name + "_" + ThreadLocalRandom.current().nextInt());
   }
 
   /**
@@ -584,14 +1286,13 @@ class PartialSegmentFileMapperV10Test
    */
   private File buildMultiBundleSegment(int numBundles, int filesPerBundle) throws IOException
   {
-    final File baseDir = new File(tempDir, "multibundle_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = temporaryFolder.newFolder("multibundle_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir)) {
       for (int b = 0; b < numBundles; b++) {
         builder.startFileBundle("b" + b);
         for (int i = 0; i < filesPerBundle; i++) {
-          final File tmpFile = new File(tempDir, StringUtils.format("mb-%d-%d.bin", b, i));
+          final File tmpFile = temporaryFolder.newFile(StringUtils.format("mb-%d-%d.bin", b, i));
           Files.write(Ints.toByteArray(b * 100 + i), tmpFile);
           builder.add(StringUtils.format("b%d/col_%d", b, i), tmpFile);
         }
@@ -603,12 +1304,11 @@ class PartialSegmentFileMapperV10Test
 
   private File buildTestSegment(int numFiles, CompressionStrategy compression) throws IOException
   {
-    final File baseDir = new File(tempDir, "base_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = temporaryFolder.newFolder("base_" + ThreadLocalRandom.current().nextInt());
 
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(JSON_MAPPER, baseDir, compression)) {
       for (int i = 0; i < numFiles; ++i) {
-        File tmpFile = new File(tempDir, StringUtils.format("smoosh-%s.bin", i));
+        File tmpFile = temporaryFolder.newFile(StringUtils.format("smoosh-%s.bin", i));
         Files.write(Ints.toByteArray(i), tmpFile);
         builder.add(StringUtils.format("%d", i), tmpFile);
       }
@@ -617,17 +1317,94 @@ class PartialSegmentFileMapperV10Test
     return new File(baseDir, IndexIO.V10_FILE_NAME);
   }
 
+  @Test
+  void testEvictContainerDefersWhileAFetchIsWritingIntoIt() throws Exception
+  {
+    final File segmentFile = buildTestSegment(20, CompressionStrategy.NONE);
+    final File cacheDir = newCacheDir("evict-defer");
+    final CountDownLatch fetching = new CountDownLatch(1);
+    final CountDownLatch release = new CountDownLatch(1);
+    final AtomicBoolean armed = new AtomicBoolean(false);
+    final AtomicBoolean gated = new AtomicBoolean(false);
+    final SegmentRangeReader delegate = new CountingRangeReader(segmentFile.getParentFile());
+    // park the first read once armed, so a fetch is provably mid-flight when the eviction arrives. Armed only after
+    // the mapper exists, since create() does its own header read on this thread.
+    final SegmentRangeReader gatedReader = (filename, offset, length) -> {
+      if (armed.get() && gated.compareAndSet(false, true)) {
+        fetching.countDown();
+        try {
+          Assertions.assertTrue(release.await(30, TimeUnit.SECONDS));
+        }
+        catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          throw new IOException(e);
+        }
+      }
+      return delegate.readRange(filename, offset, length);
+    };
+
+    final ExecutorService exec = Execs.multiThreaded(1, "evict-defer-test-%d");
+    try (PartialSegmentFileMapperV10 mapper = createMapper(gatedReader, cacheDir)) {
+      final String fileName = mapper.getSegmentFileMetadata().getFiles().keySet().iterator().next();
+      final int containerIndex = mapper.getSegmentFileMetadata().getFiles().get(fileName).getContainer();
+      armed.set(true);
+
+      final Future<?> fetch = exec.submit(() -> {
+        mapper.fetchFiles(List.of(fileName));
+        return null;
+      });
+      Assertions.assertTrue(fetching.await(30, TimeUnit.SECONDS), "fetch must reach the gated read");
+
+      // Evicting now would delete the file the fetch is streaming into. It must defer instead of tearing it down.
+      mapper.evictContainer(containerIndex);
+
+      release.countDown();
+      fetch.get(30, TimeUnit.SECONDS);
+
+      // The fetch completed, and the deferred eviction then ran: the file is no longer resident.
+      Assertions.assertFalse(
+          mapper.getDownloadedFiles().contains(fileName),
+          "the deferred eviction should have run once the fetch finished"
+      );
+    }
+    finally {
+      release.countDown();
+      exec.shutdownNow();
+    }
+  }
+
   private static PartialSegmentFileMapperV10 createMapper(
       SegmentRangeReader rangeReader,
       File localCacheDir
   ) throws IOException
   {
-    return PartialSegmentFileMapperV10.createForFile(
+    return PartialSegmentFileMapperV10.create(
         rangeReader,
         JSON_MAPPER,
         localCacheDir,
         IndexIO.V10_FILE_NAME,
-        PartialSegmentDownloadListener.NOOP
+        List.of(),
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
+    );
+  }
+
+  private static PartialSegmentFileMapperV10 createMapper(
+      SegmentRangeReader rangeReader,
+      File localCacheDir,
+      long coalesceGapBytes
+  ) throws IOException
+  {
+    return PartialSegmentFileMapperV10.create(
+        rangeReader,
+        JSON_MAPPER,
+        localCacheDir,
+        IndexIO.V10_FILE_NAME,
+        List.of(),
+        PartialSegmentDownloadListener.NOOP,
+        coalesceGapBytes,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
   }
 
@@ -643,7 +1420,9 @@ class PartialSegmentFileMapperV10Test
         localCacheDir,
         IndexIO.V10_FILE_NAME,
         List.of(externalName),
-        PartialSegmentDownloadListener.NOOP
+        PartialSegmentDownloadListener.NOOP,
+        PartialSegmentFileMapperV10.DEFAULT_COALESCE_GAP_BYTES,
+        PartialSegmentFileMapperV10.DEFAULT_MAX_FETCH_RUN_BYTES
     );
   }
 

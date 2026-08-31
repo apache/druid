@@ -47,6 +47,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -220,46 +221,6 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
         null,
         null,
         PruneSpecsHolder.DEFAULT
-    );
-  }
-
-  /**
-   * @deprecated use {@link #builder(SegmentId)} or {@link #builder(DataSegment)} instead.
-   */
-  @Deprecated
-  public DataSegment(
-      String dataSource,
-      Interval interval,
-      String version,
-      @Nullable Map<String, Object> loadSpec,
-      @Nullable List<String> dimensions,
-      @Nullable List<String> metrics,
-      @Nullable List<String> projections,
-      @Nullable ShardSpec shardSpec,
-      @Nullable CompactionState lastCompactionState,
-      Integer binaryVersion,
-      long size,
-      Integer totalRows,
-      String indexingStateFingerprint,
-      PruneSpecsHolder pruneSpecsHolder
-  )
-  {
-    this(
-        dataSource,
-        interval,
-        version,
-        loadSpec,
-        dimensions,
-        metrics,
-        projections,
-        null,
-        shardSpec,
-        lastCompactionState,
-        binaryVersion,
-        size,
-        totalRows,
-        indexingStateFingerprint,
-        pruneSpecsHolder
     );
   }
 
@@ -570,6 +531,32 @@ public class DataSegment implements Comparable<DataSegment>, Overshadowable<Data
   public DataSegment withIndexingStateFingerprint(String indexingStateFingerprint)
   {
     return builder(this).indexingStateFingerprint(indexingStateFingerprint).build();
+  }
+
+  /**
+   * Returns a copy of this segment with every optional top-level field that is not listed in {@code details} removed.
+   * The fields that are not optional are always retained; see {@link SegmentDetail} for the full split.
+   *
+   * @param details the optional details to retain; null retains all details and an empty set retains none
+   */
+  public DataSegment retainOnlyDetails(@Nullable final Set<SegmentDetail> details)
+  {
+    if (details == null) {
+      return this;
+    } else {
+      return builder(this)
+          .dimensions(details.contains(SegmentDetail.DIMENSIONS) ? dimensions : null)
+          .metrics(details.contains(SegmentDetail.METRICS) ? metrics : null)
+          .projections(details.contains(SegmentDetail.PROJECTIONS) ? projections : null)
+          .clusterGroups(details.contains(SegmentDetail.CLUSTER_GROUPS) ? clusterGroups : null)
+          .lastCompactionState(details.contains(SegmentDetail.COMPACTION_STATE) ? lastCompactionState : null)
+          .loadSpec(details.contains(SegmentDetail.LOAD_SPEC) ? loadSpec : null)
+          .totalRows(details.contains(SegmentDetail.ROW_COUNT) ? totalRows : null)
+          .indexingStateFingerprint(
+              details.contains(SegmentDetail.INDEXING_STATE_FINGERPRINT) ? indexingStateFingerprint : null
+          )
+          .build();
+    }
   }
 
   public DataSegment.Builder toBuilder()

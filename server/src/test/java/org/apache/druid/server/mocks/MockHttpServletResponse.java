@@ -21,13 +21,13 @@ package org.apache.druid.server.mocks;
 
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
+import jakarta.validation.constraints.NotNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.ServletOutputStream;
 import javax.servlet.WriteListener;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;

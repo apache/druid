@@ -39,6 +39,8 @@ public class Tasks
   public static final int DEFAULT_EMBEDDED_KILL_TASK_PRIORITY = 25;
 
   static {
+    // Keep the independently defined indexing and compaction defaults aligned when either constant changes.
+    // codeql[java/constant-comparison]
     Verify.verify(DEFAULT_MERGE_TASK_PRIORITY == DataSourceCompactionConfig.DEFAULT_COMPACTION_TASK_PRIORITY);
   }
 
@@ -55,6 +57,7 @@ public class Tasks
   public static final String SUB_TASK_TIMEOUT_KEY = "subTaskTimeoutMillis";
   public static final String FORCE_TIME_CHUNK_LOCK_KEY = "forceTimeChunkLock";
   public static final String STORE_EMPTY_COLUMNS_KEY = "storeEmptyColumns";
+  public static final String VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY = "virtualStoragePartialDownloadsEnabled";
   public static final String USE_SHARED_LOCK = "useSharedLock";
   public static final String TASK_LOCK_TYPE = "taskLockType";
   public static final String USE_CONCURRENT_LOCKS = "useConcurrentLocks";

@@ -238,6 +238,7 @@ S3
 SAS
 SDK
 SIGAR
+SIMD
 SNI
 SPNEGO
 Splunk
@@ -533,9 +534,11 @@ quantile
 quantiles
 queryable
 quickstart
+RE2
 realtime
 rebalance
 redis
+ReDoS
 regexes
 reimported
 reindex
@@ -906,8 +909,6 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
-minScaleUpDelay
-minScaleDownDelay
 NUMBER_FEATURES
 NUMBER_OF_CONTRIBUTORS
 PreparedStatement
@@ -1694,6 +1695,7 @@ un
 G1GC
 GroupBys
 QoS-type
+QoS
 DumpSegment
 SegmentMetadata
 __time
@@ -2657,3 +2659,4 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+checksum

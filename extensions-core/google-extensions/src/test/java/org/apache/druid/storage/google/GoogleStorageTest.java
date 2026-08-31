@@ -29,9 +29,9 @@ import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -41,9 +41,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GoogleStorageTest
 {
@@ -59,7 +59,7 @@ public class GoogleStorageTest
   private static final Exception STORAGE_EXCEPTION = new StorageException(404, "Runtime Storage Exception");
 
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mockStorage = EasyMock.mock(Storage.class);
@@ -130,7 +130,7 @@ public class GoogleStorageTest
   {
     EasyMock.expect(mockStorage.delete(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
-    Assert.assertThrows(StorageException.class, () -> googleStorage.delete(BUCKET, PATH));
+    Assertions.assertThrows(StorageException.class, () -> googleStorage.delete(BUCKET, PATH));
     EasyMock.verify(mockStorage);
   }
 
@@ -184,7 +184,7 @@ public class GoogleStorageTest
     EasyMock.expect(mockStorage.delete((Iterable<BlobId>) EasyMock.anyObject()))
             .andThrow(STORAGE_EXCEPTION);
     EasyMock.replay(mockStorage);
-    Assert.assertThrows(StorageException.class, () -> googleStorage.batchDelete(BUCKET, paths));
+    Assertions.assertThrows(StorageException.class, () -> googleStorage.batchDelete(BUCKET, paths));
     EasyMock.verify(mockStorage);
   }
 

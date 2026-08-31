@@ -34,9 +34,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.RowMeters;
 import org.joda.time.Interval;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -77,7 +77,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
     );
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     inputDir = temporaryFolder.newFolder("data");
@@ -108,7 +108,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
   }
 
   @Test
-  @Ignore("assumes record rates, to be fixed PR #12852")
+  @Disabled("assumes record rates, to be fixed PR #12852")
   public void testHashPartitionRowStats_concurrentSubTasks_1()
   {
     testHashPartitionRowStats(1);

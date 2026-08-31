@@ -23,18 +23,19 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.data.input.impl.prefetch.ObjectOpenFunction;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import javax.annotation.Nonnull;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
@@ -56,16 +57,13 @@ import static org.mockito.Mockito.verify;
 public class RetryingInputStreamTest
 {
   private static final int MAX_RETRY = 5;
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File testFile;
 
   private int readBytesBeforeExceptions = 0;
   private int throwCustomExceptions = 0;
   private int throwIOExceptions = 0;
-
 
   private final ObjectOpenFunction<File> objectOpenFunction = spy(new ObjectOpenFunction<File>()
   {
@@ -84,7 +82,7 @@ public class RetryingInputStreamTest
     }
   });
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     testFile = temporaryFolder.newFile();
@@ -102,7 +100,7 @@ public class RetryingInputStreamTest
     throwIOExceptions = 0;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     FileUtils.forceDelete(testFile);
@@ -120,29 +118,29 @@ public class RetryingInputStreamTest
         false
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> retryHelper(retryingInputStream)
     );
 
-    Assert.assertEquals(0, throwIOExceptions);
+    Assertions.assertEquals(0, throwIOExceptions);
   }
 
   @Test
   public void testRetryOnCustomException() throws IOException
   {
     throwCustomExceptions = 1;
-    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+    try (final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> t instanceof CustomException,
         MAX_RETRY,
         false
-    );
+    )) {
+      retryHelper(retryingInputStream);
+    }
 
-    retryHelper(retryingInputStream);
-
-    Assert.assertEquals(0, throwCustomExceptions);
+    Assertions.assertEquals(0, throwCustomExceptions);
   }
 
   @Test
@@ -157,12 +155,12 @@ public class RetryingInputStreamTest
         false
     );
 
-    final IOException e = Assert.assertThrows(
+    final IOException e = Assertions.assertThrows(
         IOException.class,
         () -> retryHelper(retryingInputStream)
     );
 
-    Assert.assertEquals(0, throwCustomExceptions);
+    Assertions.assertEquals(0, throwCustomExceptions);
     MatcherAssert.assertThat(e.getCause(), CoreMatchers.instanceOf(CustomException.class));
   }
 
@@ -172,18 +170,18 @@ public class RetryingInputStreamTest
     readBytesBeforeExceptions = 1000;
     throwCustomExceptions = 100;
 
-    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+    try (final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> true, // always retry
         MAX_RETRY,
         false
-    );
-
-    retryHelper(retryingInputStream);
+    )) {
+      retryHelper(retryingInputStream);
+    }
 
     // Tried more than MAX_RETRY times because progress was being made. (MAX_RETRIES applies to each call individually.)
-    Assert.assertEquals(81, throwCustomExceptions);
+    Assertions.assertEquals(81, throwCustomExceptions);
   }
 
   @Test
@@ -198,12 +196,12 @@ public class RetryingInputStreamTest
         false
     );
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IOException.class,
         () -> retryHelper(retryingInputStream)
     );
 
-    Assert.assertEquals(6, throwIOExceptions);
+    Assertions.assertEquals(6, throwIOExceptions);
   }
 
   @Test
@@ -211,18 +209,18 @@ public class RetryingInputStreamTest
   {
     throwCustomExceptions = 1;
     throwIOExceptions = 1;
-    final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
+    try (final RetryingInputStream<File> retryingInputStream = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> t instanceof IOException || t instanceof CustomException,
         MAX_RETRY,
         false
-    );
+    )) {
+      retryHelper(retryingInputStream);
+    }
 
-    retryHelper(retryingInputStream);
-
-    Assert.assertEquals(0, throwCustomExceptions);
-    Assert.assertEquals(0, throwIOExceptions);
+    Assertions.assertEquals(0, throwCustomExceptions);
+    Assertions.assertEquals(0, throwIOExceptions);
   }
 
   @Test
@@ -246,25 +244,27 @@ public class RetryingInputStreamTest
       }
     }).when(objectOpenFunction).open(any(), anyLong());
 
-    new RetryingInputStream<>(
+    try (final RetryingInputStream<File> ignored = new RetryingInputStream<>(
         testFile,
         objectOpenFunction,
         t -> t instanceof CustomException,
         MAX_RETRY,
         false
-    );
+    )) {
+      // Construction itself exercises the retry behavior.
+    }
     verify(objectOpenFunction, times(3)).open(any(), anyLong());
-    Assert.assertEquals(0, throwCustomExceptions);
+    Assertions.assertEquals(0, throwCustomExceptions);
   }
 
   private void retryHelper(RetryingInputStream<File> retryingInputStream) throws IOException
   {
     try (DataInputStream inputStream = new DataInputStream(new GZIPInputStream(retryingInputStream))) {
       for (int i = 0; i < 10000; i++) {
-        Assert.assertEquals(i, inputStream.readInt());
+        Assertions.assertEquals(i, inputStream.readInt());
       }
 
-      Assert.assertEquals(-1, inputStream.read());
+      Assertions.assertEquals(-1, inputStream.read());
     }
   }
 
