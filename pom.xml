@@ -514,7 +514,7 @@
             <dependency>
                 <groupId>redis.clients</groupId>
                 <artifactId>jedis</artifactId>
-                <version>7.0.0</version>
+                <version>8.0.1</version>
             </dependency>
             <dependency>
                 <groupId>com.github.fppt</groupId>
