@@ -37,7 +37,7 @@
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>1.6.5.132-6</sigar.version>
     <oshi.version>7.5.0</oshi.version>
-    <mariadb.legacy.version>2.7.3</mariadb.legacy.version>
+    <mariadb.legacy.version>3.5.10</mariadb.legacy.version>
   </properties>
 
   <dependencies>
