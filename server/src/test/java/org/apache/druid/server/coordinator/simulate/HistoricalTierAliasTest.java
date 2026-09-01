@@ -80,7 +80,7 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
 
     final long expectedCapacity = SIZE_1TB << 20;
 
-    // tier/storage/assignableCapacity is emitted per physical tier AND tagged with the alias
+    // tier/assignable/capacity is emitted per physical tier AND tagged with the alias
     verifyValue(
         Stats.Tier.ASSIGNABLE_CAPACITY.getMetricName(),
         aliasedTier(Tier.T1),

@@ -201,7 +201,7 @@ public class PrepareBalancerAndLoadQueues implements CoordinatorDuty
       }
       stats.add(Stats.Tier.CLONE_COUNT, rowKey, cloneCount);
       stats.add(Stats.Tier.ASSIGNABLE_CAPACITY, rowKey, assignableCapacity);
-      // Deprecated alias of tier/storage/assignableCapacity, emitted until the deprecation period is over
+      // Deprecated alias of tier/assignable/capacity, emitted until the deprecation period is over
       stats.add(Stats.Tier.TOTAL_CAPACITY, rowKey, assignableCapacity);
       stats.add(Stats.Tier.STORAGE_CAPACITY, rowKey, storageCapacity);
       stats.add(Stats.Tier.USED_STORAGE, rowKey, usedStorage);
