@@ -35,6 +35,7 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
   private static final Logger log = new Logger(JvmCpuMonitor.class);
 
   private final OperatingSystem operatingSystem;
+  private final int currentProcessId;
   private final KeyedDiff diff = new KeyedDiff();
   private OSProcess previousProcess;
 
@@ -53,13 +54,14 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
   {
     super(feed);
     this.operatingSystem = operatingSystem;
-    this.previousProcess = operatingSystem.getCurrentProcess();
+    this.currentProcessId = operatingSystem.getProcessId();
+    this.previousProcess = operatingSystem.getProcess(currentProcessId);
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final OSProcess currentProcess = operatingSystem.getCurrentProcess();
+    final OSProcess currentProcess = operatingSystem.getProcess(currentProcessId);
     if (currentProcess == null) {
       log.error("Unable to get current process CPU metrics");
       return true;
