@@ -498,7 +498,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
                 1L
             )
         ),
-        new RowIngestionMetersTotals(10, 335, 1, expectedThrownAwayByReason, 1)
+        new RowIngestionMetersTotals(10, 335, 1, expectedThrownAwayByReason, 1),
+        null
     );
     compareTaskReports(expectedReports, actualReports);
   }
@@ -564,7 +565,8 @@ public class SinglePhaseParallelIndexingTest extends AbstractParallelIndexSuperv
       expectedReports = buildExpectedTaskReportParallel(
           task.getId(),
           expectedUnparseableEvents,
-          expectedTotals
+          expectedTotals,
+          null
       );
     }
 
