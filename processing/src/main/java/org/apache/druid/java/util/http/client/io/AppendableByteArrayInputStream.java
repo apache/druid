@@ -59,7 +59,7 @@ public class AppendableByteArrayInputStream extends InputStream
   {
     synchronized (singleByteReaderDoer) {
       done = true;
-      singleByteReaderDoer.notify();
+      singleByteReaderDoer.notifyAll();
     }
   }
 
@@ -68,7 +68,7 @@ public class AppendableByteArrayInputStream extends InputStream
     synchronized (singleByteReaderDoer) {
       done = true;
       throwable = t;
-      singleByteReaderDoer.notify();
+      singleByteReaderDoer.notifyAll();
     }
   }
 

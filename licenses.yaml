@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.54.2
+version: 2.54.4
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -988,7 +988,7 @@ name: com.nimbusds content-type
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 2.2
+version: 2.3
 libraries:
   - com.nimbusds: content-type
 
@@ -998,7 +998,7 @@ name: com.nimbusds oauth2-oidc-sdk
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 10.8
+version: 11.38.2
 libraries:
   - com.nimbusds: oauth2-oidc-sdk
 
@@ -2359,9 +2359,17 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.11
+version: 3.0.13
 libraries:
   - org.asynchttpclient: async-http-client
+
+---
+
+name: Public Suffix List bundled by AsyncHttpClient
+license_category: binary
+module: java-core
+license_name: Mozilla Public License Version 2.0
+license_file_path: licenses/bin/public-suffix-list.MPL2
 
 ---
 
@@ -3854,7 +3862,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.0
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3984,7 +3992,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-single
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -3996,7 +4004,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/druid-lookups-cached-global
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4008,7 +4016,7 @@ name: PostgreSQL JDBC Driver
 license_category: binary
 module: extensions/postgresql-metadata-storage
 license_name: BSD-2-Clause License
-version: 42.7.12
+version: 42.7.13
 copyright: PostgreSQL Global Development Group
 license_file_path: licenses/bin/postgresql.BSD2
 libraries:
@@ -4020,7 +4028,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 4.35.1
+version: 4.36.0
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -4505,7 +4513,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.71.0
+version: 2.72.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4515,7 +4523,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.66.0
+version: 2.67.0
 libraries:
   - com.google.api: api-common
 
@@ -4606,6 +4614,20 @@ license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-2-Clause License
 version: 4.2.2
+copyright: 2008+, FasterXML, LLC
+license_file_path: licenses/bin/stax2-api.BSD2
+libraries:
+  - org.codehaus.woodstox: stax2-api
+
+---
+
+name: stax2-api
+license_category: binary
+module: extensions/druid-iceberg-extensions
+license_name: BSD-2-Clause License
+version: 4.3.0
+copyright: 2008+, FasterXML, LLC
+license_file_path: licenses/bin/stax2-api.BSD2
 libraries:
   - org.codehaus.woodstox: stax2-api
 
@@ -4625,7 +4647,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.83.0
+version: 2.84.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4637,7 +4659,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.71.0
+version: 2.72.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4649,7 +4671,7 @@ name: grpc-io
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.82.4
 libraries:
   - io.grpc: grpc-alts
   - io.grpc: grpc-auth
@@ -4673,7 +4695,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.83.1
 libraries:
   - io.grpc: grpc-api
 
@@ -4683,7 +4705,7 @@ name: grpc-context
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.83.1
 libraries:
   - io.grpc: grpc-context
 
@@ -4693,7 +4715,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.74.0
+version: 2.75.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4703,7 +4725,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.69.0
+version: 1.70.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4713,7 +4735,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.50.0
+version: 1.51.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4734,7 +4756,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -4778,7 +4800,7 @@ name: google-grpc
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.82.4
 libraries:
   - io.grpc: grpc-grpclb
 
@@ -4799,7 +4821,7 @@ name: conscrypt-openjdk-uber
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.6.0
+version: 2.6.2
 libraries:
   - org.conscrypt: conscrypt-openjdk-uber
 
@@ -5477,7 +5499,7 @@ libraries:
 
 name: Woodstox
 license_category: binary
-version: 6.4.0
+version: 7.2.2
 module: druid-ranger-security
 license_name: Apache License version 2.0
 libraries:
@@ -5652,7 +5674,7 @@ name: GraalVM
 license_category: binary
 license_name: Universal Permissive License, Version 1.0
 license_file_path: licenses/bin/graal.UPL
-version: 25.2.4
+version: 25.3.4.1
 module: core
 libraries:
   - org.graalvm.js: js
@@ -5674,7 +5696,7 @@ libraries:
 name: GraalVM Shadowed ICU4J
 license_category: binary
 license_name: Unicode/ICU License
-version: 25.2.4
+version: 25.3.4.1
 copyright: Unicode, Inc.
 license_file_path: licenses/bin/icu4j.ICU
 module: core

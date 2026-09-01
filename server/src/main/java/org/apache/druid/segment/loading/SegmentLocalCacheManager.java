@@ -690,11 +690,20 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
                   if (fullDownload) {
                     // Delta of internal-file bytes downloaded by this task
                     final long downloadedBefore = mapper.getDownloadedBytes();
-                    // Mount every bundle so the containers it owns are reserved on the location
-                    for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
-                      holdHolder.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
+                    // Mount every bundle so the containers it owns are reserved on the location, and keep those
+                    // references here for the duration of the download instead of handing them straight to
+                    // holdHolder so that the caller abandoning a load doesn't release the holds until load is
+                    // finished.
+                    final List<Closeable> bundleRefs = new ArrayList<>();
+                    try {
+                      for (String bundleName : PartialSegmentBundleCacheEntry.bundleNames(mapper)) {
+                        bundleRefs.add(reserved.metadata.getBundleAcquirer().acquire(bundleName));
+                      }
+                      mapper.ensureAllDownloaded();
                     }
-                    mapper.ensureAllDownloaded();
+                    finally {
+                      bundleRefs.forEach(holdHolder::add);
+                    }
                     loadSizeBytes = mapper.getDownloadedBytes() - downloadedBefore;
                   } else {
                     // Lazy mount: the header bytes when this task caused the mount; 0 when the entry was already
@@ -2162,6 +2171,11 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
         return;
       }
 
+      // Hold this entry against reclaim for the duration of the mount, including the post-mount reservation check
+      // below. reclaim passes over held entries only, and evicting one mid-mount unmounts a storage directory this
+      // mount is filling, or when the directory was already resident, one it is about to serve.
+      final StorageLocation.ReservationHold<SegmentCacheEntry> selfHold =
+          mountLocation.addInternalWeakReservationHoldIfExists(this.id);
       try {
         entryLock.lock();
         try {
@@ -2261,6 +2275,9 @@ public class SegmentLocalCacheManager implements SegmentCacheManager
       catch (Throwable t) {
         unmount();
         throw t;
+      }
+      finally {
+        CloseableUtils.closeAndSuppressExceptions(selfHold, e -> log.warn(e, "Failed to release mount hold[%s]", id));
       }
     }
 

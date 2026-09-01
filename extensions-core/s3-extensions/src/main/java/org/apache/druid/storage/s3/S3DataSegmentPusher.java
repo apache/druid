@@ -34,6 +34,7 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.Map;
 
 public class S3DataSegmentPusher implements DataSegmentPusher
@@ -76,27 +77,29 @@ public class S3DataSegmentPusher implements DataSegmentPusher
 
   private DataSegment pushZip(File indexFilesDir, DataSegment baseSegment, String s3Path) throws IOException
   {
-    final File zipOutFile = File.createTempFile("druid", "index.zip");
-    final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
-
-    final DataSegment outSegment = baseSegment.withSize(indexSize)
-                                              .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
-                                              .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
-
+    final File zipOutFile = Files.createTempFile("druid", "index.zip").toFile();
     try {
-      return S3Utils.retryS3Operation(
-          () -> {
-            S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path, zipOutFile);
+      final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
-            return outSegment;
-          }
-      );
-    }
-    catch (S3Exception e) {
-      throw handlePushServiceException(e, indexSize);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+      final DataSegment outSegment = baseSegment.withSize(indexSize)
+                                                .withLoadSpec(makeLoadSpec(config.getBucket(), s3Path))
+                                                .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
+
+      try {
+        return S3Utils.retryS3Operation(
+            () -> {
+              S3Utils.uploadFileIfPossible(s3Client, config.getDisableAcl(), config.getBucket(), s3Path, zipOutFile);
+
+              return outSegment;
+            }
+        );
+      }
+      catch (S3Exception e) {
+        throw handlePushServiceException(e, indexSize);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
     finally {
       log.debug("Deleting temporary cached index.zip");
