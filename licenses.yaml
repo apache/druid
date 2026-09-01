@@ -2735,7 +2735,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.5.0
+version: 7.6.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
