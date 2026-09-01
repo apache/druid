@@ -109,13 +109,10 @@ public class HistoricalTierAliasTest extends CoordinatorSimulationBaseTest
     );
   }
 
-  /**
-   * {@code tier/storage/used} reports what the tier's historicals have announced as loaded, so it stays at zero
-   * until segments are actually on disk, unlike {@code tier/required/capacity} which reports what the rules demand.
-   */
   @Test
-  public void testUsedStorageReportsAnnouncedBytesPerTier()
+  public void testUsedStorageReportsOnlyBytesLoadedAndAnnounced()
   {
+    // tier/storage/used does not report bytes consumed until historicals have actually loaded and announced the segments. It only reports the actual realized bytes of loaded segments.
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
                              .withSegments(Segments.WIKI_10X1D)

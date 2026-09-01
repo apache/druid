@@ -106,23 +106,32 @@ public class Stats
 
   public static class Tier
   {
-    // Assignment budget of a tier, denominated in full segment size. REQUIRED_CAPACITY is the demand the rules
-    // place on the tier to full load all segments, ASSIGNABLE_CAPACITY the supply the tier advertises for it. Both are
-    // planning figures and may exceed the physical disk measured by STORAGE_CAPACITY and USED_STORAGE when virtual
-    // storage is in use.
+    /**
+     * The demand the rules place on the tier to full load all segments.
+     */
     public static final CoordinatorStat REQUIRED_CAPACITY
         = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
+    /**
+     * The total assignable capacity of the tier defined by summing the configured max size of all servers in the tier.
+     */
     public static final CoordinatorStat ASSIGNABLE_CAPACITY
         = CoordinatorStat.toDebugAndEmit("assignableCap", "tier/assignable/capacity");
-    // Superseded by ASSIGNABLE_CAPACITY, which carries the same value under a name that says it is an assignment
-    // budget rather than physical disk. Still emitted so existing dashboards keep working; remove after deprecation.
+    /**
+     * Superseded by ASSIGNABLE_CAPACITY, which carries the same value under a name that says it is an assignment
+     * budget rather than physical disk. Still emitted so existing dashboards keep working; remove after deprecation.
+     */
     @Deprecated
     public static final CoordinatorStat TOTAL_CAPACITY
         = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
-
-    // Physical disk of a tier: the size of its segment cache locations and the bytes actually occupied on them.
+    /**
+     * Aggregate physical disk capacity of the tier.
+     */
     public static final CoordinatorStat STORAGE_CAPACITY
         = CoordinatorStat.toDebugAndEmit("storageCap", "tier/storage/capacity");
+    /**
+     * Actual physical disk consumed by the tier. Only reports realized bytes on disk, so partial loads when using
+     * virtual storage report their true loaded size, which can be less than the full segment size.
+     */
     public static final CoordinatorStat USED_STORAGE
         = CoordinatorStat.toDebugAndEmit("usedStorage", "tier/storage/used");
     public static final CoordinatorStat REPLICATION_FACTOR
