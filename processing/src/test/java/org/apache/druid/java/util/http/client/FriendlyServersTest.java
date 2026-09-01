@@ -185,9 +185,9 @@ public class FriendlyServersTest
           StatusResponseHandler.getInstance()
       );
 
-      Assert.assertTrue(requestReceived.await(10, TimeUnit.SECONDS));
-      Assert.assertTrue(future.cancel(true));
-      Assert.assertTrue(connectionClosed.await(10, TimeUnit.SECONDS));
+      Assertions.assertTrue(requestReceived.await(10, TimeUnit.SECONDS));
+      Assertions.assertTrue(future.cancel(true));
+      Assertions.assertTrue(connectionClosed.await(10, TimeUnit.SECONDS));
 
       final Future<StatusResponseHolder> secondResponse = requestExec.submit(
           () -> client.go(
@@ -198,7 +198,7 @@ public class FriendlyServersTest
               StatusResponseHandler.getInstance()
           ).get()
       );
-      Assert.assertEquals("hello!", secondResponse.get(10, TimeUnit.SECONDS).getContent());
+      Assertions.assertEquals("hello!", secondResponse.get(10, TimeUnit.SECONDS).getContent());
     }
     finally {
       requestExec.shutdownNow();

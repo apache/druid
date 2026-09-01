@@ -2479,7 +2479,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     try {
       Thread.currentThread().interrupt();
-      final RuntimeException exception = Assert.assertThrows(
+      final RuntimeException exception = Assertions.assertThrows(
           RuntimeException.class,
           () -> stackTraceTable.scan(
               createDataContext(Users.SUPER),
@@ -2489,9 +2489,9 @@ public class SystemSchemaTest extends CalciteTestBase
               null
           ).toList()
       );
-      Assert.assertTrue(exception.getMessage().contains("Interrupted"));
-      Assert.assertTrue(interruptingFuture.isCancelled());
-      Assert.assertTrue(Thread.currentThread().isInterrupted());
+      Assertions.assertTrue(exception.getMessage().contains("Interrupted"));
+      Assertions.assertTrue(interruptingFuture.isCancelled());
+      Assertions.assertTrue(Thread.currentThread().isInterrupted());
     }
     finally {
       Thread.interrupted();
