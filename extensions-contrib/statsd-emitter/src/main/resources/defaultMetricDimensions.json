@@ -184,6 +184,9 @@
   "tier/required/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/total/capacity" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
   "tier/replication/factor" : { "dimensions" : ["tier", "tierAlias"], "type" : "gauge" },
+  "tier/assignable/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/storage/capacity": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
+  "tier/storage/used": { "dimensions" : ["tier", "tierAlias"], "type" : "gauge"},
   "tier/historical/count" : { "dimensions" : ["tier", "tierAlias"], "type" : "count" },
 
   "compact/task/count" : { "dimensions" : [], "type" : "count" },
