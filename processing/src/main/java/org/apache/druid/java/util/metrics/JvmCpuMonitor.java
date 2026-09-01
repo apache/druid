@@ -61,6 +61,8 @@ public class JvmCpuMonitor extends FeedDefiningMonitor
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
+    // Use getProcess() instead of getCurrentProcess() so lookup failures return null rather than a zero-valued
+    // CurrentProcessStub, which would corrupt the CPU deltas and previous-process baseline.
     final OSProcess currentProcess = operatingSystem.getProcess(currentProcessId);
     if (currentProcess == null) {
       log.error("Unable to get current process CPU metrics");
