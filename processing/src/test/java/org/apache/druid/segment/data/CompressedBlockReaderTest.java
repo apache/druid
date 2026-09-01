@@ -20,8 +20,8 @@
 package org.apache.druid.segment.data;
 
 import org.apache.druid.segment.CompressedPools;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -42,7 +42,7 @@ public class CompressedBlockReaderTest
     buffer.put((byte) 0);
     buffer.flip();
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalStateException.class,
         () -> CompressedBlockReader.fromByteBuffer(
             buffer,
@@ -51,6 +51,6 @@ public class CompressedBlockReaderTest
             false
         )
     );
-    Assert.assertEquals(headerSize, buffer.position());
+    Assertions.assertEquals(headerSize, buffer.position());
   }
 }

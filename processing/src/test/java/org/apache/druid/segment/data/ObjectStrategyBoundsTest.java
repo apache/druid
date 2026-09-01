@@ -26,8 +26,8 @@ import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetric
 import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -51,10 +51,10 @@ public class ObjectStrategyBoundsTest
       final ByteBuffer buffer = ByteBuffer.allocate(4);
       buffer.position(1);
 
-      Assert.assertThrows(IAE.class, () -> strategy.fromByteBuffer(buffer, -1));
-      Assert.assertThrows(IAE.class, () -> strategy.fromByteBuffer(buffer, 4));
-      Assert.assertEquals(1, buffer.position());
-      Assert.assertEquals(4, buffer.limit());
+      Assertions.assertThrows(IAE.class, () -> strategy.fromByteBuffer(buffer, -1));
+      Assertions.assertThrows(IAE.class, () -> strategy.fromByteBuffer(buffer, 4));
+      Assertions.assertEquals(1, buffer.position());
+      Assertions.assertEquals(4, buffer.limit());
     }
   }
 }
