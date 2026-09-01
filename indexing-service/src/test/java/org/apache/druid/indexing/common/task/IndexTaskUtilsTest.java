@@ -19,20 +19,28 @@
 
 package org.apache.druid.indexing.common.task;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -109,5 +117,41 @@ public class IndexTaskUtilsTest
     Mockito.when(abstractTask.getGroupId()).thenReturn(null);
     IndexTaskUtils.setTaskDimensions(metricBuilder, abstractTask);
     Assertions.assertNull(metricBuilder.getDimension(DruidMetrics.GROUP_ID));
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("oversizedSegmentCases")
+  public void testGetOversizedSegments(
+      String name,
+      List<Integer> rowCounts,
+      int maxRowsPerSegment,
+      double oversizedRatio,
+      long expected
+  )
+  {
+    final List<DataSegment> segments = rowCounts.stream()
+        .map(rowCount -> {
+          DataSegment segment = Mockito.mock(DataSegment.class);
+          Mockito.when(segment.getTotalRows()).thenReturn(rowCount);
+          return segment;
+        })
+        .collect(ImmutableList.toImmutableList());
+    Assertions.assertEquals(
+        expected,
+        IndexTaskUtils.getOversizedSegments(segments, maxRowsPerSegment, oversizedRatio)
+    );
+    segments.forEach(segment -> {
+      Mockito.verify(segment, Mockito.times(1)).getTotalRows();
+    });
+  }
+  public static Stream<Arguments> oversizedSegmentCases()
+  {
+    return Stream.of(
+        Arguments.of("empty", List.<Integer>of(), 5, 2.0, 0L),
+        Arguments.of("equal to threshold is not oversized", List.of(10), 5, 2.0, 0L),
+        Arguments.of("over threshold", List.of(11), 5, 2.0, 1L),
+        Arguments.of("null totalRows ignored", Arrays.asList(11, null, 3), 5, 2.0, 1L),
+        Arguments.of("mixed", List.of(3, 11, 10, 21), 5, 2.0, 2L)
+    );
   }
 }

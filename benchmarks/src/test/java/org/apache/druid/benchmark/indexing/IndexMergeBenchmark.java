@@ -148,9 +148,7 @@ public class IndexMergeBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void mergeV9(Blackhole blackhole) throws Exception
   {
-    File tmpFile = File.createTempFile("IndexMergeBenchmark-MERGEDFILE-V9-" + System.currentTimeMillis(), ".TEMPFILE");
-    tmpFile.delete();
-    FileUtils.mkdirp(tmpFile);
+    final File tmpFile = FileUtils.createTempDir("IndexMergeBenchmark-MERGEDFILE-V9-");
     try {
       log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
 
@@ -167,7 +165,7 @@ public class IndexMergeBenchmark
       blackhole.consume(mergedFile);
     }
     finally {
-      tmpFile.delete();
+      FileUtils.deleteDirectory(tmpFile);
     }
   }
 
