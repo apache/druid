@@ -19,12 +19,12 @@
 
 package org.apache.druid.server.http;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
@@ -34,7 +34,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class RedirectFilterTest
 {
   private static final String REQUEST_URI = "/druid/coordinator/v1/loadstatus";
@@ -51,7 +51,7 @@ public class RedirectFilterTest
 
   private RedirectFilter redirectFilter;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     redirectFilter = new RedirectFilter(redirectInfo);
