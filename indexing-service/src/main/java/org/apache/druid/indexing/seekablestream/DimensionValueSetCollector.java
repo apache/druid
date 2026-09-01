@@ -19,9 +19,13 @@
 
 package org.apache.druid.indexing.seekablestream;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.DimensionHandlerUtils;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.DimensionValueSetShardSpec;
@@ -46,6 +50,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>A {@code null} element denotes an observed null/missing value (kept distinct from {@code ""}) so that
  * {@code IS NULL} queries are not pruned.
  *
+ * <p>Only {@code STRING} and {@code LONG} dimensions are supported: string values are recorded verbatim, LONG values
+ * are canonicalized for typed numeric pruning. Other types (e.g. {@code FLOAT}/{@code DOUBLE}) are recorded as strings
+ * and stamped no type, so they participate only in exact string-set/null pruning, not numeric-domain pruning.
+ *
  * <p>Thread-safety follows the {@link StreamingShardSpecCollector} contract:
  * {@link #observedPartitionDimValuesBySegment} is a
  * {@link ConcurrentHashMap} keyed by {@link SegmentId} whose value sets are {@link Collections#synchronizedSet} written
@@ -66,6 +74,13 @@ public class DimensionValueSetCollector implements StreamingShardSpecCollector
   private final Integer maxValuesPerDimension;
 
   /**
+   * The subset of {@link #partitionDimensions} declared as {@code LONG}. Their observed values are canonicalized to a
+   * Long string at capture ({@link #canonicalLongValue}) so the stamped set matches the broker's canonical query value
+   * exactly, and each is stamped {@link ColumnType#LONG} at publish to gate the broker's typed numeric-value pruning.
+   */
+  private final Set<String> longDimensions;
+
+  /**
    * Observed values per tracked dimension, keyed by segment identifier. Inner sets permit null and are written by the
    * run loop / read by the publish path under their own monitor. Entries are removed on successful publish via
    * {@link #onSegmentPublished}; a publish failure is terminal for the task, so any remaining entries are reclaimed at
@@ -82,10 +97,15 @@ public class DimensionValueSetCollector implements StreamingShardSpecCollector
    */
   private final Set<SegmentId> restartSpannedSegments = Sets.newConcurrentHashSet();
 
-  public DimensionValueSetCollector(List<String> partitionDimensions, @Nullable Integer maxValuesPerDimension)
+  public DimensionValueSetCollector(
+      List<String> partitionDimensions,
+      @Nullable Integer maxValuesPerDimension,
+      Set<String> longDimensions
+  )
   {
     this.partitionDimensions = partitionDimensions;
     this.maxValuesPerDimension = maxValuesPerDimension;
+    this.longDimensions = longDimensions;
   }
 
   @Override
@@ -101,13 +121,19 @@ public class DimensionValueSetCollector implements StreamingShardSpecCollector
           dim,
           k -> Collections.synchronizedSet(new HashSet<>())
       );
-      // Empty getDimension result means a null/missing value; record null so IS NULL is not pruned
-      // (distinct from "", which getDimension returns as [""]).
-      final List<String> dimValues = row.getDimension(dim);
-      if (dimValues == null || dimValues.isEmpty()) {
-        dimSet.add(null);
+      if (longDimensions.contains(dim)) {
+        // Canonicalize to the Long string the indexer stores and the broker queries with; null (unparseable/missing/
+        // multi-value) is recorded so IS NULL is not pruned.
+        dimSet.add(canonicalLongValue(row.getRaw(dim), dim));
       } else {
-        dimSet.addAll(dimValues);
+        // Empty getDimension result means a null/missing value; record null so IS NULL is not pruned
+        // (distinct from "", which getDimension returns as [""]).
+        final List<String> dimValues = row.getDimension(dim);
+        if (dimValues == null || dimValues.isEmpty()) {
+          dimSet.add(null);
+        } else {
+          dimSet.addAll(dimValues);
+        }
       }
     }
   }
@@ -137,6 +163,9 @@ public class DimensionValueSetCollector implements StreamingShardSpecCollector
   public DataSegment annotate(DataSegment s)
   {
     final Map<String, List<String>> snapshotFilters = new HashMap<>();
+    // Per-dimension type stamp gating the broker's typed numeric-value pruning (possibleInValueDomain). Populated only
+    // for declared LONG dimensions: a LONG stringifies identically at ingest and query, so set membership is exact.
+    final Map<String, ColumnType> dimensionColumnTypes = new HashMap<>();
     final SegmentId lookupKey = s.getId();
     final Map<String, Set<String>> segObserved = observedPartitionDimValuesBySegment.get(lookupKey);
     // Leave filters empty for restart-spanned segments: their pre-restart values can't be re-observed.
@@ -171,13 +200,19 @@ public class DimensionValueSetCollector implements StreamingShardSpecCollector
         // Sort for deterministic published metadata; null (missing value) sorts first.
         snapshot.sort(Comparator.nullsFirst(Comparator.naturalOrder()));
         snapshotFilters.put(dim, snapshot);
+
+        // Stamp the type only for an explicitly-declared LONG dimension; any other case is left unstamped.
+        if (longDimensions.contains(dim)) {
+          dimensionColumnTypes.put(dim, ColumnType.LONG);
+        }
       }
     }
     return s.withShardSpec(
         new DimensionValueSetShardSpec(
             s.getShardSpec().getPartitionNum(),
             s.getShardSpec().getNumCorePartitions(),
-            snapshotFilters
+            snapshotFilters,
+            dimensionColumnTypes
         )
     );
   }
@@ -187,5 +222,25 @@ public class DimensionValueSetCollector implements StreamingShardSpecCollector
   {
     observedPartitionDimValuesBySegment.remove(segmentId);
     restartSpannedSegments.remove(segmentId);
+  }
+
+  /**
+   * Canonical Long string for a LONG partition dimension's raw value, matching the string the indexer stores and the
+   * broker queries with, so set membership is exact (e.g. "00001" and 1.0 yield "1", "+5" yields "5"). Returns null for
+   * a null/missing, unparseable, or multi-value value (which the indexer would reject as a long) so {@code IS NULL} is
+   * not pruned; mirrors LongDimensionIndexer's convertObjectToLong on getRaw.
+   */
+  @Nullable
+  @VisibleForTesting
+  static String canonicalLongValue(@Nullable Object rawValue, String dimension)
+  {
+    Long coerced = null;
+    try {
+      coerced = DimensionHandlerUtils.convertObjectToLong(rawValue, false, dimension);
+    }
+    catch (ParseException ignored) {
+      // Multi-value or invalid type: treated as null (no numeric pruning for this value).
+    }
+    return coerced == null ? null : Long.toString(coerced);
   }
 }

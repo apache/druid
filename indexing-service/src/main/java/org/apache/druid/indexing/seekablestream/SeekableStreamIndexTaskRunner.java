@@ -278,7 +278,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.ioConfig = task.getIOConfig();
     this.tuningConfig = task.getTuningConfig();
     final StreamingPartitionsSpec streamingPartitionsSpec = tuningConfig.getStreamingPartitionsSpec();
-    this.shardSpecCollector = streamingPartitionsSpec == null ? null : streamingPartitionsSpec.createCollector();
+    this.shardSpecCollector = streamingPartitionsSpec == null
+                              ? null
+                              : streamingPartitionsSpec.createCollector(
+                                  task.getDataSchema() == null ? null : task.getDataSchema().getDimensionsSpec()
+                              );
     this.inputRowSchema = InputRowSchemas.fromDataSchema(task.getDataSchema());
     this.inputFormat = ioConfig.getInputFormat();
     this.stream = ioConfig.getStartSequenceNumbers().getStream();

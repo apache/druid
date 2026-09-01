@@ -25,6 +25,7 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
+import org.apache.druid.timeline.partition.TypedValueSet;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -47,6 +48,7 @@ public class FilterSegmentPruner implements SegmentPruner
   private final Set<String> filterFields;
   private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
+  private final Map<String, Optional<TypedValueSet>> valueSetCache;
   private final Map<VirtualColumns.Node, Optional<VirtualColumn>> shardEquivalenceCache;
 
   public FilterSegmentPruner(
@@ -59,6 +61,7 @@ public class FilterSegmentPruner implements SegmentPruner
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.rangeCache = new HashMap<>();
+    this.valueSetCache = new HashMap<>();
     this.shardEquivalenceCache = new HashMap<>();
   }
 
@@ -77,6 +80,10 @@ public class FilterSegmentPruner implements SegmentPruner
 
     if (shard != null) {
       final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
+      // Parallel, type-carrying domain consumed only by shard specs that override possibleInValueDomain
+      // (DimensionValueSetShardSpec). Built from the same dimensions and virtual-column resolution as the string
+      // domain, so numeric equality/IN filters can prune without going through the lexicographic range path.
+      final Map<String, TypedValueSet> filterValueDomain = new HashMap<>();
       final List<String> dimensions = shard.getDomainDimensions();
       for (String dimension : dimensions) {
         final VirtualColumns.Node shardNode = shard.getDomainVirtualColumns().getNode(dimension);
@@ -84,24 +91,35 @@ public class FilterSegmentPruner implements SegmentPruner
           final VirtualColumn queryEquivalent = getQueryEquivalent(shardNode);
           if (queryEquivalent != null) {
             if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
+              final String shardOutputName = shardNode.getVirtualColumn().getOutputName();
               final Optional<RangeSet<String>> optFilterRangeSet = rangeCache
                   .computeIfAbsent(
                       queryEquivalent.getOutputName(),
                       d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
                   );
-              optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
-                  shardNode.getVirtualColumn().getOutputName(),
-                  stringRangeSet
-              ));
+              optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(shardOutputName, stringRangeSet));
+
+              final Optional<TypedValueSet> optFilterValueSet = valueSetCache
+                  .computeIfAbsent(
+                      queryEquivalent.getOutputName(),
+                      d -> Optional.ofNullable(filter.getDimensionValueSet(d))
+                  );
+              optFilterValueSet.ifPresent(valueSet -> filterValueDomain.put(shardOutputName, valueSet));
             }
           }
         } else if (filterFields == null || filterFields.contains(dimension)) {
           final Optional<RangeSet<String>> optFilterRangeSet =
               rangeCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
           optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(dimension, stringRangeSet));
+
+          final Optional<TypedValueSet> optFilterValueSet =
+              valueSetCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionValueSet(d)));
+          optFilterValueSet.ifPresent(valueSet -> filterValueDomain.put(dimension, valueSet));
         }
       }
       if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
+        include = false;
+      } else if (!filterValueDomain.isEmpty() && !shard.possibleInValueDomain(filterValueDomain)) {
         include = false;
       }
     }
