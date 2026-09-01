@@ -19,8 +19,8 @@
 
 package org.apache.druid.test.utils;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -29,7 +29,7 @@ public class ImmutableDruidDataSourceTestUtilsTest
   @Test
   public void testListAssertEqualsRejectsNullActual()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         AssertionError.class,
         () -> ImmutableDruidDataSourceTestUtils.assertEquals(Collections.emptyList(), null)
     );
@@ -38,7 +38,7 @@ public class ImmutableDruidDataSourceTestUtilsTest
   @Test
   public void testListAssertEqualsRejectsNullExpected()
   {
-    Assert.assertThrows(
+    Assertions.assertThrows(
         AssertionError.class,
         () -> ImmutableDruidDataSourceTestUtils.assertEquals(null, Collections.emptyList())
     );

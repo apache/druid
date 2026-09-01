@@ -67,10 +67,10 @@ public class ImmutableDruidDataSourceTestUtils
   )
   {
     if (expected == null) {
-      Assert.assertNull(actual);
+      Assertions.assertNull(actual);
       return;
     }
-    Assert.assertNotNull(actual);
+    Assertions.assertNotNull(actual);
 
     Assertions.assertEquals(expected.size(), actual.size(),
         "expected and actual ImmutableDruidDataSource lists should be of equal size");

@@ -311,12 +311,12 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
         Collections.singletonList(1.0)
     );
 
-    final IllegalArgumentException exception = Assert.assertThrows(
+    final IllegalArgumentException exception = Assertions.assertThrows(
         IllegalArgumentException.class,
         () -> schema.makeGenerator(9999)
     );
-    Assert.assertTrue(exception.getMessage().contains("enumeratedValues size[2]"));
-    Assert.assertTrue(exception.getMessage().contains("enumeratedProbabilities size[1]"));
+    Assertions.assertTrue(exception.getMessage().contains("enumeratedValues size[2]"));
+    Assertions.assertTrue(exception.getMessage().contains("enumeratedProbabilities size[1]"));
   }
 
   @Test
