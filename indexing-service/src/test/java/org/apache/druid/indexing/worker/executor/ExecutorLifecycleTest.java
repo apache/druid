@@ -25,8 +25,8 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -43,7 +43,7 @@ public class ExecutorLifecycleTest
     final FileLock lock = Mockito.mock(FileLock.class);
     Mockito.when(channel.tryLock()).thenReturn(null, lock);
 
-    Assert.assertSame(lock, lifecycle.acquireTaskFileLock(channel, new File("task.lock")));
+    Assertions.assertSame(lock, lifecycle.acquireTaskFileLock(channel, new File("task.lock")));
     Mockito.verify(channel, Mockito.times(2)).tryLock();
 
     lifecycle.stop();
@@ -57,12 +57,12 @@ public class ExecutorLifecycleTest
     final FileChannel channel = Mockito.mock(FileChannel.class);
     final File lockFile = new File("task.lock");
 
-    final ISE exception = Assert.assertThrows(
+    final ISE exception = Assertions.assertThrows(
         ISE.class,
         () -> lifecycle.acquireTaskFileLock(channel, lockFile)
     );
 
-    Assert.assertEquals("Could not acquire lock file[task.lock] within 0ms.", exception.getMessage());
+    Assertions.assertEquals("Could not acquire lock file[task.lock] within 0ms.", exception.getMessage());
     Mockito.verifyNoInteractions(channel);
     lifecycle.stop();
   }
