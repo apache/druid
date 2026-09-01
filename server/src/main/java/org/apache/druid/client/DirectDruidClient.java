@@ -266,9 +266,10 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               break;
             }
           }
-          // A 503 is only treated as capacity-exceeded when the body is confirmed HTML/non-JSON; a 503 carrying a
-          // proper JSON error body falls through to the normal JSON error handling below.
-          if (statusCode == 429 || (statusCode == 503 && (isHtmlContentType || isHtmlBody))) {
+          // A 429/503 is only treated as capacity-exceeded here when the body is confirmed HTML/non-JSON; a
+          // 429/503 carrying a proper JSON error body (e.g. a genuine QueryCapacityExceededException from a data
+          // server) falls through to the normal JSON error handling below, which preserves the real error message.
+          if ((statusCode == 429 || statusCode == 503) && (isHtmlContentType || isHtmlBody)) {
             String msg = StringUtils.format(
                 "Query[%s] url[%s] failed with status[%s] [%s]",
                 query.getId(),
