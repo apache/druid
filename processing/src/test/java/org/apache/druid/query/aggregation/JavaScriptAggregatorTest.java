@@ -295,7 +295,7 @@ public class JavaScriptAggregatorTest
         new JavaScriptConfig(false)
     );
 
-    Assert.assertEquals(1 + StringUtils.toUtf8("foo").length + 32, factory.getCacheKey().length);
+    Assertions.assertEquals(1 + StringUtils.toUtf8("foo").length + 32, factory.getCacheKey().length);
   }
 
   public static void main(String... args)
