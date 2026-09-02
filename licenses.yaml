@@ -4847,6 +4847,18 @@ libraries:
 
 ---
 
+name: JavaBeans Activation Framework API
+license_category: binary
+module: java-core
+license_name: CDDL 1.1
+version: 1.2.0
+copyright: Oracle and/or its affiliates
+license_file_path: licenses/bin/javax.activation-api.CDDL11
+libraries:
+  - javax.activation: javax.activation-api
+
+---
+
 name: Apache Kafka
 license_category: binary
 module: extensions/kafka-extraction-namespace
