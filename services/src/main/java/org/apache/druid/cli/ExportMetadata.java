@@ -47,7 +47,6 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 
 import javax.annotation.Nullable;
-import javax.xml.bind.DatatypeConverter;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -55,6 +54,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -125,6 +125,8 @@ public class ExportMetadata extends GuiceRunnable
   private static final CSVParser PARSER = new CSVParser();
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
+  private static final HexFormat HEX_FORMAT = HexFormat.of().withUpperCase();
 
   public ExportMetadata()
   {
@@ -417,7 +419,7 @@ public class ExportMetadata extends GuiceRunnable
       String payload
   ) throws IOException
   {
-    DataSegment segment = JSON_MAPPER.readValue(DatatypeConverter.parseHexBinary(payload), DataSegment.class);
+    DataSegment segment = JSON_MAPPER.readValue(HEX_FORMAT.parseHex(payload), DataSegment.class);
     String uniqueId = getUniqueIDFromLocalLoadSpec(segment.getLoadSpec());
     String segmentPath = DataSegmentPusher.getDefaultStorageDirWithExistingUniquePath(segment, uniqueId);
 
@@ -436,7 +438,7 @@ public class ExportMetadata extends GuiceRunnable
 
     String serialized = JSON_MAPPER.writeValueAsString(segment);
     if (useHexBlobs) {
-      return DatatypeConverter.printHexBinary(StringUtils.toUtf8(serialized));
+      return HEX_FORMAT.formatHex(StringUtils.toUtf8(serialized));
     } else {
       return escapeJSONForCSV(serialized);
     }
@@ -455,7 +457,7 @@ public class ExportMetadata extends GuiceRunnable
     if (useHexBlobs) {
       return payload;
     }
-    String json = StringUtils.fromUtf8(DatatypeConverter.parseHexBinary(payload));
+    String json = StringUtils.fromUtf8(HEX_FORMAT.parseHex(payload));
     return escapeJSONForCSV(json);
   }
 
