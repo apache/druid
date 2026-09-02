@@ -292,12 +292,12 @@ public class NettyHttpClient extends AbstractHttpClient
 
               // Propagate the failure to the caller instead of silently resolving to null: handleResponse()/
               // handleChunk() can throw to signal a transport-level failure (e.g. an unexpected HTTP status or
-              // content type), and that exception must not be lost.
-              if (!retVal.isDone()) {
-                retVal.setException(ex);
-              }
-              channel.close();
-              channelResourceContainer.returnResource();
+              // content type), and that exception must not be lost. For a chunked response, retVal has usually
+              // already been completed by handleResponse(), so the only way to surface an exception thrown by
+              // handleChunk() is through handler.exceptionCaught(). Route it through handleExceptionAndCloseChannel
+              // so the handler sees the real exception; the channelDisconnected() that follows channel.close() is
+              // then a no-op instead of replacing it with a generic "Channel disconnected" ChannelException.
+              handleExceptionAndCloseChannel(ex, true);
 
               throw ex;
             }
