@@ -128,31 +128,6 @@ public class DerbyConnector extends SQLMetadataConnector
     return String.format(Locale.ENGLISH, "FETCH NEXT %d ROWS ONLY", limit);
   }
 
-  @Override
-  public void exportTable(
-      String tableName,
-      String outputPath
-  )
-  {
-    retryWithHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle)
-          {
-            handle.createStatement(
-                StringUtils.format(
-                    "CALL SYSCS_UTIL.SYSCS_EXPORT_TABLE (null, '%s', '%s', null, null, null)",
-                    tableName,
-                    outputPath
-                )
-            ).execute();
-            return null;
-          }
-        }
-    );
-  }
-
   /**
    * Get the ResultSet for indexInfo for given table
    *
