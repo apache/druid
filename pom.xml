@@ -520,7 +520,7 @@
             <dependency>
                 <groupId>com.github.fppt</groupId>
                 <artifactId>jedis-mock</artifactId>
-                <version>1.1.17</version>
+                <version>1.1.18</version>
             </dependency>
             <dependency>
               <groupId>io.kubernetes</groupId>
