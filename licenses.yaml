@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.54.4
+version: 2.54.7
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -927,7 +927,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.39
+version: 4.2.40
 libraries:
   - io.dropwizard.metrics: metrics-core
 
@@ -1322,7 +1322,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.6
 libraries:
   - org.yaml: snakeyaml
 
@@ -1332,7 +1332,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.6
 libraries:
   - org.yaml: snakeyaml
 
@@ -2606,7 +2606,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.5.0
+version: 7.6.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -3299,7 +3299,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.6
 libraries:
   - org.yaml: snakeyaml
 
