@@ -29,8 +29,7 @@ import org.apache.hadoop.security.authentication.util.Signer;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.eclipse.jetty.client.Request;
 import org.eclipse.jetty.http.HttpCookie;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -45,6 +44,12 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class KerberosAuthenticatorTest
 {
@@ -78,13 +83,13 @@ public class KerberosAuthenticatorTest
     // Without the fix, Signer.verifyAndExtract("") throws SignerException.
     final HttpServletRequest requestWithEmptyCookie = mockRequestWithEmptyCookie();
     final AuthenticationToken token = (AuthenticationToken) getToken.invoke(filter, requestWithEmptyCookie);
-    Assert.assertNull("Empty hadoop.auth cookie should be treated as no cookie", token);
+    assertNull(token, "Empty hadoop.auth cookie should be treated as no cookie");
 
     // No cookie at all - baseline, should return null
     final HttpServletRequest requestWithNoCookie = Mockito.mock(HttpServletRequest.class);
     Mockito.when(requestWithNoCookie.getCookies()).thenReturn(null);
     final AuthenticationToken tokenForNoCookie = (AuthenticationToken) getToken.invoke(filter, requestWithNoCookie);
-    Assert.assertNull("Missing hadoop.auth cookie should return null", tokenForNoCookie);
+    assertNull(tokenForNoCookie, "Missing hadoop.auth cookie should return null");
   }
 
   private Filter createFilterWithSigner() throws Exception
@@ -151,7 +156,7 @@ public class KerberosAuthenticatorTest
   {
     DruidNode node = createTestNode();
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = assertThrows(
         DruidException.class,
         () -> new KerberosAuthenticator(
             TEST_SERVER_PRINCIPAL,
@@ -164,15 +169,15 @@ public class KerberosAuthenticatorTest
         )
     );
 
-    Assert.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
-    Assert.assertTrue(
-        "Exception message should mention cookieSignatureSecret",
-        exception.getMessage().contains("cookieSignatureSecret")
+    assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
+    assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    assertTrue(
+        exception.getMessage().contains("cookieSignatureSecret"),
+        "Exception message should mention cookieSignatureSecret"
     );
-    Assert.assertTrue(
-        "Exception message should mention 'is not set'",
-        exception.getMessage().contains("is not set")
+    assertTrue(
+        exception.getMessage().contains("is not set"),
+        "Exception message should mention 'is not set'"
     );
   }
 
@@ -181,7 +186,7 @@ public class KerberosAuthenticatorTest
   {
     DruidNode node = createTestNode();
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = assertThrows(
         DruidException.class,
         () -> new KerberosAuthenticator(
             TEST_SERVER_PRINCIPAL,
@@ -194,15 +199,15 @@ public class KerberosAuthenticatorTest
         )
     );
 
-    Assert.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
-    Assert.assertTrue(
-        "Exception message should mention cookieSignatureSecret",
-        exception.getMessage().contains("cookieSignatureSecret")
+    assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
+    assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    assertTrue(
+        exception.getMessage().contains("cookieSignatureSecret"),
+        "Exception message should mention cookieSignatureSecret"
     );
-    Assert.assertTrue(
-        "Exception message should mention 'is not set'",
-        exception.getMessage().contains("is not set")
+    assertTrue(
+        exception.getMessage().contains("is not set"),
+        "Exception message should mention 'is not set'"
     );
   }
 
@@ -231,8 +236,8 @@ public class KerberosAuthenticatorTest
         false       // isSecure
     );
 
-    Assert.assertTrue("Cookie string should contain 'Max-Age=0'", cookieString.contains("Max-Age=0"));
-    Assert.assertFalse("Cookie string should not contain 'Expires=' when expires is 0", cookieString.contains("Expires="));
+    assertTrue(cookieString.contains("Max-Age=0"), "Cookie string should contain 'Max-Age=0'");
+    assertFalse(cookieString.contains("Expires="), "Cookie string should not contain 'Expires=' when expires is 0");
 
     // Test case: expires > 0 and persistent
     final String persistentCookieString = (String) method.invoke(
@@ -244,8 +249,8 @@ public class KerberosAuthenticatorTest
         true,
         false
     );
-    Assert.assertTrue("Persistent cookie should contain 'Expires='", persistentCookieString.contains("Expires="));
-    Assert.assertFalse("Persistent cookie should not contain 'Max-Age=0'", persistentCookieString.contains("Max-Age=0"));
+    assertTrue(persistentCookieString.contains("Expires="), "Persistent cookie should contain 'Expires='");
+    assertFalse(persistentCookieString.contains("Max-Age=0"), "Persistent cookie should not contain 'Max-Age=0'");
   }
 
   @Test
@@ -264,8 +269,8 @@ public class KerberosAuthenticatorTest
 
     final String cookieString = (String) method.invoke(null, null, "localhost", "/", 0, false, false);
 
-    Assert.assertFalse("Null token should not add quoted value", cookieString.contains("\""));
-    Assert.assertTrue("Cookie string should contain Max-Age=0", cookieString.contains("Max-Age=0"));
+    assertFalse(cookieString.contains("\""), "Null token should not add quoted value");
+    assertTrue(cookieString.contains("Max-Age=0"), "Cookie string should contain Max-Age=0");
   }
 
   @Test
@@ -292,8 +297,8 @@ public class KerberosAuthenticatorTest
         false
     );
 
-    Assert.assertFalse("Non-persistent cookie should not contain 'Expires='", cookieString.contains("Expires="));
-    Assert.assertFalse("Non-persistent cookie should not contain 'Max-Age=0'", cookieString.contains("Max-Age=0"));
+    assertFalse(cookieString.contains("Expires="), "Non-persistent cookie should not contain 'Expires='");
+    assertFalse(cookieString.contains("Max-Age=0"), "Non-persistent cookie should not contain 'Max-Age=0'");
   }
 
   @Test
@@ -359,11 +364,11 @@ public class KerberosAuthenticatorTest
     final FilterChain chain = Mockito.mock(FilterChain.class);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
 
-    final ServletException ex = Assert.assertThrows(
+    final ServletException ex = assertThrows(
         ServletException.class,
         () -> filter.doFilter(request, response, chain)
     );
-    Assert.assertTrue(ex.getMessage().contains("Principal not defined"));
+    assertTrue(ex.getMessage().contains("Principal not defined"));
   }
 
   @Test
@@ -384,11 +389,11 @@ public class KerberosAuthenticatorTest
     final FilterChain chain = Mockito.mock(FilterChain.class);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
 
-    final ServletException ex = Assert.assertThrows(
+    final ServletException ex = assertThrows(
         ServletException.class,
         () -> filter.doFilter(request, response, chain)
     );
-    Assert.assertTrue(ex.getMessage().contains("Keytab not defined"));
+    assertTrue(ex.getMessage().contains("Keytab not defined"));
   }
 
   @Test
@@ -409,10 +414,10 @@ public class KerberosAuthenticatorTest
     final FilterChain chain = Mockito.mock(FilterChain.class);
     Mockito.when(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).thenReturn(null);
 
-    final ServletException ex = Assert.assertThrows(
+    final ServletException ex = assertThrows(
         ServletException.class,
         () -> filter.doFilter(request, response, chain)
     );
-    Assert.assertTrue(ex.getMessage().contains("Keytab not defined"));
+    assertTrue(ex.getMessage().contains("Keytab not defined"));
   }
 }
