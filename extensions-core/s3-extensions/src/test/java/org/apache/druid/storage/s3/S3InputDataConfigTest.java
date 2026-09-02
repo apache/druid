@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class S3InputDataConfigTest
 {
@@ -48,7 +48,7 @@ public class S3InputDataConfigTest
     catch (JsonProcessingException e) {
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
   }
 
   @Test
@@ -61,7 +61,7 @@ public class S3InputDataConfigTest
     catch (JsonProcessingException e) {
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
   }
 
   @Test
@@ -71,7 +71,7 @@ public class S3InputDataConfigTest
         formatTemplate(S3InputDataConfig.MAX_LISTING_LENGTH_MIN),
         S3InputDataConfig.class
     );
-    Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MIN, inputDataConfig.getMaxListingLength());
+    Assertions.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MIN, inputDataConfig.getMaxListingLength());
   }
 
   @Test
@@ -81,7 +81,7 @@ public class S3InputDataConfigTest
         formatTemplate(S3InputDataConfig.MAX_LISTING_LENGTH_MAX),
         S3InputDataConfig.class
     );
-    Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
+    Assertions.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
   }
 
   @Test
@@ -95,7 +95,7 @@ public class S3InputDataConfigTest
     catch (IAE e) {
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
   }
 
   @Test
@@ -109,7 +109,7 @@ public class S3InputDataConfigTest
     catch (IAE e) {
       exceptionThrown = true;
     }
-    Assert.assertTrue(exceptionThrown);
+    Assertions.assertTrue(exceptionThrown);
   }
 
   @Test
@@ -117,7 +117,7 @@ public class S3InputDataConfigTest
   {
     inputDataConfig = new S3InputDataConfig();
     inputDataConfig.setMaxListingLength(S3InputDataConfig.MAX_LISTING_LENGTH_MIN);
-    Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MIN, inputDataConfig.getMaxListingLength());
+    Assertions.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MIN, inputDataConfig.getMaxListingLength());
   }
 
   @Test
@@ -125,14 +125,14 @@ public class S3InputDataConfigTest
   {
     inputDataConfig = new S3InputDataConfig();
     inputDataConfig.setMaxListingLength(S3InputDataConfig.MAX_LISTING_LENGTH_MAX);
-    Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
+    Assertions.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
   }
 
   @Test
   public void test_construct_maxListingLengthDefaultsToMax()
   {
     inputDataConfig = new S3InputDataConfig();
-    Assert.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
+    Assertions.assertEquals(S3InputDataConfig.MAX_LISTING_LENGTH_MAX, inputDataConfig.getMaxListingLength());
   }
 
   private static String formatTemplate(int maxListingLength)

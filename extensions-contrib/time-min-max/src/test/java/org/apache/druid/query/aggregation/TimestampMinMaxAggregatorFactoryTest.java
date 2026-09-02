@@ -31,8 +31,8 @@ import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class TimestampMinMaxAggregatorFactoryTest
 {
@@ -44,11 +44,11 @@ public class TimestampMinMaxAggregatorFactoryTest
     TimestampMaxAggregatorFactory maxAgg = new TimestampMaxAggregatorFactory("timeMax", "__time", null);
     TimestampMinAggregatorFactory minAgg = new TimestampMinAggregatorFactory("timeMin", "__time", null);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         maxAgg,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(maxAgg), TimestampMaxAggregatorFactory.class)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         maxAgg.getCombiningFactory(),
         JSON_MAPPER.readValue(
             JSON_MAPPER.writeValueAsString(maxAgg.getCombiningFactory()),
@@ -56,11 +56,11 @@ public class TimestampMinMaxAggregatorFactoryTest
         )
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         minAgg,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(minAgg), TimestampMinAggregatorFactory.class)
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         minAgg.getCombiningFactory(),
         JSON_MAPPER.readValue(
             JSON_MAPPER.writeValueAsString(minAgg.getCombiningFactory()),
@@ -105,7 +105,7 @@ public class TimestampMinMaxAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)
@@ -124,11 +124,11 @@ public class TimestampMinMaxAggregatorFactoryTest
   public void testWithName()
   {
     TimestampMaxAggregatorFactory maxAgg = new TimestampMaxAggregatorFactory("timeMax", "__time", null);
-    Assert.assertEquals(maxAgg, maxAgg.withName("timeMax"));
-    Assert.assertEquals("newTest", maxAgg.withName("newTest").getName());
+    Assertions.assertEquals(maxAgg, maxAgg.withName("timeMax"));
+    Assertions.assertEquals("newTest", maxAgg.withName("newTest").getName());
 
     TimestampMinAggregatorFactory minAgg = new TimestampMinAggregatorFactory("timeMin", "__time", null);
-    Assert.assertEquals(minAgg, minAgg.withName("timeMin"));
-    Assert.assertEquals("newTest", minAgg.withName("newTest").getName());
+    Assertions.assertEquals(minAgg, minAgg.withName("timeMin"));
+    Assertions.assertEquals("newTest", minAgg.withName("newTest").getName());
   }
 }

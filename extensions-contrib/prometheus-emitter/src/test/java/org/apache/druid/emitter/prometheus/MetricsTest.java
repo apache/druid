@@ -19,11 +19,12 @@
 
 package org.apache.druid.emitter.prometheus;
 
+import io.prometheus.client.Gauge;
 import io.prometheus.client.Histogram;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,23 +37,23 @@ public class MetricsTest
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test", null, null, null, true, true, null, null, null, null);
     Metrics metrics = new Metrics(config);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
-    Assert.assertNotNull(dimensionsAndCollector);
+    Assertions.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
-    Assert.assertEquals("dataSource", dimensions[0]);
-    Assert.assertEquals("druid_service", dimensions[1]);
-    Assert.assertEquals("host_name", dimensions[2]);
-    Assert.assertEquals("type", dimensions[3]);
-    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    Assertions.assertEquals("dataSource", dimensions[0]);
+    Assertions.assertEquals("druid_service", dimensions[1]);
+    Assertions.assertEquals("host_name", dimensions[2]);
+    Assertions.assertEquals("type", dimensions[3]);
+    Assertions.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     double[] defaultHistogramBuckets = {0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0, 120.0, 300.0};
-    Assert.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
-    Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
+    Assertions.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
+    Assertions.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
 
     DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
-    Assert.assertNotNull(d);
+    Assertions.assertNotNull(d);
     String[] dims = d.getDimensions();
-    Assert.assertEquals("druid_service", dims[0]);
-    Assert.assertEquals("host_name", dims[1]);
-    Assert.assertEquals("server", dims[2]);
+    Assertions.assertEquals("druid_service", dims[0]);
+    Assertions.assertEquals("host_name", dims[1]);
+    Assertions.assertEquals("server", dims[2]);
   }
 
   @Test
@@ -64,25 +65,25 @@ public class MetricsTest
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_2", null, null, null, true, true, null, extraLabels, null, null);
     Metrics metrics = new Metrics(config);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
-    Assert.assertNotNull(dimensionsAndCollector);
+    Assertions.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
-    Assert.assertEquals("dataSource", dimensions[0]);
-    Assert.assertEquals("druid_service", dimensions[1]);
-    Assert.assertEquals("extra_label", dimensions[2]);
-    Assert.assertEquals("host_name", dimensions[3]);
-    Assert.assertEquals("type", dimensions[4]);
-    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    Assertions.assertEquals("dataSource", dimensions[0]);
+    Assertions.assertEquals("druid_service", dimensions[1]);
+    Assertions.assertEquals("extra_label", dimensions[2]);
+    Assertions.assertEquals("host_name", dimensions[3]);
+    Assertions.assertEquals("type", dimensions[4]);
+    Assertions.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     double[] defaultHistogramBuckets = {0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0, 120.0, 300.0};
-    Assert.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
-    Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
+    Assertions.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
+    Assertions.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
 
     DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
-    Assert.assertNotNull(d);
+    Assertions.assertNotNull(d);
     String[] dims = d.getDimensions();
-    Assert.assertEquals("druid_service", dims[0]);
-    Assert.assertEquals("extra_label", dims[1]);
-    Assert.assertEquals("host_name", dims[2]);
-    Assert.assertEquals("server", dims[3]);
+    Assertions.assertEquals("druid_service", dims[0]);
+    Assertions.assertEquals("extra_label", dims[1]);
+    Assertions.assertEquals("host_name", dims[2]);
+    Assertions.assertEquals("server", dims[3]);
   }
   
   @Test
@@ -92,14 +93,28 @@ public class MetricsTest
     extraLabels.put("extra label", "value");
 
     // Expect an exception thrown by Prometheus code due to invalid metric label
-    Exception exception = Assert.assertThrows(DruidException.class, () -> {
+    Exception exception = Assertions.assertThrows(DruidException.class, () -> {
       new Metrics(new PrometheusEmitterConfig(null, "test_3", null, null, null, true, true, null, extraLabels, null, null));
     });
 
     String expectedMessage = "Invalid metric label name [extra label]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*].";
     String actualMessage = exception.getMessage();
 
-    Assert.assertTrue(actualMessage.contains(expectedMessage));
+    Assertions.assertTrue(actualMessage.contains(expectedMessage));
+  }
+
+  @Test
+  public void testMergeBufferMaxSpillProximityRegisteredAsGauge()
+  {
+    // mergeBuffer/maxSpillProximity must be in the default mapping (a no-dimension gauge); otherwise the default
+    // Prometheus configuration would silently drop the metric.
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_spill", null, null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
+    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("mergeBuffer/maxSpillProximity", "broker");
+    Assertions.assertNotNull(dimensionsAndCollector);
+    Assertions.assertTrue(dimensionsAndCollector.getCollector() instanceof Gauge);
+    // No metric-specific dimensions, only the standard service/host labels.
+    Assertions.assertArrayEquals(new String[]{"druid_service", "host_name"}, dimensionsAndCollector.getDimensions());
   }
 
   @Test
@@ -108,17 +123,17 @@ public class MetricsTest
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_4", null, null, null, true, true, null, null, null, null);
     Metrics metrics = new Metrics(config);
     DimensionsAndCollector nonExistentDimsCollector = metrics.getByName("non/existent", "historical");
-    Assert.assertNull(nonExistentDimsCollector);
+    Assertions.assertNull(nonExistentDimsCollector);
   }
 
   @Test
   public void testMetricsConfigurationWithUnSupportedType()
   {
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_5", "src/test/resources/defaultInvalidMetricsTest.json", null, null, true, true, null, null, null, null);
-    ISE iseException = Assert.assertThrows(ISE.class, () -> {
+    ISE iseException = Assertions.assertThrows(ISE.class, () -> {
       new Metrics(config);
     });
-    Assert.assertEquals("Failed to parse metric configuration", iseException.getMessage());
+    Assertions.assertEquals("Failed to parse metric configuration", iseException.getMessage());
   }
 
   @Test
@@ -127,15 +142,50 @@ public class MetricsTest
     PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_6", "src/test/resources/defaultMetricsTest.json", null, null, true, true, null, null, null, null);
     Metrics metrics = new Metrics(config);
     DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
-    Assert.assertNotNull(dimensionsAndCollector);
+    Assertions.assertNotNull(dimensionsAndCollector);
     String[] dimensions = dimensionsAndCollector.getDimensions();
-    Assert.assertEquals("dataSource", dimensions[0]);
-    Assert.assertEquals("druid_service", dimensions[1]);
-    Assert.assertEquals("host_name", dimensions[2]);
-    Assert.assertEquals("type", dimensions[3]);
-    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    Assertions.assertEquals("dataSource", dimensions[0]);
+    Assertions.assertEquals("druid_service", dimensions[1]);
+    Assertions.assertEquals("host_name", dimensions[2]);
+    Assertions.assertEquals("type", dimensions[3]);
+    Assertions.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
     double[] expectedHistogramBuckets = {10.0, 30.0, 60.0, 120.0, 200.0, 300.0};
-    Assert.assertArrayEquals(expectedHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
+    Assertions.assertArrayEquals(expectedHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
+  }
+
+  @Test
+  public void testTaskCountMetricsHaveTaskTypeLabel()
+  {
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_7", null, null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
+    for (String metric : new String[]{
+        "task/success/count",
+        "task/failed/count",
+        "task/running/count",
+        "task/pending/count",
+        "task/waiting/count"
+    }) {
+      DimensionsAndCollector dimensionsAndCollector = metrics.getByName(metric, "overlord");
+      Assertions.assertNotNull(dimensionsAndCollector, metric);
+      Assertions.assertArrayEquals(
+          new String[]{"dataSource", "druid_service", "host_name", "taskType"},
+          dimensionsAndCollector.getDimensions(),
+          metric
+      );
+    }
+  }
+
+  @Test
+  public void testTaskRunTimeHasTaskStatusLabel()
+  {
+    PrometheusEmitterConfig config = new PrometheusEmitterConfig(null, "test_8", null, null, null, true, true, null, null, null, null);
+    Metrics metrics = new Metrics(config);
+    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("task/run/time", "overlord");
+    Assertions.assertNotNull(dimensionsAndCollector);
+    Assertions.assertArrayEquals(
+        new String[]{"dataSource", "druid_service", "host_name", "taskStatus", "taskType"},
+        dimensionsAndCollector.getDimensions()
+    );
   }
 
 }

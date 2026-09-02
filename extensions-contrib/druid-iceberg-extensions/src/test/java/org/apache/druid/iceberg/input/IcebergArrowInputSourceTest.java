@@ -43,12 +43,10 @@ import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -58,9 +56,6 @@ import java.util.UUID;
 
 public class IcebergArrowInputSourceTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   private IcebergCatalog testCatalog;
   private TableIdentifier tableIdentifier;
   private File warehouseDir;
@@ -74,7 +69,7 @@ public class IcebergArrowInputSourceTest
   private static final String NAMESPACE = "default";
   private static final String TABLENAME = "foosTable";
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     warehouseDir = FileUtils.createTempDir();
@@ -83,7 +78,7 @@ public class IcebergArrowInputSourceTest
     createAndLoadTable(tableIdentifier);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     dropTableFromCatalog(tableIdentifier);
@@ -109,7 +104,7 @@ public class IcebergArrowInputSourceTest
     final InputSourceReader reader = src.reader(schemaWithMissingTs, null, FileUtils.createTempDir());
     try (org.apache.druid.java.util.common.parsers.CloseableIterator<org.apache.druid.data.input.InputRow> it = reader.read()) {
       while (it.hasNext()) {
-        Assert.assertNotNull(it.next());
+        Assertions.assertNotNull(it.next());
       }
     }
   }
@@ -126,8 +121,8 @@ public class IcebergArrowInputSourceTest
         null,
         1024
     );
-    Assert.assertFalse(src.isSplittable());
-    Assert.assertFalse(src.needsFormat());
+    Assertions.assertFalse(src.isSplittable());
+    Assertions.assertFalse(src.needsFormat());
   }
 
   @Test
@@ -147,16 +142,16 @@ public class IcebergArrowInputSourceTest
         DimensionsSpec.builder().build(),
         ColumnsFilter.all()
     );
-    final DruidException ex = Assert.assertThrows(
+    final DruidException ex = Assertions.assertThrows(
         DruidException.class,
         () -> {
           final InputSourceReader reader = src.reader(inputRowSchema, null, FileUtils.createTempDir());
           reader.read().close();
         }
     );
-    Assert.assertTrue(
-        "Expected residual error: " + ex.getMessage(),
-        ex.getMessage().contains("residual")
+    Assertions.assertTrue(
+        ex.getMessage().contains("residual"),
+        "Expected residual error: " + ex.getMessage()
     );
   }
 
@@ -206,7 +201,7 @@ public class IcebergArrowInputSourceTest
   {
     final String fname = UUID.randomUUID() + ".parquet";
     final File dataFile = new File(warehouseDir.getAbsolutePath() + "/" + fname);
-    Assert.assertTrue(dataFile.createNewFile());
+    Assertions.assertTrue(dataFile.createNewFile());
     final OutputFile out = Files.localOutput(dataFile);
     final GenericRecord row = GenericRecord.create(tableSchema);
     row.setField("id", rowData.get("id"));

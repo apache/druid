@@ -27,8 +27,8 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ReadOnlyAuthorizerTest
 {
@@ -43,13 +43,13 @@ public class ReadOnlyAuthorizerTest
             new Resource("testResource", ResourceType.DATASOURCE),
             Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
     access = authorizer.authorize(
             authenticationResult,
             new Resource("testResource", ResourceType.DATASOURCE),
             Action.READ
     );
-    Assert.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.isAllowed());
   }
 
   @Test
@@ -65,9 +65,9 @@ public class ReadOnlyAuthorizerTest
             new Resource("testResource", ResourceType.DATASOURCE),
             Action.READ
     );
-    Assert.assertTrue(access.isAllowed());
-    Assert.assertTrue(access.getPolicy().isPresent());
-    Assert.assertEquals(policy, access.getPolicy().get());
+    Assertions.assertTrue(access.isAllowed());
+    Assertions.assertTrue(access.getPolicy().isPresent());
+    Assertions.assertEquals(policy, access.getPolicy().get());
 
     // WRITE should still be denied
     access = authorizerWithPolicy.authorize(
@@ -75,7 +75,7 @@ public class ReadOnlyAuthorizerTest
             new Resource("testResource", ResourceType.DATASOURCE),
             Action.WRITE
     );
-    Assert.assertFalse(access.isAllowed());
+    Assertions.assertFalse(access.isAllowed());
 
     // READ on non-DATASOURCE should not have policy
     access = authorizerWithPolicy.authorize(
@@ -83,7 +83,7 @@ public class ReadOnlyAuthorizerTest
             new Resource("testResource", ResourceType.STATE),
             Action.READ
     );
-    Assert.assertTrue(access.isAllowed());
-    Assert.assertFalse(access.getPolicy().isPresent());
+    Assertions.assertTrue(access.isAllowed());
+    Assertions.assertFalse(access.getPolicy().isPresent());
   }
 }

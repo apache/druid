@@ -35,8 +35,9 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sigar.base.version>1.6.5</sigar.base.version>
-    <sigar.version>${sigar.base.version}.132</sigar.version>
-    <oshi.version>6.9.1</oshi.version>
+    <sigar.version>1.6.5.132-6</sigar.version>
+    <oshi.version>7.6.0</oshi.version>
+    <mariadb.legacy.version>2.7.3</mariadb.legacy.version>
   </properties>
 
   <dependencies>
@@ -132,13 +133,13 @@
       <artifactId>maven-artifact</artifactId>
     </dependency>
     <dependency>
-      <groupId>javax.el</groupId>
-      <artifactId>javax.el-api</artifactId>
+      <groupId>jakarta.el</groupId>
+      <artifactId>jakarta.el-api</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>
-      <groupId>org.glassfish</groupId>
-      <artifactId>jakarta.el</artifactId>
+      <groupId>org.glassfish.expressly</groupId>
+      <artifactId>expressly</artifactId>
       <scope>runtime</scope>
     </dependency>
     <dependency>
@@ -300,7 +301,6 @@
     <dependency>
       <groupId>com.google.re2j</groupId>
       <artifactId>re2j</artifactId>
-      <version>1.7</version>
     </dependency>
 
     <!-- com.lmax.disruptor is optional in log4j-core, so we explicitly include it here -->
@@ -341,31 +341,27 @@
       <artifactId>oshi-core</artifactId>
       <version>${oshi.version}</version>
     </dependency>
+    <dependency>
+      <groupId>com.github.oshi</groupId>
+      <artifactId>oshi-common</artifactId>
+      <version>${oshi.version}</version>
+    </dependency>
 
     <!-- Tests -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.opentest4j</groupId>
+      <artifactId>opentest4j</artifactId>
+      <version>1.3.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.carrotsearch</groupId>
-      <artifactId>junit-benchmarks</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -401,14 +397,15 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>pl.pragmatists</groupId>
-      <artifactId>JUnitParams</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava-testlib</artifactId>
       <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>junit</groupId>
+          <artifactId>junit</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.hamcrest</groupId>
@@ -459,18 +456,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.github.stefanbirkner</groupId>
-      <artifactId>system-rules</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-migrationsupport</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -524,6 +511,23 @@
               </outputDirectory>
             </configuration>
           </execution>
+          <execution>
+            <id>copy-mariadb-legacy-test-driver</id>
+            <phase>generate-test-resources</phase>
+            <goals>
+              <goal>copy</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.mariadb.jdbc</groupId>
+                  <artifactId>mariadb-java-client</artifactId>
+                  <version>${mariadb.legacy.version}</version>
+                  <outputDirectory>${project.build.directory}/mariadb-legacy</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
       <plugin>
@@ -534,6 +538,11 @@
 
           <!-- use normal classpath instead of manifest jar for JvmUtilsTest.testSystemClassPath -->
           <useManifestOnlyJar>false</useManifestOnlyJar>
+          <systemPropertyVariables>
+            <druid.test.mariadbLegacyDriver>
+              ${project.build.directory}/mariadb-legacy/mariadb-java-client-${mariadb.legacy.version}.jar
+            </druid.test.mariadbLegacyDriver>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
       <plugin>

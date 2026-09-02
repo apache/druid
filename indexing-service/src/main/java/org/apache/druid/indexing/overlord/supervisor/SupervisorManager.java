@@ -32,7 +32,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.actions.TaskLocks;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
@@ -49,7 +49,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.DefaultQueryMetrics;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.metrics.SupervisorStatsProvider;
 
@@ -436,18 +435,15 @@ public class SupervisorManager implements SupervisorStatsProvider
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(id, "id");
 
-    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    Pair<SeekableStreamSupervisor, SeekableStreamSupervisorSpec> supervisor = getSupervisorOfType(
+        id,
+        SeekableStreamSupervisor.class,
+        SeekableStreamSupervisorSpec.class,
+        "resetToLatestAndBackfill"
+    );
 
-    if (supervisor == null) {
-      throw new IAE("Supervisor[%s] does not exist", id);
-    }
-
-    if (!(supervisor.lhs instanceof SeekableStreamSupervisor)) {
-      throw new IAE("Supervisor[%s] is not a streaming supervisor", id);
-    }
-
-    SeekableStreamSupervisor streamSupervisor = (SeekableStreamSupervisor) supervisor.lhs;
-    SeekableStreamSupervisorSpec streamSpec = (SeekableStreamSupervisorSpec) supervisor.rhs;
+    SeekableStreamSupervisor streamSupervisor = supervisor.lhs;
+    SeekableStreamSupervisorSpec streamSpec = supervisor.rhs;
 
     validateResetAndBackfill(id, streamSupervisor, streamSpec);
 
@@ -748,9 +744,29 @@ public class SupervisorManager implements SupervisorStatsProvider
 
   private StreamSupervisor requireStreamSupervisor(final String supervisorId, final String operation)
   {
-    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
-    if (supervisor.lhs instanceof StreamSupervisor) {
-      return (StreamSupervisor) supervisor.lhs;
+    return getSupervisorOfType(supervisorId, StreamSupervisor.class, SupervisorSpec.class, operation).lhs;
+  }
+
+  /**
+   * Finds the non-null supervisor for the given ID only and its corresponding
+   * spec only if they are of the specified type.
+   *
+   * @throws DruidException if the supervisor does not exist or is not of the
+   * specified type.
+   */
+  @SuppressWarnings("unchecked")
+  public <S extends Supervisor, T extends SupervisorSpec> Pair<S, T> getSupervisorOfType(
+      String supervisorId,
+      Class<S> supervisorType,
+      Class<T> supervisorSpecType,
+      String operation
+  )
+  {
+    final Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor == null) {
+      throw NotFound.exception("Supervisor[%s] does not exist", supervisorId);
+    } else if (supervisorType.isInstance(supervisor.lhs) && supervisorSpecType.isInstance(supervisor.rhs)) {
+      return (Pair<S, T>) supervisor;
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
@@ -778,22 +794,9 @@ public class SupervisorManager implements SupervisorStatsProvider
    */
   private static boolean specHasConcurrentLocks(SeekableStreamSupervisorSpec spec)
   {
-    Map<String, Object> context = spec.getContext();
-    if (context == null) {
-      return Tasks.DEFAULT_USE_CONCURRENT_LOCKS;
-    }
-    Boolean useConcurrentLocks = QueryContexts.getAsBoolean(
-        Tasks.USE_CONCURRENT_LOCKS,
-        context.get(Tasks.USE_CONCURRENT_LOCKS)
+    return TaskLocks.shouldUseConcurrentLocksForAppend(
+        spec.getContext(),
+        Tasks.DEFAULT_USE_CONCURRENT_LOCKS
     );
-    if (useConcurrentLocks != null) {
-      return useConcurrentLocks;
-    }
-    TaskLockType taskLockType = QueryContexts.getAsEnum(
-        Tasks.TASK_LOCK_TYPE,
-        context.get(Tasks.TASK_LOCK_TYPE),
-        TaskLockType.class
-    );
-    return taskLockType == TaskLockType.APPEND;
   }
 }

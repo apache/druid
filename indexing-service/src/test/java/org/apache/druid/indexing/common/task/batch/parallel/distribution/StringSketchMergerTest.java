@@ -22,20 +22,15 @@ package org.apache.druid.indexing.common.task.batch.parallel.distribution;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class StringSketchMergerTest
 {
   private StringSketchMerger target;
 
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
-  @Before
+  @BeforeEach
   public void setup()
   {
     target = new StringSketchMerger();
@@ -46,10 +41,11 @@ public class StringSketchMergerTest
   {
     StringDistribution distribution = EasyMock.mock(StringDistribution.class);
 
-    exception.expect(IllegalArgumentException.class);
-    exception.expectMessage("Only merging StringSketch instances is currently supported");
-
-    target.merge(distribution);
+    final IllegalArgumentException exception = Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> target.merge(distribution)
+    );
+    Assertions.assertTrue(exception.getMessage().contains("Only merging StringSketch instances is currently supported"));
   }
 
   @Test
@@ -73,9 +69,9 @@ public class StringSketchMergerTest
     StringDistribution merged = target.getResult();
 
     PartitionBoundaries partitions = merged.getEvenPartitionsByMaxSize(1);
-    Assert.assertEquals(3, partitions.size());
-    Assert.assertNull(partitions.get(0));
-    Assert.assertEquals(string2, partitions.get(1));
-    Assert.assertNull(partitions.get(2));
+    Assertions.assertEquals(3, partitions.size());
+    Assertions.assertNull(partitions.get(0));
+    Assertions.assertEquals(string2, partitions.get(1));
+    Assertions.assertNull(partitions.get(2));
   }
 }

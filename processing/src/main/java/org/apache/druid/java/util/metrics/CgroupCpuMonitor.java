@@ -123,9 +123,11 @@ public class CgroupCpuMonitor extends FeedDefiningMonitor
   private void initUzerHz()
   {
     try {
-      Process p = new ProcessBuilder("getconf", "CLK_TCK").start();
+      // getconf has no portable absolute location; the fixed command and argument intentionally use the service PATH.
+      // codeql[java/relative-path-command]
+      final Process p = new ProcessBuilder("getconf", "CLK_TCK").start();
       try (BufferedReader in = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-        String line = in.readLine();
+        final String line = in.readLine();
         if (line != null) {
           userHz = Long.valueOf(line.trim());
         }

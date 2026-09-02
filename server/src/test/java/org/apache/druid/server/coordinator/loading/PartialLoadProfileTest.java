@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +53,7 @@ public class PartialLoadProfileTest
   @Test
   public void testForRequestRejectsNullWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forRequest(null, FINGERPRINT)
@@ -66,7 +65,7 @@ public class PartialLoadProfileTest
   @Test
   public void testForRequestRejectsEmptyWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forRequest(Map.of(), FINGERPRINT)
@@ -87,7 +86,7 @@ public class PartialLoadProfileTest
   @Test
   public void testForLoadedRejectsEmptyWrappedLoadSpec()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> PartialLoadProfile.forLoaded(Map.of(), FINGERPRINT, 100L)
@@ -113,6 +112,27 @@ public class PartialLoadProfileTest
     PartialLoadProfile profile = PartialLoadProfile.forRequest(mutable, FINGERPRINT);
     mutable.put("extra", "added-after");
     Assertions.assertFalse(profile.wrappedLoadSpec().containsKey("extra"));
+  }
+
+  @Test
+  public void testAsCloneRequestDropsTheAnnouncedFootprint()
+  {
+    // The realized footprint belongs to the announcement of the server that loaded the segment, not to the request the
+    // clone target or move destination is about to get. Everything that identifies the request carries over as-is.
+    final PartialLoadProfile loaded = PartialLoadProfile.forLoaded(WRAPPED, FINGERPRINT, 12345L);
+
+    final PartialLoadProfile request = loaded.asCloneRequest();
+
+    Assertions.assertNull(request.loadedBytes(), "a request carries no realized footprint");
+    Assertions.assertEquals(WRAPPED, request.wrappedLoadSpec());
+    Assertions.assertEquals(FINGERPRINT, request.fingerprint());
+  }
+
+  @Test
+  public void testAsCloneRequestOfARequestIsItself()
+  {
+    final PartialLoadProfile request = PartialLoadProfile.forRequest(WRAPPED, FINGERPRINT);
+    Assertions.assertSame(request, request.asCloneRequest());
   }
 
   @Test

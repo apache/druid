@@ -84,11 +84,11 @@ import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
-import org.apache.druid.sql.calcite.schema.DruidSchema;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
-import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.schema.SystemSchemaProvider;
 import org.apache.druid.sql.calcite.util.testoperator.CalciteTestOperatorModule;
 import org.apache.druid.sql.http.SqlEngineRegistry;
 import org.apache.druid.timeline.DataSegment;
@@ -122,6 +122,7 @@ public class CalciteTests
   public static final String ARRAYS_DATASOURCE = "arrays";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String READ_ONLY_DATASOURCE = "readOnlyDatasource";
   public static final String RESTRICTED_DATASOURCE = "restrictedDatasource_m1_is_6";
   public static final String RESTRICTED_BROADCAST_DATASOURCE = "restrictedBroadcastDatasource_m1_is_6";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
@@ -328,19 +329,11 @@ public class CalciteTests
     return provider;
   }
 
-  public static SystemSchema createMockSystemSchema(
-      final DruidSchema druidSchema,
-      final SpecificSegmentsQuerySegmentWalker walker,
-      final AuthorizerMapper authorizerMapper
-  )
-  {
-    return createMockSystemSchema(druidSchema, new TestTimelineServerView(walker.getSegments()), authorizerMapper);
-  }
-
-  public static SystemSchema createMockSystemSchema(
-      final DruidSchema druidSchema,
+  public static SystemSchemaProvider createMockSystemSchemaProvider(
+      final BrokerSegmentMetadataCache segmentMetadataCache,
       final TimelineServerView timelineServerView,
-      final AuthorizerMapper authorizerMapper
+      final AuthorizerMapper authorizerMapper,
+      final PlannerConfig plannerConfig
   )
   {
     final DruidNode coordinatorNode = mockCoordinatorNode();
@@ -408,8 +401,8 @@ public class CalciteTests
       }
     };
 
-    return new SystemSchema(
-        druidSchema,
+    return new SystemSchemaProvider(
+        segmentMetadataCache,
         new MetadataSegmentView(
             coordinatorClient,
             new BrokerSegmentWatcherConfig(),
@@ -425,18 +418,18 @@ public class CalciteTests
         getJsonMapper(),
         new FakeHttpClient(),
         () -> new SqlEngineRegistry(Collections.emptySet()),
-        new PlannerConfig()
+        plannerConfig
     );
   }
 
-  public static DruidSchemaCatalog createMockRootSchema(
+  public static DruidSchemaCatalogProvider createMockRootSchemaProvider(
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,
       final PlannerConfig plannerConfig,
       final AuthorizerMapper authorizerMapper
   )
   {
-    return QueryFrameworkUtils.createMockRootSchema(
+    return QueryFrameworkUtils.createMockRootSchemaProvider(
         INJECTOR,
         conglomerate,
         walker,

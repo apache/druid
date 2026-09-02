@@ -42,6 +42,7 @@ import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
+import org.apache.druid.indexer.partitions.SecondaryPartitionType;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
 import org.apache.druid.indexer.report.TaskReport;
@@ -85,6 +86,7 @@ import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentDetail;
 import org.apache.druid.timeline.partition.BuildingShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
@@ -153,6 +155,10 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   // and fix
   private static final long DEFAULT_NUM_SHARDS_WHEN_ESTIMATE_GOES_NEGATIVE = 7L;
 
+  // Ratio of the total rows of a segment to the max rows per segment, above which the segment is considered oversized
+  // For range partitioning, max rows per segment is set to 1.5x target rows, so the ratio comparison is effectively 3x target rows.
+  private static final double DEFAULT_OVERSIZE_RATIO = 2.0;
+
   private final ParallelIndexIngestionSpec ingestionSchema;
   /**
    * Base name for the {@link SubTaskSpec} ID.
@@ -209,6 +215,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   private TaskReport.ReportMap completionReports;
   private Long segmentsRead;
   private Long segmentsPublished;
+  private Long oversizedSegments; // Number of segments whose row count exceeds maxRowsPerSegment * DEFAULT_OVERSIZE_RATIO
   private final boolean isCompactionTask;
 
   @JsonCreator
@@ -460,7 +467,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     return findInputSegments(
         getDataSource(),
         taskActionClient,
-        intervals
+        intervals,
+        SegmentDetail.none()
     );
   }
 
@@ -1159,6 +1167,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     final Set<DataSegment> oldSegments = new HashSet<>();
     final Set<DataSegment> newSegments = new HashSet<>();
     final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    final SecondaryPartitionType type = ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec().getType();
+    final Integer maxRowsPerSegment = ingestionSchema.getTuningConfig().getGivenOrDefaultPartitionsSpec().getMaxRowsPerSegment();
 
     reportsMap
         .values()
@@ -1222,6 +1232,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       emitMetric(toolbox.getEmitter(), "ingest/tombstones/count", tombStones.size());
       emitMetric(toolbox.getEmitter(), "ingest/segments/count", newSegments.size());
       emitMetric(toolbox.getEmitter(), "ingest/rows/published", IndexTaskUtils.getTotalRowCount(newSegments));
+      // If partitionsSpec is range or hash, we emit info about the size in rows of generated partitions, to detect a hot partition.
+      if ((type == SecondaryPartitionType.RANGE || type == SecondaryPartitionType.HASH) && maxRowsPerSegment != null) {
+        oversizedSegments = IndexTaskUtils.getOversizedSegments(newSegments, maxRowsPerSegment, DEFAULT_OVERSIZE_RATIO);
+        if (oversizedSegments > 0) {
+          LOG.warn(
+              "Published [%d] oversized segments with more than (maxRowsPerSegment [%d] x ratio [%s]) rows.",
+              oversizedSegments,
+              maxRowsPerSegment,
+              DEFAULT_OVERSIZE_RATIO
+          );
+          emitMetric(toolbox.getEmitter(), "ingest/segments/oversized", oversizedSegments);
+        }
+      }
     } else {
       throw new ISE("Failed to publish segments");
     }
@@ -1272,6 +1295,12 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         segmentsRead,
         segmentsPublished
     );
+  }
+
+  @Override
+  protected Long getTaskCompletionOversizedSegments()
+  {
+    return oversizedSegments;
   }
 
   @Override

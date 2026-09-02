@@ -19,10 +19,14 @@
 
 package org.apache.druid.query.filter;
 
+import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.timeline.ClusterGroupTuples;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.ShardSpec;
 
@@ -47,7 +51,7 @@ public class FilterSegmentPruner implements SegmentPruner
   private final Set<String> filterFields;
   private final VirtualColumns virtualColumns;
   private final Map<String, Optional<RangeSet<String>>> rangeCache;
-  private final Map<VirtualColumns.Node, Optional<VirtualColumn>> shardEquivalenceCache;
+  private final Map<VirtualColumns.Node, Optional<VirtualColumn>> virtualColumnEquivalenceCache;
 
   public FilterSegmentPruner(
       DimFilter filter,
@@ -59,7 +63,7 @@ public class FilterSegmentPruner implements SegmentPruner
     this.filterFields = filterFields == null ? filter.getRequiredColumns() : filterFields;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.rangeCache = new HashMap<>();
-    this.shardEquivalenceCache = new HashMap<>();
+    this.virtualColumnEquivalenceCache = new HashMap<>();
   }
 
 
@@ -73,39 +77,75 @@ public class FilterSegmentPruner implements SegmentPruner
   public boolean include(DataSegment segment)
   {
     final ShardSpec shard = segment.getShardSpec();
-    boolean include = true;
 
     if (shard != null) {
       final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
-      final List<String> dimensions = shard.getDomainDimensions();
-      for (String dimension : dimensions) {
-        final VirtualColumns.Node shardNode = shard.getDomainVirtualColumns().getNode(dimension);
-        if (shardNode != null) {
-          final VirtualColumn queryEquivalent = getQueryEquivalent(shardNode);
-          if (queryEquivalent != null) {
-            if (filterFields == null || filterFields.contains(queryEquivalent.getOutputName())) {
-              final Optional<RangeSet<String>> optFilterRangeSet = rangeCache
-                  .computeIfAbsent(
-                      queryEquivalent.getOutputName(),
-                      d -> Optional.ofNullable(filter.getDimensionRangeSet(d))
-                  );
-              optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(
-                  shardNode.getVirtualColumn().getOutputName(),
-                  stringRangeSet
-              ));
-            }
-          }
-        } else if (filterFields == null || filterFields.contains(dimension)) {
-          final Optional<RangeSet<String>> optFilterRangeSet =
-              rangeCache.computeIfAbsent(dimension, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
-          optFilterRangeSet.ifPresent(stringRangeSet -> filterDomain.put(dimension, stringRangeSet));
-        }
+      for (String dimension : shard.getDomainDimensions()) {
+        addToFilterDomain(dimension, shard.getDomainVirtualColumns(), filterDomain, false);
       }
       if (!filterDomain.isEmpty() && !shard.possibleInDomain(filterDomain)) {
-        include = false;
+        return false;
       }
     }
-    return include;
+
+    final ClusterGroupTuples clusterGroups = segment.getClusterGroups();
+    if (clusterGroups != null && !possibleInClusterGroups(clusterGroups)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private boolean possibleInClusterGroups(ClusterGroupTuples clusterGroups)
+  {
+    final RowSignature clusteringColumns = clusterGroups.clusteringColumns();
+    final int numColumns = clusteringColumns.size();
+
+    final Map<String, RangeSet<String>> filterDomain = new HashMap<>();
+    for (int i = 0; i < numColumns; i++) {
+      final String column = clusteringColumns.getColumnName(i);
+      if (!ColumnType.STRING.equals(clusteringColumns.getColumnType(i).orElse(null))) {
+        continue;
+      }
+      // Cluster group virtual columns are wired into real query execution (they're merged into the segment's
+      // live VirtualColumns at cursor construction time), so "column" is directly queryable by that exact name
+      // as long as the query doesn't shadow it with a differently-defined virtual column of its own.
+      addToFilterDomain(column, clusterGroups.virtualColumns(), filterDomain, true);
+    }
+
+    if (filterDomain.isEmpty()) {
+      // Filter doesn't constrain any string clustering column.
+      return true;
+    }
+
+    for (final List<Object> tuple : clusterGroups.tuples()) {
+      if (tupleMatchesDomain(clusteringColumns, tuple, filterDomain)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private static boolean tupleMatchesDomain(
+      RowSignature clusteringColumns,
+      List<Object> tuple,
+      Map<String, RangeSet<String>> filterDomain
+  )
+  {
+    for (int i = 0; i < clusteringColumns.size(); i++) {
+      final RangeSet<String> domainRangeSet = filterDomain.get(clusteringColumns.getColumnName(i));
+      if (domainRangeSet == null) {
+        continue;
+      }
+      final Object rawValue = tuple.get(i);
+      // Nulls are less than empty String in segments
+      final Range<String> valueRange = rawValue == null ? Range.lessThan("") : Range.singleton((String) rawValue);
+      if (domainRangeSet.subRangeSet(valueRange).isEmpty()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -164,10 +204,47 @@ public class FilterSegmentPruner implements SegmentPruner
            '}';
   }
 
+  /**
+   * Adds the filter's {@link RangeSet} for {@code column} to {@code filterDomain}, if the filter constrains it and
+   * {@code column} can be safely matched: as a query virtual column with an equivalent expression, directly by name
+   * when {@code allowDirectAccess} (only valid for domain virtual columns that are themselves directly queryable,
+   * e.g. clustering groups), or as an unshadowed physical column. Otherwise, nothing is added.
+   */
+  private void addToFilterDomain(
+      String column,
+      VirtualColumns domainVirtualColumns,
+      Map<String, RangeSet<String>> filterDomain,
+      boolean allowDirectAccess
+  )
+  {
+    final VirtualColumns.Node domainNode = domainVirtualColumns.getNode(column);
+    if (domainNode != null) {
+      final VirtualColumn queryEquivalent = getQueryEquivalent(domainNode);
+      if (queryEquivalent != null) {
+        addRangeSetIfPresent(queryEquivalent.getOutputName(), column, filterDomain);
+      } else if (allowDirectAccess && virtualColumns.getNode(column) == null) {
+        addRangeSetIfPresent(column, column, filterDomain);
+      }
+    } else if (virtualColumns.getNode(column) == null) {
+      // Query doesn't shadow the materialized column with its own virtual column of the same name.
+      addRangeSetIfPresent(column, column, filterDomain);
+    }
+  }
+
+  private void addRangeSetIfPresent(String filterField, String domainColumn, Map<String, RangeSet<String>> filterDomain)
+  {
+    if (!filterFields.contains(filterField)) {
+      return;
+    }
+    final Optional<RangeSet<String>> optFilterRangeSet =
+        rangeCache.computeIfAbsent(filterField, d -> Optional.ofNullable(filter.getDimensionRangeSet(d)));
+    optFilterRangeSet.ifPresent(rangeSet -> filterDomain.put(domainColumn, rangeSet));
+  }
+
   @Nullable
   private VirtualColumn getQueryEquivalent(VirtualColumns.Node node)
   {
-    final Optional<VirtualColumn> cached = shardEquivalenceCache.computeIfAbsent(
+    final Optional<VirtualColumn> cached = virtualColumnEquivalenceCache.computeIfAbsent(
         node,
         n -> Optional.ofNullable(virtualColumns.findEquivalent(n))
     );

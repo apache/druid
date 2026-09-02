@@ -26,8 +26,8 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -227,7 +227,7 @@ public class HllSketchBuildUtilTest extends InitializedNullHandlingTest
 
   private void assertSketchEstimate(final long estimate)
   {
-    Assert.assertEquals((double) estimate, sketch.getEstimate(), 0.1);
+    Assertions.assertEquals((double) estimate, sketch.getEstimate(), 0.1);
   }
 
   private static class TestDictionarySelector implements DimensionDictionarySelector

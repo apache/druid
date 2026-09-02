@@ -27,7 +27,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -58,11 +57,12 @@ import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.TableProjectionSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.joda.time.DateTime;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -113,16 +113,16 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
       new ListBasedInputRow(ROW_SIGNATURE, TIME.plusMinutes(3), ROW_SIGNATURE.getColumnNames(), Arrays.asList("b", "y", 4L))
   );
 
-  @TempDir
-  static File sharedTempDir;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   // the built V10 segment directory, shared across tests since it's read-only
   private static File segmentDir;
 
   @BeforeAll
-  static void buildSegment()
+  static void buildSegment() throws IOException
   {
-    final File tmpDir = new File(sharedTempDir, "build_" + ThreadLocalRandom.current().nextInt());
+    final File tmpDir = SHARED_TEMPORARY_FOLDER.newFolder("build_" + ThreadLocalRandom.current().nextInt());
     segmentDir = IndexBuilder.create()
                              .useV10()
                              .tmpDir(tmpDir)
@@ -649,8 +649,9 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
    */
   private File buildExternalColumnSegment(String externalName) throws IOException
   {
-    final File baseDir = new File(sharedTempDir, "ext_seg_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
-    FileUtils.mkdirp(baseDir);
+    final File baseDir = SHARED_TEMPORARY_FOLDER.newFolder(
+        "ext_seg_" + ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE)
+    );
 
     final byte[] bytes = new byte[]{1, 2, 3, 4};
     try (SegmentFileBuilderV10 builder = SegmentFileBuilderV10.create(TestHelper.makeJsonMapper(), baseDir)) {
@@ -693,9 +694,7 @@ class PartialQueryableIndexTest extends InitializedNullHandlingTest
 
   private File newCacheDir(String name) throws IOException
   {
-    final File dir = new File(sharedTempDir, name + "_" + ThreadLocalRandom.current().nextInt());
-    FileUtils.mkdirp(dir);
-    return dir;
+    return SHARED_TEMPORARY_FOLDER.newFolder(name + "_" + ThreadLocalRandom.current().nextInt());
   }
 
   private static PartialSegmentFileMapperV10 createMapper(SegmentRangeReader rangeReader, File cacheDir) throws IOException

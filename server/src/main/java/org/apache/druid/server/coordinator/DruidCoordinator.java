@@ -543,8 +543,6 @@ public class DruidCoordinator
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
     final MetadataAction.DeleteSegments deleteSegments = this::markSegmentsAsUnused;
-    final MetadataAction.GetDatasourceRules getRules
-        = dataSource -> metadataManager.rules().getRulesWithDefault(dataSource);
 
     return ImmutableList.of(
         new PrepareBalancerAndLoadQueues(
@@ -553,10 +551,10 @@ public class DruidCoordinator
             balancerStrategyFactory,
             serverInventoryView
         ),
-        new RunRules(deleteSegments, getRules),
+        new RunRules(deleteSegments),
         new UpdateReplicationStatus(),
         new CollectSegmentStats(),
-        new UnloadUnusedSegments(loadQueueManager, getRules),
+        new UnloadUnusedSegments(loadQueueManager),
         new MarkOvershadowedSegmentsAsUnused(deleteSegments),
         new MarkEternityTombstonesAsUnused(deleteSegments),
         new BalanceSegments(config.getCoordinatorPeriod()),
@@ -736,6 +734,7 @@ public class DruidCoordinator
               .builder()
               .withDataSourcesSnapshot(dataSourcesSnapshot)
               .withDynamicConfigs(metadataManager.configs().getCurrentDynamicConfig())
+              .withRetentionRulesSnapshot(metadataManager.rules().getRulesSnapshot())
               .withCompactionConfig(metadataManager.configs().getCurrentCompactionConfig())
               .build();
           dutyGroup.run(params);

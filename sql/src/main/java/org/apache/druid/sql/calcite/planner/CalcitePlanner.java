@@ -381,8 +381,12 @@ public class CalcitePlanner implements Planner, ViewExpander
       throw new RuntimeException("parse failed", e);
     }
 
+    // Use an escalated schema for view expansion. See ViewManager javadoc for details on the security model.
+    final SchemaPlus viewRoot = context.unwrapOrThrow(PlannerContext.class)
+                                       .getEscalatedRootSchema()
+                                       .getRootSchema();
     final CalciteCatalogReader catalogReader =
-        createCatalogReader().withSchemaPath(schemaPath);
+        new CalciteCatalogReader(CalciteSchema.from(viewRoot), schemaPath, getTypeFactory(), connectionConfig);
     final SqlValidator validator = createSqlValidator(catalogReader);
 
     final RexBuilder rexBuilder = createRexBuilder();
@@ -425,7 +429,9 @@ public class CalcitePlanner implements Planner, ViewExpander
     final SqlValidator.Config validatorConfig =
         SqlValidator.Config.DEFAULT.withConformance(connectionConfig.conformance())
                                    .withLenientOperatorLookup(connectionConfig.lenientOperatorLookup())
-                                   .withIdentifierExpansion(true);
+                                   .withIdentifierExpansion(true)
+                                   .withTypeCoercionFactory(DruidTypeCoercion::new)
+                                   .withTypeCoercionRules(DruidTypeCoercion.TYPE_COERCION_RULE);
     return new DruidSqlValidator(
         opTab,
         catalogReader,

@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.druid.guice.DruidGuiceExtensions;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
@@ -31,11 +33,9 @@ import org.apache.druid.inputsource.hdfs.HdfsInputSourceConfig;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.loading.OmniDataSegmentKiller;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import javax.validation.Validation;
-import javax.validation.Validator;
 import java.util.Properties;
 
 public class HdfsStorageDruidModuleTest
@@ -46,7 +46,7 @@ public class HdfsStorageDruidModuleTest
     Properties props = new Properties();
     Injector injector = makeInjectorWithProperties(props);
     HdfsInputSourceConfig instance = injector.getInstance(HdfsInputSourceConfig.class);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("hdfs"),
         instance.getAllowedProtocols()
     );
@@ -59,7 +59,7 @@ public class HdfsStorageDruidModuleTest
     props.setProperty("druid.ingestion.hdfs.allowedProtocols", "[\"webhdfs\"]");
     Injector injector = makeInjectorWithProperties(props);
     HdfsInputSourceConfig instance = injector.getInstance(HdfsInputSourceConfig.class);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         ImmutableSet.of("webhdfs"),
         instance.getAllowedProtocols()
     );
@@ -70,8 +70,8 @@ public class HdfsStorageDruidModuleTest
   {
     Injector injector = makeInjectorWithProperties(new Properties());
     OmniDataSegmentKiller killer = injector.getInstance(OmniDataSegmentKiller.class);
-    Assert.assertTrue(killer.getKillers().containsKey(HdfsStorageDruidModule.SCHEME));
-    Assert.assertSame(
+    Assertions.assertTrue(killer.getKillers().containsKey(HdfsStorageDruidModule.SCHEME));
+    Assertions.assertSame(
         killer.getKillers().get(HdfsStorageDruidModule.SCHEME).get(),
         killer.getKillers().get(HdfsStorageDruidModule.SCHEME).get()
     );

@@ -44,12 +44,10 @@ import org.apache.iceberg.io.DataWriter;
 import org.apache.iceberg.io.OutputFile;
 import org.apache.iceberg.parquet.Parquet;
 import org.apache.iceberg.types.Types;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,9 +59,6 @@ import java.util.UUID;
 
 public class IcebergArrowInputSourceReaderTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   private static final String NAMESPACE = "default";
   private static final String TABLE = "arrowTestTable";
 
@@ -87,7 +82,7 @@ public class IcebergArrowInputSourceReaderTest
   private IcebergCatalog catalog;
   private TableIdentifier tableId;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     warehouseDir = FileUtils.createTempDir();
@@ -95,7 +90,7 @@ public class IcebergArrowInputSourceReaderTest
     tableId = TableIdentifier.of(Namespace.of(NAMESPACE), TABLE);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     if (catalog.retrieveCatalog().tableExists(tableId)) {
@@ -119,13 +114,13 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(3, rows.size());
-    Assert.assertEquals(1_000L, rows.get(0).getTimestampFromEpoch());
-    Assert.assertEquals("alice", rows.get(0).getDimension("name").get(0));
-    Assert.assertEquals(2_000L, rows.get(1).getTimestampFromEpoch());
-    Assert.assertEquals("bob", rows.get(1).getDimension("name").get(0));
-    Assert.assertEquals(3_000L, rows.get(2).getTimestampFromEpoch());
-    Assert.assertEquals("carol", rows.get(2).getDimension("name").get(0));
+    Assertions.assertEquals(3, rows.size());
+    Assertions.assertEquals(1_000L, rows.get(0).getTimestampFromEpoch());
+    Assertions.assertEquals("alice", rows.get(0).getDimension("name").get(0));
+    Assertions.assertEquals(2_000L, rows.get(1).getTimestampFromEpoch());
+    Assertions.assertEquals("bob", rows.get(1).getDimension("name").get(0));
+    Assertions.assertEquals(3_000L, rows.get(2).getTimestampFromEpoch());
+    Assertions.assertEquals("carol", rows.get(2).getDimension("name").get(0));
   }
 
   @Test
@@ -144,7 +139,7 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(0, rows.size());
+    Assertions.assertEquals(0, rows.size());
   }
 
   @Test
@@ -169,7 +164,7 @@ public class IcebergArrowInputSourceReaderTest
 
     // iceberg-arrow may dict-encode repeated string columns; assert row count only.
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(3, rows.size());
+    Assertions.assertEquals(3, rows.size());
   }
 
   @Test
@@ -196,9 +191,9 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(1, rows.size());
-    Assert.assertEquals(1_000L, rows.get(0).getTimestampFromEpoch());
-    Assert.assertEquals("alice", rows.get(0).getDimension("name").get(0));
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals(1_000L, rows.get(0).getTimestampFromEpoch());
+    Assertions.assertEquals("alice", rows.get(0).getDimension("name").get(0));
   }
 
   @Test
@@ -222,7 +217,7 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(count, rows.size());
+    Assertions.assertEquals(count, rows.size());
   }
 
   @Test
@@ -245,8 +240,8 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(1, rows.size());
-    Assert.assertEquals("snap1", rows.get(0).getDimension("name").get(0));
+    Assertions.assertEquals(1, rows.size());
+    Assertions.assertEquals("snap1", rows.get(0).getDimension("name").get(0));
   }
 
   @Test
@@ -274,15 +269,15 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(2, rows.size());
+    Assertions.assertEquals(2, rows.size());
     final Map<String, Object> event0 = ((MapBasedInputRow) rows.get(0)).getEvent();
-    Assert.assertEquals("alice", event0.get("name"));
-    Assert.assertNotNull("aggregator source column 'value' must survive projection", event0.get("value"));
-    Assert.assertEquals(9.0, ((Number) event0.get("value")).doubleValue(), 0.0001);
+    Assertions.assertEquals("alice", event0.get("name"));
+    Assertions.assertNotNull(event0.get("value"), "aggregator source column 'value' must survive projection");
+    Assertions.assertEquals(9.0, ((Number) event0.get("value")).doubleValue(), 0.0001);
     final Map<String, Object> event1 = ((MapBasedInputRow) rows.get(1)).getEvent();
-    Assert.assertEquals("bob", event1.get("name"));
-    Assert.assertNotNull("aggregator source column 'value' must survive projection", event1.get("value"));
-    Assert.assertEquals(4.5, ((Number) event1.get("value")).doubleValue(), 0.0001);
+    Assertions.assertEquals("bob", event1.get("name"));
+    Assertions.assertNotNull(event1.get("value"), "aggregator source column 'value' must survive projection");
+    Assertions.assertEquals(4.5, ((Number) event1.get("value")).doubleValue(), 0.0001);
   }
 
   @Test
@@ -310,14 +305,14 @@ public class IcebergArrowInputSourceReaderTest
     );
 
     final List<InputRow> rows = readAll(reader);
-    Assert.assertEquals(2, rows.size());
+    Assertions.assertEquals(2, rows.size());
     for (final InputRow r : rows) {
       final Map<String, Object> event = ((MapBasedInputRow) r).getEvent();
-      Assert.assertNull(
-          "excluded column 'value' must be pruned at scan and absent from event",
-          event.get("value")
+      Assertions.assertNull(
+          event.get("value"),
+          "excluded column 'value' must be pruned at scan and absent from event"
       );
-      Assert.assertNotNull("included column 'name' must be present", event.get("name"));
+      Assertions.assertNotNull(event.get("name"), "included column 'name' must be present");
     }
   }
 

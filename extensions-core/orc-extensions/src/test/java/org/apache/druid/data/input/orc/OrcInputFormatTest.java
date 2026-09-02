@@ -26,9 +26,9 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.segment.TestHelper;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -37,7 +37,7 @@ public class OrcInputFormatTest
   private ObjectMapper mapper;
 
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper =
@@ -51,7 +51,7 @@ public class OrcInputFormatTest
   {
     final OrcInputFormat config = new OrcInputFormat(null, null, null);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         config,
         mapper.readValue(mapper.writeValueAsString(config), InputFormat.class)
     );
@@ -62,7 +62,7 @@ public class OrcInputFormatTest
   {
     final OrcInputFormat config = new OrcInputFormat(new JSONPathSpec(true, Collections.emptyList()), true, null);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         config,
         mapper.readValue(mapper.writeValueAsString(config), InputFormat.class)
     );
@@ -83,7 +83,7 @@ public class OrcInputFormatTest
   {
     final OrcInputFormat format = new OrcInputFormat(null, null, null);
     long unweightedSize = 100L;
-    Assert.assertEquals(
+    Assertions.assertEquals(
         unweightedSize * OrcInputFormat.SCALE_FACTOR,
         format.getWeightedSize("file.orc", unweightedSize)
     );

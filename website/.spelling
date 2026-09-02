@@ -74,6 +74,7 @@ CUME_DIST
 DDL
 DENSE_RANK
 DML
+DN
 DNS
 DRUIDVERSION
 DataSketches
@@ -162,6 +163,7 @@ JDK7
 JDK8
 JKS
 jks
+JNDI
 JMX
 JRE
 JS
@@ -212,6 +214,7 @@ OCF
 OIDC
 OLAP
 OOMs
+OPA
 OpenJDK
 OpenLDAP
 openlineage
@@ -2406,6 +2409,7 @@ druid-orc-extensions
 druid-parquet-extensions
 druid-protobuf-extensions
 druid-ranger-security
+druid-opa-authorizer
 druid-s3-extensions
 druid-ec2-extensions
 druid-aws-rds-extensions
@@ -2659,3 +2663,13 @@ nginx
 
 - ../docs/development/extensions-core/s3.md
 NIO
+checksum
+
+- ../docs/development/extensions-contrib/druid-opa-authorizer.md
+Rego
+alice
+christy
+dylan
+eve
+opaUri
+rego

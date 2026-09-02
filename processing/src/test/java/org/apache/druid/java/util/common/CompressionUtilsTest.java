@@ -31,12 +31,12 @@ import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream
 import org.apache.commons.compress.compressors.snappy.FramedSnappyCompressorOutputStream;
 import org.apache.commons.compress.compressors.xz.XZCompressorOutputStream;
 import org.apache.commons.compress.compressors.zstandard.ZstdCompressorOutputStream;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.utils.CompressionUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -75,10 +76,15 @@ public class CompressionUtilsTest
 
   static {
     final StringBuilder builder = new StringBuilder();
-    try (InputStream stream = CompressionUtilsTest.class.getClassLoader().getResourceAsStream("white-rabbit.txt")) {
-      final Iterator<String> it = new Scanner(
-          new InputStreamReader(stream, StandardCharsets.UTF_8)
-      ).useDelimiter(Pattern.quote(System.lineSeparator()));
+    try (
+        final InputStream stream = Objects.requireNonNull(
+            CompressionUtilsTest.class.getClassLoader().getResourceAsStream("white-rabbit.txt"),
+            "Missing test resource: white-rabbit.txt"
+        );
+        final InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8);
+        final Scanner scanner = new Scanner(reader).useDelimiter(Pattern.quote(System.lineSeparator()))
+    ) {
+      final Iterator<String> it = scanner;
       while (it.hasNext()) {
         builder.append(it.next());
       }
@@ -101,8 +107,8 @@ public class CompressionUtilsTest
     GZ_BYTES = gzByteStream.toByteArray();
   }
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File testDir;
   private File testFile;
 
@@ -110,11 +116,11 @@ public class CompressionUtilsTest
   {
     try (final ByteArrayOutputStream bos = new ByteArrayOutputStream(EXPECTED.length)) {
       ByteStreams.copy(stream, bos);
-      Assert.assertArrayEquals(EXPECTED, bos.toByteArray());
+      Assertions.assertArrayEquals(EXPECTED, bos.toByteArray());
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException
   {
     testDir = temporaryFolder.newFolder("testDir");
@@ -122,26 +128,26 @@ public class CompressionUtilsTest
     try (OutputStream outputStream = new FileOutputStream(testFile)) {
       outputStream.write(StringUtils.toUtf8(CONTENT));
     }
-    Assert.assertTrue(testFile.getParentFile().equals(testDir));
+    Assertions.assertTrue(testFile.getParentFile().equals(testDir));
   }
 
   @Test
   public void testGoodGzNameResolution()
   {
-    Assert.assertEquals("foo", CompressionUtils.getGzBaseName("foo.gz"));
+    Assertions.assertEquals("foo", CompressionUtils.getGzBaseName("foo.gz"));
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testBadGzName()
   {
-    CompressionUtils.getGzBaseName("foo");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName("foo"));
   }
 
 
-  @Test(expected = IAE.class)
+  @Test
   public void testBadShortGzName()
   {
-    CompressionUtils.getGzBaseName(".gz");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName(".gz"));
   }
 
   @Test
@@ -190,16 +196,19 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodGZCompressUncompressToFile");
     final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assert.assertFalse(gzFile.exists());
+    Assertions.assertFalse(gzFile.exists());
     CompressionUtils.gzip(testFile, gzFile);
-    Assert.assertTrue(gzFile.exists());
-    try (final InputStream inputStream = new GZIPInputStream(new FileInputStream(gzFile))) {
+    Assertions.assertTrue(gzFile.exists());
+    try (
+        final InputStream fileInputStream = new FileInputStream(gzFile);
+        final InputStream inputStream = new GZIPInputStream(fileInputStream)
+    ) {
       assertGoodDataStream(inputStream);
     }
     testFile.delete();
-    Assert.assertFalse(testFile.exists());
+    Assertions.assertFalse(testFile.exists());
     CompressionUtils.gunzip(gzFile, testFile);
-    Assert.assertTrue(testFile.exists());
+    Assertions.assertTrue(testFile.exists());
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       assertGoodDataStream(inputStream);
     }
@@ -210,10 +219,15 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodZipStream");
     final File zipFile = new File(tmpDir, "compressionUtilTest.zip");
-    CompressionUtils.zip(testDir, new FileOutputStream(zipFile));
+    try (final OutputStream outputStream = new FileOutputStream(zipFile)) {
+      CompressionUtils.zip(testDir, outputStream);
+    }
     final File newDir = new File(tmpDir, "newDir");
     newDir.mkdir();
-    final FileUtils.FileCopyResult result = CompressionUtils.unzip(new FileInputStream(zipFile), newDir);
+    final FileUtils.FileCopyResult result;
+    try (final InputStream inputStream = new FileInputStream(zipFile)) {
+      result = CompressionUtils.unzip(inputStream, newDir);
+    }
     verifyUnzip(newDir, result, ImmutableMap.of(testFile.getName(), StringUtils.toUtf8(CONTENT)));
   }
 
@@ -232,7 +246,9 @@ public class CompressionUtilsTest
       }
     }
 
-    CompressionUtils.zip(srcDir, new FileOutputStream(zipFile));
+    try (final OutputStream outputStream = new FileOutputStream(zipFile)) {
+      CompressionUtils.zip(srcDir, outputStream);
+    }
 
     return expectedFiles;
   }
@@ -296,7 +312,7 @@ public class CompressionUtilsTest
       verifyUnzip(unzipDir, result, expectedFiles);
 
       // Check that all bytes were read from the stream
-      Assert.assertEquals(zipFile.length(), zipIn.getCount());
+      Assertions.assertEquals(zipFile.length(), zipIn.getCount());
     }
   }
 
@@ -305,18 +321,21 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
     final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assert.assertFalse(gzFile.exists());
+    Assertions.assertFalse(gzFile.exists());
     CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.alwaysTrue());
-    Assert.assertTrue(gzFile.exists());
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(gzFile), gzFile.getName())) {
+    Assertions.assertTrue(gzFile.exists());
+    try (
+        final InputStream fileInputStream = new FileInputStream(gzFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, gzFile.getName())
+    ) {
       assertGoodDataStream(inputStream);
     }
     if (!testFile.delete()) {
       throw new IOE("Unable to delete file [%s]", testFile.getAbsolutePath());
     }
-    Assert.assertFalse(testFile.exists());
+    Assertions.assertFalse(testFile.exists());
     CompressionUtils.gunzip(Files.asByteSource(gzFile), testFile);
-    Assert.assertTrue(testFile.exists());
+    Assertions.assertTrue(testFile.exists());
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       assertGoodDataStream(inputStream);
     }
@@ -327,11 +346,18 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testDecompressBzip2");
     final File bzFile = new File(tmpDir, testFile.getName() + ".bz2");
-    Assert.assertFalse(bzFile.exists());
-    try (final OutputStream out = new BZip2CompressorOutputStream(new FileOutputStream(bzFile))) {
-      ByteStreams.copy(new FileInputStream(testFile), out);
+    Assertions.assertFalse(bzFile.exists());
+    try (
+        final OutputStream fileOutputStream = new FileOutputStream(bzFile);
+        final OutputStream out = new BZip2CompressorOutputStream(fileOutputStream);
+        final InputStream in = new FileInputStream(testFile)
+    ) {
+      ByteStreams.copy(in, out);
     }
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(bzFile), bzFile.getName())) {
+    try (
+        final InputStream fileInputStream = new FileInputStream(bzFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, bzFile.getName())
+    ) {
       assertGoodDataStream(inputStream);
     }
   }
@@ -341,11 +367,18 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testDecompressXz");
     final File xzFile = new File(tmpDir, testFile.getName() + ".xz");
-    Assert.assertFalse(xzFile.exists());
-    try (final OutputStream out = new XZCompressorOutputStream(new FileOutputStream(xzFile))) {
-      ByteStreams.copy(new FileInputStream(testFile), out);
+    Assertions.assertFalse(xzFile.exists());
+    try (
+        final OutputStream fileOutputStream = new FileOutputStream(xzFile);
+        final OutputStream out = new XZCompressorOutputStream(fileOutputStream);
+        final InputStream in = new FileInputStream(testFile)
+    ) {
+      ByteStreams.copy(in, out);
     }
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(xzFile), xzFile.getName())) {
+    try (
+        final InputStream fileInputStream = new FileInputStream(xzFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, xzFile.getName())
+    ) {
       assertGoodDataStream(inputStream);
     }
   }
@@ -355,11 +388,18 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testDecompressSnappy");
     final File snappyFile = new File(tmpDir, testFile.getName() + ".sz");
-    Assert.assertFalse(snappyFile.exists());
-    try (final OutputStream out = new FramedSnappyCompressorOutputStream(new FileOutputStream(snappyFile))) {
-      ByteStreams.copy(new FileInputStream(testFile), out);
+    Assertions.assertFalse(snappyFile.exists());
+    try (
+        final OutputStream fileOutputStream = new FileOutputStream(snappyFile);
+        final OutputStream out = new FramedSnappyCompressorOutputStream(fileOutputStream);
+        final InputStream in = new FileInputStream(testFile)
+    ) {
+      ByteStreams.copy(in, out);
     }
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(snappyFile), snappyFile.getName())) {
+    try (
+        final InputStream fileInputStream = new FileInputStream(snappyFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, snappyFile.getName())
+    ) {
       assertGoodDataStream(inputStream);
     }
   }
@@ -369,11 +409,18 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testDecompressZstd");
     final File zstdFile = new File(tmpDir, testFile.getName() + ".zst");
-    Assert.assertFalse(zstdFile.exists());
-    try (final OutputStream out = new ZstdCompressorOutputStream(new FileOutputStream(zstdFile))) {
-      ByteStreams.copy(new FileInputStream(testFile), out);
+    Assertions.assertFalse(zstdFile.exists());
+    try (
+        final OutputStream fileOutputStream = new FileOutputStream(zstdFile);
+        final OutputStream out = new ZstdCompressorOutputStream(fileOutputStream);
+        final InputStream in = new FileInputStream(testFile)
+    ) {
+      ByteStreams.copy(in, out);
     }
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(zstdFile), zstdFile.getName())) {
+    try (
+        final InputStream fileInputStream = new FileInputStream(zstdFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, zstdFile.getName())
+    ) {
       assertGoodDataStream(inputStream);
     }
   }
@@ -383,13 +430,20 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testDecompressZip");
     final File zipFile = new File(tmpDir, testFile.getName() + ".zip");
-    Assert.assertFalse(zipFile.exists());
-    try (final ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile))) {
+    Assertions.assertFalse(zipFile.exists());
+    try (
+        final OutputStream fileOutputStream = new FileOutputStream(zipFile);
+        final ZipOutputStream out = new ZipOutputStream(fileOutputStream);
+        final InputStream in = new FileInputStream(testFile)
+    ) {
       out.putNextEntry(new ZipEntry("cool.file"));
-      ByteStreams.copy(new FileInputStream(testFile), out);
+      ByteStreams.copy(in, out);
       out.closeEntry();
     }
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(zipFile), zipFile.getName())) {
+    try (
+        final InputStream fileInputStream = new FileInputStream(zipFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, zipFile.getName())
+    ) {
       assertGoodDataStream(inputStream);
     }
   }
@@ -401,9 +455,12 @@ public class CompressionUtilsTest
     final File zipFile = new File(tmpDir, testFile.getName() + ".zip");
     writeZipWithManyFiles(zipFile);
 
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(zipFile), zipFile.getName())) {
+    try (
+        final InputStream fileInputStream = new FileInputStream(zipFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, zipFile.getName())
+    ) {
       // Should read the first file, which contains a single null byte.
-      Assert.assertArrayEquals(new byte[]{0}, ByteStreams.toByteArray(inputStream));
+      Assertions.assertArrayEquals(new byte[]{0}, ByteStreams.toByteArray(inputStream));
     }
   }
 
@@ -418,7 +475,7 @@ public class CompressionUtilsTest
     }
 
     final File newDir = new File(tmpDir, "newDir");
-    Assert.assertTrue(newDir.mkdir());
+    Assertions.assertTrue(newDir.mkdir());
 
     final FileUtils.FileCopyResult result;
     try (final InputStream in = new FileInputStream(lz4File)) {
@@ -433,7 +490,7 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testDecompressLz4");
     final File lz4File = new File(tmpDir, testFile.getName() + ".lz4");
-    Assert.assertFalse(lz4File.exists());
+    Assertions.assertFalse(lz4File.exists());
 
     try (
         final OutputStream out = new LZ4BlockOutputStream(new FileOutputStream(lz4File));
@@ -452,18 +509,28 @@ public class CompressionUtilsTest
   {
     final File tmpDir = temporaryFolder.newFolder("testGoodGZStream");
     final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assert.assertFalse(gzFile.exists());
-    CompressionUtils.gzip(new FileInputStream(testFile), new FileOutputStream(gzFile));
-    Assert.assertTrue(gzFile.exists());
-    try (final InputStream inputStream = new GZIPInputStream(new FileInputStream(gzFile))) {
+    Assertions.assertFalse(gzFile.exists());
+    try (
+        final InputStream inputStream = new FileInputStream(testFile);
+        final OutputStream outputStream = new FileOutputStream(gzFile)
+    ) {
+      CompressionUtils.gzip(inputStream, outputStream);
+    }
+    Assertions.assertTrue(gzFile.exists());
+    try (
+        final InputStream fileInputStream = new FileInputStream(gzFile);
+        final InputStream inputStream = new GZIPInputStream(fileInputStream)
+    ) {
       assertGoodDataStream(inputStream);
     }
     if (!testFile.delete()) {
       throw new IOE("Unable to delete file [%s]", testFile.getAbsolutePath());
     }
-    Assert.assertFalse(testFile.exists());
-    CompressionUtils.gunzip(new FileInputStream(gzFile), testFile);
-    Assert.assertTrue(testFile.exists());
+    Assertions.assertFalse(testFile.exists());
+    try (final InputStream inputStream = new FileInputStream(gzFile)) {
+      CompressionUtils.gunzip(inputStream, testFile);
+    }
+    Assertions.assertTrue(testFile.exists());
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       assertGoodDataStream(inputStream);
     }
@@ -485,11 +552,11 @@ public class CompressionUtilsTest
       CompressionUtils.unzip(evilZip, tmpDir);
     }
     catch (ISE ise) {
-      Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
-      Assert.assertFalse("Zip exploit triggered, /tmp/evil.txt was written.", evilResult.exists());
+      Assertions.assertTrue(ise.getMessage().contains("does not start with outDir"));
+      Assertions.assertFalse(evilResult.exists(), "Zip exploit triggered, /tmp/evil.txt was written.");
       return;
     }
-    Assert.fail("Exception was not thrown for malicious zip file");
+    Assertions.fail("Exception was not thrown for malicious zip file");
   }
 
   @Test
@@ -504,15 +571,15 @@ public class CompressionUtilsTest
     java.nio.file.Files.deleteIfExists(evilZip.toPath());
     CompressionUtilsTest.makeEvilZip(evilZip);
 
-    try {
-      CompressionUtils.unzip(new FileInputStream(evilZip), tmpDir);
+    try (final InputStream inputStream = new FileInputStream(evilZip)) {
+      CompressionUtils.unzip(inputStream, tmpDir);
     }
     catch (ISE ise) {
-      Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
-      Assert.assertFalse("Zip exploit triggered, /tmp/evil.txt was written.", evilResult.exists());
+      Assertions.assertTrue(ise.getMessage().contains("does not start with outDir"));
+      Assertions.assertFalse(evilResult.exists(), "Zip exploit triggered, /tmp/evil.txt was written.");
       return;
     }
-    Assert.fail("Exception was not thrown for malicious zip file");
+    Assertions.fail("Exception was not thrown for malicious zip file");
   }
 
   @Test
@@ -543,11 +610,11 @@ public class CompressionUtilsTest
       );
     }
     catch (ISE ise) {
-      Assert.assertTrue(ise.getMessage().contains("does not start with outDir"));
-      Assert.assertFalse("Zip exploit triggered, /tmp/evil.txt was written.", evilResult.exists());
+      Assertions.assertTrue(ise.getMessage().contains("does not start with outDir"));
+      Assertions.assertFalse(evilResult.exists(), "Zip exploit triggered, /tmp/evil.txt was written.");
       return;
     }
-    Assert.fail("Exception was not thrown for malicious zip file");
+    Assertions.fail("Exception was not thrown for malicious zip file");
   }
 
   @Test
@@ -555,21 +622,21 @@ public class CompressionUtilsTest
   public void testZeroRemainingInputStream() throws IOException
   {
     try (OutputStream outputStream = new FileOutputStream(testFile)) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           GZ_BYTES.length,
           ByteStreams.copy(
               new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           GZ_BYTES.length,
           ByteStreams.copy(
               new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
               outputStream
           )
       );
-      Assert.assertEquals(
+      Assertions.assertEquals(
           GZ_BYTES.length,
           ByteStreams.copy(
               new ZeroRemainingInputStream(new ByteArrayInputStream(GZ_BYTES)),
@@ -577,15 +644,15 @@ public class CompressionUtilsTest
           )
       );
     }
-    Assert.assertEquals(GZ_BYTES.length * 3, testFile.length());
+    Assertions.assertEquals((long) GZ_BYTES.length * 3, testFile.length());
     try (InputStream inputStream = new ZeroRemainingInputStream(new FileInputStream(testFile))) {
       for (int i = 0; i < 3; ++i) {
         final byte[] bytes = new byte[GZ_BYTES.length];
-        Assert.assertEquals(bytes.length, inputStream.read(bytes));
-        Assert.assertArrayEquals(
-            StringUtils.format("Failed on range %d", i),
+        Assertions.assertEquals(bytes.length, inputStream.read(bytes));
+        Assertions.assertArrayEquals(
             GZ_BYTES,
-            bytes
+            bytes,
+            StringUtils.format("Failed on range %d", i)
         );
       }
     }
@@ -595,7 +662,7 @@ public class CompressionUtilsTest
   public void testGunzipConcatenatedByteSource() throws IOException
   {
     testFile.delete();
-    Assert.assertFalse(testFile.exists());
+    Assertions.assertFalse(testFile.exists());
 
     final ByteArrayOutputStream tripleGzByteStream = new ByteArrayOutputStream(GZ_BYTES.length * 3);
     tripleGzByteStream.write(GZ_BYTES);
@@ -611,20 +678,20 @@ public class CompressionUtilsTest
       }
     };
 
-    Assert.assertEquals((long) (EXPECTED.length * 3), CompressionUtils.gunzip(inputStreamFactory, testFile).size());
+    Assertions.assertEquals((long) (EXPECTED.length * 3), CompressionUtils.gunzip(inputStreamFactory, testFile).size());
 
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       try (final ByteArrayOutputStream outputStream = new ByteArrayOutputStream(EXPECTED.length * 3)) {
-        Assert.assertEquals(
-            "Read terminated too soon",
+        Assertions.assertEquals(
             EXPECTED.length * 3,
-            ByteStreams.copy(inputStream, outputStream)
+            ByteStreams.copy(inputStream, outputStream),
+            "Read terminated too soon"
         );
         final byte[] found = outputStream.toByteArray();
-        Assert.assertEquals(EXPECTED.length * 3, found.length);
-        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
-        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
-        Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
+        Assertions.assertEquals(EXPECTED.length * 3, found.length);
+        Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
+        Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
+        Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
       }
     }
   }
@@ -639,7 +706,7 @@ public class CompressionUtilsTest
     tripleGzByteStream.write(GZ_BYTES);
 
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream(EXPECTED.length * 3)) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           EXPECTED.length * 3,
           CompressionUtils.gunzip(
               new ZeroRemainingInputStream(
@@ -648,10 +715,10 @@ public class CompressionUtilsTest
           )
       );
       final byte[] found = bos.toByteArray();
-      Assert.assertEquals(EXPECTED.length * 3, found.length);
-      Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
-      Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
-      Assert.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
+      Assertions.assertEquals(EXPECTED.length * 3, found.length);
+      Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 0, EXPECTED.length * 1));
+      Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 1, EXPECTED.length * 2));
+      Assertions.assertArrayEquals(EXPECTED, Arrays.copyOfRange(found, EXPECTED.length * 2, EXPECTED.length * 3));
     }
   }
 
@@ -664,12 +731,12 @@ public class CompressionUtilsTest
     final File file = new File(tmpDir, "zipDir.zip");
     final Path unzipPath = Paths.get(zipDir.getPath(), "test.dat");
     file.delete();
-    Assert.assertFalse(file.exists());
-    Assert.assertFalse(unzipPath.toFile().exists());
+    Assertions.assertFalse(file.exists());
+    Assertions.assertFalse(unzipPath.toFile().exists());
     CompressionUtils.zip(testDir, file);
-    Assert.assertTrue(file.exists());
+    Assertions.assertTrue(file.exists());
     CompressionUtils.unzip(file, zipDir);
-    Assert.assertTrue(unzipPath.toFile().exists());
+    Assertions.assertTrue(unzipPath.toFile().exists());
     try (final FileInputStream inputStream = new FileInputStream(unzipPath.toFile())) {
       assertGoodDataStream(inputStream);
     }
@@ -679,37 +746,37 @@ public class CompressionUtilsTest
   public void testNewFileDoesntCreateFile()
   {
     final File tmpFile = new File(testDir, "fofooofodshfudhfwdjkfwf.dat");
-    Assert.assertFalse(tmpFile.exists());
+    Assertions.assertFalse(tmpFile.exists());
   }
 
   @Test
   public void testGoodGzipName()
   {
-    Assert.assertEquals("foo", CompressionUtils.getGzBaseName("foo.gz"));
+    Assertions.assertEquals("foo", CompressionUtils.getGzBaseName("foo.gz"));
   }
 
   @Test
   public void testGoodGzipNameWithPath()
   {
-    Assert.assertEquals("foo", CompressionUtils.getGzBaseName("/tar/ball/baz/bock/foo.gz"));
+    Assertions.assertEquals("foo", CompressionUtils.getGzBaseName("/tar/ball/baz/bock/foo.gz"));
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testBadShortName()
   {
-    CompressionUtils.getGzBaseName(".gz");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName(".gz"));
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testBadName()
   {
-    CompressionUtils.getGzBaseName("BANANAS");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName("BANANAS"));
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testBadNameWithPath()
   {
-    CompressionUtils.getGzBaseName("/foo/big/.gz");
+    Assertions.assertThrows(IAE.class, () -> CompressionUtils.getGzBaseName("/foo/big/.gz"));
   }
 
   @Test
@@ -718,7 +785,7 @@ public class CompressionUtilsTest
     final AtomicLong flushes = new AtomicLong(0);
     final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
     final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assert.assertFalse(gzFile.exists());
+    Assertions.assertFalse(gzFile.exists());
     CompressionUtils.gzip(
         Files.asByteSource(testFile), new ByteSink()
         {
@@ -740,76 +807,98 @@ public class CompressionUtilsTest
           }
         }, Predicates.alwaysTrue()
     );
-    Assert.assertTrue(gzFile.exists());
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(gzFile), "file.gz")) {
+    Assertions.assertTrue(gzFile.exists());
+    try (
+        final InputStream fileInputStream = new FileInputStream(gzFile);
+        final InputStream inputStream = CompressionUtils.decompress(fileInputStream, "file.gz")
+    ) {
       assertGoodDataStream(inputStream);
     }
     if (!testFile.delete()) {
       throw new IOE("Unable to delete file [%s]", testFile.getAbsolutePath());
     }
-    Assert.assertFalse(testFile.exists());
+    Assertions.assertFalse(testFile.exists());
     CompressionUtils.gunzip(Files.asByteSource(gzFile), testFile);
-    Assert.assertTrue(testFile.exists());
+    Assertions.assertTrue(testFile.exists());
     try (final InputStream inputStream = new FileInputStream(testFile)) {
       assertGoodDataStream(inputStream);
     }
-    Assert.assertEquals(4, flushes.get()); // 2 for suppressed closes, 2 for manual calls to shake out errors
+    Assertions.assertEquals(4, flushes.get()); // 2 for suppressed closes, 2 for manual calls to shake out errors
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testStreamErrorGzip() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
-    final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assert.assertFalse(gzFile.exists());
-    final AtomicLong flushes = new AtomicLong(0L);
-    CompressionUtils.gzip(
-        new FileInputStream(testFile), new FileOutputStream(gzFile)
-        {
-          @Override
-          public void flush() throws IOException
-          {
-            if (flushes.getAndIncrement() > 0) {
-              super.flush();
-            } else {
-              throw new IOException("Test exception");
-            }
+    Assertions.assertThrows(
+        IOException.class,
+        () -> {
+          final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
+          final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
+          Assertions.assertFalse(gzFile.exists());
+          final AtomicLong flushes = new AtomicLong(0L);
+          try (
+              final InputStream inputStream = new FileInputStream(testFile);
+              final OutputStream outputStream = new FileOutputStream(gzFile)
+              {
+                @Override
+                public void flush() throws IOException
+                {
+                  if (flushes.getAndIncrement() > 0) {
+                    super.flush();
+                  } else {
+                    throw new IOException("Test exception");
+                  }
+                }
+              }
+          ) {
+            CompressionUtils.gzip(inputStream, outputStream);
           }
         }
     );
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testStreamErrorGunzip() throws Exception
   {
-    final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
-    final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
-    Assert.assertFalse(gzFile.exists());
-    CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.alwaysTrue());
-    Assert.assertTrue(gzFile.exists());
-    try (final InputStream inputStream = CompressionUtils.decompress(new FileInputStream(gzFile), "file.gz")) {
-      assertGoodDataStream(inputStream);
-    }
-    if (testFile.exists() && !testFile.delete()) {
-      throw new RE("Unable to delete file [%s]", testFile.getAbsolutePath());
-    }
-    Assert.assertFalse(testFile.exists());
-    final AtomicLong flushes = new AtomicLong(0L);
-    CompressionUtils.gunzip(
-        new FileInputStream(gzFile), new FilterOutputStream(
-            new FileOutputStream(testFile)
-            {
-              @Override
-              public void flush() throws IOException
-              {
-                if (flushes.getAndIncrement() > 0) {
-                  super.flush();
-                } else {
-                  throw new IOException("Test exception");
-                }
-              }
-            }
-        )
+    Assertions.assertThrows(
+        IOException.class,
+        () -> {
+          final File tmpDir = temporaryFolder.newFolder("testGoodGzipByteSource");
+          final File gzFile = new File(tmpDir, testFile.getName() + ".gz");
+          Assertions.assertFalse(gzFile.exists());
+          CompressionUtils.gzip(Files.asByteSource(testFile), Files.asByteSink(gzFile), Predicates.alwaysTrue());
+          Assertions.assertTrue(gzFile.exists());
+          try (
+              final InputStream fileInputStream = new FileInputStream(gzFile);
+              final InputStream inputStream = CompressionUtils.decompress(fileInputStream, "file.gz")
+          ) {
+            assertGoodDataStream(inputStream);
+          }
+          if (testFile.exists() && !testFile.delete()) {
+            throw new RE("Unable to delete file [%s]", testFile.getAbsolutePath());
+          }
+          Assertions.assertFalse(testFile.exists());
+          final AtomicLong flushes = new AtomicLong(0L);
+          try (
+              final InputStream inputStream = new FileInputStream(gzFile);
+              final OutputStream outputStream = new FilterOutputStream(
+                  new FileOutputStream(testFile)
+                  {
+                    @Override
+                    public void flush() throws IOException
+                    {
+                      if (flushes.getAndIncrement() > 0) {
+                        super.flush();
+                      } else {
+                        throw new IOException("Test exception");
+                      }
+                    }
+                  }
+              )
+          ) {
+            CompressionUtils.gunzip(inputStream, outputStream);
+          }
+        }
     );
   }
 
@@ -822,14 +911,14 @@ public class CompressionUtilsTest
     final List<String> filePaths = expectedFiles.keySet().stream().sorted().collect(Collectors.toList());
 
     // Check the FileCopyResult
-    Assert.assertEquals(expectedFiles.values().stream().mapToLong(arr -> arr.length).sum(), result.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(expectedFiles.values().stream().mapToLong(arr -> arr.length).sum(), result.size());
+    Assertions.assertEquals(
         filePaths.stream().map(filePath -> new File(unzipDir, filePath)).collect(Collectors.toList()),
         result.getFiles().stream().sorted().collect(Collectors.toList())
     );
 
     // Check the actual file list
-    Assert.assertEquals(
+    Assertions.assertEquals(
         filePaths,
         Arrays.stream(unzipDir.listFiles()).map(File::getName).sorted().collect(Collectors.toList())
     );
@@ -838,7 +927,7 @@ public class CompressionUtilsTest
     for (Map.Entry<String, byte[]> entry : expectedFiles.entrySet()) {
       try (final FileInputStream in = new FileInputStream(new File(unzipDir, entry.getKey()))) {
         final byte[] bytes = ByteStreams.toByteArray(in);
-        Assert.assertArrayEquals(entry.getValue(), bytes);
+        Assertions.assertArrayEquals(entry.getValue(), bytes);
       }
     }
   }

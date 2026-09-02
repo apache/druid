@@ -28,14 +28,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.Capture;
 import org.easymock.CaptureType;
 import org.easymock.EasyMock;
-import org.easymock.EasyMockRunner;
+import org.easymock.EasyMockExtension;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.io.TempDir;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
@@ -64,7 +63,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@RunWith(EasyMockRunner.class)
+@ExtendWith(EasyMockExtension.class)
 public class S3TaskLogsTest extends EasyMockSupport
 {
 
@@ -89,8 +88,8 @@ public class S3TaskLogsTest extends EasyMockSupport
   @Mock
   private ServerSideEncryptingAmazonS3 s3Client;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  public File tempFolder;
 
   @Test
   public void testTaskLogsPushWithAclDisabled() throws Exception
@@ -100,8 +99,8 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     List<Grant> grantList = testPushInternal(true, ownerId, ownerDisplayName);
 
-    Assert.assertNotNull("Grant list should not be null", grantList);
-    Assert.assertEquals("Grant list should be empty as ACL is disabled", 0, grantList.size());
+    Assertions.assertNotNull(grantList, "Grant list should not be null");
+    Assertions.assertEquals(0, grantList.size(), "Grant list should be empty as ACL is disabled");
   }
 
   @Test
@@ -112,15 +111,19 @@ public class S3TaskLogsTest extends EasyMockSupport
 
     List<Grant> grantList = testPushInternal(false, ownerId, ownerDisplayName);
 
-    Assert.assertNotNull("Grant list should not be null", grantList);
-    Assert.assertEquals("Grant list size should be equal to 1", 1, grantList.size());
+    Assertions.assertNotNull(grantList, "Grant list should not be null");
+    Assertions.assertEquals(1, grantList.size(), "Grant list size should be equal to 1");
     Grant grant = grantList.get(0);
-    Assert.assertEquals(
-        "The Grantee identifier should be test_owner",
+    Assertions.assertEquals(
         "test_owner",
-        grant.grantee().id()
+        grant.grantee().id(),
+        "The Grantee identifier should be test_owner"
     );
-    Assert.assertEquals("The Grant should have full control permission", Permission.FULL_CONTROL, grant.permission());
+    Assertions.assertEquals(
+        Permission.FULL_CONTROL,
+        grant.permission(),
+        "The Grant should have full control permission"
+    );
   }
 
   @Test
@@ -140,7 +143,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
 
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
-    File logFile = tempFolder.newFile("status.json");
+    File logFile = File.createTempFile("status", ".json", tempFolder);
 
     s3TaskLogs.pushTaskLog(taskId, logFile);
 
@@ -167,13 +170,13 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3InputDataConfig inputDataConfig = new S3InputDataConfig();
     S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
 
-    File payloadFile = tempFolder.newFile("task.json");
+    File payloadFile = File.createTempFile("task", ".json", tempFolder);
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
     s3TaskLogs.pushTaskPayload(taskId, payloadFile);
 
-    Assert.assertEquals(TEST_BUCKET, bucketCapture.getValue());
-    Assert.assertEquals("prefix/" + taskId + "/task.json", keyCapture.getValue());
-    Assert.assertEquals(payloadFile, fileCapture.getValue());
+    Assertions.assertEquals(TEST_BUCKET, bucketCapture.getValue());
+    Assertions.assertEquals("prefix/" + taskId + "/task.json", keyCapture.getValue());
+    Assertions.assertEquals(payloadFile, fileCapture.getValue());
     EasyMock.verify(s3Client);
   }
 
@@ -212,11 +215,11 @@ public class S3TaskLogsTest extends EasyMockSupport
     Optional<InputStream> payloadResponse = s3TaskLogs.streamTaskPayload(taskId);
 
     GetObjectRequest getObjectRequest = getObjectRequestCapture.getValue().build();
-    Assert.assertEquals(TEST_BUCKET, getObjectRequest.bucket());
-    Assert.assertEquals("prefix/" + taskId + "/task.json", getObjectRequest.key());
-    Assert.assertTrue(payloadResponse.isPresent());
+    Assertions.assertEquals(TEST_BUCKET, getObjectRequest.bucket());
+    Assertions.assertEquals("prefix/" + taskId + "/task.json", getObjectRequest.key());
+    Assertions.assertTrue(payloadResponse.isPresent());
 
-    Assert.assertEquals(taskPayloadString, IOUtils.toString(payloadResponse.get(), Charset.defaultCharset()));
+    Assertions.assertEquals(taskPayloadString, IOUtils.toString(payloadResponse.get(), Charset.defaultCharset()));
     EasyMock.verify(s3Client);
   }
 
@@ -329,7 +332,7 @@ public class S3TaskLogsTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(s3Client, timeSupplier);
   }
@@ -428,7 +431,7 @@ public class S3TaskLogsTest extends EasyMockSupport
       ioExceptionThrown = true;
     }
 
-    Assert.assertTrue(ioExceptionThrown);
+    Assertions.assertTrue(ioExceptionThrown);
 
     EasyMock.verify(s3Client, timeSupplier);
   }
@@ -454,12 +457,13 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskLog(KEY_1, 0);
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
-    Assert.assertEquals(LOG_CONTENTS, taskLogs);
+    Assertions.assertEquals(LOG_CONTENTS, taskLogs);
   }
 
   @Test
@@ -483,12 +487,13 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskLog(KEY_1, 1);
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
-    Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
+    Assertions.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
 
   @Test
@@ -512,12 +517,13 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskLog(KEY_1, -1 * (LOG_CONTENTS.length() - 1));
-    String taskLogs = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String taskLogs;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      taskLogs = reader.lines().collect(Collectors.joining("\n"));
+    }
 
-    Assert.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
+    Assertions.assertEquals(LOG_CONTENTS.substring(1), taskLogs);
   }
 
 
@@ -541,12 +547,13 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskReports(KEY_1);
-    String report = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String report;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      report = reader.lines().collect(Collectors.joining("\n"));
+    }
 
-    Assert.assertEquals(REPORT_CONTENTS, report);
+    Assertions.assertEquals(REPORT_CONTENTS, report);
   }
 
   @Test
@@ -569,12 +576,13 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = getS3TaskLogs();
 
     Optional<InputStream> inputStreamOptional = s3TaskLogs.streamTaskStatus(KEY_1);
-    String report = new BufferedReader(
-        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))
-        .lines()
-        .collect(Collectors.joining("\n"));
+    final String report;
+    try (final BufferedReader reader = new BufferedReader(
+        new InputStreamReader(inputStreamOptional.get(), StandardCharsets.UTF_8))) {
+      report = reader.lines().collect(Collectors.joining("\n"));
+    }
 
-    Assert.assertEquals(STATUS_CONTENTS, report);
+    Assertions.assertEquals(STATUS_CONTENTS, report);
   }
 
   @Test
@@ -615,7 +623,7 @@ public class S3TaskLogsTest extends EasyMockSupport
       report = reader.lines().collect(Collectors.joining("\n"));
     }
 
-    Assert.assertEquals(STATUS_CONTENTS, report);
+    Assertions.assertEquals(STATUS_CONTENTS, report);
   }
 
   @Nonnull
@@ -666,7 +674,7 @@ public class S3TaskLogsTest extends EasyMockSupport
     S3TaskLogs s3TaskLogs = new S3TaskLogs(() -> s3Client, config, inputDataConfig, timeSupplier);
 
     String taskId = "index_test-datasource_2019-06-18T13:30:28.887Z";
-    File logFile = tempFolder.newFile("test_log_file");
+    File logFile = File.createTempFile("test_log_file", ".tmp", tempFolder);
 
     s3TaskLogs.pushTaskLog(taskId, logFile);
 
@@ -676,10 +684,10 @@ public class S3TaskLogsTest extends EasyMockSupport
   @Test
   public void testEnsureQuotated()
   {
-    Assert.assertEquals("\"etag\"", S3TaskLogs.ensureQuotated("etag"));
-    Assert.assertNull(S3TaskLogs.ensureQuotated(null));
-    Assert.assertEquals("\"etag", S3TaskLogs.ensureQuotated("\"etag"));
-    Assert.assertEquals("etag\"", S3TaskLogs.ensureQuotated("etag\""));
+    Assertions.assertEquals("\"etag\"", S3TaskLogs.ensureQuotated("etag"));
+    Assertions.assertNull(S3TaskLogs.ensureQuotated(null));
+    Assertions.assertEquals("\"etag", S3TaskLogs.ensureQuotated("\"etag"));
+    Assertions.assertEquals("etag\"", S3TaskLogs.ensureQuotated("etag\""));
   }
 
   @Test
@@ -692,6 +700,6 @@ public class S3TaskLogsTest extends EasyMockSupport
         .ifMatch(S3TaskLogs.ensureQuotated(eTag))
         .range("bytes=0-1")
         .build();
-    Assert.assertEquals("\"" + eTag + "\"", request.ifMatch());
+    Assertions.assertEquals("\"" + eTag + "\"", request.ifMatch());
   }
 }

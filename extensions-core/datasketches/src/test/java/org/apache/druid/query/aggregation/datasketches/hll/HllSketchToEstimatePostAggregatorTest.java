@@ -31,8 +31,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HllSketchToEstimatePostAggregatorTest
 {
@@ -51,8 +51,8 @@ public class HllSketchToEstimatePostAggregatorTest
         PostAggregator.class
     );
 
-    Assert.assertEquals(there, andBackAgain);
-    Assert.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
+    Assertions.assertEquals(there, andBackAgain);
+    Assertions.assertArrayEquals(there.getCacheKey(), andBackAgain.getCacheKey());
   }
 
   @Test
@@ -64,7 +64,7 @@ public class HllSketchToEstimatePostAggregatorTest
         true
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "HllSketchToEstimatePostAggregator{name='post', field=FieldAccessPostAggregator{name='field1', fieldName='sketch'}, round=true}",
         postAgg.toString()
     );
@@ -113,7 +113,7 @@ public class HllSketchToEstimatePostAggregatorTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)
