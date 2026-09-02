@@ -1918,7 +1918,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.2
+version: 1.6.3
 libraries:
   - net.thisptr: jackson-jq
 
