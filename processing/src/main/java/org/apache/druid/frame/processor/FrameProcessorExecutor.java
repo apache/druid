@@ -32,25 +32,23 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
 import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
@@ -127,57 +125,82 @@ public class FrameProcessorExecutor
       public void run()
       {
         try {
-          final List<ListenableFuture<?>> allWritabilityFutures = gatherWritabilityFutures();
-          final List<ListenableFuture<?>> writabilityFuturesToWaitFor =
-              allWritabilityFutures.stream().filter(f -> !f.isDone()).collect(Collectors.toList());
-
-          logProcessorStatusString(processor, finished, allWritabilityFutures);
-
-          if (!writabilityFuturesToWaitFor.isEmpty()) {
-            runProcessorAfterFutureResolves(Futures.allAsList(writabilityFuturesToWaitFor), false);
+          if (!registerRunningProcessor()) {
+            // Processor was canceled. Just exit; cleanup would have been handled elsewhere.
             return;
           }
 
-          final Optional<ReturnOrAwait<T>> maybeResult = runProcessorNow();
+          // Set nonnull if the processor should run again.
+          Runnable nextRun = null;
+          Throwable error = null;
 
-          if (!maybeResult.isPresent()) {
-            // Processor exited abnormally. Just exit; cleanup would have been handled elsewhere.
-            return;
-          }
+          try {
+            final List<ListenableFuture<?>> writabilityFutures = gatherWritabilityFutures();
+            final List<ListenableFuture<?>> writabilityFuturesToWaitFor =
+                writabilityFutures.stream().filter(f -> !f.isDone()).collect(Collectors.toList());
 
-          final ReturnOrAwait<T> result = maybeResult.get();
-          logProcessorStatusString(processor, finished, null);
+            if (!writabilityFuturesToWaitFor.isEmpty()) {
+              logProcessorStatusString(processor, finished.isDone(), null, null, writabilityFutures);
+              nextRun = () -> runProcessorAfterFutureResolves(Futures.allAsList(writabilityFuturesToWaitFor), false);
+              return;
+            }
 
-          if (result.isReturn()) {
-            succeed(result.value());
-          } else if (result.hasAwaitableFutures()) {
-            runProcessorAfterFutureResolves(Futures.allAsList(result.awaitableFutures()), true);
-          } else {
-            assert result.hasAwaitableChannels();
+            final ReturnOrAwait<T> result = runProcessorNow();
 
-            // Don't retain a reference to this set: it may be mutated the next time the processor runs.
-            final IntSet await = result.awaitableChannels();
-
-            if (await.isEmpty()) {
-              exec.execute(ExecutorRunnable.this);
-            } else if (result.isAwaitAllChannels() || await.size() == 1) {
-              final List<ListenableFuture<?>> readabilityFutures = new ArrayList<>();
-
-              for (final int channelNumber : await) {
-                final ReadableFrameChannel channel = inputChannels.get(channelNumber);
-                if (!channel.isFinished() && !channel.canRead()) {
-                  readabilityFutures.add(channel.readabilityFuture());
-                }
-              }
-
-              if (readabilityFutures.isEmpty()) {
-                exec.execute(ExecutorRunnable.this);
-              } else {
-                runProcessorAfterFutureResolves(Futures.allAsList(readabilityFutures), false);
-              }
+            if (result.isReturn()) {
+              logProcessorStatusString(processor, finished.isDone(), result, null, null);
+              succeed(result.value());
+            } else if (result.hasAwaitableFutures()) {
+              logProcessorStatusString(processor, finished.isDone(), result, result.awaitableFutures(), null);
+              final ListenableFuture<List<Object>> combinedFuture = Futures.allAsList(result.awaitableFutures());
+              nextRun = () -> runProcessorAfterFutureResolves(combinedFuture, true);
             } else {
-              // Await any.
-              runProcessorAfterFutureResolves(awaitAnyWidget.awaitAny(await), false);
+              assert result.hasAwaitableChannels();
+
+              // Don't retain a reference to this set: it may be mutated the next time the processor runs.
+              final IntSet await = result.awaitableChannels();
+
+              if (await.isEmpty()) {
+                nextRun = () -> exec.execute(ExecutorRunnable.this);
+              } else if (result.isAwaitAllChannels() || await.size() == 1) {
+                final List<ListenableFuture<?>> readabilityFutures = new ArrayList<>();
+
+                for (final int channelNumber : await) {
+                  final ReadableFrameChannel channel = inputChannels.get(channelNumber);
+                  if (!channel.isFinished() && !channel.canRead()) {
+                    readabilityFutures.add(channel.readabilityFuture());
+                  }
+                }
+
+                logProcessorStatusString(processor, finished.isDone(), result, readabilityFutures, null);
+
+                if (readabilityFutures.isEmpty()) {
+                  nextRun = () -> exec.execute(ExecutorRunnable.this);
+                } else {
+                  final ListenableFuture<List<Object>> combinedFuture = Futures.allAsList(readabilityFutures);
+                  nextRun = () -> runProcessorAfterFutureResolves(combinedFuture, false);
+                }
+              } else {
+                // Await any.
+                final ListenableFuture<?> combinedFuture = awaitAnyWidget.awaitAny(await);
+                logProcessorStatusString(processor, finished.isDone(), result, List.of(combinedFuture), null);
+                nextRun = () -> runProcessorAfterFutureResolves(combinedFuture, false);
+              }
+            }
+          }
+          catch (Throwable e) {
+            error = e;
+          }
+          finally {
+            final boolean canceled = deregisterRunningProcessor();
+
+            if (canceled) {
+              // Processor was canceled while running. Suppress the error and don't schedule the next run;
+              // the cancel thread handles cleanup.
+            } else if (error != null) {
+              fail(error);
+            } else if (nextRun != null) {
+              nextRun.run();
             }
           }
         }
@@ -198,11 +221,10 @@ public class FrameProcessorExecutor
       }
 
       /**
-       * Executes {@link FrameProcessor#runIncrementally} on the currently-readable inputs, while respecting
-       * cancellation. Returns an empty Optional if the processor exited abnormally (canceled or failed). Returns a
-       * present Optional if the processor ran successfully. Throws an exception if the processor does.
+       * Executes {@link FrameProcessor#runIncrementally} on the currently-readable inputs.
+       * Throws an exception if the processor does.
        */
-      private Optional<ReturnOrAwait<T>> runProcessorNow()
+      private ReturnOrAwait<T> runProcessorNow()
       {
         final IntSet readableInputs = new IntOpenHashSet(inputChannels.size());
 
@@ -213,21 +235,7 @@ public class FrameProcessorExecutor
           }
         }
 
-        if (cancellationId != null) {
-          // After this synchronized block, our thread may be interrupted by cancellations, because "cancel"
-          // checks "runningProcessors".
-          synchronized (lock) {
-            if (cancelableProcessors.containsEntry(cancellationId, processor)) {
-              runningProcessors.put(processor, Thread.currentThread());
-            } else {
-              // Processor has been canceled. We don't need to handle cleanup, because someone else did it.
-              return Optional.empty();
-            }
-          }
-        }
-
         final String threadName = Thread.currentThread().getName();
-        boolean canceled = false;
         Either<Throwable, ReturnOrAwait<T>> retVal;
 
         try {
@@ -247,33 +255,11 @@ public class FrameProcessorExecutor
           retVal = Either.error(e);
         }
         finally {
-          if (cancellationId != null) {
-            // After this synchronized block, our thread will no longer be interrupted by cancellations,
-            // because "cancel" checks "runningProcessors".
-            synchronized (lock) {
-              if (Thread.interrupted()) {
-                // ignore: interrupt was meant for the processor, but came after the processor already exited.
-              }
-
-              runningProcessors.remove(processor);
-              lock.notifyAll();
-
-              if (!cancelableProcessors.containsEntry(cancellationId, processor)) {
-                // Processor has been canceled by one of the "cancel" methods. They will handle cleanup.
-                canceled = true;
-              }
-            }
-
-            // Restore original thread name.
-            Thread.currentThread().setName(threadName);
-          }
+          // Restore original thread name.
+          Thread.currentThread().setName(threadName);
         }
 
-        if (canceled) {
-          return Optional.empty();
-        } else {
-          return Optional.of(retVal.valueOrThrow());
-        }
+        return retVal.valueOrThrow();
       }
 
       /**
@@ -281,7 +267,7 @@ public class FrameProcessorExecutor
        *
        * @param future       the future
        * @param failOnCancel whether the processor should be {@link #fail(Throwable)} if the future is itself canceled.
-       *                     This is true for futures provided by {@link ReturnOrAwait#awaitAllFutures(Collection)},
+       *                     This is true for futures provided by {@link ReturnOrAwait#awaitAllFutures(List)},
        *                     because the processor has declared it wants to wait for them; if they are canceled
        *                     the processor must fail. It is false for other futures, which the processor was not
        *                     directly waiting for.
@@ -384,13 +370,69 @@ public class FrameProcessorExecutor
           processor.cleanup();
         }
       }
+
+      /**
+       * Registers the current thread as running the processor. Returns false if the processor has been canceled,
+       * in which case the caller should not run it.
+       */
+      private boolean registerRunningProcessor()
+      {
+        if (cancellationId != null) {
+          // After this synchronized block, our thread may be interrupted by cancellations, because "cancel"
+          // checks "runningProcessors".
+          synchronized (lock) {
+            if (cancelableProcessors.containsEntry(cancellationId, processor)) {
+              final Thread priorThread = runningProcessors.putIfAbsent(processor, Thread.currentThread());
+              if (priorThread != null) {
+                throw DruidException.defensive(
+                    "Already running processor[%s] on thread[%s], cannot also run on thread[%s]",
+                    processor,
+                    priorThread.getName(),
+                    Thread.currentThread().getName()
+                );
+              }
+            } else {
+              // Processor has been canceled. We don't need to handle cleanup, because someone else did it.
+              return false;
+            }
+          }
+        }
+
+        return true;
+      }
+
+      /**
+       * Deregisters the current thread from running the processor, clearing any pending interrupt.
+       *
+       * @return true if the processor was canceled while it was running
+       */
+      private boolean deregisterRunningProcessor()
+      {
+        if (cancellationId != null) {
+          // After this synchronized block, our thread will no longer be interrupted by cancellations,
+          // because "cancel" checks "runningProcessors".
+          synchronized (lock) {
+            if (Thread.interrupted()) {
+              // ignore: interrupt was meant for the processor, but came after the processor already exited.
+            }
+
+            runningProcessors.remove(processor);
+            lock.notifyAll();
+
+            return !cancelableProcessors.containsEntry(cancellationId, processor);
+          }
+        }
+
+        return false;
+      }
     }
 
     final ExecutorRunnable runnable = new ExecutorRunnable();
 
     finished.addListener(
         () -> {
-          logProcessorStatusString(processor, finished, null);
+          // finished will be done here, so this log call gets us the "done=y" log.
+          logProcessorStatusString(processor, finished.isDone(), null, null, null);
 
           // If the future was canceled, and the processor is cancelable, then cancel the processor too.
           if (finished.isCancelled() && cancellationId != null) {
@@ -408,7 +450,7 @@ public class FrameProcessorExecutor
         Execs.directExecutor()
     );
 
-    logProcessorStatusString(processor, finished, null);
+    logProcessorStatusString(processor, finished.isDone(), null, null, null);
     registerCancelableProcessor(processor, cancellationId);
     exec.execute(runnable);
     return finished;
@@ -633,9 +675,22 @@ public class FrameProcessorExecutor
     }
   }
 
+  /**
+   * Logs a debug-level status string for the given processor, including input channel readability,
+   * output channel writability, and completion state.
+   *
+   * @param processor the processor
+   * @param finished whether the processor's "finished" future has resolved
+   * @param returnOrAwait if the processor has just finished {@link FrameProcessor#runIncrementally}, what it returned
+   * @param readabilityFutures if the processor has just finished {@link FrameProcessor#runIncrementally}, futures for
+   *                           inputs it is waiting for
+   * @param writabilityFutures futures for output availability
+   */
   private static <T> void logProcessorStatusString(
       final FrameProcessor<T> processor,
-      final ListenableFuture<?> finishedFuture,
+      final boolean finished,
+      @Nullable final ReturnOrAwait<?> returnOrAwait,
+      @Nullable final List<ListenableFuture<?>> readabilityFutures,
       @Nullable final List<ListenableFuture<?>> writabilityFutures
   )
   {
@@ -643,37 +698,36 @@ public class FrameProcessorExecutor
       final StringBuilder sb = new StringBuilder()
           .append("Processor [")
           .append(processor)
-          .append("]; in=[");
+          .append("]");
 
-      for (ReadableFrameChannel channel : processor.inputChannels()) {
-        if (channel.canRead()) {
-          sb.append("R"); // R for readable
-        } else if (channel.isFinished()) {
-          sb.append("D"); // D for done
-        } else {
-          sb.append("~"); // ~ for waiting
-        }
-      }
+      if (returnOrAwait != null) {
+        sb.append("; ").append(returnOrAwait);
 
-      sb.append("]");
-
-      if (writabilityFutures != null) {
-        sb.append("; out=[");
-
-        for (final ListenableFuture<?> future : writabilityFutures) {
-          if (future.isDone()) {
-            sb.append("W"); // W for writable
-          } else {
-            sb.append("~"); // ~ for waiting
+        if (readabilityFutures != null) {
+          // Information about inputs. Note, we can't call methods on the processor's input channels, because
+          // they might have been closed.
+          sb.append("; in=[");
+          for (final ListenableFuture<?> future : readabilityFutures) {
+            sb.append(future.isDone() ? 'R' : 'B'); // R = ready; B = blocked.
           }
+          sb.append("]");
         }
 
-        sb.append("]");
+        if (writabilityFutures != null) {
+          // Information about outputs. Note, we can't call methods on the processor's output channels, because
+          // they might have been closed.
+          sb.append("; out=[");
+
+          for (final ListenableFuture<?> future : writabilityFutures) {
+            sb.append(future.isDone() ? 'R' : 'B'); // R = ready; B = blocked.
+          }
+
+          sb.append("]");
+        }
       }
 
-      sb.append("; cancel=").append(finishedFuture.isCancelled() ? "y" : "n");
-      sb.append("; done=").append(finishedFuture.isDone() ? "y" : "n");
-      log.debug(StringUtils.encodeForFormat(sb.toString()));
+      sb.append("; done=").append(finished ? "y" : "n");
+      log.debug("%s", sb);
     }
   }
 
