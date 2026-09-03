@@ -83,6 +83,28 @@ class QueryContextParameterTest
   }
 
   @Test
+  void testParseOrDefault()
+  {
+    final QueryContextParameter<Integer> parameter = QueryContextParameter
+        .builder("maxThings", Integer.class, value -> QueryContexts.getAsInt("maxThings", value))
+        .defaultValue(10)
+        .build();
+
+    assertEquals(12, parameter.parseOrDefault("12"));
+    assertEquals(10, parameter.parseOrDefault(null));
+  }
+
+  @Test
+  void testParseOrDefaultRequiresDeclaredDefault()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("tag", String.class, value -> (String) value)
+        .build();
+
+    assertThrows(ISE.class, () -> parameter.parseOrDefault(null));
+  }
+
+  @Test
   void testValidatorRejectsParsedValue()
   {
     final QueryContextParameter<Integer> parameter = QueryContextParameter
@@ -107,7 +129,7 @@ class QueryContextParameterTest
             Integer.class,
             value -> {
               parserCalled.set(true);
-              return QueryContexts.getAsInt("maxThings", value);
+              return (Integer) value;
             }
         )
         .build();
@@ -116,32 +138,7 @@ class QueryContextParameterTest
     assertFalse(parserCalled.get());
 
     assertEquals(1, parameter.parse(1));
-    assertFalse(parserCalled.get());
-
-    assertEquals(1, parameter.parse("1"));
     assertTrue(parserCalled.get());
-  }
-
-  @Test
-  void testParseOrDefault()
-  {
-    final QueryContextParameter<Integer> parameter = QueryContextParameter
-        .builder("maxThings", Integer.class, value -> QueryContexts.getAsInt("maxThings", value))
-        .defaultValue(10)
-        .build();
-
-    assertEquals(12, parameter.parseOrDefault("12"));
-    assertEquals(10, parameter.parseOrDefault(null));
-  }
-
-  @Test
-  void testParseOrDefaultRequiresDeclaredDefault()
-  {
-    final QueryContextParameter<String> parameter = QueryContextParameter
-        .builder("tag", String.class, value -> (String) value)
-        .build();
-
-    assertThrows(ISE.class, () -> parameter.parseOrDefault(null));
   }
 
   @Test

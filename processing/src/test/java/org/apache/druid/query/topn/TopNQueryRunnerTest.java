@@ -42,7 +42,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BySegmentResultValue;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Order;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -69,6 +69,7 @@ import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFacto
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -1138,7 +1139,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   {
 
     final HashMap<String, Object> specialContext = new HashMap<>();
-    specialContext.put(QueryContexts.BY_SEGMENT_KEY, "true");
+    specialContext.put(QueryContextParameters.BY_SEGMENT.getName(), "true");
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -3729,7 +3730,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
             QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT,
             QueryRunnerTestHelper.DEPENDENT_POST_AGG
         )
-        .context(ImmutableMap.of(QueryContexts.FINALIZE_KEY, true, QueryContexts.BY_SEGMENT_KEY, true))
+        .context(QueryContext.ofMap(QueryContextParameters.FINALIZE, true, QueryContextParameters.BY_SEGMENT, true))
         .build();
     TopNResultValue topNResult = TopNResultValue.create(
         Arrays.<Map<String, Object>>asList(
@@ -7167,7 +7168,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
         .metric(QueryRunnerTestHelper.INDEX_METRIC)
         .threshold(10_000)
         .intervals(QueryRunnerTestHelper.FIRST_TO_THIRD)
-        .context(ImmutableMap.of(QueryContexts.TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY, true))
+        .context(QueryContext.ofMap(QueryContextParameters.USE_TOPN_MULTI_PASS_POOLED_QUERY_GRANULARITY, true))
         .aggregators(
             QueryRunnerTestHelper.INDEX_LONG_SUM,
             new StringAnyAggregatorFactory("big", QueryRunnerTestHelper.PLACEMENT_DIMENSION, 4000000, null)

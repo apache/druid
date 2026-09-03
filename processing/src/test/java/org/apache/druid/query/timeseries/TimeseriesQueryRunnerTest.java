@@ -374,11 +374,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                                               .aggregators(List.of(maxQuality));
     // construct a query to ignore projection
     Map<String, Object> contextNoProjection = makeContext();
-    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    contextNoProjection.put(QueryContextParameters.NO_PROJECTIONS.getName(), "true");
     TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
     // construct a query to use projection
     Map<String, Object> contextWithProjection = makeContext();
-    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_market_maxQuality");
+    contextWithProjection.put(QueryContextParameters.USE_PROJECTION.getName(), "daily_market_maxQuality");
     TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
 
 
@@ -405,11 +405,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                                               .aggregators(List.of(countAgg));
     // construct a query to ignore projection
     Map<String, Object> contextNoProjection = makeContext();
-    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    contextNoProjection.put(QueryContextParameters.NO_PROJECTIONS.getName(), "true");
     TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
     // construct a query to use projection
     Map<String, Object> contextWithProjection = makeContext();
-    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_countAndQualityCardinalityAndMaxLongNullable");
+    contextWithProjection.put(QueryContextParameters.USE_PROJECTION.getName(), "daily_countAndQualityCardinalityAndMaxLongNullable");
     TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
 
 
@@ -436,11 +436,11 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                                               .aggregators(List.of(longNullableMax));
     // construct a query to ignore projection
     Map<String, Object> contextNoProjection = makeContext();
-    contextNoProjection.put(QueryContexts.NO_PROJECTIONS, "true");
+    contextNoProjection.put(QueryContextParameters.NO_PROJECTIONS.getName(), "true");
     TimeseriesQuery queryNoProjection = queryBuilder.context(contextNoProjection).build();
     // construct a query to use projection
     Map<String, Object> contextWithProjection = makeContext();
-    contextWithProjection.put(QueryContexts.USE_PROJECTION, "daily_countAndQualityCardinalityAndMaxLongNullable");
+    contextWithProjection.put(QueryContextParameters.USE_PROJECTION.getName(), "daily_countAndQualityCardinalityAndMaxLongNullable");
     TimeseriesQuery queryWithProjection = queryBuilder.context(contextWithProjection).build();
 
 
@@ -3347,9 +3347,9 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   protected Map<String, Object> makeContext(final Map<String, Object> myContext)
   {
     final Map<String, Object> context = new HashMap<>();
-    context.put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false");
-    context.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize ? "force" : "false");
-    context.put(QueryContexts.VECTOR_SIZE_KEY, 16); // Small vector size to ensure we use more than one.
+    context.put(QueryContextParameters.VECTORIZE.getName(), vectorize ? "force" : "false");
+    context.put(QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.getName(), vectorize ? "force" : "false");
+    context.put(QueryContextParameters.VECTOR_SIZE.getName(), 16); // Small vector size to ensure we use more than one.
     context.putAll(myContext);
     return context;
   }

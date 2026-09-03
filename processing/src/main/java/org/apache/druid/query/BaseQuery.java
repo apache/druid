@@ -57,9 +57,13 @@ public abstract class BaseQuery<T> implements Query<T>
     }
   }
 
-  public static final String QUERY_ID = "queryId";
+  /** @deprecated use {@link QueryContextParameters#QUERY_ID}. */
+  @Deprecated
+  public static final String QUERY_ID = QueryContextParameters.QUERY_ID.getName();
   public static final String SUB_QUERY_ID = "subQueryId";
-  public static final String SQL_QUERY_ID = "sqlQueryId";
+  /** @deprecated use {@link QueryContextParameters#SQL_QUERY_ID}. */
+  @Deprecated
+  public static final String SQL_QUERY_ID = QueryContextParameters.SQL_QUERY_ID.getName();
   private final DataSource dataSource;
   private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;
@@ -232,7 +236,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Query<T> withSqlQueryId(String sqlQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(SQL_QUERY_ID, sqlQueryId));
+    return withOverriddenContext(QueryContextParameters.SQL_QUERY_ID, sqlQueryId);
   }
 
   @Override

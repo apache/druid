@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
@@ -125,7 +124,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.msq.util.SqlStatementResourceHelper;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -135,6 +134,7 @@ import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
@@ -287,65 +287,80 @@ import static org.mockito.Mockito.mock;
 public class MSQTestBase extends BaseCalciteQueryTest
 {
   public static final Map<String, Object> DEFAULT_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, "test-query")
-                  .put(QueryContexts.FINALIZE_KEY, true)
-                  .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
-                  .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
-                  .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity())
-                  .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
-                  .put(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE, (int) FrameType.latestRowBased().version())
-                  .build();
+      QueryContext.builder()
+                  .put(QueryContextParameters.SQL_QUERY_ID, "test-query")
+                  .put(QueryContextParameters.FINALIZE, true)
+                  .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
+                  .putRaw(
+                      MultiStageQueryContext.CTX_MAX_NUM_TASKS,
+                      2
+                  )
+                  .putRaw(
+                      MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+                      0
+                  )
+                  .putRaw(
+                      MSQTaskQueryMaker.USER_KEY,
+                      CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity()
+                  )
+                  .putRaw(
+                      MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
+                      true
+                  )
+                  .putRaw(
+                      MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE,
+                      (int) FrameType.latestRowBased().version()
+                  )
+                  .toMap();
 
   public static final Map<String, Object> SUPERUSER_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.SUPER_USER_AUTH_RESULT.getIdentity())
-                  .buildKeepingLast();
+                  .putRaw(MSQTaskQueryMaker.USER_KEY, CalciteTests.SUPER_USER_AUTH_RESULT.getIdentity())
+                  .toMap();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true)
-                  .build();
+                  .putRaw(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, true)
+                  .toMap();
 
 
   public static final Map<String, Object> FAULT_TOLERANCE_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
-                  .build();
+                  .putRaw(MultiStageQueryContext.CTX_FAULT_TOLERANCE, true)
+                  .toMap();
 
   public static final Map<String, Object> PARALLEL_MERGE_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(
+                  .putRaw(
                       MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
                       ClusterStatisticsMergeMode.PARALLEL.toString()
                   )
-                  .build();
+                  .toMap();
 
   public static final Map<String, Object> USE_COMBINER_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(MultiStageQueryContext.CTX_USE_COMBINER, true)
-                  .build();
+                  .putRaw(MultiStageQueryContext.CTX_USE_COMBINER, true)
+                  .toMap();
 
   public static final Map<String, Object> FAIL_EMPTY_INSERT_ENABLED_MSQ_CONTEXT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(
+                  .putRaw(
                       MultiStageQueryContext.CTX_FAIL_ON_EMPTY_INSERT,
                       true
                   )
-                  .build();
+                  .toMap();
 
   public static final Map<String, Object>
-      ROLLUP_CONTEXT_PARAMS = ImmutableMap.<String, Object>builder()
-                                          .put(MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false)
-                                          .put(GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false)
-                                          .build();
+      ROLLUP_CONTEXT_PARAMS = Map.of(
+          MultiStageQueryContext.CTX_FINALIZE_AGGREGATIONS, false,
+          GroupByQueryConfig.CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING, false
+      );
 
   public static final String FAULT_TOLERANCE = "fault_tolerance";
   public static final String DURABLE_STORAGE = "durable_storage";

@@ -44,7 +44,7 @@ import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QueryConfigProvider;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authenticator;
@@ -232,7 +232,7 @@ public class DruidMeta extends MetaImpl
     // Don't stringify arrays for JDBC because Avatica needs to handle arrays.
     // When using query context security, all JDBC users must have permission on
     // this context key.
-    contextMap.put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false);
+    contextMap.put(QueryContextParameters.SQL_STRINGIFY_ARRAYS.getName(), false);
     try {
       openDruidConnection(ch.id, secret, contextMap);
     }

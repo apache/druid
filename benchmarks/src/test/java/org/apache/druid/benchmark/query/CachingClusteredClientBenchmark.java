@@ -54,7 +54,6 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -63,7 +62,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -72,6 +71,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -381,11 +381,11 @@ public class CachingClusteredClientBenchmark
                        .aggregators(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))
                        .granularity(Granularity.fromString(queryGranularity))
                        .context(
-                           ImmutableMap.of(
-                               BaseQuery.QUERY_ID, "BenchmarkQuery",
-                               QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
-                               QueryContexts.BROKER_PARALLELISM, parallelism
-                           )
+                           QueryContext.builder()
+                               .put(QueryContextParameters.ENABLE_PARALLEL_MERGE, parallelCombine)
+                               .put(QueryContextParameters.PARALLEL_MERGE_PARALLELISM, parallelism)
+                               .put(QueryContextParameters.QUERY_ID, "BenchmarkQuery")
+                               .toMap()
                        )
                        .build();
 
@@ -412,11 +412,11 @@ public class CachingClusteredClientBenchmark
         .metric("sumLongSequential")
         .threshold(10_000) // we are primarily measuring 'broker' merge time, so collect a significant number of results
         .context(
-            ImmutableMap.of(
-                BaseQuery.QUERY_ID, "BenchmarkQuery",
-                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
-                QueryContexts.BROKER_PARALLELISM, parallelism
-            )
+            QueryContext.builder()
+                .put(QueryContextParameters.ENABLE_PARALLEL_MERGE, parallelCombine)
+                .put(QueryContextParameters.PARALLEL_MERGE_PARALLELISM, parallelism)
+                .put(QueryContextParameters.QUERY_ID, "BenchmarkQuery")
+                .toMap()
         )
         .build();
 
@@ -445,11 +445,11 @@ public class CachingClusteredClientBenchmark
         .setAggregatorSpecs(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"))
         .setGranularity(Granularity.fromString(queryGranularity))
         .setContext(
-            ImmutableMap.of(
-                BaseQuery.QUERY_ID, "BenchmarkQuery",
-                QueryContexts.BROKER_PARALLEL_MERGE_KEY, parallelCombine,
-                QueryContexts.BROKER_PARALLELISM, parallelism
-            )
+            QueryContext.builder()
+                .put(QueryContextParameters.ENABLE_PARALLEL_MERGE, parallelCombine)
+                .put(QueryContextParameters.PARALLEL_MERGE_PARALLELISM, parallelism)
+                .put(QueryContextParameters.QUERY_ID, "BenchmarkQuery")
+                .toMap()
         )
         .build();
 
@@ -469,7 +469,7 @@ public class CachingClusteredClientBenchmark
                                               query.getDataSource(),
                                               query.getId(),
                                               query.getSqlQueryId(),
-                                              query.context().getString(QueryContexts.QUERY_RESOURCE_ID)
+                                              query.context().getString(QueryContextParameters.QUERY_RESOURCE_ID.getName())
                                           ));
   }
 

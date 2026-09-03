@@ -38,7 +38,7 @@ import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
@@ -88,7 +88,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
   @Override
   public ControllerContext newContext(final QueryContext context)
   {
-    final String queryId = context.getString(QueryContexts.CTX_DART_QUERY_ID);
+    final String queryId = context.get(QueryContextParameters.DART_QUERY_ID);
     return new DartControllerContext(
         injector,
         jsonMapper,

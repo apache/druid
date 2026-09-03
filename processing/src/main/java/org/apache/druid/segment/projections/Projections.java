@@ -29,10 +29,10 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
@@ -113,10 +113,10 @@ public class Projections
       Function<String, T> getRowSelector
   )
   {
-    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.NO_PROJECTIONS, false)) {
+    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.NO_PROJECTIONS, false)) {
       return null;
     }
-    final String name = cursorBuildSpec.getQueryContext().getString(QueryContexts.USE_PROJECTION);
+    final String name = cursorBuildSpec.getQueryContext().get(QueryContextParameters.USE_PROJECTION);
 
     if (cursorBuildSpec.isAggregate()) {
       for (AggregateProjectionMetadata spec : projections) {
@@ -145,7 +145,7 @@ public class Projections
     if (name != null) {
       throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
     }
-    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.FORCE_PROJECTION, false)) {
+    if (cursorBuildSpec.getQueryContext().getOrDefault(QueryContextParameters.FORCE_PROJECTIONS, false)) {
       throw InvalidInput.exception("Force projections specified, but none satisfy query");
     }
     return null;

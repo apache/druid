@@ -36,7 +36,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 
 /**
  * Generates the checked-in query context parameter table rows from the descriptor catalog.
@@ -47,9 +46,6 @@ public final class ParameterDocumentationGenerator
   private static final String SCAN_REFERENCE = "docs/querying/scan-query.md";
   private static final String SQL_REFERENCE = "docs/querying/sql-query-context.md";
   private static final String MARKER_FORMAT = "<!-- GENERATED QUERY CONTEXT PARAMETER: %s -->";
-  private static final Pattern TEXT_BLOCK_LINE_CONTINUATION = Pattern.compile("\\\\[ \\t]*\\R");
-  private static final Pattern LINE_BREAK = Pattern.compile("\\R");
-  private static final Pattern HORIZONTAL_WHITESPACE = Pattern.compile("[ \\t]+");
 
   private ParameterDocumentationGenerator()
   {
@@ -233,11 +229,10 @@ public final class ParameterDocumentationGenerator
    */
   static String normalizeTableCell(final String value)
   {
-    return HORIZONTAL_WHITESPACE.matcher(
-                         LINE_BREAK.matcher(TEXT_BLOCK_LINE_CONTINUATION.matcher(value).replaceAll("")).replaceAll(" ")
-                     )
-                     .replaceAll(" ")
-                     .trim();
+    return value.replaceAll("\\\\[ \\t]*\\R", "")
+                .replaceAll("\\R", " ")
+                .replaceAll("[ \\t]+", " ")
+                .trim();
   }
 
   private enum Mode

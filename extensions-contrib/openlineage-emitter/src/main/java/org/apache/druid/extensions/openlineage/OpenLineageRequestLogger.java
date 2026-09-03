@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.RequestLogLine;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
@@ -248,7 +248,9 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
 
     Map<String, Object> sqlContext = requestLogLine.getSqlQueryContext();
-    String queryId = sqlContext != null ? (String) sqlContext.get("sqlQueryId") : null;
+    String queryId = sqlContext != null
+                     ? (String) sqlContext.get(QueryContextParameters.SQL_QUERY_ID.getName())
+                     : null;
     if (queryId == null) {
       log.debug("MSQ SQL query reached OpenLineage logger without a sqlQueryId");
       queryId = UNKNOWN_QUERY_ID;
@@ -359,7 +361,7 @@ public class OpenLineageRequestLogger implements RequestLogger
     }
     // For native sub-queries of SQL, include the parent SQL query ID for correlation.
     Object sqlQueryId = requestLogLine.getQuery() != null
-        ? requestLogLine.getQuery().getContext().get(BaseQuery.SQL_QUERY_ID) : null;
+        ? requestLogLine.getQuery().getContext().get(QueryContextParameters.SQL_QUERY_ID.getName()) : null;
     if (sqlQueryId != null) {
       contextFacet.put("sqlQueryId", sqlQueryId.toString());
     }

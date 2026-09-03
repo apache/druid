@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.GeneratedMessage;
 import org.apache.calcite.avatica.SqlType;
@@ -41,6 +40,8 @@ import org.apache.druid.java.util.common.guava.Accumulator;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContextBuilder;
 import org.apache.druid.query.QueryConfigProvider;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
@@ -332,13 +333,9 @@ public class QueryDriver
    */
   private Map<String, Object> translateContext(QueryRequest request)
   {
-    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-    if (request.getContextCount() > 0) {
-      for (Map.Entry<String, String> entry : request.getContextMap().entrySet()) {
-        builder.put(entry.getKey(), entry.getValue());
-      }
-    }
-    return builder.build();
+    final QueryContextBuilder builder = QueryContext.builder();
+    builder.putAll(request.getContextMap());
+    return builder.toMap();
   }
 
   /**

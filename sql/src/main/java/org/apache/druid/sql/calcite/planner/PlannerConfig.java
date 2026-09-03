@@ -22,7 +22,9 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.joda.time.DateTimeZone;
 
 import java.util.HashMap;
@@ -31,14 +33,8 @@ import java.util.Objects;
 
 public class PlannerConfig
 {
-  public static final String CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT = "useApproximateCountDistinct";
-  public static final String CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT = "useGroupingSetForExactDistinct";
-  public static final String CTX_KEY_USE_APPROXIMATE_TOPN = "useApproximateTopN";
-  public static final String CTX_KEY_USE_LEXICOGRAPHIC_TOPN = "useLexicographicTopN";
   public static final String CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER = "computeInnerJoinCostAsFilter";
-  public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
-  public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
   public static final String CTX_REQUIRE_TIME_CONDITION = "requireTimeCondition";
   public static final String CTX_KEY_MAX_PLANNING_TIME_MS = "maxPlanningTimeMs";
   public static final int NUM_FILTER_NOT_USED = -1;
@@ -452,24 +448,18 @@ public class PlannerConfig
 
     public Builder withOverrides(final Map<String, Object> queryContext)
     {
-      useApproximateCountDistinct = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
+      final QueryContext context = QueryContext.of(queryContext);
+      useApproximateCountDistinct = context.getOrDefault(
+          QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT,
           useApproximateCountDistinct
       );
-      useGroupingSetForExactDistinct = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+      useGroupingSetForExactDistinct = context.getOrDefault(
+          QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT,
           useGroupingSetForExactDistinct
       );
-      useApproximateTopN = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_KEY_USE_APPROXIMATE_TOPN,
-          useApproximateTopN
-      );
-      useLexicographicTopN = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_KEY_USE_LEXICOGRAPHIC_TOPN,
+      useApproximateTopN = context.getOrDefault(QueryContextParameters.USE_APPROXIMATE_TOP_N, useApproximateTopN);
+      useLexicographicTopN = context.getOrDefault(
+          QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N,
           useLexicographicTopN
       );
       computeInnerJoinCostAsFilter = QueryContexts.parseBoolean(
@@ -477,9 +467,8 @@ public class PlannerConfig
           CTX_COMPUTE_INNER_JOIN_COST_AS_FILTER,
           computeInnerJoinCostAsFilter
       );
-      useNativeQueryExplain = QueryContexts.parseBoolean(
-          queryContext,
-          CTX_KEY_USE_NATIVE_QUERY_EXPLAIN,
+      useNativeQueryExplain = context.getOrDefault(
+          QueryContextParameters.USE_NATIVE_QUERY_EXPLAIN,
           useNativeQueryExplain
       );
       forceExpressionVirtualColumns = QueryContexts.parseBoolean(
@@ -487,17 +476,15 @@ public class PlannerConfig
           CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS,
           forceExpressionVirtualColumns
       );
-      final int queryContextMaxNumericInFilters = QueryContexts.parseInt(
-          queryContext,
-          CTX_MAX_NUMERIC_IN_FILTERS,
+      final int queryContextMaxNumericInFilters = context.getOrDefault(
+          QueryContextParameters.MAX_NUMERIC_IN_FILTERS,
           maxNumericInFilters
       );
       maxNumericInFilters = validateMaxNumericInFilters(
           queryContextMaxNumericInFilters,
           maxNumericInFilters);
-      nativeQuerySqlPlanningMode = QueryContexts.parseString(
-          queryContext,
-          QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+      nativeQuerySqlPlanningMode = context.getOrDefault(
+          QueryContextParameters.NATIVE_QUERY_SQL_PLANNING_MODE,
           nativeQuerySqlPlanningMode
       );
       requireTimeCondition = QueryContexts.parseBoolean(
@@ -518,12 +505,12 @@ public class PlannerConfig
       // if maxNumericInFIlters through context == 0 catch exception
       // else if query context exceeds system set value throw error
       if (queryContextMaxNumericInFilters == 0) {
-        throw new UOE("[%s] must be greater than 0", CTX_MAX_NUMERIC_IN_FILTERS);
+        throw new UOE("[%s] must be greater than 0", QueryContextParameters.MAX_NUMERIC_IN_FILTERS);
       } else if (queryContextMaxNumericInFilters > systemConfigMaxNumericInFilters
                  && systemConfigMaxNumericInFilters != NUM_FILTER_NOT_USED) {
         throw new UOE(
             "Expected parameter[%s] cannot exceed system set value of [%d]",
-            CTX_MAX_NUMERIC_IN_FILTERS,
+            QueryContextParameters.MAX_NUMERIC_IN_FILTERS,
             systemConfigMaxNumericInFilters
         );
       }
@@ -570,13 +557,13 @@ public class PlannerConfig
     PlannerConfig def = new PlannerConfig();
     if (def.useApproximateCountDistinct != useApproximateCountDistinct) {
       overrides.put(
-          CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT,
+          QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT.getName(),
           String.valueOf(useApproximateCountDistinct)
       );
     }
     if (def.useGroupingSetForExactDistinct != useGroupingSetForExactDistinct) {
       overrides.put(
-          CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+          QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
           String.valueOf(useGroupingSetForExactDistinct)
       );
     }

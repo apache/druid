@@ -35,6 +35,7 @@ import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -45,6 +46,7 @@ import org.apache.druid.query.aggregation.ExpressionLambdaAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -92,10 +94,10 @@ import java.util.Map;
 public class CalciteArraysQueryTest extends BaseCalciteQueryTest
 {
   private static final Map<String, Object> QUERY_CONTEXT_UNNEST =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .build();
+                  .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
+                  .toMap();
 
   public static void assertResultsDeepEquals(String sql, List<Object[]> expected, List<Object[]> results)
   {
@@ -1017,7 +1019,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        Map.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+        QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true)
     );
 
     testQuery(
@@ -1302,7 +1304,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+        QueryContext.ofMap(QueryContextParameters.SQL_USE_EXTRACTION_FNS, true)
     );
 
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
@@ -3496,7 +3498,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testArrayAggGroupByArrayAggFromSubquery()
   {
     final Map<String, Object> context =
-        QueryContexts.override(QUERY_CONTEXT_NO_STRINGIFY_ARRAY, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+        QueryContexts.override(QUERY_CONTEXT_NO_STRINGIFY_ARRAY, QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true);
     testQuery(
         "SELECT dim2, arr, COUNT(*) FROM (SELECT dim2, ARRAY_AGG(DISTINCT dim1) as arr FROM foo WHERE dim1 is not null GROUP BY 1 LIMIT 5) GROUP BY 1,2",
         context,
@@ -5003,7 +5005,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testUnnestWithGroupByOrderByWithLimit()
   {
     final Map<String, Object> context =
-        QueryContexts.override(QUERY_CONTEXT_UNNEST, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+        QueryContexts.override(QUERY_CONTEXT_UNNEST, QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true);
     testQuery(
         "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 ORDER BY d3 ASC LIMIT 4 ",
         context,

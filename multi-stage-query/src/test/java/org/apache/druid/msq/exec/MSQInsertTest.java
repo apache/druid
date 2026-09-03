@@ -60,6 +60,7 @@ import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -104,13 +105,13 @@ public class MSQInsertTest extends MSQTestBase
 {
   private static final String WITH_APPEND_LOCK = "WITH_APPEND_LOCK";
   private static final Map<String, Object> QUERY_CONTEXT_WITH_APPEND_LOCK =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
-                  .put(
+                  .putRaw(
                       Tasks.TASK_LOCK_TYPE,
                       TaskLockType.APPEND.name().toLowerCase(Locale.ENGLISH)
                   )
-                  .build();
+                  .toMap();
   private final HashFunction fn = Hashing.murmur3_128();
 
   public static Collection<Object[]> data()
@@ -317,16 +318,15 @@ public class MSQInsertTest extends MSQTestBase
                         new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
                         new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
                     )
-                    .setContext(ImmutableMap.<String, Object>builder()
-                                            .put("__user", "allowAll")
-                                            .put("finalize", true)
-                                            .put("maxNumTasks", 2)
-                                            .put("maxParseExceptions", 0)
-                                            .put("sqlInsertSegmentGranularity", "\"DAY\"")
-                                            .put("sqlQueryId", "test-query")
-                                            .put("sqlStringifyArrays", false)
-                                            .build()
-                    )
+                    .setContext(Map.of(
+                        "__user", "allowAll",
+                        "finalize", true,
+                        "maxNumTasks", 2,
+                        "maxParseExceptions", 0,
+                        "sqlInsertSegmentGranularity", "\"DAY\"",
+                        "sqlQueryId", "test-query",
+                        "sqlStringifyArrays", false
+                    ))
                     .setLimitSpec(DefaultLimitSpec.builder()
                                                   .orderBy(OrderByColumnSpec.asc("d1"))
                                                   .build()
@@ -353,12 +353,18 @@ public class MSQInsertTest extends MSQTestBase
         MSQTuningConfig.defaultConfig()
     );
 
-    ImmutableMap<String, Object> sqlContext =
-        ImmutableMap.<String, Object>builder()
+    Map<String, Object> sqlContext =
+        QueryContext.builder()
             .putAll(context)
-                    .put("sqlInsertSegmentGranularity", "\"DAY\"")
-                    .put("forceTimeChunkLock", true)
-                    .build();
+                    .putRaw(
+                        "sqlInsertSegmentGranularity",
+                        "\"DAY\""
+                    )
+                    .putRaw(
+                        "forceTimeChunkLock",
+                        true
+                    )
+                    .toMap();
 
     MSQControllerTask controllerTask = new MSQControllerTask(
         TEST_CONTROLLER_TASK_ID,
@@ -1277,13 +1283,13 @@ public class MSQInsertTest extends MSQTestBase
                                             .add("__time", ColumnType.LONG)
                                             .add("dim1", ColumnType.STRING)
                                             .add("cnt", ColumnType.LONG).build();
-    Map<String, Object> newContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> newContext = QueryContext.builder()
                                               .putAll(DEFAULT_MSQ_CONTEXT)
-                                              .put(
+                                              .putRaw(
                                                   MultiStageQueryContext.CTX_CLUSTER_STATISTICS_MERGE_MODE,
                                                   ClusterStatisticsMergeMode.SEQUENTIAL.toString()
                                               )
-                                              .build();
+                                              .toMap();
 
     testIngestQuery().setSql(
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
@@ -1534,10 +1540,10 @@ public class MSQInsertTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testInsertOnFoo1WithMultiValueDimGroupByWithoutGroupByEnable(String contextName, Map<String, Object> context)
   {
-    Map<String, Object> localContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> localContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .put("groupByEnableMultiValueUnnesting", false)
-                                                   .build();
+                                                   .putRaw("groupByEnableMultiValueUnnesting", false)
+                                                   .toMap();
 
 
     testIngestQuery().setSql(
@@ -1582,9 +1588,9 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  __time, dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context)
+                     .setQueryContext(QueryContext.builder().putAll(context)
                                                                                 .putAll(ROLLUP_CONTEXT_PARAMS)
-                                                                                .build())
+                                                                                .toMap())
                      .setExpectedRollUp(true)
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
                      .setExpectedRowSignature(rowSignature)
@@ -1640,8 +1646,8 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(*) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
+                     .setQueryContext(QueryContext.builder().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).toMap())
                      .setExpectedRollUp(true)
                      .setExpectedQueryGranularity(Granularities.DAY)
                      .addExpectedAggregatorFactory(new LongSumAggregatorFactory("cnt", "cnt"))
@@ -1714,8 +1720,8 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  floor(__time to day) as __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
+                     .setQueryContext(QueryContext.builder().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).toMap())
                      .setExpectedRollUp(true)
                      .setExpectedQueryGranularity(Granularities.DAY)
                      .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
@@ -1740,8 +1746,8 @@ public class MSQInsertTest extends MSQTestBase
     testIngestQuery().setSql(
                          "insert into foo1 select  __time , dim1 , count(distinct m1) as cnt from foo where dim1 is not null group by 1, 2 PARTITIONED by day clustered by dim1")
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
+                     .setQueryContext(QueryContext.builder().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).toMap())
                      .setExpectedRollUp(true)
                      .addExpectedAggregatorFactory(new HyperUniquesAggregatorFactory("cnt", "cnt", false, true))
                      .setExpectedRowSignature(rowSignature)
@@ -1773,8 +1779,8 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1  PARTITIONED by day ")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
+                     .setQueryContext(QueryContext.builder().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).toMap())
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
@@ -1842,8 +1848,8 @@ public class MSQInsertTest extends MSQTestBase
                              + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"namespace\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
                              + "  )\n"
                              + ") group by 1,2  PARTITIONED by day ")
-                     .setQueryContext(new ImmutableMap.Builder<String, Object>().putAll(context).putAll(
-                         ROLLUP_CONTEXT_PARAMS).build())
+                     .setQueryContext(QueryContext.builder().putAll(context).putAll(
+                         ROLLUP_CONTEXT_PARAMS).toMap())
                      .setExpectedRollUp(true)
                      .setExpectedDataSource("foo1")
                      .setExpectedRowSignature(rowSignature)
@@ -2047,11 +2053,17 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertWithTooManySegmentsInTimeChunk()
   {
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .put("maxNumSegments", 1)
-                                                    .put("rowsPerSegment", 1)
-                                                    .build();
+                                                    .putRaw(
+                                                        "maxNumSegments",
+                                                        1
+                                                    )
+                                                    .putRaw(
+                                                        "rowsPerSegment",
+                                                        1
+                                                    )
+                                                    .toMap();
 
     testIngestQuery().setSql("INSERT INTO foo"
                              + " SELECT TIME_PARSE(ts) AS __time, c1 "
@@ -2075,11 +2087,17 @@ public class MSQInsertTest extends MSQTestBase
   @Test
   public void testInsertWithMaxNumSegments()
   {
-    final Map<String, Object> context = ImmutableMap.<String, Object>builder()
+    final Map<String, Object> context = QueryContext.builder()
                                                     .putAll(DEFAULT_MSQ_CONTEXT)
-                                                    .put("maxNumSegments", 2)
-                                                    .put("rowsPerSegment", 1)
-                                                    .build();
+                                                    .putRaw(
+                                                        "maxNumSegments",
+                                                        2
+                                                    )
+                                                    .putRaw(
+                                                        "rowsPerSegment",
+                                                        1
+                                                    )
+                                                    .toMap();
 
     final RowSignature expectedRowSignature = RowSignature.builder()
                                                           .add("__time", ColumnType.LONG)
@@ -2150,10 +2168,10 @@ public class MSQInsertTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testInsertOnFoo1WithLimit(String contextName, Map<String, Object> context)
   {
-    Map<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> queryContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
-                                                   .build();
+                                                   .putRaw(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .toMap();
 
     List<Object[]> expectedRows = ImmutableList.of(
         new Object[]{946771200000L, "10.1", 1L},
@@ -2188,10 +2206,10 @@ public class MSQInsertTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testInsertOnFoo1NoDimensionsWithLimit(String contextName, Map<String, Object> context)
   {
-    Map<String, Object> queryContext = ImmutableMap.<String, Object>builder()
+    Map<String, Object> queryContext = QueryContext.builder()
                                                    .putAll(context)
-                                                   .put(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
-                                                   .build();
+                                                   .putRaw(MultiStageQueryContext.CTX_ROWS_PER_SEGMENT, 2)
+                                                   .toMap();
 
     List<Object[]> expectedRows = ImmutableList.of(new Object[]{DateTimes.utc(0L).getMillis(), 5L});
 

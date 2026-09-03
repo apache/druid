@@ -29,10 +29,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
@@ -291,8 +291,8 @@ public class TopNQueryEngine
       final int numBytesToWorkWith = resultsBuf.capacity();
       final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
-      final boolean allowMultiPassPooled = query.context().getBoolean(
-          QueryContexts.TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY,
+      final boolean allowMultiPassPooled = query.context().getOrDefault(
+          QueryContextParameters.USE_TOPN_MULTI_PASS_POOLED_QUERY_GRANULARITY,
           false
       );
       if (Granularities.ALL.equals(query.getGranularity()) || allowMultiPassPooled) {

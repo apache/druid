@@ -45,6 +45,7 @@ import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OperatorFactoryBuilders;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -85,6 +86,7 @@ import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFact
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -554,7 +556,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     msqIncompatible();
     final Map<String, Object> context =
-        QueryContexts.override(OUTER_LIMIT_CONTEXT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+        QueryContexts.override(OUTER_LIMIT_CONTEXT, QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N, true);
     final List<Object[]> expected = ImmutableList.of(
         new Object[]{"def", 1L},
         new Object[]{"abc", 1L}
@@ -2659,8 +2661,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .plannerConfig(
             PLANNER_CONFIG_NO_HLL.withOverrides(
                 ImmutableMap.of(
-                    PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, "false",
-                    PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false
+                    QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(), "false",
+                    QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT.getName(), false
                 )
             )
         )
@@ -2684,7 +2686,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
                 "true"
             )
         ),
@@ -3823,7 +3825,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceColumnsFilterWithEquality()
   {
-    // we can remove this test if PlannerContext.CTX_SQL_USE_BOUNDS_AND_SELECTORS ever defaults to false all the time
+    // we can remove this test if QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS.getName() ever defaults to false all the time
     // since it otherwise is a duplicate of testCoalesceColumnsFilter
 
     testQuery(
@@ -4436,7 +4438,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarWithLongColumnFiltersForceRange()
   {
-    // we can remove this test if PlannerContext.CTX_SQL_USE_BOUNDS_AND_SELECTORS ever defaults to false all the time
+    // we can remove this test if QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS.getName() ever defaults to false all the time
     // since it otherwise is a duplicate of testCountStarWithLongColumnFilters
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt >= 3 OR cnt = 1",
@@ -5565,7 +5567,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT dim1 IN ('abc', 'def', 'ghi'), COUNT(*)\n"
         + "FROM druid.foo\n"
         + "GROUP BY 1",
-        QueryContexts.override(QUERY_CONTEXT_DEFAULT, QueryContexts.IN_FUNCTION_EXPR_THRESHOLD, 100),
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, QueryContextParameters.IN_FUNCTION_EXPR_THRESHOLD, 100),
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5877,7 +5879,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         "SELECT dim1, COUNT(*) FROM druid.foo\n"
         + "WHERE dim1 IN (" + elementsString + ") OR dim1 = 'xyz' OR dim1 IS NULL\n"
         + "GROUP BY dim1",
-        QueryContexts.override(QUERY_CONTEXT_DEFAULT, QueryContexts.IN_FUNCTION_THRESHOLD, 20),
+        QueryContexts.override(QUERY_CONTEXT_DEFAULT, QueryContextParameters.IN_FUNCTION_THRESHOLD, 20),
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5927,9 +5929,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "GROUP BY dim1",
         QueryContexts.override(
             QUERY_CONTEXT_DEFAULT,
-            ImmutableMap.of(
-                QueryContexts.IN_FUNCTION_THRESHOLD, 20,
-                QueryContexts.IN_SUB_QUERY_THRESHOLD_KEY, 20
+            QueryContext.ofMap(
+                QueryContextParameters.IN_FUNCTION_THRESHOLD,
+                20,
+                QueryContextParameters.IN_SUBQUERY_THRESHOLD,
+                20
             )
         ),
         ImmutableList.of(
@@ -7568,7 +7572,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
                 "true"
             )
         ),
@@ -8157,7 +8161,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
       testQuery(
           PLANNER_CONFIG_MAX_NUMERIC_IN_FILTER,
-          ImmutableMap.of(QueryContexts.MAX_NUMERIC_IN_FILTERS, 20000),
+          QueryContext.ofMap(QueryContextParameters.MAX_NUMERIC_IN_FILTERS, 20000),
           "SELECT COUNT(*)\n"
               + "FROM druid.numfoo\n"
               + "WHERE dim6 IN (\n"
@@ -8476,7 +8480,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+        QueryContextParameters.SQL_USE_EXTRACTION_FNS,
+        true
     );
 
     testQuery(
@@ -8628,7 +8633,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     final Map<String, Object> queryContext = QueryContexts.override(
         QUERY_CONTEXT_DEFAULT,
-        ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+        QueryContextParameters.SQL_USE_EXTRACTION_FNS,
+        true
     );
 
     GroupByQuery.Builder builder =
@@ -8704,7 +8710,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM foo",
         QueryContexts.override(
             QUERY_CONTEXT_DEFAULT,
-            ImmutableMap.of(PlannerContext.CTX_SQL_USE_EXTRACTION_FNS, true)
+            QueryContextParameters.SQL_USE_EXTRACTION_FNS,
+            true
         ),
         DruidException.class,
         invalidSqlContains(
@@ -9326,7 +9333,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
             ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+                QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT.getName(),
                 "true"
             )
         ),
@@ -13577,7 +13584,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqIncompatible();
     Map<String, Object> outerLimitContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     outerLimitContext.put(PlannerContext.CTX_SQL_OUTER_LIMIT, 4);
-    outerLimitContext.put(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+    QueryContextParameters.USE_LEXICOGRAPHIC_TOP_N.set(outerLimitContext, true);
 
     TopNQueryBuilder baseBuilder = new TopNQueryBuilder()
         .dataSource(CalciteTests.DATASOURCE1)
@@ -15685,7 +15692,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     DruidException e = assertThrows(
         DruidException.class,
         () -> testBuilder()
-            .queryContext(ImmutableMap.of(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, true))
+            .queryContext(QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, true))
             .sql("SELECT sum(distinct m1) from druid.foo")
             .run()
     );
@@ -16053,8 +16060,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 + "GROUP BY FLOOR(__time TO DAY)"
         )
         .queryContext(
-            ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true
+            QueryContext.ofMap(
+                QueryContextParameters.DEBUG,
+                true
             )
         )
         .expectedQuery(
@@ -16152,8 +16160,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             + "left join compare0 on main.pickup is not distinct from compare0.pickup "
         )
         .queryContext(
-            ImmutableMap.of(
-                QueryContexts.ENABLE_DEBUG, true
+            QueryContext.ofMap(
+                QueryContextParameters.DEBUG,
+                true
             )
         )
         .expectedResults(
@@ -16420,9 +16429,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorizeUnlessFallback();
     msqIncompatible();
-    final Map<String, Object> queryContext = ImmutableMap.of(
-        PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false,
-        PlannerConfig.CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT, true
+    final Map<String, Object> queryContext = QueryContext.ofMap(
+        QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT,
+        false,
+        QueryContextParameters.USE_GROUPING_SET_FOR_EXACT_DISTINCT,
+        true
     );
     testBuilder()
         .sql(
@@ -16495,11 +16506,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   public void testMultiStatementSetsContext()
   {
     HashMap<String, Object> expectedContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
-    expectedContext.put("useApproximateCountDistinct", true);
+    QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT.set(expectedContext, true);
     expectedContext.put("timeout", 9000.0);
     expectedContext.put("vectorize", "force");
     // sql query id is also set in the base context sent with the query, expect the SET statement to override this
-    expectedContext.put(QueryContexts.CTX_SQL_QUERY_ID, "dummy2");
+    expectedContext.put(QueryContextParameters.SQL_QUERY_ID.getName(), "dummy2");
 
     testBuilder().sql(
         "set useApproximateCountDistinct = TRUE; set timeout = 90000; set vectorize = 'force'; set sqlQueryId = 'dummy2'; select 3;;;"
@@ -16618,10 +16629,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setGranularity(Granularities.ALL)
                                             .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                                             .setContext(
-                                                ImmutableMap.<String, Object>builder()
+                                                QueryContext.builder()
                                                             .putAll(QUERY_CONTEXT_DEFAULT)
-                                                            .put("useApproximateCountDistinct", false)
-                                                            .build()
+                                                            .put(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)
+                                                            .toMap()
                                             )
                                             .build()
                             )
@@ -16635,10 +16646,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                             )
                         ))
                         .setContext(
-                            ImmutableMap.<String, Object>builder()
+                            QueryContext.builder()
                                         .putAll(QUERY_CONTEXT_DEFAULT)
-                                        .put("useApproximateCountDistinct", false)
-                                        .build()
+                                        .put(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)
+                                        .toMap()
                         )
                         .build()
         )

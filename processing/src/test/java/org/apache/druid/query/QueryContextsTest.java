@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -63,7 +64,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
+        QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1000L)
     );
     Assertions.assertEquals(1000, query.context().getTimeout());
 
@@ -77,7 +78,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1000)
+        QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1000L)
     );
 
     BadQueryContextException ex = Assertions.assertThrows(
@@ -93,7 +94,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, 1000)
+        QueryContext.ofMap(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, 1000L)
     );
 
     BadQueryContextException ex = Assertions.assertThrows(
@@ -109,7 +110,7 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.SECONDARY_PARTITION_PRUNING_KEY, false)
+        QueryContext.ofMap(QueryContextParameters.SECONDARY_PARTITION_PRUNING, false)
     );
     Assertions.assertFalse(query.context().isSecondaryPartitionPruningEnabled());
   }
@@ -159,28 +160,28 @@ public class QueryContextsTest
         QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED,
         QueryContext.empty().isCatalogValidationEnabled()
     );
-    Assertions.assertTrue(QueryContext.of(ImmutableMap.of(
-        QueryContexts.CATALOG_VALIDATION_ENABLED,
-        true
-    )).isCatalogValidationEnabled());
-    Assertions.assertFalse(QueryContext.of(ImmutableMap.of(
-        QueryContexts.CATALOG_VALIDATION_ENABLED,
-        false
-    )).isCatalogValidationEnabled());
+    Assertions.assertTrue(
+        QueryContext.of(QueryContextParameters.CATALOG_VALIDATION_ENABLED, true)
+            .isCatalogValidationEnabled()
+    );
+    Assertions.assertFalse(
+        QueryContext.of(QueryContextParameters.CATALOG_VALIDATION_ENABLED, false)
+            .isCatalogValidationEnabled()
+    );
   }
 
   @Test
   public void testGetEnableJoinLeftScanDirect()
   {
     Assertions.assertFalse(QueryContext.empty().getEnableJoinLeftScanDirect());
-    Assertions.assertTrue(QueryContext.of(ImmutableMap.of(
-        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
-        true
-    )).getEnableJoinLeftScanDirect());
-    Assertions.assertFalse(QueryContext.of(ImmutableMap.of(
-        QueryContexts.SQL_JOIN_LEFT_SCAN_DIRECT,
-        false
-    )).getEnableJoinLeftScanDirect());
+    Assertions.assertTrue(
+        QueryContext.of(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT, true)
+            .getEnableJoinLeftScanDirect()
+    );
+    Assertions.assertFalse(
+        QueryContext.of(QueryContextParameters.ENABLE_JOIN_LEFT_SCAN_DIRECT, false)
+            .getEnableJoinLeftScanDirect()
+    );
   }
 
   @Test
@@ -189,7 +190,7 @@ public class QueryContextsTest
     Map<String, Object> queryContext = new HashMap<>();
     Assertions.assertNull(QueryContext.of(queryContext).getBrokerServiceName());
 
-    queryContext.put(QueryContexts.BROKER_SERVICE_NAME, "hotBroker");
+    queryContext.put(QueryContextParameters.BROKER_SERVICE.getName(), "hotBroker");
     Assertions.assertEquals("hotBroker", QueryContext.of(queryContext).getBrokerServiceName());
   }
 
@@ -197,7 +198,7 @@ public class QueryContextsTest
   public void testGetBrokerServiceName_withNonStringValue()
   {
     Map<String, Object> queryContext = new HashMap<>();
-    queryContext.put(QueryContexts.BROKER_SERVICE_NAME, 100);
+    queryContext.put(QueryContextParameters.BROKER_SERVICE.getName(), 100);
 
     Assertions.assertThrows(BadQueryContextException.class, () -> QueryContext.of(queryContext).getBrokerServiceName());
   }
@@ -206,7 +207,7 @@ public class QueryContextsTest
   public void testGetTimeout_withNonNumericValue()
   {
     Map<String, Object> queryContext = new HashMap<>();
-    queryContext.put(QueryContexts.TIMEOUT_KEY, "2000'");
+    queryContext.put(QueryContextParameters.TIMEOUT.getName(), "2000'");
 
     Assertions.assertThrows(
         BadQueryContextException.class,
@@ -319,17 +320,17 @@ public class QueryContextsTest
     Query<?> query = new TestQuery(
         new TableDataSource("test"),
         new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("0/100"))),
-        ImmutableMap.of(QueryContexts.CTX_EXECUTION_MODE, "SYNC", QueryContexts.CTX_EXECUTION_MODE + "_1", "ASYNC")
+        ImmutableMap.of(QueryContextParameters.EXECUTION_MODE.getName(), "SYNC", QueryContextParameters.EXECUTION_MODE.getName() + "_1", "ASYNC")
     );
 
     Assertions.assertEquals(
         ExecutionMode.SYNC,
-        query.context().getEnum(QueryContexts.CTX_EXECUTION_MODE, ExecutionMode.class, ExecutionMode.ASYNC)
+        query.context().getEnum(QueryContextParameters.EXECUTION_MODE.getName(), ExecutionMode.class, ExecutionMode.ASYNC)
     );
 
     Assertions.assertEquals(
         ExecutionMode.ASYNC,
-        query.context().getEnum(QueryContexts.CTX_EXECUTION_MODE + "_1", ExecutionMode.class, ExecutionMode.SYNC)
+        query.context().getEnum(QueryContextParameters.EXECUTION_MODE.getName() + "_1", ExecutionMode.class, ExecutionMode.SYNC)
     );
   }
 

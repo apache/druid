@@ -20,7 +20,6 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
@@ -34,6 +33,7 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -1681,10 +1681,10 @@ public class MSQWindowTest extends MSQTestBase
   public void testSelectWithWikipediaEmptyOverWithCustomContext()
   {
     final Map<String, Object> customContext =
-        ImmutableMap.<String, Object>builder()
+        QueryContext.builder()
                     .putAll(DEFAULT_MSQ_CONTEXT)
-                    .put(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, 200)
-                    .build();
+                    .putRaw(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, 200)
+                    .toMap();
 
     testSelectQuery()
         .setSql(

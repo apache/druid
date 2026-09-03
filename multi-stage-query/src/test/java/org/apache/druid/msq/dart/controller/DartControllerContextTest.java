@@ -20,7 +20,6 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -36,7 +35,7 @@ import org.apache.druid.msq.test.TestDartControllerContextFactoryImpl;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
@@ -65,13 +64,10 @@ public class DartControllerContextTest
   /**
    * Context returned by {@link #query}. Overrides "maxConcurrentStages".
    */
-  private final QueryContext queryContext =
-      QueryContext.of(
-          ImmutableMap.of(
-              MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3,
-              QueryContexts.CTX_DART_QUERY_ID, QUERY_ID
-          )
-      );
+  private final QueryContext queryContext = QueryContext.builder()
+      .put(QueryContextParameters.DART_QUERY_ID, QUERY_ID)
+      .putRaw(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, 3)
+      .toContext();
   private MemoryIntrospector memoryIntrospector;
   private AutoCloseable mockCloser;
 

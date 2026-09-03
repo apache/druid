@@ -19,10 +19,11 @@
 
 package org.apache.druid.sql.calcite;
 
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.server.security.AuthConfig;
@@ -33,6 +34,7 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
 public class DecoupledExtension implements BeforeEachCallback
 {
@@ -52,11 +54,11 @@ public class DecoupledExtension implements BeforeEachCallback
     qCaseDir = ProjectPathUtils.getPathFromProjectRoot("sql/src/test/quidem/" + testClass.getName());
   }
 
-  private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.<String, Object>builder()
+  private static final Map<String, Object> CONTEXT_OVERRIDES = QueryContext.builder()
       .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-      .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-      .put(QueryContexts.ENABLE_DEBUG, true)
-      .build();
+      .put(QueryContextParameters.NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+      .put(QueryContextParameters.DEBUG, true)
+      .toMap();
 
   public QueryTestBuilder testBuilder()
   {

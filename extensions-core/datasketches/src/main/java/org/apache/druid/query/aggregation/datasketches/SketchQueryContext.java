@@ -19,20 +19,13 @@
 
 package org.apache.druid.query.aggregation.datasketches;
 
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 public class SketchQueryContext
 {
-  public static final String CTX_FINALIZE_OUTER_SKETCHES = "sqlFinalizeOuterSketches";
-  public static final boolean DEFAULT_FINALIZE_OUTER_SKETCHES = false;
-
   public static boolean isFinalizeOuterSketches(final PlannerContext plannerContext)
   {
-    return QueryContexts.getAsBoolean(
-        CTX_FINALIZE_OUTER_SKETCHES,
-        plannerContext.queryContextMap().get(CTX_FINALIZE_OUTER_SKETCHES),
-        DEFAULT_FINALIZE_OUTER_SKETCHES
-    );
+    return plannerContext.queryContext().getOrDefault(QueryContextParameters.SQL_FINALIZE_OUTER_SKETCHES);
   }
 }

@@ -42,6 +42,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.InDimFilter;
@@ -93,7 +94,6 @@ public class PlannerContext
 {
   // Query context keys
   public static final String CTX_SQL_CURRENT_TIMESTAMP = "sqlCurrentTimestamp";
-  public static final String CTX_SQL_TIME_ZONE = "sqlTimeZone";
   public static final String CTX_SQL_JOIN_ALGORITHM = "sqlJoinAlgorithm";
   private static final JoinAlgorithm DEFAULT_SQL_JOIN_ALGORITHM = JoinAlgorithm.BROADCAST;
 
@@ -107,30 +107,6 @@ public class PlannerContext
    * Key to enable transfer of RACs over wire.
    */
   public static final String CTX_ENABLE_RAC_TRANSFER_OVER_WIRE = "enableRACOverWire";
-
-  /**
-   * Context key for {@link PlannerContext#isUseBoundsAndSelectors()}.
-   */
-  public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";
-  public static final boolean DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS = false;
-
-  /**
-   * Context key for {@link PlannerContext#isUseExtractionFns()}.
-   */
-  public static final String CTX_SQL_USE_EXTRACTION_FNS = "sqlUseExtractionFns";
-  public static final boolean DEFAULT_SQL_USE_EXTRACTION_FNS = false;
-
-  /**
-   * Context key for {@link PlannerContext#isPullUpLookup()}.
-   */
-  public static final String CTX_SQL_PULL_UP_LOOKUP = "sqlPullUpLookup";
-  public static final boolean DEFAULT_SQL_PULL_UP_LOOKUP = true;
-
-  /**
-   * Context key for {@link PlannerContext#isReverseLookup()}.
-   */
-  public static final String CTX_SQL_REVERSE_LOOKUP = "sqlReverseLookup";
-  public static final boolean DEFAULT_SQL_REVERSE_LOOKUP = true;
 
   /**
    * Context key for {@link PlannerContext#isUseGranularity()}.
@@ -434,7 +410,7 @@ public class PlannerContext
    * {@link org.apache.druid.query.filter.SelectorDimFilter} (true) or {@link org.apache.druid.query.filter.RangeFilter},
    * {@link org.apache.druid.query.filter.EqualityFilter}, and {@link org.apache.druid.query.filter.NullFilter} (false).
    *
-   * Can be overriden by the context parameter {@link #CTX_SQL_USE_BOUNDS_AND_SELECTORS}.
+   * Can be overridden by the context parameter {@link QueryContextParameters#SQL_USE_BOUND_AND_SELECTORS}.
    */
   public boolean isUseBoundsAndSelectors()
   {
@@ -749,7 +725,7 @@ public class PlannerContext
       utcNow = new DateTime(DateTimeZone.UTC);
     }
 
-    final Object tzParam = queryContext.get(CTX_SQL_TIME_ZONE);
+    final Object tzParam = queryContext.get(QueryContextParameters.SQL_TIME_ZONE.getName());
     final DateTimeZone timeZone;
     if (tzParam != null) {
       timeZone = DateTimes.inferTzFromString(String.valueOf(tzParam));
@@ -758,39 +734,41 @@ public class PlannerContext
     }
     localNow = utcNow.withZone(timeZone);
 
-    final Object stringifyParam = queryContext.get(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS);
+    final Object stringifyParam = queryContext.get(QueryContextParameters.SQL_STRINGIFY_ARRAYS.getName());
     if (stringifyParam != null) {
       stringifyArrays = Numbers.parseBoolean(stringifyParam);
     } else {
       stringifyArrays = true;
     }
 
-    final Object useBoundsAndSelectorsParam = queryContext.get(CTX_SQL_USE_BOUNDS_AND_SELECTORS);
+    final Object useBoundsAndSelectorsParam = queryContext.get(
+        QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS.getName()
+    );
     if (useBoundsAndSelectorsParam != null) {
       useBoundsAndSelectors = Numbers.parseBoolean(useBoundsAndSelectorsParam);
     } else {
-      useBoundsAndSelectors = DEFAULT_SQL_USE_BOUNDS_AND_SELECTORS;
+      useBoundsAndSelectors = QueryContextParameters.SQL_USE_BOUND_AND_SELECTORS.getDefaultValue().orElse(false);
     }
 
-    final Object useExtractionFnsParam = queryContext.get(CTX_SQL_USE_EXTRACTION_FNS);
+    final Object useExtractionFnsParam = queryContext.get(QueryContextParameters.SQL_USE_EXTRACTION_FNS.getName());
     if (useExtractionFnsParam != null) {
       useExtractionFns = Numbers.parseBoolean(useExtractionFnsParam);
     } else {
-      useExtractionFns = DEFAULT_SQL_USE_EXTRACTION_FNS;
+      useExtractionFns = QueryContextParameters.SQL_USE_EXTRACTION_FNS.getDefaultValue().orElse(false);
     }
 
-    final Object pullUpLookupParam = queryContext.get(CTX_SQL_PULL_UP_LOOKUP);
+    final Object pullUpLookupParam = queryContext.get(QueryContextParameters.SQL_PULL_UP_LOOKUP.getName());
     if (pullUpLookupParam != null) {
       pullUpLookup = Numbers.parseBoolean(pullUpLookupParam);
     } else {
-      pullUpLookup = DEFAULT_SQL_PULL_UP_LOOKUP;
+      pullUpLookup = QueryContextParameters.SQL_PULL_UP_LOOKUP.getDefaultValue().orElse(true);
     }
 
-    final Object reverseLookupParam = queryContext.get(CTX_SQL_REVERSE_LOOKUP);
+    final Object reverseLookupParam = queryContext.get(QueryContextParameters.SQL_REVERSE_LOOKUP.getName());
     if (reverseLookupParam != null) {
       reverseLookup = Numbers.parseBoolean(reverseLookupParam);
     } else {
-      reverseLookup = DEFAULT_SQL_REVERSE_LOOKUP;
+      reverseLookup = QueryContextParameters.SQL_REVERSE_LOOKUP.getDefaultValue().orElse(true);
     }
 
     final Object useGranularityParam = queryContext.get(CTX_SQL_USE_GRANULARITY);
@@ -800,11 +778,11 @@ public class PlannerContext
       useGranularity = DEFAULT_SQL_USE_GRANULARITY;
     }
 
-    sqlQueryId = (String) this.queryContext.get(QueryContexts.CTX_SQL_QUERY_ID);
+    sqlQueryId = (String) this.queryContext.get(QueryContextParameters.SQL_QUERY_ID.getName());
     // special handling for DruidViewMacro, normal client will allocate sqlid in SqlLifecyle
     if (Strings.isNullOrEmpty(sqlQueryId)) {
       sqlQueryId = UUID.randomUUID().toString();
-      this.queryContext.put(QueryContexts.CTX_SQL_QUERY_ID, UUID.randomUUID().toString());
+      this.queryContext.put(QueryContextParameters.SQL_QUERY_ID.getName(), sqlQueryId);
     }
 
     if (plannerConfig != null) {

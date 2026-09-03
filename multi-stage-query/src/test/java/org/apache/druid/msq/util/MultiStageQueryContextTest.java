@@ -33,7 +33,7 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.joda.time.DateTime;
@@ -425,12 +425,10 @@ public class MultiStageQueryContextTest
   @Test
   public void testDartSelectDestination()
   {
-    final QueryContext context = QueryContext.of(
-        ImmutableMap.of(
-            QueryContexts.CTX_DART_QUERY_ID, "test",
-            MultiStageQueryContext.CTX_SELECT_DESTINATION, "durablestorage"
-        )
-    );
+    final QueryContext context = QueryContext.builder()
+        .put(QueryContextParameters.DART_QUERY_ID, "test")
+        .putRaw(MultiStageQueryContext.CTX_SELECT_DESTINATION, "durablestorage")
+        .toContext();
 
     Assertions.assertEquals(
         MSQSelectDestination.TASKREPORT,
@@ -497,7 +495,7 @@ public class MultiStageQueryContextTest
     final QueryContext context = MultiStageQueryContext.withCommonContext(QueryContext.empty());
     Assertions.assertTrue(context.containsKey(MultiStageQueryContext.CTX_START_TIME));
     Assertions.assertFalse(context.containsKey(MultiStageQueryContext.CTX_QUERY_DEADLINE));
-    Assertions.assertEquals(true, context.get(QueryContexts.FINALIZE_KEY));
+    Assertions.assertEquals(true, context.get(QueryContextParameters.FINALIZE.getName()));
     Assertions.assertEquals(true, context.get(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION));
     Assertions.assertTrue(context.containsKey(MultiStageQueryContext.CTX_ROW_BASED_FRAME_TYPE));
   }
@@ -507,7 +505,7 @@ public class MultiStageQueryContextTest
   {
     final long timeoutMs = 60_000;
     final QueryContext context = MultiStageQueryContext.withCommonContext(
-        QueryContext.of(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, timeoutMs))
+        QueryContext.of(QueryContextParameters.TIMEOUT, timeoutMs)
     );
 
     Assertions.assertTrue(context.containsKey(MultiStageQueryContext.CTX_START_TIME));

@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.UnnestDataSource;
 
 import java.lang.annotation.ElementType;
@@ -123,7 +122,7 @@ public @interface DecoupledTestConfig
      */
     EQUIV_PLAN,
     /**
-     * {@link QueryContexts#SQL_JOIN_LEFT_SCAN_DIRECT} not supported.
+     * {@link org.apache.druid.query.context.QueryContextParameters#ENABLE_JOIN_LEFT_SCAN_DIRECT} not supported.
      */
     JOIN_LEFT_DIRECT_ACCESS,
     /**

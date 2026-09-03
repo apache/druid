@@ -31,6 +31,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Order;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -45,6 +46,7 @@ import org.apache.druid.query.groupby.orderby.OrderByColumnSpec.Direction;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -936,7 +938,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     final Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00.123Z");
-    context.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
+    QueryContextParameters.SQL_TIME_ZONE.set(context, LOS_ANGELES);
 
     DateTimeZone timeZone = DateTimes.inferTzFromString(LOS_ANGELES);
     testQuery(
@@ -2208,8 +2210,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) from druid.foo where m1 < -1.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2247,8 +2248,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) from druid.foo where m1 < 111.0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2286,8 +2286,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) FILTER (where m1 < -1.0) from druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
@@ -2328,8 +2327,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   {
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
-            ImmutableMap.of(
-                PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)),
+            QueryContext.ofMap(QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT, false)),
         "select count(distinct m1) FILTER (where m1 < -1.0) c from druid.foo HAVING c > 3",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
