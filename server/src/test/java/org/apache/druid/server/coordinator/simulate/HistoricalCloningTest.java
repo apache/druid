@@ -21,12 +21,16 @@ package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.server.coordinator.CloneSyncCriteria;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.ServerCloneStatus;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.timeline.DataSegment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Map;
 
 public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
@@ -343,5 +347,57 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
     loadQueuedSegments();
     Assertions.assertEquals(5, historicalT11.getTotalSegments());
     Assertions.assertEquals(5, historicalT12.getTotalSegments());
+  }
+
+  @Test
+  public void test_cloneIsSynced_ifLoadedSegmentsMeetCriteria()
+  {
+    final List<DataSegment> segments = Segments.WIKI_10X1D;
+    final CoordinatorSimulation sim =
+        CoordinatorSimulation.builder()
+                             .withSegments(segments)
+                             .withServers(historicalT11, historicalT12)
+                             .withRules(datasource, Load.on(Tier.T1, 1).forever())
+                             .withDynamicConfig(
+                                 CoordinatorDynamicConfig
+                                     .builder()
+                                     .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
+                                     .withCloneSyncCriteria(new CloneSyncCriteria(1, 10.0))
+                                     .withSmartSegmentLoading(true)
+                                     .build()
+                             )
+                             .build();
+
+
+    // Load 9 segments on histT11
+    segments.forEach(historicalT11::addDataSegment);
+    historicalT11.removeDataSegment(segments.getFirst().getId());
+
+    // Load 8 segments on histT12
+    segments.forEach(historicalT12::addDataSegment);
+    historicalT12.removeDataSegment(segments.getFirst().getId());
+    historicalT12.removeDataSegment(segments.getLast().getId());
+
+    startSimulation(sim);
+    runCoordinatorCycle();
+
+    // Verify that 2 segments are assigned to the clone but only 1 is required for full sync
+    verifyValue(
+        Stats.Segments.ASSIGNED_TO_CLONE.getMetricName(),
+        Map.of("server", historicalT12.getName()),
+        2L
+    );
+    verifyValue(
+        Stats.Segments.PENDING_SYNC.getMetricName(),
+        Map.of("server", historicalT12.getName()),
+        1L
+    );
+
+    // Verify that the clone is already considered as synced since criteria is met
+    final ServerCloneStatus cloneStatus = getCloneStatus(historicalT12);
+    Assertions.assertNotNull(cloneStatus);
+    Assertions.assertEquals(2, cloneStatus.segmentLoadsRemaining());
+    Assertions.assertEquals(1, cloneStatus.segmentsPendingSync());
+    Assertions.assertEquals(ServerCloneStatus.State.SYNCED, cloneStatus.state());
   }
 }

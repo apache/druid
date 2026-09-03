@@ -71,6 +71,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("cloneLoad", "segment/clone/assigned/count");
     public static final CoordinatorStat DROPPED_FROM_CLONE
         = CoordinatorStat.toDebugAndEmit("cloneDrop", "segment/clone/dropped/count");
+    public static final CoordinatorStat PENDING_SYNC
+        = CoordinatorStat.toDebugAndEmit("clonePendingSync", "segment/clone/pendingSync/count");
 
     // Partial-load reconciliation in a run
     public static final CoordinatorStat PARTIAL_ASSIGNED
