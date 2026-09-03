@@ -520,6 +520,147 @@ public class ResourcePoolTest
     EasyMock.reset(resourceFactory);
   }
 
+  /**
+   * A single take() discards every parked resource that fails {@link ResourceFactory#isGood}, not only the one at the
+   * head of the queue. Otherwise a peer restart - which kills all pooled resources at once, long before any of them
+   * expires - is discovered one take() at a time, each paying a fresh handshake on a caller's thread.
+   */
+  @Test
+  public void testDeadResourcesArePurgedInOneTake()
+  {
+    primePool();
+
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(false).anyTimes();
+    EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(false).anyTimes();
+    resourceFactory.close("billy0");
+    EasyMock.expectLastCall();
+    resourceFactory.close("billy1");
+    EasyMock.expectLastCall();
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).anyTimes();
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> billy = pool.take("billy");
+    Assert.assertEquals("billy2", billy.get());
+    billy.returnResource();
+
+    // Both dead resources must already be closed: one left parked would not have been.
+    EasyMock.verify(resourceFactory);
+    EasyMock.reset(resourceFactory);
+  }
+
+  /**
+   * A resource whose {@link ResourceFactory#isGood} throws is closed rather than dropped on the floor, and the failed
+   * take() gives its lent slot back.
+   */
+  @Test
+  public void testResourceIsClosedWhenIsGoodThrows() throws Exception
+  {
+    primePool();
+
+    EasyMock.expect(resourceFactory.isGood("billy1")).andThrow(new ISE("health check blew up")).times(1);
+    resourceFactory.close("billy1");
+    EasyMock.expectLastCall();
+    EasyMock.replay(resourceFactory);
+
+    ISE thrown = null;
+    try {
+      pool.take("billy");
+    }
+    catch (ISE e) {
+      thrown = e;
+    }
+    Assert.assertNotNull("exception", thrown);
+
+    // billy1 was taken off the queue and handed to nobody; without close() it is leaked.
+    EasyMock.verify(resourceFactory);
+    EasyMock.reset(resourceFactory);
+
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    CountDownLatch heldUntil = new CountDownLatch(1);
+    Assert.assertEquals("billy0", takeOnAnotherThread(heldUntil, "billy"));
+    Assert.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
+    heldUntil.countDown();
+
+    EasyMock.verify(resourceFactory);
+    EasyMock.reset(resourceFactory);
+  }
+
+  /**
+   * A resource that fails to close while being evicted for expiry does not fail the take() that evicted it, does not
+   * strand the resources queued behind it, and does not consume a lent slot.
+   */
+  @Test
+  public void testCloseFailureWhileEvictingExpiredResources() throws Exception
+  {
+    resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
+
+    pool = new ResourcePool<>(
+        resourceFactory,
+        new ResourcePoolConfig(2, TimeUnit.SECONDS.toMillis(1)),
+        true
+    );
+
+    EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> warm = pool.take("billy");
+    Assert.assertEquals("billy0", warm.get());
+    warm.returnResource();
+
+    EasyMock.verify(resourceFactory);
+    EasyMock.reset(resourceFactory);
+
+    Thread.sleep(1500);
+
+    // billy1 sits at the head of the queue, so its close() fails first - billy0 behind it must still be closed.
+    resourceFactory.close("billy1");
+    EasyMock.expectLastCall().andThrow(new ISE("close blew up"));
+    resourceFactory.close("billy0");
+    EasyMock.expectLastCall();
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> billy = pool.take("billy");
+    Assert.assertEquals("billy2", billy.get());
+    billy.returnResource();
+
+    EasyMock.verify(resourceFactory);
+    EasyMock.reset(resourceFactory);
+
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy3").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy3")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    CountDownLatch heldUntil = new CountDownLatch(1);
+    Assert.assertEquals("billy2", takeOnAnotherThread(heldUntil, "billy"));
+    Assert.assertEquals("billy3", takeOnAnotherThread(heldUntil, "billy"));
+    heldUntil.countDown();
+
+    EasyMock.verify(resourceFactory);
+    EasyMock.reset(resourceFactory);
+  }
+
+  /**
+   * Returns the resource obtained by taking {@code key} on another thread, or null if the take did not complete within
+   * a few seconds - which is what a leaked lent slot looks like, since the pool blocks once every slot is handed out.
+   * The resource stays lent until {@code heldUntil} is counted down, so successive takes cannot reuse each other's.
+   */
+  private String takeOnAnotherThread(CountDownLatch heldUntil, String key) throws InterruptedException
+  {
+    MyThread thread = new MyThread(heldUntil, key);
+    thread.start();
+    thread.waitForValueToBeGotten(5, TimeUnit.SECONDS);
+    return thread.getValue();
+  }
+
   private static class StringIncrementingAnswer implements IAnswer<String>
   {
     int count = 0;
