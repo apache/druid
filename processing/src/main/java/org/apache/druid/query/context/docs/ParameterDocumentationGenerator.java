@@ -25,6 +25,7 @@ import org.apache.druid.query.context.QueryContextParameter;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.constraint.ParameterConstraint;
 import org.apache.druid.query.context.constraint.Range;
+import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
 
 import java.io.IOException;
@@ -43,6 +44,7 @@ public final class ParameterDocumentationGenerator
 {
   private static final String GENERAL_REFERENCE = "docs/querying/query-context-reference.md";
   private static final String SCAN_REFERENCE = "docs/querying/scan-query.md";
+  private static final String SQL_REFERENCE = "docs/querying/sql-query-context.md";
   private static final String MARKER_FORMAT = "<!-- GENERATED QUERY CONTEXT PARAMETER: %s -->";
 
   private ParameterDocumentationGenerator()
@@ -88,10 +90,18 @@ public final class ParameterDocumentationGenerator
   {
     final Map<String, Map<String, String>> rowsByDocument = new LinkedHashMap<>();
     for (final QueryContextParameter<?> parameter : QueryContextParameters.BY_NAME.values()) {
-      final ParameterDocumentation docs = parameter.getDocumentation().orElseThrow(
-          () -> new ISE("Query context parameter [%s] has no documentation", parameter.getName())
-      );
-      final String document = docs.getQueryTypes().contains(QueryType.SCAN) ? SCAN_REFERENCE : GENERAL_REFERENCE;
+      final ParameterDocumentation docs = parameter.getDocumentation().orElse(null);
+      if (docs == null) {
+        continue;
+      }
+      final String document;
+      if (docs.getQueries().contains(Query.SQL) && !docs.getQueries().contains(Query.JSON)) {
+        document = SQL_REFERENCE;
+      } else if (docs.getQueryTypes().contains(QueryType.SCAN)) {
+        document = SCAN_REFERENCE;
+      } else {
+        document = GENERAL_REFERENCE;
+      }
       rowsByDocument.computeIfAbsent(document, ignored -> new LinkedHashMap<>())
                     .put(parameter.getName(), renderRow(parameter, docs, document));
     }
@@ -110,6 +120,15 @@ public final class ParameterDocumentationGenerator
           parameter.getName(),
           escapeTableCell(docs.getDescription()),
           renderValueDescription(parameter),
+          renderDefault(parameter, docs)
+      );
+    }
+
+    if (SQL_REFERENCE.equals(document)) {
+      return StringUtils.format(
+          "|`%s`|%s|%s|",
+          parameter.getName(),
+          escapeTableCell(docs.getDescription()),
           renderDefault(parameter, docs)
       );
     }
@@ -160,11 +179,10 @@ public final class ParameterDocumentationGenerator
       final ParameterDocumentation docs
   )
   {
-    return parameter.getDefaultValue()
-                    .map(String::valueOf)
-                    .or(docs::getDefaultDescription)
-                    .map(value -> "`" + value + "`")
-                    .orElse("N/A");
+    return docs.getDefaultDescription()
+               .map(ParameterDocumentationGenerator::normalizeTableCell)
+               .or(() -> parameter.getDefaultValue().map(value -> "`" + value + "`"))
+               .orElse("N/A");
   }
 
   private static String replaceRows(
@@ -201,7 +219,20 @@ public final class ParameterDocumentationGenerator
 
   private static String escapeTableCell(final String value)
   {
-    return StringUtils.replace(value, "|", "\\|");
+    return StringUtils.replace(normalizeTableCell(value), "|", "\\|");
+  }
+
+  /**
+   * Markdown table cells must be rendered on one physical line. Parameter descriptions and default descriptions are
+   * commonly written as Java text blocks, so remove text-block line continuations, flatten remaining line breaks, and
+   * collapse incidental whitespace before writing the generated documentation.
+   */
+  static String normalizeTableCell(final String value)
+  {
+    return value.replaceAll("\\\\[ \\t]*\\R", "")
+                .replaceAll("\\R", " ")
+                .replaceAll("[ \\t]+", " ")
+                .trim();
   }
 
   private enum Mode

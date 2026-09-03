@@ -33,12 +33,18 @@ import java.util.Set;
  */
 public final class ParameterDocumentation
 {
-  public enum Language
+  /**
+   * Query interface or representation that can provide this parameter.
+   */
+  public enum Query
   {
-    NATIVE,
+    JSON,
     SQL
   }
 
+  /**
+   * Query execution engine that honors this parameter.
+   */
   public enum Engine
   {
     NATIVE,
@@ -62,7 +68,7 @@ public final class ParameterDocumentation
   }
 
   private final String description;
-  private final Set<Language> languages;
+  private final Set<Query> queries;
   private final Set<Engine> engines;
   private final Set<QueryType> queryTypes;
   private final Set<StatementType> statementTypes;
@@ -72,7 +78,7 @@ public final class ParameterDocumentation
   private ParameterDocumentation(final Builder builder)
   {
     this.description = requireNonBlank(builder.description, "description");
-    this.languages = Set.copyOf(builder.languages);
+    this.queries = Set.copyOf(builder.queries);
     this.engines = Set.copyOf(builder.engines);
     this.queryTypes = Set.copyOf(builder.queryTypes);
     this.statementTypes = Set.copyOf(builder.statementTypes);
@@ -90,9 +96,9 @@ public final class ParameterDocumentation
     return description;
   }
 
-  public Set<Language> getLanguages()
+  public Set<Query> getQueries()
   {
-    return languages;
+    return queries;
   }
 
   public Set<Engine> getEngines()
@@ -134,7 +140,7 @@ public final class ParameterDocumentation
   {
     @Nullable
     private String description;
-    private final Set<Language> languages = EnumSet.noneOf(Language.class);
+    private final Set<Query> queries = EnumSet.noneOf(Query.class);
     private final Set<Engine> engines = EnumSet.noneOf(Engine.class);
     private final Set<QueryType> queryTypes = EnumSet.noneOf(QueryType.class);
     private final Set<StatementType> statementTypes = EnumSet.noneOf(StatementType.class);
@@ -153,9 +159,9 @@ public final class ParameterDocumentation
       return this;
     }
 
-    public Builder language(final Language... languages)
+    public Builder query(final Query... queries)
     {
-      Collections.addAll(this.languages, languages);
+      Collections.addAll(this.queries, queries);
       return this;
     }
 
@@ -165,7 +171,7 @@ public final class ParameterDocumentation
       return this;
     }
 
-    public Builder query(final QueryType... queryTypes)
+    public Builder queryType(final QueryType... queryTypes)
     {
       Collections.addAll(this.queryTypes, queryTypes);
       return this;

@@ -109,6 +109,24 @@ class ParameterDocumentationGeneratorTest
     assertTrue(exception.getMessage().contains("Expected arguments"));
   }
 
+  @Test
+  void testNormalizesTableCell()
+  {
+    final String description = String.join(
+        "",
+        " Description with ",
+        "\\",
+        "\n",
+        " wrapped lines ",
+        "\n and   a continuation marker. "
+    );
+
+    assertEquals(
+        "Description with wrapped lines and a continuation marker.",
+        ParameterDocumentationGenerator.normalizeTableCell(description)
+    );
+  }
+
   private String[] arguments(final String mode, final Path generatedOutput)
   {
     return new String[]{temporaryFolder.toString(), mode, generatedOutput.toString()};

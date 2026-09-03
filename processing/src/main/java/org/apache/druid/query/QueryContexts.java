@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameter;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -515,6 +516,19 @@ public class QueryContexts
   }
 
   /**
+   * Insert, update or remove a typed parameter to produce an overridden context.
+   * Leaves the original context unchanged.
+   */
+  public static <V> Map<String, Object> override(
+      final Map<String, Object> context,
+      final QueryContextParameter<V> parameter,
+      @Nullable final V value
+  )
+  {
+    return override(context, parameter.getName(), parameter.validate(value));
+  }
+
+  /**
    * Insert or replace multiple keys to produce an overridden context.
    * Leaves the original context unchanged.
    *
@@ -557,7 +571,9 @@ public class QueryContexts
     }
 
     try {
-      if (value instanceof String) {
+      if (clazz.isInstance(value)) {
+        return clazz.cast(value);
+      } else if (value instanceof String) {
         return Enum.valueOf(clazz, StringUtils.toUpperCase((String) value));
       } else if (value instanceof Boolean) {
         return Enum.valueOf(clazz, StringUtils.toUpperCase(String.valueOf(value)));

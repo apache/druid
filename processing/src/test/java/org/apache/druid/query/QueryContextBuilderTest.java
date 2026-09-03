@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,13 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class QueryContextBuilderTest
 {
   @Test
-  void testPutStringAndTypedParameters()
+  void testPutRawAndTypedParameters()
   {
-    final Map<String, Object> context = new QueryContextBuilder()
-        .put("legacy", 1)
+    final Map<String, Object> context = QueryContext.builder()
+        .putRaw("legacy", 1)
         .put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 10)
         .put(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
-        .build();
+        .toMap();
 
     assertEquals(
         ImmutableMap.of(
@@ -55,12 +56,25 @@ class QueryContextBuilderTest
   @Test
   void testLaterValueReplacesEarlierValue()
   {
-    final Map<String, Object> context = new QueryContextBuilder()
+    final Map<String, Object> context = QueryContext.builder()
         .put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 10)
-        .put("maxRowsQueuedForOrdering", 20)
-        .build();
+        .putRaw("maxRowsQueuedForOrdering", 20)
+        .toMap();
 
     assertEquals(20, context.get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName()));
+  }
+
+  @Test
+  void testPutAll()
+  {
+    final Map<String, Object> firstValues = ImmutableMap.of("legacy", 1);
+    final Map<String, Object> secondValues = ImmutableMap.of("legacy", 2);
+    final Map<String, Object> context = QueryContext.builder()
+        .putAll(firstValues)
+        .putAll(secondValues)
+        .toMap();
+
+    assertEquals(2, context.get("legacy"));
   }
 
   @Test
@@ -68,18 +82,28 @@ class QueryContextBuilderTest
   {
     assertThrows(
         IAE.class,
-        () -> new QueryContextBuilder().put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+        () -> QueryContext.builder().put(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
     );
   }
 
   @Test
   void testTypedPutAcceptsNullableParameter()
   {
-    final Map<String, Object> context = new QueryContextBuilder()
+    final Map<String, Object> context = QueryContext.builder()
         .put(QueryContextParameters.USE_RESULT_LEVEL_CACHE, null)
-        .build();
+        .toMap();
 
     assertTrue(context.containsKey(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
     assertNull(context.get(QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName()));
+  }
+
+  @Test
+  void testToContext()
+  {
+    final QueryContext context = QueryContext.builder()
+        .put(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
+        .toContext();
+
+    assertFalse(context.isUseResultLevelCache());
   }
 }

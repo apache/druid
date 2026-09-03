@@ -21,41 +21,63 @@ package org.apache.druid.query;
 
 import org.apache.druid.query.context.QueryContextParameter;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * Builds an immutable query context map using either string keys or typed parameter descriptors.
+ * Builds an immutable query context map using typed parameter descriptors.
+ * Existing string-keyed maps can be copied with {@link #putAll(Map)} for backward compatibility.
  */
 public final class QueryContextBuilder
 {
   private final Map<String, Object> values = new LinkedHashMap<>();
 
   /**
-   * Adds a context value using its string key.
+   * Adds a context value using a raw string key.
+   *
+   * <p>This is an explicit escape hatch for keys that do not yet have a declared
+   * {@link QueryContextParameter} descriptor.</p>
    */
-  public QueryContextBuilder put(final String name, final Object value)
+  public QueryContextBuilder putRaw(final String name, @Nullable final Object value)
   {
-    final String nonNullName = Objects.requireNonNull(name, "name");
-    values.put(nonNullName, value);
+    values.put(Objects.requireNonNull(name, "name"), value);
+    return this;
+  }
+
+  /**
+   * Adds all values from an existing query context map.
+   */
+  public QueryContextBuilder putAll(final Map<? extends String, ?> values)
+  {
+    values.forEach((name, value) -> this.values.put(Objects.requireNonNull(name, "name"), value));
     return this;
   }
 
   /**
    * Adds a context value using a typed parameter descriptor.
    */
-  public <V> QueryContextBuilder put(final QueryContextParameter<V> parameter, final V value)
+  public <V> QueryContextBuilder put(final QueryContextParameter<V> parameter, @Nullable final V value)
   {
-    return put(parameter.getName(), parameter.validate(value));
+    values.put(parameter.getName(), parameter.validate(value));
+    return this;
   }
 
   /**
-   * Builds the immutable context map.
+   * Converts the current values to an immutable context map snapshot.
    */
-  public Map<String, Object> build()
+  public Map<String, Object> toMap()
   {
     return Collections.unmodifiableMap(new LinkedHashMap<>(values));
+  }
+
+  /**
+   * Converts the current values to an immutable {@link QueryContext} snapshot.
+   */
+  public QueryContext toContext()
+  {
+    return QueryContext.of(toMap());
   }
 }

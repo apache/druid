@@ -20,6 +20,7 @@
 package org.apache.druid.query.context;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.context.constraint.ParameterConstraint;
 import org.apache.druid.query.context.docs.ParameterDocumentation;
 
@@ -64,7 +65,9 @@ public final class QueryContextParameter<T>
     this.defaultValue = Optional.ofNullable(builder.defaultValue);
     this.nullable = builder.nullable;
     this.deprecationMessage = Optional.ofNullable(builder.deprecationMessage);
-    this.documentation = Optional.ofNullable(builder.documentation);
+    this.documentation = builder.documentationBuilder == null
+                         ? Optional.empty()
+                         : Optional.of(builder.documentationBuilder.build());
 
     defaultValue.ifPresent(this::validate);
   }
@@ -105,7 +108,26 @@ public final class QueryContextParameter<T>
     if (value == null && !nullable) {
       throw new IAE("Query context parameter [%s] must not be null", name);
     }
+    if (value != null && valueType.isInstance(value)) {
+      return validate(valueType.cast(value));
+    }
     return validate(valueType.cast(parser.parse(value)));
+  }
+
+  /**
+   * Parses a raw value and returns the declared default when parsing produces {@code null}.
+   *
+   * @throws ISE if this parameter has no declared default
+   */
+  public T parseOrDefault(@Nullable final Object value)
+  {
+    final T parsed = parse(value);
+    if (parsed != null) {
+      return parsed;
+    }
+    return defaultValue.orElseThrow(
+        () -> new ISE("Query context parameter [%s] has no declared default", name)
+    );
   }
 
   /**
@@ -178,7 +200,7 @@ public final class QueryContextParameter<T>
     @Nullable
     private String deprecationMessage;
     @Nullable
-    private ParameterDocumentation documentation;
+    private ParameterDocumentation.Builder documentationBuilder;
 
     private Builder(final String name, final Class<T> valueType, final ValueParser<T> parser)
     {
@@ -218,9 +240,53 @@ public final class QueryContextParameter<T>
       return this;
     }
 
-    public Builder<T> docs(final ParameterDocumentation documentation)
+    private ParameterDocumentation.Builder documentationBuilder()
     {
-      this.documentation = Objects.requireNonNull(documentation, "documentation");
+      if (documentationBuilder == null) {
+        documentationBuilder = ParameterDocumentation.builder();
+      }
+      return documentationBuilder;
+    }
+
+    public Builder<T> description(final String description)
+    {
+      documentationBuilder().description(description);
+      return this;
+    }
+
+    public Builder<T> query(final ParameterDocumentation.Query... queries)
+    {
+      documentationBuilder().query(queries);
+      return this;
+    }
+
+    public Builder<T> engine(final ParameterDocumentation.Engine... engines)
+    {
+      documentationBuilder().engine(engines);
+      return this;
+    }
+
+    public Builder<T> queryType(final ParameterDocumentation.QueryType... queryTypes)
+    {
+      documentationBuilder().queryType(queryTypes);
+      return this;
+    }
+
+    public Builder<T> statement(final ParameterDocumentation.StatementType... statementTypes)
+    {
+      documentationBuilder().statement(statementTypes);
+      return this;
+    }
+
+    public Builder<T> defaultDescription(final String defaultDescription)
+    {
+      documentationBuilder().defaultDescription(defaultDescription);
+      return this;
+    }
+
+    public Builder<T> since(final String since)
+    {
+      documentationBuilder().since(since);
       return this;
     }
 

@@ -134,7 +134,7 @@ public interface Query<T>
    * {@link QueryContext#getString(String)} <br/>
    * {@link QueryContext#getInt(String)} <br/>
    * {@link QueryContext#getLong(String)} <br/>
-   * {@link QueryContext#getFloat(String)} <br/>
+ * {@link QueryContext#getFloat(String, float)} <br/>
    * {@link QueryContext#getEnum(String, Class, Enum)} <br/>
    * {@link QueryContext#getHumanReadableBytes(String, HumanReadableBytes)}
    *

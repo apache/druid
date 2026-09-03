@@ -22,9 +22,8 @@ package org.apache.druid.query.context;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.constraint.Range;
-import org.apache.druid.query.context.docs.ParameterDocumentation;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
-import org.apache.druid.query.context.docs.ParameterDocumentation.Language;
+import org.apache.druid.query.context.docs.ParameterDocumentation.Query;
 import org.apache.druid.query.context.docs.ParameterDocumentation.QueryType;
 
 import javax.annotation.Nullable;
@@ -42,37 +41,32 @@ public final class QueryContextParameters
 {
   public static final QueryContextParameter<Boolean> USE_RESULT_LEVEL_CACHE = booleanParameter("useResultLevelCache")
       .defaultValue(true)
-      .docs(
-          doc().description(
-                   """
-                   Flag indicating whether to leverage the result level cache for this query. When set to false, it \
-                   disables reading from the query cache for this query. When set to true, Druid uses \
-                   `druid.broker.cache.useResultLevelCache` to determine whether or not to read from the \
-                   result-level query cache.\
-                   """
-               )
-               .language(Language.NATIVE, Language.SQL)
-               .engine(Engine.NATIVE)
-               .build()
+      .description(
+          """
+          Flag indicating whether to leverage the result level cache for this query.
+          When set to false, it disables reading from the query cache for this query.
+          When set to true, Druid uses `druid.broker.cache.useResultLevelCache` to determine whether or not to read from the result-level query cache.
+          """
       )
+      .since("0.13.0-incubating")
+      .query(Query.JSON, Query.SQL)
+      .engine(Engine.NATIVE)
       .build();
 
   public static final QueryContextParameter<Integer> MAX_ROWS_QUEUED_FOR_ORDERING =
       integerParameter("maxRowsQueuedForOrdering")
           .constraint(Range.closedRange(1, Integer.MAX_VALUE))
-          .docs(
-              doc().description(
-                       """
-                       The maximum number of rows returned when time ordering is used. Overrides the identically \
-                       named config.\
-                       """
-                   )
-                   .defaultDescription("druid.query.scan.maxRowsQueuedForOrdering")
-                   .language(Language.NATIVE)
-                   .engine(Engine.NATIVE)
-                   .query(QueryType.SCAN)
-                   .build()
+          .description(
+              """
+              The maximum number of rows returned when time ordering is used.
+              Overrides the identically named config.
+              """
           )
+          .since("0.15.0-incubating")
+          .defaultDescription("`druid.query.scan.maxRowsQueuedForOrdering`")
+          .query(Query.JSON)
+          .engine(Engine.NATIVE)
+          .queryType(QueryType.SCAN)
           .build();
 
   /** Immutable query context parameter descriptors indexed by parameter name. */
@@ -139,8 +133,4 @@ public final class QueryContextParameters
     return QueryContextParameter.builder(name, String.class, value -> QueryContexts.getAsString(name, value, null));
   }
 
-  private static ParameterDocumentation.Builder doc()
-  {
-    return ParameterDocumentation.builder();
-  }
 }

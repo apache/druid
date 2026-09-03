@@ -50,7 +50,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -104,6 +103,33 @@ public class QueryContextTest
   }
 
   @Test
+  public void testOfTypedParameters()
+  {
+    assertEquals(
+        ImmutableMap.of(
+            QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING.getName(), 10,
+            QueryContextParameters.USE_RESULT_LEVEL_CACHE.getName(), false
+        ),
+        QueryContext.ofMap(
+            QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
+            10,
+            QueryContextParameters.USE_RESULT_LEVEL_CACHE,
+            false
+        )
+    );
+
+    assertEquals(
+        false,
+        QueryContext.of(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false)
+                    .get(QueryContextParameters.USE_RESULT_LEVEL_CACHE)
+    );
+    assertThrows(
+        IAE.class,
+        () -> QueryContext.ofMap(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 0)
+    );
+  }
+
+  @Test
   public void testIsEmpty()
   {
     assertTrue(QueryContext.empty().isEmpty());
@@ -153,20 +179,17 @@ public class QueryContextTest
         )
     );
 
-    assertTrue(context.containsKey(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertTrue(context.has(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
     assertEquals(10, context.get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
-    assertEquals(Optional.of(10), context.getOptional(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
     assertFalse(context.get(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
     assertFalse(context.getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
 
     final QueryContext emptyContext = QueryContext.empty();
-    assertFalse(emptyContext.containsKey(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
+    assertFalse(emptyContext.has(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
     assertNull(emptyContext.get(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
-    assertEquals(Optional.empty(), emptyContext.getOptional(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
     assertEquals(20, emptyContext.getOrDefault(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING, 20));
     assertThrows(ISE.class, () -> emptyContext.getOrDefault(QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING));
     assertTrue(emptyContext.get(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
-    assertEquals(Optional.of(true), emptyContext.getOptional(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
     assertFalse(emptyContext.getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE, false));
     assertTrue(emptyContext.getOrDefault(QueryContextParameters.USE_RESULT_LEVEL_CACHE));
   }
@@ -192,7 +215,6 @@ public class QueryContextTest
     assertEquals(20, context.getOrDefault(nullableWithDefault, 20));
     assertThrows(IAE.class, () -> context.get(nonNullable));
     assertThrows(IAE.class, () -> context.getOrDefault(nonNullable, 20));
-    assertThrows(IAE.class, () -> context.getOptional(nonNullable));
   }
 
   @Test
@@ -521,18 +543,6 @@ public class QueryContextTest
                                 .context(ImmutableMap.of("foo", "bar"))
                                 .build();
     assertNotNull(timeseries.getContext());
-  }
-
-  @Test
-  @SuppressWarnings("deprecation")
-  public void testIsRealtimeSegmentsOnly()
-  {
-    assertFalse(QueryContext.empty().isRealtimeSegmentsOnly());
-    assertTrue(
-        QueryContext
-            .of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
-            .isRealtimeSegmentsOnly()
-    );
   }
 
   @Test
