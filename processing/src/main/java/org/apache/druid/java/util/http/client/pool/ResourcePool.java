@@ -242,8 +242,7 @@ public class ResourcePool<K, V> implements Closeable
     V get()
     {
       final V poolVal;
-      // resourceHolderList can't have nulls, so we'll use a null to signal that we need to create a new resource.
-      final List<V> expiredResources = new ArrayList<>();
+      final List<V> expiredResources;
       synchronized (this) {
         while (!closed && (numLentResources == maxSize)) {
           try {
@@ -259,17 +258,7 @@ public class ResourcePool<K, V> implements Closeable
           log.info(StringUtils.format("get() called even though I'm closed. key[%s]", key));
           return null;
         } else if (numLentResources < maxSize) {
-          // Purge every idle resource that has outlived the timeout, not just the one at the front. The deque is
-          // ordered oldest-first (giveBack() always appends with a fresh timestamp), so the expired ones form a
-          // prefix. Dropping them all lets the pool shrink when demand falls, instead of reconnecting one-for-one
-          // and paying a fresh handshake on the caller's thread for every stale connection it hands out.
-          final long now = System.currentTimeMillis();
-          while (!resourceHolderList.isEmpty()
-                 && now - resourceHolderList.peekFirst().getLastAccessedTime() > unusedResourceTimeoutMillis) {
-            expiredResources.add(resourceHolderList.removeFirst().getResource());
-          }
-
-          // Reuse a surviving warm resource if one is left, otherwise create a new one.
+          expiredResources = removeExpiredResources();
           if (resourceHolderList.isEmpty()) {
             poolVal = factory.generate(key);
           } else {
@@ -308,6 +297,23 @@ public class ResourcePool<K, V> implements Closeable
       }
 
       return retVal;
+    }
+
+    /**
+     * Drains and returns every idle resource that has outlived the timeout so the pool shrinks when demand falls,
+     * rather than reconnecting one-for-one and paying a fresh handshake on the caller's thread per stale resource.
+     * The deque is ordered oldest-first (giveBack() re-stamps on return), so the expired resources are a leading
+     * prefix. Must be called while holding the monitor; the caller owns closing the returned resources.
+     */
+    private List<V> removeExpiredResources()
+    {
+      final List<V> expired = new ArrayList<>();
+      final long now = System.currentTimeMillis();
+      while (!resourceHolderList.isEmpty()
+             && now - resourceHolderList.peekFirst().getLastAccessedTime() > unusedResourceTimeoutMillis) {
+        expired.add(resourceHolderList.removeFirst().getResource());
+      }
+      return expired;
     }
 
     void giveBack(V object)
