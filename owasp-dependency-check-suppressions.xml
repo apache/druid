@@ -899,4 +899,16 @@
     <cve>CVE-2023-46853</cve> <!-- Off-by-one in memcached server daemon proxy mode request parsing -->
     <cve>CVE-2017-9951</cve>  <!-- Heap buffer over-read in memcached server daemon (try_read_command) -->
   </suppress>
+
+  <suppress>
+    <!-- GHSA-w5hq-g745-h8pq: Missing bounds check in uuid v3/v5/v6 when the optional buf
+         argument is provided. Druid's web console uses only uuidv4() with no buf argument
+         (web-console/src/druid-models/workbench-query/workbench-query.ts), so the
+         vulnerable code path is never exercised. -->
+    <notes><![CDATA[
+      file name: package-lock.json (pkg:npm/uuid@7.0.3)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:npm/uuid@.*$</packageUrl>
+    <vulnerabilityName>GHSA-w5hq-g745-h8pq</vulnerabilityName>
+  </suppress>
 </suppressions>
