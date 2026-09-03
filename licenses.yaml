@@ -1322,7 +1322,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -1332,7 +1332,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -3428,7 +3428,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.6
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
