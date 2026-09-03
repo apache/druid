@@ -126,6 +126,8 @@ public class CloneHistoricals implements CoordinatorDuty
         if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)) {
           loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
           cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
+        } else if (targetServer.isLoadingSegment(segment)) {
+          cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
         }
       }
 

@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
  * Criteria definining when a clone historical should be considered as "synced"
  * to its source server. The criteria is a function of the number or percentage
  * of segments "pending sync", i.e. segments already loaded on the source server
- * but not present on the target server. Segments which are yet to be loaded on
+ * but still loading on the target server. Segments which are yet to be loaded on
  * the source server itself do not affect the sync status.
  */
 public class CloneSyncCriteria
