@@ -65,11 +65,11 @@ public record ServerCloneStatus(
      */
     IN_PROGRESS,
     /**
-     * Clone server has caught up with the source server. This typically means
-     * that nearly all (based on configured tolerance) the segments currently
-     * present on the source server have also been loaded on the target server,
-     * and that segments in the load queue of the source server are also present
-     * in the load queue of the target server.
+     * Clone server has caught up with the source server. This is not a permanent
+     * state and if sync criteria are updated or if the clone starts lagging behind,
+     * subsequent coordinator cycles may move the clone back to {@link #IN_PROGRESS}.
+     *
+     * @see CloneSyncCriteria
      */
     SYNCED
   }
