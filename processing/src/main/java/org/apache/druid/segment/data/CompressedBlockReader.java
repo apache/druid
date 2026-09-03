@@ -77,7 +77,8 @@ public final class CompressedBlockReader implements Closeable
       Preconditions.checkArgument(numBlocks > 0, "Number of blocks[%s] must be positive", numBlocks);
       Preconditions.checkArgument(
           (long) numBlocks * Integer.BYTES <= buffer.remaining(),
-          "Number of blocks[%s] exceeds the available buffer"
+          "Number of blocks[%s] exceeds the available buffer",
+          numBlocks
       );
       final int offsetsSize = numBlocks * Integer.BYTES;
       // buffer is at start of ending offsets
