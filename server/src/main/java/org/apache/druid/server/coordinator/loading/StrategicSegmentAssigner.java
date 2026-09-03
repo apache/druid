@@ -43,6 +43,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
@@ -194,7 +195,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     if (serverA.isLoadingSegment(segment)) {
       // Cancel the load on serverA and load on serverB instead
-      if (serverA.cancelOperation(SegmentAction.LOAD, segment)) {
+      if (serverA.cancelLoad(segment)) {
         int loadedCountOnTier = replicaCountMap.get(segment.getId(), tier)
                                                .loadedNotDropping();
         if (loadedCountOnTier >= 1) {
@@ -593,8 +594,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         break;
       }
       // Try LOAD then REPLICATE; the queued action depends on whether this was a primary or a replica.
-      if (server.cancelOperation(SegmentAction.LOAD, segment)
-          || server.cancelOperation(SegmentAction.REPLICATE, segment)) {
+      if (server.cancelLoad(segment)) {
         canceledOut.add(server);
       }
     }
@@ -658,8 +658,15 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     // clears the rule on the historical.
     final int replicasToRevert = requiredReplicas > 0 ? replicaCountOnTier.loadedWithPartialProfile() : 0;
 
+    final boolean shouldPrioritizeLoadOfUnavailableSegment =
+        replicaCountOnTier.loadedNotDropping() < 1
+        && replicaCountOnTier.replicating() >= 1;
+
     // Check if there is any action required on this tier
-    if (projectedReplicas == requiredReplicas && !shouldCancelMoves && replicasToRevert <= 0) {
+    if (projectedReplicas == requiredReplicas
+        && !shouldCancelMoves
+        && !shouldPrioritizeLoadOfUnavailableSegment
+        && replicasToRevert <= 0) {
       return 0;
     }
 
@@ -670,6 +677,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (shouldCancelMoves) {
       cancelOperations(SegmentAction.MOVE_TO, movingReplicas, segment, segmentStatus);
       cancelOperations(SegmentAction.MOVE_FROM, movingReplicas, segment, segmentStatus);
+    }
+
+    // If segment is unavailable, prioritize load by changing REPLICATE actions to LOAD
+    if (shouldPrioritizeLoadOfUnavailableSegment) {
+      for (ServerHolder server : segmentStatus.getServersPerforming(SegmentAction.REPLICATE)) {
+        prioritizeLoadOfUnavailableSegment(segment, server, null);
+      }
     }
 
     // Cancel drops and queue loads if the projected count is below the requirement
@@ -692,7 +706,9 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     if (projectedReplicas > requiredReplicas) {
       int replicaSurplus = projectedReplicas - requiredReplicas;
       int canceledLoads =
-          cancelOperations(SegmentAction.LOAD, replicaSurplus, segment, segmentStatus);
+          cancelOperations(SegmentAction.REPLICATE, replicaSurplus, segment, segmentStatus);
+      canceledLoads +=
+          cancelOperations(SegmentAction.LOAD, replicaSurplus - canceledLoads, segment, segmentStatus);
 
       int numReplicasToDrop = Math.min(replicaSurplus - canceledLoads, maxReplicasToDrop);
       if (numReplicasToDrop > 0) {
@@ -710,6 +726,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         incrementStat(Stats.Segments.PARTIAL_RULE_REVERTED, segment, tier, reverted);
       }
     }
+
+
 
     return dropsQueuedOnTier;
   }
@@ -874,7 +892,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private boolean dropBroadcastSegment(DataSegment segment, ServerHolder server)
   {
     if (server.isLoadingSegment(segment)) {
-      return server.cancelOperation(SegmentAction.LOAD, segment);
+      return server.cancelLoad(segment);
     } else if (server.isServingSegment(segment)) {
       return loadQueueManager.dropSegment(segment, server);
     } else {
@@ -1001,6 +1019,25 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     return numLoadsQueued;
+  }
+
+  /**
+   * Tries to increase the load priority of the given unavailable segment (by
+   * changing the action from {@link SegmentAction#REPLICATE} to {@link SegmentAction#LOAD})
+   * if it is already present in the queue of the server.
+   *
+   * @return true only if the priority was increased successfully.
+   */
+  private boolean prioritizeLoadOfUnavailableSegment(
+      DataSegment segment,
+      ServerHolder server,
+      @Nullable PartialLoadProfile profile
+  )
+  {
+    return server.getActionOnSegment(segment) == SegmentAction.REPLICATE
+           && Objects.equals(profile, server.getProjectedProfile(segment))
+           && server.cancelOperation(SegmentAction.REPLICATE, segment)
+           && loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, profile);
   }
 
   private boolean loadSegment(DataSegment segment, ServerHolder server, @Nullable PartialLoadProfile profile)
