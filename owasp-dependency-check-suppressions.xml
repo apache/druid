@@ -19,6 +19,52 @@
   -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
   <!-- False positives -->
+
+  <!--
+    elasticache-java-cluster-client-1.2.4.jar is Amazon's Java client for ElastiCache (Memcached).
+    It wraps spymemcached and adds auto-discovery. Druid uses it as a Memcached CLIENT only —
+    it sends get/set/delete commands to a remote Memcached server. Druid does NOT run a Memcached server.
+
+    The CVE scanner matches the JAR version "1.2.4" against CPE cpe:2.3:a:memcached:memcached:1.2.4
+    (the C memcached server daemon), which is a false positive. All CVEs below are vulnerabilities
+    in the Memcached server daemon (C code: memcached.c, items.c, etc.) and are not applicable to
+    a Java application acting as a Memcached client.
+  -->
+  <suppress>
+    <notes><![CDATA[
+      file name: elasticache-java-cluster-client-1.2.4.jar
+
+      All CVEs below affect the Memcached SERVER daemon (C code), not any Java client library.
+      Druid uses elasticache-java-cluster-client solely as a Memcached client to send cache
+      get/set/delete commands. Druid does not run or embed a Memcached server process.
+
+      The version string "1.2.4" of the Java client JAR is incorrectly matched by the scanner
+      against CPE cpe:2.3:a:memcached:memcached:1.2.4 (the C memcached server), causing false positives.
+
+      CVE-2019-11596: NULL pointer dereference in lru mode command parsing in memcached.c (server daemon).
+      CVE-2026-47784: SASL password timing side channel in sasl_server_userdb_checkpass (server daemon).
+      CVE-2026-47783: SASL username timing side channel in sasl_server_userdb_checkpass (server daemon).
+      CVE-2016-8705: Integer overflow in process_bin_update in Memcached binary protocol (server daemon).
+      CVE-2016-8706: Integer overflow in process_bin_sasl_auth in Memcached binary protocol (server daemon).
+      CVE-2016-8704: Integer overflow in process_bin_append_prepend in Memcached binary protocol (server daemon).
+      CVE-2023-46852: Buffer overflow in proxy mode multiget handling in Memcached (server daemon).
+      CVE-2018-1000127: Integer overflow in items.c:item_free() in Memcached (server daemon).
+      CVE-2023-46853: Off-by-one error in proxy mode request handling in Memcached (server daemon).
+      CVE-2017-9951: Heap-based buffer over-read in try_read_command in memcached.c (server daemon).
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.amazonaws/elasticache-java-cluster-client@.*$</packageUrl>
+    <cve>CVE-2019-11596</cve>
+    <cve>CVE-2026-47784</cve>
+    <cve>CVE-2026-47783</cve>
+    <cve>CVE-2016-8705</cve>
+    <cve>CVE-2016-8706</cve>
+    <cve>CVE-2016-8704</cve>
+    <cve>CVE-2023-46852</cve>
+    <cve>CVE-2018-1000127</cve>
+    <cve>CVE-2023-46853</cve>
+    <cve>CVE-2017-9951</cve>
+  </suppress>
+
   <suppress>
     <notes><![CDATA[
      file name: json-path-2.9.0.jar jackson-core-2.12.7.jar
@@ -830,5 +876,27 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
     <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
+  </suppress>
+
+  <suppress>
+    <!-- False positive: the scanner matches the Java client version 1.2.4 against
+         cpe:2.3:a:memcached:memcached:1.2.4 (the C memcached server daemon).
+         com.amazonaws:elasticache-java-cluster-client is a Java Memcached client
+         library; all CVEs below are vulnerabilities in the Memcached server C code.
+         Druid acts as a Memcached client and is not affected by server-side CVEs. -->
+    <notes><![CDATA[
+      file name: elasticache-java-cluster-client-1.2.4.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.amazonaws/elasticache-java-cluster-client@.*$</packageUrl>
+    <cve>CVE-2019-11596</cve> <!-- NULL ptr deref in memcached server daemon (memcached.c lru mode command) -->
+    <cve>CVE-2026-47784</cve> <!-- SASL password timing side-channel in memcached server daemon -->
+    <cve>CVE-2026-47783</cve> <!-- SASL username timing side-channel in memcached server daemon -->
+    <cve>CVE-2016-8705</cve>  <!-- Integer overflow in memcached server daemon (process_bin_update) -->
+    <cve>CVE-2016-8706</cve>  <!-- Integer overflow in memcached server daemon (process_bin_sasl_auth) -->
+    <cve>CVE-2016-8704</cve>  <!-- Integer overflow in memcached server daemon (process_bin_append_prepend) -->
+    <cve>CVE-2023-46852</cve> <!-- Buffer overflow in memcached server daemon proxy mode multiget -->
+    <cve>CVE-2018-1000127</cve> <!-- Integer overflow in memcached server daemon (items.c item_free) -->
+    <cve>CVE-2023-46853</cve> <!-- Off-by-one in memcached server daemon proxy mode request parsing -->
+    <cve>CVE-2017-9951</cve>  <!-- Heap buffer over-read in memcached server daemon (try_read_command) -->
   </suppress>
 </suppressions>
