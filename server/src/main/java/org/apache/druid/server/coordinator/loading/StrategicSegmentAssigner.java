@@ -679,13 +679,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       cancelOperations(SegmentAction.MOVE_FROM, movingReplicas, segment, segmentStatus);
     }
 
-    // If segment is unavailable, prioritize load by changing REPLICATE actions to LOAD
-    if (shouldPrioritizeLoadOfUnavailableSegment) {
-      for (ServerHolder server : segmentStatus.getServersPerforming(SegmentAction.REPLICATE)) {
-        prioritizeLoadOfUnavailableSegment(segment, server, null);
-      }
-    }
-
     // Cancel drops and queue loads if the projected count is below the requirement
     if (projectedReplicas < requiredReplicas) {
       int replicaDeficit = requiredReplicas - projectedReplicas;
@@ -714,6 +707,13 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       if (numReplicasToDrop > 0) {
         dropsQueuedOnTier = dropReplicas(numReplicasToDrop, segment, tier, segmentStatus);
         incrementStat(Stats.Segments.DROPPED, segment, tier, dropsQueuedOnTier);
+      }
+    }
+
+    // If segment is unavailable, prioritize load by changing REPLICATE actions to LOAD
+    if (shouldPrioritizeLoadOfUnavailableSegment) {
+      for (ServerHolder server : segmentStatus.getServersPerforming(SegmentAction.REPLICATE)) {
+        prioritizeLoadOfUnavailableSegment(segment, server, null);
       }
     }
 
@@ -1035,9 +1035,15 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   )
   {
     return server.getActionOnSegment(segment) == SegmentAction.REPLICATE
-           && Objects.equals(profile, server.getProjectedProfile(segment))
+           && Objects.equals(fingerprintOf(profile), fingerprintOf(server.getProjectedProfile(segment)))
            && server.cancelOperation(SegmentAction.REPLICATE, segment)
            && loadQueueManager.loadSegment(segment, server, SegmentAction.LOAD, profile);
+  }
+
+  @Nullable
+  private static String fingerprintOf(@Nullable PartialLoadProfile profile)
+  {
+    return profile == null ? null : profile.fingerprint();
   }
 
   private boolean loadSegment(DataSegment segment, ServerHolder server, @Nullable PartialLoadProfile profile)

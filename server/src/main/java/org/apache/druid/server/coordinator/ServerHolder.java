@@ -350,7 +350,7 @@ public class ServerHolder implements Comparable<ServerHolder>
   {
     final List<DataSegment> loadingSegments = new ArrayList<>();
     queuedSegments.forEach((segment, action) -> {
-      if (action == SegmentAction.LOAD) {
+      if (action == SegmentAction.LOAD || action == SegmentAction.REPLICATE) {
         loadingSegments.add(segment);
       }
     });
