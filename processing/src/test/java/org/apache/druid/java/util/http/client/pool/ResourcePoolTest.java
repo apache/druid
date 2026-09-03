@@ -439,12 +439,18 @@ public class ResourcePoolTest
     //make sure resources have been timed out.
     Thread.sleep(100);
 
-    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy1").times(1);
+    // Both parked resources (billy0, billy1) are stale, so a single take() purges both before opening one
+    // validated replacement.
+    resourceFactory.close("billy0");
+    EasyMock.expectLastCall();
     resourceFactory.close("billy1");
+    EasyMock.expectLastCall();
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy1", billy.get());
+    Assert.assertEquals("billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -452,27 +458,21 @@ public class ResourcePoolTest
   }
 
   /**
-   * The pool has no background reaper: an idle resource sitting past
-   * {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} is neither closed nor removed until it is
-   * next taken. Expiry is enforced lazily inside {@code get()} and the stale resource is replaced 1:1, so the
-   * pool never shrinks below {@code maxPerKey} on its own. This guards the "warm pool stays put until reuse"
-   * property the broker relies on (see FINDINGS_eviction.md).
+   * A single take() purges every idle resource that has outlived the timeout - not just the one at the front -
+   * and opens at most one replacement, letting the pool shrink instead of reconnecting one-for-one. A warm
+   * survivor is then reused directly, so no handshake is paid on the caller's thread.
    */
   @Test
-  public void testIdleResourcesAreNotReapedInBackgroundAndReplacedOneForOne() throws Exception
+  public void testExpiredResourcesArePurgedAndPoolShrinks() throws Exception
   {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
-
-    // Timeout longer than the populate step below (so the two resources stay warm while being parked) yet
-    // shorter than the idle sleep in phase 1 (so they are reliably expired by the time they are reused).
     pool = new ResourcePool<>(
         resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(50)),
+        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(100)),
         true
     );
 
-    // Populate: eager init lazily generates the full maxPerKey(2) on the first take() of a key. Take both and
-    // return both so the pool parks two warm, idle resources (billy0, billy1).
+    // Park two warm resources (billy0, billy1).
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
     EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(true).times(1);
@@ -488,31 +488,32 @@ public class ResourcePoolTest
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
 
-    // Phase 1 - no background reaper: let both parked resources sit idle well past the 50ms timeout with no
-    // take(). With zero expectations replayed, any generate()/close()/isGood() the pool triggered on its own
-    // would fail verify(). It doesn't - nothing is reaped without a reuse; the pool never shrinks on its own.
-    EasyMock.replay(resourceFactory);
+    // Let both parked resources go stale.
     Thread.sleep(500);
-    EasyMock.verify(resourceFactory);
-    EasyMock.reset(resourceFactory);
 
-    // Phase 2 - lazy 1:1 replacement: the two now-stale resources are swapped only when taken. Each expired one
-    // is closed and a fresh one generated (isGood is skipped on the expired path); both slots are still handed
-    // out concurrently, so capacity stays at maxPerKey - the pool did not shrink.
+    // One take() closes BOTH stale resources and opens a single validated replacement - the pool shrinks to the
+    // one connection actually needed rather than eagerly re-handshaking back up to maxPerKey.
     resourceFactory.close("billy0");
     EasyMock.expectLastCall();
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
-    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy3").times(1);
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> a = pool.take("billy");
-    ResourceContainer<String> b = pool.take("billy"); // full maxPerKey still handed out => no shrink
     Assert.assertEquals("billy2", a.get());
-    Assert.assertEquals("billy3", b.get());
-
     a.returnResource();
+
+    EasyMock.verify(resourceFactory);
+    EasyMock.reset(resourceFactory);
+
+    // The lone warm survivor is reused directly - no close(), no generate(), no handshake.
+    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
+    EasyMock.replay(resourceFactory);
+
+    ResourceContainer<String> b = pool.take("billy");
+    Assert.assertEquals("billy2", b.get());
     b.returnResource();
 
     EasyMock.verify(resourceFactory);

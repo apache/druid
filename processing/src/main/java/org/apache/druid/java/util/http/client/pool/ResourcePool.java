@@ -32,7 +32,9 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -241,7 +243,7 @@ public class ResourcePool<K, V> implements Closeable
     {
       final V poolVal;
       // resourceHolderList can't have nulls, so we'll use a null to signal that we need to create a new resource.
-      boolean expired = false;
+      final List<V> expiredResources = new ArrayList<>();
       synchronized (this) {
         while (!closed && (numLentResources == maxSize)) {
           try {
@@ -257,15 +259,21 @@ public class ResourcePool<K, V> implements Closeable
           log.info(StringUtils.format("get() called even though I'm closed. key[%s]", key));
           return null;
         } else if (numLentResources < maxSize) {
-          // Attempt to take an existing resource or create one if list is empty, and increment numLentResources
+          // Purge every idle resource that has outlived the timeout, not just the one at the front. The deque is
+          // ordered oldest-first (giveBack() always appends with a fresh timestamp), so the expired ones form a
+          // prefix. Dropping them all lets the pool shrink when demand falls, instead of reconnecting one-for-one
+          // and paying a fresh handshake on the caller's thread for every stale connection it hands out.
+          final long now = System.currentTimeMillis();
+          while (!resourceHolderList.isEmpty()
+                 && now - resourceHolderList.peekFirst().getLastAccessedTime() > unusedResourceTimeoutMillis) {
+            expiredResources.add(resourceHolderList.removeFirst().getResource());
+          }
+
+          // Reuse a surviving warm resource if one is left, otherwise create a new one.
           if (resourceHolderList.isEmpty()) {
             poolVal = factory.generate(key);
           } else {
-            ResourceHolder<V> holder = resourceHolderList.removeFirst();
-            poolVal = holder.getResource();
-            if (System.currentTimeMillis() - holder.getLastAccessedTime() > unusedResourceTimeoutMillis) {
-              expired = true;
-            }
+            poolVal = resourceHolderList.removeFirst().getResource();
           }
           numLentResources++;
         } else {
@@ -273,10 +281,15 @@ public class ResourcePool<K, V> implements Closeable
         }
       }
 
+      // Close purged resources outside the lock so a slow close() can't stall other threads taking this key.
+      for (V expired : expiredResources) {
+        factory.close(expired);
+      }
+
       final V retVal;
       // At this point, we must either return a valid resource. Or throw and exception decrement "numLentResources"
       try {
-        if (poolVal != null && !expired && factory.isGood(poolVal)) {
+        if (poolVal != null && factory.isGood(poolVal)) {
           retVal = poolVal;
         } else {
           if (poolVal != null) {
