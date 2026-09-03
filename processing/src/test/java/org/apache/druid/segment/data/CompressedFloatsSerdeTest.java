@@ -73,7 +73,7 @@ public class CompressedFloatsSerdeTest
   private static final double DELTA = 0.00001;
 
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   protected final CompressionStrategy compressionStrategy;
   protected final ByteOrder order;

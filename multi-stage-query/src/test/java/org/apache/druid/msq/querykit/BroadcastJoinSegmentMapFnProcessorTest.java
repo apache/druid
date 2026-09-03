@@ -71,7 +71,7 @@ import java.util.stream.Collectors;
 public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private CursorFactory cursorFactory;
   private File testDataFile1;

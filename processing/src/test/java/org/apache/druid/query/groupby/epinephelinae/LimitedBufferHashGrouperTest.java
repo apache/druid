@@ -370,6 +370,86 @@ public class LimitedBufferHashGrouperTest extends InitializedNullHandlingTest
     Assertions.assertEquals(expectedPeakUsage, grouper.getMaxMergeBufferUsedBytes());
   }
 
+  @Test
+  public void testMaxSpillProximityIsZeroOnHeapTrimSwaps()
+  {
+    // A LimitedBufferHashGrouper's Alternating hash table swaps sub-buffers on every "full" event and trims to `limit`
+    // entries — a heap trim for limit push-down, NOT a disk spill. size hits regrowthThreshold on every swap (see
+    // testMinBufferSize: size == getMaxSize() == 101 at steady state after 899 swaps). This path never spills, so its
+    // fill ratio is not proximity to a spill: AlternatingByteBufferHashTable.recordsFillProximity() returns false,
+    // suppressing fill-proximity recording entirely. A Limited grouper that trims but never spills must report exactly
+    // 0.0 — not the ~(T-1)/T saturation that the raw fill ratio would produce.
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final LimitedBufferHashGrouper<IntKey> grouper = makeGrouper(columnSelectorFactory, 12120);
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+    for (int i = 0; i < NUM_ROWS; i++) {
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i + KEY_BASE)).isOk(), String.valueOf(i + KEY_BASE));
+    }
+
+    // Confirms this exercised the heap-trim swap path (matches testMinBufferSize's observations).
+    Assertions.assertTrue(
+        grouper.getGrowthCount() > 100,
+        "expected multiple heap-trim swaps: " + grouper.getGrowthCount()
+    );
+    Assertions.assertEquals(101, grouper.getMaxSize());
+    Assertions.assertEquals(101, grouper.getSize());
+
+    // Despite size == regrowthThreshold at every swap, proximity must be exactly 0.0: heap-trim swaps are not a spill,
+    // and no bucket rejection ever occurred (post-swap size <= limit < regrowthThreshold guarantees the next insert
+    // succeeds), so nothing sets proximity above its 0.0 initial value.
+    Assertions.assertEquals(
+        0.0,
+        grouper.getMaxSpillProximity(),
+        0.0,
+        "heap-trim swaps must not register any spill proximity: " + grouper.getMaxSpillProximity()
+    );
+  }
+
+  @Test
+  public void testMaxSpillProximityIsOneOnGenuineRejection()
+  {
+    // The only real spill signal for the Alternating table is a genuine bucket rejection in findBucketWithAutoGrowth.
+    // Force one by capping bufferGrouperMaxSize (maxSizeForTesting) below regrowthThreshold: once size reaches the cap
+    // no new bucket is allowed AND no swap is attempted (size < maxSizeForTesting is false), so findBucketWithAutoGrowth
+    // returns -1 and pins proximity to exactly 1.0 — even though recordsFillProximity() zeroes the ordinary heap-trim
+    // path.
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    final int maxSize = 50;
+    final LimitedBufferHashGrouper<IntKey> grouper = new LimitedBufferHashGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(12120)),
+        GrouperTestUtil.intKeySerde(),
+        AggregatorAdapters.factorizeBuffered(
+            columnSelectorFactory,
+            ImmutableList.of(
+                new LongSumAggregatorFactory("valueSum", "value"),
+                new CountAggregatorFactory("count")
+            )
+        ),
+        maxSize,
+        0.5f,
+        2,
+        LIMIT,
+        false
+    );
+    grouper.init();
+
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 10L)));
+
+    // Fill up to the cap; every insert is accepted and proximity stays 0.0 (heap-trim/fill path is suppressed).
+    for (int i = 0; i < maxSize; i++) {
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i + KEY_BASE)).isOk());
+    }
+    Assertions.assertEquals(0.0, grouper.getMaxSpillProximity(), 0.0);
+
+    // The next distinct key cannot be placed and cannot trigger a swap (size == maxSizeForTesting): a genuine
+    // rejection. Proximity is pinned to exactly 1.0.
+    Assertions.assertFalse(grouper.aggregate(new IntKey(maxSize + KEY_BASE)).isOk());
+    Assertions.assertEquals(1.0, grouper.getMaxSpillProximity(), 0.0);
+
+    grouper.close();
+  }
+
   private static LimitedBufferHashGrouper<IntKey> makeGrouper(
       GroupByTestColumnSelectorFactory columnSelectorFactory,
       int bufferSize

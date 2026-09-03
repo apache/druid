@@ -97,7 +97,7 @@ import java.util.zip.GZIPOutputStream;
 public class JettyTest extends BaseJettyTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension folder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension folder = TemporaryFolderExtension.testCaseScoped();
 
   private HttpClientConfig sslConfig;
 

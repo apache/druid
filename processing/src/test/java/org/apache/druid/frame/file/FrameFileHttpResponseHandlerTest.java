@@ -68,7 +68,7 @@ import java.util.List;
 public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final int maxRowsPerFrame;
 

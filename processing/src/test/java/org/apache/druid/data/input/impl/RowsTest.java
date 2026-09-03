@@ -28,9 +28,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -127,10 +124,7 @@ public class RowsTest extends InitializedNullHandlingTest
           o + " (throw)"
       );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("for field[" + FIELD_NAME + "]"))
-      );
+      Assertions.assertTrue(e.getMessage().contains("for field[" + FIELD_NAME + "]"));
     }
   }
 
@@ -158,10 +152,7 @@ public class RowsTest extends InitializedNullHandlingTest
           o + " (throw)"
       );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("for field[" + FIELD_NAME + "]"))
-      );
+      Assertions.assertTrue(e.getMessage().contains("for field[" + FIELD_NAME + "]"));
     }
   }
 
@@ -189,10 +180,7 @@ public class RowsTest extends InitializedNullHandlingTest
           o + " (throw)"
       );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("for field[" + FIELD_NAME + "]"))
-      );
+      Assertions.assertTrue(e.getMessage().contains("for field[" + FIELD_NAME + "]"));
     }
   }
 
@@ -220,10 +208,7 @@ public class RowsTest extends InitializedNullHandlingTest
           o + " (throw)"
       );
 
-      MatcherAssert.assertThat(
-          e,
-          ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("for field[" + FIELD_NAME + "]"))
-      );
+      Assertions.assertTrue(e.getMessage().contains("for field[" + FIELD_NAME + "]"));
     }
   }
 

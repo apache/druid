@@ -158,7 +158,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
 
   @Test

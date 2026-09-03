@@ -46,7 +46,7 @@ public class SegmentWriteOutMediumTest
   }
 
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private SegmentWriteOutMediumFactory factory;
   private SegmentWriteOutMedium medium;

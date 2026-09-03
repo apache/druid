@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.schema;
 
-import com.google.inject.Inject;
 import org.apache.calcite.schema.Schema;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -36,7 +35,6 @@ public class NamedSystemSchema implements NamedSchema
   private final SystemSchema systemSchema;
   private final PlannerConfig plannerConfig;
 
-  @Inject
   public NamedSystemSchema(PlannerConfig plannerConfig, SystemSchema systemSchema)
   {
     this.plannerConfig = plannerConfig;

@@ -33,6 +33,8 @@ public class ConnectionUriUtilsTest
   public static class ThrowIfURLHasNotAllowedPropertiesTest
   {
     private static final String MYSQL_URI = "jdbc:mysql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
+    private static final String MYSQL_URI_WITH_MARIA_DB_3X_SCHEME =
+        "jdbc:mysql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat&permitMysqlScheme";
     private static final String MARIA_URI = "jdbc:mariadb://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
     private static final String POSTGRES_URI = "jdbc:postgresql://localhost:3306/test?user=druid&password=diurd&keyonly&otherOptions=wat";
     private static final String UNKNOWN_URI = "jdbc:druid://localhost:8888/query/v2/sql/avatica?user=druid&password=diurd&keyonly&otherOptions=wat";
@@ -122,35 +124,53 @@ public class ConnectionUriUtilsTest
     @Test
     public void testMySqlFallbackMySqlMaria2x()
     {
-      MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class);
-      utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false)).thenCallRealMethod();
-      utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI)).thenThrow(ClassNotFoundException.class);
-      utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI)).thenCallRealMethod();
+      try (MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class)) {
+        utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false)).thenCallRealMethod();
+        utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI))
+             .thenReturn(ImmutableSet.of("user", "password", "keyonly", "otherOptions"));
 
-      Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
-      // this would be 9 if didn't fall back to mariadb
-      Assertions.assertEquals(4, props.size());
-      utils.close();
+        Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI, false);
+        // this would be 9 if didn't fall back to mariadb
+        Assertions.assertEquals(4, props.size());
+      }
+    }
+
+    @Test
+    public void testMySqlFallbackMySqlMaria3x()
+    {
+      try (MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class)) {
+        utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME, false))
+             .thenCallRealMethod();
+        utils.when(() -> ConnectionUriUtils.tryParseMySqlConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME))
+             .thenCallRealMethod();
+
+        Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MYSQL_URI_WITH_MARIA_DB_3X_SCHEME, false);
+        Assertions.assertEquals(
+            ImmutableSet.of("user", "password", "keyonly", "otherOptions", "permitMysqlScheme"),
+            props
+        );
+      }
     }
 
     @Test
     public void testMariaFallbackMaria3x()
     {
-      MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class);
-      utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false)).thenCallRealMethod();
-      utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MARIA_URI)).thenThrow(ClassNotFoundException.class);
-      utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI)).thenCallRealMethod();
+      try (MockedStatic<ConnectionUriUtils> utils = Mockito.mockStatic(ConnectionUriUtils.class)) {
+        utils.when(() -> ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false)).thenCallRealMethod();
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MARIA_URI))
+             .thenThrow(ClassNotFoundException.class);
+        utils.when(() -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI)).thenCallRealMethod();
 
-      try {
         Set<String> props = ConnectionUriUtils.tryParseJdbcUriParameters(MARIA_URI, false);
         // this would be 4 if didn't fall back to mariadb 3x
-        Assertions.assertEquals(8, props.size());
+        Assertions.assertEquals(4, props.size());
       }
-      catch (RuntimeException e) {
-
-        Assertions.assertTrue(e.getMessage().contains("Failed to find MariaDB driver class"));
-      }
-      utils.close();
     }
 
     @Test
@@ -196,30 +216,11 @@ public class ConnectionUriUtilsTest
     }
 
     @Test
-    public void testMariaDb2xDriver() throws Throwable
-    {
-      Set<String> props = ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MYSQL_URI);
-      // mariadb doesn't spit out any extras other than what the user specified
-      Assertions.assertEquals(4, props.size());
-      Assertions.assertTrue(props.contains("user"));
-      Assertions.assertTrue(props.contains("password"));
-      Assertions.assertTrue(props.contains("otherOptions"));
-      Assertions.assertTrue(props.contains("keyonly"));
-      props = ConnectionUriUtils.tryParseMariaDb2xConnectionUri(MARIA_URI);
-      Assertions.assertEquals(4, props.size());
-      Assertions.assertTrue(props.contains("user"));
-      Assertions.assertTrue(props.contains("password"));
-      Assertions.assertTrue(props.contains("otherOptions"));
-      Assertions.assertTrue(props.contains("keyonly"));
-    }
-
-    @Test
     public void testMariaDb3xDriver() throws Exception
     {
-      // at the time of adding this test, mariadb connector/j 3.x does not actually parse jdbc:mysql uris
-      // so this would throw an IAE.class instead of ClassNotFoundException.class if the connector is swapped out
-      // in maven dependencies
-      Assertions.assertThrows(ClassNotFoundException.class, () ->
+      // MariaDB Connector/J 3.x rejects plain jdbc:mysql URLs by default. MYSQL_URI lacks permitMysqlScheme,
+      // so Configuration.parse returns null, which Druid translates to IAE.
+      Assertions.assertThrows(IAE.class, () ->
           ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MYSQL_URI)
       );
     }
@@ -227,19 +228,12 @@ public class ConnectionUriUtilsTest
     @Test
     public void testMariaDb3xDriverMariaUri() throws Exception
     {
-      // mariadb 3.x driver cannot be loaded alongside 2.x, so this will fail with class not found
-      // however, if we swap out version in pom then we end up with 8 keys where
-      // "database", "addresses", "codecs", and "initialUrl" are added as extras
-      // we should perhaps consider adding them to built-in allowed lists in the future when this driver is no longer
-      // an alpha release
-      Assertions.assertThrows(ClassNotFoundException.class, () -> {
-        Set<String> props = ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI);
-        Assertions.assertEquals(8, props.size());
-        Assertions.assertTrue(props.contains("user"));
-        Assertions.assertTrue(props.contains("password"));
-        Assertions.assertTrue(props.contains("otherOptions"));
-        Assertions.assertTrue(props.contains("keyonly"));
-      });
+      Set<String> props = ConnectionUriUtils.tryParseMariaDb3xConnectionUri(MARIA_URI);
+      Assertions.assertEquals(4, props.size());
+      Assertions.assertTrue(props.contains("user"));
+      Assertions.assertTrue(props.contains("password"));
+      Assertions.assertTrue(props.contains("otherOptions"));
+      Assertions.assertTrue(props.contains("keyonly"));
     }
 
     @Test
@@ -257,7 +251,7 @@ public class ConnectionUriUtilsTest
     @Test
     public void testMariaDbInvalidArgs() throws Exception
     {
-      Assertions.assertThrows(IAE.class, () -> ConnectionUriUtils.tryParseMariaDb2xConnectionUri(POSTGRES_URI));
+      Assertions.assertThrows(IAE.class, () -> ConnectionUriUtils.tryParseMariaDb3xConnectionUri(POSTGRES_URI));
     }
   }
 }

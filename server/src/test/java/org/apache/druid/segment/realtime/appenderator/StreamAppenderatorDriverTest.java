@@ -109,7 +109,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   private DataSegmentKiller dataSegmentKiller;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp() throws Exception

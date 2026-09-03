@@ -48,7 +48,7 @@ public class DruidServerConfigTest
   private File testSegmentCacheDir2;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public ObjectMapper mapper = new DefaultObjectMapper();
 

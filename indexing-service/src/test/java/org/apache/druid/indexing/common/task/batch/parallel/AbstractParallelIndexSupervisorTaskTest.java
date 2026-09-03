@@ -113,7 +113,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.io.TempDir;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -166,19 +165,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
   private static final Logger LOG = new Logger(AbstractParallelIndexSupervisorTaskTest.class);
 
-  @TempDir
-  protected File parallelTemporaryFolder;
-
-  protected final File createTempDir()
-  {
-    return FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), null);
-  }
-
-  protected final File createTempDir(final String prefix)
-  {
-    return FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), prefix);
-  }
-
   /**
    * Transient task failure rate emulated by the taskKiller in {@link SimpleThreadingTaskRunner}.
    * Per {@link SubTaskSpec}, there could be at most one task failure.
@@ -226,7 +212,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   @BeforeEach
   public void setUpAbstractParallelIndexSupervisorTaskTest(TestInfo testInfo) throws IOException
   {
-    localDeepStorage = FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "localStorage");
+    localDeepStorage = temporaryFolder.newFolder("localStorage");
     taskRunner = new SimpleThreadingTaskRunner(testInfo.getTestMethod().orElseThrow().getName());
     objectMapper = getObjectMapper();
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
@@ -234,7 +220,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .setShuffleDataLocations(
             ImmutableList.of(
                 new StorageLocationConfig(
-                    FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "shuffle"),
+                    temporaryFolder.newFolder("shuffle"),
                     null,
                     null
                 )
@@ -689,10 +675,10 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .dataSegmentKiller(new NoopDataSegmentKiller())
         .joinableFactory(NoopJoinableFactory.INSTANCE)
         .segmentCacheManager(
-            newSegmentLoader(FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), "segmentCache"))
+            newSegmentLoader(temporaryFolder.newFolder("segmentCache"))
         )
         .jsonMapper(objectMapper)
-        .taskWorkDir(FileUtils.createTempDirInLocation(parallelTemporaryFolder.toPath(), task.getId()))
+        .taskWorkDir(temporaryFolder.newFolder(task.getId()))
         .indexIO(getIndexIO())
         .indexMerger(getIndexMergerV9Factory().create(task.getContextValue(Tasks.STORE_EMPTY_COLUMNS_KEY, true)))
         .intermediaryDataManager(intermediaryDataManager)
@@ -800,6 +786,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 0L,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -809,7 +796,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected TaskReport.ReportMap buildExpectedTaskReportParallel(
       String taskId,
       List<ParseExceptionReport> expectedUnparseableEvents,
-      RowIngestionMetersTotals expectedTotals
+      RowIngestionMetersTotals expectedTotals,
+      Long oversizedSegments
   )
   {
     Map<String, Object> unparseableEvents = ImmutableMap.of("buildSegments", expectedUnparseableEvents);
@@ -826,7 +814,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 0L,
                 null,
                 null,
-                null
+                null,
+                oversizedSegments
             )
         )
     );
@@ -875,6 +864,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
     List<String> actualInputs = actualParseExceptionReports
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
+    Assertions.assertEquals(expectedPayload.getOversizedSegments(), actualPayload.getOversizedSegments());
     Assertions.assertEquals(expectedInputs, actualInputs);
   }
 

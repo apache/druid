@@ -101,7 +101,7 @@ public class SuperSorterTest
     private static final int FRAME_SIZE = 1_000_000;
 
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private FrameProcessorExecutor exec;
 
@@ -249,7 +249,7 @@ public class SuperSorterTest
     private static final Map<ClusterBy, List<List<Object>>> SORTED_TEST_ROWS = new HashMap<>();
 
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private RowSignature signature;
     private FrameProcessorExecutor exec;
@@ -846,7 +846,7 @@ public class SuperSorterTest
     }
 
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private final int maxRowsPerFrame;
     private final int maxChannelsPerMerger;

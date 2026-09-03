@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,8 @@ public class SqlEntityTest
 {
   @RegisterExtension
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final ObjectMapper mapper = TestHelper.makeSmileMapper();
   private TestDerbyConnector derbyConnector;
@@ -65,7 +68,7 @@ public class SqlEntityTest
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     final InputRow expectedRow = testUtils.createTableWithRows(TABLE_NAME_1, 1).get(0);
-    File tmpFile = File.createTempFile("testQueryResults", "");
+    final File tmpFile = temporaryFolder.newFile("testQueryResults");
     final String actualJson;
     try (final InputEntity.CleanableFile queryResult = SqlEntity.openCleanableFile(
         VALID_SQL,
@@ -90,7 +93,7 @@ public class SqlEntityTest
     derbyConnector = derbyConnectorRule.getConnector();
     SqlTestUtils testUtils = new SqlTestUtils(derbyConnector);
     testUtils.createTableWithRows(TABLE_NAME_1, 1);
-    File tmpFile = File.createTempFile("testQueryResults", "");
+    final File tmpFile = temporaryFolder.newFile("testQueryResults");
     Assertions.assertTrue(tmpFile.exists());
 
     Assertions.assertThrows(

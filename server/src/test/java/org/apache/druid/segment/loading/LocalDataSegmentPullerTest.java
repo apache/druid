@@ -41,7 +41,7 @@ import java.util.zip.GZIPOutputStream;
 public class LocalDataSegmentPullerTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File tmpDir;
   private LocalDataSegmentPuller puller;
 
@@ -79,7 +79,7 @@ public class LocalDataSegmentPullerTest
   @Test
   public void simpleGZTest() throws IOException, SegmentLoadingException
   {
-    File zipFile = File.createTempFile("gztest", ".gz");
+    final File zipFile = temporaryFolder.newFile("gztest.gz");
     File unZipFile = new File(
         tmpDir,
         Files.getNameWithoutExtension(

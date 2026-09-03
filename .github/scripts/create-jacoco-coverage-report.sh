@@ -67,6 +67,3 @@ fi
 
 echo " * test balancing details"
 .github/scripts/test_balancing_calc
-
-echo " * validate junit4/junit5 usage"
-dev/validate-junit5-usage

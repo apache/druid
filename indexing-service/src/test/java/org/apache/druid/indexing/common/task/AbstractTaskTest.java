@@ -32,16 +32,16 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogPusher;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -54,8 +54,8 @@ import static org.mockito.Mockito.when;
 
 public class AbstractTaskTest
 {
-  @TempDir
-  private File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private ObjectMapper objectMapper;
 
@@ -67,14 +67,14 @@ public class AbstractTaskTest
 
   private File createTempReportFile() throws Exception
   {
-    final File reportsFile = Files.createTempFile(temporaryFolder.toPath(), "report", ".json").toFile();
+    final File reportsFile = temporaryFolder.newFile("report.json");
     FileUtils.write(reportsFile, "", StandardCharsets.UTF_8);
     return reportsFile;
   }
 
-  private File createTempDir()
+  private File createTempDir() throws Exception
   {
-    return org.apache.druid.java.util.common.FileUtils.createTempDirInLocation(temporaryFolder.toPath(), "task");
+    return temporaryFolder.newFolder("task");
   }
 
   @Test

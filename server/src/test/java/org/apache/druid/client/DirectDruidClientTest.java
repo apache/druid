@@ -82,7 +82,7 @@ public class DirectDruidClientTest
   public static QueryStackTests.ConglomerateExtension conglomerateRule = new QueryStackTests.ConglomerateExtension();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final String hostName = "localhost:8080";
   private final ObjectMapper objectMapper = new DefaultObjectMapper();

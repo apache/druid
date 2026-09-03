@@ -133,9 +133,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         .stream(baseConstructors.spliterator(), false)
         .filter(
             constructor -> {
-              boolean canVectorize =
-                  QueryRunnerTestHelper.isTestRunnerVectorizable((QueryRunner) constructor[0])
-                  && !(boolean) constructor[1] /* descending */;
+              boolean canVectorize = QueryRunnerTestHelper.isTestRunnerVectorizable((QueryRunner) constructor[0]);
               final boolean vectorize = (boolean) constructor[2]; /* vectorize */
               final boolean useVectorApi = (boolean) constructor[4]; /* useVectorApi */
               if (!vectorize && useVectorApi) {

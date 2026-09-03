@@ -67,7 +67,7 @@ import java.util.Map;
 public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension tempFoler = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFoler = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testComputeWithoutFinalizing()
@@ -208,7 +208,7 @@ public class FinalizingFieldAccessPostAggregatorTest extends InitializedNullHand
   public void testIngestAndQueryWithArithmeticPostAggregator() throws Exception
   {
     try (
-        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTemporaryFolderExtension(
+        final AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
             Collections.singletonList(new AggregatorsModule()),
             GroupByQueryRunnerTest.testConfigs().get(0),
             tempFoler

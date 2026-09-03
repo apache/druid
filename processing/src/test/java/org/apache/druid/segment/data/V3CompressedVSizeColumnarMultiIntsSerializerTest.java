@@ -76,7 +76,7 @@ public class V3CompressedVSizeColumnarMultiIntsSerializerTest
   private List<int[]> vals;
 
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public V3CompressedVSizeColumnarMultiIntsSerializerTest(
       CompressionStrategy compressionStrategy,

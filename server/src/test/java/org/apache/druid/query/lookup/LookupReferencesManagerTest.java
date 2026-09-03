@@ -55,7 +55,7 @@ public class LookupReferencesManagerTest
   private static final String LOOKUP_TIER = "lookupTier";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   LookupReferencesManager lookupReferencesManager;
   LookupExtractorFactory lookupExtractorFactory;
   LookupExtractorFactoryContainer container;

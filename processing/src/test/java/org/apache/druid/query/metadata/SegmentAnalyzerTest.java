@@ -97,7 +97,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
       EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class);
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testIncrementalWorks()

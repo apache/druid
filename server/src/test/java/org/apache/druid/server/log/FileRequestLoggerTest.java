@@ -44,7 +44,7 @@ public class FileRequestLoggerTest
   private static final String HOST = "localhost";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testLog() throws Exception

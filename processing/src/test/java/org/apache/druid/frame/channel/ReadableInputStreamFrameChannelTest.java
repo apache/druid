@@ -31,11 +31,12 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -50,8 +51,8 @@ import java.util.concurrent.ExecutorService;
 public class ReadableInputStreamFrameChannelTest extends InitializedNullHandlingTest
 {
 
-  @TempDir
-  File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   final IncrementalIndexCursorFactory cursorFactory =
       new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
@@ -88,7 +89,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   {
     final File file = FrameTestUtil.writeFrameFile(
         Sequences.empty(),
-        File.createTempFile("tmp", null, temporaryFolder)
+        temporaryFolder.newFile()
     );
     ReadableInputStreamFrameChannel readableInputStreamFrameChannel = ReadableInputStreamFrameChannel.open(
         Files.newInputStream(file.toPath()),
@@ -112,7 +113,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   @Test
   public void testZeroBytesFrameFile() throws IOException
   {
-    final File file = File.createTempFile("tmp", null, temporaryFolder);
+    final File file = temporaryFolder.newFile();
     FileOutputStream outputStream = new FileOutputStream(file);
     outputStream.write(new byte[0]);
     outputStream.close();
@@ -154,7 +155,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
                             .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
                             .frameType(FrameType.latestRowBased())
                             .frames(),
-        File.createTempFile("tmp", null, temporaryFolder)
+        temporaryFolder.newFile()
     );
 
     final byte[] truncatedFile = new byte[truncatedSize];
@@ -184,7 +185,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
   @Test
   public void testIncorrectFrameFile() throws IOException
   {
-    final File file = File.createTempFile("tmp", null, temporaryFolder);
+    final File file = temporaryFolder.newFile();
     FileOutputStream outputStream = new FileOutputStream(file);
     outputStream.write(10);
     outputStream.close();
@@ -264,7 +265,7 @@ public class ReadableInputStreamFrameChannelTest extends InitializedNullHandling
                               .maxRowsPerFrame(10)
                               .frameType(FrameType.latestRowBased())
                               .frames(),
-          File.createTempFile("tmp", null, temporaryFolder)
+          temporaryFolder.newFile()
       );
       return Files.newInputStream(file.toPath());
     }

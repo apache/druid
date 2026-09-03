@@ -50,7 +50,7 @@ public class DruidJsonValidatorTest
   private final Injector injector = GuiceInjectors.makeStartupInjector();
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp() throws IOException

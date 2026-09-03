@@ -77,7 +77,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   DefaultColumnFormatConfig DEFAULT_FORMAT = new DefaultColumnFormatConfig(null, null, null, null);
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final AggregationTestHelper helper;
   private final Closer closer;
@@ -121,7 +121,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   {
     BuiltInTypesModule.registerHandlersAndSerde();
     List<? extends Module> mods = BuiltInTypesModule.getJacksonModulesList();
-    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelperWithTemporaryFolderExtension(mods, tempFolder);
+    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(mods, tempFolder);
     this.closer = Closer.create();
   }
 

@@ -28,6 +28,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.roaringbitmap.IntIterator;
+import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -130,7 +131,13 @@ public class BitmapOffset extends Offset
   private IntIterator iteratorForMark;
   private int valueForMark;
 
-  public static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
+  /**
+   * Returns an iterator over the set bits of "bitmapIndex", from highest to lowest. The returned iterator's
+   * {@link PeekableIntIterator#advanceIfNeeded(int)} deviates from its contract in order to remain useful:
+   * it advances as long as the next value is larger than the given value, i.e., it is the reverse-order
+   * analog of the forward iterator's behavior.
+   */
+  public static PeekableIntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
   {
     ImmutableBitmap roaringBitmap = bitmapIndex;
     if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {

@@ -95,7 +95,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   );
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSimpleIngestion() throws Exception

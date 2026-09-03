@@ -141,7 +141,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   /**
    * Writes the frame file for one case into the temporary folder, and returns it.

@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.datasketches;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -57,11 +56,12 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.Collections;
@@ -82,8 +82,8 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
   protected static final String SKETCH_COLUMN = "sketch";
   protected static final String DIM_COLUMN = "dim";
 
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   private IndexIO indexIO;
   private IndexMergerV9 indexMerger;
@@ -147,7 +147,7 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     // Create a QueryableIndex (simulates historical/persisted segment)
     IncrementalIndex indexToPersist = closer.register(createIncrementalIndex(aggregators));
     addRows(indexToPersist, 100, 200);
-    File segmentDir = newFolder(tempFolder, "junit");
+    File segmentDir = tempFolder.newFolder();
     indexMerger.persist(indexToPersist, segmentDir, IndexSpec.getDefault(), null);
     QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(segmentDir));
 
@@ -240,13 +240,13 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     // Create two persisted segments
     IncrementalIndex index1 = closer.register(createIncrementalIndex(aggregators));
     addRows(index1, 0, 100);
-    File segmentDir1 = newFolder(tempFolder, "junit");
+    File segmentDir1 = tempFolder.newFolder();
     indexMerger.persist(index1, segmentDir1, IndexSpec.getDefault(), null);
     QueryableIndex queryableIndex1 = closer.register(indexIO.loadIndex(segmentDir1));
 
     IncrementalIndex index2 = closer.register(createIncrementalIndex(aggregators));
     addRows(index2, 100, 200);
-    File segmentDir2 = newFolder(tempFolder, "junit");
+    File segmentDir2 = tempFolder.newFolder();
     indexMerger.persist(index2, segmentDir2, IndexSpec.getDefault(), null);
     QueryableIndex queryableIndex2 = closer.register(indexIO.loadIndex(segmentDir2));
 
@@ -465,8 +465,4 @@ public abstract class BaseSketchBuildSegmentMetadataQueryTest extends Initialize
     return results.get(0).getColumns().get(columnName);
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs) + "-");
-  }
 }

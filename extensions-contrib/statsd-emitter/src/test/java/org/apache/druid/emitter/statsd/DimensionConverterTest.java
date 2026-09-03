@@ -25,6 +25,8 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 public class DimensionConverterTest
 {
   @Test
@@ -57,5 +59,85 @@ public class DimensionConverterTest
     expected.put("dataSource", "data-source");
     expected.put("type", "groupBy");
     Assertions.assertEquals(expected.build(), actual.build(), "correct Dimensions");
+  }
+
+  @Test
+  public void testConvertTaskCountMetrics()
+  {
+    DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+    for (String metric : new String[]{
+        "task/success/count",
+        "task/failed/count",
+        "task/running/count",
+        "task/pending/count",
+        "task/waiting/count"
+    }) {
+      ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+          .setDimension("dataSource", "data-source")
+          .setDimension("taskType", "index_kafka")
+          .setDimension("supervisorId", "supervisor-1")
+          .setMetric(metric, 1)
+          .build("overlord", "overlordHost1");
+
+      ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
+      StatsDMetric statsDMetric = dimensionConverter.addFilteredUserDims(
+          event.getService(),
+          event.getMetric(),
+          event.getUserDims(),
+          actual
+      );
+      Assertions.assertNotNull(statsDMetric, metric + " is mapped");
+      final ImmutableMap<String, String> dims = actual.build();
+      Assertions.assertEquals(
+          ImmutableMap.of("dataSource", "data-source", "taskType", "index_kafka"),
+          dims,
+          "correct Dimensions for " + metric
+      );
+      // Dimensions are iterated in sorted order, and for non-dogstatsd output their values are
+      // appended to the dotted metric name in that order, so the emitted order is user-visible.
+      Assertions.assertEquals(
+          List.of("dataSource", "taskType"),
+          List.copyOf(dims.keySet()),
+          "correct Dimension order for " + metric
+      );
+    }
+  }
+
+  @Test
+  public void testConvertTaskRunTime()
+  {
+    DimensionConverter dimensionConverter = new DimensionConverter(new ObjectMapper(), null);
+    ServiceMetricEvent event = new ServiceMetricEvent.Builder()
+        .setDimension("dataSource", "data-source")
+        .setDimension("taskType", "index_kafka")
+        .setDimension("taskStatus", "FAILED")
+        .setDimension("taskId", "index_kafka_data-source_abc_1")
+        .setDimension("groupId", "index_kafka_data-source_abc")
+        .setDimension("description", "some very long error message")
+        .setMetric("task/run/time", 10)
+        .build("overlord", "overlordHost1");
+
+    ImmutableMap.Builder<String, String> actual = new ImmutableMap.Builder<>();
+    StatsDMetric statsDMetric = dimensionConverter.addFilteredUserDims(
+        event.getService(),
+        event.getMetric(),
+        event.getUserDims(),
+        actual
+    );
+    Assertions.assertEquals(StatsDMetric.Type.timer, statsDMetric.type, "correct StatsDMetric.Type");
+    final ImmutableMap<String, String> dims = actual.build();
+    // taskId, groupId and description stay filtered out; they are unbounded.
+    Assertions.assertEquals(
+        ImmutableMap.of("dataSource", "data-source", "taskStatus", "FAILED", "taskType", "index_kafka"),
+        dims,
+        "correct Dimensions"
+    );
+    // Dimensions are iterated in sorted order, and for non-dogstatsd output their values are
+    // appended to the dotted metric name in that order, so the emitted order is user-visible.
+    Assertions.assertEquals(
+        List.of("dataSource", "taskStatus", "taskType"),
+        List.copyOf(dims.keySet()),
+        "correct Dimension order"
+    );
   }
 }

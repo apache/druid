@@ -23,20 +23,19 @@ import com.google.cloud.storage.StorageException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageObjectMetadata;
 import org.apache.druid.storage.google.GoogleStorageObjectPage;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -47,8 +46,8 @@ public class GoogleStorageConnectorTest
   private static final String BUCKET = "BUCKET";
   private static final String PREFIX = "PREFIX";
   private static final String TEST_FILE = "TEST_FILE";
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private static final int MAX_LISTING_LEN = 10;
 
@@ -62,7 +61,7 @@ public class GoogleStorageConnectorTest
   @BeforeEach
   public void setUp() throws IOException
   {
-    GoogleOutputConfig config = new GoogleOutputConfig(BUCKET, PREFIX, newFolder(temporaryFolder, "junit"), CHUNK_SIZE, null);
+    GoogleOutputConfig config = new GoogleOutputConfig(BUCKET, PREFIX, temporaryFolder.newFolder(), CHUNK_SIZE, null);
     GoogleInputDataConfig inputDataConfig = new GoogleInputDataConfig();
     inputDataConfig.setMaxListingLength(MAX_LISTING_LEN);
     googleStorageConnector = new GoogleStorageConnector(config, googleStorage, inputDataConfig);
@@ -430,8 +429,4 @@ public class GoogleStorageConnectorTest
 
   }
 
-  private static File newFolder(File root, String... subDirs)
-  {
-    return FileUtils.createTempDirInLocation(root.toPath(), String.join("-", subDirs));
-  }
 }

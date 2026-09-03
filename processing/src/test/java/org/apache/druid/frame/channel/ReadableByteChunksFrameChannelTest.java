@@ -71,7 +71,7 @@ public class ReadableByteChunksFrameChannelTest
   public static class NonParameterizedTests extends InitializedNullHandlingTest
   {
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     @Test
     public void testZeroBytes()
@@ -226,7 +226,7 @@ public class ReadableByteChunksFrameChannelTest
   public static class ParameterizedWithTestIndexTests extends InitializedNullHandlingTest
   {
     @RegisterExtension
-    public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+    public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
     private final FrameType frameType;
     private final int maxRowsPerFrame;

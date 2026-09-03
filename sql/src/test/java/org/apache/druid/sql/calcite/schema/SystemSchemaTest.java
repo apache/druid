@@ -38,7 +38,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.schema.SchemaPlus;
-import org.apache.calcite.schema.Table;
+import org.apache.calcite.schema.lookup.LikePattern;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.DruidServer;
@@ -58,6 +58,7 @@ import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -100,12 +101,12 @@ import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.Authorizer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
-import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.SystemSchema.QueriesTable;
@@ -193,7 +194,6 @@ public class SystemSchemaTest extends CalciteTestBase
       .withRollup(false)
       .build();
 
-  private SystemSchema schema;
   private SpecificSegmentsQuerySegmentWalker walker;
   private CoordinatorClient coordinatorClient;
   private OverlordClient overlordClient;
@@ -201,7 +201,7 @@ public class SystemSchemaTest extends CalciteTestBase
   private StringFullResponseHolder responseHolder;
   private BytesAccumulatingResponseHandler responseHandler;
   private Request request;
-  private DruidSchema druidSchema;
+  private BrokerSegmentMetadataCache segmentMetadataCache;
   private AuthorizerMapper authMapper;
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static Closer resourceCloser;
@@ -267,7 +267,7 @@ public class SystemSchemaTest extends CalciteTestBase
                                                .add(segment2, index2)
                                                .add(segment3, index3);
 
-    BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
+    segmentMetadataCache = new BrokerSegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         new TestTimelineServerView(walker.getSegments(), realtimeSegments),
         SEGMENT_CACHE_CONFIG_DEFAULT,
@@ -281,27 +281,12 @@ public class SystemSchemaTest extends CalciteTestBase
         new NoopCoordinatorClient(),
         CentralizedDatasourceSchemaConfig.create()
     );
-    cache.start();
-    cache.awaitInitialization();
-    druidSchema = new DruidSchema(cache, null, CatalogResolver.NULL_RESOLVER);
+    segmentMetadataCache.start();
+    segmentMetadataCache.awaitInitialization();
     metadataView = EasyMock.createMock(MetadataSegmentView.class);
     druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
     serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     httpClient = EasyMock.createMock(HttpClient.class);
-    schema = new SystemSchema(
-        druidSchema,
-        metadataView,
-        serverView,
-        serverInventoryView,
-        EasyMock.createStrictMock(AuthorizerMapper.class),
-        coordinatorClient,
-        overlordClient,
-        druidNodeDiscoveryProvider,
-        MAPPER,
-        httpClient,
-        () -> new SqlEngineRegistry(Collections.emptySet()),
-        new PlannerConfig()
-    );
   }
 
   private final CompactionState expectedCompactionState =
@@ -569,25 +554,43 @@ public class SystemSchemaTest extends CalciteTestBase
   private final List<ImmutableDruidServer> immutableDruidServers = ImmutableList.of(druidServer1, druidServer2);
 
   @Test
-  public void testGetTableMap()
+  public void testGetTables()
   {
+    final PlannerConfig plannerConfig = new PlannerConfig();
+    final SystemSchema schema = new SystemSchema(
+        segmentMetadataCache,
+        metadataView,
+        serverView,
+        serverInventoryView,
+        AuthTestUtils.TEST_AUTHORIZER_MAPPER,
+        coordinatorClient,
+        overlordClient,
+        druidNodeDiscoveryProvider,
+        MAPPER,
+        httpClient,
+        () -> new SqlEngineRegistry(Collections.emptySet()),
+        plannerConfig,
+        createAuthResult(Users.SUPER),
+        SystemSchemaProvider.computeAllTableNames(plannerConfig)
+    );
+
     Assertions.assertEquals(
         ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
         schema.getTableNames()
     );
 
-    final Map<String, Table> tableMap = schema.getTableMap();
     Assertions.assertEquals(
         ImmutableSet.of("segments", "servers", "server_segments", "tasks", "supervisors", "server_properties"),
-        tableMap.keySet()
+        schema.tables().getNames(LikePattern.any())
     );
-    final SystemSchema.SegmentsTable segmentsTable = (SystemSchema.SegmentsTable) schema.getTableMap().get("segments");
+
+    final SystemSchema.SegmentsTable segmentsTable = (SystemSchema.SegmentsTable) schema.tables().get("segments");
     final RelDataType rowType = segmentsTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> fields = rowType.getFieldList();
 
     Assertions.assertEquals(20, fields.size());
 
-    final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.getTableMap().get("tasks");
+    final SystemSchema.TasksTable tasksTable = (SystemSchema.TasksTable) schema.tables().get("tasks");
     final RelDataType sysRowType = tasksTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> sysFields = sysRowType.getFieldList();
     Assertions.assertEquals(14, sysFields.size());
@@ -595,14 +598,14 @@ public class SystemSchemaTest extends CalciteTestBase
     Assertions.assertEquals("task_id", sysFields.get(0).getName());
     Assertions.assertEquals(SqlTypeName.VARCHAR, sysFields.get(0).getType().getSqlTypeName());
 
-    final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.getTableMap().get("servers");
+    final SystemSchema.ServersTable serversTable = (SystemSchema.ServersTable) schema.tables().get("servers");
     final RelDataType serverRowType = serversTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> serverFields = serverRowType.getFieldList();
     Assertions.assertEquals(16, serverFields.size());
     Assertions.assertEquals("server", serverFields.get(0).getName());
     Assertions.assertEquals(SqlTypeName.VARCHAR, serverFields.get(0).getType().getSqlTypeName());
 
-    final SystemServerPropertiesTable propertiesTable = (SystemServerPropertiesTable) schema.getTableMap()
+    final SystemServerPropertiesTable propertiesTable = (SystemServerPropertiesTable) schema.tables()
                                                                                             .get("server_properties");
     final RelDataType propertiesRowType = propertiesTable.getRowType(new JavaTypeFactoryImpl());
     final List<RelDataTypeField> propertiesFields = propertiesRowType.getFieldList();
@@ -613,9 +616,9 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testSegmentsTableGetDataSourceFilter()
   {
     final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
-    final RexLiteral foo = (RexLiteral) rexBuilder.makeLiteral("foo");
-    final RexLiteral bar = (RexLiteral) rexBuilder.makeLiteral("bar");
-    final RexLiteral baz = (RexLiteral) rexBuilder.makeLiteral("baz");
+    final RexLiteral foo = rexBuilder.makeLiteral("foo");
+    final RexLiteral bar = rexBuilder.makeLiteral("bar");
+    final RexLiteral baz = rexBuilder.makeLiteral("baz");
     // Match the input-ref type to the literal type so Calcite does not wrap the literal in a CAST.
     // "datasource" is column index 1, "size" is column index 4 in SEGMENTS_SIGNATURE.
     final RexNode dsRef = rexBuilder.makeInputRef(foo.getType(), 1);
@@ -694,7 +697,8 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, MAPPER, authMapper);
+    final SegmentsTable segmentsTable =
+        new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
         new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
@@ -706,7 +710,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = segmentsTable.scan(dataContext, Collections.emptyList(), null).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
@@ -814,7 +818,8 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTableWithProjection() throws JsonProcessingException
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, MAPPER, authMapper);
+    final SegmentsTable segmentsTable =
+        new SegmentsTable(segmentMetadataCache, metadataView, MAPPER, authMapper, createAuthResult(Users.SUPER));
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
         new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
@@ -826,7 +831,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(metadataView.getSegments(EasyMock.anyObject())).andReturn(publishedSegments.iterator()).once();
 
     EasyMock.replay(request, responseHolder, responseHandler, metadataView);
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = segmentsTable.scan(
         dataContext,
         Collections.emptyList(),
@@ -890,7 +895,8 @@ public class SystemSchemaTest extends CalciteTestBase
                                                          authMapper,
                                                          overlordClient,
                                                          coordinatorClient,
-                                                         MAPPER
+                                                         MAPPER,
+                                                         createAuthResult(Users.SUPER)
                                                      )
                                                      .createMock();
     EasyMock.replay(serversTable);
@@ -968,7 +974,7 @@ public class SystemSchemaTest extends CalciteTestBase
         indexerNodeDiscovery
     );
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = serversTable.scan(dataContext).toList();
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
@@ -1342,14 +1348,14 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     SystemSchema.ServerSegmentsTable serverSegmentsTable = EasyMock
         .createMockBuilder(SystemSchema.ServerSegmentsTable.class)
-        .withConstructor(serverView, authMapper)
+        .withConstructor(serverView, authMapper, createAuthResult(Users.SUPER))
         .createMock();
     EasyMock.replay(serverSegmentsTable);
     EasyMock.expect(serverView.getDruidServers())
             .andReturn(immutableDruidServers)
             .once();
     EasyMock.replay(serverView);
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
 
     //server_segments table is the join of servers and segments table
     // it will have 5 rows as follows
@@ -1390,9 +1396,10 @@ public class SystemSchemaTest extends CalciteTestBase
   public void testTasksTable() throws Exception
   {
 
-    SystemSchema.TasksTable tasksTable = EasyMock.createMockBuilder(SystemSchema.TasksTable.class)
-                                                 .withConstructor(overlordClient, authMapper)
-                                                 .createMock();
+    SystemSchema.TasksTable tasksTable =
+        EasyMock.createMockBuilder(SystemSchema.TasksTable.class)
+                .withConstructor(overlordClient, authMapper, createAuthResult(Users.SUPER))
+                .createMock();
 
     EasyMock.replay(tasksTable);
 
@@ -1439,7 +1446,7 @@ public class SystemSchemaTest extends CalciteTestBase
     );
 
     EasyMock.replay(overlordClient, request, responseHandler);
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = tasksTable.scan(dataContext).toList();
 
     Object[] row0 = rows.get(0);
@@ -1481,8 +1488,6 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testTasksTableAuth()
   {
-    SystemSchema.TasksTable tasksTable = new SystemSchema.TasksTable(overlordClient, authMapper);
-
     String json = "[{\n"
                   + "\t\"id\": \"index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
                   + "\t\"groupId\": \"group_index_wikipedia_2018-09-20T22:33:44.911Z\",\n"
@@ -1528,21 +1533,24 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(overlordClient);
 
     // Verify that no row is returned for Datasource Write user
-    List<Object[]> rows = tasksTable
-        .scan(createDataContext(Users.DATASOURCE_WRITE))
-        .toList();
+    List<Object[]> rows =
+        new SystemSchema.TasksTable(overlordClient, authMapper, createAuthResult(Users.DATASOURCE_WRITE))
+            .scan(createDataContext())
+            .toList();
     Assertions.assertTrue(rows.isEmpty());
 
     // Verify that 2 rows are returned for Datasource Read user
-    rows = tasksTable
-        .scan(createDataContext(Users.DATASOURCE_READ))
-        .toList();
+    rows =
+        new SystemSchema.TasksTable(overlordClient, authMapper, createAuthResult(Users.DATASOURCE_READ))
+            .scan(createDataContext())
+            .toList();
     Assertions.assertEquals(2, rows.size());
 
     // Verify that 2 rows are returned for Super user
-    rows = tasksTable
-        .scan(createDataContext(Users.SUPER))
-        .toList();
+    rows =
+        new SystemSchema.TasksTable(overlordClient, authMapper, createAuthResult(Users.SUPER))
+            .scan(createDataContext())
+            .toList();
     Assertions.assertEquals(2, rows.size());
   }
 
@@ -1551,7 +1559,7 @@ public class SystemSchemaTest extends CalciteTestBase
   {
     SystemSchema.SupervisorsTable supervisorTable =
         EasyMock.createMockBuilder(SystemSchema.SupervisorsTable.class)
-                .withConstructor(overlordClient, authMapper)
+                .withConstructor(overlordClient, authMapper, createAuthResult(Users.SUPER))
                 .createMock();
     EasyMock.replay(supervisorTable);
 
@@ -1577,7 +1585,7 @@ public class SystemSchemaTest extends CalciteTestBase
     );
 
     EasyMock.replay(overlordClient);
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = supervisorTable.scan(dataContext).toList();
 
     Object[] row0 = rows.get(0);
@@ -1601,9 +1609,6 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSupervisorTableAuth()
   {
-    SystemSchema.SupervisorsTable supervisorTable =
-        new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
-
     String json = "[{\n"
                   + "\t\"id\": \"wikipedia_supervisor\",\n"
                   + "\t\"dataSource\": \"wikipedia\",\n"
@@ -1628,21 +1633,24 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(overlordClient);
 
     // Verify that no row is returned for Datasource Write user
-    List<Object[]> rows = supervisorTable
-        .scan(createDataContext(Users.DATASOURCE_WRITE))
-        .toList();
+    List<Object[]> rows =
+        new SystemSchema.SupervisorsTable(overlordClient, authMapper, createAuthResult(Users.DATASOURCE_WRITE))
+            .scan(createDataContext())
+            .toList();
     Assertions.assertTrue(rows.isEmpty());
 
-    // Verify that 1 row is returned for Datasource Write user
-    rows = supervisorTable
-        .scan(createDataContext(Users.DATASOURCE_READ))
-        .toList();
+    // Verify that 1 row is returned for Datasource Read user
+    rows =
+        new SystemSchema.SupervisorsTable(overlordClient, authMapper, createAuthResult(Users.DATASOURCE_READ))
+            .scan(createDataContext())
+            .toList();
     Assertions.assertEquals(1, rows.size());
 
     // Verify that 1 row is returned for Super user
-    rows = supervisorTable
-        .scan(createDataContext(Users.SUPER))
-        .toList();
+    rows =
+        new SystemSchema.SupervisorsTable(overlordClient, authMapper, createAuthResult(Users.SUPER))
+            .scan(createDataContext())
+            .toList();
     Assertions.assertEquals(1, rows.size());
 
     // TODO: If needed, verify the first row here
@@ -1654,9 +1662,16 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testPropertiesTable()
   {
-    SystemServerPropertiesTable propertiesTable = EasyMock.createMockBuilder(SystemServerPropertiesTable.class)
-                                                          .withConstructor(druidNodeDiscoveryProvider, authMapper, httpClient, MAPPER)
-                                                          .createMock();
+    SystemServerPropertiesTable propertiesTable =
+        EasyMock.createMockBuilder(SystemServerPropertiesTable.class)
+                .withConstructor(
+                    druidNodeDiscoveryProvider,
+                    authMapper,
+                    httpClient,
+                    MAPPER,
+                    createAuthResult(Users.SUPER)
+                )
+                .createMock();
 
     EasyMock.replay(propertiesTable);
 
@@ -1748,7 +1763,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(druidNodeDiscoveryProvider, responseHandler, httpClient);
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
     expectedRows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
@@ -1766,7 +1781,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);
@@ -1781,7 +1797,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
 
     // Should return 1 row even though properties fetch failed
@@ -1810,7 +1826,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);
@@ -1829,7 +1846,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
 
     Assertions.assertEquals(1, rows.size());
@@ -1849,7 +1866,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
@@ -1875,7 +1893,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rexBuilder.makeLiteral("localhost:8081")
     );
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = propertiesTable.scan(dataContext, ImmutableList.of(serverEquality), null).toList();
 
     Assertions.assertEquals(1, rows.size());
@@ -1893,7 +1911,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
@@ -1918,7 +1937,7 @@ public class SystemSchemaTest extends CalciteTestBase
     );
 
     final List<Object[]> rows =
-        propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(serverIn), null).toList();
+        propertiesTable.scan(createDataContext(), ImmutableList.of(serverIn), null).toList();
 
     Assertions.assertEquals(1, rows.size());
     Assertions.assertEquals("localhost:8081", rows.get(0)[0]);
@@ -1933,7 +1952,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     mockAllNodeRolesWithCoordinator(coordinator, coordinator2);
@@ -1971,7 +1991,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rexBuilder.makeLiteral("s1")
     );
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     List<Object[]> rows = propertiesTable.scan(dataContext, ImmutableList.of(serviceNameEquality), null).toList();
     Assertions.assertEquals(2, rows.size());
 
@@ -1987,7 +2007,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rexBuilder.makeLiteral("nonexistent:9999")
     );
 
-    dataContext = createDataContext(Users.SUPER);
+    dataContext = createDataContext();
     rows = propertiesTable.scan(dataContext, ImmutableList.of(nonMatchingFilter), null).toList();
     Assertions.assertEquals(0, rows.size());
 
@@ -2001,7 +2021,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     final RexBuilder rexBuilder = new RexBuilder(new JavaTypeFactoryImpl());
@@ -2021,7 +2042,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX),
         rexBuilder.makeLiteral("some-server:1234")
     );
-    Assertions.assertEquals(2, propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(notEquals), null).toList().size());
+    Assertions.assertEquals(2, propertiesTable.scan(createDataContext(), ImmutableList.of(notEquals), null).toList().size());
     EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
 
     // 2) Non-RexCall filter (bare RexInputRef) is ignored
@@ -2035,7 +2056,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
 
     final RexNode inputRef = rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX);
-    Assertions.assertEquals(2, propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(inputRef), null).toList().size());
+    Assertions.assertEquals(2, propertiesTable.scan(createDataContext(), ImmutableList.of(inputRef), null).toList().size());
     EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
 
     // 3) Equality on non-pushed column (property) is ignored
@@ -2053,7 +2074,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rexBuilder.makeInputRef(rowType.getFieldList().get(PROPERTY_INDEX).getType(), PROPERTY_INDEX),
         rexBuilder.makeLiteral("druid.key")
     );
-    Assertions.assertEquals(2, propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(propertyEquality), null).toList().size());
+    Assertions.assertEquals(2, propertiesTable.scan(createDataContext(), ImmutableList.of(propertyEquality), null).toList().size());
     EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
 
     // 4) Reversed equality ('localhost:8081' = server) is correctly extracted
@@ -2071,7 +2092,7 @@ public class SystemSchemaTest extends CalciteTestBase
         rexBuilder.makeLiteral("localhost:8081"),
         rexBuilder.makeInputRef(rowType.getFieldList().get(SERVER_INDEX).getType(), SERVER_INDEX)
     );
-    List<Object[]> rows = propertiesTable.scan(createDataContext(Users.SUPER), ImmutableList.of(reversedEquality), null).toList();
+    List<Object[]> rows = propertiesTable.scan(createDataContext(), ImmutableList.of(reversedEquality), null).toList();
     Assertions.assertEquals(2, rows.size());
     Assertions.assertEquals("localhost:8081", rows.get(0)[0]);
     EasyMock.verify(druidNodeDiscoveryProvider, httpClient);
@@ -2084,7 +2105,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     // Same host:port under two roles
@@ -2120,7 +2142,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
 
     // Multi-role: only 1 HTTP call, node_roles contains both
     final List<Object[]> fullRows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
@@ -2158,7 +2180,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);
@@ -2171,7 +2194,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     Thread.currentThread().interrupt();
     RuntimeException ex = Assertions.assertThrows(
         RuntimeException.class,
@@ -2191,7 +2214,8 @@ public class SystemSchemaTest extends CalciteTestBase
         druidNodeDiscoveryProvider,
         authMapper,
         httpClient,
-        MAPPER
+        MAPPER,
+        createAuthResult(Users.SUPER)
     );
 
     mockAllNodeRolesWithCoordinator(coordinator);
@@ -2203,7 +2227,7 @@ public class SystemSchemaTest extends CalciteTestBase
 
     EasyMock.replay(druidNodeDiscoveryProvider, httpClient);
 
-    DataContext dataContext = createDataContext(Users.SUPER);
+    DataContext dataContext = createDataContext();
     final List<Object[]> rows = propertiesTable.scan(dataContext, Collections.emptyList(), null).toList();
 
     Assertions.assertEquals(1, rows.size());
@@ -2230,10 +2254,10 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.replay(mockEngine);
 
     final SqlEngineRegistry registry = new SqlEngineRegistry(ImmutableSet.of(mockEngine));
-    final QueriesTable queriesTable = new QueriesTable(() -> registry, MAPPER, authMapper);
+    final QueriesTable queriesTable =
+        new QueriesTable(() -> registry, MAPPER, authMapper, createAuthResult(Users.SUPER));
 
-    final DataContext dataContext = createDataContext(Users.SUPER);
-    final List<Object[]> rows = queriesTable.scan(dataContext, Collections.emptyList(), null).toList();
+    final List<Object[]> rows = queriesTable.scan(createDataContext(), Collections.emptyList(), null).toList();
 
     Assertions.assertEquals(2, rows.size());
 
@@ -2256,10 +2280,13 @@ public class SystemSchemaTest extends CalciteTestBase
   }
 
   @Test
-  public void testSupervisorTableAuthOnDataSourceName() throws JsonProcessingException
+  public void testSupervisorTableAuthOnDataSourceName()
   {
-    SystemSchema.SupervisorsTable supervisorTable =
-        new SystemSchema.SupervisorsTable(overlordClient, createAuthMapper());
+    SystemSchema.SupervisorsTable supervisorTable = new SystemSchema.SupervisorsTable(
+        overlordClient,
+        createAuthMapper(),
+        createAuthResult(Users.ONLY_DATASOURCE_ALL_ACCESS)
+    );
 
     // Verify that 1 row is returned for datasource name DATASOURCE_ALL_ACCESS
     String datasourceAllAccessSupervisor =
@@ -2284,7 +2311,7 @@ public class SystemSchemaTest extends CalciteTestBase
     ).times(1);
     EasyMock.replay(overlordClient);
     List<Object[]> rows = supervisorTable
-        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .scan(createDataContext())
         .toList();
     Assertions.assertEquals(1, rows.size());
     EasyMock.verify(overlordClient);
@@ -2313,7 +2340,7 @@ public class SystemSchemaTest extends CalciteTestBase
     ).times(1);
     EasyMock.replay(overlordClient);
     rows = supervisorTable
-        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .scan(createDataContext())
         .toList();
     Assertions.assertTrue(rows.isEmpty());
     EasyMock.verify(overlordClient);
@@ -2342,7 +2369,7 @@ public class SystemSchemaTest extends CalciteTestBase
     ).times(1);
     EasyMock.replay(overlordClient);
     rows = supervisorTable
-        .scan(createDataContext(Users.ONLY_DATASOURCE_ALL_ACCESS))
+        .scan(createDataContext())
         .toList();
     Assertions.assertTrue(rows.isEmpty());
     EasyMock.verify(overlordClient);
@@ -2401,7 +2428,7 @@ public class SystemSchemaTest extends CalciteTestBase
   /**
    * Creates a DataContext for the given username.
    */
-  private DataContext createDataContext(String username)
+  private DataContext createDataContext()
   {
     return new DataContext()
     {
@@ -2424,11 +2451,9 @@ public class SystemSchemaTest extends CalciteTestBase
       }
 
       @Override
-      public Object get(String authorizerName)
+      public Object get(String name)
       {
-        return CalciteTests.TEST_SUPERUSER_NAME.equals(username)
-               ? CalciteTests.SUPER_USER_AUTH_RESULT
-               : new AuthenticationResult(username, authorizerName, null, null);
+        throw NotYetImplemented.ex(null, "Not expected to be called");
       }
     };
   }
@@ -2459,6 +2484,13 @@ public class SystemSchemaTest extends CalciteTestBase
         };
       }
     };
+  }
+
+  private AuthenticationResult createAuthResult(final String username)
+  {
+    return CalciteTests.TEST_SUPERUSER_NAME.equals(username)
+           ? CalciteTests.SUPER_USER_AUTH_RESULT
+           : new AuthenticationResult(username, "testAuthorizer", null, null);
   }
 
   private static void verifyTypes(final List<Object[]> rows, final RowSignature signature)

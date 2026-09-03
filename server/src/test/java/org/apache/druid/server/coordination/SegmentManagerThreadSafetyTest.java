@@ -81,7 +81,7 @@ public class SegmentManagerThreadSafetyTest
   private static final int NUM_THREAD = 4;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private TestSegmentPuller segmentPuller;
   private ObjectMapper objectMapper;

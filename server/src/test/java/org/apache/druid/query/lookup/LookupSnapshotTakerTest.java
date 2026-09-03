@@ -42,7 +42,7 @@ public class LookupSnapshotTakerTest
   private static final String TIER2 = "tier2";
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 

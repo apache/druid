@@ -206,11 +206,7 @@ public class MSQTaskSqlEngine implements SqlEngine
     validateInsert(
         relRoot,
         destination instanceof TableDestination
-        ? plannerContext.getPlannerToolbox()
-                        .rootSchema()
-                        .getNamedSchema(plannerContext.getPlannerToolbox().druidSchemaName())
-                        .getSchema()
-                        .getTable(((TableDestination) destination).getTableName())
+        ? plannerContext.getDruidTable(((TableDestination) destination).getTableName())
         : null,
         plannerContext
     );

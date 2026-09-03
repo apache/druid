@@ -53,6 +53,7 @@ import org.apache.druid.segment.join.PostJoinCursor;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.utils.CloseableUtils;
@@ -62,9 +63,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -79,8 +80,8 @@ import static org.apache.druid.segment.filter.Filters.or;
 
 public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  public static File tmp;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
   private static Closer CLOSER;
   private static IncrementalIndex INCREMENTAL_INDEX;
   private static IncrementalIndexCursorFactory INCREMENTAL_INDEX_CURSOR_FACTORY;
@@ -95,7 +96,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
 
 
   @BeforeAll
-  public static void setup()
+  public static void setup() throws IOException
   {
     CLOSER = Closer.create();
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
@@ -131,7 +132,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
     );
     IndexBuilder bob = IndexBuilder.create()
-                                   .tmpDir(new File(tmp, "index"))
+                                   .tmpDir(SHARED_TEMPORARY_FOLDER.newFolder("index"))
                                    .schema(
                                        IncrementalIndexSchema.builder()
                                                              .withTimestampSpec(TimestampSpec.DEFAULT)
@@ -145,7 +146,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                                    .inputSource(inputSource)
                                    .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
                                    .transform(TransformSpec.NONE)
-                                   .inputTmpDir(new File(tmp, "input"));
+                                   .inputTmpDir(SHARED_TEMPORARY_FOLDER.newFolder("input"));
     QUERYABLE_INDEX = CLOSER.register(bob.buildMMappedIndex());
     UNNEST_ARRAYS = new UnnestCursorFactory(
         new QueryableIndexCursorFactory(QUERYABLE_INDEX),

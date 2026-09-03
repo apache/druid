@@ -34,9 +34,10 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -51,8 +52,8 @@ import java.util.List;
 
 public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  public File temporaryFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void test() throws IOException
@@ -61,7 +62,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
     final List<File> files = new ArrayList<>();
     long totalFileSize = 0;
     for (int i = 0; i < numFiles; i++) {
-      final File file = new File(temporaryFolder, "test_" + i);
+      final File file = temporaryFolder.newFile("test_" + i);
       files.add(file);
       try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write(StringUtils.format("%d,%s,%d\n", 20190101 + i, "name_" + i, i));
@@ -90,7 +91,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
         ),
         SystemFieldDecoratorFactory.NONE,
-        temporaryFolder
+        temporaryFolder.getRoot()
     );
 
     final InputStats inputStats = new InputStatsImpl();
@@ -120,7 +121,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
     final int numFiles = 5;
     final List<File> files = new ArrayList<>();
     for (int i = 0; i < numFiles; i++) {
-      final File file = new File(temporaryFolder, "test_" + i);
+      final File file = temporaryFolder.newFile("test_" + i);
       files.add(file);
       try (Writer writer = Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8)) {
         writer.write(StringUtils.format("%d,%s,%d\n", 20190101 + i, "name_" + i, i));
@@ -129,7 +130,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
     }
 
     LocalInputSource inputSource = new LocalInputSource(
-        temporaryFolder,
+        temporaryFolder.getRoot(),
         "test_*",
         null,
         new SystemFields(EnumSet.of(SystemField.URI, SystemField.PATH)));
@@ -159,7 +160,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             files.stream().flatMap(file -> ImmutableList.of(new FileEntity(file)).stream()).iterator()
         ),
         SystemFieldDecoratorFactory.fromInputSource(inputSource),
-        temporaryFolder
+        temporaryFolder.getRoot()
     );
 
     try (CloseableIterator<InputRowListPlusRawValues> iterator = reader.sample()) {
@@ -219,7 +220,7 @@ public class InputEntityIteratingReaderTest extends InitializedNullHandlingTest
             ).iterator()
         ),
         SystemFieldDecoratorFactory.NONE,
-        temporaryFolder
+        temporaryFolder.getRoot()
     );
 
     try (CloseableIterator<InputRow> readIterator = inputReader.read()) {

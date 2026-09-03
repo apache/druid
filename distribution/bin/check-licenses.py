@@ -58,6 +58,10 @@ class DependencyReportParser(HTMLParser):
         if self.state == "none":
             if tag == "h2":
                 self.state = "h2_start"
+            elif tag == "a":
+                for attr in attrs:
+                    if attr[0] == "id" and attr[1] == "Project_Dependencies_compile":
+                        self.state = "modern_compile_anchor"
 
         if self.state == "h2_start":
             if tag == "a":
@@ -75,6 +79,10 @@ class DependencyReportParser(HTMLParser):
                 for attr in attrs:
                     if attr[0] == "name" and attr[1] == "compile":
                         self.state = "compile_start"
+
+        if self.state == "modern_compile_heading":
+            if tag == "h2":
+                self.state = "h3_end"
 
         if self.state == "h3_end":
             if tag == "table":
@@ -109,6 +117,10 @@ class DependencyReportParser(HTMLParser):
         if self.state == "project_dependencies_start":
             if tag == "a":
                 self.state = "project_dependencies_end"
+
+        if self.state == "modern_compile_anchor":
+            if tag == "a":
+                self.state = "modern_compile_heading"
 
         if self.state == "h2_start":
             if tag == "h2":

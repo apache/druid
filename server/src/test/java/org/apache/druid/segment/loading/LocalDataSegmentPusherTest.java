@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
 public class LocalDataSegmentPusherTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   LocalDataSegmentPusher localDataSegmentPusher;
   LocalDataSegmentPusher localDataSegmentPusherZip;

@@ -100,7 +100,7 @@ import static org.easymock.EasyMock.mock;
 public class CliPeonTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
 

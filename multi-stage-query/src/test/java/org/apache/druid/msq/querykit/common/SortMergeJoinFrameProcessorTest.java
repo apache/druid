@@ -76,7 +76,7 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
   private final int rowsPerOutputFrame;
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public SortMergeJoinFrameProcessorTest(int rowsPerInputFrame, int rowsPerOutputFrame)
   {

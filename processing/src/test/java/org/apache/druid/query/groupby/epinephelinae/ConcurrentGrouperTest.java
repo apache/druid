@@ -76,7 +76,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   private static final ColumnSelectorFactory NULL_FACTORY = new TestColumnSelectorFactory();
 
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final Supplier<ByteBuffer> bufferSupplier;
   private final int concurrencyHint;

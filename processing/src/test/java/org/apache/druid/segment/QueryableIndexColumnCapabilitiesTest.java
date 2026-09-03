@@ -46,13 +46,14 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -60,8 +61,8 @@ import java.util.Map;
 
 public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  public static File temporaryFolder;
+  @RegisterExtension
+  public static final TemporaryFolderExtension SHARED_TEMPORARY_FOLDER = TemporaryFolderExtension.classScoped();
 
   private static IncrementalIndex INC_INDEX;
   private static QueryableIndex MMAP_INDEX;
@@ -69,7 +70,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
   private static QueryableIndex MMAP_INDEX_WITH_NULLS;
 
   @BeforeAll
-  public static void setup()
+  public static void setup() throws IOException
   {
     InputRowSchema rowSchema = new InputRowSchema(
         new TimestampSpec("time", "auto", null),
@@ -110,7 +111,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                                .withRollup(false)
                                                .build()
                                        )
-                                       .tmpDir(new File(temporaryFolder, "index"));
+                                       .tmpDir(SHARED_TEMPORARY_FOLDER.newFolder("index"));
     INC_INDEX = builder.buildIncrementalIndex();
     MMAP_INDEX = builder.buildMMappedIndex();
 
@@ -136,7 +137,7 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
                                                         .withRollup(false)
                                                         .build()
                                                 )
-                                                .tmpDir(new File(temporaryFolder, "index-with-nulls"));
+                                                .tmpDir(SHARED_TEMPORARY_FOLDER.newFolder("index-with-nulls"));
     INC_INDEX_WITH_NULLS = builderWithNulls.buildIncrementalIndex();
     MMAP_INDEX_WITH_NULLS = builderWithNulls.buildMMappedIndex();
   }

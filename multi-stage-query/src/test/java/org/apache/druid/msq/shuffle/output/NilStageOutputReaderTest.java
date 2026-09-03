@@ -42,7 +42,7 @@ import java.util.concurrent.ExecutionException;
 public class NilStageOutputReaderTest extends InitializedNullHandlingTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private final NilStageOutputReader reader = NilStageOutputReader.INSTANCE;
 

@@ -31,7 +31,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import com.google.inject.TypeLiteral;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.AvaticaClientRuntimeException;
 import org.apache.calcite.avatica.AvaticaSqlException;
@@ -72,7 +71,6 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -87,9 +85,8 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
-import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
@@ -97,6 +94,7 @@ import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.jupiter.api.AfterAll;
@@ -138,6 +136,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * Tests the Avatica-based JDBC implementation using JSON serialization. See
@@ -196,9 +196,9 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   private Injector injector;
   private TestRequestLogger testRequestLogger;
 
-  private DruidSchemaCatalog makeRootSchema()
+  private DruidSchemaCatalogProvider makeRootSchemaProvider()
   {
-    return CalciteTests.createMockRootSchema(
+    return CalciteTests.createMockRootSchemaProvider(
         conglomerate,
         walker,
         plannerConfig,
@@ -274,7 +274,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   @BeforeEach
   public void setUp() throws Exception
   {
-    final DruidSchemaCatalog rootSchema = makeRootSchema();
+    final DruidSchemaCatalogProvider rootSchemaProvider = makeRootSchemaProvider();
     testRequestLogger = new TestRequestLogger();
 
     injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
@@ -294,10 +294,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                     .toInstance(new DefaultQueryConfig(ImmutableMap.of("forbidden-key", "system-default-value")));
               binder.bind(QueryConfigProvider.class).to(DefaultQueryConfig.class);
               binder.bind(RequestLogger.class).toInstance(testRequestLogger);
-              binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
-              for (NamedSchema schema : rootSchema.getNamedSchemas().values()) {
-                Multibinder.newSetBinder(binder, NamedSchema.class).addBinding().toInstance(schema);
-              }
+              binder.bind(DruidSchemaCatalogProvider.class).toInstance(rootSchemaProvider);
               binder.bind(QueryLifecycleFactory.class)
                     .toInstance(CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate));
               binder.bind(DruidOperatorTable.class).toInstance(operatorTable);
@@ -601,6 +598,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.READ_ONLY_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.RESTRICTED_BROADCAST_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -706,6 +709,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             row(
                 Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.DATASOURCE3),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.READ_ONLY_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
             ),
@@ -1121,7 +1130,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
     return QueryFrameworkUtils.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
         new PlannerFactory(
-            makeRootSchema(),
+            makeRootSchemaProvider(),
             operatorTable,
             macroTable,
             plannerConfig,
@@ -1706,48 +1715,24 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   }
 
   /**
-   * Verify that a security exception is mapped to the correct Avatica SQL error codes.
+   * Verify that a table the user cannot read is not visible at all.
    */
   @Test
   public void testUnauthorizedTable()
   {
     final String query = "SELECT * FROM " + CalciteTests.FORBIDDEN_DATASOURCE;
-    final String expectedError = "Error 2 (00002) : Error while executing SQL \"" +
-                                 query + "\": Remote driver error: " + Access.DEFAULT_ERROR_MESSAGE;
-    try (Statement statement = client.createStatement()) {
-      statement.executeQuery(query);
-    }
-    catch (SQLException e) {
-      Assertions.assertEquals(
-          e.getMessage(),
-          expectedError
-      );
-      return;
-    }
-    Assertions.fail("Test failed, did not get SQLException");
-  }
-
-  private static class TestResultFetcher extends ResultFetcher
-  {
-    public TestResultFetcher(int limit, Yielder<Object[]> yielder)
-    {
-      super(limit, yielder);
-    }
-
-    @Override
-    public Meta.Frame call()
-    {
-      try {
-        if (offset() == 0) {
-          System.out.println("Taking a nap now...");
-          Thread.sleep(3000);
+    final SQLException e = Assertions.assertThrows(
+        SQLException.class,
+        () -> {
+          try (Statement statement = client.createStatement()) {
+            statement.executeQuery(query);
+          }
         }
-      }
-      catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
-      return super.call();
-    }
+    );
+    assertThat(
+        e.getMessage(),
+        CoreMatchers.containsString("Object '" + CalciteTests.FORBIDDEN_DATASOURCE + "' not found")
+    );
   }
 
   /**
@@ -1903,9 +1888,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   // in reality, but handled at the JDBC level below DBI.)
   private void testWithJDBI(String baseUrl)
   {
-    String url = baseUrl + "?user=regularUser&password=druid" + getJdbcUrlTail();
-    System.out.println(url);
-    DBI dbi = new DBI(url);
+    DBI dbi = new DBI(baseUrl, "regularUser", "druid");
     Handle handle = dbi.open();
     try {
       ResultIterator<Pair<Long, String>> iter = handle

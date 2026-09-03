@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.
@@ -14,24 +13,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#--------------------------------------------------------------------
 
-set -e
+# Get the directory of this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-git grep junit-jupiter-engine '**/pom.xml' | cut -d: -f1 | while read pom ;do
+# Check if the bootstrap.ldif file exists on the host
+if [ ! -f "$DIR/bootstrap.ldif" ]; then
+    echo "Error: $DIR/bootstrap.ldif not found."
+    exit 1
+fi
 
-	m=`dirname $pom`
-	hasj4=`git grep org.junit.Test $m | head -n 1 | wc -l`
-	hasVintage=`git grep junit-vintage-engine $m|head -n 1 | wc -l`
+# Stop and remove any existing ldap-mock container
+docker rm -f ldap-mock 2>/dev/null || true
 
-	echo "$m hasj4:$hasj4 hasVintage:$hasVintage"
-
-	if [ "$hasVintage" != "$hasj4" ];then
-		echo "Module [$m] is configured to use junit5 but its configured is not valid!"
-		echo " has_junit4_tests[$hasj4] <> has_vintage_engine[$hasVintage] !"
-		echo
-		echo "The junit4/5 migration guide might be helpfull https://www.baeldung.com/junit-5-migration"
-		echo "Possibly usefull openrewrite docs: https://docs.openrewrite.org/recipes/java/testing/junit5/junit4to5migration"
-		exit 1
-	fi
-done
+# Start the ldap-mock container with correct mount
+docker run -d \
+  --name ldap-mock \
+  -p 8389:389 \
+  -v "$DIR/bootstrap.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/bootstrap.ldif" \
+  -e LDAP_DOMAIN="example.org" \
+  -e LDAP_ORGANISATION="Example" \
+  -e LDAP_ADMIN_PASSWORD="admin" \
+  osixia/openldap:1.5.0 --copy-service

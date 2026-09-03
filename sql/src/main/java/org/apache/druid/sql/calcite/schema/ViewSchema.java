@@ -20,34 +20,69 @@
 package org.apache.druid.sql.calcite.schema;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
-import com.google.inject.Inject;
 import org.apache.calcite.schema.Function;
 import org.apache.calcite.schema.impl.AbstractSchema;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.view.DruidViewMacro;
 import org.apache.druid.sql.calcite.view.ViewManager;
 
 import java.util.Map;
+import java.util.Set;
 
 public class ViewSchema extends AbstractSchema
 {
   private final ViewManager viewManager;
+  private final AuthorizerMapper authorizerMapper;
+  private final AuthenticationResult authenticationResult;
+  private final boolean authorizeTableVisibility;
+  private final Supplier<Multimap<String, Function>> functionMultimap =
+      Suppliers.memoize(this::computeFunctionMultimap);
 
-  @Inject
   public ViewSchema(
-      final ViewManager viewManager
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper,
+      final AuthenticationResult authenticationResult,
+      final boolean authorizeTableVisibility
   )
   {
     this.viewManager = Preconditions.checkNotNull(viewManager, "viewManager");
+    this.authorizerMapper = Preconditions.checkNotNull(authorizerMapper, "authorizerMapper");
+    this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
+    this.authorizeTableVisibility = authorizeTableVisibility;
   }
 
   @Override
   protected Multimap<String, Function> getFunctionMultimap()
   {
+    return functionMultimap.get();
+  }
+
+  private Multimap<String, Function> computeFunctionMultimap()
+  {
+    final Map<String, DruidViewMacro> viewsMap = viewManager.getViews();
+    final Set<String> visibleViews;
+    if (authorizeTableVisibility) {
+      visibleViews = SchemaUtils.filterVisibleTables(
+          authorizerMapper,
+          authenticationResult,
+          viewsMap.keySet(),
+          _ -> ResourceType.VIEW
+      );
+    } else {
+      visibleViews = viewsMap.keySet();
+    }
+
     final ImmutableMultimap.Builder<String, Function> builder = ImmutableMultimap.builder();
-    for (Map.Entry<String, DruidViewMacro> entry : viewManager.getViews().entrySet()) {
-      builder.put(entry);
+    for (Map.Entry<String, DruidViewMacro> entry : viewsMap.entrySet()) {
+      if (visibleViews.contains(entry.getKey())) {
+        builder.put(entry);
+      }
     }
     return builder.build();
   }

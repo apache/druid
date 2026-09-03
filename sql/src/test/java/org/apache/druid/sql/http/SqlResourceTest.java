@@ -82,7 +82,6 @@ import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.HttpStatement;
@@ -102,7 +101,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -236,7 +235,7 @@ public class SqlResourceTest extends CalciteTestBase
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
     final PlannerConfig plannerConfig = PlannerConfig.builder().build();
-    final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
+    final DruidSchemaCatalogProvider schemaProvider = CalciteTests.createMockRootSchemaProvider(
         conglomerate,
         walker,
         plannerConfig,
@@ -250,7 +249,7 @@ public class SqlResourceTest extends CalciteTestBase
     testRequestLogger = new TestRequestLogger();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
-        rootSchema,
+        schemaProvider,
         operatorTable,
         macroTable,
         plannerConfig,
@@ -354,14 +353,18 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
-  public void testUnauthorized()
+  public void testUnauthorized() throws Exception
   {
-    ForbiddenException e = Assertions.assertThrows(ForbiddenException.class, () -> {
-      postForAsyncResponse(createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"), request());
-    });
-    Assertions.assertEquals("Unauthorized", e.getMessage());
+    // Unauthorized tables are validation errors ("not found") because DruidSchemaProvider filters them out.
+    ErrorResponse errorResponse =
+        postSyncForException("select count(*) from forbiddenDatasource", Status.BAD_REQUEST.getStatusCode());
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Object 'forbiddenDatasource' not found"
+    );
+
     Assertions.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
-    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
   @Test

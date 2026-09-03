@@ -17,31 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.testing;
+package org.apache.druid.security.opa.opatypes;
 
-import org.junit.rules.TestRule;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.security.AuthenticationResult;
 
-import java.util.concurrent.TimeUnit;
-
-/**
- * This Rule is based on {@link org.junit.rules.Timeout}, additionally deadlocked threads are detected.
- */
-public final class DeadlockDetectingTimeout implements TestRule
+public class OpaMessage
 {
-  private final long timeout;
-  private final TimeUnit timeoutUnit;
+  private final OpaInput input;
 
-  public DeadlockDetectingTimeout(long timeout, TimeUnit timeoutUnit)
+  public OpaMessage(
+      @JsonProperty("authenticationResult") AuthenticationResult authenticationResult,
+      @JsonProperty("action") String action,
+      @JsonProperty("resourceName") String resourceName,
+      @JsonProperty("resourceType") String resourceType
+  )
   {
-    this.timeout = timeout;
-    this.timeoutUnit = timeoutUnit;
+    this.input = new OpaInput(authenticationResult, action, resourceName, resourceType);
   }
 
-  @Override
-  public Statement apply(Statement base, Description description)
+  @JsonProperty
+  public OpaInput getInput()
   {
-    return new DeadlockDetectingFailOnTimeout(timeout, timeoutUnit, base);
+    return input;
   }
 }

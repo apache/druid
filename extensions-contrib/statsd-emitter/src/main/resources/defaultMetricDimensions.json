@@ -55,6 +55,7 @@
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "ingest/segments/oversized" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/rows/published": { "dimensions" : ["dataSource"], "type" : "count" },
 
   "ingest/realtime/segmentUpgrade/persisted" : { "dimensions" : ["dataSource", "interval", "version"], "type" : "count" },
@@ -79,11 +80,11 @@
 
   "ingest/pause/time" : { "dimensions" : ["dataSource", "taskId"], "type" : "timer" },
 
-  "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "task/running/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "task/success/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
+  "task/failed/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
+  "task/running/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
+  "task/pending/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
+  "task/waiting/count" : { "dimensions" : ["dataSource", "taskType"], "type" : "gauge" },
 
   "task/action/run/time": { "dimensions" : ["dataSource", "taskActionType"], "type" : "timer" },
   "task/status/queue/count": { "dimensions" : [], "type" : "gauge" },
@@ -104,7 +105,7 @@
   "taskSlot/lazy/count" : { "dimensions" : ["category"], "type" : "gauge" },
   "taskSlot/blacklisted/count" : { "dimensions" : ["category"], "type" : "gauge" },
 
-  "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer" },
+  "task/run/time" : { "dimensions" : ["dataSource", "taskType", "taskStatus"], "type" : "timer" },
   "segment/added/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "segment/moved/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },
   "segment/nuked/bytes" : { "dimensions" : ["dataSource", "taskType"], "type" : "count" },

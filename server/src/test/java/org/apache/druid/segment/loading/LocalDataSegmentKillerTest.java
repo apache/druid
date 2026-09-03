@@ -55,7 +55,7 @@ public class LocalDataSegmentKillerTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testKill() throws Exception

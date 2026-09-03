@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 public class LocalFileTimestampVersionFinderTest
 {
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
   private File tmpDir;
   private LocalFileTimestampVersionFinder finder;
 

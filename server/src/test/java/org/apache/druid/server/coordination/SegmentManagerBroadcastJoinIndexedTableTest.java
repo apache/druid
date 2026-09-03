@@ -94,7 +94,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
       ImmutableSet.of("market", "longNumericNull", "doubleNumericNull", "floatNumericNull", "partial_null_column");
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private LocalDataSegmentPuller segmentPuller;
   private ObjectMapper objectMapper;

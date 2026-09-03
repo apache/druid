@@ -73,7 +73,7 @@ public class CompressedLongsSerdeTest
   }
 
   @RegisterExtension
-  public TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   protected final CompressionFactory.LongEncodingStrategy encodingStrategy;
   protected final CompressionStrategy compressionStrategy;

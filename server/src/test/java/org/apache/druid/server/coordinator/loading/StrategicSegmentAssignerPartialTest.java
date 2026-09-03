@@ -616,6 +616,51 @@ public class StrategicSegmentAssignerPartialTest
   }
 
   @Test
+  public void testCancelledStaleInFlightIsNotReloadedOntoDecommissioningServer()
+  {
+    // The tier's only server is decommissioning and carries a stale-fingerprint in-flight load. Cancelling that load
+    // frees its slot, but canLoadSegment still rejects the server, so nothing is queued back onto it.
+    final DataSegment segment = createSegment();
+    final PartialLoadProfile staleInFlightProfile = PartialLoadProfile.forRequest(
+        Map.of(
+            "type", "partialProjection",
+            "projections", List.of("users"),
+            "fingerprint", FP_USERS
+        ),
+        FP_USERS
+    );
+    final TestLoadQueuePeon peon = new TestLoadQueuePeon();
+    peon.addInFlightHolder(new SegmentHolder(
+        segment,
+        SegmentAction.LOAD,
+        staleInFlightProfile,
+        Duration.standardSeconds(10),
+        null
+    ));
+    final ServerHolder decommServer =
+        new ServerHolder(createDruidServer(TIER1).toImmutableDruidServer(), peon, true);
+    final DruidCluster cluster = DruidCluster.builder().addTier(TIER1, decommServer).build();
+
+    final DruidCoordinatorRuntimeParams params = makeRuntimeParams(cluster, segment);
+    params.getSegmentAssigner()
+          .replicateSegmentPartially(segment, profileForRevenue(), ImmutableMap.of(TIER1, 1));
+
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+    Assertions.assertEquals(
+        1L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_STALE_CANCELLED, TIER1, segment.getDataSource()),
+        "the stale in-flight load is still cancelled"
+    );
+    Assertions.assertEquals(
+        0L,
+        stats.getSegmentStat(Stats.Segments.PARTIAL_ASSIGNED, TIER1, segment.getDataSource()),
+        "no partial load is queued on a decommissioning server"
+    );
+    Assertions.assertTrue(decommServer.getLoadingSegments().isEmpty());
+    Assertions.assertNull(peon.getProfileFor(segment));
+  }
+
+  @Test
   public void testStaleInFlightCancelledAndReplaced()
   {
     // s1 has a stale-fingerprint load already in-flight (from a previous coordinator run with a different rule).

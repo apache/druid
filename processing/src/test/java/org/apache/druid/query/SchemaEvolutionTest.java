@@ -125,7 +125,7 @@ public class SchemaEvolutionTest
   }
 
   @RegisterExtension
-  public final TemporaryFolderExtension temporaryFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   // Index1: c1 is a string, c2 nonexistent, "uniques" nonexistent
   private QueryableIndex index1 = null;

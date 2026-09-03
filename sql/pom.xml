@@ -214,12 +214,6 @@
     </dependency>
 
     <!-- Tests -->
-    <!-- Required while SegmentMetadataCacheTestBase in the server test-jar still uses JUnit 4 TemporaryFolder. -->
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>net.hydromatic</groupId>
       <artifactId>quidem</artifactId>

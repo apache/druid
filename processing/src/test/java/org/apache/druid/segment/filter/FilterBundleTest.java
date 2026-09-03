@@ -51,7 +51,7 @@ public class FilterBundleTest extends InitializedNullHandlingTest
   protected ColumnIndexSelector indexSelector;
 
   @RegisterExtension
-  public final TemporaryFolderExtension tmpDir = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tmpDir = TemporaryFolderExtension.testCaseScoped();
 
   @BeforeEach
   public void setUp()
