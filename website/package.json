@@ -39,5 +39,13 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "replace-in-file": "^4.3.1"
+  },
+  "overrides": {
+    "brace-expansion": "5.0.8",
+    "serialize-javascript": "7.0.5",
+    "sockjs": {
+      "uuid": "11.1.1"
+    },
+    "tmp": "0.2.7"
   }
 }
