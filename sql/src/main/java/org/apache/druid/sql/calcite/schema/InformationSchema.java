@@ -45,6 +45,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidTypeSystem;
@@ -171,13 +172,13 @@ public class InformationSchema extends AbstractSchema
     return tableMap;
   }
 
-  private Set<String> getVisibleNames(final Iterable<String> allNames, final Function<String, String> resourceTypeFn)
+  private Set<String> getVisibleNames(final Iterable<String> allNames, final Function<String, Resource> resourceFn)
   {
-    return SchemaUtils.filterVisibleTables(
+    return SchemaUtils.filterVisibleResources(
         authorizerMapper,
         authenticationResult,
         allNames,
-        resourceTypeFn
+        resourceFn
     );
   }
 
@@ -249,11 +250,11 @@ public class InformationSchema extends AbstractSchema
                   final SchemaPlus subSchema = rootSchema.getSubSchema(schemaName);
                   final Set<String> tableNames = getVisibleNames(
                       subSchema.tables().getNames(LikePattern.any()),
-                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
+                      tableName -> rootSchema.getResource(subSchema.getName(), tableName)
                   );
                   final Set<String> functionNames = getVisibleNames(
                       subSchema.getFunctionNames(),
-                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
+                      tableName -> rootSchema.getResource(subSchema.getName(), tableName)
                   );
 
                   return Iterables.filter(
@@ -349,11 +350,11 @@ public class InformationSchema extends AbstractSchema
                   final RelDataTypeFactory typeFactory = root.getTypeFactory();
                   final Set<String> tableNames = getVisibleNames(
                       subSchema.tables().getNames(LikePattern.any()),
-                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
+                      tableName -> rootSchema.getResource(subSchema.getName(), tableName)
                   );
                   final Set<String> functionNames = getVisibleNames(
                       subSchema.getFunctionNames(),
-                      tableName -> rootSchema.getResourceType(subSchema.getName(), tableName)
+                      tableName -> rootSchema.getResource(subSchema.getName(), tableName)
                   );
 
                   return Iterables.concat(
