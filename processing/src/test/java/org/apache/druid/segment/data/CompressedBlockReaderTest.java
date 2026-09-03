@@ -100,9 +100,7 @@ public class CompressedBlockReaderTest
     buffer.putInt(0);
     buffer.flip();
 
-    CompressedBlockReader.fromByteBuffer(
-        buffer, ByteOrder.nativeOrder(), ByteOrder.nativeOrder(), false
-    );
+    CompressedBlockReader.fromByteBuffer(buffer, ByteOrder.nativeOrder(), ByteOrder.nativeOrder(), false);
     Assertions.assertTrue(true);
   }
 }
