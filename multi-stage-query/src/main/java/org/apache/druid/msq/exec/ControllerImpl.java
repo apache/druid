@@ -976,15 +976,15 @@ public class ControllerImpl implements Controller
   {
     // This check safeguards that the controller doesn't run out of memory. Workers apply their own limiting to
     // protect their own memory, and to conserve worker -> controller bandwidth.
-    long numReportsToAddCheck = Math.min(
+    final int numReportsToAddCheck = Math.min(
         errorReports.size(),
-        Limits.MAX_WORKERS * Limits.MAX_VERBOSE_WARNINGS - workerWarnings.size()
+        Math.toIntExact(Limits.MAX_WORKERS * Limits.MAX_VERBOSE_WARNINGS - workerWarnings.size())
     );
     if (numReportsToAddCheck > 0) {
       synchronized (workerWarnings) {
-        long numReportsToAdd = Math.min(
+        final int numReportsToAdd = Math.min(
             errorReports.size(),
-            Limits.MAX_WORKERS * Limits.MAX_VERBOSE_WARNINGS - workerWarnings.size()
+            Math.toIntExact(Limits.MAX_WORKERS * Limits.MAX_VERBOSE_WARNINGS - workerWarnings.size())
         );
         for (int i = 0; i < numReportsToAdd; ++i) {
           workerWarnings.add(errorReports.get(i));

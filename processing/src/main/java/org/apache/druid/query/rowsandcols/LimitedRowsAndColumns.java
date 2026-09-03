@@ -35,8 +35,8 @@ public class LimitedRowsAndColumns implements RowsAndColumns
   public LimitedRowsAndColumns(RowsAndColumns rac, int start, int end)
   {
     final int numRows = rac.numRows();
-    if (numRows < end) {
-      throw new ISE("end[%d] is out of bounds, cannot be greater than numRows[%d]", end, numRows);
+    if (start < 0 || end < start || end > numRows) {
+      throw new ISE("Invalid row range start[%d], end[%d], numRows[%d]", start, end, numRows);
     }
 
     this.rac = rac;
@@ -53,7 +53,7 @@ public class LimitedRowsAndColumns implements RowsAndColumns
   @Override
   public int numRows()
   {
-    return end - start;
+    return Math.subtractExact(end, start);
   }
 
   @Override

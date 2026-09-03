@@ -208,8 +208,8 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     final int keyEndInRow =
         dataRegion.getInt(rowPosition + (long) (keyFieldCount - 1) * Integer.BYTES);
 
-    final long keyLength = keyEndInRow - firstFieldPosition;
-    final byte[] keyBytes = new byte[Ints.checkedCast(keyFieldPointersEndInRow + keyEndInRow - firstFieldPosition)];
+    final int keyLength = Ints.checkedCast((long) keyEndInRow - firstFieldPosition);
+    final byte[] keyBytes = new byte[Math.addExact(keyFieldPointersEndInRow, keyLength)];
 
     // Length of the portion of the header which isn't included in the rowKey
     final int headerSizeAdjustment = (signature.size() - keyFieldCount) * Integer.BYTES;

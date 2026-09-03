@@ -1183,11 +1183,15 @@ public class ConciseSet extends AbstractIntSet implements Serializable
         } else {
           if (isZeroSequence(w)) {
             if (!isSequenceWithNoBits(w)) {
+              // Cardinality is bounded by MAX_ALLOWED_INTEGER + 1, so this increment cannot overflow.
+              // codeql[java/tainted-arithmetic]
               size++;
             }
           } else {
             size += maxLiteralLengthMultiplication(getSequenceCount(w) + 1);
             if (!isSequenceWithNoBits(w)) {
+              // This branch follows addition of at least one literal and therefore cannot underflow.
+              // codeql[java/tainted-arithmetic]
               size--;
             }
           }

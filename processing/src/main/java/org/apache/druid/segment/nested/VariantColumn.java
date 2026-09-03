@@ -140,8 +140,8 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
       this.logicalType = logicalType;
     }
     this.adjustLongId = stringDictionary.size();
-    this.adjustDoubleId = adjustLongId + longDictionary.size();
-    this.adjustArrayId = adjustDoubleId + doubleDictionary.size();
+    this.adjustDoubleId = Math.addExact(adjustLongId, longDictionary.size());
+    this.adjustArrayId = Math.addExact(adjustDoubleId, doubleDictionary.size());
   }
 
   @Override

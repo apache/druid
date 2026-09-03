@@ -86,9 +86,9 @@ public abstract class CompressedBigDecimalAggregatorFactoryBase
     this.scale = scale == null ? DEFAULT_SCALE : scale;
     this.strictNumberParsing = strictNumberParsing == null ? DEFAULT_STRICT_NUMBER_PARSING : strictNumberParsing;
 
-    byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
+    final byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    cacheKey = ByteBuffer.allocate(1 + fieldNameBytes.length + 2 * Integer.BYTES + 1)
+    cacheKey = ByteBuffer.allocate(Math.addExact(fieldNameBytes.length, 2 * Integer.BYTES + 2))
                          .put(cacheTypeId)
                          .put(fieldNameBytes)
                          .putInt(this.size)

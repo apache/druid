@@ -93,6 +93,25 @@ public class CompressionStrategyTest
   }
 
   @Test
+  public void testUncompressedDecompressorRejectsInvalidLengths()
+  {
+    final ByteBuffer input = ByteBuffer.allocate(4);
+    final ByteBuffer output = ByteBuffer.allocate(4);
+    input.position(1);
+    output.position(2);
+
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> CompressionStrategy.UNCOMPRESSED.getDecompressor().decompress(input, -1, output)
+    );
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> CompressionStrategy.UNCOMPRESSED.getDecompressor().decompress(input, 3, output)
+    );
+    Assertions.assertEquals(1, input.position());
+    Assertions.assertEquals(2, output.position());
+  }
+
   @org.junit.jupiter.api.Timeout(value = 60_000L, unit = java.util.concurrent.TimeUnit.MILLISECONDS)
   public void testConcurrency() throws Exception
   {

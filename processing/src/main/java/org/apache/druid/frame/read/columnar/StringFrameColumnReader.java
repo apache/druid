@@ -523,18 +523,24 @@ public class StringFrameColumnReader implements FrameColumnReader
     {
       final long dataStart;
       final long dataEnd =
-          startOfStringDataSection +
-          memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * index);
+          Math.addExact(
+              startOfStringDataSection,
+              memory.getInt(Math.addExact(startOfStringLengthSection, (long) Integer.BYTES * index))
+          );
 
       if (index == 0) {
         dataStart = startOfStringDataSection;
       } else {
         dataStart =
-            startOfStringDataSection +
-            memory.getInt(startOfStringLengthSection + (long) Integer.BYTES * (index - 1));
+            Math.addExact(
+                startOfStringDataSection,
+                memory.getInt(
+                    Math.addExact(startOfStringLengthSection, (long) Integer.BYTES * Math.subtractExact(index, 1))
+                )
+            );
       }
 
-      final int dataLength = Ints.checkedCast(dataEnd - dataStart);
+      final int dataLength = Ints.checkedCast(Math.subtractExact(dataEnd, dataStart));
 
       if (dataLength == 1 && memory.getByte(dataStart) == FrameWriterUtils.NULL_STRING_MARKER) {
         return null;

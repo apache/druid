@@ -46,7 +46,7 @@ public class VSizeLongSerde
     if (value < 0) {
       throw new IAE("maxValue[%s] must be positive", value);
     }
-    byte numBits = 0;
+    int numBits = 0;
     long maxValue = 1;
     for (int supportedSize : SUPPORTED_SIZES) {
       while (numBits < supportedSize && maxValue < Long.MAX_VALUE / 2) {

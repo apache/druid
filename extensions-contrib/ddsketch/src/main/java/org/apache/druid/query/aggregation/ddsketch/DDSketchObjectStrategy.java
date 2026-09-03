@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation.ddsketch;
 import com.datadoghq.sketch.ddsketch.DDSketch;
 import com.datadoghq.sketch.ddsketch.DDSketchProtoBinding;
 import com.datadoghq.sketch.ddsketch.store.CollapsingLowestDenseStore;
+import com.google.common.base.Preconditions;
 import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.druid.segment.data.ObjectStrategy;
 
@@ -44,11 +45,18 @@ public class DDSketchObjectStrategy implements ObjectStrategy<DDSketch>
     if (numBytes == 0) {
       return null;
     }
-    ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
-    readOnlyBuffer.limit(buffer.position() + numBytes);
+    Preconditions.checkArgument(
+        numBytes >= 0 && numBytes <= buffer.remaining(),
+        "numBytes[%s] exceeds buffer remaining[%s]",
+        numBytes,
+        buffer.remaining()
+    );
+    final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
+    readOnlyBuffer.limit(Math.addExact(buffer.position(), numBytes));
     try {
-      com.datadoghq.sketch.ddsketch.proto.DDSketch proto = com.datadoghq.sketch.ddsketch.proto.DDSketch.parseFrom(readOnlyBuffer);
-      DDSketch recovered = DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
+      final com.datadoghq.sketch.ddsketch.proto.DDSketch proto =
+          com.datadoghq.sketch.ddsketch.proto.DDSketch.parseFrom(readOnlyBuffer);
+      final DDSketch recovered = DDSketchProtoBinding.fromProto(() -> new CollapsingLowestDenseStore(1000), proto);
       return recovered;
     } 
     catch (InvalidProtocolBufferException e) {

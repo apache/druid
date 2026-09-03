@@ -418,7 +418,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       Assertions.assertEquals("hello", nextRow.getDimension("dim1").get(0));
       Assertions.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
-    Assertions.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
+    Assertions.assertEquals(2L * CONTENT.length, inputStats.getProcessedBytes());
   }
 
   @Test
@@ -465,7 +465,7 @@ public class GoogleCloudStorageInputSourceTest extends InitializedNullHandlingTe
       Assertions.assertEquals("hello", nextRow.getDimension("dim1").get(0));
       Assertions.assertEquals("world", nextRow.getDimension("dim2").get(0));
     }
-    Assertions.assertEquals(2 * CONTENT.length, inputStats.getProcessedBytes());
+    Assertions.assertEquals(2L * CONTENT.length, inputStats.getProcessedBytes());
   }
 
   @Test

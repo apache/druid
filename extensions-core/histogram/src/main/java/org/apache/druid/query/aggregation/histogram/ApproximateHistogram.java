@@ -1259,7 +1259,7 @@ public class ApproximateHistogram
       for (int i = 0; i < binCount; ++i) {
         // repeat each value bins[i] times for approximate bins
         if ((bins[i] & APPROX_FLAG_BIT) != 0) {
-          for (int k = 0; k < (bins[i] & COUNT_BITS); ++k) {
+          for (long k = 0; k < (bins[i] & COUNT_BITS); ++k) {
             buf.putFloat(positions[i]);
           }
         }
@@ -1275,7 +1275,7 @@ public class ApproximateHistogram
     for (int i = 0; i < binCount; ++i) {
       // repeat each value bins[i] times for exact bins
       if ((bins[i] & APPROX_FLAG_BIT) == 0) {
-        for (int k = 0; k < (bins[i] & COUNT_BITS); ++k) {
+        for (long k = 0; k < (bins[i] & COUNT_BITS); ++k) {
           buf.putFloat(positions[i]);
         }
       }
@@ -1369,7 +1369,7 @@ public class ApproximateHistogram
       }
       return histogram;
     } else {
-      byte approxCount = (byte) (-1 * count);
+      final int approxCount = -count;
 
       Map<Float, Long> approx = new HashMap<>();
 
