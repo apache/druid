@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
@@ -206,7 +207,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public String getId()
   {
-    return context().getString(QUERY_ID);
+    return context().get(QueryContextParameters.QUERY_ID);
   }
 
   @Override
@@ -225,7 +226,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public Query<T> withId(String id)
   {
-    return withOverriddenContext(ImmutableMap.of(QUERY_ID, id));
+    return withOverriddenContext(QueryContextParameters.QUERY_ID, id);
   }
 
   @Override

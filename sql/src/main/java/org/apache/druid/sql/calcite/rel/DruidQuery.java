@@ -63,6 +63,7 @@ import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.SimpleLongAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -1217,7 +1218,7 @@ public class DruidQuery
     // Alternatively, the timeseries query should return empty buckets, even with ALL granularity when timeseries query
     // was originally a groupBy query, but with the grouping dimensions removed away in Grouping#applyProject
     if (!Granularities.ALL.equals(queryGranularity) || grouping.hasGroupingDimensionsDropped()) {
-      theContext.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
+      QueryContextParameters.SKIP_EMPTY_BUCKETS.set(theContext, true);
     }
     theContext.putAll(plannerContext.queryContextMap());
 

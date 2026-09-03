@@ -50,11 +50,13 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.FluentQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
@@ -707,21 +709,31 @@ public class QuerySchedulerTest
   private TopNQuery makeDefaultQuery()
   {
     return makeBaseBuilder()
-        .context(ImmutableMap.of("queryId", "default-" + UUID.randomUUID()))
+        .context(QueryContext.ofMap(QueryContextParameters.QUERY_ID, "default-" + UUID.randomUUID()))
         .build();
   }
 
   private TopNQuery makeInteractiveQuery()
   {
     return makeBaseBuilder()
-        .context(ImmutableMap.of("priority", 10, "queryId", "high-" + UUID.randomUUID()))
+        .context(QueryContext.ofMap(
+            QueryContextParameters.PRIORITY,
+            10,
+            QueryContextParameters.QUERY_ID,
+            "high-" + UUID.randomUUID()
+        ))
         .build();
   }
 
   private TopNQuery makeReportQuery()
   {
     return makeBaseBuilder()
-        .context(ImmutableMap.of("priority", -1, "queryId", "low-" + UUID.randomUUID()))
+        .context(QueryContext.ofMap(
+            QueryContextParameters.PRIORITY,
+            -1,
+            QueryContextParameters.QUERY_ID,
+            "low-" + UUID.randomUUID()
+        ))
         .build();
   }
 

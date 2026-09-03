@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
@@ -32,7 +31,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
-import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryProcessingPool;
@@ -41,6 +40,7 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.AfterAll;
@@ -201,7 +201,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 500L))
         .build();
 
     final ResourceLimitExceededException exception = Assertions.assertThrows(
@@ -244,7 +244,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 500L))
         .build();
 
     Assertions.assertThrows(
@@ -273,7 +273,7 @@ public class GroupByQueryRunnerFailureTest
         .setGranularity(Granularities.ALL)
         .setInterval(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
-        .setContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 500))
+        .setContext(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 500L))
         .build();
 
     List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
@@ -305,7 +305,7 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1L))
         .queryId("test")
         .build();
 
@@ -352,7 +352,7 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(Map.of(QueryContexts.TIMEOUT_KEY, 1))
+        .overrideContext(QueryContext.ofMap(QueryContextParameters.TIMEOUT, 1L))
         .queryId("test")
         .build();
 
@@ -402,11 +402,11 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(Map.of(
-            QueryContexts.TIMEOUT_KEY,
-            300_000,
-            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
-            100
+        .overrideContext(QueryContext.ofMap(
+            QueryContextParameters.TIMEOUT,
+            300_000L,
+            QueryContextParameters.PER_SEGMENT_TIMEOUT,
+            100L
         ))
         .queryId("test")
         .build();
@@ -457,11 +457,11 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(Map.of(
-            QueryContexts.TIMEOUT_KEY,
-            300_000,
-            QueryContexts.PER_SEGMENT_TIMEOUT_KEY,
-            100
+        .overrideContext(QueryContext.ofMap(
+            QueryContextParameters.TIMEOUT,
+            300_000L,
+            QueryContextParameters.PER_SEGMENT_TIMEOUT,
+            100L
         ))
         .queryId("test")
         .build();
@@ -524,9 +524,11 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(Map.of(
-            QueryContexts.TIMEOUT_KEY, 300_000,
-            QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 1_000
+        .overrideContext(QueryContext.ofMap(
+            QueryContextParameters.TIMEOUT,
+            300_000L,
+            QueryContextParameters.PER_SEGMENT_TIMEOUT,
+            1_000L
         ))
         .queryId("slow")
         .build();
@@ -538,9 +540,11 @@ public class GroupByQueryRunnerFailureTest
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
         .setGranularity(Granularities.ALL)
-        .overrideContext(Map.of(
-            QueryContexts.TIMEOUT_KEY, 5_000,
-            QueryContexts.PER_SEGMENT_TIMEOUT_KEY, 100
+        .overrideContext(QueryContext.ofMap(
+            QueryContextParameters.TIMEOUT,
+            5_000L,
+            QueryContextParameters.PER_SEGMENT_TIMEOUT,
+            100L
         ))
         .queryId("fast")
         .build();

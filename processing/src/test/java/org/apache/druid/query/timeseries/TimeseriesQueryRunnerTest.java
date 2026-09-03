@@ -38,6 +38,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -58,6 +59,7 @@ import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorF
 import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -743,7 +745,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   )
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(ImmutableMap.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, false))
+                                  .context(QueryContext.ofMap(QueryContextParameters.SKIP_EMPTY_BUCKETS, false))
                                   .build();
     List<Result<TimeseriesResultValue>> expectedResults = new ArrayList<>();
 
@@ -1802,7 +1804,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .aggregators(aggregatorFactoryList)
                                   .postAggregators(QueryRunnerTestHelper.ADD_ROWS_INDEX_CONSTANT)
                                   .descending(descending)
-                                  .context(makeContext(ImmutableMap.of(TimeseriesQuery.SKIP_EMPTY_BUCKETS, "true")))
+                                  .context(makeContext(ImmutableMap.of(QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), "true")))
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.emptyList();
@@ -2749,10 +2751,10 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .descending(descending)
                                   .context(
                                       makeContext(
-                                          ImmutableMap.of(
-                                              TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
-                                              TimeseriesQuery.SKIP_EMPTY_BUCKETS, true
-                                          )
+                                          QueryContext.builder()
+                                                      .putRaw(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
+                                                      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
+                                                      .toMap()
                                       )
                                   )
                                   .build();
@@ -2865,10 +2867,10 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .descending(descending)
                                   .context(
                                       makeContext(
-                                          ImmutableMap.of(
-                                              TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME,
-                                              TimeseriesQuery.SKIP_EMPTY_BUCKETS, true
-                                          )
+                                          QueryContext.builder()
+                                                      .putRaw(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, TIMESTAMP_RESULT_FIELD_NAME)
+                                                      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
+                                                      .toMap()
                                       )
                                   )
                                   .build();

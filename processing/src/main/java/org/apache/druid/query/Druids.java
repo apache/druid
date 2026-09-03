@@ -22,7 +22,6 @@ package org.apache.druid.query;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.Intervals;
@@ -30,6 +29,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -278,7 +278,7 @@ public class Druids
 
     public TimeseriesQueryBuilder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
+      context = BaseQuery.computeOverriddenContext(context, QueryContext.ofMap(QueryContextParameters.QUERY_ID, queryId));
       return this;
     }
 
@@ -512,7 +512,7 @@ public class Druids
 
     public SearchQueryBuilder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
+      context = BaseQuery.computeOverriddenContext(context, QueryContext.ofMap(QueryContextParameters.QUERY_ID, queryId));
       return this;
     }
   }
@@ -629,7 +629,7 @@ public class Druids
 
     public TimeBoundaryQueryBuilder queryId(String queryId)
     {
-      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
+      context = BaseQuery.computeOverriddenContext(context, QueryContext.ofMap(QueryContextParameters.QUERY_ID, queryId));
       return this;
     }
   }

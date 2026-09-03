@@ -32,13 +32,13 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
@@ -83,13 +83,13 @@ public class DataSourceMetadataQueryTest
                                                 .intervals("2013/2014")
                                                 .context(
                                                     ImmutableMap.of(
-                                                        QueryContexts.PRIORITY_KEY,
+                                                        QueryContextParameters.PRIORITY.getName(),
                                                         1,
-                                                        QueryContexts.USE_CACHE_KEY,
+                                                        QueryContextParameters.USE_CACHE.getName(),
                                                         true,
-                                                        QueryContexts.POPULATE_CACHE_KEY,
+                                                        QueryContextParameters.POPULATE_CACHE.getName(),
                                                         "true",
-                                                        QueryContexts.FINALIZE_KEY,
+                                                        QueryContextParameters.FINALIZE.getName(),
                                                         true
                                                     )
                                                 ).build();
@@ -107,13 +107,13 @@ public class DataSourceMetadataQueryTest
     );
 
     final QueryContext queryContext = serdeQuery.context();
-    Assertions.assertEquals(1, (int) queryContext.getInt(QueryContexts.PRIORITY_KEY));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY));
-    Assertions.assertEquals("true", queryContext.getString(QueryContexts.POPULATE_CACHE_KEY));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.USE_CACHE_KEY, false));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.POPULATE_CACHE_KEY, false));
-    Assertions.assertEquals(true, queryContext.getBoolean(QueryContexts.FINALIZE_KEY, false));
+    Assertions.assertEquals(1, (int) queryContext.getInt(QueryContextParameters.PRIORITY.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.USE_CACHE.getName()));
+    Assertions.assertEquals("true", queryContext.getString(QueryContextParameters.POPULATE_CACHE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.FINALIZE.getName()));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.USE_CACHE.getName(), false));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.POPULATE_CACHE.getName(), false));
+    Assertions.assertEquals(true, queryContext.getBoolean(QueryContextParameters.FINALIZE.getName(), false));
   }
 
   /**

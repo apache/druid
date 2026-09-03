@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.timeboundary;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
@@ -28,8 +28,9 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -37,6 +38,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.TestQueryRunner;
 import org.apache.druid.query.context.ConcurrentResponseContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.RangeFilter;
@@ -331,14 +333,15 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
       @Nullable final DateTime expectedMaxTime
   )
   {
-    final List<String> vectorizeValues = new ArrayList<>(Arrays.asList("false", "true"));
+    final List<QueryContexts.Vectorize> vectorizeValues =
+        new ArrayList<>(Arrays.asList(QueryContexts.Vectorize.FALSE, QueryContexts.Vectorize.TRUE));
 
     if (runner.getSegment().as(QueryableIndex.class) != null) {
-      vectorizeValues.add("force");
+      vectorizeValues.add(QueryContexts.Vectorize.FORCE);
     }
 
     for (final String bound : Arrays.asList(TimeBoundaryQuery.MIN_TIME, TimeBoundaryQuery.MAX_TIME, null)) {
-      for (final String vectorize : vectorizeValues) {
+      for (final QueryContexts.Vectorize vectorize : vectorizeValues) {
         final String message = StringUtils.join(new Object[]{runner.getName(), bound, vectorize}, ' ');
         final TimeBoundaryQuery query =
             Druids.newTimeBoundaryQueryBuilder()
@@ -351,9 +354,11 @@ public class TimeBoundaryQueryRunnerTest extends InitializedNullHandlingTest
                   )
                   .bound(bound)
                   .context(
-                      ImmutableMap.of(
-                          QueryContexts.VECTORIZE_KEY, vectorize,
-                          QueryContexts.VECTOR_SIZE_KEY, 7
+                      QueryContext.ofMap(
+                          QueryContextParameters.VECTORIZE,
+                          vectorize,
+                          QueryContextParameters.VECTOR_SIZE,
+                          7
                       )
                   )
                   .build();

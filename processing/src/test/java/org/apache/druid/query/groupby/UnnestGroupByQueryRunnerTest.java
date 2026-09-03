@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -32,12 +31,14 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -1387,11 +1388,14 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private Map<String, Object> makeContext()
   {
-    return ImmutableMap.<String, Object>builder()
-                       .put(QueryContexts.VECTORIZE_KEY, vectorize ? "force" : "false")
-                       .put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize ? "force" : "false")
-                       .put("vectorSize", 16) // Small vector size to ensure we use more than one.
-                       .build();
+    return QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorize ? QueryContexts.Vectorize.FORCE : QueryContexts.Vectorize.FALSE,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorize ? QueryContexts.Vectorize.FORCE : QueryContexts.Vectorize.FALSE,
+        QueryContextParameters.VECTOR_SIZE,
+        16 // Small vector size to ensure we use more than one.
+    );
   }
 
 }

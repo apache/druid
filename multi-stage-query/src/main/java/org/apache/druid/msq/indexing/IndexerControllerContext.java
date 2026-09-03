@@ -54,9 +54,9 @@ import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.realtime.ChatHandler;
@@ -357,7 +357,7 @@ public class IndexerControllerContext implements ControllerContext
     workerContextMap.put(MultiStageQueryContext.CTX_MAX_FRAME_SIZE, frameSize);
 
     if (querySpec.getId() != null) {
-      workerContextMap.put(BaseQuery.QUERY_ID, querySpec.getId());
+      QueryContextParameters.QUERY_ID.set(workerContextMap, querySpec.getId());
     }
 
     MSQDestination destination = querySpec.getDestination();

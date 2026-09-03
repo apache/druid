@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.benchmark.query.QueryBenchmarkUtil;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -32,6 +31,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -42,6 +42,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
@@ -310,9 +311,11 @@ public class FilteredAggregatorBenchmark
 
     final QueryPlus<T> queryToRun = QueryPlus.wrap(
         query.withOverriddenContext(
-            ImmutableMap.of(
-                QueryContexts.VECTORIZE_KEY, vectorize,
-                QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize
+            QueryContext.ofMap(
+                QueryContextParameters.VECTORIZE,
+                QueryContexts.Vectorize.fromString(vectorize),
+                QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+                QueryContexts.Vectorize.fromString(vectorize)
             )
         )
     );

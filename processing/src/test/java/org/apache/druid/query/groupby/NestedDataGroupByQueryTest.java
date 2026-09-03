@@ -28,9 +28,11 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
@@ -101,9 +103,11 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
 
   public Map<String, Object> getContext()
   {
-    return ImmutableMap.of(
-        QueryContexts.VECTORIZE_KEY, vectorize.toString(),
-        QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize.toString()
+    return QueryContext.ofMap(
+        QueryContextParameters.VECTORIZE,
+        vectorize,
+        QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
+        vectorize
     );
   }
   public static Collection<?> constructorFeeder()

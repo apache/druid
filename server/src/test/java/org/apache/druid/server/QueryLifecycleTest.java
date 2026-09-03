@@ -40,6 +40,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryConfigProvider;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
@@ -537,8 +538,8 @@ public class QueryLifecycleTest
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
-    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
-    revisedContext.remove("queryId");
+    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey(QueryContextParameters.QUERY_ID.getName()));
+    revisedContext.remove(QueryContextParameters.QUERY_ID.getName());
     Assertions.assertEquals(
         userContext,
         revisedContext
@@ -627,8 +628,8 @@ public class QueryLifecycleTest
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
-    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
-    revisedContext.remove("queryId");
+    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey(QueryContextParameters.QUERY_ID.getName()));
+    revisedContext.remove(QueryContextParameters.QUERY_ID.getName());
     Assertions.assertEquals(
         userContext,
         revisedContext
@@ -678,8 +679,8 @@ public class QueryLifecycleTest
     lifecycle.initialize(query);
 
     final Map<String, Object> revisedContext = new HashMap<>(lifecycle.getQuery().getContext());
-    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey("queryId"));
-    revisedContext.remove("queryId");
+    Assertions.assertTrue(lifecycle.getQuery().getContext().containsKey(QueryContextParameters.QUERY_ID.getName()));
+    revisedContext.remove(QueryContextParameters.QUERY_ID.getName());
     Assertions.assertEquals(
         userContext,
         revisedContext
@@ -792,7 +793,7 @@ public class QueryLifecycleTest
     Assertions.assertNotNull(revisedContext);
     Assertions.assertTrue(revisedContext.containsKey("foo"));
     Assertions.assertTrue(revisedContext.containsKey("baz"));
-    Assertions.assertTrue(revisedContext.containsKey("queryId"));
+    Assertions.assertTrue(revisedContext.containsKey(QueryContextParameters.QUERY_ID.getName()));
 
     Assertions.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
 

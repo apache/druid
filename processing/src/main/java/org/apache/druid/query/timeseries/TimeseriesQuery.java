@@ -37,6 +37,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec.LimitJsonIncludeFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -59,7 +60,6 @@ import java.util.Set;
 public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   public static final String CTX_GRAND_TOTAL = "grandTotal";
-  public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
   // "timestampResultField" is an undocumented parameter used internally by the SQL layer.
   // It is necessary because when the SQL layer generates a Timeseries query for a group-by-time-floor SQL query,
   // it expects the result of the time-floor to have a specific name. That name is provided using this parameter.
@@ -179,7 +179,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public boolean isSkipEmptyBuckets()
   {
-    return context().getBoolean(SKIP_EMPTY_BUCKETS, false);
+    return context().getOrDefault(QueryContextParameters.SKIP_EMPTY_BUCKETS);
   }
 
   @Override
