@@ -75,13 +75,13 @@ public class KllDoublesSketchAggregatorTest extends InitializedNullHandlingTest
         config,
         tempFolder
     ).withQueryContext(
-        QueryContext.ofMap(QueryContextParameters.VECTORIZE, QueryContexts.Vectorize.fromString(vectorize))
+        QueryContext.ofMap(QueryContextParameters.VECTORIZE, QueryContextParameters.VECTORIZE.parse(vectorize))
     );
     timeSeriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         module.getJacksonModules(),
         tempFolder
     ).withQueryContext(
-        QueryContext.ofMap(QueryContextParameters.VECTORIZE, QueryContexts.Vectorize.fromString(vectorize))
+        QueryContext.ofMap(QueryContextParameters.VECTORIZE, QueryContextParameters.VECTORIZE.parse(vectorize))
     );
   }
 

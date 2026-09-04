@@ -46,6 +46,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -174,75 +175,78 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final String PRETEND_CURRENT_TIME = "2000-01-01T00:00:00Z";
 
   public static final Map<String, Object> QUERY_CONTEXT_DEFAULT =
-      ImmutableMap.<String, Object>builder()
-                  .put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
-                  .put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
-                  .put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-                  .put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
-                  .build();
+      QueryContext.builder()
+                  .putRaw(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+                  .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
+                  .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+                  .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+                  .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
-                  .build();
+                  .putRaw(QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false)
+                  .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY_USE_EQUALITY =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                  .build();
+                  .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), false,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = QueryContext.builder()
+      .putRaw(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+      .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, false)
+      .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), true,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = QueryContext.builder()
+      .putRaw(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+      .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
+      .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_LEXICOGRAPHIC_TOPN =
-      QueryContexts.override(QUERY_CONTEXT_DEFAULT, PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true);
+      QueryContext.builder()
+                  .putAll(QUERY_CONTEXT_DEFAULT)
+                  .putRaw(PlannerConfig.CTX_KEY_USE_LEXICOGRAPHIC_TOPN, true)
+                  .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false",
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_NO_TOPN = QueryContext.builder()
+      .putRaw(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+      .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .putRaw(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false")
+      .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .toMap();
 
-  public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = QueryContext.builder()
+      .putRaw(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+      .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .putRaw(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES)
+      .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .toMap();
 
   // Matches QUERY_CONTEXT_DEFAULT
-  public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
-      QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
-      PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), true,
-      QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
-      QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
-  );
+  public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = QueryContext.builder()
+      .putRaw(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
+      .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
+      .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
+      .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
+      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT =
-      ImmutableMap.<String, Object>builder()
+      QueryContext.builder()
                   .putAll(QUERY_CONTEXT_DEFAULT)
-                  .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  .putRaw(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
                   // Disallows the fallback to row based limiting
-                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1")
-                  .build();
+                  .putRaw(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "1")
+                  .toMap();
 
   // Add additional context to the given context map for when the
   // timeseries query has timestamp_floor expression on the timestamp dimension
@@ -251,10 +255,10 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       String timestampResultField
   )
   {
-    return ImmutableMap.<String, Object>builder()
+    return QueryContext.builder()
                        .putAll(context)
-                       .put(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
-                       .build();
+                       .putRaw(TimeseriesQuery.CTX_TIMESTAMP_RESULT_FIELD, timestampResultField)
+                       .toMap();
   }
 
   // Matches QUERY_CONTEXT_LOS_ANGELES
