@@ -57,13 +57,7 @@ public abstract class BaseQuery<T> implements Query<T>
     }
   }
 
-  /** @deprecated use {@link QueryContextParameters#QUERY_ID}. */
-  @Deprecated
-  public static final String QUERY_ID = QueryContextParameters.QUERY_ID.getName();
   public static final String SUB_QUERY_ID = "subQueryId";
-  /** @deprecated use {@link QueryContextParameters#SQL_QUERY_ID}. */
-  @Deprecated
-  public static final String SQL_QUERY_ID = QueryContextParameters.SQL_QUERY_ID.getName();
   private final DataSource dataSource;
   private final QueryContext context;
   private final QuerySegmentSpec querySegmentSpec;

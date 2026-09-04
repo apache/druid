@@ -126,7 +126,7 @@ public class BuiltinApproxCountDistinctSqlAggregator implements SqlAggregator
               "Using APPROX_COUNT_DISTINCT() or enabling approximation with COUNT(DISTINCT) is not supported for"
               + " column type [%s]. You can disable approximation by setting [%s: false] in the query context.",
               arg.getDruidType(),
-              QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT.getName()
+              QueryContextParameters.USE_APPROXIMATE_COUNT_DISTINCT
           );
           return null;
         }

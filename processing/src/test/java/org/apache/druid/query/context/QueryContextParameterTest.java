@@ -129,7 +129,7 @@ class QueryContextParameterTest
             Integer.class,
             value -> {
               parserCalled.set(true);
-              return (Integer) value;
+              return Integer.parseInt((String) value);
             }
         )
         .build();
@@ -138,6 +138,9 @@ class QueryContextParameterTest
     assertFalse(parserCalled.get());
 
     assertEquals(1, parameter.parse(1));
+    assertFalse(parserCalled.get());
+
+    assertEquals(1, parameter.parse("1"));
     assertTrue(parserCalled.get());
   }
 

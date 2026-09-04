@@ -307,7 +307,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
         + ") AS alias\n",
         QueryContext.builder()
                     .putAll(QUERY_CONTEXT_DEFAULT)
-                    .put(QueryContextParameters.MAX_SUBQUERY_BYTES, "100000")
+                    .put(QueryContextParameters.MAX_SUBQUERY_BYTES, 100_000)
                     // Disallows the fallback to row based limiting
                     .put(QueryContextParameters.MAX_SUBQUERY_ROWS, 10)
                     .toMap(),

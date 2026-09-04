@@ -229,10 +229,75 @@ public final class ParameterDocumentationGenerator
    */
   static String normalizeTableCell(final String value)
   {
-    return value.replaceAll("\\\\[ \\t]*\\R", "")
-                .replaceAll("\\R", " ")
-                .replaceAll("[ \\t]+", " ")
-                .trim();
+    final StringBuilder normalized = new StringBuilder(value.length());
+    boolean pendingSpace = false;
+
+    for (int index = 0; index < value.length();) {
+      final int continuationEnd = lineContinuationEnd(value, index);
+      if (continuationEnd > index) {
+        index = continuationEnd;
+        continue;
+      }
+
+      final int lineSeparatorLength = lineSeparatorLength(value, index);
+      if (lineSeparatorLength > 0) {
+        pendingSpace = true;
+        index += lineSeparatorLength;
+        continue;
+      }
+
+      final char character = value.charAt(index++);
+      if (character == ' ' || character == '\t') {
+        pendingSpace = true;
+        continue;
+      }
+
+      if (pendingSpace && normalized.length() > 0) {
+        normalized.append(' ');
+      }
+      normalized.append(character);
+      pendingSpace = false;
+    }
+
+    return normalized.toString().trim();
+  }
+
+  private static int lineContinuationEnd(final String value, final int index)
+  {
+    if (value.charAt(index) != '\\') {
+      return index;
+    }
+
+    int separatorStart = index + 1;
+    while (separatorStart < value.length()) {
+      final char character = value.charAt(separatorStart);
+      if (character != ' ' && character != '\t') {
+        break;
+      }
+      separatorStart++;
+    }
+
+    final int separatorLength = lineSeparatorLength(value, separatorStart);
+    return separatorLength == 0 ? index : separatorStart + separatorLength;
+  }
+
+  private static int lineSeparatorLength(final String value, final int index)
+  {
+    if (index >= value.length()) {
+      return 0;
+    }
+
+    final char character = value.charAt(index);
+    if (character == '\r') {
+      return index + 1 < value.length() && value.charAt(index + 1) == '\n' ? 2 : 1;
+    }
+
+    return character == '\n'
+           || character == '\u000B'
+           || character == '\f'
+           || character == '\u0085'
+           || character == '\u2028'
+           || character == '\u2029' ? 1 : 0;
   }
 
   private enum Mode
