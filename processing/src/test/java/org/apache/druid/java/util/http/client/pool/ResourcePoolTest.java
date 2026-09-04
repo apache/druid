@@ -43,26 +43,29 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 /**
  */
 @RunWith(Parameterized.class)
 public class ResourcePoolTest
 {
-  @Parameterized.Parameters(name = "useSemaphorePool = {0}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    return Arrays.asList(new Object[][]{{false}, {true}});
+    return Arrays.stream(ResourcePool.Implementation.values())
+                 .map(implementation -> new Object[]{implementation})
+                 .collect(Collectors.toList());
   }
 
-  private final boolean useSemaphorePool;
+  private final ResourcePool.Implementation poolImplementation;
 
   ResourceFactory<String, String> resourceFactory;
   ResourcePool<String, String> pool;
 
-  public ResourcePoolTest(boolean useSemaphorePool)
+  public ResourcePoolTest(ResourcePool.Implementation poolImplementation)
   {
-    this.useSemaphorePool = useSemaphorePool;
+    this.poolImplementation = poolImplementation;
   }
 
   @Before
@@ -95,17 +98,22 @@ public class ResourcePoolTest
   {
     return new ResourcePool<>(
         resourceFactory,
-        new ResourcePoolConfig(maxPerKey, unusedConnectionTimeoutMillis, useSemaphorePool),
+        new ResourcePoolConfig(maxPerKey, unusedConnectionTimeoutMillis, poolImplementation),
         eagerInitialization
     );
   }
 
-  /**
-   * Skips a test that pins behaviour only {@link ResourcePoolConfig#isUseSemaphorePool()} provides.
-   */
-  private void assumeSemaphorePool()
+  private boolean isShrinkingPool()
   {
-    Assume.assumeTrue("only the semaphore pool satisfies this", useSemaphorePool);
+    return poolImplementation == ResourcePool.Implementation.SHRINKING;
+  }
+
+  /**
+   * Skips a test that pins behaviour only {@link ResourcePool.Implementation#SHRINKING} provides.
+   */
+  private void assumeShrinkingPool()
+  {
+    Assume.assumeTrue("only the shrinking pool satisfies this", isShrinkingPool());
   }
 
   @Test
@@ -318,7 +326,7 @@ public class ResourcePoolTest
     EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(false).times(1);
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
-    if (useSemaphorePool) {
+    if (isShrinkingPool()) {
       // The next idle resource is tried before opening a new connection.
       EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
     } else {
@@ -327,7 +335,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals(useSemaphorePool ? "billy0" : "billy2", billy.get());
+    Assert.assertEquals(isShrinkingPool() ? "billy0" : "billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -496,7 +504,7 @@ public class ResourcePoolTest
     //make sure resources have been timed out.
     Thread.sleep(100);
 
-    if (useSemaphorePool) {
+    if (isShrinkingPool()) {
       // Both parked resources (billy0, billy1) are stale, so a single take() purges both before opening one
       // validated replacement.
       resourceFactory.close("billy0");
@@ -513,7 +521,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals(useSemaphorePool ? "billy2" : "billy1", billy.get());
+    Assert.assertEquals(isShrinkingPool() ? "billy2" : "billy1", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -528,7 +536,7 @@ public class ResourcePoolTest
   @Test
   public void testExpiredResourcesArePurgedAndPoolShrinks() throws Exception
   {
-    assumeSemaphorePool();
+    assumeShrinkingPool();
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
     pool = createPool(2, TimeUnit.MILLISECONDS.toMillis(100), true);
 
@@ -588,7 +596,7 @@ public class ResourcePoolTest
   @Test
   public void testDeadResourcesArePurgedInOneTake()
   {
-    assumeSemaphorePool();
+    assumeShrinkingPool();
     primePool();
 
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(false).anyTimes();
@@ -617,7 +625,7 @@ public class ResourcePoolTest
   @Test
   public void testResourceIsClosedWhenIsGoodThrows() throws Exception
   {
-    assumeSemaphorePool();
+    assumeShrinkingPool();
     primePool();
 
     EasyMock.expect(resourceFactory.isGood("billy1")).andThrow(new ISE("health check blew up")).times(1);
@@ -659,7 +667,7 @@ public class ResourcePoolTest
   @Test
   public void testCloseFailureWhileEvictingExpiredResources() throws Exception
   {
-    assumeSemaphorePool();
+    assumeShrinkingPool();
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
     pool = createPool(2, TimeUnit.SECONDS.toMillis(1), true);
@@ -714,7 +722,7 @@ public class ResourcePoolTest
   @Test
   public void testEagerInitializationFailureClosesAlreadyCreatedResources()
   {
-    assumeSemaphorePool();
+    assumeShrinkingPool();
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy0").times(1);
     EasyMock.expect(resourceFactory.generate("billy")).andThrow(new ISE("no more billies")).times(1);
     resourceFactory.close("billy0");
@@ -742,7 +750,7 @@ public class ResourcePoolTest
   @Test
   public void testNullGeneratedResourceFailsTheTake_lazy() throws Exception
   {
-    assumeSemaphorePool();
+    assumeShrinkingPool();
     setUpPoolWithoutEagerInitialization();
 
     EasyMock.expect(resourceFactory.generate("billy")).andReturn(null).times(1);
@@ -930,7 +938,7 @@ public class ResourcePoolTest
     // Any close() of a sally resource here would be an unexpected call on the mock.
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
-    if (useSemaphorePool) {
+    if (isShrinkingPool()) {
       resourceFactory.close("billy0");
       EasyMock.expectLastCall();
       EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
@@ -968,7 +976,7 @@ public class ResourcePoolTest
     final ExclusiveResourceFactory factory = new ExclusiveResourceFactory();
     final ResourcePool<String, String> stressPool = new ResourcePool<>(
         factory,
-        new ResourcePoolConfig(maxPerKey, 5, useSemaphorePool),
+        new ResourcePoolConfig(maxPerKey, 5, poolImplementation),
         false
     );
 
@@ -1034,7 +1042,7 @@ public class ResourcePoolTest
   {
     MyThread thread = new MyThread(heldUntil, key);
     thread.start();
-    thread.waitForValueToBeGotten(5, TimeUnit.SECONDS);
+    thread.waitForValueToBeGotten(waitSeconds, TimeUnit.SECONDS);
     return thread.getValue();
   }
 

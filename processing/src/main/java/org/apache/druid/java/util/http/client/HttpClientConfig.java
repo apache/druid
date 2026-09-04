@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.http.client;
 
+import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -82,7 +83,7 @@ public class HttpClientConfig
 
   private final int numConnections;
   private final boolean eagerInitialization;
-  private final boolean useSemaphorePool;
+  private final ResourcePool.Implementation poolImplementation;
   private final SSLContext sslContext;
   private final HttpClientProxyConfig proxyConfig;
   private final Duration readTimeout;
@@ -95,7 +96,7 @@ public class HttpClientConfig
   private HttpClientConfig(
       int numConnections,
       boolean eagerInitialization,
-      boolean useSemaphorePool,
+      ResourcePool.Implementation poolImplementation,
       SSLContext sslContext,
       HttpClientProxyConfig proxyConfig,
       Duration readTimeout,
@@ -108,7 +109,7 @@ public class HttpClientConfig
   {
     this.numConnections = numConnections;
     this.eagerInitialization = eagerInitialization;
-    this.useSemaphorePool = useSemaphorePool;
+    this.poolImplementation = poolImplementation;
     this.sslContext = sslContext;
     this.proxyConfig = proxyConfig;
     this.readTimeout = readTimeout;
@@ -129,9 +130,9 @@ public class HttpClientConfig
     return eagerInitialization;
   }
 
-  public boolean isUseSemaphorePool()
+  public ResourcePool.Implementation getPoolImplementation()
   {
-    return useSemaphorePool;
+    return poolImplementation;
   }
 
   public SSLContext getSslContext()
@@ -178,7 +179,7 @@ public class HttpClientConfig
   {
     private int numConnections = 1;
     private boolean eagerInitialization = true;
-    private boolean useSemaphorePool = true;
+    private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.SHRINKING;
     private SSLContext sslContext = null;
     private HttpClientProxyConfig proxyConfig = null;
     private Duration readTimeout = null;
@@ -204,9 +205,9 @@ public class HttpClientConfig
       return this;
     }
 
-    public Builder withUseSemaphorePool(boolean useSemaphorePool)
+    public Builder withPoolImplementation(ResourcePool.Implementation poolImplementation)
     {
-      this.useSemaphorePool = useSemaphorePool;
+      this.poolImplementation = poolImplementation;
       return this;
     }
 
@@ -257,7 +258,7 @@ public class HttpClientConfig
       return new HttpClientConfig(
           numConnections,
           eagerInitialization,
-          useSemaphorePool,
+          poolImplementation,
           sslContext,
           proxyConfig,
           readTimeout,

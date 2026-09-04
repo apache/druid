@@ -19,6 +19,8 @@
 
 package org.apache.druid.java.util.http.client.pool;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.cache.CacheBuilder;
@@ -48,8 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * A resource is discarded once it has gone {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} unused or
  * {@link ResourceFactory#isGood} rejects it. With eagerInitialization a key starts out full, otherwise empty.
  *
- * {@link ResourcePoolConfig#isUseSemaphorePool()} selects between {@link SemaphoreResourceHolderPerKey} and the older
- * {@link ResourceHolderPerKey}.
+ * {@link ResourcePoolConfig#getPoolImplementation()} selects which {@link Implementation} does the pooling.
  */
 public class ResourcePool<K, V> implements Closeable
 {
@@ -66,32 +67,7 @@ public class ResourcePool<K, V> implements Closeable
           @Override
           public PooledResources<V> load(K input)
           {
-            if (config.isUseSemaphorePool()) {
-              final SemaphoreResourceHolderPerKey<K, V> holder = new SemaphoreResourceHolderPerKey<>(
-                  config.getMaxPerKey(),
-                  config.getUnusedConnectionTimeoutMillis(),
-                  input,
-                  factory
-              );
-              if (eagerInitialization) {
-                holder.preload();
-              }
-              return holder;
-            } else if (eagerInitialization) {
-              return new EagerCreationResourceHolder<>(
-                  config.getMaxPerKey(),
-                  config.getUnusedConnectionTimeoutMillis(),
-                  input,
-                  factory
-              );
-            } else {
-              return new LazyCreationResourceHolder<>(
-                  config.getMaxPerKey(),
-                  config.getUnusedConnectionTimeoutMillis(),
-                  input,
-                  factory
-              );
-            }
+            return config.getPoolImplementation().create(config, input, factory, eagerInitialization);
           }
         }
     );
@@ -179,6 +155,88 @@ public class ResourcePool<K, V> implements Closeable
     }
     catch (IOException e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Which implementation pools the resources of a key.
+   */
+  public enum Implementation
+  {
+    /**
+     * Discards every stale or broken resource a taker walks past, letting the pool fall back to the size the traffic
+     * needs. Holds no lock while creating, validating or closing resources.
+     */
+    SHRINKING {
+      @Override
+      <K, V> PooledResources<V> create(
+          ResourcePoolConfig config,
+          K key,
+          ResourceFactory<K, V> factory,
+          boolean eagerInitialization
+      )
+      {
+        final ShrinkingResourceHolderPerKey<K, V> resources = new ShrinkingResourceHolderPerKey<>(
+            config.getMaxPerKey(),
+            config.getUnusedConnectionTimeoutMillis(),
+            key,
+            factory
+        );
+        if (eagerInitialization) {
+          resources.preload();
+        }
+        return resources;
+      }
+    },
+
+    /**
+     * Replaces a stale or broken resource with a fresh one, one for one, and only once it has reached the front of the
+     * queue, so the pool stays at its high-water mark. Guards the resources of a key with its monitor.
+     */
+    REPLACING {
+      @Override
+      <K, V> PooledResources<V> create(
+          ResourcePoolConfig config,
+          K key,
+          ResourceFactory<K, V> factory,
+          boolean eagerInitialization
+      )
+      {
+        if (eagerInitialization) {
+          return new EagerCreationResourceHolder<>(
+              config.getMaxPerKey(),
+              config.getUnusedConnectionTimeoutMillis(),
+              key,
+              factory
+          );
+        }
+        return new LazyCreationResourceHolder<>(
+            config.getMaxPerKey(),
+            config.getUnusedConnectionTimeoutMillis(),
+            key,
+            factory
+        );
+      }
+    };
+
+    abstract <K, V> PooledResources<V> create(
+        ResourcePoolConfig config,
+        K key,
+        ResourceFactory<K, V> factory,
+        boolean eagerInitialization
+    );
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return StringUtils.toLowerCase(name());
+    }
+
+    @JsonCreator
+    public static Implementation fromString(String name)
+    {
+      return valueOf(StringUtils.toUpperCase(name));
     }
   }
 
@@ -400,7 +458,7 @@ public class ResourcePool<K, V> implements Closeable
    * A taker discards every stale or broken resource it walks past rather than one per take, so the pool shrinks to
    * what the traffic needs instead of reconnecting one for one.
    */
-  private static class SemaphoreResourceHolderPerKey<K, V> extends PooledResources<V>
+  private static class ShrinkingResourceHolderPerKey<K, V> extends PooledResources<V>
   {
     /**
      * Released on close to wake every parked taker at once. Half of the range so that the permits still outstanding
@@ -416,7 +474,7 @@ public class ResourcePool<K, V> implements Closeable
     private final Deque<ResourceHolder<V>> idleResources = new ConcurrentLinkedDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    private SemaphoreResourceHolderPerKey(
+    private ShrinkingResourceHolderPerKey(
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,

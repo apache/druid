@@ -91,7 +91,7 @@ public class HttpClientInit
                   new ResourcePoolConfig(
                       config.getNumConnections(),
                       config.getUnusedConnectionTimeoutDuration().getMillis(),
-                      config.isUseSemaphorePool()
+                      config.getPoolImplementation()
                   ),
                   config.isEagerInitialization()
               ),

@@ -22,6 +22,7 @@ package org.apache.druid.guice.http;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.http.client.pool.ResourcePool;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -73,12 +74,8 @@ public class DruidHttpClientConfig
   @JsonProperty
   private Boolean eagerInitialization = null;
 
-  /**
-   * Whether connections are pooled by the semaphore-based implementation. Turn off to fall back to the older
-   * monitor-based one, which replaces a stale or broken connection one for one instead of letting the pool shrink.
-   */
   @JsonProperty
-  private boolean useSemaphorePool = true;
+  private ResourcePool.Implementation poolImplementation = ResourcePool.Implementation.SHRINKING;
 
   @JsonProperty
   private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
@@ -140,9 +137,9 @@ public class DruidHttpClientConfig
     return eagerInitialization;
   }
 
-  public boolean isUseSemaphorePool()
+  public ResourcePool.Implementation getPoolImplementation()
   {
-    return useSemaphorePool;
+    return poolImplementation;
   }
 
   public long getClientConnectTimeout()
