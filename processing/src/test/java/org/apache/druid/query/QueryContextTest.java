@@ -577,6 +577,19 @@ public class QueryContextTest
   }
 
   @Test
+  public void testGetRealtimeSegmentsModeIgnoresExplicitNullDeprecatedFlag()
+  {
+    assertEquals(
+        QueryContexts.RealtimeSegmentsMode.EXCLUDE,
+        QueryContext.builder()
+                    .put(QueryContextParameters.REALTIME_SEGMENTS_MODE, QueryContexts.RealtimeSegmentsMode.EXCLUDE)
+                    .put(QueryContextParameters.REALTIME_SEGMENTS_ONLY, null)
+                    .toContext()
+                    .getRealtimeSegmentsMode()
+    );
+  }
+
+  @Test
   public void testGetRealtimeSegmentsModeConflictThrows()
   {
     BadQueryContextException e = assertThrows(

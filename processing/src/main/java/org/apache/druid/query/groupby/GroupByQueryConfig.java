@@ -402,10 +402,10 @@ public class GroupByQueryConfig
         Optional.ofNullable(queryContext.getString(CTX_KEY_DEFER_EXPRESSION_DIMENSIONS))
                 .map(DeferExpressionDimensions::fromString)
                 .orElse(getDeferExpressionDimensions());
-    final QueryContexts.Vectorize vectorize = queryContext.has(QueryContextParameters.VECTORIZE)
-                                              ? queryContext.get(QueryContextParameters.VECTORIZE)
-                                              : null;
-    newConfig.vectorize = vectorize == null ? isVectorize() : vectorize != QueryContexts.Vectorize.FALSE;
+    newConfig.vectorize = queryContext.getOrDefault(
+        QueryContextParameters.VECTORIZE,
+        isVectorize() ? QueryContexts.Vectorize.TRUE : QueryContexts.Vectorize.FALSE
+    ) != QueryContexts.Vectorize.FALSE;
     newConfig.enableMultiValueUnnesting = queryContext.getBoolean(
         CTX_KEY_ENABLE_MULTI_VALUE_UNNESTING,
         isMultiValueUnnestingEnabled()

@@ -32,7 +32,6 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -313,9 +312,9 @@ public class FilteredAggregatorBenchmark
         query.withOverriddenContext(
             QueryContext.ofMap(
                 QueryContextParameters.VECTORIZE,
-                QueryContexts.Vectorize.fromString(vectorize),
+                QueryContextParameters.VECTORIZE.parse(vectorize),
                 QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS,
-                QueryContexts.Vectorize.fromString(vectorize)
+                QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.parse(vectorize)
             )
         )
     );

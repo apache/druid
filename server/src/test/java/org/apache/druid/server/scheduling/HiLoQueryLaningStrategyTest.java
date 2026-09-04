@@ -143,6 +143,15 @@ public class HiLoQueryLaningStrategyTest
   }
 
   @Test
+  public void testLaningExplicitNullPriority()
+  {
+    TimeseriesQuery query = queryBuilder
+        .context(QueryContext.builder().put(QueryContextParameters.PRIORITY, null).toMap())
+        .build();
+    Assertions.assertFalse(strategy.computeLane(QueryPlus.wrap(query), ImmutableSet.of()).isPresent());
+  }
+
+  @Test
   public void testLaningZeroPriority()
   {
     TimeseriesQuery query = queryBuilder.context(QueryContext.ofMap(QueryContextParameters.PRIORITY, 0)).build();

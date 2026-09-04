@@ -52,6 +52,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.CascadeExtractionFn;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -194,7 +195,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> QUERY_CONTEXT_DONT_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      TimeseriesQuery.SKIP_EMPTY_BUCKETS, false,
+      QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), false,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -202,7 +203,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = ImmutableMap.of(
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
+      QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -230,7 +231,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Map<String, Object> TIMESERIES_CONTEXT_BY_GRAN = ImmutableMap.of(
       QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID,
       PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME,
-      TimeseriesQuery.SKIP_EMPTY_BUCKETS, true,
+      QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), true,
       QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS,
       QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE
   );
@@ -269,7 +270,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z");
     TIMESERIES_CONTEXT_LOS_ANGELES.put(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES);
-    TIMESERIES_CONTEXT_LOS_ANGELES.put(TimeseriesQuery.SKIP_EMPTY_BUCKETS, true);
+    TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContextParameters.SKIP_EMPTY_BUCKETS.getName(), true);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS);
     TIMESERIES_CONTEXT_LOS_ANGELES.put(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE);
 

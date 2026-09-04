@@ -34,8 +34,6 @@ import org.easymock.EasyMock;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.Map;
-
 public class SetAndVerifyContextQueryRunnerTest
 {
   @Test

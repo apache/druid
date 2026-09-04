@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.quidem.DruidQTestInfo;
