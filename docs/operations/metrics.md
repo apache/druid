@@ -452,6 +452,9 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/assignSkipped/count`|Number of segments that could not be assigned to any server for loading. This can occur due to replication throttling, no available disk space, or a full load queue.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/moveSkipped/count`|Number of segments that were chosen for balancing but could not be moved. This can occur when segments are already optimally placed.|`dataSource`, `server`, `tier`, `description`|Varies|
 |`segment/dropSkipped/count`|Number of segments that could not be dropped from any server.|`dataSource`, `server`, `tier`, `description`|Varies|
+|`segment/clone/assigned/count`|Number of segments assigned to be loaded on a historical clone.|`dataSource`, `server`, `tier`|Varies|
+|`segment/clone/dropped/count`|Number of segments assigned to be loaded on a historical clone.|`dataSource`, `server`, `tier`|Varies|
+|`segment/clone/pendingSync/count`|Number of segments that still need to be loaded on a historical clone but are already loaded on its source server.|`server`, `tier`|Varies|
 |`segment/loadQueue/size`|Size in bytes of segments to load.|`server`|Varies|
 |`segment/loadQueue/count`|Number of segments to load.|`server`|Varies|
 |`segment/loading/rateKbps`|Current rate of segment loading on a server in kbps (1000 bits per second). The rate is calculated as a moving average over the last 10 GiB or more of successful segment loads on that server.|`server`|Varies|
@@ -468,6 +471,8 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
 |`tier/historical/count`|Number of available historical nodes in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/historical/clone/count`|Number of historical nodes in a tier which are a clone of another historical in the same or different tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
+|`tier/historical/clone/synced`|Number of historical clones in a tier which are now synced with their source server. |`server`, `tier`|Varies|
 |`tier/replication/factor`|Configured maximum replication factor in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
 |`tier/required/capacity`|Total capacity in bytes required in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
 |`tier/total/capacity`|Total capacity in bytes available in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|

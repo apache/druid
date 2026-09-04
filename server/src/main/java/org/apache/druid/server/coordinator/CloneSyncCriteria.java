@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.InvalidInput;
@@ -34,26 +33,22 @@ import javax.annotation.Nullable;
  * server. Segments which are yet to be loaded on the source server itself do not
  * affect the sync status.
  */
-public class CloneSyncCriteria
+public record CloneSyncCriteria(
+    @JsonProperty("maxSegmentsPendingSync") @Nullable Integer maxSegmentsPendingSync,
+    @JsonProperty("maxPercentPendingSync") @Nullable Double maxPercentPendingSync
+)
 {
-  private final int maxSegmentsPendingSync;
-  private final double maxPercentPendingSync;
+  public static final int DEFAULT_MAX_SEGMENTS_PENDING_SYNC = 100;
+  public static final double DEFAULT_MAX_PERCENT_PENDING_SYNC = 1.0;
 
-  @JsonCreator
-  public CloneSyncCriteria(
-      @JsonProperty("maxSegmentsPendingSync") @Nullable Integer maxSegmentsPendingSync,
-      @JsonProperty("maxPercentPendingSync") @Nullable Double maxPercentPendingSync
-  )
+  public CloneSyncCriteria
   {
-    this.maxSegmentsPendingSync = Configs.valueOrDefault(maxSegmentsPendingSync, 100);
-    this.maxPercentPendingSync = Configs.valueOrDefault(maxPercentPendingSync, 1.0f);
-
     InvalidInput.conditionalException(
-        this.maxSegmentsPendingSync >= 0,
+        maxSegmentsPendingSync == null || maxSegmentsPendingSync >= 0,
         "'maxSegmentsPendingSync' must be greater than or equal to 0"
     );
     InvalidInput.conditionalException(
-        this.maxPercentPendingSync >= 0.0 && this.maxPercentPendingSync <= 100.0,
+        maxPercentPendingSync == null || (maxPercentPendingSync >= 0.0 && maxPercentPendingSync <= 100.0),
         "'maxPercentPendingSync' must be in the range [0.0, 100.0]"
     );
   }
@@ -61,20 +56,20 @@ public class CloneSyncCriteria
   /**
    * For a clone to be considered SYNCED, the number of segments pending sync
    * must be less than or equal to this value.
+   * Default value is {@link #DEFAULT_MAX_SEGMENTS_PENDING_SYNC}.
    */
-  @JsonProperty
   public int getMaxSegmentsPendingSync()
   {
-    return maxSegmentsPendingSync;
+    return Configs.valueOrDefault(maxSegmentsPendingSync, DEFAULT_MAX_SEGMENTS_PENDING_SYNC);
   }
 
   /**
    * For a clone to be considered SYNCED, the percentage of segments pending sync
    * must be less than or equal to this value.
+   * Default value is {@link #DEFAULT_MAX_PERCENT_PENDING_SYNC}.
    */
-  @JsonProperty
   public double getMaxPercentPendingSync()
   {
-    return maxPercentPendingSync;
+    return Configs.valueOrDefault(maxPercentPendingSync, DEFAULT_MAX_PERCENT_PENDING_SYNC);
   }
 }

@@ -362,7 +362,7 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
                                  CoordinatorDynamicConfig
                                      .builder()
                                      .withCloneServers(Map.of(historicalT12.getHost(), historicalT11.getHost()))
-                                     .withCloneSyncCriteria(new CloneSyncCriteria(1, 10.0))
+                                     .withCloneSyncCriteria(new CloneSyncCriteria(1, 15.0))
                                      .withSmartSegmentLoading(true)
                                      .build()
                              )
@@ -388,8 +388,13 @@ public class HistoricalCloningTest extends CoordinatorSimulationBaseTest
         2L
     );
     verifyValue(
-        Stats.Segments.PENDING_SYNC.getMetricName(),
+        Stats.Segments.PENDING_SYNC_ON_CLONE.getMetricName(),
         Map.of("server", historicalT12.getName()),
+        1L
+    );
+    verifyValue(
+        Stats.Tier.CLONE_SYNCED.getMetricName(),
+        Map.of("server", historicalT12.getName(), "tier", Tier.T1),
         1L
     );
 

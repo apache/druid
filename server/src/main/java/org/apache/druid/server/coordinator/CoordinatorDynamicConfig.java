@@ -457,6 +457,7 @@ public class CoordinatorDynamicConfig
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
            ", turboLoadingNodes=" + turboLoadingNodes +
            ", cloneServers=" + cloneServers +
+           ", cloneSyncCriteria=" + cloneSyncCriteria +
            ", historicalTierAliases=" + historicalTierAliases +
            '}';
   }
@@ -495,6 +496,7 @@ public class CoordinatorDynamicConfig
            && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions)
            && Objects.equals(cloneServers, that.cloneServers)
+           && Objects.equals(cloneSyncCriteria, that.cloneSyncCriteria)
            && Objects.equals(historicalTierAliases, that.historicalTierAliases);
   }
 
@@ -520,6 +522,7 @@ public class CoordinatorDynamicConfig
         debugDimensions,
         turboLoadingNodes,
         cloneServers,
+        cloneSyncCriteria,
         historicalTierAliases
     );
   }

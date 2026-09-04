@@ -143,9 +143,8 @@ public class CloneHistoricals implements CoordinatorDuty
         hostToHistoricalMap,
         cloneServers,
         targetHistoricalStats,
-        params.getCoordinatorDynamicConfig().getCloneSyncCriteria()
+        params
     );
-    collectMetricsIfStateChanged(newStatusMap, params.getCoordinatorStats());
     cloneStatusManager.updateStatus(newStatusMap);
 
     return params;
@@ -164,6 +163,7 @@ public class CloneHistoricals implements CoordinatorDuty
   {
     final RowKey.Builder rowKey = RowKey
         .with(Dimension.SERVER, targetServer.getServer().getName())
+        .with(Dimension.TIER, targetServer.getServer().getTier())
         .with(Dimension.DATASOURCE, segment.getDataSource());
 
     final DataSegment loadableSegment = getLoadableSegment(segment, params);
@@ -202,9 +202,13 @@ public class CloneHistoricals implements CoordinatorDuty
     if (targetServer.isLoadingSegment(segment)) {
       targetServer.cancelOperation(SegmentAction.LOAD, segment);
     } else if (loadQueueManager.dropSegment(segment, targetServer)) {
+      final RowKey rowKey = RowKey
+          .with(Dimension.SERVER, targetServer.getServer().getName())
+          .with(Dimension.TIER, targetServer.getServer().getTier())
+          .and(Dimension.DATASOURCE, segment.getDataSource());
       params.getCoordinatorStats().add(
           Stats.Segments.DROPPED_FROM_CLONE,
-          RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
+          rowKey,
           1L
       );
     }
@@ -238,10 +242,11 @@ public class CloneHistoricals implements CoordinatorDuty
       Map<String, ServerHolder> historicalMap,
       Map<String, String> cloneServers,
       Map<String, CloningStats> targetHistoricalStats,
-      CloneSyncCriteria cloneSyncCriteria
+      DruidCoordinatorRuntimeParams params
   )
   {
     final Map<String, ServerCloneStatus> newStatusMap = new HashMap<>();
+    final CloneSyncCriteria cloneSyncCriteria = params.getCoordinatorDynamicConfig().getCloneSyncCriteria();
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetServerName = entry.getKey();
@@ -284,6 +289,7 @@ public class CloneHistoricals implements CoordinatorDuty
             stats.percentPendingSync(),
             bytesLeft
         );
+        collectMetricsIfStateChanged(targetServer, newStatus, params.getCoordinatorStats());
       }
       newStatusMap.put(targetServerName, newStatus);
     }
@@ -324,22 +330,28 @@ public class CloneHistoricals implements CoordinatorDuty
    * Adds metrics to the run stats if the state has changed to SYNCED in this run.
    */
   private void collectMetricsIfStateChanged(
-      Map<String, ServerCloneStatus> targetServerToStatus,
+      ServerHolder server,
+      ServerCloneStatus newStatus,
       CoordinatorRunStats stats
   )
   {
-    targetServerToStatus.forEach((targetServerName, newStatus) -> {
-      final ServerCloneStatus oldStatus = cloneStatusManager.getStatusForServer(targetServerName);
+    final String targetServerName = server.getServer().getName();
+    final ServerCloneStatus oldStatus = cloneStatusManager.getStatusForServer(targetServerName);
 
-      if (newStatus.state() == ServerCloneStatus.State.SYNCED
-          && oldStatus != null && oldStatus.state() != ServerCloneStatus.State.SYNCED) {
-        stats.add(
-            Stats.Segments.PENDING_SYNC,
-            RowKey.of(Dimension.SERVER, targetServerName),
-            newStatus.segmentsPendingSync()
-        );
-      }
-    });
+    stats.add(
+        Stats.Segments.PENDING_SYNC_ON_CLONE,
+        RowKey.of(Dimension.SERVER, targetServerName),
+        newStatus.segmentsPendingSync()
+    );
+    if (newStatus.state() == ServerCloneStatus.State.SYNCED
+        && (oldStatus == null || oldStatus.state() != ServerCloneStatus.State.SYNCED)) {
+      stats.add(
+          Stats.Tier.CLONE_SYNCED,
+          RowKey.with(Dimension.SERVER, targetServerName)
+                .and(Dimension.TIER, server.getServer().getTier()),
+          1L
+      );
+    }
   }
 
   private static class CloningStats
