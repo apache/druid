@@ -120,6 +120,7 @@ public class HttpClientModule implements Module
           .builder()
           .withNumConnections(config.getNumConnections())
           .withEagerInitialization(config.isEagerInitialization(eagerByDefault))
+          .withUseSemaphorePool(config.isUseSemaphorePool())
           .withReadTimeout(config.getReadTimeout())
           .withWorkerCount(config.getNumMaxThreads())
           .withCompressionCodec(

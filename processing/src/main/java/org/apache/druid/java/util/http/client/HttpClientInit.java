@@ -90,7 +90,8 @@ public class HttpClientInit
                   ),
                   new ResourcePoolConfig(
                       config.getNumConnections(),
-                      config.getUnusedConnectionTimeoutDuration().getMillis()
+                      config.getUnusedConnectionTimeoutDuration().getMillis(),
+                      config.isUseSemaphorePool()
                   ),
                   config.isEagerInitialization()
               ),

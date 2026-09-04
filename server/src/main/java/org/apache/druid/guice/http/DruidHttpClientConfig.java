@@ -73,6 +73,13 @@ public class DruidHttpClientConfig
   @JsonProperty
   private Boolean eagerInitialization = null;
 
+  /**
+   * Whether connections are pooled by the semaphore-based implementation. Turn off to fall back to the older
+   * monitor-based one, which replaces a stale or broken connection one for one instead of letting the pool shrink.
+   */
+  @JsonProperty
+  private boolean useSemaphorePool = true;
+
   @JsonProperty
   private long clientConnectTimeout = TimeUnit.MILLISECONDS.toMillis(500);
 
@@ -131,6 +138,11 @@ public class DruidHttpClientConfig
       return defaultValue;
     }
     return eagerInitialization;
+  }
+
+  public boolean isUseSemaphorePool()
+  {
+    return useSemaphorePool;
   }
 
   public long getClientConnectTimeout()

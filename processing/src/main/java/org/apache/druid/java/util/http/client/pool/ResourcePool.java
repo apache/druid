@@ -42,20 +42,14 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * A resource pool based on {@link LoadingCache}. Resources are pooled per key and at most
- * {@link ResourcePoolConfig#getMaxPerKey()} of them are lent out at a time; a caller arriving when they are all lent
- * out waits for one to come back.
+ * Lends out at most {@link ResourcePoolConfig#getMaxPerKey()} resources per key, blocking further takers until one
+ * comes back.
  *
- * With eagerInitialization the pool is filled to that maximum the first time a key is used, otherwise resources are
- * created on demand. Either way a resource is only ever created when no idle one is available, so the pool settles at
- * the size the traffic actually needs: an idle resource is discarded once it has gone
- * {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} unused, or as soon as {@link ResourceFactory#isGood}
- * rejects it.
+ * A resource is discarded once it has gone {@link ResourcePoolConfig#getUnusedConnectionTimeoutMillis()} unused or
+ * {@link ResourceFactory#isGood} rejects it. With eagerInitialization a key starts out full, otherwise empty.
  *
- * Two implementations of the per-key pooling exist, selected by {@link ResourcePoolConfig#isUseSemaphorePool()}:
- * {@link SemaphoreResourceHolderPerKey}, and the older monitor-based {@link ResourceHolderPerKey} kept unmodified as
- * an escape hatch. The older one replaces a stale or broken resource one for one rather than letting the pool shrink,
- * and leaks a resource when {@link ResourceFactory#isGood} throws.
+ * {@link ResourcePoolConfig#isUseSemaphorePool()} selects between {@link SemaphoreResourceHolderPerKey} and the older
+ * {@link ResourceHolderPerKey}.
  */
 public class ResourcePool<K, V> implements Closeable
 {
@@ -104,8 +98,10 @@ public class ResourcePool<K, V> implements Closeable
   }
 
   /**
-   * Returns a {@link ResourceContainer} for the given key, or null if this pool is closed or the calling thread was
-   * interrupted while waiting for a resource to become available.
+   * Takes a resource, blocking until one is free.
+   *
+   * Returns null if this pool is closed, or if the calling thread is interrupted while waiting; the interrupt is left
+   * set on the thread.
    */
   @Nullable
   public ResourceContainer<V> take(final K key)
@@ -187,22 +183,24 @@ public class ResourcePool<K, V> implements Closeable
   }
 
   /**
-   * The resources pooled for a single key.
-   *
-   * {@link SemaphoreResourceHolderPerKey} is the implementation in use; {@link ResourceHolderPerKey} is the older
-   * monitor-based one, kept behind {@link ResourcePoolConfig#isUseSemaphorePool()} as an escape hatch.
+   * The resources of a single key.
    */
   private abstract static class PooledResources<V> implements Closeable
   {
     /**
-     * Returns a resource, waiting for one to be given back if they are all lent out, or null if this holder is closed
-     * or the current thread was interrupted while waiting.
+     * Takes a resource, blocking until one is free. Null if closed or interrupted.
      */
     @Nullable
     abstract V get();
 
+    /**
+     * Returns a resource taken from {@link #get()}, freeing the slot it occupied.
+     */
     abstract void giveBack(V object);
 
+    /**
+     * Discards every idle resource and releases every waiting taker. Lent resources are closed on {@link #giveBack}.
+     */
     @Override
     public abstract void close();
   }
@@ -396,19 +394,17 @@ public class ResourcePool<K, V> implements Closeable
   }
 
   /**
-   * Pools the resources of one key with a permit per lendable resource and a lock-free queue of the idle ones.
+   * Pools the resources of one key behind a permit per lendable resource, holding no lock while creating, validating
+   * or closing them.
    *
-   * A permit must be held to have a resource lent out, which is what bounds the pool to
-   * {@link ResourcePoolConfig#getMaxPerKey()}: takers park until a permit frees up. Idle resources are parked
-   * oldest-first, and a taker walks them from the front, discarding the ones that expired or that
-   * {@link ResourceFactory#isGood} rejects, before falling back to creating one. No lock is held while doing so, so a
-   * slow {@link ResourceFactory#close} never stalls the other takers of this key.
+   * A taker discards every stale or broken resource it walks past rather than one per take, so the pool shrinks to
+   * what the traffic needs instead of reconnecting one for one.
    */
   private static class SemaphoreResourceHolderPerKey<K, V> extends PooledResources<V>
   {
     /**
-     * Released on close to wake every parked taker at once. Half of the range keeps the permit count from overflowing
-     * when the outstanding permits are handed back afterwards.
+     * Released on close to wake every parked taker at once. Half of the range so that the permits still outstanding
+     * cannot overflow the count when they come back.
      */
     private static final int CLOSE_PERMITS = Integer.MAX_VALUE / 2;
 
@@ -435,8 +431,7 @@ public class ResourcePool<K, V> implements Closeable
     }
 
     /**
-     * Fills the pool up to its maximum size. Resources created before a failure are closed, since a holder whose
-     * creation fails never reaches the cache and could not be reached again.
+     * Fills the pool to its maximum size, closing what it created if that fails.
      */
     void preload()
     {
@@ -524,7 +519,7 @@ public class ResourcePool<K, V> implements Closeable
     }
 
     /**
-     * Returns the first idle resource still worth using, closing every expired or broken one it walks past, or null if
+     * Removes and returns the first usable idle resource, closing every expired or broken one it walks past. Null if
      * none is left.
      */
     @Nullable
@@ -550,7 +545,7 @@ public class ResourcePool<K, V> implements Closeable
     }
 
     /**
-     * Creates a resource, replacing it once if it turns out to be broken on arrival.
+     * Creates a resource, replacing it once if it arrives broken. The replacement is not validated.
      */
     private V createResource()
     {
