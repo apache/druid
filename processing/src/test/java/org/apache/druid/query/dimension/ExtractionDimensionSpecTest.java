@@ -155,7 +155,12 @@ public class ExtractionDimensionSpecTest
         ColumnType.LONG,
         StrlenExtractionFn.instance()
     );
-    final byte[] expected = new byte[]{1, 7, 102, 111, 111, 9, 14, 7, 76, 79, 78, 71};
+    final byte[] expected = new byte[]{
+        1,                                 // cache type id
+        7, 0, 0, 0, 3, 102, 111, 111,      // STRING_KEY, length 3, "foo"
+        9, 0, 0, 0, 1, 14,                 // CACHEABLE_KEY, length 1, StrlenExtractionFn
+        7, 0, 0, 0, 4, 76, 79, 78, 71      // STRING_KEY, length 4, "LONG"
+    };
     Assertions.assertArrayEquals(expected, dimensionSpec.getCacheKey());
   }
 }
