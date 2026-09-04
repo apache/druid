@@ -185,7 +185,7 @@ public class CloneHistoricals implements CoordinatorDuty
   )
   {
     if (targetServer.isLoadingSegment(segment)) {
-      targetServer.cancelOperation(SegmentAction.LOAD, segment);
+      targetServer.cancelLoad(segment);
     } else if (loadQueueManager.dropSegment(segment, targetServer)) {
       params.getCoordinatorStats().add(
           Stats.Segments.DROPPED_FROM_CLONE,

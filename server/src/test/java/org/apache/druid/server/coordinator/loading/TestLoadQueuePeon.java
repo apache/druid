@@ -23,7 +23,9 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -138,9 +140,9 @@ public class TestLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
-  public Set<SegmentHolder> getSegmentsInQueue()
+  public List<SegmentHolder> getSegmentsInQueue()
   {
-    return queuedHolders;
+    return new ArrayList<>(queuedHolders);
   }
 
   @Override
