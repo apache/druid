@@ -172,8 +172,7 @@ so a definition planned under a context that changes that shape only matches que
 A projection body accepts a select list, an optional `WHERE` and an optional `GROUP BY`. It cannot use `ORDER BY`,
 `LIMIT` or `HAVING`: a projection's ordering follows its grouping columns and is not something you choose. It also
 cannot use joins, subqueries, or expressions computed over aggregates, such as `SUM(x) / COUNT(x)`: store the two
-aggregates as separate columns and divide at query time. (`AVG(x)` is rejected for the same reason, because Druid
-plans it as exactly that expression.) A projection can store the same
+aggregates as separate columns and divide at query time. A projection can store the same
 [aggregation functions that are supported for rollup at ingestion time](../../multi-stage-query/concepts.md#rollup).
 
 Projections may also be added to and removed from an existing table:
@@ -217,9 +216,8 @@ The clustering columns must be the leading columns of the table, because the dec
 `SEALED` is optional: a column the query produces but the table does not declare is stored after the declared
 layout, in the order it arrives. Declare `SEALED` to reject such columns instead.
 
-A computed column is written by the expression, not by the ingestion query, so an `INSERT` must supply the
-expression's inputs and leave the computed column out. Above, that means supplying `user_id` and letting `bucket`
-be derived.
+Computed columns, like `bucket` in the example above, are computed based on inputs provided by the `INSERT` or
+`REPLACE`. In terms of the example, the `INSERT` or `REPLACE` command should provide `user_id`, not `bucket`.
 
 Unlike an aggregate projection, a `__base` body cannot filter or group: the base table stores every ingested row.
 It is the only projection that chooses a clustering.
