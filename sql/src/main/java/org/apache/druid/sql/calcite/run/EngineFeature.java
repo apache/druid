@@ -43,6 +43,13 @@ public enum EngineFeature
   CAN_REPLACE,
 
   /**
+   * Can execute catalog DDL statements (CREATE TABLE, ALTER TABLE). DDL is a synchronous metadata operation that
+   * returns no rows and launches no task, so it belongs to interactive engines; an engine whose result is a handle to
+   * asynchronous work has nothing sensible to return for it.
+   */
+  CAN_DDL,
+
+  /**
    * Queries of type {@link org.apache.druid.query.timeseries.TimeseriesQuery} are usable.
    */
   TIMESERIES_QUERY,

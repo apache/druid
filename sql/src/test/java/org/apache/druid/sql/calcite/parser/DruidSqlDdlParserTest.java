@@ -297,18 +297,22 @@ public class DruidSqlDdlParserTest
   @Test
   public void testProjectionBodyRejectsUnsupportedClauses()
   {
-    for (String body : new String[]{
-        "SELECT a GROUP BY a ORDER BY a",
-        "SELECT a GROUP BY a LIMIT 10",
-        "SELECT a GROUP BY a HAVING COUNT(*) > 1",
-        "SELECT a FROM other GROUP BY a",
-        "SELECT a GROUP BY a UNION ALL SELECT b GROUP BY b"
-    }) {
-      assertThrows(
+    // Each entry pairs an illegal body with the token the parser's error must name: the grammar produces the
+    // rejection, so naming the offending clause is all the user gets to locate the problem.
+    final String[][] cases = {
+        {"SELECT a GROUP BY a ORDER BY a", "ORDER"},
+        {"SELECT a GROUP BY a LIMIT 10", "LIMIT"},
+        {"SELECT a GROUP BY a HAVING COUNT(*) > 1", "HAVING"},
+        {"SELECT a FROM other GROUP BY a", "FROM"},
+        {"SELECT a GROUP BY a UNION ALL SELECT b GROUP BY b", "UNION"},
+    };
+    for (String[] c : cases) {
+      final DruidException e = assertThrows(
           DruidException.class,
-          () -> parse("CREATE TABLE t (a VARCHAR, PROJECTION p AS (" + body + "))"),
-          body
+          () -> parse("CREATE TABLE t (a VARCHAR, PROJECTION p AS (" + c[0] + "))"),
+          c[0]
       );
+      assertTrue(e.getMessage().contains(c[1]), c[0] + " -> " + e.getMessage());
     }
   }
 

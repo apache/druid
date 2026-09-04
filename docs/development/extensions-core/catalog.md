@@ -43,6 +43,24 @@ allowing queries to be more concise, and simpler to write. This also allows the 
 written into a defined column of the table is consistent with that columns definition, minimizing errors where unexpected
 data is written into a particular column of the table.
 
+### Effects of a table definition
+
+A table definition takes effect when it is read, not when it is written: changing one, whether through SQL DDL or the
+REST API, rewrites nothing. What it affects:
+
+- **SELECT queries** report each declared column with its declared type, in declared order. Segments that store a
+  column as a different physical type are converted to the declared type at query time. Columns present in segments
+  but not declared in the catalog remain queryable, and follow the declared columns with their physical types.
+- **INSERT and REPLACE** (the catalog applies only to SQL-based ingestion) validate against the definition rather
+  than merely defaulting from it. A query column targeting a declared column must be convertible to the declared type
+  without changing it: inserting a `BIGINT` value into a column declared `VARCHAR` stores the value as a string, while
+  inserting a `VARCHAR` value into a column declared `BIGINT` is an error. Columns the query produces that the table
+  does not declare are rejected when the table is [`sealed`](#table-properties) and ingested normally otherwise.
+  Table properties such as `segmentGranularity` and `clusterKeys` act as defaults that an individual statement may
+  override, such as with its own `PARTITIONED BY`.
+- **Streaming and native batch ingestion** do not consult the catalog; their specs are unaffected by any table
+  definition.
+
 ### SQL DDL
 
 Tables can be defined with SQL instead of by posting a table specification. `CREATE TABLE` and `ALTER TABLE` are
@@ -50,23 +68,28 @@ submitted to the Broker like any other SQL statement, and write the same catalog
 return no rows.
 
 These statements change catalog metadata only. They never create, modify, or delete segments: defining a table does
-not ingest anything, and altering a column does not rewrite existing data. Column changes take effect for subsequent
-ingestion.
+not ingest anything, and altering a column does not rewrite existing data. Changes take effect for subsequent queries
+and ingestion, as described in [Effects of a table definition](#effects-of-a-table-definition).
 
 These statements are disabled by default. Set `druid.sql.planner.enableCatalogDdl` to `true` on the Broker to enable
-them. They require `WRITE` permission on the datasource, the same permission the catalog API requires, so enabling
-them lets anyone who can ingest into a datasource also change its catalog definition; leave them disabled if you
-manage catalog entries with your own tooling. The setting cannot be overridden per query.
+them. They require both `READ` and `WRITE` permission on the datasource, the same permissions the catalog API
+requires for its write operations, so enabling them lets anyone who can ingest into a datasource also change its
+catalog definition; leave them disabled if you manage catalog entries with your own tooling. The setting cannot be
+overridden per query.
 
 The `druid-catalog` extension must be loaded on both the Broker and the Coordinator; without it, these statements
 report that the extension is not available.
 
 ```sql
 CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
-  [ ( { <column> <type> | PROJECTION <name> AS ( <select> ) } [, ...] ) ]
+  [ ( <table element> [, ...] ) ]
   [ PARTITIONED BY <granularity> ]
   [ CLUSTERED BY <column> [, ...] ]
   [ SEALED ]
+
+<table element> ::=
+    <column> <type>
+  | PROJECTION <name> AS ( <select> )
 ```
 
 `OR REPLACE` replaces the specification of an existing table; `IF NOT EXISTS` leaves an existing table unchanged.
@@ -108,6 +131,13 @@ is reported rather than quietly creating or replacing a column. Each statement i
 table definition, not only the part it changes: adding a column, changing a type, or setting a property is rejected if
 the resulting table would be invalid, such as a segment granularity coarser than a projection the table declares.
 
+`DROP COLUMN` removes the column's declaration, not its data. A table's SQL schema is the declared columns followed by
+any other columns present in its segments, so a dropped column that still has data remains queryable: it loses its
+declared type and position and appears after the declared columns, like any column the catalog does not know about.
+Whether it can still be ingested then follows the usual rule: rejected if the table is sealed, accepted as an
+undeclared column otherwise. To remove a column from query results without rewriting data, use the catalog's
+`hiddenColumns` property instead, which currently has no SQL spelling and is set through the REST API.
+
 #### Projections
 
 A table may declare [projections](../../querying/projections.md), which are pre-aggregated views stored inside each
@@ -141,8 +171,10 @@ so a definition planned under a context that changes that shape only matches que
 
 A projection body accepts a select list, an optional `WHERE` and an optional `GROUP BY`. It cannot use `ORDER BY`,
 `LIMIT` or `HAVING`: a projection's ordering follows its grouping columns and is not something you choose. It also
-cannot use joins, subqueries, or expressions computed over aggregates. Store the aggregates instead: `SUM(x)` and
-`COUNT(x)` rather than `AVG(x)`.
+cannot use joins, subqueries, or expressions computed over aggregates, such as `SUM(x) / COUNT(x)`: store the two
+aggregates as separate columns and divide at query time. (`AVG(x)` is rejected for the same reason, because Druid
+plans it as exactly that expression.) A projection can store the same
+[aggregation functions that are supported for rollup at ingestion time](../../multi-stage-query/concepts.md#rollup).
 
 Projections may also be added to and removed from an existing table:
 
@@ -207,7 +239,7 @@ ALTER TABLE "druid"."visits" SET PROPERTIES (targetSegmentRows = 3000000, sealed
 ALTER TABLE "druid"."visits" SET PROPERTIES (sealed = NULL)
 ```
 
-Both statements require the `WRITE` permission on the datasource, the same permission the REST API checks. Table
+Both statements require `READ` and `WRITE` permission on the datasource, the same permissions the REST API checks. Table
 names may be unqualified or qualified with the `druid` schema; other schemas are rejected. Names are case-sensitive.
 
 There is no `DROP TABLE`. Deleting a table's catalog entry without deleting its data would be a surprising meaning

@@ -98,49 +98,28 @@ public class TableEditor
    */
   public long go() throws CatalogException
   {
-    if (editRequest instanceof HideColumns) {
-      return hideColumns(((HideColumns) editRequest).columns);
-    } else if (editRequest instanceof UnhideColumns) {
-      return unHideColumns(((UnhideColumns) editRequest).columns);
-    } else if (editRequest instanceof DropColumns) {
-      return dropColumns(((DropColumns) editRequest).columns);
-    } else if (editRequest instanceof UpdateProperties) {
-      return updateProperties(((UpdateProperties) editRequest).properties);
-    } else if (editRequest instanceof UpdateColumns) {
-      return updateColumns(((UpdateColumns) editRequest).columns);
-    } else if (editRequest instanceof AddColumns) {
-      return addOrAlterColumns(((AddColumns) editRequest).columns, true);
-    } else if (editRequest instanceof AlterColumns) {
-      return addOrAlterColumns(((AlterColumns) editRequest).columns, false);
-    } else if (editRequest instanceof AddProjection) {
-      final AddProjection addProjection = (AddProjection) editRequest;
-      return addProjection(addProjection.projection, addProjection.ifNotExists);
-    } else if (editRequest instanceof DropProjection) {
-      final DropProjection dropProjection = (DropProjection) editRequest;
-      return dropProjection(dropProjection.projection, dropProjection.ifExists);
-    } else if (editRequest instanceof SetBaseTable) {
-      final SetBaseTable setBaseTable = (SetBaseTable) editRequest;
-      return setBaseTable(setBaseTable.baseTable, setBaseTable.ifNotExists);
-    } else if (editRequest instanceof DropBaseTable) {
-      return dropBaseTable(((DropBaseTable) editRequest).ifExists);
-    } else if (editRequest instanceof MoveColumn) {
-      return moveColumn(((MoveColumn) editRequest));
-    } else {
-      // More of a server error: if we can deserialize the request,
-      // we should know how to perform that request.
-      throw CatalogException.badRequest(
+    return switch (editRequest) {
+      case HideColumns hideColumns -> hideColumns(hideColumns.columns);
+      case UnhideColumns unhideColumns -> unHideColumns(unhideColumns.columns);
+      case DropColumns dropColumns -> dropColumns(dropColumns.columns);
+      case UpdateProperties updateProperties -> updateProperties(updateProperties.properties);
+      case UpdateColumns updateColumns -> updateColumns(updateColumns.columns);
+      case AddColumns addColumns -> addOrAlterColumns(addColumns.columns, true);
+      case AlterColumns alterColumns -> addOrAlterColumns(alterColumns.columns, false);
+      case AddProjection addProjection -> addProjection(addProjection.projection, addProjection.ifNotExists);
+      case DropProjection dropProjection -> dropProjection(dropProjection.projection, dropProjection.ifExists);
+      case SetBaseTable setBaseTable -> setBaseTable(setBaseTable.baseTable, setBaseTable.ifNotExists);
+      case DropBaseTable dropBaseTable -> dropBaseTable(dropBaseTable.ifExists);
+      case MoveColumn moveColumn -> moveColumn(moveColumn);
+      default -> throw CatalogException.badRequest(
           "Unknown edit request: %s",
           editRequest.getClass().getSimpleName()
       );
-    }
+    };
   }
 
   /**
-   * Validate the revised spec as a whole before it is written back. Every edit is a read-modify-write of one part of
-   * the spec, but the rules that matter are cross-field: a projection is checked against the segment granularity, a
-   * base table layout against the declared columns. Validating only the part being edited would let an edit to either
-   * side leave the catalog holding a spec that later fails at ingest, so the update transactions load the whole spec
-   * (they still write back only the part they own) and each edit is checked against all of it.
+   * Validate the revised spec as a whole before it is written back.
    *
    * @param revised the revised spec, or null when the edit is a no-op and the transaction should roll back
    */

@@ -73,6 +73,17 @@ public class SQLCatalogManager implements CatalogManager
   private static final String PROPERTIES_COL = "properties";
   private static final String COLUMNS_COL = "columns";
 
+  /**
+   * The version for a row being written: the current time, but strictly after {@code lastVersion}, which is the
+   * version the writer read ({@code 0} when there is none, as for a new row). The version doubles as the
+   * compare-and-set token and as the cache's ordering key, so it must actually advance on every write, even when two
+   * writes land in the same millisecond.
+   */
+  private static long nextVersion(long lastVersion)
+  {
+    return Math.max(System.currentTimeMillis(), lastVersion + 1);
+  }
+
   private final MetadataStorageManager metastoreManager;
   private final SQLMetadataConnector connector;
   private final ObjectMapper jsonMapper;
@@ -150,7 +161,7 @@ public class SQLCatalogManager implements CatalogManager
             public Long withHandle(Handle handle) throws DuplicateKeyException
             {
               final TableSpec spec = table.spec();
-              final long updateTime = System.currentTimeMillis();
+              final long updateTime = nextVersion(0);
               final Update stmt = handle
                   .createStatement(statement(INSERT_TABLE))
                   .bind(SCHEMA_NAME_COL, table.id().schema())
@@ -257,7 +268,7 @@ public class SQLCatalogManager implements CatalogManager
             {
               final TableId id = table.id();
               final TableSpec spec = table.spec();
-              final long updateTime = System.currentTimeMillis();
+              final long updateTime = nextVersion(table.updateTime());
               final int updateCount = handle
                   .createStatement(statement(REPLACE_SPEC_STMT))
                   .bind(SCHEMA_NAME_COL, id.schema())
@@ -302,7 +313,7 @@ public class SQLCatalogManager implements CatalogManager
             {
               final TableId id = table.id();
               final TableSpec spec = table.spec();
-              final long updateTime = System.currentTimeMillis();
+              final long updateTime = nextVersion(oldVersion);
               final int updateCount = handle
                   .createStatement(statement(UPDATE_SPEC_STMT))
                   .bind(SCHEMA_NAME_COL, id.schema())
@@ -460,10 +471,7 @@ public class SQLCatalogManager implements CatalogManager
                   handle.rollback();
                   return null;
                 }
-                // The version is also the compare-and-set token, so it must actually change on every write: a commit
-                // landing in the same millisecond as the write that produced the version it read would otherwise
-                // leave the token as it was, letting a second writer's predicate match after this one commits.
-                final long updateTime = Math.max(System.currentTimeMillis(), existing.updateTime() + 1);
+                final long updateTime = nextVersion(existing.updateTime());
                 final int updateCount = handle
                     .createStatement(statement(updateStmt))
                     .bind(SCHEMA_NAME_COL, id.schema())
@@ -534,7 +542,7 @@ public class SQLCatalogManager implements CatalogManager
           @Override
           public Long withHandle(Handle handle)
           {
-            long updateTime = System.currentTimeMillis();
+            long updateTime = nextVersion(0);
             int updateCount = handle
                 .createStatement(statement(MARK_DELETING_STMT))
                 .bind(SCHEMA_NAME_COL, id.schema())

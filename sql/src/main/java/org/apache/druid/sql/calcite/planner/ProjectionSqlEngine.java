@@ -90,6 +90,7 @@ public class ProjectionSqlEngine implements SqlEngine
       case WRITE_EXTERNAL_DATA:
       case CAN_INSERT:
       case CAN_REPLACE:
+      case CAN_DDL:
       case SCAN_ORDER_BY_NON_TIME:
       case WINDOW_FUNCTIONS:
       case WINDOW_LEAF_OPERATOR:

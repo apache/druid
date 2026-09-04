@@ -21,6 +21,12 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.sql.SqlExplain;
+import org.apache.calcite.sql.SqlExplainFormat;
+import org.apache.calcite.sql.SqlExplainLevel;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.druid.catalog.model.ClusteredValueGroupsBaseTableMetadata;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.DatasourceBaseTableMetadata;
@@ -35,14 +41,19 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.calcite.CalciteCatalogDdlTest.CatalogDdlComponentSupplier;
+import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.planner.CatalogTableWriter;
+import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.BeforeEach;
@@ -172,14 +183,88 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testResourceActionIsDatasourceWrite()
+  public void testResourceActionsAreDatasourceReadAndWrite()
   {
+    // READ and WRITE, matching the Coordinator catalog API's requirement for write operations: the write is forwarded
+    // with escalated credentials, so this statement-level check is the only one the issuing user faces.
     final DirectStatement stmt = statement("CREATE TABLE tbl (a VARCHAR)");
     stmt.execute();
     assertEquals(
-        Collections.singleton(new ResourceAction(new Resource("tbl", ResourceType.DATASOURCE), Action.WRITE)),
-        stmt.resources()
+        ImmutableSet.of(
+            new ResourceAction(new Resource("tbl", ResourceType.DATASOURCE), Action.READ),
+            new ResourceAction(new Resource("tbl", ResourceType.DATASOURCE), Action.WRITE)
+        ),
+        ImmutableSet.copyOf(stmt.resources())
     );
+  }
+
+  /**
+   * The grammar cannot express EXPLAIN of a DDL statement, so the planner's defensive guard is exercised directly:
+   * parse the CREATE, wrap it in a hand-built SqlExplain, and hand that to the planner as if the parser had produced
+   * it.
+   */
+  @Test
+  public void testExplainOfDdlIsRejectedByThePlanner()
+  {
+    final SqlNode create = DruidSqlParser.parse("CREATE TABLE tbl (a VARCHAR)", true).getMainStatement();
+    final SqlExplain explain = new SqlExplain(
+        SqlParserPos.ZERO,
+        create,
+        SqlExplainLevel.ALL_ATTRIBUTES.symbol(SqlParserPos.ZERO),
+        SqlExplain.Depth.PHYSICAL.symbol(SqlParserPos.ZERO),
+        SqlExplainFormat.TEXT.symbol(SqlParserPos.ZERO),
+        0
+    );
+    final PlannerFactory plannerFactory = queryFramework()
+        .plannerFixture(PlannerConfig.builder().enableCatalogDdl(true).build(), new AuthConfig())
+        .plannerFactory();
+    try (DruidPlanner planner = plannerFactory.createPlanner(
+        queryFramework().engine(),
+        "EXPLAIN PLAN FOR CREATE TABLE tbl (a VARCHAR)",
+        explain,
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        Collections.emptySet(),
+        Collections.emptyMap(),
+        null
+    )) {
+      final DruidException e = assertThrows(DruidException.class, planner::validate);
+      assertTrue(e.getMessage().contains("EXPLAIN is not supported for [CREATE_TABLE]"), e.getMessage());
+    }
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * An unauthorized statement must not touch the catalog: authorization runs before planning, and the write itself is
+   * deferred to the result's run, so a rejected statement leaves no trace. Covers both denial modes: no permissions at
+   * all, and READ without WRITE (DDL requires both).
+   */
+  @Test
+  public void testUnauthorizedDdlNeverReachesTheWriter()
+  {
+    assertThrows(
+        ForbiddenException.class,
+        () -> statement("CREATE TABLE forbiddenDatasource (a VARCHAR)", CalciteTests.REGULAR_USER_AUTH_RESULT)
+            .execute()
+    );
+    assertThrows(
+        ForbiddenException.class,
+        () -> statement("CREATE TABLE readOnlyTbl (a VARCHAR)", CalciteTests.REGULAR_USER_AUTH_RESULT).execute()
+    );
+    assertTrue(WRITER.calls.isEmpty());
+  }
+
+  /**
+   * Planning a DDL statement is free of side effects; the catalog write happens when the result runs.
+   */
+  @Test
+  public void testWriteHappensOnRunNotOnPlan()
+  {
+    final DirectStatement.ResultSet resultSet = statement("CREATE TABLE tbl (a VARCHAR)").plan();
+    assertTrue(WRITER.calls.isEmpty());
+
+    resultSet.run();
+    assertEquals(1, WRITER.calls.size());
+    assertEquals("createTable", WRITER.calls.get(0).operation);
   }
 
   @Test
@@ -515,6 +600,46 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     assertTrue(e.getMessage().contains("expression over aggregates"), e.getMessage());
   }
 
+  /**
+   * Subqueries survive the grammar (they are just expressions in the select list or WHERE), so the translator walks
+   * the body and rejects them with a pointed message rather than letting the planner produce something the lift
+   * cannot express.
+   */
+  @Test
+  public void testProjectionRejectsSubquery()
+  {
+    for (String body : new String[]{
+        "SELECT a, (SELECT 1) AS s GROUP BY 1, 2",
+        "SELECT a WHERE a IN (SELECT a) GROUP BY a",
+    }) {
+      final DruidException e = assertThrows(
+          DruidException.class,
+          () -> execute("CREATE TABLE tbl (a VARCHAR, PROJECTION p AS (" + body + "))"),
+          body
+      );
+      assertTrue(e.getMessage().contains("contains a subquery"), body + " -> " + e.getMessage());
+    }
+  }
+
+  /**
+   * Window functions survive the grammar as ordinary select items, and are rejected by the nested planner because the
+   * projection engine does not declare {@code EngineFeature.WINDOW_FUNCTIONS}; the error is attributed to the
+   * projection by name.
+   */
+  @Test
+  public void testProjectionRejectsWindowFunctions()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> execute(
+            "CREATE TABLE tbl (a VARCHAR, b BIGINT,"
+            + " PROJECTION p AS (SELECT a, SUM(b) OVER (PARTITION BY a) AS w GROUP BY a, b))"
+        )
+    );
+    assertTrue(e.getMessage().contains("Cannot define projection [p]"), e.getMessage());
+    assertTrue(e.getMessage().contains("window functions"), e.getMessage());
+  }
+
   @Test
   public void testProjectionRejectsUnknownColumn()
   {
@@ -818,9 +943,14 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
 
   private DirectStatement statement(String sql)
   {
+    return statement(sql, CalciteTests.SUPER_USER_AUTH_RESULT);
+  }
+
+  private DirectStatement statement(String sql, AuthenticationResult authenticationResult)
+  {
     return getSqlStatementFactory(PlannerConfig.builder().enableCatalogDdl(true).build(), new AuthConfig())
         .directStatement(
-        SqlQueryPlus.builder(sql).auth(CalciteTests.SUPER_USER_AUTH_RESULT).build()
+        SqlQueryPlus.builder(sql).auth(authenticationResult).build()
     );
   }
 

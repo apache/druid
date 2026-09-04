@@ -19,9 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.calcite.jdbc.CalciteSchema;
 import org.apache.calcite.rel.type.RelDataType;
@@ -63,6 +62,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.parser.DruidSqlPropertyAssignment;
 import org.apache.druid.sql.calcite.parser.SqlGranularityLiteral;
 import org.apache.druid.sql.calcite.parser.SqlProjectionSpec;
+import org.apache.druid.sql.calcite.run.EngineFeature;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -115,6 +115,14 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
   @Override
   public void validate()
   {
+    if (!handlerContext.plannerContext().featureAvailable(EngineFeature.CAN_DDL)) {
+      throw InvalidSqlInput.exception(
+          "[%s] is not supported by requested SQL engine [%s]. DDL executes immediately and returns no task, so it"
+          + " is available only on interactive engines",
+          operationName(),
+          handlerContext.engine().name()
+      );
+    }
     if (!handlerContext.plannerContext().getPlannerConfig().isEnableCatalogDdl()) {
       throw DruidException.forPersona(DruidException.Persona.ADMIN)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
@@ -128,8 +136,10 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
       throw InvalidSqlInput.exception("Dynamic parameters are not supported for [%s]", operationName());
     }
     tableId = TableId.datasource(resolveTableName());
-    resourceActions = Collections.singleton(
-        new ResourceAction(new Resource(tableId.name(), ResourceType.DATASOURCE), Action.WRITE)
+    final Resource resource = new Resource(tableId.name(), ResourceType.DATASOURCE);
+    resourceActions = ImmutableSet.of(
+        new ResourceAction(resource, Action.READ),
+        new ResourceAction(resource, Action.WRITE)
     );
     validateStatement();
   }
@@ -161,11 +171,13 @@ public abstract class CatalogDdlHandler extends SqlStatementHandler.BaseStatemen
   @Override
   public PlannerResult plan()
   {
-    execute(handlerContext.plannerContext().getPlannerToolbox().catalogTableWriter());
-    final Supplier<QueryResponse<Object[]>> resultsSupplier = Suppliers.ofInstance(
-        QueryResponse.withEmptyContext(Sequences.empty())
+    return new PlannerResult(
+        () -> {
+          execute(handlerContext.plannerContext().getPlannerToolbox().catalogTableWriter());
+          return QueryResponse.withEmptyContext(Sequences.empty());
+        },
+        RESULT_TYPE
     );
-    return new PlannerResult(resultsSupplier, RESULT_TYPE);
   }
 
   @Override

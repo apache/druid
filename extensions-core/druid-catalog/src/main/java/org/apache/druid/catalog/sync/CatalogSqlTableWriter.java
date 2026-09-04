@@ -147,13 +147,9 @@ public class CatalogSqlTableWriter implements CatalogTableWriter
   private void refreshCache(TableId tableId)
   {
     try {
-      final TableMetadata table = client.table(tableId);
-      cache.updated(
-          new UpdateEvent(
-              table == null ? UpdateEvent.EventType.DELETE : UpdateEvent.EventType.UPDATE,
-              table == null ? TableMetadata.empty(tableId) : table
-          )
-      );
+      // An authoritative single-entry refresh, not an incremental update event: the cache may never have seen this
+      // table (CREATE TABLE), and an UPDATE event for an unseen entry is reported as an inconsistency.
+      cache.resynced(tableId, client.table(tableId));
     }
     catch (Exception e) {
       // The write succeeded, so failing the statement here would be misleading. The cache converges on the next
