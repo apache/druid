@@ -60,7 +60,7 @@
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-context</artifactId>
-            <version>1.83.1</version>
+            <version>1.84.0</version>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
