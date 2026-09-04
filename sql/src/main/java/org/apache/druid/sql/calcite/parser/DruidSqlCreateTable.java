@@ -155,8 +155,12 @@ public class DruidSqlCreateTable extends SqlCreate
     name.unparse(writer, leftPrec, rightPrec);
 
     // The element list is optional and, when present, must hold at least one element, so a table declaring nothing
-    // prints no parentheses at all: "()" is not something the grammar can read back.
+    // prints no parentheses at all: "()" is not something the grammar can read back. SEALED binds to the list (it
+    // declares the list to be the whole schema), so it prints just before it and never without it.
     if (!columnList.isEmpty() || !projectionList.isEmpty()) {
+      if (sealed) {
+        writer.keyword("SEALED");
+      }
       final SqlWriter.Frame frame = writer.startList("(", ")");
       for (SqlNode column : columnList) {
         writer.sep(",");
@@ -182,10 +186,6 @@ public class DruidSqlCreateTable extends SqlCreate
         clusterByOpts.unparse(writer, leftPrec, rightPrec);
       }
       writer.endList(clusterFrame);
-    }
-
-    if (sealed) {
-      writer.keyword("SEALED");
     }
   }
 

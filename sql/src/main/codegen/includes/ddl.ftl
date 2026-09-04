@@ -40,6 +40,9 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
   [ <IF> <NOT> <EXISTS> { ifNotExists = true; } ]
   id = CompoundTableIdentifier()
   [
+    // SEALED binds to the column list rather than trailing the statement: it declares that the list is the table's
+    // whole schema, so it is only accepted when there is a list for it to describe.
+    [ <SEALED> { sealed = true; } ]
     <LPAREN> { elementSpan = span(); }
     AddDruidTableElement(columns, projections)
     (
@@ -53,9 +56,6 @@ SqlCreate DruidSqlCreateTable(Span s, boolean replace) :
   ]
   [
     clusteredBy = ClusteredBy()
-  ]
-  [
-    <SEALED> { sealed = true; }
   ]
   {
     final SqlParserPos elementPos = elementSpan == null ? s.pos() : elementSpan.end(this);

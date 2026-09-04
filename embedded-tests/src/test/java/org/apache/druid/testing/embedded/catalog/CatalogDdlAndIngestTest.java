@@ -344,7 +344,7 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
     final String tableName = dataSource;
 
     cluster.callApi().runSql(
-        "CREATE TABLE \"%s\" (\n"
+        "CREATE TABLE \"%s\" SEALED (\n"
         + "  varchar_col2 VARCHAR,\n"
         + "  __time TIMESTAMP,\n"
         + "  varchar_col1 VARCHAR,\n"
@@ -355,7 +355,7 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
         + "    CLUSTERED BY varchar_col2\n"
         + "  )\n"
         + ")\n"
-        + "PARTITIONED BY DAY SEALED",
+        + "PARTITIONED BY DAY",
         tableName
     );
 
@@ -447,9 +447,9 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
     final String tableName = dataSource;
 
     cluster.callApi().runSql(
-        "CREATE TABLE \"%s\" (t VARCHAR, __time TIMESTAMP, v BIGINT, doubled BIGINT,"
+        "CREATE TABLE \"%s\" SEALED (t VARCHAR, __time TIMESTAMP, v BIGINT, doubled BIGINT,"
         + " PROJECTION __base AS (SELECT t, __time, v, v * 2 AS doubled CLUSTERED BY t))"
-        + " PARTITIONED BY DAY SEALED",
+        + " PARTITIONED BY DAY",
         tableName
     );
 
@@ -471,7 +471,7 @@ public class CatalogDdlAndIngestTest extends CatalogTestBase
     final String tableName = dataSource;
 
     cluster.callApi().runSql(
-        "CREATE TABLE \"%s\" (t VARCHAR, __time TIMESTAMP, v BIGINT) PARTITIONED BY DAY SEALED",
+        "CREATE TABLE \"%s\" SEALED (t VARCHAR, __time TIMESTAMP, v BIGINT) PARTITIONED BY DAY",
         tableName
     );
     cluster.callApi().runSql(

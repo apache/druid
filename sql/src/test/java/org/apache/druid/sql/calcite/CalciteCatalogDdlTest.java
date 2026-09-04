@@ -696,7 +696,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   public void testCreateTableWithBaseProjection() throws Exception
   {
     execute(
-        "CREATE TABLE tbl ("
+        "CREATE TABLE tbl SEALED ("
         + " tenant VARCHAR,"
         + " bucket BIGINT,"
         + " __time TIMESTAMP,"
@@ -705,7 +705,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
         + "   SELECT tenant, ABS(user_id) AS bucket, __time, user_id"
         + "   CLUSTERED BY tenant, bucket"
         + " )"
-        + ") PARTITIONED BY DAY SEALED"
+        + ") PARTITIONED BY DAY"
     );
 
     final TableSpec spec = WRITER.calls.get(0).spec;
@@ -735,8 +735,8 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     final DruidException e = assertThrows(
         DruidException.class,
         () -> execute(
-            "CREATE TABLE tbl (id BIGINT, copy BIGINT, __time TIMESTAMP,"
-            + " PROJECTION __base AS (SELECT id, id AS copy, __time CLUSTERED BY id)) SEALED"
+            "CREATE TABLE tbl SEALED (id BIGINT, copy BIGINT, __time TIMESTAMP,"
+            + " PROJECTION __base AS (SELECT id, id AS copy, __time CLUSTERED BY id))"
         )
     );
     assertTrue(
@@ -749,8 +749,8 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   public void testBaseProjectionWithoutComputedColumns()
   {
     execute(
-        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
-        + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY tenant)) SEALED"
+        "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+        + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY tenant))"
     );
     final ClusteredValueGroupsBaseTableMetadata baseTable = baseTable();
     assertEquals(List.of("tenant"), baseTable.getClusteringColumns());
@@ -764,9 +764,9 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
   public void testBaseProjectionAlongsideAggregateProjection()
   {
     execute(
-        "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+        "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
         + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY tenant),"
-        + " PROJECTION by_tenant AS (SELECT tenant, SUM(v) AS sum_v GROUP BY tenant)) SEALED"
+        + " PROJECTION by_tenant AS (SELECT tenant, SUM(v) AS sum_v GROUP BY tenant))"
     );
     final TableSpec spec = WRITER.calls.get(0).spec;
     assertNotNull(spec.properties().get(DatasourceDefn.BASE_TABLE_PROPERTY));
@@ -799,8 +799,8 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     final DruidException wrongOrder = assertThrows(
         DruidException.class,
         () -> execute(
-            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
-            + " PROJECTION __base AS (SELECT __time, tenant, v CLUSTERED BY tenant)) SEALED"
+            "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+            + " PROJECTION __base AS (SELECT __time, tenant, v CLUSTERED BY tenant))"
         )
     );
     assertTrue(wrongOrder.getMessage().contains("the table declares"), wrongOrder.getMessage());
@@ -808,8 +808,8 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     final DruidException missing = assertThrows(
         DruidException.class,
         () -> execute(
-            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
-            + " PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant)) SEALED"
+            "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time CLUSTERED BY tenant))"
         )
     );
     assertTrue(missing.getMessage().contains("must name every declared column"), missing.getMessage());
@@ -825,8 +825,8 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
     final DruidException e = assertThrows(
         DruidException.class,
         () -> execute(
-            "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
-            + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY v)) SEALED"
+            "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, v BIGINT,"
+            + " PROJECTION __base AS (SELECT tenant, __time, v CLUSTERED BY v))"
         )
     );
     assertTrue(e.getMessage().contains("__base"), e.getMessage());
@@ -842,7 +842,7 @@ public class CalciteCatalogDdlTest extends BaseCalciteQueryTest
       final DruidException e = assertThrows(
           DruidException.class,
           () -> execute(
-              "CREATE TABLE tbl (tenant VARCHAR, __time TIMESTAMP, PROJECTION __base AS (" + body + ")) SEALED"
+              "CREATE TABLE tbl SEALED (tenant VARCHAR, __time TIMESTAMP, PROJECTION __base AS (" + body + "))"
           ),
           body
       );

@@ -82,10 +82,9 @@ report that the extension is not available.
 
 ```sql
 CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
-  [ ( <table element> [, ...] ) ]
+  [ [ SEALED ] ( <table element> [, ...] ) ]
   [ PARTITIONED BY <granularity> ]
   [ CLUSTERED BY <column> [, ...] ]
-  [ SEALED ]
 
 <table element> ::=
     <column> <type>
@@ -95,7 +94,10 @@ CREATE [OR REPLACE] TABLE [IF NOT EXISTS] <table>
 `OR REPLACE` replaces the specification of an existing table; `IF NOT EXISTS` leaves an existing table unchanged.
 The two cannot be combined. `PARTITIONED BY` sets [`segmentGranularity`](#table-properties) and `CLUSTERED BY` sets
 `clusterKeys`, both of which a later `INSERT` or `REPLACE` inherits unless it states its own. `SEALED` sets
-[`sealed`](#table-properties), which requires every ingested column to be declared.
+[`sealed`](#table-properties), which requires every ingested column to be declared. It is written just before the
+column list because that is what it describes: the list is the table's whole schema, so the statement does not accept
+`SEALED` without one. (The `sealed` property itself can still be set on any table through `SET PROPERTIES` or the
+REST API.)
 
 Note that the table-level `CLUSTERED BY` is a sort order applied to each ingestion, which is a different thing from
 the `CLUSTERED BY` inside a [`__base` projection](#the-base-table), which defines how segments physically group rows.
@@ -197,7 +199,7 @@ Its body lists the columns in the order segments store them, so it must name eve
 order. An item written as `<expr> AS <name>` makes that column computed at ingest time, from the columns it reads:
 
 ```sql
-CREATE TABLE "druid"."events" (
+CREATE TABLE "druid"."events" SEALED (
   tenant VARCHAR,
   bucket BIGINT,
   __time TIMESTAMP,
@@ -209,7 +211,6 @@ CREATE TABLE "druid"."events" (
   )
 )
 PARTITIONED BY DAY
-SEALED
 ```
 
 The clustering columns must be the leading columns of the table, because the declared order is the physical order.

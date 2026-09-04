@@ -320,7 +320,7 @@ public class DruidSqlDdlParserTest
   public void testCreateTableWithBaseProjectionAndSealed()
   {
     final DruidSqlCreateTable create = parseCreate(
-        "CREATE TABLE t (\n"
+        "CREATE TABLE t SEALED (\n"
         + "  tenant VARCHAR,\n"
         + "  bucket BIGINT,\n"
         + "  __time TIMESTAMP,\n"
@@ -328,7 +328,7 @@ public class DruidSqlDdlParserTest
         + "    SELECT tenant, ABS(user_id) AS bucket, __time\n"
         + "    CLUSTERED BY tenant, bucket\n"
         + "  )\n"
-        + ") PARTITIONED BY DAY SEALED"
+        + ") PARTITIONED BY DAY"
     );
 
     assertTrue(create.isSealed());
@@ -343,8 +343,22 @@ public class DruidSqlDdlParserTest
   @Test
   public void testSealedWithoutProjection()
   {
-    assertTrue(parseCreate("CREATE TABLE t (a VARCHAR) SEALED").isSealed());
+    assertTrue(parseCreate("CREATE TABLE t SEALED (a VARCHAR)").isSealed());
     assertFalse(parseCreate("CREATE TABLE t (a VARCHAR)").isSealed());
+  }
+
+  /**
+   * SEALED binds to the column list, so a table declaring no columns cannot be sealed: the odd statement is
+   * unparseable rather than accepted.
+   */
+  @Test
+  public void testSealedWithoutColumnListIsRejected()
+  {
+    final DruidException e = assertThrows(
+        DruidException.class,
+        () -> parse("CREATE TABLE tbl SEALED PARTITIONED BY DAY")
+    );
+    assertTrue(e.getMessage().contains("PARTITIONED"), e.getMessage());
   }
 
   /**
@@ -354,7 +368,8 @@ public class DruidSqlDdlParserTest
   public void testSealedUsableAsIdentifier()
   {
     assertEquals("sealed VARCHAR", columnsOf(parseCreate("CREATE TABLE t (sealed VARCHAR)")));
-    assertTrue(parseCreate("CREATE TABLE sealed (a VARCHAR) SEALED").isSealed());
+    // A table named 'sealed' followed by the SEALED keyword: the identifier and the keyword coexist.
+    assertTrue(parseCreate("CREATE TABLE sealed SEALED (a VARCHAR)").isSealed());
   }
 
   @Test
@@ -387,7 +402,7 @@ public class DruidSqlDdlParserTest
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" DROP COLUMN \"a\"");
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" ALTER COLUMN \"a\" SET DATA TYPE BIGINT");
     assertUnparseRoundTrips("ALTER TABLE \"tbl\" SET PROPERTIES (\"sealed\" = TRUE)");
-    assertUnparseRoundTrips("CREATE TABLE \"tbl\" (\"a\" VARCHAR) SEALED");
+    assertUnparseRoundTrips("CREATE TABLE \"tbl\" SEALED (\"a\" VARCHAR)");
     assertUnparseRoundTrips(
         "CREATE TABLE \"tbl\" (\"a\" VARCHAR, \"c\" BIGINT,"
         + " PROJECTION \"p\" AS (SELECT \"a\", SUM(\"c\") AS \"total\" GROUP BY \"a\"))"
@@ -411,9 +426,9 @@ public class DruidSqlDdlParserTest
         "CREATE OR REPLACE TABLE \"tbl\" (\"a\" VARCHAR)",
         "CREATE TABLE IF NOT EXISTS \"tbl\" (\"a\" VARCHAR)",
         "CREATE TABLE \"tbl\" (\"a\" VARCHAR) PARTITIONED BY DAY CLUSTERED BY \"a\"",
-        "CREATE TABLE \"tbl\" (\"a\" VARCHAR) SEALED",
+        "CREATE TABLE \"tbl\" SEALED (\"a\" VARCHAR)",
         "CREATE TABLE \"tbl\" (\"a\" VARCHAR, PROJECTION \"p\" AS (SELECT \"a\" GROUP BY \"a\"))",
-        "CREATE TABLE \"tbl\" (\"a\" VARCHAR, PROJECTION \"__base\" AS (SELECT \"a\" CLUSTERED BY \"a\")) SEALED",
+        "CREATE TABLE \"tbl\" SEALED (\"a\" VARCHAR, PROJECTION \"__base\" AS (SELECT \"a\" CLUSTERED BY \"a\"))",
         "ALTER TABLE \"tbl\" ADD COLUMN \"a\" DOUBLE",
         "ALTER TABLE \"tbl\" DROP COLUMN \"a\"",
         "ALTER TABLE \"tbl\" ALTER COLUMN \"a\" SET DATA TYPE BIGINT",
