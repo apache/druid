@@ -29,23 +29,23 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 public class FrameFileWriterTest extends InitializedNullHandlingTest
 {
-  @TempDir
-  Path tempDir;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void test_abort_afterAllFrames() throws IOException
@@ -55,7 +55,7 @@ public class FrameFileWriterTest extends InitializedNullHandlingTest
                                                        .frameType(FrameType.latestRowBased())
                                                        .frames();
 
-    final File file = Files.createTempFile(tempDir, "junit", null).toFile();
+    final File file = temporaryFolder.newFile();
     final FrameFileWriter fileWriter = FrameFileWriter.open(
         Files.newByteChannel(
             file.toPath(),

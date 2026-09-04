@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +48,7 @@ public class RegexpReplaceExprMacroTest extends MacroTestBase
   @Test
   public void testInvalidRegexpReplacePattern()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> eval("regexp_replace(a, '[Ab-cd-0]', 'xyz')", InputBindings.nilBindings())),

@@ -136,13 +136,13 @@
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
-      <version>2.29.1</version>
+      <version>2.72.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-core</artifactId>
-      <version>2.27.0</version>
+      <version>2.73.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -266,6 +266,12 @@
     <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-avro-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-opa-authorizer</artifactId>
       <version>${project.parent.version}</version>
       <scope>test</scope>
     </dependency>
@@ -474,11 +480,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
@@ -486,11 +487,6 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -696,7 +692,7 @@
     <dependency>
       <groupId>com.github.os72</groupId>
       <artifactId>protobuf-dynamic</artifactId>
-      <version>0.9.3</version>
+      <version>1.0.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -771,13 +767,13 @@
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
-      <version>0.23.0</version>
+      <version>0.24.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.aliyun.oss</groupId>
       <artifactId>aliyun-sdk-oss</artifactId>
-      <version>3.11.3</version>
+      <version>3.18.5</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -838,7 +834,7 @@
     <dependency>
       <groupId>com.google.auth</groupId>
       <artifactId>google-auth-library-credentials</artifactId>
-      <version>1.20.0</version>
+      <version>1.51.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>

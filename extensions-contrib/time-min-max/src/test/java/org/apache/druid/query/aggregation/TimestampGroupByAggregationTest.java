@@ -106,7 +106,7 @@ public class TimestampGroupByAggregationTest
 
   private void setup()
   {
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         new TimestampMinMaxModule().getJacksonModules(),
         config,
         temporaryFolder

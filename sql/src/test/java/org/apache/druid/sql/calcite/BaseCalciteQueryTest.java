@@ -109,6 +109,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -121,7 +122,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -1142,9 +1142,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       final DruidExceptionMatcher exceptionMatcher
   )
   {
-    // DruidExceptionMatcher is a Hamcrest matcher, so this delegates to Hamcrest's MatcherAssert.assertThat.
-    // Remove this bridge in the final cleanup after all DruidExceptionMatcher callers are migrated.
-    assertThat(exception, exceptionMatcher);
+    DruidExceptionMatcher.assertThat(exception, exceptionMatcher);
   }
 
   public void analyzeResources(
@@ -1190,16 +1188,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         .authResult(authenticationResult)
         .expectedResources(expectedActions)
         .run();
-  }
-
-  public SqlStatementFactory getSqlStatementFactory(
-      PlannerConfig plannerConfig
-  )
-  {
-    return getSqlStatementFactory(
-        plannerConfig,
-        new AuthConfig()
-    );
   }
 
   /**
@@ -1568,14 +1556,13 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public File getResourceAsTemporaryFile(final String resource)
   {
     final File file = newTempFile("resourceAsTempFile");
-    final InputStream stream = getClass().getResourceAsStream(resource);
-
-    if (stream == null) {
-      throw new RE(StringUtils.format("No such resource [%s]", resource));
-    }
-
-    try {
-      ByteStreams.copy(stream, Files.newOutputStream(file.toPath()));
+    try (final InputStream stream = BaseCalciteQueryTest.class.getResourceAsStream(resource)) {
+      if (stream == null) {
+        throw new RE(StringUtils.format("No such resource [%s]", resource));
+      }
+      try (final OutputStream outputStream = Files.newOutputStream(file.toPath())) {
+        ByteStreams.copy(stream, outputStream);
+      }
     }
     catch (IOException e) {
       throw new RuntimeException(e);

@@ -27,6 +27,8 @@ import com.google.inject.Key;
 import com.google.inject.Scopes;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalTableScan;
@@ -47,7 +49,9 @@ import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlParser;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
+import org.apache.druid.sql.calcite.schema.ConstantDruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
+import org.apache.druid.sql.calcite.schema.DruidSchemaCatalogProvider;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
@@ -58,9 +62,6 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import javax.validation.Validation;
-import javax.validation.Validator;
 
 import java.util.Collections;
 import java.util.Optional;
@@ -138,7 +139,8 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
           binder.bind(String.class).annotatedWith(DruidSchemaName.class).toInstance(DRUID_SCHEMA_NAME);
           binder.bind(Key.get(new TypeLiteral<Set<SqlAggregator>>() {})).toInstance(aggregators);
           binder.bind(Key.get(new TypeLiteral<Set<SqlOperatorConversion>>() {})).toInstance(operatorConversions);
-          binder.bind(DruidSchemaCatalog.class).toInstance(rootSchema);
+          binder.bind(DruidSchemaCatalogProvider.class)
+                .toInstance(new ConstantDruidSchemaCatalogProvider(rootSchema));
           binder.bind(JoinableFactoryWrapper.class).toInstance(joinableFactoryWrapper);
           binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
         },
@@ -192,6 +194,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
         sql,
         DruidSqlParser.parse(sql, false).getMainStatement(),
         new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+        null, // Don't need an authentication result
         Collections.emptySet(),
         Collections.emptyMap(),
         null
@@ -215,6 +218,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+            null, // Don't need an authentication result
             Collections.emptySet(),
             Collections.singletonMap(BLOAT_PROPERTY, BLOAT),
             null
@@ -225,6 +229,7 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
             sql,
             DruidSqlParser.parse(sql, false).getMainStatement(),
             new NativeSqlEngine(queryLifecycleFactory, mapper, (SqlStatementFactory) null),
+            null, // Don't need an authentication result
             Collections.emptySet(),
             Collections.emptyMap(),
             null

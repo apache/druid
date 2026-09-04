@@ -21,10 +21,9 @@ package org.apache.druid.indexing.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotNull;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-
-import javax.validation.constraints.NotNull;
 
 public class TaskStorageConfig
 {

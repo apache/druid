@@ -22,14 +22,11 @@ package org.apache.druid.segment;
 import com.google.common.util.concurrent.Runnables;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.runner.Description;
-import org.junit.runners.model.Statement;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -38,7 +35,7 @@ public class CloserRuleTest
   @Test
   public void testCloses() throws Throwable
   {
-    final CloserRule closer = new CloserRule(false);
+    final CloserExtension closer = new CloserExtension(false);
     final AtomicBoolean closed = new AtomicBoolean(false);
     closer.closeLater(
         new Closeable()
@@ -57,7 +54,7 @@ public class CloserRuleTest
   @Test
   public void testPreservesException() throws Throwable
   {
-    final CloserRule closer = new CloserRule(false);
+    final CloserExtension closer = new CloserExtension(false);
     final AtomicBoolean closed = new AtomicBoolean(false);
     closer.closeLater(
         new Closeable()
@@ -93,7 +90,7 @@ public class CloserRuleTest
   @Test
   public void testSuppressed()
   {
-    final CloserRule closer = new CloserRule(true);
+    final CloserExtension closer = new CloserExtension(true);
     final AtomicBoolean closed = new AtomicBoolean(false);
     final String ioExceptionMsg = "You can't triple stamp a double stamp!";
     final IOException suppressed = new IOException(ioExceptionMsg);
@@ -142,7 +139,7 @@ public class CloserRuleTest
   @Test
   public void testThrowsCloseException()
   {
-    final CloserRule closer = new CloserRule(true);
+    final CloserExtension closer = new CloserExtension(true);
     final String ioExceptionMsg = "You can't triple stamp a double stamp!";
     final IOException ioException = new IOException(ioExceptionMsg);
     closer.closeLater(
@@ -169,7 +166,7 @@ public class CloserRuleTest
   @Test
   public void testJustLogs() throws Throwable
   {
-    final CloserRule closer = new CloserRule(false);
+    final CloserExtension closer = new CloserExtension(false);
     final String ioExceptionMsg = "You can't triple stamp a double stamp!";
     closer.closeLater(
         new Closeable()
@@ -187,7 +184,7 @@ public class CloserRuleTest
   @Test
   public void testJustLogsAnything() throws Throwable
   {
-    final CloserRule closer = new CloserRule(false);
+    final CloserExtension closer = new CloserExtension(false);
     final String ioExceptionMsg = "You can't triple stamp a double stamp!";
     closer.closeLater(
         new Closeable()
@@ -226,7 +223,7 @@ public class CloserRuleTest
   public void testClosesEverything()
   {
     final AtomicLong counter = new AtomicLong(0L);
-    final CloserRule closer = new CloserRule(true);
+    final CloserExtension closer = new CloserExtension(true);
     final String ioExceptionMsg = "You can't triple stamp a double stamp!";
     final List<IOException> ioExceptions = Arrays.asList(
         new IOException(ioExceptionMsg),
@@ -263,19 +260,19 @@ public class CloserRuleTest
     Assertions.assertEquals(2, ex.getSuppressed().length);
   }
 
-  private void run(final CloserRule closer, final Runnable runnable) throws Throwable
+  private void run(final CloserExtension closer, final Runnable runnable) throws Throwable
   {
-    closer.apply(
-        new Statement()
-        {
-          @Override
-          public void evaluate()
-          {
-            runnable.run();
-          }
-        }, Description.createTestDescription(
-            CloserRuleTest.class.getName(), "baseRunner", UUID.randomUUID()
-        )
-    ).evaluate();
+    closer.beforeEach(null);
+    try {
+      try {
+        runnable.run();
+      }
+      catch (Throwable throwable) {
+        closer.handleTestExecutionException(null, throwable);
+      }
+    }
+    finally {
+      closer.afterEach(null);
+    }
   }
 }

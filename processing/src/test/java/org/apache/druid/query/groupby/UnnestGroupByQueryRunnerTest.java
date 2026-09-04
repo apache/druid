@@ -90,7 +90,7 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   private final boolean vectorize;
 
   @RegisterExtension
-  public final TemporaryFolderExtension tempFolder = new TemporaryFolderExtension();
+  public final TemporaryFolderExtension tempFolder = TemporaryFolderExtension.testCaseScoped();
 
   public UnnestGroupByQueryRunnerTest(
       GroupByQueryConfig config,

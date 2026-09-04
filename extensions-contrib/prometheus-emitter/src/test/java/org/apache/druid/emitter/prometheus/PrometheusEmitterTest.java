@@ -209,15 +209,17 @@ public class PrometheusEmitterTest
     ServiceMetricEvent build = ServiceMetricEvent.builder()
             .setDimension("dataSource", "test")
             .setDimension("taskType", "index_parallel")
+            .setDimension("taskStatus", "SUCCESS")
             .setMetric("task/run/time", 500)
             .build(ImmutableMap.of("service", "overlord", "host", "druid.test.cn"));
     emitter.emit(build);
     double assertEpsilon = 0.0001;
+    final String[] labelNames = {"dataSource", "druid_service", "host_name", "taskStatus", "taskType", "le"};
     Assertions.assertEquals(0.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.1"}
+            "namespace_task_run_time_bucket", labelNames, new String[]{"test", "overlord", "druid.test.cn", "SUCCESS", "index_parallel", "0.1"}
     ), assertEpsilon);
     Assertions.assertEquals(1.0, CollectorRegistry.defaultRegistry.getSampleValue(
-            "namespace_task_run_time_bucket", new String[]{"dataSource", "druid_service", "host_name", "taskType", "le"}, new String[]{"test", "overlord", "druid.test.cn", "index_parallel", "0.5"}
+            "namespace_task_run_time_bucket", labelNames, new String[]{"test", "overlord", "druid.test.cn", "SUCCESS", "index_parallel", "0.5"}
     ), assertEpsilon);
   }
 

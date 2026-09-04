@@ -63,7 +63,7 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
   public void initFixedBucketsHistogramAggregationTest(final GroupByQueryConfig config)
   {
     ApproximateHistogramDruidModule.registerSerde();
-    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelperWithTempDir(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Lists.newArrayList(new ApproximateHistogramDruidModule().getJacksonModules()),
         config,
         tempFolder

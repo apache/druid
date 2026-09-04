@@ -24,7 +24,6 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -58,7 +57,7 @@ public class RegexpLikeExprMacroTest extends MacroTestBase
   @Test
   public void testInvalidRegexpLikePattern()
   {
-    MatcherAssert.assertThat(
+    DruidExceptionMatcher.assertThat(
         Assertions.assertThrows(
             DruidException.class,
             () -> eval("regexp_like('a', '[Ab-C]')", InputBindings.nilBindings())),
