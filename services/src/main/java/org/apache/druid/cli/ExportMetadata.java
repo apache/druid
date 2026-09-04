@@ -26,16 +26,18 @@ import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.opencsv.CSVParser;
+import org.apache.druid.cli.MetadataCsvExporter.ColumnKind;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
@@ -48,20 +50,20 @@ import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
 
 import javax.annotation.Nullable;
 import javax.xml.bind.DatatypeConverter;
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Command(
     name = "export-metadata",
-    description = "Exports the contents of a Druid Derby metadata store to CSV files to assist with cluster migration. This tool also provides the ability to rewrite segment locations in the Derby metadata to assist with deep storage migration."
+    description = "Exports the contents of a Druid metadata store (Derby or PostgreSQL) to CSV files to assist with cluster migration. This tool also provides the ability to rewrite segment locations in the metadata to assist with deep storage migration."
 )
 public class ExportMetadata extends GuiceRunnable
 {
@@ -120,9 +122,82 @@ public class ExportMetadata extends GuiceRunnable
       description = "Write boolean values as true/false strings instead of 1/0")
   public boolean booleansAsStrings = false;
 
-  private static final Logger log = new Logger(ExportMetadata.class);
+  /**
+   * How one metadata table is exported: the canonical order in which its columns are written, matching the import
+   * commands documented in {@code docs/operations/export-metadata.md}, the columns which are not exported (in lower
+   * case), and whether the table may be absent from the metadata store, in which case it is skipped instead of
+   * failing the export.
+   */
+  static final class TableSpec
+  {
+    final List<String> columnOrder;
+    final Set<String> excludedColumns;
+    final boolean optional;
 
-  private static final CSVParser PARSER = new CSVParser();
+    TableSpec(final List<String> columnOrder)
+    {
+      this(columnOrder, ImmutableSet.of(), false);
+    }
+
+    TableSpec(final List<String> columnOrder, final Set<String> excludedColumns, final boolean optional)
+    {
+      this.columnOrder = columnOrder;
+      this.excludedColumns = excludedColumns;
+      this.optional = optional;
+    }
+  }
+
+  private static final TableSpec DATASOURCE = new TableSpec(
+      ImmutableList.of("dataSource", "created_date", "commit_metadata_payload", "commit_metadata_sha1")
+  );
+
+  private static final TableSpec RULES = new TableSpec(
+      ImmutableList.of("id", "dataSource", "version", "payload")
+  );
+
+  private static final TableSpec CONFIG = new TableSpec(
+      ImmutableList.of("name", "payload")
+  );
+
+  private static final TableSpec SUPERVISORS = new TableSpec(
+      ImmutableList.of("id", "spec_id", "created_date", "payload")
+  );
+
+  static final TableSpec SEGMENTS = new TableSpec(
+      ImmutableList.of(
+          "id", "dataSource", "created_date", "start", "end", "partitioned", "version", "used", "payload",
+          "used_status_last_updated", "indexing_state_fingerprint", "upgraded_from_segment_id",
+          "schema_fingerprint", "num_rows"
+      )
+  );
+
+  /**
+   * The table holding the schemas that the {@code schema_fingerprint} of a segment refers to. It only exists if
+   * centralized datasource schema is enabled, and its {@code id} is a generated identity column which nothing
+   * refers to, so it is not exported: importing a value into such a column is rejected outright by Derby and needs
+   * database-specific handling elsewhere, while letting the target database generate the ids works everywhere.
+   */
+  static final TableSpec SEGMENT_SCHEMAS = new TableSpec(
+      ImmutableList.of(
+          "fingerprint", "created_date", "datasource", "payload", "used", "used_status_last_updated", "version"
+      ),
+      ImmutableSet.of("id"),
+      true
+  );
+
+  /**
+   * The table holding the indexing states that the {@code indexing_state_fingerprint} of a segment refers to. It
+   * does not exist in metadata stores written by older Druid versions.
+   */
+  static final TableSpec INDEXING_STATES = new TableSpec(
+      ImmutableList.of(
+          "fingerprint", "created_date", "dataSource", "payload", "used", "pending", "used_status_last_updated"
+      ),
+      ImmutableSet.of(),
+      true
+  );
+
+  private static final Logger log = new Logger(ExportMetadata.class);
 
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
@@ -184,10 +259,7 @@ public class ExportMetadata extends GuiceRunnable
   @Override
   public void run()
   {
-    InjectableValues.Std injectableValues = new InjectableValues.Std();
-    injectableValues.addValue(ObjectMapper.class, JSON_MAPPER);
-    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
-    JSON_MAPPER.setInjectableValues(injectableValues);
+    configureJsonMapper();
 
     if (hadoopStorageDirectory != null && newLocalPath != null) {
       throw new IllegalArgumentException(
@@ -206,212 +278,157 @@ public class ExportMetadata extends GuiceRunnable
     }
 
     final Injector injector = makeInjector();
-    SQLMetadataConnector dbConnector = injector.getInstance(SQLMetadataConnector.class);
-    MetadataStorageTablesConfig metadataStorageTablesConfig = injector.getInstance(MetadataStorageTablesConfig.class);
-    
-    // We export a raw CSV first, and then apply some conversions for easier imports:
-    // Boolean strings are rewritten as 1 and 0
-    // hexadecimal BLOB columns are rewritten with rewriteHexPayloadAsEscapedJson()
-    log.info("Exporting datasource table: " + metadataStorageTablesConfig.getDataSourceTable());
-    exportTable(dbConnector, metadataStorageTablesConfig.getDataSourceTable(), true);
-    rewriteDatasourceExport(metadataStorageTablesConfig.getDataSourceTable());
+    final SQLMetadataConnector dbConnector = injector.getInstance(SQLMetadataConnector.class);
+    final MetadataStorageTablesConfig tablesConfig = injector.getInstance(MetadataStorageTablesConfig.class);
+    final MetadataCsvExporter exporter = new MetadataCsvExporter(dbConnector);
 
-    log.info("Exporting segments table: " + metadataStorageTablesConfig.getSegmentsTable());
-    exportTable(dbConnector, metadataStorageTablesConfig.getSegmentsTable(), true);
-    rewriteSegmentsExport(metadataStorageTablesConfig.getSegmentsTable());
-
-    log.info("Exporting rules table: " + metadataStorageTablesConfig.getRulesTable());
-    exportTable(dbConnector, metadataStorageTablesConfig.getRulesTable(), true);
-    rewriteRulesExport(metadataStorageTablesConfig.getRulesTable());
-
-    log.info("Exporting config table: " + metadataStorageTablesConfig.getConfigTable());
-    exportTable(dbConnector, metadataStorageTablesConfig.getConfigTable(), true);
-    rewriteConfigExport(metadataStorageTablesConfig.getConfigTable());
-
-    log.info("Exporting supervisor table: " + metadataStorageTablesConfig.getSupervisorTable());
-    exportTable(dbConnector, metadataStorageTablesConfig.getSupervisorTable(), true);
-    rewriteSupervisorExport(metadataStorageTablesConfig.getSupervisorTable());
+    exportTable(exporter, dbConnector, tablesConfig.getDataSourceTable(), DATASOURCE, this::convertValue);
+    exportTable(exporter, dbConnector, tablesConfig.getSegmentsTable(), SEGMENTS, this::convertSegmentValue);
+    exportTable(exporter, dbConnector, tablesConfig.getRulesTable(), RULES, this::convertValue);
+    exportTable(exporter, dbConnector, tablesConfig.getConfigTable(), CONFIG, this::convertValue);
+    exportTable(exporter, dbConnector, tablesConfig.getSupervisorTable(), SUPERVISORS, this::convertValue);
+    // The tables the fingerprints of a segment refer to. Without them, an imported segment refers to a schema and an
+    // indexing state which the target metadata store does not have.
+    exportTable(exporter, dbConnector, tablesConfig.getSegmentSchemasTable(), SEGMENT_SCHEMAS, this::convertValue);
+    exportTable(exporter, dbConnector, tablesConfig.getIndexingStatesTable(), INDEXING_STATES, this::convertValue);
   }
 
-  private void exportTable(
-      SQLMetadataConnector dbConnector,
-      String tableName,
-      boolean withRawFilename
-  )
+  static void configureJsonMapper()
   {
-    String pathFormatString;
-    if (withRawFilename) {
-      pathFormatString = "%s/%s_raw.csv";
-    } else {
-      pathFormatString = "%s/%s.csv";
-    }
-    dbConnector.exportTable(
-        StringUtils.toUpperCase(tableName),
-        StringUtils.format(pathFormatString, outputPath, tableName)
-    );
+    final InjectableValues.Std injectableValues = new InjectableValues.Std();
+    injectableValues.addValue(ObjectMapper.class, JSON_MAPPER);
+    injectableValues.addValue(PruneSpecsHolder.class, PruneSpecsHolder.DEFAULT);
+    JSON_MAPPER.setInjectableValues(injectableValues);
   }
 
-  private void rewriteDatasourceExport(
-      String datasourceTableName
+  /**
+   * Exports one metadata table to {@code <outputPath>/<tableName>.csv}, writing the columns of the source table in
+   * the canonical order of the given spec.
+   */
+  void exportTable(
+      final MetadataCsvExporter exporter,
+      final SQLMetadataConnector dbConnector,
+      final String tableName,
+      final TableSpec spec,
+      final MetadataCsvExporter.ValueConverter converter
   )
   {
-    String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, datasourceTableName);
-    String outFile = StringUtils.format("%s/%s.csv", outputPath, datasourceTableName);
-    try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
-    ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //dataSource
-                         + parsed[1] + "," //created_date
-                         + rewriteHexPayloadAsEscapedJson(parsed[2]) + "," //commit_metadata_payload
-                         + parsed[3] //commit_metadata_sha1
-                         + "\n";
-        writer.write(newLine);
-
+    // Derby folds unquoted identifiers to upper case, so its tables are named in upper case, while PostgreSQL folds
+    // them to lower case and uses the table names as configured.
+    final String sourceTableName = isDerby() ? StringUtils.toUpperCase(tableName) : tableName;
+    final List<String> columns =
+        orderColumns(spec.columnOrder, dbConnector.getTableColumns(sourceTableName), spec.excludedColumns);
+    // An empty column list means the table does not exist: a failed lookup throws instead, so that a table which
+    // cannot be read is never mistaken for one the metadata store does not have.
+    if (columns.isEmpty()) {
+      if (spec.optional) {
+        // Remove the file of an earlier export into the same directory, which would otherwise be imported as this
+        // table's data.
+        deleteOutputFile(tableName);
+        log.info("Skipping table[%s], which this metadata store does not have.", tableName);
+        return;
       }
+      throw new ISE("Table[%s] does not exist in this metadata store.", sourceTableName);
     }
-    catch (IOException ioex) {
-      throw new RuntimeException(ioex);
-    }
+
+    log.info("Exporting table[%s].", tableName);
+    exporter.exportTable(sourceTableName, columns, makeOutputFile(tableName), converter);
   }
 
-  private void rewriteRulesExport(
-      String rulesTableName
-  )
+  private Path makeOutputFile(final String tableName)
   {
-    String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, rulesTableName);
-    String outFile = StringUtils.format("%s/%s.csv", outputPath, rulesTableName);
-    try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
-    ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //id
-                         + parsed[1] + "," //dataSource
-                         + parsed[2] + "," //version
-                         + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
-                         + "\n";
-        writer.write(newLine);
-
-      }
-    }
-    catch (IOException ioex) {
-      throw new RuntimeException(ioex);
-    }
+    return Paths.get(outputPath, StringUtils.format("%s.csv", tableName));
   }
 
-  private void rewriteConfigExport(
-      String configTableName
-  )
+  private void deleteOutputFile(final String tableName)
   {
-    String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, configTableName);
-    String outFile = StringUtils.format("%s/%s.csv", outputPath, configTableName);
-    try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
-    ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //name
-                         + rewriteHexPayloadAsEscapedJson(parsed[1]) //payload
-                         + "\n";
-        writer.write(newLine);
-
-      }
+    final Path outputFile = makeOutputFile(tableName);
+    try {
+      Files.deleteIfExists(outputFile);
     }
-    catch (IOException ioex) {
-      throw new RuntimeException(ioex);
-    }
-  }
-
-  private void rewriteSupervisorExport(
-      String supervisorTableName
-  )
-  {
-    String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, supervisorTableName);
-    String outFile = StringUtils.format("%s/%s.csv", outputPath, supervisorTableName);
-    try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
-    ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-
-        String newLine = parsed[0] + "," //id
-                         + parsed[1] + "," //spec_id
-                         + parsed[2] + "," //created_date
-                         + rewriteHexPayloadAsEscapedJson(parsed[3]) //payload
-                         + "\n";
-        writer.write(newLine);
-
-      }
-    }
-    catch (IOException ioex) {
-      throw new RuntimeException(ioex);
-    }
-  }
-
-
-  private void rewriteSegmentsExport(
-      String segmentsTableName
-  )
-  {
-    String inFile = StringUtils.format(("%s/%s_raw.csv"), outputPath, segmentsTableName);
-    String outFile = StringUtils.format("%s/%s.csv", outputPath, segmentsTableName);
-    try (
-        BufferedReader reader = new BufferedReader(
-            new InputStreamReader(new FileInputStream(inFile), StandardCharsets.UTF_8)
-        );
-        OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(outFile), StandardCharsets.UTF_8)
-    ) {
-      String line;
-      while ((line = reader.readLine()) != null) {
-        String[] parsed = PARSER.parseLine(line);
-        StringBuilder newLineBuilder = new StringBuilder();
-        newLineBuilder.append(parsed[0]).append(","); //id
-        newLineBuilder.append(parsed[1]).append(","); //dataSource
-        newLineBuilder.append(parsed[2]).append(","); //created_date
-        newLineBuilder.append(parsed[3]).append(","); //start
-        newLineBuilder.append(parsed[4]).append(","); //end
-        newLineBuilder.append(convertBooleanString(parsed[5])).append(","); //partitioned
-        newLineBuilder.append(parsed[6]).append(","); //version
-        newLineBuilder.append(convertBooleanString(parsed[7])).append(","); //used
-
-        if (s3Bucket != null || hadoopStorageDirectory != null || newLocalPath != null) {
-          newLineBuilder.append(makePayloadWithConvertedLoadSpec(parsed[8]));
-        } else {
-          newLineBuilder.append(rewriteHexPayloadAsEscapedJson(parsed[8])); //payload
-        }
-        newLineBuilder.append("\n");
-        writer.write(newLineBuilder.toString());
-
-      }
-    }
-    catch (IOException ioex) {
-      throw new RuntimeException(ioex);
+    catch (IOException e) {
+      throw new ISE(e, "Could not delete stale file[%s] of skipped table[%s].", outputFile, tableName);
     }
   }
 
   /**
-   * Returns a new load spec in escaped JSON form, with the new deep storage location if configured.
+   * Orders the given actual column names of a table by the given canonical order, ignoring case, skipping canonical
+   * columns which the table does not have and appending any unknown columns at the end in their original order.
+   * Columns in {@code excludedColumns} are left out. Exporting this explicit column list keeps the output
+   * independent of the physical column order, which depends on the order in which {@code ALTER TABLE} added the
+   * newer columns.
+   */
+  static List<String> orderColumns(
+      final List<String> columnOrder,
+      final List<String> actualColumns,
+      final Set<String> excludedColumns
+  )
+  {
+    final Map<String, String> remaining = new LinkedHashMap<>();
+    for (String column : actualColumns) {
+      final String lowerCaseColumn = StringUtils.toLowerCase(column);
+      if (!excludedColumns.contains(lowerCaseColumn)) {
+        remaining.put(lowerCaseColumn, column);
+      }
+    }
+
+    final List<String> ordered = new ArrayList<>(actualColumns.size());
+    for (String column : columnOrder) {
+      final String actualColumn = remaining.remove(StringUtils.toLowerCase(column));
+      if (actualColumn != null) {
+        ordered.add(actualColumn);
+      }
+    }
+    ordered.addAll(remaining.values());
+    return ordered;
+  }
+
+  private boolean isDerby()
+  {
+    return connectURI != null && connectURI.startsWith("jdbc:derby");
+  }
+
+  /**
+   * Converts one exported value: BLOB payloads are decoded as JSON unless {@code --use-hex-blobs} was given, and
+   * booleans are written as 1 and 0 unless {@code --booleans-as-strings} was given. A NULL stays a NULL.
+   */
+  @Nullable
+  String convertValue(final ColumnKind kind, @Nullable final String value)
+  {
+    if (value == null) {
+      return null;
+    }
+    switch (kind) {
+      case BINARY:
+        return convertPayload(value);
+      case BOOLEAN:
+        return convertBooleanString(value);
+      default:
+        return value;
+    }
+  }
+
+  /**
+   * Converts one exported value of the segments table, rewriting the deep storage location of the segment payload
+   * if one of {@code --s3bucket}, {@code --hadoopStorageDirectory} or {@code --newLocalPath} was given, and
+   * otherwise behaving like {@link #convertValue}.
+   */
+  @Nullable
+  String convertSegmentValue(final ColumnKind kind, @Nullable final String value) throws IOException
+  {
+    if (kind == ColumnKind.BINARY && value != null && isDeepStorageMigration()) {
+      return makePayloadWithConvertedLoadSpec(value);
+    }
+    return convertValue(kind, value);
+  }
+
+  private boolean isDeepStorageMigration()
+  {
+    return s3Bucket != null || hadoopStorageDirectory != null || newLocalPath != null;
+  }
+
+  /**
+   * Returns the segment payload in JSON form, with the new deep storage location if configured.
    */
   private String makePayloadWithConvertedLoadSpec(
       String payload
@@ -438,39 +455,29 @@ public class ExportMetadata extends GuiceRunnable
     if (useHexBlobs) {
       return DatatypeConverter.printHexBinary(StringUtils.toUtf8(serialized));
     } else {
-      return escapeJSONForCSV(serialized);
+      return serialized;
     }
   }
 
   /**
-   * Derby's export tool writes BLOB columns as a hexadecimal string:
-   * https://db.apache.org/derby/docs/10.9/adminguide/cadminimportlobs.html
-   *
-   * Decodes the hex string and escapes the decoded JSON.
+   * Converts a BLOB value, which the exporter reads as a hexadecimal string, to the JSON it holds, unless hex blobs
+   * were requested.
    */
-  private String rewriteHexPayloadAsEscapedJson(
-      String payload
-  )
+  private String convertPayload(final String payload)
   {
     if (useHexBlobs) {
       return payload;
     }
-    String json = StringUtils.fromUtf8(DatatypeConverter.parseHexBinary(payload));
-    return escapeJSONForCSV(json);
+    return StringUtils.fromUtf8(DatatypeConverter.parseHexBinary(payload));
   }
 
-  private String convertBooleanString(String booleanString)
+  private String convertBooleanString(final String booleanString)
   {
     if (booleansAsStrings) {
       return booleanString;
     } else {
       return "true".equals(booleanString) ? "1" : "0";
     }
-  }
-
-  private String escapeJSONForCSV(String json)
-  {
-    return "\"" + StringUtils.replace(json, "\"", "\"\"") + "\"";
   }
 
   private Map<String, Object> makeS3LoadSpec(
