@@ -786,6 +786,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 0L,
                 null,
                 null,
+                null,
                 null
             )
         )
@@ -795,7 +796,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected TaskReport.ReportMap buildExpectedTaskReportParallel(
       String taskId,
       List<ParseExceptionReport> expectedUnparseableEvents,
-      RowIngestionMetersTotals expectedTotals
+      RowIngestionMetersTotals expectedTotals,
+      Long oversizedSegments
   )
   {
     Map<String, Object> unparseableEvents = ImmutableMap.of("buildSegments", expectedUnparseableEvents);
@@ -812,7 +814,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                 0L,
                 null,
                 null,
-                null
+                null,
+                oversizedSegments
             )
         )
     );
@@ -861,6 +864,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
     List<String> actualInputs = actualParseExceptionReports
         .stream().map(ParseExceptionReport::getInput).collect(Collectors.toList());
+    Assertions.assertEquals(expectedPayload.getOversizedSegments(), actualPayload.getOversizedSegments());
     Assertions.assertEquals(expectedInputs, actualInputs);
   }
 

@@ -240,7 +240,7 @@ name: AWS SDK for Java 2
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.54.3
+version: 2.54.7
 libraries:
   - software.amazon.awssdk: annotations
   - software.amazon.awssdk: apache-client
@@ -927,7 +927,7 @@ name: DropWizard Metrics Core
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.39
+version: 4.2.40
 libraries:
   - io.dropwizard.metrics: metrics-core
 
@@ -1322,7 +1322,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -1332,7 +1332,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions-core/kubernetes-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -1918,7 +1918,7 @@ name: jackson-jq
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.6.2
+version: 1.6.3
 libraries:
   - net.thisptr: jackson-jq
 
@@ -2359,9 +2359,17 @@ name: AsyncHttpClient asynchttpclient
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.0.11
+version: 3.0.13
 libraries:
   - org.asynchttpclient: async-http-client
+
+---
+
+name: Public Suffix List bundled by AsyncHttpClient
+license_category: binary
+module: java-core
+license_name: Mozilla Public License Version 2.0
+license_file_path: licenses/bin/public-suffix-list.MPL2
 
 ---
 
@@ -2727,7 +2735,7 @@ name: OSHI
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 7.5.0
+version: 7.6.0
 libraries:
   - com.github.oshi: oshi-core
   - com.github.oshi: oshi-common
@@ -3420,7 +3428,7 @@ name: org.yaml snakeyaml
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: Apache License version 2.0
-version: 2.5
+version: 2.7
 libraries:
   - org.yaml: snakeyaml
 
@@ -4505,7 +4513,7 @@ name: Google Storage Client Library For Java
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache-2.0
-version: 2.71.0
+version: 2.72.0
 libraries:
   - com.google.cloud: google-cloud-storage
 
@@ -4515,7 +4523,7 @@ name: Google Cloud Storage API
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.66.0
+version: 2.67.0
 libraries:
   - com.google.api: api-common
 
@@ -4606,6 +4614,20 @@ license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-2-Clause License
 version: 4.2.2
+copyright: 2008+, FasterXML, LLC
+license_file_path: licenses/bin/stax2-api.BSD2
+libraries:
+  - org.codehaus.woodstox: stax2-api
+
+---
+
+name: stax2-api
+license_category: binary
+module: extensions/druid-iceberg-extensions
+license_name: BSD-2-Clause License
+version: 4.3.0
+copyright: 2008+, FasterXML, LLC
+license_file_path: licenses/bin/stax2-api.BSD2
 libraries:
   - org.codehaus.woodstox: stax2-api
 
@@ -4625,7 +4647,7 @@ name: gax
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 2.83.0
+version: 2.84.0
 libraries:
   - com.google.api: gax
   - com.google.api: gax-grpc
@@ -4637,7 +4659,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.71.0
+version: 2.72.0
 libraries:
   - com.google.api.grpc: gapic-google-cloud-storage-v2
   - com.google.api.grpc: grpc-google-cloud-storage-v2
@@ -4649,7 +4671,7 @@ name: grpc-io
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.82.4
 libraries:
   - io.grpc: grpc-alts
   - io.grpc: grpc-auth
@@ -4693,7 +4715,7 @@ name: proto-google-common-protos
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.74.0
+version: 2.75.0
 libraries:
   - com.google.api.grpc: proto-google-common-protos
 
@@ -4703,7 +4725,7 @@ name: proto-google-iam-v1
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.69.0
+version: 1.70.0
 libraries:
   - com.google.api.grpc: proto-google-iam-v1
 
@@ -4713,7 +4735,7 @@ name: google-auth
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: BSD-3-Clause License
-version: 1.50.0
+version: 1.51.0
 libraries:
   - com.google.auth: google-auth-library-credentials
   - com.google.auth: google-auth-library-oauth2-http
@@ -4734,7 +4756,7 @@ name: google-cloud
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.73.0
+version: 2.74.0
 libraries:
   - com.google.cloud: google-cloud-core
   - com.google.cloud: google-cloud-core-grpc
@@ -4778,7 +4800,7 @@ name: google-grpc
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.82.2
+version: 1.82.4
 libraries:
   - io.grpc: grpc-grpclb
 
@@ -4799,7 +4821,7 @@ name: conscrypt-openjdk-uber
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 2.6.0
+version: 2.6.2
 libraries:
   - org.conscrypt: conscrypt-openjdk-uber
 

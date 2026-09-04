@@ -61,6 +61,7 @@ public class CreateTablesTest
     Assertions.assertFalse(tableExists(config.getAuditTable()));
     Assertions.assertFalse(tableExists(config.getSupervisorTable()));
     Assertions.assertFalse(tableExists(config.getTaskLockTable()));
+    Assertions.assertFalse(tableExists(config.getIndexingStatesTable()));
 
     // Run CreateTables
     CreateTables createTables = new CreateTables()
@@ -85,6 +86,7 @@ public class CreateTablesTest
     Assertions.assertTrue(tableExists(config.getAuditTable()));
     Assertions.assertTrue(tableExists(config.getSupervisorTable()));
     Assertions.assertTrue(tableExists(config.getTaskLockTable()));
+    Assertions.assertTrue(tableExists(config.getIndexingStatesTable()));
   }
 
   private boolean tableExists(String tableName)

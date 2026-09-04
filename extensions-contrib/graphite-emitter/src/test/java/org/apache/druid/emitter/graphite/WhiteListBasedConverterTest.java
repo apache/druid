@@ -22,8 +22,10 @@ package org.apache.druid.emitter.graphite;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -31,11 +33,16 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Objects;
 
 
 public class WhiteListBasedConverterTest
 {
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
   private static final String PREFIX = "druid";
   private static final String HOSTNAME = "testHost.yahoo.com:8080";
   private static final String SERVICE_NAME = "historical";
@@ -98,14 +105,16 @@ public class WhiteListBasedConverterTest
   @Test
   public void testWhiteListedStringArrayDimension() throws IOException
   {
-    File mapFile = File.createTempFile("testing-" + System.nanoTime(), ".json");
-    mapFile.deleteOnExit();
+    final File mapFile = temporaryFolder.newFile("whiteList.json");
 
-    try (OutputStream outputStream = new FileOutputStream(mapFile)) {
-      IOUtils.copyLarge(
-          getClass().getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
-          outputStream
-      );
+    try (
+        final InputStream inputStream = Objects.requireNonNull(
+            WhiteListBasedConverterTest.class.getResourceAsStream("/testWhiteListedStringArrayDimension.json"),
+            "Missing test resource: /testWhiteListedStringArrayDimension.json"
+        );
+        final OutputStream outputStream = new FileOutputStream(mapFile)
+    ) {
+      IOUtils.copyLarge(inputStream, outputStream);
     }
 
     WhiteListBasedConverter converter = new WhiteListBasedConverter(

@@ -193,8 +193,11 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   public <T> QueryableDruidServer pick(@Nullable Query<T> query, CloneQueryMode cloneQueryMode)
   {
     synchronized (this) {
-      if (!historicalServers.isEmpty()) {
-        return historicalTierStrategy.pick(query, filter.getQueryableServers(historicalServers, cloneQueryMode), segment.get());
+      final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> queryableHistoricals =
+          filter.getQueryableServers(historicalServers, cloneQueryMode);
+
+      if (hasAnyServers(queryableHistoricals)) {
+        return historicalTierStrategy.pick(query, queryableHistoricals, segment.get());
       }
       return realtimeTierStrategy.pick(query, realtimeServers, segment.get());
     }
@@ -252,5 +255,20 @@ public class ServerSelector implements Overshadowable<ServerSelector>
     synchronized (this) {
       return (!realtimeServers.isEmpty()) && historicalServers.isEmpty();
     }
+  }
+
+  /**
+   * Whether the given priority-to-servers map holds at least one server.
+   */
+  private static boolean hasAnyServers(final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> servers)
+  {
+    for (final Set<QueryableDruidServer> priorityServers : servers.values()) {
+      if (!priorityServers.isEmpty()) {
+        return true;
+      }
+    }
+
+    // No sets, or all sets were empty.
+    return false;
   }
 }

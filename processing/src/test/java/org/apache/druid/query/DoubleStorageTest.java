@@ -27,7 +27,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
@@ -59,12 +58,14 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -132,6 +133,9 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   private QueryableIndex index;
   private final SegmentAnalysis expectedSegmentAnalysis;
   private final String storeDoubleAs;
+
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   public DoubleStorageTest(
       String storeDoubleAs,
@@ -256,7 +260,7 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
   @BeforeEach
   public void setup() throws IOException
   {
-    index = buildIndex(storeDoubleAs);
+    index = buildIndex(storeDoubleAs, temporaryFolder.newFolder());
   }
 
   @Test
@@ -318,7 +322,8 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     ScanQueryRunnerTest.verify(expectedResults, results);
   }
 
-  private static QueryableIndex buildIndex(String storeDoubleAsFloat) throws IOException
+  private static QueryableIndex buildIndex(final String storeDoubleAsFloat, final File indexDirectory)
+      throws IOException
   {
     String oldValue = System.getProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY);
     System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, storeDoubleAsFloat);
@@ -351,12 +356,8 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
     } else {
       System.setProperty(ColumnHolder.DOUBLE_STORAGE_TYPE_PROPERTY, oldValue);
     }
-    File someTmpFile = File.createTempFile("billy", "yay");
-    someTmpFile.delete();
-    FileUtils.mkdirp(someTmpFile);
-    INDEX_MERGER_V9.persist(index, someTmpFile, IndexSpec.getDefault(), null);
-    someTmpFile.delete();
-    return INDEX_IO.loadIndex(someTmpFile);
+    INDEX_MERGER_V9.persist(index, indexDirectory, IndexSpec.getDefault(), null);
+    return INDEX_IO.loadIndex(indexDirectory);
   }
 
   @AfterEach

@@ -63,14 +63,6 @@ public interface MetadataStorageConnector
     throw new UnsupportedOperationException("compareAndSwap is not implemented.");
   }
 
-  default void exportTable(
-      String tableName,
-      String outputPath
-  )
-  {
-    throw new UnsupportedOperationException("exportTable is not implemented.");
-  }
-
   void createDataSourceTable();
 
   void createPendingSegmentsTable();
