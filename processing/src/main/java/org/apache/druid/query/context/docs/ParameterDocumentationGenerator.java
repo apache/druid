@@ -90,6 +90,9 @@ public final class ParameterDocumentationGenerator
   {
     final Map<String, Map<String, String>> rowsByDocument = new LinkedHashMap<>();
     for (final QueryContextParameter<?> parameter : QueryContextParameters.ALL.get().values()) {
+      if (parameter.isInternal()) {
+        continue;
+      }
       final ParameterDocumentation docs = parameter.getDocumentation().orElse(null);
       if (docs == null) {
         continue;

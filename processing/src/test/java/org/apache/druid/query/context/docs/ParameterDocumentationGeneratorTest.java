@@ -84,6 +84,7 @@ class ParameterDocumentationGeneratorTest
     assertTrue(sql.startsWith("sql header\n"));
     assertTrue(sql.contains("|`sqlQueryId`|"));
     assertTrue(sql.contains(SQL_MARKER));
+    assertFalse(sql.contains("dartQueryId"));
 
     assertEquals(general, Files.readString(generatedOutput.resolve(GENERAL_DOCUMENT), StandardCharsets.UTF_8));
     assertEquals(scan, Files.readString(generatedOutput.resolve(SCAN_DOCUMENT), StandardCharsets.UTF_8));
@@ -191,6 +192,9 @@ class ParameterDocumentationGeneratorTest
   {
     final StringBuilder output = new StringBuilder(document);
     for (final QueryContextParameter<?> parameter : QueryContextParameters.BY_NAME.values()) {
+      if (parameter.isInternal()) {
+        continue;
+      }
       final ParameterDocumentation docs = parameter.getDocumentation().orElse(null);
       if (docs == null) {
         continue;

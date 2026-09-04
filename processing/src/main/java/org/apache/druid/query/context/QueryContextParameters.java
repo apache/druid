@@ -740,6 +740,11 @@ public final class QueryContextParameters
   public static final QueryContextParameter<String> QUERY_RESOURCE_ID =
       stringParameter("queryResourceId").build();
 
+  /*
+   * SQL query context parameters.
+   *
+   * The descriptors below are documented in sql-query-context.md when they are applicable only to SQL.
+   */
   public static final QueryContextParameter<String> SQL_QUERY_ID =
       stringParameter("sqlQueryId")
           .description(
@@ -942,8 +947,16 @@ public final class QueryContextParameters
           .engine(Engine.NATIVE, Engine.MSQ, Engine.DART)
           .build();
 
+  /*
+   * Internal query context parameters.
+   *
+   * These descriptors are used for Druid-internal coordination and are not included in public query-context tables.
+   */
   public static final QueryContextParameter<String> DART_QUERY_ID =
-      stringParameter("dartQueryId").build();
+      stringParameter("dartQueryId")
+          .internal()
+          .since("35.0.0")
+          .build();
 
   public static final QueryContextParameter<Boolean> FULL_REPORT = booleanParameter("fullReport")
       .defaultValue(QueryContexts.DEFAULT_CTX_FULL_REPORT)

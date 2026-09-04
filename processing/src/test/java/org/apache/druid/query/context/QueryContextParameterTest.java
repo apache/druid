@@ -301,6 +301,36 @@ class QueryContextParameterTest
   }
 
   @Test
+  void testInternalParameterGetsGeneratedDocumentation()
+  {
+    final QueryContextParameter<String> parameter = QueryContextParameter
+        .builder("internalParameter", String.class, value -> String.valueOf(value))
+        .internal()
+        .since("39.0.0")
+        .build();
+
+    assertTrue(parameter.isInternal());
+    final ParameterDocumentation documentation = parameter.getDocumentation().orElseThrow();
+    assertEquals(
+        "System generated description: Internal query context parameter `internalParameter`.",
+        documentation.getDescription()
+    );
+    assertEquals("39.0.0", documentation.getSince().orElseThrow());
+  }
+
+  @Test
+  void testInternalParameterRequiresSince()
+  {
+    assertThrows(
+        IAE.class,
+        () -> QueryContextParameter
+            .builder("internalParameter", String.class, value -> String.valueOf(value))
+            .internal()
+            .build()
+    );
+  }
+
+  @Test
   void testRejectsInvalidName()
   {
     assertThrows(
