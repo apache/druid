@@ -106,12 +106,34 @@ public class Stats
 
   public static class Tier
   {
+    /**
+     * The demand the rules place on the tier to full load all segments.
+     */
     public static final CoordinatorStat REQUIRED_CAPACITY
         = CoordinatorStat.toDebugAndEmit("reqdCap", "tier/required/capacity");
+    /**
+     * The total assignable capacity of the tier defined by summing the configured max size of all servers in the tier.
+     */
+    public static final CoordinatorStat ASSIGNABLE_CAPACITY
+        = CoordinatorStat.toDebugAndEmit("assignableCap", "tier/assignable/capacity");
+    /**
+     * Superseded by ASSIGNABLE_CAPACITY, which carries the same value under a name that says it is an assignment
+     * budget rather than physical disk. Still emitted so existing dashboards keep working; remove after deprecation.
+     */
+    @Deprecated
     public static final CoordinatorStat TOTAL_CAPACITY
         = CoordinatorStat.toDebugAndEmit("totalCap", "tier/total/capacity");
+    /**
+     * Aggregate physical disk capacity of the tier.
+     */
     public static final CoordinatorStat STORAGE_CAPACITY
         = CoordinatorStat.toDebugAndEmit("storageCap", "tier/storage/capacity");
+    /**
+     * Actual physical disk consumed by the tier. Only reports realized bytes on disk, so partial loads when using
+     * virtual storage report their true loaded size, which can be less than the full segment size.
+     */
+    public static final CoordinatorStat USED_STORAGE
+        = CoordinatorStat.toDebugAndEmit("usedStorage", "tier/storage/used");
     public static final CoordinatorStat REPLICATION_FACTOR
         = CoordinatorStat.toDebugAndEmit("maxRepFactor", "tier/replication/factor");
     public static final CoordinatorStat HISTORICAL_COUNT
