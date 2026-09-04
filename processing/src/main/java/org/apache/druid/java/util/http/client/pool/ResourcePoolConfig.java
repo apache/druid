@@ -32,7 +32,7 @@ public class ResourcePoolConfig
       long unusedConnectionTimeoutMillis
   )
   {
-    this(maxPerKey, unusedConnectionTimeoutMillis, ResourcePool.Implementation.SHRINKING);
+    this(maxPerKey, unusedConnectionTimeoutMillis, ResourcePool.Implementation.ADAPTIVE);
   }
 
   public ResourcePoolConfig(

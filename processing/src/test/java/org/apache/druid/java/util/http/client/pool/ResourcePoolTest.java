@@ -103,17 +103,17 @@ public class ResourcePoolTest
     );
   }
 
-  private boolean isShrinkingPool()
+  private boolean isAdaptivePool()
   {
-    return poolImplementation == ResourcePool.Implementation.SHRINKING;
+    return poolImplementation == ResourcePool.Implementation.ADAPTIVE;
   }
 
   /**
-   * Skips a test that pins behaviour only {@link ResourcePool.Implementation#SHRINKING} provides.
+   * Skips a test that pins behaviour only {@link ResourcePool.Implementation#ADAPTIVE} provides.
    */
-  private void assumeShrinkingPool()
+  private void assumeAdaptivePool()
   {
-    Assume.assumeTrue("only the shrinking pool satisfies this", isShrinkingPool());
+    Assume.assumeTrue("only the adaptive pool satisfies this", isAdaptivePool());
   }
 
   @Test
@@ -326,7 +326,7 @@ public class ResourcePoolTest
     EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(false).times(1);
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
-    if (isShrinkingPool()) {
+    if (isAdaptivePool()) {
       // The next idle resource is tried before opening a new connection.
       EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
     } else {
@@ -335,7 +335,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals(isShrinkingPool() ? "billy0" : "billy2", billy.get());
+    Assert.assertEquals(isAdaptivePool() ? "billy0" : "billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -504,7 +504,7 @@ public class ResourcePoolTest
     //make sure resources have been timed out.
     Thread.sleep(100);
 
-    if (isShrinkingPool()) {
+    if (isAdaptivePool()) {
       // Both parked resources (billy0, billy1) are stale, so a single take() purges both before opening one
       // validated replacement.
       resourceFactory.close("billy0");
@@ -521,7 +521,7 @@ public class ResourcePoolTest
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals(isShrinkingPool() ? "billy2" : "billy1", billy.get());
+    Assert.assertEquals(isAdaptivePool() ? "billy2" : "billy1", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -536,7 +536,7 @@ public class ResourcePoolTest
   @Test
   public void testExpiredResourcesArePurgedAndPoolShrinks() throws Exception
   {
-    assumeShrinkingPool();
+    assumeAdaptivePool();
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
     pool = createPool(2, TimeUnit.MILLISECONDS.toMillis(100), true);
 
@@ -596,7 +596,7 @@ public class ResourcePoolTest
   @Test
   public void testDeadResourcesArePurgedInOneTake()
   {
-    assumeShrinkingPool();
+    assumeAdaptivePool();
     primePool();
 
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(false).anyTimes();
@@ -625,7 +625,7 @@ public class ResourcePoolTest
   @Test
   public void testResourceIsClosedWhenIsGoodThrows() throws Exception
   {
-    assumeShrinkingPool();
+    assumeAdaptivePool();
     primePool();
 
     EasyMock.expect(resourceFactory.isGood("billy1")).andThrow(new ISE("health check blew up")).times(1);
@@ -667,7 +667,7 @@ public class ResourcePoolTest
   @Test
   public void testCloseFailureWhileEvictingExpiredResources() throws Exception
   {
-    assumeShrinkingPool();
+    assumeAdaptivePool();
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
     pool = createPool(2, TimeUnit.SECONDS.toMillis(1), true);
@@ -722,7 +722,7 @@ public class ResourcePoolTest
   @Test
   public void testEagerInitializationFailureClosesAlreadyCreatedResources()
   {
-    assumeShrinkingPool();
+    assumeAdaptivePool();
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy0").times(1);
     EasyMock.expect(resourceFactory.generate("billy")).andThrow(new ISE("no more billies")).times(1);
     resourceFactory.close("billy0");
@@ -750,7 +750,7 @@ public class ResourcePoolTest
   @Test
   public void testNullGeneratedResourceFailsTheTake_lazy() throws Exception
   {
-    assumeShrinkingPool();
+    assumeAdaptivePool();
     setUpPoolWithoutEagerInitialization();
 
     EasyMock.expect(resourceFactory.generate("billy")).andReturn(null).times(1);
@@ -938,7 +938,7 @@ public class ResourcePoolTest
     // Any close() of a sally resource here would be an unexpected call on the mock.
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
-    if (isShrinkingPool()) {
+    if (isAdaptivePool()) {
       resourceFactory.close("billy0");
       EasyMock.expectLastCall();
       EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);

@@ -164,10 +164,10 @@ public class ResourcePool<K, V> implements Closeable
   public enum Implementation
   {
     /**
-     * Discards every stale or broken resource a taker walks past, letting the pool fall back to the size the traffic
-     * needs. Holds no lock while creating, validating or closing resources.
+     * Follows demand: a taker discards every stale or broken resource it walks past, so the pool falls back to the
+     * size the traffic needs. Holds no lock while creating, validating or closing resources.
      */
-    SHRINKING {
+    ADAPTIVE {
       @Override
       <K, V> PooledResources<V> create(
           ResourcePoolConfig config,
@@ -176,7 +176,7 @@ public class ResourcePool<K, V> implements Closeable
           boolean eagerInitialization
       )
       {
-        final ShrinkingResourceHolderPerKey<K, V> resources = new ShrinkingResourceHolderPerKey<>(
+        final AdaptiveResourceHolderPerKey<K, V> resources = new AdaptiveResourceHolderPerKey<>(
             config.getMaxPerKey(),
             config.getUnusedConnectionTimeoutMillis(),
             key,
@@ -190,10 +190,11 @@ public class ResourcePool<K, V> implements Closeable
     },
 
     /**
-     * Replaces a stale or broken resource with a fresh one, one for one, and only once it has reached the front of the
-     * queue, so the pool stays at its high-water mark. Guards the resources of a key with its monitor.
+     * Never gives up a resource it has opened: a stale or broken one is replaced by a fresh one, one for one, and only
+     * once it has reached the front of the queue, so the pool stays at its high-water mark. Guards the resources of a
+     * key with its monitor.
      */
-    REPLACING {
+    RETAINING {
       @Override
       <K, V> PooledResources<V> create(
           ResourcePoolConfig config,
@@ -458,7 +459,7 @@ public class ResourcePool<K, V> implements Closeable
    * A taker discards every stale or broken resource it walks past rather than one per take, so the pool shrinks to
    * what the traffic needs instead of reconnecting one for one.
    */
-  private static class ShrinkingResourceHolderPerKey<K, V> extends PooledResources<V>
+  private static class AdaptiveResourceHolderPerKey<K, V> extends PooledResources<V>
   {
     /**
      * Released on close to wake every parked taker at once. Half of the range so that the permits still outstanding
@@ -474,7 +475,7 @@ public class ResourcePool<K, V> implements Closeable
     private final Deque<ResourceHolder<V>> idleResources = new ConcurrentLinkedDeque<>();
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    private ShrinkingResourceHolderPerKey(
+    private AdaptiveResourceHolderPerKey(
         int maxSize,
         long unusedResourceTimeoutMillis,
         K key,
