@@ -52,8 +52,8 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationResult;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
-import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -326,13 +326,14 @@ public class PlannerContext
   }
 
   /**
-   * Returns the {@link ResourceType} string for a particular resource (e.g. table, view) located in a
-   * particular schema. If null, there is no authorization associated with the named resource.
+   * Returns the {@link Resource} to authorize against for a particular resource (e.g. table, view) located in a
+   * particular schema. If null, there is no authorization associated with the named resource (all authenticated
+   * users may access it).
    */
   @Nullable
-  public String getSchemaResourceType(String schema, String resourceName)
+  public Resource getSchemaResource(String schema, String resourceName)
   {
-    return rootSchema.getResourceType(schema, resourceName);
+    return rootSchema.getResource(schema, resourceName);
   }
 
   /**

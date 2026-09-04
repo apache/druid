@@ -42,6 +42,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
@@ -114,8 +115,10 @@ public class CalcitePlannerModuleTest extends CalciteTestBase
     EasyMock.expect(druidSchema2.getSchema()).andStubReturn(schema2);
     EasyMock.expect(druidSchema1.getSchemaName()).andStubReturn(SCHEMA_1);
     EasyMock.expect(druidSchema2.getSchemaName()).andStubReturn(SCHEMA_2);
-    EasyMock.expect(druidSchema1.getSchemaResourceType(EasyMock.anyString())).andStubReturn(ResourceType.DATASOURCE);
-    EasyMock.expect(druidSchema2.getSchemaResourceType(EasyMock.anyString())).andStubReturn("test");
+    EasyMock.expect(druidSchema1.getSchemaResource(EasyMock.anyString()))
+            .andStubReturn(new Resource("resource", ResourceType.DATASOURCE));
+    EasyMock.expect(druidSchema2.getSchemaResource(EasyMock.anyString()))
+            .andStubReturn(new Resource("resource", "test"));
     EasyMock.replay(druidSchema1, druidSchema2);
     aggregators = ImmutableSet.of();
     operatorConversions = ImmutableSet.of();
