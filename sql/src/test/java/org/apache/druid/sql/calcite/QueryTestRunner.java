@@ -278,7 +278,7 @@ public class QueryTestRunner
                                                   .queryContext(builder.queryContext)
                                                   .build();
 
-        final QueryContexts.Vectorize vectorizeOption = QueryContexts.Vectorize.fromString(vectorize);
+        final QueryContexts.Vectorize vectorizeOption = QueryContextParameters.VECTORIZE.parse(vectorize);
         final Map<String, Object> theQueryContext = new HashMap<>(sqlQuery.context());
         QueryContextParameters.VECTORIZE.set(theQueryContext, vectorizeOption);
         QueryContextParameters.VECTORIZE_VIRTUAL_COLUMNS.set(theQueryContext, vectorizeOption);
