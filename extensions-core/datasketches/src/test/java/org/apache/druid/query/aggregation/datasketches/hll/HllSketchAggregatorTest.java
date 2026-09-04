@@ -86,7 +86,7 @@ public class HllSketchAggregatorTest extends InitializedNullHandlingTest
     timeseriesHelper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelperWithTempDir(
         new HllSketchModule().getJacksonModules(), timeseriesFolder
     );
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
+    this.vectorize = QueryContextParameters.VECTORIZE.parse(vectorize);
     this.stringEncoding = stringEncoding;
   }
 

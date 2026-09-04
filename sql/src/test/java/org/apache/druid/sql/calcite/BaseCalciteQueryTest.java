@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.error.DruidException;
@@ -179,7 +178,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
                   .putRaw(QueryContexts.CTX_SQL_QUERY_ID, DUMMY_SQL_ID)
                   .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, "2000-01-01T00:00:00Z")
                   .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-                  .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+                  .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
                   .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_NO_STRINGIFY_ARRAY =
@@ -198,7 +197,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, false)
       .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_DO_SKIP_EMPTY_BUCKETS = QueryContext.builder()
@@ -206,7 +205,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
       .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_LEXICOGRAPHIC_TOPN =
@@ -220,7 +219,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .putRaw(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, "false")
       .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_LOS_ANGELES = QueryContext.builder()
@@ -228,7 +227,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .putRaw(PlannerContext.CTX_SQL_TIME_ZONE, LOS_ANGELES)
       .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .toMap();
 
   // Matches QUERY_CONTEXT_DEFAULT
@@ -237,7 +236,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       .putRaw(PlannerContext.CTX_SQL_CURRENT_TIMESTAMP, PRETEND_CURRENT_TIME)
       .put(QueryContextParameters.SKIP_EMPTY_BUCKETS, true)
       .putRaw(QueryContexts.DEFAULT_TIMEOUT_KEY, QueryContexts.DEFAULT_TIMEOUT_MILLIS)
-      .putRaw(QueryContexts.MAX_SCATTER_GATHER_BYTES_KEY, Long.MAX_VALUE)
+      .put(QueryContextParameters.MAX_SCATTER_GATHER_BYTES, Long.MAX_VALUE)
       .toMap();
 
   public static final Map<String, Object> QUERY_CONTEXT_WITH_SUBQUERY_MEMORY_LIMIT =
@@ -1312,49 +1311,49 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         // default behavior
         Named.of("default", QUERY_CONTEXT_DEFAULT),
         // all rewrites enabled
-        Named.of("all_enabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("all_enabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+            .putRaw(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .toMap()),
         // filter-on-value-column rewrites disabled, everything else enabled
-        Named.of("filter-on-value-column_disabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("filter-on-value-column_disabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+            .putRaw(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .toMap()),
         // filter rewrites fully disabled, join-to-filter enabled
-        Named.of("join-to-filter", new ImmutableMap.Builder<String, Object>()
+        Named.of("join-to-filter", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+            .putRaw(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .toMap()),
         // filter rewrites disabled, but value column filters still set to true
         // (it should be ignored and this should
         // behave the same as the previous context)
-        Named.of("filter-rewrites-disabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("filter-rewrites-disabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
-            .build()),
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+            .putRaw(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, true)
+            .toMap()),
         // filter rewrites fully enabled, join-to-filter disabled
-        Named.of("filter-rewrites", new ImmutableMap.Builder<String, Object>()
+        Named.of("filter-rewrites", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
-            .build()),
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, true)
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, true)
+            .putRaw(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
+            .toMap()),
         // all rewrites disabled
-        Named.of("all_disabled", new ImmutableMap.Builder<String, Object>()
+        Named.of("all_disabled", QueryContext.builder()
             .putAll(QUERY_CONTEXT_DEFAULT)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
-            .put(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
-            .put(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
-            .build()),
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_VALUE_COLUMN_FILTERS_ENABLE_KEY, false)
+            .putRaw(QueryContexts.JOIN_FILTER_REWRITE_ENABLE_KEY, false)
+            .putRaw(QueryContexts.REWRITE_JOIN_TO_FILTER_ENABLE_KEY, false)
+            .toMap()),
     };
   }
 
