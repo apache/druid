@@ -81,6 +81,13 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
   @GuardedBy("this")
   private Throwable error = null;
 
+  /**
+   * Whether {@link #close()} happened before the resource became available, i.e. acquisition was canceled. Such a
+   * resource is complete: {@link #isReady()} is true and {@link #get()} throws {@link AsyncResourceCanceledException}.
+   */
+  @GuardedBy("this")
+  private boolean canceled = false;
+
   @GuardedBy("this")
   private State state = State.NEW;
 
@@ -127,7 +134,7 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
    * the canceler from {@link #setCanceler(Runnable)}.
    *
    * <p>If this method returns false, the resource was already closed: the producer is responsible for closing the
-   * resource itself, and the callbacks that {@link #close()} dropped do not fire.
+   * resource itself. The pending callbacks already fired when {@link #close()} canceled acquisition.
    *
    * <p>Throws {@link DruidException} if this resource was already completed from a prior call to this method or
    * {@link #setException}).
@@ -170,8 +177,8 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
    * {@link #addReadyCallback(Runnable)}. Afterwards, {@link #close()} will no longer call the canceler from
    * {@link #setCanceler(Runnable)}.
    *
-   * <p>If the resource was already closed, the error is logged at debug and otherwise dropped, and the callbacks that
-   * {@link #close()} dropped do not fire.
+   * <p>If the resource was already closed, the error is logged at debug and otherwise dropped: the consumer already
+   * learned that acquisition was canceled when {@link #close()} fired the pending callbacks.
    *
    * <p>Throws {@link DruidException} if this resource was already completed from a prior call to this method or
    * {@link #set}).
@@ -184,7 +191,8 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
   @Override
   public synchronized boolean isReady()
   {
-    return state == State.READY;
+    // a closed resource is complete too (acquisition is over and get() reports why)
+    return state == State.READY || state == State.CLOSED;
   }
 
   @Override
@@ -203,7 +211,12 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
         }
       }
       case RELEASED -> throw DruidException.defensive("Resource has been released");
-      case CLOSED -> throw DruidException.defensive("Closed");
+      case CLOSED -> {
+        if (canceled) {
+          throw new AsyncResourceCanceledException("Resource acquisition was canceled by close()");
+        }
+        throw DruidException.defensive("Closed");
+      }
     };
   }
 
@@ -219,8 +232,8 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
    * {@link AsyncResources#collect}, {@link AsyncResources#transform}, etc. These combinators will fail to properly
    * encapsulate resource lifecycle if resources have been released.
    *
-   * <p>Throws {@link DruidException} if the holder is not yet ready, has already been released, or if
-   * {@link #close()} has been called.
+   * <p>Throws {@link DruidException} if the holder is not yet ready, has already been released, or was closed after
+   * becoming ready. Throws {@link AsyncResourceCanceledException} if {@link #close()} canceled acquisition first.
    */
   protected synchronized T release()
   {
@@ -258,6 +271,7 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
   public void close()
   {
     final Closeable deferredCloseable;
+    final List<Runnable> callbacksToFire;
 
     synchronized (this) {
       deferredCloseable = switch (state) {
@@ -267,11 +281,12 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
         default -> throw DruidException.defensive("Already closed");
       };
 
-      // Clear result and canceler to allow GC. Dropping the pending ready callbacks ensures they are not fired if
-      // close() was called before set/setException.
+      canceled = state == State.NEW;
+      callbacksToFire = drainCallbacks();
+
+      // Clear result and canceler to allow GC.
       result = null;
       canceler = null;
-      readyCallbacks.clear();
       state = State.CLOSED;
     }
 
@@ -279,6 +294,8 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
         deferredCloseable,
         e -> LOG.warn(e, "Failed to call cleaner of class[%s]", deferredCloseable.getClass())
     );
+
+    fireCallbacks(callbacksToFire);
   }
 
   @GuardedBy("this")
@@ -316,8 +333,8 @@ public class SettableAsyncResource<T> implements AsyncResource<T>
     }
 
     if (!didSet && value.isError()) {
-      // Nothing will ever surface this error: get() on a closed resource throws "Closed" and the callbacks are gone,
-      // so debug log it rather than let a failure that lost a race with close() vanish.
+      // Nothing will ever surface this error: the callbacks already fired at close() and get() reports the
+      // cancellation, so debug log it rather than let a failure that lost a race with close() vanish.
       LOG.debug(value.error(), "Resource failed after close().");
     }
 

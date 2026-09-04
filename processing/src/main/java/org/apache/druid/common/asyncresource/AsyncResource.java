@@ -76,16 +76,17 @@ import java.util.concurrent.TimeoutException;
 public interface AsyncResource<T> extends Closeable
 {
   /**
-   * Whether resource acquisition has completed (successfully or with failure). To wait for this to become true
-   * asynchronously, use {@link #addReadyCallback(Runnable)}. To block until readiness, use {@link #await()}
-   * or {@link #await(long)}.
+   * Whether resource acquisition has completed (successfully, with failure, or canceled by {@link #close()}). To wait
+   * for this to become true asynchronously, use {@link #addReadyCallback(Runnable)}. To block until readiness, use
+   * {@link #await()} or {@link #await(long)}.
    */
   boolean isReady();
 
   /**
    * Register a callback to fire when {@link #isReady()} becomes true (whether the load succeeded or failed). If the
-   * holder is already ready, the callback fires immediately in the calling thread. Callbacks are not fired if
-   * {@link #close()} is called prior to the resource becoming available.
+   * holder is already ready, the callback fires immediately in the calling thread. Callbacks also fire when
+   * {@link #close()} cancels acquisition before the resource became available, so that a waiting consumer learns it
+   * was aborted; {@link #get()} then throws {@link AsyncResourceCanceledException}.
    *
    * <p>Because of the fires-immediately case, the callback can run on the REGISTERING thread, not just on whatever
    * thread completes the resource, so a callback must not do blocking or expensive work (I/O, deserialization)
@@ -98,8 +99,9 @@ public interface AsyncResource<T> extends Closeable
   /**
    * Retrieve the underlying object. May be called any number of times, and the same object will be returned.
    *
-   * <p>Throws {@link DruidException} if the underlying object is not ready or if {@link #close()} has been called.
-   * Also throws an exception if the resource acquisition failed.
+   * <p>Throws {@link AsyncResourceCanceledException} if {@link #close()} canceled acquisition before it completed, and
+   * {@link DruidException} if the underlying object is not ready or was closed after becoming ready. Also throws an
+   * exception if the resource acquisition failed.
    */
   T get();
 
@@ -107,10 +109,10 @@ public interface AsyncResource<T> extends Closeable
    * Block until {@link #isReady()} returns true. Does not close the resource if interrupted; callers must still
    * call {@link #close()}.
    *
-   * <p>Throws {@link DruidException} if {@link #close()} has been called prior to this method.
+   * <p>A {@link #close()} that cancels acquisition wakes the waiter, which then throws
+   * {@link AsyncResourceCanceledException}.
    *
-   * <p>Must not be used when another thread may {@link #close()} this resource: a close does not wake an awaiting
-   * thread, so this method would block forever.
+   * <p>Throws {@link DruidException} if {@link #close()} has been called prior to this method.
    */
   default T await() throws InterruptedException
   {
@@ -124,10 +126,10 @@ public interface AsyncResource<T> extends Closeable
    * Block until {@link #isReady()} returns true, up to some timeout. Does not close the resource if interrupted
    * or if waiting times out; callers must still call {@link #close()}.
    *
-   * <p>Throws {@link DruidException} if {@link #close()} has been called prior to this method.
+   * <p>A {@link #close()} that cancels acquisition wakes the waiter, which then throws
+   * {@link AsyncResourceCanceledException}.
    *
-   * <p>Must not be used when another thread may {@link #close()} this resource: a close does not wake an awaiting
-   * thread, so this method would wait out the full timeout.
+   * <p>Throws {@link DruidException} if {@link #close()} has been called prior to this method.
    */
   default T await(long timeoutMillis) throws InterruptedException, TimeoutException
   {
@@ -141,8 +143,10 @@ public interface AsyncResource<T> extends Closeable
 
   /**
    * Closes the resource if it is ready, and has not been released by {@link SettableAsyncResource#release()}.
-   * If acquisition is still in progress, it is canceled if possible and any pending
-   * {@link #addReadyCallback(Runnable)} callbacks are dropped without ever firing.
+   * If acquisition is still in progress, it is canceled if possible, and any pending
+   * {@link #addReadyCallback(Runnable)} callbacks fire so that waiting consumers learn acquisition was aborted
+   * instead of waiting for a completion that will never come. {@link #isReady()} then returns true and
+   * {@link #get()} throws {@link AsyncResourceCanceledException}.
    *
    * <p>Despite {@link Closeable} requiring this method to be idempotent, it is not necessarily
    * going to be idempotent. Do not close more than once.

@@ -171,6 +171,9 @@ public class AsyncResources
    * given a chance to substitute a fallback value. Recovery generally happens eagerly in the thread that provides
    * the source resource, so it is important that it run quickly.
    *
+   * <p>The {@code recoverFn} is not called when the source was canceled by {@link AsyncResource#close()}: there is
+   * no consumer left to recover for.
+   *
    * <p>When recovery happens, the {@code sourceResource} is closed immediately. Otherwise, the {@code sourceResoruce}
    * is closed when the resource returned by this function is closed.
    *

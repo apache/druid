@@ -22,6 +22,7 @@ package org.apache.druid.common.asyncresource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -141,10 +142,56 @@ public class RecoverAsyncResourceTest
     // Close the wrapper while the source is still pending.
     recovering.close();
     Assertions.assertEquals(1, source.closeCount.get());
-    Assertions.assertFalse(recovering.isReady());
+    // Canceled acquisition completes the resource, so waiting consumers stop waiting.
+    Assertions.assertTrue(recovering.isReady());
 
     // Completing the source after close is a no-op and must not throw.
     Assertions.assertFalse(source.delegate.set("late", null));
+  }
+
+  @Test
+  public void testCloseCancellationIsNotRecoveredFrom()
+  {
+    final TrackingAsyncResource<String> source = new TrackingAsyncResource<>();
+    final AtomicInteger recoveryCalls = new AtomicInteger();
+
+    final AsyncResource<String> recovering = AsyncResources.recover(
+        source,
+        e -> {
+          recoveryCalls.incrementAndGet();
+          return "fallback";
+        }
+    );
+
+    // Closing fires the source's ready callback, which lands in this class's failure path. Recovering there would run
+    // the fallback for a consumer that has already gone away, so cancellation must pass straight through.
+    recovering.close();
+
+    Assertions.assertEquals(0, recoveryCalls.get(), "recovery must not be called for a canceled source");
+    Assertions.assertThrows(AsyncResourceCanceledException.class, recovering::get);
+  }
+
+  @Test
+  public void testProducerCancellationIsStillRecoveredFrom()
+  {
+    final TrackingAsyncResource<String> source = new TrackingAsyncResource<>();
+    final AtomicInteger recoveryCalls = new AtomicInteger();
+
+    final AsyncResource<String> recovering = AsyncResources.recover(
+        source,
+        e -> {
+          recoveryCalls.incrementAndGet();
+          return "fallback";
+        }
+    );
+
+    // A load canceled underneath a consumer that is still waiting (an executor shutdown, say) arrives as a plain
+    // CancellationException rather than AsyncResourceCanceledException. There is someone left to serve, so unlike a
+    // close-initiated cancellation this is a failure the fallback should cover.
+    source.delegate.setException(new CancellationException("canceled underneath a waiting consumer"));
+
+    Assertions.assertEquals(1, recoveryCalls.get(), "recovery must run when the consumer is still waiting");
+    Assertions.assertEquals("fallback", recovering.get());
   }
 
   /**

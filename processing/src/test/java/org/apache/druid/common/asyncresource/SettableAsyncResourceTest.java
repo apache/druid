@@ -25,8 +25,12 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class SettableAsyncResourceTest
 {
@@ -218,29 +222,97 @@ public class SettableAsyncResourceTest
   }
 
   @Test
-  public void testReadyCallbackNotFiredWhenSetLosesRaceWithClose()
+  public void testCloseBeforeReadyCompletesAsCanceled()
   {
-    // A callback registered before close(), followed by a producer's late set() that loses the race, must NOT fire:
-    // close() is contractually "callbacks are not fired if close() happened first". This holds because close() drops
-    // the pending callbacks; setInternal still drains on its no-op path, so it finds nothing left to replay.
-    final AtomicInteger fired = new AtomicInteger();
     final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
-    resource.addReadyCallback(fired::incrementAndGet);
     resource.close();
-    Assertions.assertFalse(resource.set("value", null));
-    Assertions.assertEquals(0, fired.get());
+
+    // Canceled acquisition is a completion: consumers gate their waiting on isReady(), and get() says what happened.
+    Assertions.assertTrue(resource.isReady());
+    Assertions.assertThrows(AsyncResourceCanceledException.class, resource::get);
   }
 
   @Test
-  public void testReadyCallbackNotFiredWhenSetExceptionLosesRaceWithClose()
+  public void testCloseAfterReadyIsNotReportedAsCancellation()
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.set("value", null);
+    resource.close();
+
+    // Using a resource you closed after it was ready is a coding error, not a cancellation.
+    Assertions.assertThrows(DruidException.class, resource::get);
+  }
+
+  @Test
+  public void testReadyCallbackFiredOnceWhenSetLosesRaceWithClose()
+  {
+    // close() before the resource is available fires the pending callbacks, so a waiting consumer learns acquisition
+    // was aborted. A producer's late set() that loses the race must not fire them a second time: close() drained them.
+    final AtomicInteger fired = new AtomicInteger();
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.addReadyCallback(fired::incrementAndGet);
+
+    resource.close();
+    Assertions.assertEquals(1, fired.get());
+
+    Assertions.assertFalse(resource.set("value", null));
+    Assertions.assertEquals(1, fired.get());
+  }
+
+  @Test
+  public void testReadyCallbackFiredOnceWhenSetExceptionLosesRaceWithClose()
   {
     final AtomicInteger fired = new AtomicInteger();
     final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
     resource.addReadyCallback(fired::incrementAndGet);
+
     resource.close();
-    // setException on a CLOSED resource must not fire the dropped callback; the error is logged and otherwise dropped.
+    Assertions.assertEquals(1, fired.get());
+
+    // setException on a CLOSED resource is dropped (logged at debug) and must not re-fire the callback.
     resource.setException(new IllegalStateException("late failure"));
-    Assertions.assertEquals(0, fired.get());
+    Assertions.assertEquals(1, fired.get());
+  }
+
+  @Test
+  public void testCloseFiresCallbacksAfterRunningTheCanceler()
+  {
+    // Ordering matters: a woken consumer must observe a fully torn-down resource, not one still mid-abort.
+    final List<String> order = new ArrayList<>();
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    resource.setCanceler(() -> order.add("canceler"));
+    resource.addReadyCallback(() -> order.add("callback"));
+
+    resource.close();
+    Assertions.assertEquals(List.of("canceler", "callback"), order);
+  }
+
+  @Test
+  public void testAwaitIsWokenByCloseAndThrowsCancellation() throws InterruptedException
+  {
+    final SettableAsyncResource<String> resource = new SettableAsyncResource<>();
+    final AtomicReference<Throwable> outcome = new AtomicReference<>();
+
+    // A bounded await, so a regression that stops waking the waiter fails with a TimeoutException instead of hanging.
+    final Thread waiter = new Thread(() -> {
+      try {
+        resource.await(30_000);
+      }
+      catch (Throwable t) {
+        outcome.set(t);
+      }
+    });
+    waiter.start();
+
+    // Wait until the waiter is parked on await()'s latch, so close() cannot land before its callback is registered.
+    final long deadlineNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+    while (waiter.getState() != Thread.State.TIMED_WAITING && System.nanoTime() < deadlineNanos) {
+      Thread.onSpinWait();
+    }
+
+    resource.close();
+    waiter.join();
+    Assertions.assertInstanceOf(AsyncResourceCanceledException.class, outcome.get());
   }
 
   @Test
