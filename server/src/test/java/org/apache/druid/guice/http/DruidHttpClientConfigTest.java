@@ -53,8 +53,7 @@ public class DruidHttpClientConfigTest
   }
 
   /**
-   * The value an operator writes is not case sensitive, since the enum constant and the property value it is spelled
-   * with differ in case.
+   * Either casing is accepted, since the constant is upper case while the value serialises lower case.
    */
   @Test
   public void testPoolImplementationIsNotCaseSensitive()
@@ -72,7 +71,7 @@ public class DruidHttpClientConfigTest
   public void testUnknownPoolImplementationIsRejected()
   {
     final Properties properties = new Properties();
-    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "semaphore");
+    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "elastic");
 
     Assert.assertThrows(RuntimeException.class, () -> configure(properties));
   }
