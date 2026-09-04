@@ -112,7 +112,15 @@ public class SegmentMetadataQueryQueryToolChestTest
         new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()).getCacheStrategy(query);
 
     // Test cache key generation
-    byte[] expectedKey = {0x04, 0x09, 0x01, 0x0A, 0x00, 0x00, 0x00, 0x03, 0x00, 0x02, 0x04};
+    byte[] expectedKey = {
+        0x04,                                // cache type id
+        0x09, 0x00, 0x00, 0x00, 0x01, 0x01,  // CACHEABLE_KEY, length 1, "toInclude"
+        0x0A, 0x00, 0x00, 0x00, 0x13,        // CACHEABLE_LIST_KEY, length 19
+        0x00, 0x00, 0x00, 0x03,              // 3 analysis types, each length-prefixed
+        0x00, 0x00, 0x00, 0x01, 0x00,
+        0x00, 0x00, 0x00, 0x01, 0x02,
+        0x00, 0x00, 0x00, 0x01, 0x04
+    };
     byte[] actualKey = strategy.computeCacheKey(query);
     Assertions.assertArrayEquals(expectedKey, actualKey);
 
