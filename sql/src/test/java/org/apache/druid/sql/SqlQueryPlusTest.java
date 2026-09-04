@@ -21,7 +21,6 @@ package org.apache.druid.sql;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.api.Assertions;
@@ -44,11 +43,18 @@ public class SqlQueryPlusTest
   @Test
   public void testSetParameterConstraintIsValidated()
   {
-    Assertions.assertThrows(
-        IAE.class,
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
         () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 0; SELECT 1")
                           .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
                           .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Query context parameter [maxRowsQueuedForOrdering] must be in the closed range")
     );
   }
 

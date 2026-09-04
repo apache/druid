@@ -1535,6 +1535,22 @@ public class SqlResourceTest extends CalciteTestBase
   }
 
   @Test
+  public void testInvalidSetParameterReturnsBadRequest() throws Exception
+  {
+    final ErrorResponse errorResponse = postSyncForException(
+        "SET maxRowsQueuedForOrdering = 0; SELECT 1",
+        Status.BAD_REQUEST.getStatusCode()
+    );
+
+    validateInvalidSqlError(
+        errorResponse,
+        "Query context parameter [maxRowsQueuedForOrdering] must be in the closed range"
+    );
+    Assertions.assertEquals(0, testRequestLogger.getSqlQueryLogs().size()); // Invalid queries are not logged
+    Assertions.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
   public void testCannotValidate() throws Exception
   {
     ErrorResponse errorResponse = postSyncForException(
