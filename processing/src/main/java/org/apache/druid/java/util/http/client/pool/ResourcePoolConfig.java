@@ -25,14 +25,25 @@ public class ResourcePoolConfig
 {
   private final int maxPerKey;
   private final long unusedConnectionTimeoutMillis;
+  private final boolean useSemaphorePool;
 
   public ResourcePoolConfig(
       int maxPerKey,
       long unusedConnectionTimeoutMillis
   )
   {
+    this(maxPerKey, unusedConnectionTimeoutMillis, true);
+  }
+
+  public ResourcePoolConfig(
+      int maxPerKey,
+      long unusedConnectionTimeoutMillis,
+      boolean useSemaphorePool
+  )
+  {
     this.maxPerKey = maxPerKey;
     this.unusedConnectionTimeoutMillis = unusedConnectionTimeoutMillis;
+    this.useSemaphorePool = useSemaphorePool;
   }
 
   @Deprecated
@@ -60,5 +71,14 @@ public class ResourcePoolConfig
   public long getUnusedConnectionTimeoutMillis()
   {
     return unusedConnectionTimeoutMillis;
+  }
+
+  /**
+   * Whether to pool resources with a semaphore and a lock-free queue of idle resources, rather than with the older
+   * monitor-based implementation. On by default; the alternative is kept only as an escape hatch.
+   */
+  public boolean isUseSemaphorePool()
+  {
+    return useSemaphorePool;
   }
 }

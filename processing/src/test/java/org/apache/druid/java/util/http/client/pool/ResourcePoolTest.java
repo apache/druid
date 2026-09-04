@@ -25,10 +25,15 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.lang.ref.Reference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,10 +46,24 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class ResourcePoolTest
 {
+  @Parameterized.Parameters(name = "useSemaphorePool = {0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return Arrays.asList(new Object[][]{{false}, {true}});
+  }
+
+  private final boolean useSemaphorePool;
+
   ResourceFactory<String, String> resourceFactory;
   ResourcePool<String, String> pool;
+
+  public ResourcePoolTest(boolean useSemaphorePool)
+  {
+    this.useSemaphorePool = useSemaphorePool;
+  }
 
   @Before
   public void setUp()
@@ -62,14 +81,31 @@ public class ResourcePoolTest
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
     EasyMock.replay(resourceFactory);
-    pool = new ResourcePool<>(
-        resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MINUTES.toMillis(4)),
-        eagerInitialization
-    );
+    pool = createPool(2, TimeUnit.MINUTES.toMillis(4), eagerInitialization);
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
+  }
+
+  private ResourcePool<String, String> createPool(
+      int maxPerKey,
+      long unusedConnectionTimeoutMillis,
+      boolean eagerInitialization
+  )
+  {
+    return new ResourcePool<>(
+        resourceFactory,
+        new ResourcePoolConfig(maxPerKey, unusedConnectionTimeoutMillis, useSemaphorePool),
+        eagerInitialization
+    );
+  }
+
+  /**
+   * Skips a test that pins behaviour only {@link ResourcePoolConfig#isUseSemaphorePool()} provides.
+   */
+  private void assumeSemaphorePool()
+  {
+    Assume.assumeTrue("only the semaphore pool satisfies this", useSemaphorePool);
   }
 
   @Test
@@ -282,12 +318,16 @@ public class ResourcePoolTest
     EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(false).times(1);
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
-    // The next idle resource is tried before opening a new connection.
-    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    if (useSemaphorePool) {
+      // The next idle resource is tried before opening a new connection.
+      EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
+    } else {
+      EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    }
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy0", billy.get());
+    Assert.assertEquals(useSemaphorePool ? "billy0" : "billy2", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -439,11 +479,7 @@ public class ResourcePoolTest
   {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
-    pool = new ResourcePool<>(
-        resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(10)),
-        true
-    );
+    pool = createPool(2, TimeUnit.MILLISECONDS.toMillis(10), true);
 
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
@@ -460,18 +496,24 @@ public class ResourcePoolTest
     //make sure resources have been timed out.
     Thread.sleep(100);
 
-    // Both parked resources (billy0, billy1) are stale, so a single take() purges both before opening one
-    // validated replacement.
-    resourceFactory.close("billy0");
-    EasyMock.expectLastCall();
-    resourceFactory.close("billy1");
-    EasyMock.expectLastCall();
-    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
-    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
+    if (useSemaphorePool) {
+      // Both parked resources (billy0, billy1) are stale, so a single take() purges both before opening one
+      // validated replacement.
+      resourceFactory.close("billy0");
+      EasyMock.expectLastCall();
+      resourceFactory.close("billy1");
+      EasyMock.expectLastCall();
+      EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+      EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
+    } else {
+      // Only the resource at the front of the queue is discarded, and it is replaced one for one.
+      resourceFactory.close("billy1");
+      EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy1").times(1);
+    }
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy2", billy.get());
+    Assert.assertEquals(useSemaphorePool ? "billy2" : "billy1", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -486,12 +528,9 @@ public class ResourcePoolTest
   @Test
   public void testExpiredResourcesArePurgedAndPoolShrinks() throws Exception
   {
+    assumeSemaphorePool();
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
-    pool = new ResourcePool<>(
-        resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.MILLISECONDS.toMillis(100)),
-        true
-    );
+    pool = createPool(2, TimeUnit.MILLISECONDS.toMillis(100), true);
 
     // Park two warm resources (billy0, billy1).
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
@@ -549,6 +588,7 @@ public class ResourcePoolTest
   @Test
   public void testDeadResourcesArePurgedInOneTake()
   {
+    assumeSemaphorePool();
     primePool();
 
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(false).anyTimes();
@@ -577,6 +617,7 @@ public class ResourcePoolTest
   @Test
   public void testResourceIsClosedWhenIsGoodThrows() throws Exception
   {
+    assumeSemaphorePool();
     primePool();
 
     EasyMock.expect(resourceFactory.isGood("billy1")).andThrow(new ISE("health check blew up")).times(1);
@@ -618,13 +659,10 @@ public class ResourcePoolTest
   @Test
   public void testCloseFailureWhileEvictingExpiredResources() throws Exception
   {
+    assumeSemaphorePool();
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
-    pool = new ResourcePool<>(
-        resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.SECONDS.toMillis(1)),
-        true
-    );
+    pool = createPool(2, TimeUnit.SECONDS.toMillis(1), true);
 
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
@@ -676,6 +714,7 @@ public class ResourcePoolTest
   @Test
   public void testEagerInitializationFailureClosesAlreadyCreatedResources()
   {
+    assumeSemaphorePool();
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy0").times(1);
     EasyMock.expect(resourceFactory.generate("billy")).andThrow(new ISE("no more billies")).times(1);
     resourceFactory.close("billy0");
@@ -703,6 +742,7 @@ public class ResourcePoolTest
   @Test
   public void testNullGeneratedResourceFailsTheTake_lazy() throws Exception
   {
+    assumeSemaphorePool();
     setUpPoolWithoutEagerInitialization();
 
     EasyMock.expect(resourceFactory.generate("billy")).andReturn(null).times(1);
@@ -747,8 +787,10 @@ public class ResourcePoolTest
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
-    Assert.assertEquals("billy1", pool.take("billy").get());
-    Assert.assertEquals("billy0", pool.take("billy").get());
+    final ResourceContainer<String> first = pool.take("billy");
+    final ResourceContainer<String> second = pool.take("billy");
+    Assert.assertEquals("billy1", first.get());
+    Assert.assertEquals("billy0", second.get());
 
     TakeAndReturnThread waiter = new TakeAndReturnThread("billy");
     waiter.start();
@@ -756,6 +798,8 @@ public class ResourcePoolTest
     waiter.interrupt();
 
     Assert.assertNull("returning an interrupted take's container", waiter.failureFromTakeAndReturn());
+
+    keepLent(first, second);
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -777,8 +821,10 @@ public class ResourcePoolTest
     EasyMock.expectLastCall();
     EasyMock.replay(resourceFactory);
 
-    Assert.assertEquals("billy1", pool.take("billy").get());
-    Assert.assertEquals("billy0", pool.take("billy").get());
+    final ResourceContainer<String> first = pool.take("billy");
+    final ResourceContainer<String> second = pool.take("billy");
+    Assert.assertEquals("billy1", first.get());
+    Assert.assertEquals("billy0", second.get());
 
     TakeAndReturnThread waiter = new TakeAndReturnThread("billy");
     waiter.start();
@@ -786,6 +832,8 @@ public class ResourcePoolTest
     pool.close();
 
     Assert.assertNull("returning the container of a take unblocked by close()", waiter.failureFromTakeAndReturn());
+
+    keepLent(first, second);
 
     EasyMock.verify(resourceFactory);
     EasyMock.reset(resourceFactory);
@@ -852,11 +900,7 @@ public class ResourcePoolTest
   {
     resourceFactory = (ResourceFactory<String, String>) EasyMock.createMock(ResourceFactory.class);
 
-    pool = new ResourcePool<>(
-        resourceFactory,
-        new ResourcePoolConfig(2, TimeUnit.SECONDS.toMillis(1)),
-        true
-    );
+    pool = createPool(2, TimeUnit.SECONDS.toMillis(1), true);
 
     EasyMock.expect(resourceFactory.generate("billy")).andAnswer(new StringIncrementingAnswer("billy")).times(2);
     EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
@@ -884,12 +928,14 @@ public class ResourcePoolTest
     EasyMock.reset(resourceFactory);
 
     // Any close() of a sally resource here would be an unexpected call on the mock.
-    resourceFactory.close("billy0");
-    EasyMock.expectLastCall();
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
+    if (useSemaphorePool) {
+      resourceFactory.close("billy0");
+      EasyMock.expectLastCall();
+      EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
+    }
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
-    EasyMock.expect(resourceFactory.isGood("billy2")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     billy = pool.take("billy");
@@ -922,7 +968,7 @@ public class ResourcePoolTest
     final ExclusiveResourceFactory factory = new ExclusiveResourceFactory();
     final ResourcePool<String, String> stressPool = new ResourcePool<>(
         factory,
-        new ResourcePoolConfig(maxPerKey, 5),
+        new ResourcePoolConfig(maxPerKey, 5, useSemaphorePool),
         false
     );
 
@@ -950,6 +996,16 @@ public class ResourcePoolTest
         factory.peakLent() <= maxPerKey
     );
     Assert.assertEquals("every generated resource is closed", factory.generated(), factory.closed());
+  }
+
+  /**
+   * Keeps lent containers reachable until here. {@link ResourceContainer#finalize()} gives a resource back if its
+   * container is collected, which would hand a free slot to a thread that the test needs to stay blocked.
+   */
+  private static void keepLent(ResourceContainer<String> first, ResourceContainer<String> second)
+  {
+    Reference.reachabilityFence(first);
+    Reference.reachabilityFence(second);
   }
 
   /**
