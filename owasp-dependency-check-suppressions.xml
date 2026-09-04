@@ -353,14 +353,6 @@
   </suppress>
 
   <suppress>
-    <notes><![CDATA[
-      file name: async-http-client-3.0.2.jar
-    ]]></notes>
-    <packageUrl regex="true">^pkg:maven/org\.asynchttpclient/async-http-client@3.0.2$</packageUrl>
-    <cve>CVE-2026-45300</cve> <!-- Cookie leak on cross-origin redirect: Druid does not configure automatic redirect following or a cookie store in AHC; redirects are handled manually at application level in ServiceClientImpl without forwarding cookies -->
-  </suppress>
-
-  <suppress>
     <!-- Netty 4.x CVEs for codecs/features that Druid never activates.
          Druid's HTTP server is Jetty; Netty 4.x is present as a transitive dependency
          (gRPC, AWS SDK) for buffer management and internal comms only. -->
@@ -910,5 +902,16 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:npm/uuid@.*$</packageUrl>
     <vulnerabilityName>GHSA-w5hq-g745-h8pq</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-53914: Unsafe deserialization in Kotlin's build cache metadata (Kotlin compiler/Gradle plugin).
+         This is a build-toolchain vulnerability, not a runtime stdlib issue. Druid has no Kotlin source files;
+         kotlin-stdlib is a transitive runtime dependency (via Iceberg) and Druid never invokes Kotlin's build cache. -->
+    <notes><![CDATA[
+      file name: kotlin-stdlib-2.4.10.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jetbrains\.kotlin/kotlin-stdlib@.*$</packageUrl>
+    <cve>CVE-2026-53914</cve>
   </suppress>
 </suppressions>
