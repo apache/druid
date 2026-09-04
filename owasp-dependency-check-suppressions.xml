@@ -19,6 +19,52 @@
   -->
 <suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
   <!-- False positives -->
+
+  <!--
+    elasticache-java-cluster-client-1.2.4.jar is Amazon's Java client for ElastiCache (Memcached).
+    It wraps spymemcached and adds auto-discovery. Druid uses it as a Memcached CLIENT only —
+    it sends get/set/delete commands to a remote Memcached server. Druid does NOT run a Memcached server.
+
+    The CVE scanner matches the JAR version "1.2.4" against CPE cpe:2.3:a:memcached:memcached:1.2.4
+    (the C memcached server daemon), which is a false positive. All CVEs below are vulnerabilities
+    in the Memcached server daemon (C code: memcached.c, items.c, etc.) and are not applicable to
+    a Java application acting as a Memcached client.
+  -->
+  <suppress>
+    <notes><![CDATA[
+      file name: elasticache-java-cluster-client-1.2.4.jar
+
+      All CVEs below affect the Memcached SERVER daemon (C code), not any Java client library.
+      Druid uses elasticache-java-cluster-client solely as a Memcached client to send cache
+      get/set/delete commands. Druid does not run or embed a Memcached server process.
+
+      The version string "1.2.4" of the Java client JAR is incorrectly matched by the scanner
+      against CPE cpe:2.3:a:memcached:memcached:1.2.4 (the C memcached server), causing false positives.
+
+      CVE-2019-11596: NULL pointer dereference in lru mode command parsing in memcached.c (server daemon).
+      CVE-2026-47784: SASL password timing side channel in sasl_server_userdb_checkpass (server daemon).
+      CVE-2026-47783: SASL username timing side channel in sasl_server_userdb_checkpass (server daemon).
+      CVE-2016-8705: Integer overflow in process_bin_update in Memcached binary protocol (server daemon).
+      CVE-2016-8706: Integer overflow in process_bin_sasl_auth in Memcached binary protocol (server daemon).
+      CVE-2016-8704: Integer overflow in process_bin_append_prepend in Memcached binary protocol (server daemon).
+      CVE-2023-46852: Buffer overflow in proxy mode multiget handling in Memcached (server daemon).
+      CVE-2018-1000127: Integer overflow in items.c:item_free() in Memcached (server daemon).
+      CVE-2023-46853: Off-by-one error in proxy mode request handling in Memcached (server daemon).
+      CVE-2017-9951: Heap-based buffer over-read in try_read_command in memcached.c (server daemon).
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.amazonaws/elasticache-java-cluster-client@.*$</packageUrl>
+    <cve>CVE-2019-11596</cve>
+    <cve>CVE-2026-47784</cve>
+    <cve>CVE-2026-47783</cve>
+    <cve>CVE-2016-8705</cve>
+    <cve>CVE-2016-8706</cve>
+    <cve>CVE-2016-8704</cve>
+    <cve>CVE-2023-46852</cve>
+    <cve>CVE-2018-1000127</cve>
+    <cve>CVE-2023-46853</cve>
+    <cve>CVE-2017-9951</cve>
+  </suppress>
+
   <suppress>
     <notes><![CDATA[
      file name: json-path-2.9.0.jar jackson-core-2.12.7.jar
@@ -274,6 +320,61 @@
     <cve>CVE-2025-58057</cve> <!-- Netty 3.x not affected; compression issue only in 4.x -->
     <cve>CVE-2026-33870</cve> <!-- We don't use HttpPostRequestDecoder -->
     <cve>CVE-2026-33871</cve> <!-- Netty 3.x not affected; HTTP/2 issues only in 4.x -->
+    <cve>CVE-2026-44893</cve> <!-- We don't use the HAProxy codec -->
+    <cve>CVE-2026-44250</cve> <!-- We don't use the Redis codec -->
+    <cve>CVE-2026-48059</cve> <!-- We don't use the HAProxy codec -->
+    <cve>CVE-2026-44890</cve> <!-- We don't use the Redis codec -->
+    <cve>CVE-2026-44891</cve> <!-- We don't use the STOMP codec -->
+    <cve>CVE-2026-50011</cve> <!-- We don't use the Redis codec -->
+    <cve>CVE-2026-59901</cve> <!-- We don't use Netty's Bzip2Decoder; Druid uses Apache Commons Compress for bzip2 -->
+    <cve>CVE-2026-62380</cve> <!-- We don't use the SOCKS codec; Druid uses HTTP CONNECT proxy tunneling -->
+    <cve>CVE-2026-59898</cve> <!-- Server-side WebSocket vulnerability; Druid's HTTP server is Jetty, not Netty -->
+    <cve>CVE-2026-59899</cve> <!-- Server-side HttpContentEncoder vulnerability; Druid uses Netty 3.x as HTTP client only -->
+    <cve>CVE-2026-42587</cve> <!-- Affects brotli/zstd/snappy decompression added in Netty 4.x; Netty 3.x only supports gzip/deflate -->
+    <cve>CVE-2026-42586</cve> <!-- We don't use the Redis codec -->
+    <cve>CVE-2026-44248</cve> <!-- We don't use the MQTT codec -->
+    <cve>CVE-2026-44249</cve> <!-- We don't use Netty's IpSubnetFilterRule; Druid uses Jetty for HTTP access control -->
+    <cve>CVE-2026-45416</cve> <!-- Server-side TLS SNI vulnerability; Druid uses Netty 3.x as TLS client only, never as a server -->
+    <cve>CVE-2026-42581</cve> <!-- Server-side HTTP request smuggling; Druid's HTTP server is Jetty, not Netty -->
+    <cve>CVE-2026-45674</cve> <!-- Affects netty-resolver-dns which Druid doesn't use; Druid uses JDK DNS resolution -->
+    <cve>CVE-2026-48006</cve> <!-- We don't use the Redis codec -->
+    <cve>CVE-2026-42585</cve> <!-- Server-side HTTP request smuggling; Druid's HTTP server is Jetty, not Netty -->
+    <cve>CVE-2026-42584</cve> <!-- HttpClientCodec response desynchronization in Netty 4.x codec; Druid uses Netty 3.x's HttpClientCodec which has a different implementation -->
+    <cve>CVE-2026-46340</cve> <!-- We don't use SCTP transport; Druid uses TCP/NIO -->
+    <cve>CVE-2026-42583</cve> <!-- We don't use Netty's Lz4FrameDecoder; Druid uses lz4-java directly -->
+    <cve>CVE-2026-48043</cve> <!-- We don't use netty-codec-http2 directly; Druid's HTTP/2 is served by Jetty -->
+    <cve>CVE-2026-56822</cve> <!-- We don't use netty-handler-ssl-ocsp -->
+    <cve>CVE-2026-56821</cve> <!-- We don't use netty-handler-ssl-ocsp -->
+    <cve>CVE-2026-47691</cve> <!-- Affects netty-resolver-dns which Druid doesn't use; Druid uses JDK DNS resolution -->
+    <cve>CVE-2026-56820</cve> <!-- We don't use netty-handler-ssl-ocsp -->
+    <cve>CVE-2026-50010</cve> <!-- Druid's Netty 3.x HTTP client does not use SslContextBuilder; gRPC/AWS SDK paths use managed SSL contexts -->
+    <cve>CVE-2026-42578</cve> <!-- We don't use HttpProxyHandler; Druid uses a custom HTTP CONNECT tunnel via HttpClientCodec -->
+    <cve>CVE-2026-42579</cve> <!-- We don't use netty-codec-dns; Druid uses JDK DNS resolution -->
+  </suppress>
+
+  <suppress>
+    <!-- Netty 4.x CVEs for codecs/features that Druid never activates.
+         Druid's HTTP server is Jetty; Netty 4.x is present as a transitive dependency
+         (gRPC, AWS SDK) for buffer management and internal comms only. -->
+    <notes><![CDATA[
+      file name: netty-codec-protobuf-4.2.15.Final.jar netty-transport-4.2.15.Final.jar (and other netty-*.jar at 4.2.x)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/io\.netty/netty-.*@4\.2\..*$</packageUrl>
+    <cve>CVE-2026-56819</cve> <!-- HTTP/2 decompressor ByteBuf leak: Druid does not run a Netty 4.x HTTP/2 server -->
+    <cve>CVE-2026-56817</cve> <!-- XML injection/XXE in netty-codec-xml: Druid does not use the XML codec -->
+    <cve>CVE-2026-44891</cve> <!-- STOMP header OOM: Druid does not use the STOMP codec -->
+    <cve>CVE-2026-55833</cve> <!-- SPDY zlib expansion: Druid does not use SPDY -->
+    <cve>CVE-2026-56745</cve> <!-- SPDY RST_STREAM ByteBuf leak: Druid does not use SPDY -->
+    <cve>CVE-2026-56822</cve> <!-- OCSP TOCTOU race: Druid does not use netty-handler-ssl-ocsp -->
+    <cve>CVE-2026-55831</cve> <!-- SPDY SETTINGS frame unbounded map: Druid does not use SPDY -->
+    <cve>CVE-2026-56821</cve> <!-- OCSP stale response: Druid does not use netty-handler-ssl-ocsp -->
+    <cve>CVE-2026-56820</cve> <!-- OCSP CertificateID not validated: Druid does not use netty-handler-ssl-ocsp -->
+    <cve>CVE-2026-56816</cve> <!-- HTTP/3 reserved frame memory exhaustion: Druid does not use HTTP/3 -->
+    <cve>CVE-2026-59901</cve> <!-- Bzip2Decoder infinite loop: Druid uses Apache Commons Compress for bzip2, not Netty's codec -->
+    <cve>CVE-2026-62380</cve> <!-- SOCKS encoder CRLF injection: Druid does not use the SOCKS codec -->
+    <cve>CVE-2026-59898</cve> <!-- WebSocket handshake smuggling (server-side): Druid's HTTP server is Jetty -->
+    <cve>CVE-2026-59899</cve> <!-- HttpContentEncoder pipelining OOM (server-side): Druid's HTTP server is Jetty -->
+    <cve>CVE-2026-55851</cve> <!-- HAProxy decoder OOM: Druid does not use the HAProxy codec -->
   </suppress>
 
   <suppress>
@@ -767,5 +868,50 @@
     ]]></notes>
     <packageUrl regex="true">^pkg:maven/io\.grpc/grpc-.*@.*$</packageUrl>
     <cve>CVE-2026-33186</cve> <!-- Only applicable to gRPC Go (google.golang.org/grpc < 1.79.3), not gRPC Java - https://nvd.nist.gov/vuln/detail/CVE-2026-33186 -->
+  </suppress>
+
+  <suppress>
+    <!-- False positive: the scanner matches the Java client version 1.2.4 against
+         cpe:2.3:a:memcached:memcached:1.2.4 (the C memcached server daemon).
+         com.amazonaws:elasticache-java-cluster-client is a Java Memcached client
+         library; all CVEs below are vulnerabilities in the Memcached server C code.
+         Druid acts as a Memcached client and is not affected by server-side CVEs. -->
+    <notes><![CDATA[
+      file name: elasticache-java-cluster-client-1.2.4.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.amazonaws/elasticache-java-cluster-client@.*$</packageUrl>
+    <cve>CVE-2019-11596</cve> <!-- NULL ptr deref in memcached server daemon (memcached.c lru mode command) -->
+    <cve>CVE-2026-47784</cve> <!-- SASL password timing side-channel in memcached server daemon -->
+    <cve>CVE-2026-47783</cve> <!-- SASL username timing side-channel in memcached server daemon -->
+    <cve>CVE-2016-8705</cve>  <!-- Integer overflow in memcached server daemon (process_bin_update) -->
+    <cve>CVE-2016-8706</cve>  <!-- Integer overflow in memcached server daemon (process_bin_sasl_auth) -->
+    <cve>CVE-2016-8704</cve>  <!-- Integer overflow in memcached server daemon (process_bin_append_prepend) -->
+    <cve>CVE-2023-46852</cve> <!-- Buffer overflow in memcached server daemon proxy mode multiget -->
+    <cve>CVE-2018-1000127</cve> <!-- Integer overflow in memcached server daemon (items.c item_free) -->
+    <cve>CVE-2023-46853</cve> <!-- Off-by-one in memcached server daemon proxy mode request parsing -->
+    <cve>CVE-2017-9951</cve>  <!-- Heap buffer over-read in memcached server daemon (try_read_command) -->
+  </suppress>
+
+  <suppress>
+    <!-- GHSA-w5hq-g745-h8pq: Missing bounds check in uuid v3/v5/v6 when the optional buf
+         argument is provided. Druid's web console uses only uuidv4() with no buf argument
+         (web-console/src/druid-models/workbench-query/workbench-query.ts), so the
+         vulnerable code path is never exercised. -->
+    <notes><![CDATA[
+      file name: package-lock.json (pkg:npm/uuid@7.0.3)
+    ]]></notes>
+    <packageUrl regex="true">^pkg:npm/uuid@.*$</packageUrl>
+    <vulnerabilityName>GHSA-w5hq-g745-h8pq</vulnerabilityName>
+  </suppress>
+
+  <suppress>
+    <!-- CVE-2026-53914: Unsafe deserialization in Kotlin's build cache metadata (Kotlin compiler/Gradle plugin).
+         This is a build-toolchain vulnerability, not a runtime stdlib issue. Druid has no Kotlin source files;
+         kotlin-stdlib is a transitive runtime dependency (via Iceberg) and Druid never invokes Kotlin's build cache. -->
+    <notes><![CDATA[
+      file name: kotlin-stdlib-2.4.10.jar
+    ]]></notes>
+    <packageUrl regex="true">^pkg:maven/org\.jetbrains\.kotlin/kotlin-stdlib@.*$</packageUrl>
+    <cve>CVE-2026-53914</cve>
   </suppress>
 </suppressions>
