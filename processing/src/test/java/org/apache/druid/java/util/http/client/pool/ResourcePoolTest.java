@@ -186,9 +186,13 @@ public class ResourcePoolTest
 
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy0");
     EasyMock.expect(resourceFactory.isGood("billy0")).andThrow(new RuntimeException("blah"));
+    resourceFactory.close("billy0");
+    EasyMock.expectLastCall();
 
     EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy1");
     EasyMock.expect(resourceFactory.isGood("billy1")).andThrow(new RuntimeException("blah"));
+    resourceFactory.close("billy1");
+    EasyMock.expectLastCall();
 
     EasyMock.expect(resourceFactory.generate("billy")).andThrow(new RuntimeException("blah"));
 
@@ -203,6 +207,8 @@ public class ResourcePoolTest
     EasyMock.expect(resourceFactory.isGood("billy4")).andReturn(true);
 
     EasyMock.expect(resourceFactory.isGood("billy3")).andThrow(new RuntimeException("blah"));
+    resourceFactory.close("billy3");
+    EasyMock.expectLastCall();
 
     EasyMock.replay(resourceFactory);
     // numLentResources == 0, resourceHolderList.size() == 0
@@ -276,11 +282,12 @@ public class ResourcePoolTest
     EasyMock.expect(resourceFactory.isGood("billy1")).andReturn(false).times(1);
     resourceFactory.close("billy1");
     EasyMock.expectLastCall();
-    EasyMock.expect(resourceFactory.generate("billy")).andReturn("billy2").times(1);
+    // The next idle resource is tried before opening a new connection.
+    EasyMock.expect(resourceFactory.isGood("billy0")).andReturn(true).times(1);
     EasyMock.replay(resourceFactory);
 
     ResourceContainer<String> billy = pool.take("billy");
-    Assert.assertEquals("billy2", billy.get());
+    Assert.assertEquals("billy0", billy.get());
     billy.returnResource();
 
     EasyMock.verify(resourceFactory);
@@ -698,7 +705,7 @@ public class ResourcePoolTest
   {
     setUpPoolWithoutEagerInitialization();
 
-    EasyMock.expect(resourceFactory.generate("billy")).andReturn(null).times(2);
+    EasyMock.expect(resourceFactory.generate("billy")).andReturn(null).times(1);
     EasyMock.replay(resourceFactory);
 
     Exception thrown = null;
