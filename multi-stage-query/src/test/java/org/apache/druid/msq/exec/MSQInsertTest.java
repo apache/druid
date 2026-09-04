@@ -65,6 +65,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -318,15 +319,17 @@ public class MSQInsertTest extends MSQTestBase
                         new DefaultDimensionSpec("__time", "d0", ColumnType.LONG),
                         new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
                     )
-                    .setContext(Map.of(
-                        "__user", "allowAll",
-                        "finalize", true,
-                        "maxNumTasks", 2,
-                        "maxParseExceptions", 0,
-                        "sqlInsertSegmentGranularity", "\"DAY\"",
-                        "sqlQueryId", "test-query",
-                        "sqlStringifyArrays", false
-                    ))
+                    .setContext(
+                        QueryContext.builder()
+                                   .putRaw("__user", "allowAll")
+                                   .put(QueryContextParameters.FINALIZE, true)
+                                   .putRaw(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
+                                   .putRaw("maxParseExceptions", 0)
+                                   .putRaw("sqlInsertSegmentGranularity", "\"DAY\"")
+                                   .put(QueryContextParameters.SQL_QUERY_ID, "test-query")
+                                   .put(QueryContextParameters.SQL_STRINGIFY_ARRAYS, false)
+                                   .toMap()
+                    )
                     .setLimitSpec(DefaultLimitSpec.builder()
                                                   .orderBy(OrderByColumnSpec.asc("d1"))
                                                   .build()

@@ -22,7 +22,6 @@ package org.apache.druid.query.union;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -176,13 +175,13 @@ public class UnionQuery implements Query<Object>
   @Override
   public Query<Object> withSubQueryId(String subQueryId)
   {
-    return withOverriddenContext(ImmutableMap.of(BaseQuery.SUB_QUERY_ID, subQueryId));
+    return withOverriddenContext(QueryContextParameters.SUB_QUERY_ID, subQueryId);
   }
 
   @Override
   public String getSubQueryId()
   {
-    return context().getString(BaseQuery.SUB_QUERY_ID);
+    return context().get(QueryContextParameters.SUB_QUERY_ID);
   }
 
   @Override

@@ -958,6 +958,12 @@ public final class QueryContextParameters
           .since("35.0.0")
           .build();
 
+  public static final QueryContextParameter<String> SUB_QUERY_ID =
+      stringParameter("subQueryId")
+          .internal()
+          .since("0.18.0")
+          .build();
+
   public static final QueryContextParameter<Boolean> FULL_REPORT = booleanParameter("fullReport")
       .defaultValue(QueryContexts.DEFAULT_CTX_FULL_REPORT)
       .build();
