@@ -5778,8 +5778,28 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.26.2
+version: 7.29.7
 license_file_path: licenses/bin/@babel-code-frame.MIT
+
+---
+
+name: "@babel/generator"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.29.7
+license_file_path: licenses/bin/@babel-generator.MIT
+
+---
+
+name: "@babel/helper-globals"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.29.7
+license_file_path: licenses/bin/@babel-helper-globals.MIT
 
 ---
 
@@ -5788,7 +5808,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.22.15
+version: 7.29.7
 license_file_path: licenses/bin/@babel-helper-module-imports.MIT
 
 ---
@@ -5798,7 +5818,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.25.9
+version: 7.29.7
 license_file_path: licenses/bin/@babel-helper-string-parser.MIT
 
 ---
@@ -5808,8 +5828,18 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.25.9
+version: 7.29.7
 license_file_path: licenses/bin/@babel-helper-validator-identifier.MIT
+
+---
+
+name: "@babel/parser"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.29.7
+license_file_path: licenses/bin/@babel-parser.MIT
 
 ---
 
@@ -5823,12 +5853,32 @@ license_file_path: licenses/bin/@babel-runtime.MIT
 
 ---
 
+name: "@babel/template"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.29.7
+license_file_path: licenses/bin/@babel-template.MIT
+
+---
+
+name: "@babel/traverse"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: The Babel Team
+version: 7.29.7
+license_file_path: licenses/bin/@babel-traverse.MIT
+
+---
+
 name: "@babel/types"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: The Babel Team
-version: 7.27.0
+version: 7.29.7
 license_file_path: licenses/bin/@babel-types.MIT
 
 ---
@@ -6006,6 +6056,46 @@ version: 3.5.6
 
 ---
 
+name: "@jridgewell/gen-mapping"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Justin Ridgewell
+version: 0.3.13
+license_file_path: licenses/bin/@jridgewell-gen-mapping.MIT
+
+---
+
+name: "@jridgewell/resolve-uri"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Justin Ridgewell
+version: 3.1.0
+license_file_path: licenses/bin/@jridgewell-resolve-uri.MIT
+
+---
+
+name: "@jridgewell/sourcemap-codec"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Justin Ridgewell
+version: 1.5.5
+license_file_path: licenses/bin/@jridgewell-sourcemap-codec.MIT
+
+---
+
+name: "@jridgewell/trace-mapping"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Justin Ridgewell
+version: 0.3.31
+license_file_path: licenses/bin/@jridgewell-trace-mapping.MIT
+
+---
+
 name: "@popperjs/core"
 license_category: binary
 module: web-console
@@ -6075,6 +6165,16 @@ license_file_path: licenses/bin/ace-builds.BSD3
 
 ---
 
+name: "agent-base"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Nathan Rajlich
+version: 6.0.2
+license_file_path: licenses/bin/agent-base.MIT
+
+---
+
 name: "asynckit"
 license_category: binary
 module: web-console
@@ -6090,7 +6190,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.15.0
+version: 1.18.0
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -6122,6 +6222,16 @@ license_name: MIT License
 copyright: Syntax JSX team and other contributors
 version: 6.18.0
 license_file_path: licenses/bin/babel-plugin-syntax-jsx.MIT
+
+---
+
+name: "call-bind-apply-helpers"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.2
+license_file_path: licenses/bin/call-bind-apply-helpers.MIT
 
 ---
 
@@ -6414,6 +6524,16 @@ license_file_path: licenses/bin/dayjs.MIT
 
 ---
 
+name: "debug"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Josh Junon
+version: 4.3.3
+license_file_path: licenses/bin/debug.MIT
+
+---
+
 name: "delayed-stream"
 license_category: binary
 module: web-console
@@ -6438,7 +6558,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Kevin Decker <kpdecker@gmail.com>
-version: 4.0.1
+version: 4.0.4
 license_file_path: licenses/bin/diff.BSD3
 
 ---
@@ -6472,12 +6592,22 @@ version: 1.2.2
 
 ---
 
+name: "dunder-proto"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.1
+license_file_path: licenses/bin/dunder-proto.MIT
+
+---
+
 name: "echarts"
 license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Apache Software Foundation
-version: 5.5.1
+version: 6.1.0
 
 ---
 
@@ -6501,6 +6631,16 @@ license_file_path: licenses/bin/error-ex.MIT
 
 ---
 
+name: "es-define-property"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.0.1
+license_file_path: licenses/bin/es-define-property.MIT
+
+---
+
 name: "es-errors"
 license_category: binary
 module: web-console
@@ -6511,12 +6651,22 @@ license_file_path: licenses/bin/es-errors.MIT
 
 ---
 
+name: "es-object-atoms"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.1.1
+license_file_path: licenses/bin/es-object-atoms.MIT
+
+---
+
 name: "es-set-tostringtag"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 2.0.3
+version: 2.1.0
 license_file_path: licenses/bin/es-set-tostringtag.MIT
 
 ---
@@ -6556,7 +6706,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Ruben Verborgh
-version: 1.15.6
+version: 1.16.0
 license_file_path: licenses/bin/follow-redirects.MIT
 
 ---
@@ -6566,7 +6716,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Felix Geisendörfer
-version: 4.0.4
+version: 4.0.6
 license_file_path: licenses/bin/form-data.MIT
 
 ---
@@ -6586,18 +6736,28 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.2.4
+version: 1.3.0
 license_file_path: licenses/bin/get-intrinsic.MIT
 
 ---
 
-name: "has-proto"
+name: "get-proto"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.0.3
-license_file_path: licenses/bin/has-proto.MIT
+version: 1.0.1
+license_file_path: licenses/bin/get-proto.MIT
+
+---
+
+name: "gopd"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.2.0
+license_file_path: licenses/bin/gopd.MIT
 
 ---
 
@@ -6606,7 +6766,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 1.0.3
+version: 1.1.0
 license_file_path: licenses/bin/has-symbols.MIT
 
 ---
@@ -6626,7 +6786,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 2.0.2
+version: 2.0.4
 license_file_path: licenses/bin/hasown.MIT
 
 ---
@@ -6668,6 +6828,16 @@ license_name: BSD-3-Clause License
 copyright: Michael Ridgway
 version: 3.3.0
 license_file_path: licenses/bin/hoist-non-react-statics.BSD3
+
+---
+
+name: "https-proxy-agent"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Nathan Rajlich
+version: 5.0.1
+license_file_path: licenses/bin/https-proxy-agent.MIT
 
 ---
 
@@ -6738,6 +6908,16 @@ license_name: MIT License
 copyright: Simon Lydell
 version: 4.0.0
 license_file_path: licenses/bin/js-tokens.MIT
+
+---
+
+name: "jsesc"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Mathias Bynens
+version: 3.1.0
+license_file_path: licenses/bin/jsesc.MIT
 
 ---
 
@@ -6841,6 +7021,16 @@ license_file_path: licenses/bin/markdown-table-ts.MIT
 
 ---
 
+name: "math-intrinsics"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Jordan Harband
+version: 1.1.0
+license_file_path: licenses/bin/math-intrinsics.MIT
+
+---
+
 name: "memoize-one"
 license_category: binary
 module: web-console
@@ -6868,6 +7058,16 @@ license_name: MIT License
 copyright: Jonathan Ong <me@jongleberry.com>
 version: 2.1.35
 license_file_path: licenses/bin/mime-types.MIT
+
+---
+
+name: "ms"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Zeit, Inc.
+version: 2.1.2
+license_file_path: licenses/bin/ms.MIT
 
 ---
 
@@ -7025,7 +7225,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Rob Wu
-version: 1.1.0
+version: 2.1.0
 license_file_path: licenses/bin/proxy-from-env.MIT
 
 ---
@@ -7365,7 +7565,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Robert Kieffer and other contributors
-version: 7.0.3
+version: 11.1.1
 license_file_path: licenses/bin/uuid.MIT
 
 ---
@@ -7395,7 +7595,7 @@ license_category: binary
 module: web-console
 license_name: ISC License
 copyright: Eemeli Aro
-version: 1.10.2
+version: 1.10.3
 license_file_path: licenses/bin/yaml.ISC
 
 ---
@@ -7405,7 +7605,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Baidu Inc.
-version: 5.6.0
+version: 6.1.0
 license_file_path: licenses/bin/zrender.BSD3
 
 ---

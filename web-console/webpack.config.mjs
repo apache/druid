@@ -56,9 +56,14 @@ export default env => {
   console.log(`Webpack running in ${mode} mode.`);
 
   const plugins = [
+    new webpack.BannerPlugin({
+      banner: 'globalThis.global ??= globalThis;',
+      raw: true,
+      entryOnly: true,
+    }),
     new webpack.DefinePlugin({
       'process.env': JSON.stringify({ NODE_ENV: mode }),
-      'global': {},
+      'global': 'globalThis.global',
       'NODE_ENV': JSON.stringify(mode),
     }),
 
