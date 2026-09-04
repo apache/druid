@@ -71,7 +71,7 @@ public class DruidHttpClientConfigTest
   public void testUnknownPoolImplementationIsRejected()
   {
     final Properties properties = new Properties();
-    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "elastic");
+    properties.setProperty(PROPERTY_BASE + ".poolImplementation", "invalid");
 
     Assert.assertThrows(RuntimeException.class, () -> configure(properties));
   }
