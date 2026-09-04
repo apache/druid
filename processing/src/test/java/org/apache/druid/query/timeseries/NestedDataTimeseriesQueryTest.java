@@ -107,7 +107,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     );
     this.segmentsGenerator = segmentsGenerator;
     this.segmentsName = segmentsGenerator.toString();
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
+    this.vectorize = QueryContextParameters.VECTORIZE.parse(vectorize);
     this.closer = Closer.create();
   }
 

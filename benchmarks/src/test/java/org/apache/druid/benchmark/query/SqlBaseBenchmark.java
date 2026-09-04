@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchApproxCountDistinctSqlAggregator;
@@ -248,7 +249,7 @@ public class SqlBaseBenchmark
   @Setup(Level.Trial)
   public void setup() throws JsonProcessingException
   {
-    vectorizeContext = QueryContexts.Vectorize.fromString(vectorize);
+    vectorizeContext = QueryContextParameters.VECTORIZE.parse(vectorize);
     checkIncompatibleParameters();
 
     Map<DataSegment, IncrementalIndex> realtimeSegments = new HashMap<>();

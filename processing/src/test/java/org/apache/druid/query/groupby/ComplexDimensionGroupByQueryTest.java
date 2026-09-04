@@ -63,7 +63,7 @@ public class ComplexDimensionGroupByQueryTest
 
   public ComplexDimensionGroupByQueryTest(GroupByQueryConfig config, String vectorize)
   {
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
+    this.vectorize = QueryContextParameters.VECTORIZE.parse(vectorize);
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         Collections.emptyList(),
         config,

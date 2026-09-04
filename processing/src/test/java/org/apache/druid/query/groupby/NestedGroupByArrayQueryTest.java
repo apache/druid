@@ -80,7 +80,7 @@ public class NestedGroupByArrayQueryTest
   )
   {
     BuiltInTypesModule.registerHandlersAndSerde();
-    this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
+    this.vectorize = QueryContextParameters.VECTORIZE.parse(vectorize);
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         BuiltInTypesModule.getJacksonModulesList(),
         config,
