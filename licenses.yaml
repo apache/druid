@@ -4695,7 +4695,7 @@ name: grpc-api
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.83.1
+version: 1.84.0
 libraries:
   - io.grpc: grpc-api
 
@@ -4705,7 +4705,7 @@ name: grpc-context
 license_category: binary
 module: extensions/druid-google-extensions
 license_name: Apache License version 2.0
-version: 1.83.1
+version: 1.84.0
 libraries:
   - io.grpc: grpc-context
 
