@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.List;
@@ -194,7 +195,7 @@ public class DefaultK8sApiClient implements K8sApiClient
         private Watch.Response<DiscoveryDruidNodeAndResourceVersion> obj;
 
         @Override
-        public boolean hasNext() throws SocketTimeoutException
+        public boolean hasNext() throws IOException
         {
           try {
             while (watch.hasNext()) {
@@ -274,9 +275,11 @@ public class DefaultK8sApiClient implements K8sApiClient
           catch (RuntimeException ex) {
             if (ex.getCause() instanceof SocketTimeoutException) {
               throw (SocketTimeoutException) ex.getCause();
-            } else {
-              throw ex;
             }
+            if (ex.getCause() instanceof IOException && !(ex.getCause() instanceof InterruptedIOException)) {
+              throw new ChannelResetException(ex.getCause());
+            }
+            throw ex;
           }
 
           return false;
