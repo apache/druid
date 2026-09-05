@@ -281,7 +281,7 @@ public class TaskQueueScaleTest
               try {
                 synchronized (knownTasks) {
                   final TestTaskRunnerWorkItem item2 = knownTasks.get(task.getId());
-                  if (item2.getState() == RunnerTaskState.PENDING) {
+                  if (item2 != null && item2.getState() == RunnerTaskState.PENDING) {
                     knownTasks.put(task.getId(), item2.withState(RunnerTaskState.RUNNING));
                   }
                 }
@@ -292,7 +292,9 @@ public class TaskQueueScaleTest
                         final TestTaskRunnerWorkItem item2;
                         synchronized (knownTasks) {
                           item2 = knownTasks.get(task.getId());
-                          knownTasks.put(task.getId(), item2.withState(RunnerTaskState.NONE));
+                          if (item2 != null) {
+                            knownTasks.put(task.getId(), item2.withState(RunnerTaskState.NONE));
+                          }
                         }
                         if (item2 != null) {
                           item2.setResult(TaskStatus.success(task.getId()));
