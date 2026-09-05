@@ -78,6 +78,10 @@
           <artifactId>commons-pool</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>com.github.luben</groupId>
+          <artifactId>zstd-jni</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.apache.yetus</groupId>
           <artifactId>audience-annotations</artifactId>
         </exclusion>
