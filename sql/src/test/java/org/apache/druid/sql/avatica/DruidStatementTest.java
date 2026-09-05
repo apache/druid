@@ -359,6 +359,53 @@ public class DruidStatementTest extends CalciteTestBase
     }
   }
 
+  @Test
+  public void testMaxRowCountDirect()
+  {
+    // SELECT_FROM_FOO returns 6 rows. Verify that maxRowCount=2 limits to 2 rows.
+    SqlQueryPlus queryPlus =
+        SqlQueryPlus.builder()
+                    .sql(SELECT_FROM_FOO)
+                    .auth(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+                    .buildJdbc();
+    try (final DruidJdbcStatement statement = jdbcStatement()) {
+      statement.execute(queryPlus, 2, null);
+      Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 10);
+      Assert.assertEquals(2, frame.rows.size());
+      Assert.assertTrue(frame.done);
+      Assert.assertTrue(statement.isDone());
+    }
+  }
+
+  @Test
+  public void testMaxRowCountOverMultipleFramesDirect()
+  {
+    // SELECT_FROM_FOO returns 6 rows. Verify that maxRowCount=2 limits across
+    // multiple frames, returning 2 rows total and terminating.
+    SqlQueryPlus queryPlus =
+        SqlQueryPlus.builder()
+                    .sql(SELECT_FROM_FOO)
+                    .auth(AllowAllAuthenticator.ALLOW_ALL_RESULT)
+                    .buildJdbc();
+    try (final DruidJdbcStatement statement = jdbcStatement()) {
+      statement.execute(queryPlus, 2, null);
+      // First frame, ask for 1 row.
+      Assert.assertEquals(0, statement.getCurrentOffset());
+      Assert.assertFalse(statement.isDone());
+      Meta.Frame frame = statement.nextFrame(AbstractDruidJdbcStatement.START_OFFSET, 1);
+      Assert.assertEquals(1, frame.rows.size());
+      Assert.assertFalse(frame.done);
+      Assert.assertFalse(statement.isDone());
+      Assert.assertEquals(1, statement.getCurrentOffset());
+
+      // Second frame, ask for the remaining row.
+      frame = statement.nextFrame(1, 10);
+      Assert.assertEquals(1, frame.rows.size());
+      Assert.assertTrue(frame.done);
+      Assert.assertTrue(statement.isDone());
+    }
+  }
+
   /**
    * Verify that JDBC automatically closes the first result set when we
    * open a second for the same statement.
