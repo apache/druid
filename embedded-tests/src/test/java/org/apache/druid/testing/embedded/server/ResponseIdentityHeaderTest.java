@@ -83,10 +83,14 @@ public class ResponseIdentityHeaderTest extends EmbeddedClusterTestBase
 
   @Test
   @Timeout(30)
-  public void testOverlordResponseIdentity_directAndViaRouter() throws Exception
+  public void testOverlordResponseIdentity_directViaCoordinatorAndViaRouter() throws Exception
   {
     assertResponseIdentity(
         sendGet(getServerUrl(overlord) + "/druid/indexer/v1/isLeader"),
+        overlord
+    );
+    assertResponseIdentity(
+        sendGet(getServerUrl(coordinator) + "/druid/indexer/v1/isLeader"),
         overlord
     );
     assertResponseIdentity(

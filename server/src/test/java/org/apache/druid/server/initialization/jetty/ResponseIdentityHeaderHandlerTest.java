@@ -19,10 +19,14 @@
 
 package org.apache.druid.server.initialization.jetty;
 
+import org.apache.druid.server.DruidNode;
 import org.easymock.EasyMock;
 import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.util.Callback;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +34,45 @@ import javax.servlet.http.HttpServletResponse;
 
 public class ResponseIdentityHeaderHandlerTest
 {
+  @Test
+  public void testRestoresIdentityHeadersAfterResponseResetAndHeaderClear() throws Exception
+  {
+    final DruidNode node = new DruidNode("druid/test", "test-host", false, 8080, null, true, false);
+    final Request request = EasyMock.strictMock(Request.class);
+    final org.eclipse.jetty.server.Response response = EasyMock.mock(org.eclipse.jetty.server.Response.class);
+    final HttpFields.Mutable headers = HttpFields.build();
+
+    EasyMock.expect(response.getHeaders()).andReturn(headers).times(2);
+    response.reset();
+    EasyMock.expectLastCall().andAnswer(
+        () -> {
+          headers.clear();
+          return null;
+        }
+    );
+    EasyMock.replay(request, response);
+
+    final Handler handler = new Handler.Abstract.NonBlocking()
+    {
+      @Override
+      public boolean handle(
+          final Request request,
+          final org.eclipse.jetty.server.Response response,
+          final Callback callback
+      )
+      {
+        response.getHeaders().clear();
+        assertIdentityHeaders(response.getHeaders(), node);
+        response.reset();
+        return true;
+      }
+    };
+
+    Assertions.assertTrue(new ResponseIdentityHeaderHandler(node, handler).handle(request, response, Callback.NOOP));
+    assertIdentityHeaders(headers, node);
+    EasyMock.verify(request, response);
+  }
+
   @Test
   public void testClearRouterIdentityRemovesAllHeaders()
   {
@@ -127,5 +170,12 @@ public class ResponseIdentityHeaderHandlerTest
     EasyMock.expect(serverResponse.getHeaders()).andReturn(headers).times(calls);
     EasyMock.replay(serverResponse);
     return serverResponse;
+  }
+
+  private static void assertIdentityHeaders(final HttpFields headers, final DruidNode node)
+  {
+    Assertions.assertEquals("test-host:8080", headers.get(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER));
+    Assertions.assertEquals("druid/test", headers.get(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER));
+    Assertions.assertEquals(node.getVersion(), headers.get(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER));
   }
 }

@@ -26,10 +26,15 @@ import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.JettyUtils;
+import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.initialization.jetty.ResponseIdentityHeaderHandler;
+import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.Request;
+import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.ee8.proxy.ProxyServlet;
+import org.eclipse.jetty.http.HttpField;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -43,17 +48,20 @@ public class OverlordProxyServlet extends ProxyServlet
   private final OverlordClient overlordClient;
   private final Provider<HttpClient> httpClientProvider;
   private final DruidHttpClientConfig httpClientConfig;
+  private final ServerConfig serverConfig;
 
   @Inject
   OverlordProxyServlet(
       OverlordClient overlordClient,
       @Global Provider<HttpClient> httpClientProvider,
-      @Global DruidHttpClientConfig httpClientConfig
+      @Global DruidHttpClientConfig httpClientConfig,
+      ServerConfig serverConfig
   )
   {
     this.overlordClient = overlordClient;
     this.httpClientProvider = httpClientProvider;
     this.httpClientConfig = httpClientConfig;
+    this.serverConfig = serverConfig;
   }
 
   @Override
@@ -83,6 +91,35 @@ public class OverlordProxyServlet extends ProxyServlet
     return client;
   }
 
+  @Override
+  protected void onServerResponseHeaders(
+      final HttpServletRequest clientRequest,
+      final HttpServletResponse proxyResponse,
+      final Response serverResponse
+  )
+  {
+    ResponseIdentityHeaderHandler.clearRouterIdentity(proxyResponse);
+    StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
+    super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
+  }
+
+  @Override
+  protected HttpField filterServerResponseHeader(
+      final HttpServletRequest clientRequest,
+      final Response serverResponse,
+      final HttpField field
+  )
+  {
+    // The Coordinator-to-Overlord proxy follows the same all-or-nothing identity contract as Router proxies.
+    if (!ResponseIdentityHeaderHandler.shouldProxyIdentityHeader(
+        serverConfig.isEnableResponseIdentityHeaders(),
+        serverResponse,
+        field
+    )) {
+      return null;
+    }
+    return super.filterServerResponseHeader(clientRequest, serverResponse, field);
+  }
 
   @Override
   protected void sendProxyRequest(

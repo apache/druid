@@ -70,6 +70,7 @@ public class ServerConfigTest
         new AllowedRegexErrorResponseTransformStrategy(ImmutableList.of(".*")),
         "my-cool-policy",
         true,
+        true,
         UriCompliance.RFC3986,
         false
     );
@@ -85,6 +86,7 @@ public class ServerConfigTest
     Assertions.assertEquals("my-cool-policy", modifiedConfig.getContentSecurityPolicy());
     Assertions.assertEquals("my-cool-policy", modifiedConfig2.getContentSecurityPolicy());
     Assertions.assertTrue(modifiedConfig2.isEnableHSTS());
+    Assertions.assertTrue(modifiedConfig2.isEnableResponseIdentityHeaders());
     Assertions.assertEquals(UriCompliance.RFC3986, modifiedConfig2.getUriCompliance());
     Assertions.assertFalse(modifiedConfig2.isEnforceStrictSNIHostChecking());
   }

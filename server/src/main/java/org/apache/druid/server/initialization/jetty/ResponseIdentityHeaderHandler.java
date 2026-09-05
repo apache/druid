@@ -23,24 +23,79 @@ import org.apache.druid.server.DruidNode;
 import org.eclipse.jetty.client.Response;
 import org.eclipse.jetty.http.HttpField;
 import org.eclipse.jetty.http.HttpFields;
-import org.eclipse.jetty.rewrite.handler.HeaderPatternRule;
-import org.eclipse.jetty.rewrite.handler.RewriteHandler;
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Request;
+import org.eclipse.jetty.util.Callback;
 
 import javax.servlet.http.HttpServletResponse;
 
-public class ResponseIdentityHeaderHandler extends RewriteHandler
+public class ResponseIdentityHeaderHandler extends Handler.Wrapper
 {
   public static final String RESPONSE_SERVER_HEADER = "X-Druid-Server";
   public static final String RESPONSE_SERVICE_HEADER = "X-Druid-Service";
   public static final String RESPONSE_VERSION_HEADER = "X-Druid-Version";
 
+  private final String responseServer;
+  private final String responseService;
+  private final String responseVersion;
+
   public ResponseIdentityHeaderHandler(final DruidNode selfNode, final Handler handler)
   {
     super(handler);
-    addRule(new HeaderPatternRule("*", RESPONSE_SERVER_HEADER, selfNode.getHostAndPortToUse()));
-    addRule(new HeaderPatternRule("*", RESPONSE_SERVICE_HEADER, selfNode.getServiceName()));
-    addRule(new HeaderPatternRule("*", RESPONSE_VERSION_HEADER, selfNode.getVersion()));
+    responseServer = selfNode.getHostAndPortToUse();
+    responseService = selfNode.getServiceName();
+    responseVersion = selfNode.getVersion();
+  }
+
+  @Override
+  public boolean handle(
+      final Request request,
+      final org.eclipse.jetty.server.Response response,
+      final Callback callback
+  ) throws Exception
+  {
+    addIdentityHeaders(response);
+    final HttpFields.Mutable responseHeaders = new HttpFields.Mutable.Wrapper(response.getHeaders())
+    {
+      @Override
+      public HttpFields.Mutable clear()
+      {
+        super.clear();
+        addIdentityHeaders(this);
+        return this;
+      }
+    };
+    return super.handle(
+        request,
+        new org.eclipse.jetty.server.Response.Wrapper(request, response)
+        {
+          @Override
+          public HttpFields.Mutable getHeaders()
+          {
+            return responseHeaders;
+          }
+
+          @Override
+          public void reset()
+          {
+            super.reset();
+            addIdentityHeaders(this);
+          }
+        },
+        callback
+    );
+  }
+
+  private void addIdentityHeaders(final org.eclipse.jetty.server.Response response)
+  {
+    addIdentityHeaders(response.getHeaders());
+  }
+
+  private void addIdentityHeaders(final HttpFields.Mutable headers)
+  {
+    headers.put(RESPONSE_SERVER_HEADER, responseServer);
+    headers.put(RESPONSE_SERVICE_HEADER, responseService);
+    headers.put(RESPONSE_VERSION_HEADER, responseVersion);
   }
 
   public static void clearRouterIdentity(final HttpServletResponse proxyResponse)
