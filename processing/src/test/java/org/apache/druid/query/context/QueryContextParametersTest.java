@@ -32,6 +32,8 @@ class QueryContextParametersTest
   void testValidateParameter()
   {
     assertThrows(IAE.class, () -> QueryContextParameters.validate("maxRowsQueuedForOrdering", -1));
+    assertThrows(IAE.class, () -> QueryContextParameters.validate("maxRowsQueuedForOrdering", "not-an-int"));
+    assertThrows(IAE.class, () -> QueryContextParameters.validate("useResultLevelCache", 1));
     QueryContextParameters.validate("maxRowsQueuedForOrdering", Integer.MAX_VALUE);
     QueryContextParameters.validate("maxRowsQueuedForOrdering", null);
     QueryContextParameters.validate("unmigratedParameter", -1);

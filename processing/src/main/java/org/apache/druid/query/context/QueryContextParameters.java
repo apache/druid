@@ -19,7 +19,9 @@
 
 package org.apache.druid.query.context;
 
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.query.BadQueryContextException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.context.constraint.Range;
 import org.apache.druid.query.context.docs.ParameterDocumentation.Engine;
@@ -89,7 +91,12 @@ public final class QueryContextParameters
     final QueryContextParameter<?> parameter = BY_NAME.get(name);
     // Unmigrated parameters are intentionally accepted until the catalog contains every supported context parameter.
     if (parameter != null) {
-      parameter.parse(value);
+      try {
+        parameter.parse(value);
+      }
+      catch (BadQueryContextException e) {
+        throw new IAE(e, "Invalid query context parameter [%s]: %s", name, e.getMessage());
+      }
     }
   }
 

@@ -59,6 +59,24 @@ public class SqlQueryPlusTest
   }
 
   @Test
+  public void testSetParameterParserFailureIsInvalidSqlInput()
+  {
+    final DruidException e = Assertions.assertThrows(
+        DruidException.class,
+        () -> SqlQueryPlus.builder("SET maxRowsQueuedForOrdering = 'not-an-int'; SELECT 1")
+                          .auth(CalciteTests.REGULAR_USER_AUTH_RESULT)
+                          .build()
+    );
+
+    BaseCalciteQueryTest.assertDruidException(
+        e,
+        DruidExceptionMatcher
+            .invalidSqlInput()
+            .expectMessageContains("Invalid query context parameter [maxRowsQueuedForOrdering]")
+    );
+  }
+
+  @Test
   public void testSyntaxError()
   {
     // SqlQueryPlus throws parse errors on build() if the statement is invalid
