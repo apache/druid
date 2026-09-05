@@ -20,7 +20,6 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.DateTimes;
@@ -35,6 +34,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.context.QueryContextParameters;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -390,10 +390,8 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                                            .batchSize(testCase.batchSize())
                                            .build()
                                            .withOverriddenContext(
-                                               ImmutableMap.of(
-                                                   ScanQueryConfig.CTX_KEY_MAX_ROWS_QUEUED_FOR_ORDERING,
-                                                   testCase.maxRowsQueuedForOrdering()
-                                               )
+                                               QueryContextParameters.MAX_ROWS_QUEUED_FOR_ORDERING,
+                                               testCase.maxRowsQueuedForOrdering()
                                            ),
         brokerRunner
     );

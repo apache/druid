@@ -34,6 +34,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <query.context.docs.mode>verify</query.context.docs.mode>
     <sigar.base.version>1.6.5</sigar.base.version>
     <sigar.version>1.6.5.132-6</sigar.version>
     <oshi.version>7.6.0</oshi.version>
@@ -526,6 +527,27 @@
                   <outputDirectory>${project.build.directory}/mariadb-legacy</outputDirectory>
                 </artifactItem>
               </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-query-context-documentation</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>java</goal>
+            </goals>
+            <configuration>
+              <mainClass>org.apache.druid.query.context.docs.ParameterDocumentationGenerator</mainClass>
+              <arguments>
+                <argument>${project.basedir}/..</argument>
+                <argument>${query.context.docs.mode}</argument>
+                <argument>${project.build.directory}/generated-docs</argument>
+              </arguments>
             </configuration>
           </execution>
         </executions>
