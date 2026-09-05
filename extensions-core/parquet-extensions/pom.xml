@@ -77,6 +77,7 @@
           <groupId>commons-pool</groupId>
           <artifactId>commons-pool</artifactId>
         </exclusion>
+        <!-- zstd-jni is already provided by druid-processing; keep a single Druid-managed native library version. -->
         <exclusion>
           <groupId>com.github.luben</groupId>
           <artifactId>zstd-jni</artifactId>
