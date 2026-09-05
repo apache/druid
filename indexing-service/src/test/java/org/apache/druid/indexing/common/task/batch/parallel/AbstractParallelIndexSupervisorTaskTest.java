@@ -251,6 +251,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
                               .withPartitionsSpec(partitionsSpec)
                               .withForceGuaranteedRollup(forceGuaranteedRollup)
                               .withMaxNumConcurrentSubTasks(maxNumConcurrentSubTasks)
+                              // Serial tests need only a short poll interval; concurrent tests retain the default.
+                              .withTaskStatusCheckPeriodMs(maxNumConcurrentSubTasks == 1 ? 100L : null)
                               .withMaxParseExceptions(5)
                               .build();
   }
