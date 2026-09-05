@@ -136,7 +136,7 @@ public class SqlTestUtils
 
   public List<InputRow> createTableWithRows(final String tableName, int numEntries)
   {
-    derbyConnector.createTable(
+    derbyConnector.createTableIfNotExists(
         tableName,
         ImmutableList.of(
             StringUtils.format(
