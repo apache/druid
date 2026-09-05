@@ -565,6 +565,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         ...queryContext,
                         useCache,
                         populateCache: useCache,
+                        useResultLevelCache: useCache,
+                        populateResultLevelCache: useCache,
+                        useForwardedResultLevelCache: useCache,
+                        populateForwardedResultLevelCache: useCache,
                       })
                     }
                     optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
