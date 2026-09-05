@@ -25,7 +25,9 @@ import org.apache.druid.server.security.AuthenticationResult;
 import org.pac4j.core.config.Config;
 import org.pac4j.core.engine.DefaultCallbackLogic;
 import org.pac4j.core.engine.DefaultSecurityLogic;
+import org.pac4j.core.engine.SecurityLogic;
 import org.pac4j.core.exception.http.HttpAction;
+import org.pac4j.core.profile.CommonProfile;
 import org.pac4j.jee.context.JEEContext;
 import org.pac4j.jee.http.adapter.JEEHttpActionAdapter;
 
@@ -38,6 +40,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 
 public class Pac4jFilter implements Filter
 {
@@ -99,7 +103,7 @@ public class Pac4jFilter implements Filter
               null
       );
     } else {
-      DefaultSecurityLogic securityLogic = new DefaultSecurityLogic();
+      SecurityLogic securityLogic = createSecurityLogic();
       try {
         securityLogic.perform(
             context,
@@ -109,9 +113,14 @@ public class Pac4jFilter implements Filter
               try {
                 // Extract user ID from pac4j profiles and create AuthenticationResult
                 if (profiles != null && !profiles.isEmpty()) {
-                  String uid = profiles.iterator().next().getId();
+                  CommonProfile profile = (CommonProfile) profiles.iterator().next();
+                  String uid = profile.getId();
                   if (uid != null) {
-                    AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, null);
+                    Map<String, Object> authContext = Collections.singletonMap(
+                        "profile",
+                        Collections.singletonMap("attributes", profile.getAttributes())
+                    );
+                    AuthenticationResult authenticationResult = new AuthenticationResult(uid, authorizerName, name, authContext);
                     servletRequest.setAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT, authenticationResult);
                     filterChain.doFilter(servletRequest, servletResponse);
                   }
@@ -135,6 +144,11 @@ public class Pac4jFilter implements Filter
         JEEHttpActionAdapter.INSTANCE.adapt(e, context);
       }
     }
+  }
+
+  protected SecurityLogic createSecurityLogic()
+  {
+    return new DefaultSecurityLogic();
   }
 
   @Override
