@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.duty;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.CloneStatusManager;
+import org.apache.druid.server.coordinator.CloneSyncCriteria;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -30,6 +31,7 @@ import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
@@ -94,6 +96,7 @@ public class CloneHistoricals implements CoordinatorDuty
                                                                      serverHolder -> serverHolder
                                                                  ));
 
+    final Map<String, CloningStats> targetHistoricalStats = new HashMap<>();
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetHistoricalName = entry.getKey();
       final ServerHolder targetServer = hostToHistoricalMap.get(targetHistoricalName);
@@ -110,6 +113,9 @@ public class CloneHistoricals implements CoordinatorDuty
         continue;
       }
 
+      final CloningStats cloningStats = new CloningStats(sourceServer.getServer().getNumSegments());
+      targetHistoricalStats.put(targetHistoricalName, cloningStats);
+
       final Set<DataSegment> sourceProjectedSegments = sourceServer.getProjectedSegments();
       final Set<DataSegment> targetProjectedSegments = targetServer.getProjectedSegments();
       // Load any segment that the clone target is missing, or that it holds under a different partial-load profile
@@ -119,6 +125,9 @@ public class CloneHistoricals implements CoordinatorDuty
         final PartialLoadProfile sourceProfile = sourceServer.getProjectedProfile(segment);
         if (shouldLoadSegmentOnTargetServer(segment, sourceProfile, targetServer, targetProjectedSegments)) {
           loadSegmentOnTargetServer(segment, sourceProfile, targetServer, params);
+          cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
+        } else if (targetServer.isLoadingSegment(segment)) {
+          cloningStats.incrementMissingSegmentCount(sourceServer.isServingSegment(segment));
         }
       }
 
@@ -130,7 +139,12 @@ public class CloneHistoricals implements CoordinatorDuty
       }
     }
 
-    final Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(hostToHistoricalMap, cloneServers);
+    final Map<String, ServerCloneStatus> newStatusMap = createCurrentStatusMap(
+        hostToHistoricalMap,
+        cloneServers,
+        targetHistoricalStats,
+        params
+    );
     cloneStatusManager.updateStatus(newStatusMap);
 
     return params;
@@ -149,6 +163,7 @@ public class CloneHistoricals implements CoordinatorDuty
   {
     final RowKey.Builder rowKey = RowKey
         .with(Dimension.SERVER, targetServer.getServer().getName())
+        .with(Dimension.TIER, targetServer.getServer().getTier())
         .with(Dimension.DATASOURCE, segment.getDataSource());
 
     final DataSegment loadableSegment = getLoadableSegment(segment, params);
@@ -187,9 +202,13 @@ public class CloneHistoricals implements CoordinatorDuty
     if (targetServer.isLoadingSegment(segment)) {
       targetServer.cancelOperation(SegmentAction.LOAD, segment);
     } else if (loadQueueManager.dropSegment(segment, targetServer)) {
+      final RowKey rowKey = RowKey
+          .with(Dimension.SERVER, targetServer.getServer().getName())
+          .with(Dimension.TIER, targetServer.getServer().getTier())
+          .and(Dimension.DATASOURCE, segment.getDataSource());
       params.getCoordinatorStats().add(
           Stats.Segments.DROPPED_FROM_CLONE,
-          RowKey.of(Dimension.SERVER, targetServer.getServer().getName()),
+          rowKey,
           1L
       );
     }
@@ -221,10 +240,13 @@ public class CloneHistoricals implements CoordinatorDuty
    */
   private Map<String, ServerCloneStatus> createCurrentStatusMap(
       Map<String, ServerHolder> historicalMap,
-      Map<String, String> cloneServers
+      Map<String, String> cloneServers,
+      Map<String, CloningStats> targetHistoricalStats,
+      DruidCoordinatorRuntimeParams params
   )
   {
     final Map<String, ServerCloneStatus> newStatusMap = new HashMap<>();
+    final CloneSyncCriteria cloneSyncCriteria = params.getCoordinatorDynamicConfig().getCloneSyncCriteria();
 
     for (Map.Entry<String, String> entry : cloneServers.entrySet()) {
       final String targetServerName = entry.getKey();
@@ -239,10 +261,12 @@ public class CloneHistoricals implements CoordinatorDuty
       if (targetServer == null) {
         newStatus = ServerCloneStatus.unknown(sourceServerName, targetServerName);
       } else {
-
         ServerCloneStatus.State state;
+        final CloningStats stats = targetHistoricalStats.getOrDefault(targetServerName, new CloningStats(0));
         if (!historicalMap.containsKey(sourceServerName)) {
           state = ServerCloneStatus.State.SOURCE_SERVER_MISSING;
+        } else if (isSynced(stats, cloneSyncCriteria)) {
+          state = ServerCloneStatus.State.SYNCED;
         } else {
           state = ServerCloneStatus.State.IN_PROGRESS;
         }
@@ -255,7 +279,17 @@ public class CloneHistoricals implements CoordinatorDuty
             segmentDrop += 1;
           }
         }
-        newStatus = new ServerCloneStatus(sourceServerName, targetServerName, state, segmentLoad, segmentDrop, bytesLeft);
+        newStatus = new ServerCloneStatus(
+            sourceServerName,
+            targetServerName,
+            state,
+            segmentLoad,
+            segmentDrop,
+            stats.segmentsPendingSync,
+            stats.percentPendingSync(),
+            bytesLeft
+        );
+        collectMetricsIfStateChanged(targetServer, newStatus, params.getCoordinatorStats());
       }
       newStatusMap.put(targetServerName, newStatus);
     }
@@ -284,5 +318,73 @@ public class CloneHistoricals implements CoordinatorDuty
     }
     final PartialLoadProfile targetProfile = targetServer.getProjectedProfile(segment);
     return !Objects.equals(fingerprintOf(sourceProfile), fingerprintOf(targetProfile));
+  }
+
+  private boolean isSynced(CloningStats stats, CloneSyncCriteria criteria)
+  {
+    return stats.segmentsPendingSync <= criteria.getMaxSegmentsPendingSync()
+        && stats.percentPendingSync() <= criteria.getMaxPercentPendingSync();
+  }
+
+  /**
+   * Adds metrics to the run stats if the state has changed to SYNCED in this run.
+   */
+  private void collectMetricsIfStateChanged(
+      ServerHolder server,
+      ServerCloneStatus newStatus,
+      CoordinatorRunStats stats
+  )
+  {
+    final String targetServerName = server.getServer().getName();
+    final ServerCloneStatus oldStatus = cloneStatusManager.getStatusForServer(targetServerName);
+
+    stats.add(
+        Stats.Segments.PENDING_SYNC_ON_CLONE,
+        RowKey.of(Dimension.SERVER, targetServerName),
+        newStatus.segmentsPendingSync()
+    );
+    if (newStatus.state() == ServerCloneStatus.State.SYNCED
+        && (oldStatus == null || oldStatus.state() != ServerCloneStatus.State.SYNCED)) {
+      stats.add(
+          Stats.Tier.CLONE_SYNCED,
+          RowKey.with(Dimension.SERVER, targetServerName)
+                .and(Dimension.TIER, server.getServer().getTier()),
+          1L
+      );
+    }
+  }
+
+  private static class CloningStats
+  {
+    final int totalSegmentsLoadedOnSource;
+
+    /**
+     * Number of segments already loaded on source server but not on target server.
+     */
+    int segmentsPendingSync = 0;
+
+    CloningStats(int totalSegmentsLoadedOnSource)
+    {
+      this.totalSegmentsLoadedOnSource = totalSegmentsLoadedOnSource;
+    }
+
+    void incrementMissingSegmentCount(boolean loadedOnSourceServer)
+    {
+      if (loadedOnSourceServer) {
+        ++segmentsPendingSync;
+      }
+    }
+
+    /**
+     * Percentage of segments pending sync.
+     */
+    double percentPendingSync()
+    {
+      if (totalSegmentsLoadedOnSource > 0) {
+        return (100.0 * segmentsPendingSync) / totalSegmentsLoadedOnSource;
+      } else {
+        return 0.0;
+      }
+    }
   }
 }
