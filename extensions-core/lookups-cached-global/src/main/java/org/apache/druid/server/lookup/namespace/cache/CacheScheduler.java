@@ -33,9 +33,13 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.query.lookup.namespace.CacheGenerator;
 import org.apache.druid.query.lookup.namespace.ExtractionNamespace;
+import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -61,11 +65,11 @@ import java.util.function.Supplier;
  *   Map<String, String> cache = ((VersionedCache) cacheState).getCache(); // use the cache
  *   // Although VersionedCache implements AutoCloseable, versionedCache shouldn't be manually closed
  *   // when obtained from entry.getCacheState(). If the namespace updates should be ceased completely,
- *   // entry.close() (see below) should be called, it will close the last VersionedCache as well.
- *   // On scheduled updates, outdated VersionedCaches are also closed automatically.
+ *   // entry.close() (see below) should be called; it will retire the last VersionedCache as well.
+ *   // On scheduled updates, outdated VersionedCaches are also retired automatically.
  * }
  * ...
- * entry.close(); // close the last VersionedCache and unschedule future updates
+ * entry.close(); // retire the last VersionedCache and unschedule future updates
  * }</pre>
  */
 @LazySingleton
@@ -123,6 +127,13 @@ public final class CacheScheduler
     {
       impl.updateCounter.awaitCount(totalUpdates, timeoutMills, TimeUnit.MILLISECONDS);
     }
+
+    @VisibleForTesting
+    int pruneAndCountRetiredCaches()
+    {
+      return impl.pruneRetiredCaches();
+    }
+
     @VisibleForTesting
     void awaitNextUpdates(int nextUpdates) throws InterruptedException
     {
@@ -130,7 +141,7 @@ public final class CacheScheduler
     }
 
     /**
-     * Close the last {@link #getCacheState()}, if it is {@link VersionedCache}, and unschedule future updates.
+     * Retire the last {@link #getCacheState()}, if it is {@link VersionedCache}, and unschedule future updates.
      */
     @Override
     public void close()
@@ -162,6 +173,7 @@ public final class CacheScheduler
     private final ConcurrentAwaitableCounter updateCounter = new ConcurrentAwaitableCounter();
     private final CountDownLatch startLatch = new CountDownLatch(1);
     private final CompletableFuture<Boolean> firstLoadFinishedSuccessfully = new CompletableFuture<>();
+    private final List<VersionedCache> retiredCaches = new ArrayList<>();
 
     private EntryImpl(final T namespace, final Entry<T> entry, final CacheGenerator<T> cacheGenerator)
     {
@@ -229,6 +241,14 @@ public final class CacheScheduler
       boolean updatedCacheSuccessfully = false;
       CacheHandler newCache = null;
       try {
+        if (!canLoadNewCache()) {
+          log.warn(
+              "%s: skipping lookup cache update because '%s' retired cache entries are still retained",
+              this,
+              retiredCacheCount()
+          );
+          return false;
+        }
         updatesStarted.incrementAndGet();
         newCache = CacheScheduler.this.cacheManager.allocateCache();
         final String newVersion = cacheGenerator.generateCache(
@@ -244,7 +264,7 @@ public final class CacheScheduler
           if (previousCacheState != NoCache.ENTRY_CLOSED) {
             updatedCacheSuccessfully = true;
             if (previousCacheState instanceof VersionedCache) {
-              ((VersionedCache) previousCacheState).close();
+              retireAndTrackSwappedCache((VersionedCache) previousCacheState);
             }
             log.debug("%s: the cache was successfully updated", this);
           } else {
@@ -271,6 +291,52 @@ public final class CacheScheduler
         }
       }
       return updatedCacheSuccessfully;
+    }
+
+    private boolean canLoadNewCache()
+    {
+      return pruneRetiredCaches() < maxRetiredCacheEntries;
+    }
+
+    private int retiredCacheCount()
+    {
+      synchronized (retiredCaches) {
+        return retiredCaches.size();
+      }
+    }
+
+    private void retireAndTrackSwappedCache(VersionedCache versionedCache)
+    {
+      versionedCache.retire();
+      synchronized (retiredCaches) {
+        pruneRetiredCachesLocked(System.currentTimeMillis());
+        if (versionedCache.isRetired()
+            && !retiredCaches.contains(versionedCache)
+            && retiredCaches.size() < maxRetiredCacheEntries) {
+          retiredCaches.add(versionedCache);
+        }
+        pruneRetiredCachesLocked(System.currentTimeMillis());
+      }
+    }
+
+    private void retireLastCacheOnClose(VersionedCache versionedCache)
+    {
+      versionedCache.retire();
+      // The entry is closed and won't refresh again, so the last cache doesn't need backpressure tracking.
+      pruneRetiredCaches();
+    }
+
+    private int pruneRetiredCaches()
+    {
+      synchronized (retiredCaches) {
+        return pruneRetiredCachesLocked(System.currentTimeMillis());
+      }
+    }
+
+    private int pruneRetiredCachesLocked(long now)
+    {
+      retiredCaches.removeIf(retiredCache -> retiredCache.disposeRetiredIfNeeded(now, retiredCacheEntryTimeoutMillis));
+      return retiredCaches.size();
     }
 
     private String currentVersionOrNull(CacheState currentCacheState)
@@ -349,7 +415,7 @@ public final class CacheScheduler
           // entry.close(), it may be harmful to forcibly close the cache, which could still be used, at some
           // non-deterministic point of time. Cleaners are introduced to mitigate possible errors, not to escalate them.
           if (calledManually && lastCacheState instanceof VersionedCache) {
-            ((VersionedCache) lastCacheState).cacheHandler.close();
+            retireLastCacheOnClose((VersionedCache) lastCacheState);
           }
         }
         return true;
@@ -398,6 +464,16 @@ public final class CacheScheduler
     final String entryId;
     final CacheHandler cacheHandler;
     final String version;
+    private long retiredAtMillis = -1;
+    private int references = 0;
+    private Lifecycle lifecycle = Lifecycle.LIVE;
+
+    private enum Lifecycle
+    {
+      LIVE,
+      RETIRED,
+      DISPOSED
+    }
 
     private VersionedCache(String entryId, String version, CacheHandler cache)
     {
@@ -424,17 +500,88 @@ public final class CacheScheduler
       return version;
     }
 
-    @Override
-    public void close()
+    public synchronized Closeable acquireReference()
     {
-      cacheHandler.close();
-      // Log statement after cacheHandler.close(), because logging may fail (e. g. in shutdown hooks)
-      log.debug("Closed version [%s] of %s", version, entryId);
+      if (lifecycle != Lifecycle.LIVE) {
+        throw new ISE("Version '%s' of %s is in [%s] state", version, entryId, lifecycle);
+      }
+
+      references++;
+      return new Closeable()
+      {
+        private boolean closed = false;
+
+        @Override
+        public void close()
+        {
+          synchronized (VersionedCache.this) {
+            if (!closed) {
+              closed = true;
+              references--;
+              disposeIfNeeded(false);
+            }
+          }
+        }
+      };
+    }
+
+    @Override
+    public synchronized void close()
+    {
+      retire();
+    }
+
+    private synchronized void retire()
+    {
+      if (lifecycle == Lifecycle.DISPOSED) {
+        return;
+      }
+
+      if (lifecycle == Lifecycle.LIVE) {
+        lifecycle = Lifecycle.RETIRED;
+        retiredAtMillis = System.currentTimeMillis();
+      }
+
+      disposeIfNeeded(false);
+    }
+
+    private synchronized boolean disposeRetiredIfNeeded(long now, long timeoutMillis)
+    {
+      if (lifecycle == Lifecycle.DISPOSED) {
+        return true;
+      }
+      if (lifecycle == Lifecycle.LIVE) {
+        throw new ISE("Version '%s' of %s is still alive, can't dispose", version, entryId); // should never happen
+      }
+
+      return disposeIfNeeded(now - retiredAtMillis >= timeoutMillis);
+    }
+
+    private synchronized boolean isRetired()
+    {
+      return lifecycle == Lifecycle.RETIRED;
+    }
+
+    private boolean disposeIfNeeded(boolean force)
+    {
+      if (lifecycle == Lifecycle.RETIRED && (force || references == 0)) {
+        try {
+          cacheHandler.close();
+          lifecycle = Lifecycle.DISPOSED;
+          log.debug("Closed version '%s' of %s", version, entryId);
+        }
+        catch (RuntimeException e) {
+          log.warn(e, "Failed to close version '%s' of %s", version, entryId);
+        }
+      }
+      return lifecycle == Lifecycle.DISPOSED;
     }
   }
 
   private final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceGeneratorMap;
   private final NamespaceExtractionCacheManager cacheManager;
+  private final int maxRetiredCacheEntries;
+  private final long retiredCacheEntryTimeoutMillis;
   private final AtomicLong updatesStarted = new AtomicLong(0);
   private final AtomicInteger activeEntries = new AtomicInteger();
 
@@ -442,13 +589,16 @@ public final class CacheScheduler
   public CacheScheduler(
       final ServiceEmitter serviceEmitter,
       final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceGeneratorMap,
-      NamespaceExtractionCacheManager cacheManager
+      NamespaceExtractionCacheManager cacheManager,
+      NamespaceExtractionConfig config
   )
   {
     // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
     // Class doesn't override Object.equals().
     this.namespaceGeneratorMap = new IdentityHashMap<>(namespaceGeneratorMap);
     this.cacheManager = cacheManager;
+    this.maxRetiredCacheEntries = config.getMaxRetiredCacheEntries();
+    this.retiredCacheEntryTimeoutMillis = config.getRetiredCacheEntryTimeoutMillis();
     cacheManager.scheduledExecutorService().scheduleAtFixedRate(
         new Runnable()
         {
@@ -476,6 +626,16 @@ public final class CacheScheduler
         1,
         10, TimeUnit.MINUTES
     );
+  }
+
+  @VisibleForTesting
+  public CacheScheduler(
+      final ServiceEmitter serviceEmitter,
+      final Map<Class<? extends ExtractionNamespace>, CacheGenerator<?>> namespaceGeneratorMap,
+      NamespaceExtractionCacheManager cacheManager
+  )
+  {
+    this(serviceEmitter, namespaceGeneratorMap, cacheManager, new NamespaceExtractionConfig());
   }
 
   @VisibleForTesting

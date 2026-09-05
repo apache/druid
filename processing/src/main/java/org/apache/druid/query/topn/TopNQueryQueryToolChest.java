@@ -60,6 +60,7 @@ import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
@@ -467,6 +468,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         if (!TopNQueryEngine.canApplyExtractionInPost(topNQuery)) {
           return resultSequence;
         } else {
+          final DimensionSpec dimensionSpec = topNQuery.getDimensionSpec();
+          final String dimOutputName = dimensionSpec.getOutputName();
+          final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
           return Sequences.map(
               resultSequence,
               new Function<>()
@@ -488,12 +492,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                                     DimensionAndMetricValueExtractor input
                                 )
                                 {
-                                  String dimOutputName = topNQuery.getDimensionSpec().getOutputName();
                                   Object dimValue = input.getDimensionValue(dimOutputName);
                                   Map<String, Object> map = input.getBaseObject();
                                   map.put(
                                       dimOutputName,
-                                      topNQuery.getDimensionSpec().getExtractionFn().apply(dimValue)
+                                      extractionFn.apply(dimValue)
                                   );
                                   return input;
                                 }

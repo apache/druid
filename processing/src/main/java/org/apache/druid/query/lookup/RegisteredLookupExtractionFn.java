@@ -26,16 +26,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.extraction.DimExtractionFn;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
 
-public class RegisteredLookupExtractionFn implements ExtractionFn
+public class RegisteredLookupExtractionFn extends DimExtractionFn
 {
-  // Protected for moving to not-null by `delegateLock`
-  private volatile LookupExtractionFn delegate = null;
   private final Object delegateLock = new Object();
   private final LookupExtractorFactoryContainerProvider manager;
   private final String lookup;
@@ -43,6 +43,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   private final String replaceMissingValueWith;
   private final Boolean injective;
   private final boolean optimize;
+  private volatile LookupExtractionFn delegate = null;
 
   @JsonCreator
   public RegisteredLookupExtractionFn(
@@ -114,22 +115,9 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
   @Override
   @Nullable
-  public String apply(@Nullable Object value)
-  {
-    return ensureDelegate().apply(value);
-  }
-
-  @Override
-  @Nullable
   public String apply(@Nullable String value)
   {
-    return ensureDelegate().apply(value);
-  }
-
-  @Override
-  public String apply(long value)
-  {
-    return ensureDelegate().apply(value);
+    return withLookupExtractionFn(extractionFn -> extractionFn.apply(value));
   }
 
   @Override
@@ -152,29 +140,76 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return ensureDelegate();
   }
 
+  private LookupExtractorFactoryContainer ensureLookupExtractorFactoryContainer()
+  {
+    return getLookupExtractorFactoryContainerIfPresent()
+        .orElseThrow(() -> new ISE("Lookup [%s] not found", getLookupName()));
+  }
+
+  private Optional<LookupExtractorFactoryContainer> getLookupExtractorFactoryContainerIfPresent()
+  {
+    return manager.get(getLookupName());
+  }
+
   private LookupExtractionFn ensureDelegate()
+  {
+    return ensureDelegate(ensureLookupExtractorFactoryContainer());
+  }
+
+  private LookupExtractionFn ensureDelegate(LookupExtractorFactoryContainer container)
   {
     if (null == delegate) {
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
-          final LookupExtractor lookupExtractor =
-              manager.get(getLookupName())
-                     .orElseThrow(() -> new ISE("Lookup [%s] not found", getLookupName()))
-                     .getLookupExtractorFactory()
-                     .get();
+          final LookupExtractor lookupExtractor = container.getLookupExtractorFactory().get();
 
-          delegate = new LookupExtractionFn(
-              lookupExtractor,
-              retainMissingValue,
-              replaceMissingValueWith,
-              injective,
-              optimize
-          );
+          delegate = makeDelegate(lookupExtractor);
         }
       }
     }
     return delegate;
+  }
+
+  private LookupExtractionFn makeDelegate(LookupExtractor lookupExtractor)
+  {
+    return new LookupExtractionFn(
+        lookupExtractor,
+        retainMissingValue,
+        replaceMissingValueWith,
+        injective,
+        optimize
+    );
+  }
+
+  private <T> T withLookupExtractionFn(Function<LookupExtractionFn, T> fn)
+  {
+    final Optional<LookupExtractorFactoryContainer> maybeContainer = getLookupExtractorFactoryContainerIfPresent();
+    if (maybeContainer.isPresent()) {
+      return withLookupExtractionFn(maybeContainer.get(), fn);
+    }
+
+    final LookupExtractionFn currentDelegate = delegate;
+    if (currentDelegate != null) {
+      return fn.apply(currentDelegate);
+    }
+
+    return withLookupExtractionFn(ensureLookupExtractorFactoryContainer(), fn);
+  }
+
+  private <T> T withLookupExtractionFn(
+      LookupExtractorFactoryContainer container,
+      Function<LookupExtractionFn, T> fn
+  )
+  {
+    final Optional<RetainedLookupExtractor> retainedLookupExtractor =
+        container.getLookupExtractorFactory().acquireRetainedLookupExtractor();
+    if (retainedLookupExtractor.isPresent()) {
+      try (RetainedLookupExtractor retained = retainedLookupExtractor.get()) {
+        return fn.apply(makeDelegate(retained));
+      }
+    }
+    return fn.apply(ensureDelegate(container));
   }
 
   @Override
@@ -197,7 +232,6 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   @Override
   public int hashCode()
   {
-
     return Objects.hash(lookup, retainMissingValue, replaceMissingValueWith, injective, optimize);
   }
 
