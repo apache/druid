@@ -332,6 +332,12 @@ public class SystemSchema extends AbstractTableSchema
           jsonMapper,
           authenticationResult
       );
+      case SystemStackTraceTable.TABLE_NAME -> new SystemStackTraceTable(
+          druidNodeDiscoveryProvider,
+          authorizerMapper,
+          httpClient,
+          jsonMapper
+      );
       case QUERIES_TABLE -> new QueriesTable(
           sqlEngineRegistryProvider,
           jsonMapper,
