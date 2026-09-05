@@ -4503,7 +4503,7 @@ name: Google APIs Client Library For Java
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.7.2
+version: 2.9.1
 libraries:
   - com.google.api-client: google-api-client
 
