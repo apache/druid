@@ -13199,7 +13199,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT exp(count(*)) + 10, sin(pi / 6), cos(pi / 6), tan(pi / 6), cot(pi / 6)," +
-        "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1) " +
+        "asin(exp(count(*)) / 2), acos(exp(count(*)) / 2), atan(exp(count(*)) / 2), atan2(exp(count(*)), 1)," +
+        "sinh(exp(count(*)) / 2), cosh(exp(count(*)) / 2), tanh(exp(count(*)) / 2), cbrt(exp(count(*))) " +
         "FROM druid.foo WHERE  dim2 = 0",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
@@ -13221,7 +13222,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    expressionPostAgg("p5", "asin((exp(\"a0\") / 2))", ColumnType.DOUBLE),
                                    expressionPostAgg("p6", "acos((exp(\"a0\") / 2))", ColumnType.DOUBLE),
                                    expressionPostAgg("p7", "atan((exp(\"a0\") / 2))", ColumnType.DOUBLE),
-                                   expressionPostAgg("p8", "atan2(exp(\"a0\"),1)", ColumnType.DOUBLE)
+                                   expressionPostAgg("p8", "atan2(exp(\"a0\"),1)", ColumnType.DOUBLE),
+                                   expressionPostAgg("p9", "sinh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p10", "cosh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p11", "tanh((exp(\"a0\") / 2))", ColumnType.DOUBLE),
+                                   expressionPostAgg("p12", "cbrt(exp(\"a0\"))", ColumnType.DOUBLE)
                                )
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
@@ -13235,7 +13240,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 Math.asin(0.5),
                 Math.acos(0.5),
                 Math.atan(0.5),
-                Math.atan2(1, 1)
+                Math.atan2(1, 1),
+                Math.sinh(0.5),
+                Math.cosh(0.5),
+                Math.tanh(0.5),
+                Math.cbrt(1.0)
             }
         )
     );

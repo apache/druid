@@ -179,7 +179,34 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "SELECT SUM(ABS(long1 - long4)) FROM expressions",
       // 69,70: unary sqrt on double and long inputs (long input exercises the SIMD widening path)
       "SELECT SUM(SQRT(double1)) FROM expressions",
-      "SELECT SUM(SQRT(long1)) FROM expressions"
+      "SELECT SUM(SQRT(long1)) FROM expressions",
+      // 71-96: VO_MATHLIB unary ops exposed via SQL and covered by SIMD dispatch.
+      "SELECT SUM(LN(double1)) FROM expressions",
+      "SELECT SUM(LN(long1)) FROM expressions",
+      "SELECT SUM(EXP(double1)) FROM expressions",
+      "SELECT SUM(EXP(long1)) FROM expressions",
+      "SELECT SUM(LOG10(double1)) FROM expressions",
+      "SELECT SUM(LOG10(long1)) FROM expressions",
+      "SELECT SUM(CBRT(double1)) FROM expressions",
+      "SELECT SUM(CBRT(long1)) FROM expressions",
+      "SELECT SUM(SIN(double1)) FROM expressions",
+      "SELECT SUM(SIN(long1)) FROM expressions",
+      "SELECT SUM(COS(double1)) FROM expressions",
+      "SELECT SUM(COS(long1)) FROM expressions",
+      "SELECT SUM(TAN(double1)) FROM expressions",
+      "SELECT SUM(TAN(long1)) FROM expressions",
+      "SELECT SUM(ASIN(double1)) FROM expressions",
+      "SELECT SUM(ASIN(long1)) FROM expressions",
+      "SELECT SUM(ACOS(double1)) FROM expressions",
+      "SELECT SUM(ACOS(long1)) FROM expressions",
+      "SELECT SUM(ATAN(double1)) FROM expressions",
+      "SELECT SUM(ATAN(long1)) FROM expressions",
+      "SELECT SUM(SINH(double1)) FROM expressions",
+      "SELECT SUM(SINH(long1)) FROM expressions",
+      "SELECT SUM(COSH(double1)) FROM expressions",
+      "SELECT SUM(COSH(long1)) FROM expressions",
+      "SELECT SUM(TANH(double1)) FROM expressions",
+      "SELECT SUM(TANH(long1)) FROM expressions"
   );
 
   @Param({
@@ -266,7 +293,33 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "67",
       "68",
       "69",
-      "70"
+      "70",
+      "71",
+      "72",
+      "73",
+      "74",
+      "75",
+      "76",
+      "77",
+      "78",
+      "79",
+      "80",
+      "81",
+      "82",
+      "83",
+      "84",
+      "85",
+      "86",
+      "87",
+      "88",
+      "89",
+      "90",
+      "91",
+      "92",
+      "93",
+      "94",
+      "95",
+      "96"
   })
   private String query;
 
