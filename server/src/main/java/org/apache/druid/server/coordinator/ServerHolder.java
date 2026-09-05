@@ -223,7 +223,9 @@ public class ServerHolder implements Comparable<ServerHolder>
    * The total size:
    * <ol>
    * <li>INCLUDES segments loaded on this server</li>
-   * <li>INCLUDES segments loading on this server (actions: LOAD/REPLICATE)</li>
+   * <li>INCLUDES segments loading on this server (actions: LOAD/REPLICATE). A load of a segment this server already
+   * serves is an in-place reload, and is counted at its {@link #inPlaceReloadSizeDelta} rather than its full size, so
+   * that the bytes already on disk are not counted twice</li>
    * <li>INCLUDES segments moving to this server (action: MOVE_TO)</li>
    * <li>INCLUDES segments moving from this server (action: MOVE_FROM). This is
    * because these segments have only been <i>marked</i> for drop. We include
@@ -508,8 +510,12 @@ public class ServerHolder implements Comparable<ServerHolder>
 
     // Add to projected if load is started, remove from projected if drop has started
     if (action.isLoad()) {
-      projectedSegmentCounts.addSegment(segment);
-      sizeOfLoadingSegments += segment.getSize();
+      if (hasSegmentLoaded(segment.getId())) {
+        sizeOfLoadingSegments += inPlaceReloadSizeDelta(segment);
+      } else {
+        projectedSegmentCounts.addSegment(segment);
+        sizeOfLoadingSegments += segment.getSize();
+      }
     } else {
       projectedSegmentCounts.removeSegment(segment);
       if (action == SegmentAction.DROP) {
@@ -525,14 +531,33 @@ public class ServerHolder implements Comparable<ServerHolder>
     queuedSegments.remove(segment);
 
     if (action.isLoad()) {
-      projectedSegmentCounts.removeSegment(segment);
-      sizeOfLoadingSegments -= segment.getSize();
+      if (hasSegmentLoaded(segment.getId())) {
+        sizeOfLoadingSegments -= inPlaceReloadSizeDelta(segment);
+      } else {
+        projectedSegmentCounts.removeSegment(segment);
+        sizeOfLoadingSegments -= segment.getSize();
+      }
     } else {
       projectedSegmentCounts.addSegment(segment);
       if (action == SegmentAction.DROP) {
         sizeOfDroppingSegments -= segment.getSize();
       }
     }
+  }
+
+  /**
+   * Upper bound of bytes an in-place reload of {@code segment} can still add to this server, i.e. a load queued on a
+   * server that is already serving it. This is an upper bound, not the exact delta, which the coordinator cannot know
+   * until the historical announces the footprint it realized.
+   * <p>
+   * Both the loaded set and the announced profile come from this run's immutable server snapshot, so the value is
+   * stable across the {@link #addToQueuedSegments} / {@link #removeFromQueuedSegments} pair for a canceled operation.
+   */
+  private long inPlaceReloadSizeDelta(DataSegment segment)
+  {
+    final PartialLoadProfile loaded = server.getPartialLoadProfile(segment.getId());
+    final Long loadedBytes = loaded == null ? null : loaded.loadedBytes();
+    return loadedBytes == null ? 0L : Math.max(0L, segment.getSize() - loadedBytes);
   }
 
   @Override
