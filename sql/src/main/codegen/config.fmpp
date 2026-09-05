@@ -50,16 +50,25 @@ data: {
     imports: [
       "java.util.List"
       "org.apache.calcite.sql.SqlNode"
+      "org.apache.calcite.sql.SqlCreate"
       "org.apache.calcite.sql.SqlInsert"
       "org.apache.calcite.sql.SqlNodeList"
+      "org.apache.calcite.sql.SqlSelect"
+      "org.apache.calcite.sql.SqlLiteral"
+      "org.apache.calcite.sql.parser.SqlParserPos"
       "org.apache.calcite.sql.SqlBasicCall"
       "org.apache.druid.java.util.common.granularity.Granularity"
       "org.apache.druid.java.util.common.granularity.GranularityType"
       "org.apache.druid.java.util.common.granularity.Granularities"
+      "org.apache.druid.sql.calcite.parser.DruidSqlAlterTable"
+      "org.apache.druid.sql.calcite.parser.DruidSqlColumnDeclaration"
+      "org.apache.druid.sql.calcite.parser.DruidSqlCreateTable"
       "org.apache.druid.sql.calcite.parser.DruidSqlInsert"
       "org.apache.druid.sql.calcite.parser.DruidSqlParserUtils"
+      "org.apache.druid.sql.calcite.parser.DruidSqlPropertyAssignment"
       "org.apache.druid.sql.calcite.external.ExtendOperator"
       "org.apache.druid.sql.calcite.external.ParameterizeOperator"
+      "org.apache.druid.sql.calcite.parser.SqlProjectionSpec"
       "org.apache.druid.sql.calcite.parser.ExternalDestinationSqlIdentifier"
       "java.util.HashMap"
     ]
@@ -71,12 +80,20 @@ data: {
       "OVERWRITE"
       "PARTITIONED"
       "EXTERN"
+      "IF"
+      "PROPERTIES"
+      "PROJECTION"
+      "SEALED"
     ]
 
     nonReservedKeywordsToAdd: [
       "OVERWRITE"
       "EXTERN"
       "VARIANT"
+      "IF"
+      "PROPERTIES"
+      "PROJECTION"
+      "SEALED"
     ]
 
     # List of methods for parsing custom SQL statements.
@@ -86,6 +103,14 @@ data: {
       "DruidSqlInsertEof()"
       "DruidSqlExplain()"
       "DruidSqlReplaceEof()"
+      "DruidSqlAlterTable()"
+    ]
+
+    # CREATE reaches DruidSqlCreateTable through Calcite's stock SqlCreate() production, which supplies the
+    # (Span, boolean replace) arguments. DROP TABLE is deliberately absent: catalog-only deletion would be a
+    # surprising meaning for the statement, so it is left unclaimed until the semantics are settled.
+    createStatementParserMethods: [
+      "DruidSqlCreateTable"
     ]
 
     # List of methods for parsing custom data types.
@@ -101,6 +126,7 @@ data: {
     # "dataTypeParserMethods".
     implementationFiles: [
       "common.ftl"
+      "ddl.ftl"
       "explain.ftl"
       "replace.ftl"
     ]
