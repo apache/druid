@@ -34,9 +34,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
 import java.net.URI;
+import java.net.Socket;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 
@@ -135,6 +137,40 @@ public class ResponseIdentityHeaderTest extends EmbeddedClusterTestBase
     assertResponseIdentity(client.send(request, HttpResponse.BodyHandlers.ofString()), router, 405);
   }
 
+  @Test
+  @Timeout(30)
+  public void testJettyRequestParsingErrorUsesRouterIdentity() throws Exception
+  {
+    final URI routerUri = URI.create(getServerUrl(router));
+    final String response;
+    try (Socket socket = new Socket(routerUri.getHost(), routerUri.getPort())) {
+      socket.setSoTimeout(10_000);
+      socket.getOutputStream().write(
+          "GET /status/health HTTP/1.1\r\nHost: localhost\r\nInvalid Header: value\r\n\r\n"
+              .getBytes(StandardCharsets.US_ASCII)
+      );
+      socket.getOutputStream().flush();
+      response = new String(socket.getInputStream().readAllBytes(), StandardCharsets.US_ASCII);
+    }
+
+    Assertions.assertTrue(response.startsWith("HTTP/1.1 400"), response);
+    assertRawHeader(
+        response,
+        ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER,
+        router.bindings().selfNode().getHostAndPortToUse()
+    );
+    assertRawHeader(
+        response,
+        ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER,
+        router.bindings().selfNode().getServiceName()
+    );
+    assertRawHeader(
+        response,
+        ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER,
+        router.bindings().selfNode().getVersion()
+    );
+  }
+
   private HttpResponse<String> sendGet(final String url) throws Exception
   {
     final HttpRequest request = HttpRequest.newBuilder(URI.create(url))
@@ -210,6 +246,14 @@ public class ResponseIdentityHeaderTest extends EmbeddedClusterTestBase
     Assertions.assertEquals(
         List.of(expectedServer.bindings().selfNode().getVersion()),
         response.headers().allValues(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER)
+    );
+  }
+
+  private static void assertRawHeader(final String response, final String name, final String value)
+  {
+    Assertions.assertTrue(
+        response.lines().anyMatch(line -> line.equalsIgnoreCase(name + ": " + value)),
+        response
     );
   }
 }

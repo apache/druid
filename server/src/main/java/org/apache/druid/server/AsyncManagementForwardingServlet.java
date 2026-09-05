@@ -202,9 +202,22 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       Response serverResponse
   )
   {
+    ResponseIdentityHeaderHandler.rememberLocalIdentity(clientRequest, proxyResponse);
     ResponseIdentityHeaderHandler.clearRouterIdentity(proxyResponse);
     StandardResponseHeaderFilterHolder.deduplicateHeadersInProxyServlet(proxyResponse, serverResponse);
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
+  }
+
+  @Override
+  protected void onProxyResponseFailure(
+      final HttpServletRequest clientRequest,
+      final HttpServletResponse proxyResponse,
+      final Response serverResponse,
+      final Throwable failure
+  )
+  {
+    ResponseIdentityHeaderHandler.restoreLocalIdentity(clientRequest, proxyResponse);
+    super.onProxyResponseFailure(clientRequest, proxyResponse, serverResponse, failure);
   }
 
   @Override

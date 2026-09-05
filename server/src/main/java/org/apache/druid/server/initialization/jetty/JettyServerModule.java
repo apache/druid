@@ -485,6 +485,17 @@ public class JettyServerModule extends JerseyServletModule
       });
     }
 
+    if (config.isEnableResponseIdentityHeaders()) {
+      // Request parsing failures do not enter the server's handler chain, so add the identity at the error handler too.
+      final Request.Handler errorHandler = server.getErrorHandler() == null
+                                                   ? new ErrorHandler()
+                                                   : server.getErrorHandler();
+      server.setErrorHandler((request, response, callback) -> {
+        ResponseIdentityHeaderHandler.addIdentityHeaders(response, node);
+        return errorHandler.handle(request, response, callback);
+      });
+    }
+
     server.setRequestLog(new JettyRequestLog());
 
     return server;

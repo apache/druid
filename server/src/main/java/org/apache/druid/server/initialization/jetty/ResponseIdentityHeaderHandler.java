@@ -27,10 +27,14 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.util.Callback;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class ResponseIdentityHeaderHandler extends Handler.Wrapper
 {
+  private static final String LOCAL_IDENTITY_ATTRIBUTE =
+      ResponseIdentityHeaderHandler.class.getName() + ".localIdentity";
+
   public static final String RESPONSE_SERVER_HEADER = "X-Druid-Server";
   public static final String RESPONSE_SERVICE_HEADER = "X-Druid-Service";
   public static final String RESPONSE_VERSION_HEADER = "X-Druid-Version";
@@ -96,6 +100,47 @@ public class ResponseIdentityHeaderHandler extends Handler.Wrapper
     headers.put(RESPONSE_SERVER_HEADER, responseServer);
     headers.put(RESPONSE_SERVICE_HEADER, responseService);
     headers.put(RESPONSE_VERSION_HEADER, responseVersion);
+  }
+
+  public static void addIdentityHeaders(
+      final org.eclipse.jetty.server.Response response,
+      final DruidNode selfNode
+  )
+  {
+    response.getHeaders().put(RESPONSE_SERVER_HEADER, selfNode.getHostAndPortToUse());
+    response.getHeaders().put(RESPONSE_SERVICE_HEADER, selfNode.getServiceName());
+    response.getHeaders().put(RESPONSE_VERSION_HEADER, selfNode.getVersion());
+  }
+
+  public static void rememberLocalIdentity(
+      final HttpServletRequest clientRequest,
+      final HttpServletResponse proxyResponse
+  )
+  {
+    final String server = proxyResponse.getHeader(RESPONSE_SERVER_HEADER);
+    final String service = proxyResponse.getHeader(RESPONSE_SERVICE_HEADER);
+    final String version = proxyResponse.getHeader(RESPONSE_VERSION_HEADER);
+    if (server != null && service != null && version != null) {
+      clientRequest.setAttribute(LOCAL_IDENTITY_ATTRIBUTE, new ResponseIdentity(server, service, version));
+    }
+  }
+
+  public static void restoreLocalIdentity(
+      final HttpServletRequest clientRequest,
+      final HttpServletResponse proxyResponse
+  )
+  {
+    final Object identity = clientRequest.getAttribute(LOCAL_IDENTITY_ATTRIBUTE);
+    if (identity instanceof ResponseIdentity localIdentity) {
+      clearRouterIdentity(proxyResponse);
+      proxyResponse.setHeader(RESPONSE_SERVER_HEADER, localIdentity.server());
+      proxyResponse.setHeader(RESPONSE_SERVICE_HEADER, localIdentity.service());
+      proxyResponse.setHeader(RESPONSE_VERSION_HEADER, localIdentity.version());
+    }
+  }
+
+  private record ResponseIdentity(String server, String service, String version)
+  {
   }
 
   public static void clearRouterIdentity(final HttpServletResponse proxyResponse)

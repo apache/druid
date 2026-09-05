@@ -29,7 +29,9 @@ import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.util.Callback;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 public class ResponseIdentityHeaderHandlerTest
@@ -87,6 +89,31 @@ public class ResponseIdentityHeaderHandlerTest
     EasyMock.replay(proxyResponse);
     ResponseIdentityHeaderHandler.clearRouterIdentity(proxyResponse);
     EasyMock.verify(proxyResponse);
+  }
+
+  @Test
+  public void testRestoresRememberedLocalIdentity()
+  {
+    final HttpServletRequest clientRequest = Mockito.mock(HttpServletRequest.class);
+    final HttpServletResponse proxyResponse = Mockito.mock(HttpServletResponse.class);
+    final Object[] rememberedIdentity = new Object[1];
+    Mockito.when(proxyResponse.getHeader(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER))
+           .thenReturn("router:8888");
+    Mockito.when(proxyResponse.getHeader(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER))
+           .thenReturn("druid/router");
+    Mockito.when(proxyResponse.getHeader(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER)).thenReturn("39.0.0");
+    Mockito.doAnswer(invocation -> {
+      rememberedIdentity[0] = invocation.getArgument(1);
+      return null;
+    }).when(clientRequest).setAttribute(Mockito.anyString(), Mockito.any());
+    Mockito.when(clientRequest.getAttribute(Mockito.anyString())).thenAnswer(invocation -> rememberedIdentity[0]);
+
+    ResponseIdentityHeaderHandler.rememberLocalIdentity(clientRequest, proxyResponse);
+    ResponseIdentityHeaderHandler.restoreLocalIdentity(clientRequest, proxyResponse);
+
+    Mockito.verify(proxyResponse).setHeader(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "router:8888");
+    Mockito.verify(proxyResponse).setHeader(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER, "druid/router");
+    Mockito.verify(proxyResponse).setHeader(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER, "39.0.0");
   }
 
   @Test
