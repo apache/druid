@@ -177,13 +177,7 @@ public class SegmentManager
         if (ref.isPresent()) {
           try {
             final Optional<Segment> mapped = segmentMapFunction.apply(ref).map(safetyNet::register);
-            segmentReferences.add(
-                new SegmentReference(
-                    segment.getDescriptor(),
-                    mapped,
-                    null
-                )
-            );
+            segmentReferences.add(new SegmentReference(segment.getDescriptor(), mapped));
           }
           catch (Throwable t) {
             // If applying the mapFn failed, attach the base segment to the closer and rethrow
@@ -226,13 +220,12 @@ public class SegmentManager
   }
 
   /**
-   * Returns a {@link AcquireSegmentAction}, where calling {@link AcquireSegmentAction#getSegmentFuture()} will either
-   * return immediately if the {@link Segment} is in the cache, or possibly try to fetch the segment from deep storage
-   * if not. The returned {@link Segment}, if present, must be closed when the caller is finished doing segment things.
-   * <p>
-   * Calling this method is treated as an intent to acquire and use the segment via resolving the future, and cache
-   * manager implementations will place a hold on this segment until the 'loadCleanup' closer is closed - typically
-   * after resolving the future to acquire the reference to the actual {@link Segment} object.
+   * Returns an {@link AcquireSegmentAction}: an async handle that becomes ready immediately if the {@link Segment}
+   * is in the cache, or after fetching the segment from deep storage if not (the load starts immediately). Callers
+   * wait for readiness and then {@link AcquireSegmentAction#release()} the result, closing the delivered
+   * {@link Segment} when finished doing segment things (its close releases the reference plus any cache holds placed
+   * for the acquisition); closing the action without releasing cancels an in-flight load or discards a delivered
+   * result. See {@link AcquireSegmentAction} for the full consumer protocol.
    * <p>
    * With {@link AcquireMode#PARTIAL} the action resolves to a partial-load capable segment (when the segment supports
    * range reads), and callers must use async methods like
