@@ -610,6 +610,107 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
+  public void testSparseOverflowRegisterEstimation()
+  {
+    // Reproduces the case where a single element whose positionOf1 exceeds the 4-bit nibble range
+    // (registerOffset 0 + RANGE 15) is stored only in the overflow register, leaving the sparse buffer empty.
+    // estimateSparse() must still account for that one non-empty register instead of reporting a cardinality of 0.
+
+    // Direct form: bucket 5 with positionOf1 = 16 (> RANGE) goes straight to the overflow register.
+    HyperLogLogCollector direct = HyperLogLogCollector.makeLatestCollector();
+    direct.add((short) 5, (byte) 16);
+    Assert.assertEquals(1L, direct.estimateCardinalityRound());
+    Assert.assertEquals(1.0d, direct.estimateCardinality(), 0.05d);
+
+    // Same situation reached through the byte[] hashing path used during ingestion: leading bytes 0x00 0x80
+    // give positionOf1 = 16, and the trailing bytes select the bucket.
+    byte[] hashedValue = new byte[16];
+    hashedValue[1] = (byte) 0x80;
+    hashedValue[15] = 0x05;
+    HyperLogLogCollector hashed = HyperLogLogCollector.makeLatestCollector();
+    hashed.add(hashedValue);
+    Assert.assertEquals(1L, hashed.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testSparseOverflowRegisterOnPopulatedBucket()
+  {
+    // Adding an in-range value converts the collector to dense storage, so estimateSparse's overflow handling is
+    // only reachable through a sparse-serialized buffer. A single bucket that first receives an in-range value and
+    // then an overflow value is still one populated register (the overflow value supersedes the nibble). After a
+    // sparse round-trip that register must be counted exactly once: estimateSparse has to recognize that the
+    // overflow register already has a sparse entry (comparing positions in the same coordinate system) and skip the
+    // standalone compensation, otherwise the register is counted twice and a single element estimates as 2.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    source.add((short) 4, (byte) 3);   // in-range value -> nibble for bucket 4
+    source.add((short) 4, (byte) 16);  // overflow on the same bucket -> overflow register
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    Assert.assertEquals(1L, sparse.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testSparseOverflowRegisterAmongOtherEntries()
+  {
+    // A sparse buffer holding an overflow register plus other populated registers: estimateSparse must fold the
+    // overflow into the overflow bucket's own entry and leave the other entries untouched, which exercises both
+    // sides of the normalized position comparison. Two distinct populated registers should estimate as 2.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    source.add((short) 4, (byte) 3);   // bucket 4 in-range value
+    source.add((short) 4, (byte) 16);  // overflow on bucket 4 -> overflow register
+    source.add((short) 20, (byte) 5);  // an unrelated populated register in a different byte
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    Assert.assertEquals(2L, sparse.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testSparseOverflowRegisterOnOddBucket()
+  {
+    // Odd bucket: the overflow value is folded into the decoded lowerNibble (16), which is a scalar and no longer
+    // fits the 4-bit nibble mask. zeroCount must treat it as populated, otherwise the single register is counted
+    // as empty and the estimate collapses to 0.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    source.add((short) 5, (byte) 3);   // in-range value -> lower nibble of byte 2
+    source.add((short) 5, (byte) 16);  // overflow on the same odd bucket
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    Assert.assertEquals(1L, sparse.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testSparseOverflowRegisterOnOddBucketWithPopulatedNeighbor()
+  {
+    // The overflow byte also holds an in-range value for the neighboring even bucket. Both decoded nibbles are
+    // non-zero scalars (2 and 16), so neither register may be counted as empty: two populated registers should
+    // estimate as 2.
+    HyperLogLogCollector source = HyperLogLogCollector.makeLatestCollector();
+    source.add((short) 4, (byte) 2);   // neighbor bucket in the same byte, upper nibble
+    source.add((short) 5, (byte) 3);   // odd bucket in-range value, lower nibble
+    source.add((short) 5, (byte) 16);  // overflow on the odd bucket
+
+    HyperLogLogCollector sparse = HyperLogLogCollector.makeCollector(ByteBuffer.wrap(source.toByteArray()));
+    Assert.assertEquals(2L, sparse.estimateCardinalityRound());
+  }
+
+  @Test
+  public void testDenseOverflowRegisterEstimation()
+  {
+    // Adding an in-range value converts the collector to dense storage, so estimating without a sparse round-trip
+    // exercises estimateDense's overflow handling. The same decoded-scalar zero check applies there: one populated
+    // register must estimate as 1 for both nibble parities.
+    HyperLogLogCollector even = HyperLogLogCollector.makeLatestCollector();
+    even.add((short) 4, (byte) 3);
+    even.add((short) 4, (byte) 16);
+    Assert.assertEquals(1L, even.estimateCardinalityRound());
+
+    HyperLogLogCollector odd = HyperLogLogCollector.makeLatestCollector();
+    odd.add((short) 5, (byte) 3);
+    odd.add((short) 5, (byte) 16);
+    Assert.assertEquals(1L, odd.estimateCardinalityRound());
+  }
+
+  @Test
   public void testEstimationReadOnlyByteBuffers()
   {
     Random random = new Random(0L);
