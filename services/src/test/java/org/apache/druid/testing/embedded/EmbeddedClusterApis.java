@@ -149,6 +149,15 @@ public class EmbeddedClusterApis implements EmbeddedResource
     return client.runSql(sql, args);
   }
 
+  public String runSql(
+      final String sql,
+      final Map<String, Object> context,
+      final Object... args
+  )
+  {
+    return client.runSql(sql, context, args);
+  }
+
   /**
    * Runs the given SQL query for a datasource and verifies the result.
    *

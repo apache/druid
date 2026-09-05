@@ -50,6 +50,7 @@ public class OverlordRedirectInfoTest
     Assertions.assertTrue(redirectInfo.doLocal(null));
     Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
     Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assertions.assertTrue(redirectInfo.doLocal("/druid/v2"));
     Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
     EasyMock.verify(overlord);
   }
@@ -62,6 +63,7 @@ public class OverlordRedirectInfoTest
     Assertions.assertFalse(redirectInfo.doLocal(null));
     Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/leader"));
     Assertions.assertTrue(redirectInfo.doLocal("/druid/indexer/v1/isLeader"));
+    Assertions.assertTrue(redirectInfo.doLocal("/druid/v2"));
     Assertions.assertFalse(redirectInfo.doLocal("/druid/indexer/v1/other/path"));
     EasyMock.verify(overlord);
   }

@@ -78,11 +78,15 @@ datasources can be referenced as either `druid.dataSourceName` or simply `dataSo
 - [Lookups](datasource.md#lookup) from the `lookup` schema, for example `lookup.countries`. Note that lookups can
 also be queried using the [`LOOKUP` function](sql-scalar.md#string-functions).
 - [Subqueries](datasource.md#query).
-- [Joins](datasource.md#join) between anything in this list, except between native datasources (table, lookup,
-query) and system tables. The join condition must be an equality between expressions from the left- and right-hand side
-of the join.
-- [Metadata tables](sql-metadata-tables.md) from the `INFORMATION_SCHEMA` or `sys` schemas. Unlike the other options for the
-FROM clause, metadata tables are not considered datasources. They exist only in the SQL layer.
+- [Joins](datasource.md#join) between anything in this list. The traditional SQL-layer system-table path does not
+  support joins between native datasources (table, lookup, query) and system tables. When
+  [`useNativeQueryForSystemTables`](sql-metadata-tables.md#native-query-execution) is enabled, system tables that support
+  native execution can participate in native datasource joins. The join condition must be an equality between
+  expressions from the left- and right-hand side of the join.
+- [Metadata tables](sql-metadata-tables.md) from the `INFORMATION_SCHEMA` or `sys` schemas. By default, metadata tables
+  exist only in the SQL layer and are not considered datasources. When
+  [`useNativeQueryForSystemTables`](sql-metadata-tables.md#native-query-execution) is enabled, supported `sys` tables are
+  represented as native system-table datasources.
 
 For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.md)
 documentation.
@@ -294,7 +298,8 @@ grouping expressions or aggregated values. It can only be used together with GRO
 The ORDER BY clause refers to columns that are present after execution of GROUP BY. It can be used to order the results
 based on either grouping expressions or aggregated values. ORDER BY can refer to an expression or a select clause
 ordinal position (like `ORDER BY 2` to order by the second selected column). For non-aggregation queries, ORDER BY
-can only order by the `__time` column. For aggregation queries, ORDER BY can order by any column.
+can normally only order by the `__time` column. Native-enabled system tables can also use the native window-query path
+to order by other columns. For aggregation queries, ORDER BY can order by any column.
 
 ## LIMIT
 

@@ -38,11 +38,11 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.system.table.ServerPropertiesTableDescriptor;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
@@ -66,21 +66,13 @@ import java.util.stream.Collectors;
  * that server would have multiple values in the column {@code node_roles} rather than duplicating all the
  * rows.
  */
-public class SystemServerPropertiesTable extends AbstractTable implements ProjectableFilterableTable
+public class SystemServerPropertiesTable extends AbstractTable implements ProjectableFilterableTable, NativeSystemTable
 {
   private static final Logger log = new Logger(SystemServerPropertiesTable.class);
 
-  public static final String TABLE_NAME = "server_properties";
+  public static final String TABLE_NAME = ServerPropertiesTableDescriptor.TABLE_NAME;
 
-  static final RowSignature ROW_SIGNATURE = RowSignature
-      .builder()
-      .add("server", ColumnType.STRING)
-      .add("service_name", ColumnType.STRING)
-      .add("node_roles", ColumnType.STRING)
-      .add("property", ColumnType.STRING)
-      .add("value", ColumnType.STRING)
-      .add("error_message", ColumnType.STRING)
-      .build();
+  static final RowSignature ROW_SIGNATURE = ServerPropertiesTableDescriptor.ROW_SIGNATURE;
 
   private static final int SERVER_INDEX = ROW_SIGNATURE.indexOf("server");
   private static final int SERVICE_NAME_INDEX = ROW_SIGNATURE.indexOf("service_name");
@@ -120,6 +112,12 @@ public class SystemServerPropertiesTable extends AbstractTable implements Projec
   public Schema.TableType getJdbcTableType()
   {
     return Schema.TableType.SYSTEM_TABLE;
+  }
+
+  @Override
+  public NativeServerPropertiesTable asNativeTable()
+  {
+    return new NativeServerPropertiesTable();
   }
 
   @Override

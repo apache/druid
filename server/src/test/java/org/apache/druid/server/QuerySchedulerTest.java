@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
@@ -53,6 +54,7 @@ import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.SystemTableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -97,6 +99,25 @@ public class QuerySchedulerTest
 
   private ListeningExecutorService executorService;
   private ObservableQueryScheduler scheduler;
+
+  /** System-table node queries attach a stable datasource authorization resource for cancellation. */
+  @Test
+  public void testSystemTableCancellationHasAuthorizationResource()
+  {
+    final Query<?> query = GroupByQuery.builder()
+                                       .setDataSource(new SystemTableDataSource("tasks"))
+                                       .setInterval("2000/2001")
+                                       .setGranularity(Granularities.ALL)
+                                       .setContext(Map.of("queryId", "system-query"))
+                                       .build();
+    final SettableFuture<Object> future = SettableFuture.create();
+
+    scheduler.registerQueryFuture(query, future);
+
+    Assertions.assertEquals(Set.of("sys.tasks"), scheduler.getQueryDatasources(query.getId()));
+    scheduler.cancelQuery(query.getId());
+    Assertions.assertTrue(future.isCancelled());
+  }
 
   @BeforeEach
   public void setup()

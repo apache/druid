@@ -51,6 +51,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ListProvider;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.MetadataManagerModule;
+import org.apache.druid.guice.NativeQueryEngineModule;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.RegexEngineModule;
 import org.apache.druid.guice.SupervisorModule;
@@ -109,6 +110,7 @@ import org.apache.druid.indexing.overlord.sampler.SamplerModule;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
+import org.apache.druid.indexing.overlord.task.TasksTableDataProvider;
 import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
@@ -142,6 +144,8 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.server.system.table.SystemTableDataProvider;
+import org.apache.druid.server.system.table.TaskTableDescriptor;
 import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
@@ -203,14 +207,27 @@ public class CliOverlord extends ServerRunnable
 
   protected List<? extends Module> getModules(final boolean standalone)
   {
-    return ImmutableList.of(
-        new DerbyTaskStorageModule(),
-        standalone ? new MetadataManagerModule() : binder -> {},
+    final ImmutableList.Builder<Module> modules = ImmutableList.builder();
+    modules.add(new DerbyTaskStorageModule());
+    modules.add(standalone ? new MetadataManagerModule() : binder -> {});
+    if (standalone) {
+      modules.add(NativeQueryEngineModule.builder().scanOnly().build());
+    }
+    modules.add(
         new Module()
         {
           @Override
           public void configure(Binder binder)
           {
+            final MapBinder<String, SystemTableDataProvider> dataProviderBinder = MapBinder.newMapBinder(
+                binder,
+                String.class,
+                SystemTableDataProvider.class
+            );
+            dataProviderBinder.addBinding(TaskTableDescriptor.TABLE_NAME)
+                              .to(TasksTableDataProvider.class)
+                              .in(LazySingleton.class);
+
             validateCentralizedDatasourceSchemaConfig(properties);
 
             if (standalone) {
@@ -516,6 +533,7 @@ public class CliOverlord extends ServerRunnable
         new MSQExternalDataSourceModule(),
         new RegexEngineModule()
     );
+    return modules.build();
   }
 
   /**

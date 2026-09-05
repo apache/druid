@@ -42,6 +42,7 @@ import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
+import org.apache.druid.metadata.TaskStorageQueryFilter;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -227,6 +228,30 @@ public class MetadataTaskStorage implements TaskStorage
         );
 
     return handler.getTaskStatusList(processedTaskLookups, datasource)
+                  .stream()
+                  .map(TaskStatusPlus::fromTaskIdentifierInfo)
+                  .collect(Collectors.toList());
+  }
+
+  @Override
+  public boolean supportsTaskStatusQueryFilter()
+  {
+    return true;
+  }
+
+  @Override
+  public List<TaskStatusPlus> getTaskStatusPlusListWithFilter(
+      final Map<TaskLookupType, TaskLookup> taskLookups,
+      final TaskStorageQueryFilter filter
+  )
+  {
+    Map<TaskLookupType, TaskLookup> processedTaskLookups =
+        TaskStorageUtils.processTaskLookups(
+            taskLookups,
+            DateTimes.nowUtc().minus(config.getRecentlyFinishedThreshold())
+        );
+
+    return handler.getTaskStatusListWithFilter(processedTaskLookups, filter)
                   .stream()
                   .map(TaskStatusPlus::fromTaskIdentifierInfo)
                   .collect(Collectors.toList());

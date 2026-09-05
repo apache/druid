@@ -42,6 +42,13 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
+import org.apache.druid.segment.column.ColumnType;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -449,6 +456,160 @@ public class SQLMetadataStorageActionHandlerTest
     verifyTaskInfoToMetadataInfo(completedAltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(activeUnaltered, taskMetadataInfos, false);
     verifyTaskInfoToMetadataInfo(activeAltered, taskMetadataInfos, false);
+  }
+
+  @Test
+  public void testGetTaskStatusListWithStorageFilters()
+  {
+    insertStorageFilterTestTasks();
+
+    assertFilteredTaskIds(
+        Set.of("task-1", "task-3"),
+        List.of(new TypedInFilter("id", ColumnType.STRING, List.of("task-1", "task-3"), null, null))
+    );
+    // Null group_id and type values are retained as a migration-safe superset. The native filter remains residual.
+    assertFilteredTaskIds(
+        Set.of("task-1", "task-3", "task-legacy"),
+        List.of(new SelectorDimFilter("group_id", "group-a", null))
+    );
+    assertFilteredTaskIds(
+        Set.of("task-1", "task-legacy"),
+        List.of(new SelectorDimFilter("type", "noop", null))
+    );
+    assertFilteredTaskIds(
+        Set.of("task-2"),
+        List.of(new SelectorDimFilter("datasource", "datasource-b", null))
+    );
+    assertFilteredTaskIds(
+        Set.of("task-3"),
+        List.of(new SelectorDimFilter("created_date", "2014-01-30T00:00:00.000Z", null))
+    );
+    assertFilteredTaskIds(
+        Set.of("task-1", "task-legacy"),
+        List.of(new SelectorDimFilter("status", TaskState.RUNNING.name(), null))
+    );
+    // SUCCESS and FAILED share the completed-task lookup; the native residual filter distinguishes them.
+    assertFilteredTaskIds(
+        Set.of("task-2", "task-3"),
+        List.of(new SelectorDimFilter("status", TaskState.SUCCESS.name(), null))
+    );
+  }
+
+  /**
+   * Verifies SQL generation and binding for string-value filters:
+   *
+   * - `id = 'task-2'`
+   * - `id IN ('task-1', 'task-3')`
+   * - `id = 'task-1' OR id = 'task-3'`
+   */
+  @Test
+  public void testGetTaskStatusListWithStringValueFilterVariants()
+  {
+    insertStorageFilterTestTasks();
+
+    assertFilteredTaskIds(
+        Set.of("task-2"),
+        List.of(new EqualityFilter("id", ColumnType.STRING, "task-2", null))
+    );
+    assertFilteredTaskIds(
+        Set.of("task-1", "task-3"),
+        List.of(new InDimFilter("id", List.of("task-1", "task-3"), null))
+    );
+    assertFilteredTaskIds(
+        Set.of("task-1", "task-3"),
+        List.of(
+            new OrDimFilter(
+                new SelectorDimFilter("id", "task-1", null),
+                new SelectorDimFilter("id", "task-3", null)
+            )
+        )
+    );
+  }
+
+  /**
+   * Verifies multiple predicates and the legacy datasource argument in the same metadata query:
+   *
+   * - `datasource = 'datasource-a' AND id IN ('task-1', 'task-3')`
+   * - legacy datasource filter `datasource = 'datasource-a'`
+   */
+  @Test
+  public void testGetTaskStatusListWithCombinedFiltersAndLegacyDatasource()
+  {
+    insertStorageFilterTestTasks();
+
+    assertFilteredTaskIds(
+        Set.of("task-1", "task-3", "task-legacy"),
+        List.of(
+            new SelectorDimFilter("datasource", "datasource-a", null),
+            new InDimFilter("id", List.of("task-1", "task-3", "task-legacy"), null)
+        )
+    );
+    assertFilteredTaskIds(Set.of("task-1", "task-3", "task-legacy"), "datasource-a");
+  }
+
+  private void assertFilteredTaskIds(
+      final Set<String> expectedTaskIds,
+      final List<DimFilter> pushdownFilters
+  )
+  {
+    final Set<String> actualTaskIds = handler
+        .getTaskStatusListWithFilter(taskLookups(), new TaskStorageQueryFilter(pushdownFilters), false)
+        .stream()
+        .map(taskStatus -> taskStatus.getTaskIdentifier().getId())
+        .collect(Collectors.toSet());
+    Assertions.assertEquals(expectedTaskIds, actualTaskIds);
+  }
+
+  private void assertFilteredTaskIds(final Set<String> expectedTaskIds, final String dataSource)
+  {
+    final Set<String> actualTaskIds = handler.getTaskStatusList(taskLookups(), dataSource, false)
+                                                 .stream()
+                                                 .map(taskStatus -> taskStatus.getTaskIdentifier().getId())
+                                                 .collect(Collectors.toSet());
+    Assertions.assertEquals(expectedTaskIds, actualTaskIds);
+  }
+
+  private static Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups()
+  {
+    final Map<TaskLookup.TaskLookupType, TaskLookup> taskLookups = new HashMap<>();
+    taskLookups.put(TaskLookup.TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance());
+    taskLookups.put(
+        TaskLookup.TaskLookupType.COMPLETE,
+        CompleteTaskLookup.withTasksCreatedPriorTo(null, DateTimes.of("2014-01-01"))
+    );
+    return taskLookups;
+  }
+
+  private void insertStorageFilterTestTasks()
+  {
+    insertTask("task-1", "group-a", "noop", "datasource-a", "2014-01-10", TaskState.RUNNING, true);
+    insertTask("task-2", "group-b", "other", "datasource-b", "2014-01-20", TaskState.SUCCESS, true);
+    insertTask("task-3", "group-a", "other", "datasource-a", "2014-01-30", TaskState.FAILED, true);
+    insertTask("task-legacy", "group-a", "noop", "datasource-a", "2014-01-15", TaskState.RUNNING, false);
+  }
+
+  private void insertTask(
+      final String id,
+      final String groupId,
+      final String storedType,
+      final String dataSource,
+      final String createdTime,
+      final TaskState taskState,
+      final boolean migrated
+  )
+  {
+    final Task task = new NoopTask(id, groupId, dataSource, 1L, 0L, null);
+    final TaskStatus status = new TaskStatus(id, taskState, 0L, null, TaskLocation.unknown());
+    handler.insert(
+        id,
+        DateTimes.of(createdTime),
+        dataSource,
+        task,
+        TaskState.RUNNING.equals(taskState),
+        status,
+        migrated ? storedType : null,
+        migrated ? groupId : null
+    );
   }
 
   private Integer getUnmigratedTaskCount()

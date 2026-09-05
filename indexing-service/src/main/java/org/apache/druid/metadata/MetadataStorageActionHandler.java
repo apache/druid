@@ -129,6 +129,18 @@ public interface MetadataStorageActionHandler
       @Nullable String datasource
   );
 
+  /**
+   * Returns task statuses with validated native-query prefilters. Implementations that do not support these filters
+   * may return a superset because the native query retains the original filter for final evaluation.
+   */
+  default List<TaskIdStatus> getTaskStatusListWithFilter(
+      final Map<TaskLookupType, TaskLookup> taskLookups,
+      final TaskStorageQueryFilter filter
+  )
+  {
+    return getTaskStatusList(taskLookups, null);
+  }
+
   default List<TaskInfo> getTaskInfos(
       TaskLookup taskLookup,
       @Nullable String datasource
