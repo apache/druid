@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.aggregation.datasketches.theta;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.datasketches.common.Family;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.theta.SetOperation;
@@ -28,7 +26,7 @@ import org.apache.datasketches.theta.Union;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.IdentityHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A helper class used by {@link SketchBufferAggregator} and {@link SketchVectorAggregator}
@@ -38,8 +36,8 @@ final class SketchBufferAggregatorHelper
 {
   private final int size;
   private final int maxIntermediateSize;
-  private final IdentityHashMap<ByteBuffer, Int2ObjectMap<Union>> unions = new IdentityHashMap<>();
-  private final IdentityHashMap<ByteBuffer, WritableMemory> memCache = new IdentityHashMap<>();
+  private final ConcurrentHashMap<ByteBuffer, ConcurrentHashMap<Integer, Union>> unions = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<ByteBuffer, WritableMemory> memCache = new ConcurrentHashMap<>();
 
   public SketchBufferAggregatorHelper(final int size, final int maxIntermediateSize)
   {
@@ -62,7 +60,7 @@ final class SketchBufferAggregatorHelper
    */
   public Object get(ByteBuffer buf, int position)
   {
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    ConcurrentHashMap<Integer, Union> unionMap = unions.get(buf);
     Union union = unionMap != null ? unionMap.get(position) : null;
     if (union == null) {
       return SketchHolder.EMPTY;
@@ -82,7 +80,7 @@ final class SketchBufferAggregatorHelper
   public void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer)
   {
     createNewUnion(newBuffer, newPosition, true);
-    Int2ObjectMap<Union> unionMap = unions.get(oldBuffer);
+    ConcurrentHashMap<Integer, Union> unionMap = unions.get(oldBuffer);
     if (unionMap != null) {
       unionMap.remove(oldPosition);
       if (unionMap.isEmpty()) {
@@ -99,7 +97,7 @@ final class SketchBufferAggregatorHelper
    */
   public Union getOrCreateUnion(ByteBuffer buf, int position)
   {
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
+    ConcurrentHashMap<Integer, Union> unionMap = unions.get(buf);
     Union union = unionMap != null ? unionMap.get(position) : null;
     if (union != null) {
       return union;
@@ -113,11 +111,7 @@ final class SketchBufferAggregatorHelper
     Union union = isWrapped
                   ? (Union) SetOperation.wrap(mem)
                   : (Union) SetOperation.builder().setNominalEntries(size).build(Family.UNION, mem);
-    Int2ObjectMap<Union> unionMap = unions.get(buf);
-    if (unionMap == null) {
-      unionMap = new Int2ObjectOpenHashMap<>();
-      unions.put(buf, unionMap);
-    }
+    ConcurrentHashMap<Integer, Union> unionMap = unions.computeIfAbsent(buf, k -> new ConcurrentHashMap<>());
     unionMap.put(position, union);
     return union;
   }
@@ -130,11 +124,6 @@ final class SketchBufferAggregatorHelper
 
   private WritableMemory getMemory(ByteBuffer buffer)
   {
-    WritableMemory mem = memCache.get(buffer);
-    if (mem == null) {
-      mem = WritableMemory.writableWrap(buffer, ByteOrder.LITTLE_ENDIAN);
-      memCache.put(buffer, mem);
-    }
-    return mem;
+    return memCache.computeIfAbsent(buffer, buf -> WritableMemory.writableWrap(buf, ByteOrder.LITTLE_ENDIAN));
   }
 }
