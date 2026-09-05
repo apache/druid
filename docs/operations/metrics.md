@@ -444,6 +444,9 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
+|`config/brokerSync/time`| Time in milliseconds for a Broker to sync with the Coordinator|||
+|`config/brokerSync/total/time`|Total time in milliseconds taken for all Brokers to sync with the Coordinator
+|`config/brokerSync/error`|Emitted when syncing a Broker fails. ||0|
 |`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|`dataSource`, `tier`|Varies|
 |`segment/moved/count`|Number of segments moved in the cluster.|`dataSource`, `tier`|Varies|
 |`segment/dropped/count`|Number of segments chosen to be dropped from the cluster due to being over-replicated.|`dataSource`, `tier`|Varies|
@@ -467,6 +470,9 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`segment/unavailable/count`|Number of unique segments left to load until all used segments are available for queries.|`dataSource`|0|
 |`segment/underReplicated/count`|Number of segments, including replicas, left to load until all used segments are available for queries.|`tier`, `dataSource`|0|
 |`segment/availableDeepStorageOnly/count`|Number of unique segments that are only available for querying directly from deep storage.|`dataSource`|Varies|
+|`segment/poll/time`|Time in milliseconds to poll for all used segments. |None||
+|`segment/pollWithSchema/time`|Time in milliseconds to poll for all used segments including schema information.|None||
+|`segment/buildSnapshot/time`|Time taken to build a snapshot of the current segment state.|None||
 |`tier/historical/count`|Number of available historical nodes in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration), and can be used to aggregate metrics across the tiers in an alias.|`tier`, `tierAlias`|Varies|
 |`tier/replication/factor`|Configured maximum replication factor in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
 |`tier/required/capacity`|Total capacity in bytes required in each tier. The `tierAlias` dimension is emitted only when the tier belongs to an alias configured via [`historicalTierAliases`](../configuration/index.md#dynamic-configuration).|`tier`, `tierAlias`|Varies|
