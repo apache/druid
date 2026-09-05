@@ -104,6 +104,7 @@
         <guice.version>6.0.0</guice.version>
         <hamcrest.version>3.0</hamcrest.version>
         <iceberg.core.version>1.11.0</iceberg.core.version>
+        <arrow.version>15.0.2</arrow.version>
         <jetty.version>12.1.12</jetty.version>
         <jspecify.version>1.0.1</jspecify.version>
         <jersey.version>1.19.4</jersey.version>
@@ -437,6 +438,23 @@
                 <groupId>io.projectreactor</groupId>
                 <artifactId>reactor-core</artifactId>
                 <version>3.8.7</version>
+            </dependency>
+
+            <!-- Arrow + Iceberg-Arrow -->
+            <dependency>
+                <groupId>org.apache.arrow</groupId>
+                <artifactId>arrow-vector</artifactId>
+                <version>${arrow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.arrow</groupId>
+                <artifactId>arrow-memory-unsafe</artifactId>
+                <version>${arrow.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.iceberg</groupId>
+                <artifactId>iceberg-arrow</artifactId>
+                <version>${iceberg.core.version}</version>
             </dependency>
 
             <!-- transitive dependency of kafka-clients and kubernetes client
