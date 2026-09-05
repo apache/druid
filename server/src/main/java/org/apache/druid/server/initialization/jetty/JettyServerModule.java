@@ -404,6 +404,9 @@ public class JettyServerModule extends JerseyServletModule
     JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
     try {
       initializer.initialize(server, injector);
+      if (config.isEnableResponseIdentityHeaders()) {
+        server.setHandler(new ResponseIdentityHeaderHandler(node, server.getHandler()));
+      }
     }
     catch (Exception e) {
       throw new RE(e, "server initialization exception");

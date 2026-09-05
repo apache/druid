@@ -44,6 +44,7 @@ public class ServerConfigTest
     Assertions.assertEquals(defaultConfig, defaultConfig2);
     Assertions.assertFalse(defaultConfig2.isEnableForwardedRequestCustomizer());
     Assertions.assertFalse(defaultConfig2.isEnableHSTS());
+    Assertions.assertFalse(defaultConfig2.isEnableResponseIdentityHeaders());
     Assertions.assertEquals(UriCompliance.LEGACY, defaultConfig.getUriCompliance());
     Assertions.assertEquals(true, defaultConfig.isEnforceStrictSNIHostChecking());
 

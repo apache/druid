@@ -207,6 +207,9 @@ public class ServerConfig
   private boolean enableHSTS = false;
 
   @JsonProperty
+  private boolean enableResponseIdentityHeaders = false;
+
+  @JsonProperty
   @JsonDeserialize(using = UriComplianceDeserializer.class)
   @JsonSerialize(using = UriComplianceSerializer.class)
   private UriCompliance uriCompliance = UriCompliance.LEGACY;
@@ -330,6 +333,11 @@ public class ServerConfig
     return enableHSTS;
   }
 
+  public boolean isEnableResponseIdentityHeaders()
+  {
+    return enableResponseIdentityHeaders;
+  }
+
   public boolean isEnableQueryRequestsQueuing()
   {
     return enableQueryRequestsQueuing;
@@ -376,6 +384,7 @@ public class ServerConfig
            errorResponseTransformStrategy.equals(that.errorResponseTransformStrategy) &&
            Objects.equals(contentSecurityPolicy, that.getContentSecurityPolicy()) &&
            enableHSTS == that.enableHSTS &&
+           enableResponseIdentityHeaders == that.enableResponseIdentityHeaders &&
            enableQueryRequestsQueuing == that.enableQueryRequestsQueuing &&
            Objects.equals(uriCompliance, that.uriCompliance) &&
            enforceStrictSNIHostChecking == that.enforceStrictSNIHostChecking;
@@ -406,6 +415,7 @@ public class ServerConfig
         showDetailedJettyErrors,
         contentSecurityPolicy,
         enableHSTS,
+        enableResponseIdentityHeaders,
         enableQueryRequestsQueuing,
         uriCompliance,
         enforceStrictSNIHostChecking
@@ -437,6 +447,7 @@ public class ServerConfig
            ", showDetailedJettyErrors=" + showDetailedJettyErrors +
            ", contentSecurityPolicy=" + contentSecurityPolicy +
            ", enableHSTS=" + enableHSTS +
+           ", enableResponseIdentityHeaders=" + enableResponseIdentityHeaders +
            ", enableQueryRequestsQueuing=" + enableQueryRequestsQueuing +
            ", uriCompliance=" + uriCompliance +
            ", enforceStrictSNIHostChecking=" + enforceStrictSNIHostChecking +

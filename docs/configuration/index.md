@@ -557,6 +557,14 @@ Store task logs in HDFS. Note that the `druid-hdfs-storage` extension must be lo
 |`druid.indexer.logs.kill.initialDelay`| Optional. Number of milliseconds after Overlord start when first auto kill is run. |random value less than 300000 (5 mins)|
 |`druid.indexer.logs.kill.delay`|Optional. Number of milliseconds of delay between successive executions of auto kill run. |21600000 (6 hours)|
 
+### Response identity headers
+
+This configuration applies to all Druid services.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.server.http.enableResponseIdentityHeaders`|If enabled, adds response headers containing the responding Druid service name and its advertised host and port. This can expose internal cluster topology; only enable it when clients are authorized to receive this information.|`false`|
+
 ### API error response
 
 You can configure Druid API error responses to hide internal information like the Druid class name, stack trace, thread name, servlet name, code, line/column number, host, or IP address.
