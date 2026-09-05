@@ -31,14 +31,16 @@ import javax.servlet.http.HttpServletResponse;
 
 public class ResponseIdentityHeaderHandler extends RewriteHandler
 {
-  public static final String RESPONSE_SERVER_HEADER = "X-Druid-Response-Server";
-  public static final String RESPONSE_SERVICE_HEADER = "X-Druid-Response-Service";
+  public static final String RESPONSE_SERVER_HEADER = "X-Druid-Server";
+  public static final String RESPONSE_SERVICE_HEADER = "X-Druid-Service";
+  public static final String RESPONSE_VERSION_HEADER = "X-Druid-Version";
 
   public ResponseIdentityHeaderHandler(final DruidNode selfNode, final Handler handler)
   {
     super(handler);
     addRule(new HeaderPatternRule("*", RESPONSE_SERVER_HEADER, selfNode.getHostAndPortToUse()));
     addRule(new HeaderPatternRule("*", RESPONSE_SERVICE_HEADER, selfNode.getServiceName()));
+    addRule(new HeaderPatternRule("*", RESPONSE_VERSION_HEADER, selfNode.getVersion()));
   }
 
   public static void clearRouterIdentity(final HttpServletResponse proxyResponse)
@@ -46,6 +48,7 @@ public class ResponseIdentityHeaderHandler extends RewriteHandler
     // In EE8 compatible Jetty 12 using servlet API 4.x, setting a header to null is the accepted way to remove it.
     proxyResponse.setHeader(RESPONSE_SERVER_HEADER, null);
     proxyResponse.setHeader(RESPONSE_SERVICE_HEADER, null);
+    proxyResponse.setHeader(RESPONSE_VERSION_HEADER, null);
   }
 
   public static boolean shouldProxyIdentityHeader(
@@ -62,12 +65,15 @@ public class ResponseIdentityHeaderHandler extends RewriteHandler
     }
 
     final HttpFields headers = serverResponse.getHeaders();
-    return headers.contains(RESPONSE_SERVER_HEADER) && headers.contains(RESPONSE_SERVICE_HEADER);
+    return headers.contains(RESPONSE_SERVER_HEADER)
+           && headers.contains(RESPONSE_SERVICE_HEADER)
+           && headers.contains(RESPONSE_VERSION_HEADER);
   }
 
   private static boolean isIdentityHeader(final String headerName)
   {
     return RESPONSE_SERVER_HEADER.equalsIgnoreCase(headerName)
-           || RESPONSE_SERVICE_HEADER.equalsIgnoreCase(headerName);
+           || RESPONSE_SERVICE_HEADER.equalsIgnoreCase(headerName)
+           || RESPONSE_VERSION_HEADER.equalsIgnoreCase(headerName);
   }
 }

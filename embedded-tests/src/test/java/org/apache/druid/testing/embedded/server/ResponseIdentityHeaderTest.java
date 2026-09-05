@@ -203,5 +203,9 @@ public class ResponseIdentityHeaderTest extends EmbeddedClusterTestBase
         List.of(expectedServer.bindings().selfNode().getServiceName()),
         response.headers().allValues(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER)
     );
+    Assertions.assertEquals(
+        List.of(expectedServer.bindings().selfNode().getVersion()),
+        response.headers().allValues(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER)
+    );
   }
 }

@@ -214,8 +214,8 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       final HttpField field
   )
   {
-    // Identity headers are an all-or-nothing pair. Forward an identity field only when this Router has the feature
-    // enabled and the upstream response contains both fields, so a client never observes a partial identity.
+    // Identity headers are an all-or-nothing triple. Forward an identity field only when this Router has the feature
+    // enabled and the upstream response contains all three fields, so a client never observes a partial identity.
     if (!ResponseIdentityHeaderHandler.shouldProxyIdentityHeader(
         serverConfig.isEnableResponseIdentityHeaders(),
         serverResponse,

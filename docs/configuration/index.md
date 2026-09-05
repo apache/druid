@@ -563,7 +563,7 @@ This configuration applies to all Druid services.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.server.http.enableResponseIdentityHeaders`|If enabled, adds response headers containing the responding Druid service name and its advertised host and port. This can expose internal cluster topology; only enable it when clients are authorized to receive this information.|`false`|
+|`druid.server.http.enableResponseIdentityHeaders`|If enabled, adds response headers containing the responding Druid service name, version, and advertised host and port. This can expose internal cluster topology and version information; only enable it when clients are authorized to receive this information.|`false`|
 
 ### API error response
 

@@ -31,12 +31,14 @@ import javax.servlet.http.HttpServletResponse;
 public class ResponseIdentityHeaderHandlerTest
 {
   @Test
-  public void testClearRouterIdentityRemovesBothHeaders()
+  public void testClearRouterIdentityRemovesAllHeaders()
   {
     final HttpServletResponse proxyResponse = EasyMock.strictMock(HttpServletResponse.class);
     proxyResponse.setHeader(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, null);
     EasyMock.expectLastCall().once();
     proxyResponse.setHeader(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER, null);
+    EasyMock.expectLastCall().once();
+    proxyResponse.setHeader(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER, null);
     EasyMock.expectLastCall().once();
 
     EasyMock.replay(proxyResponse);
@@ -45,12 +47,13 @@ public class ResponseIdentityHeaderHandlerTest
   }
 
   @Test
-  public void testShouldProxyIdentityHeaderWhenUpstreamReturnsBothHeaders()
+  public void testShouldProxyIdentityHeaderWhenUpstreamReturnsAllHeaders()
   {
     final Response serverResponse = mockResponse(
         HttpFields.from(
             new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "upstream:8082"),
-            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER, "druid/broker")
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER, "druid/broker"),
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_VERSION_HEADER, "39.0.0")
         ),
         1
     );
@@ -69,7 +72,10 @@ public class ResponseIdentityHeaderHandlerTest
   public void testShouldNotProxyPartialIdentity()
   {
     final Response serverResponse = mockResponse(
-        HttpFields.from(new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "upstream:8082")),
+        HttpFields.from(
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVER_HEADER, "upstream:8082"),
+            new HttpField(ResponseIdentityHeaderHandler.RESPONSE_SERVICE_HEADER, "druid/broker")
+        ),
         1
     );
 
