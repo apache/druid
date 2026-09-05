@@ -32,10 +32,14 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.java.util.http.client.response.ClientResponse;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.QueryException;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -56,8 +60,17 @@ import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.testing.TemporaryFolderExtension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.handler.codec.http.DefaultHttpChunk;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpChunk;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.jboss.netty.handler.timeout.ReadTimeoutException;
+import org.joda.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -398,6 +411,140 @@ public class DirectDruidClientTest
             queryPlus.getQuery().getId()
         ),
         actualException.getMessage());
+  }
+
+  @Test
+  public void testHtml503InInitialResponseIsCapacityExceeded()
+  {
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.SERVICE_UNAVAILABLE, "text/html", "<html><body>503 Service Unavailable</body></html>")
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("<html>"), e.getMessage());
+  }
+
+  @Test
+  public void testHtml503InLaterChunkAfterEmptyInitialBodyIsCapacityExceeded()
+  {
+    // A chunked 503 whose initial HttpResponse carries an empty body: the HTML only shows up in a later chunk, and
+    // must still be classified as capacity-exceeded rather than reaching the JSON parser or being reported as a
+    // generic HTML-instead-of-JSON error.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.SERVICE_UNAVAILABLE, null, "", "  \n", "<html><body>503</body></html>")
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("status[503]"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("detected in chunk[2]"), e.getMessage());
+  }
+
+  @Test
+  public void testHtmlInLaterChunkOf200ResponseIsQueryInterrupted()
+  {
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.OK, null, "", "<html><body>oops</body></html>")
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryInterruptedException e = Assertions.assertThrows(
+        QueryInterruptedException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("returned HTML response instead of JSON"), e.getMessage());
+    Assertions.assertTrue(e.getMessage().contains("detected in chunk[1]"), e.getMessage());
+  }
+
+  @Test
+  public void testPlainText503IsCapacityExceeded()
+  {
+    // Not every proxy error page is HTML: Envoy, for one, returns a plain-text body with a 503.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(HttpResponseStatus.SERVICE_UNAVAILABLE, "text/plain", "upstream connect error or disconnect/reset before headers")
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryCapacityExceededException e = Assertions.assertThrows(
+        QueryCapacityExceededException.class,
+        () -> client.run(queryPlus, responseContext)
+    );
+    Assertions.assertTrue(e.getMessage().contains("upstream connect error"), e.getMessage());
+  }
+
+  @Test
+  public void testJson503IsNotShortCircuited()
+  {
+    // A 503 carrying Druid's own JSON error body must take the normal JSON error path so the server's message
+    // survives, instead of being replaced by a synthesized capacity-exceeded error.
+    final DirectDruidClient client = makeDirectDruidClient(
+        new ScriptedHttpClient(
+            HttpResponseStatus.SERVICE_UNAVAILABLE,
+            "application/json",
+            "{\"error\":\"Unknown exception\",\"errorMessage\":\"backend says no\",\"errorClass\":\"x\",\"host\":\"h\"}"
+        )
+    );
+
+    final QueryPlus queryPlus = getQueryPlus();
+    final QueryException e = Assertions.assertThrows(
+        QueryException.class,
+        () -> client.run(queryPlus, responseContext).toList()
+    );
+    Assertions.assertFalse(e instanceof QueryCapacityExceededException, e.getClass().getName());
+    Assertions.assertEquals("backend says no", e.getMessage());
+  }
+
+  /**
+   * An {@link HttpClient} that feeds the handler a scripted response synchronously: the initial {@link HttpResponse}
+   * carries {@code bodies[0]} and each subsequent element is delivered as an {@link HttpChunk}.
+   */
+  private static class ScriptedHttpClient implements HttpClient
+  {
+    private final HttpResponseStatus status;
+    private final String contentType;
+    private final String[] bodies;
+
+    ScriptedHttpClient(HttpResponseStatus status, String contentType, String... bodies)
+    {
+      this.status = status;
+      this.contentType = contentType;
+      this.bodies = bodies;
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(Request request, HttpResponseHandler<Intermediate, Final> handler)
+    {
+      return go(request, handler, null);
+    }
+
+    @Override
+    public <Intermediate, Final> ListenableFuture<Final> go(
+        Request request,
+        HttpResponseHandler<Intermediate, Final> handler,
+        Duration readTimeout
+    )
+    {
+      final HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, status);
+      if (contentType != null) {
+        response.headers().set(HttpHeaders.Names.CONTENT_TYPE, contentType);
+      }
+      response.setContent(ChannelBuffers.wrappedBuffer(StringUtils.toUtf8(bodies[0])));
+      response.setChunked(bodies.length > 1);
+      ClientResponse<Intermediate> clientResponse = handler.handleResponse(response, TestHttpClient.NOOP_TRAFFIC_COP);
+      for (int i = 1; i < bodies.length; i++) {
+        final HttpChunk chunk = new DefaultHttpChunk(ChannelBuffers.wrappedBuffer(StringUtils.toUtf8(bodies[i])));
+        clientResponse = handler.handleChunk(clientResponse, chunk, i);
+      }
+      return Futures.immediateFuture(handler.done(clientResponse).getObj());
+    }
   }
 
   private DirectDruidClient makeDirectDruidClient(HttpClient httpClient)

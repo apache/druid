@@ -43,7 +43,10 @@ import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryException;
+import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -65,6 +68,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.core.MediaType;
 
 import java.io.IOException;
@@ -185,6 +189,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         // handleResponse). Once set, incoming chunks are dropped rather than buffered.
         private final AtomicBoolean discard = new AtomicBoolean(false);
         private final AtomicBoolean nodeMetricsEmitted = new AtomicBoolean(false);
+        // Tracks whether the response body's leading (non-whitespace) byte has been classified as JSON or
+        // HTML. For chunked responses the initial HttpResponse can arrive with an empty or all-whitespace body,
+        // in which case the check is retried against each subsequent HttpChunk until it resolves.
+        private final AtomicBoolean bodyPrefixResolved = new AtomicBoolean(false);
+        // HTTP status of the initial response, remembered so that an HTML body first seen in a later chunk of a
+        // 429/503 reply is still reported as capacity-exceeded rather than as a generic HTML-instead-of-JSON error.
+        private volatile int responseStatusCode = -1;
         private final AtomicReference<String> fail = new AtomicReference<>();
         private final AtomicReference<TrafficCop> trafficCopRef = new AtomicReference<>();
 
@@ -238,11 +249,139 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           return holder.getStream();
         }
 
+        /**
+         * Scans past leading whitespace in {@code buffer} looking for the first content byte, without consuming
+         * (advancing the reader index of) the buffer, and returns it. Once a non-whitespace byte is found, the prefix
+         * is considered resolved (see {@link #bodyPrefixResolved}) and later calls return null. If {@code buffer} is
+         * empty or entirely whitespace, the prefix remains unresolved (and null is returned) so a later call, from a
+         * subsequent chunk, can retry the check; this matters for chunked responses, where the initial
+         * {@link HttpResponse} can carry an empty body and the real content, HTML or otherwise, only arrives via
+         * {@link #handleChunk}.
+         */
+        @Nullable
+        private Byte bodyPrefixByte(ChannelBuffer buffer)
+        {
+          if (bodyPrefixResolved.get()) {
+            return null;
+          }
+          final int readerIndex = buffer.readerIndex();
+          final int readable = buffer.readableBytes();
+          for (int i = 0; i < readable; i++) {
+            byte b = buffer.getByte(readerIndex + i);
+            if (b == ' ' || b == '\n' || b == '\r' || b == '\t') {
+              continue;
+            }
+            bodyPrefixResolved.set(true);
+            return b;
+          }
+          return null;
+        }
+
+        /**
+         * Classifies the body prefix in {@code buffer} (see {@link #bodyPrefixByte}) and fails the query if it is not
+         * JSON. HTML always fails; any other non-JSON body fails only when the status is 429/503, since Druid itself
+         * never sends a non-JSON body with those statuses but proxies routinely do (an HTML error page from nginx or
+         * a load balancer, a plain-text "upstream connect error" from Envoy). A JSON body, whatever the status, is
+         * left alone so that the normal parse path can surface the server's own structured error.
+         *
+         * @param contentType Content-Type header of the initial response, possibly null; a text/html value fails the
+         *                    query regardless of the body prefix
+         * @param chunkNum    0 for the initial response body, else the chunk number
+         */
+        private void failIfNonJsonBody(String contentType, ChannelBuffer buffer, long chunkNum)
+        {
+          final boolean isHtmlContentType =
+              contentType != null && StringUtils.toLowerCase(contentType).contains("text/html");
+          final Byte prefix = bodyPrefixByte(buffer);
+          final boolean isHtml = isHtmlContentType || (prefix != null && prefix == '<');
+          final boolean isNonJson = prefix != null && prefix != '{' && prefix != '[';
+          final int statusCode = responseStatusCode;
+          if (isHtml || (isNonJson && (statusCode == 429 || statusCode == 503))) {
+            throwForNonJsonBody(statusCode, contentType, buffer, chunkNum, isHtml);
+          }
+        }
+
+        /**
+         * Returns up to 256 characters of {@code buffer} (read from at most its first 512 bytes) for inclusion in an
+         * error message, without consuming the buffer.
+         */
+        private String bodyPreview(ChannelBuffer buffer)
+        {
+          final int len = Math.min(buffer.readableBytes(), 512);
+          if (len == 0) {
+            return "";
+          }
+          final byte[] previewBytes = new byte[len];
+          buffer.getBytes(buffer.readerIndex(), previewBytes);
+          final String preview = StringUtils.fromUtf8(previewBytes);
+          return preview.substring(0, Math.min(preview.length(), 256));
+        }
+
+        /**
+         * Fails the query because the response body is not JSON, typically an error page produced by a load balancer
+         * or reverse proxy sitting in front of the data server. A 429/503 status is reported as
+         * {@link QueryCapacityExceededException} since that is what such intermediaries return when the server is
+         * over capacity; any other status is reported as a {@link QueryInterruptedException}. Either way, the caller
+         * gets a message that says what actually came back instead of a {@code JsonParseException} on {@code '<'}.
+         *
+         * @param statusCode  HTTP status of the initial response
+         * @param contentType Content-Type header of the initial response, possibly null
+         * @param buffer      the buffer in which the non-JSON body was detected (the initial response body or a chunk)
+         * @param chunkNum    0 if detected in the initial response body, else the chunk number
+         * @param isHtml      whether the body was identified as HTML specifically (vs. some other non-JSON content)
+         */
+        private void throwForNonJsonBody(
+            int statusCode,
+            String contentType,
+            ChannelBuffer buffer,
+            long chunkNum,
+            boolean isHtml
+        )
+        {
+          final String preview = bodyPreview(buffer);
+          final String where = chunkNum > 0 ? StringUtils.format(" (detected in chunk[%d])", chunkNum) : "";
+          if (statusCode == 429 || statusCode == 503) {
+            throw QueryCapacityExceededException.withErrorMessageAndResolvedHost(
+                StringUtils.format(
+                    "Query[%s] url[%s] failed with status[%s]%s: %s",
+                    query.getId(),
+                    url,
+                    statusCode,
+                    where,
+                    preview
+                )
+            );
+          }
+          throw new QueryInterruptedException(
+              QueryException.UNKNOWN_EXCEPTION_ERROR_CODE,
+              StringUtils.format(
+                  "Query[%s] url[%s] returned %s response instead of JSON with status[%s] contentType[%s]%s preview[%s]",
+                  query.getId(),
+                  url,
+                  isHtml ? "HTML" : "non-JSON",
+                  statusCode,
+                  contentType,
+                  where,
+                  preview
+              ),
+              QueryInterruptedException.class.getName(),
+              host
+          );
+        }
+
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response, TrafficCop trafficCop)
         {
           trafficCopRef.set(trafficCop);
           checkQueryTimeout();
+          // Detect a non-JSON body (e.g. a 429/503 error page from a proxy) before it reaches the JSON parser, where
+          // it would surface only as a JsonParseException on 0x3c ('<'). The shortcut is taken only when the body is
+          // confirmed non-JSON: a 429/503 carrying Druid's own JSON error body (a genuine
+          // QueryCapacityExceededException or SERVICE_UNAVAILABLE from a data server) falls through to the normal JSON
+          // error path below, which preserves the server's structured error details.
+          responseStatusCode = response.getStatus().getCode();
+          final String contentType = response.headers().get(HttpHeaders.Names.CONTENT_TYPE);
+          failIfNonJsonBody(contentType, response.getContent(), 0);
           checkTotalBytesLimit(response.getContent().readableBytes());
 
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
@@ -369,6 +508,13 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final int bytes = channelBuffer.readableBytes();
 
           checkTotalBytesLimit(bytes);
+
+          // The initial HttpResponse for a chunked reply can have an empty body, so the JSON-vs-not prefix check done
+          // in handleResponse may not have resolved yet. Retry it here, against this chunk, before the bytes are
+          // enqueued for JSON parsing: otherwise an HTML error page (for example from a load balancer or reverse
+          // proxy) delivered as chunked content is enqueued blind and only surfaces later as a confusing
+          // JsonParseException. This is a no-op once the prefix has been resolved.
+          failIfNonJsonBody(null, channelBuffer, chunkNum);
 
           boolean continueReading = true;
           if (bytes > 0) {
