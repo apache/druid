@@ -4905,7 +4905,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT)
               .virtualColumns(
-                  expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
+                  expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
+                  expressionVirtualColumn("v1", "1", ColumnType.LONG)
               )
               .aggregators(
                   aggregators(
@@ -4933,8 +4934,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           not(equality("dim1", "1", ColumnType.STRING))
                       ),
                       new FilteredAggregatorFactory(
-                          new CountAggregatorFactory("a5"),
-                          not(equality("dim1", "1", ColumnType.STRING))
+                          new LongSumAggregatorFactory("a5", "v1"),
+                          not(equality("dim1", "1", ColumnType.STRING)),
+                          "a5",
+                          0L
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a6", "cnt"),
@@ -4949,7 +4952,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       ),
                       new FilteredAggregatorFactory(
                           new LongSumAggregatorFactory("a8", "cnt"),
-                          not(equality("dim1", "1", ColumnType.STRING))
+                          not(equality("dim1", "1", ColumnType.STRING)),
+                          "a8",
+                          0L
                       ),
                       new FilteredAggregatorFactory(
                           new LongMaxAggregatorFactory("a9", "cnt"),
@@ -5010,16 +5015,25 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE1)
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "1", ColumnType.LONG)
+                        )
                         .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG)))
                         .setAggregatorSpecs(aggregators(
                             new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("a0"),
-                                not(equality("dim1", "1", ColumnType.STRING))
+                                new LongSumAggregatorFactory("a0", "v0"),
+                                not(equality("dim1", "1", ColumnType.STRING)),
+                                "a0",
+                                0L
                             ),
                             new LongSumAggregatorFactory("a1", "cnt")
                         ))
                         .setPostAggregatorSpecs(
-                            expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.LONG)
+                            expressionPostAgg(
+                                "p0",
+                                "(\"a0\" + \"a1\")",
+                                ColumnType.LONG
+                            )
                         )
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
@@ -5055,7 +5069,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         aggregators(
                             new FilteredAggregatorFactory(
                                 new LongSumAggregatorFactory("a0", "v0"),
-                                not(equality("dim1", "1", ColumnType.STRING))
+                                not(equality("dim1", "1", ColumnType.STRING)),
+                                "a0",
+                                0L
                             ),
                             new LongSumAggregatorFactory("a1", "cnt")
                         )
@@ -9302,6 +9318,11 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     "v0",
                                                     "((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000))",
                                                     ColumnType.LONG
+                                                ),
+                                                expressionVirtualColumn(
+                                                    "v1",
+                                                    "1",
+                                                    ColumnType.LONG
                                                 )
                                             )
                                             .setDimensions(
@@ -9313,7 +9334,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setAggregatorSpecs(
                                                 aggregators(
                                                     new FilteredAggregatorFactory(
-                                                        new CountAggregatorFactory("a0"),
+                                                        new LongSumAggregatorFactory("a0", "v1"),
                                                         range(
                                                             "__time",
                                                             ColumnType.LONG,
@@ -9321,7 +9342,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                             timestamp("2022-01-05T17:00:00"),
                                                             false,
                                                             true
-                                                        )
+                                                        ),
+                                                        "a0",
+                                                        0L
                                                     ),
                                                     new GroupingAggregatorFactory(
                                                         "a1",
