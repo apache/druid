@@ -50,16 +50,13 @@ import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
-import org.apache.druid.java.util.metrics.NoopSysMonitor;
 import org.apache.druid.java.util.metrics.NoopTaskHolder;
 import org.apache.druid.java.util.metrics.OshiSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
-import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.java.util.metrics.TaskHolder;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.DruidNode;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
@@ -70,8 +67,6 @@ import java.util.Set;
 
 public class MetricsModuleTest
 {
-  private static final String CPU_ARCH = System.getProperty("os.arch");
-
   @Test
   public void testSimpleInjection()
   {
@@ -233,37 +228,6 @@ public class MetricsModuleTest
     Assertions.assertTrue(exception.getMessage().contains("Unknown monitor scheduler[UnknownScheduler]"));
   }
 
-  @Test
-  public void testGetSysMonitorViaInjector()
-  {
-    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
-
-    final Properties properties = new Properties();
-    properties.setProperty(MetricsModule.PROPERTY_PEON_MANAGED, "true");
-    final Injector injector = createInjector(properties, ImmutableSet.of(NodeRole.PEON));
-    final SysMonitor sysMonitor = injector.getInstance(SysMonitor.class);
-    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    sysMonitor.doMonitor(emitter);
-
-    Assertions.assertTrue(sysMonitor instanceof NoopSysMonitor);
-    Mockito.verify(emitter, Mockito.never()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
-  }
-
-  @Test
-  public void testGetSysMonitorWhenNull()
-  {
-    // Do not run the tests on ARM64. Sigar library has no binaries for ARM64
-    Assumptions.assumeFalse("aarch64".equals(CPU_ARCH));
-
-    Injector injector = createInjector(new Properties(), ImmutableSet.of());
-    final SysMonitor sysMonitor = injector.getInstance(SysMonitor.class);
-    final ServiceEmitter emitter = Mockito.mock(ServiceEmitter.class);
-    sysMonitor.doMonitor(emitter);
-
-    Assertions.assertFalse(sysMonitor instanceof NoopSysMonitor);
-    Mockito.verify(emitter, Mockito.atLeastOnce()).emit(ArgumentMatchers.any(ServiceEventBuilder.class));
-  }
   @Test
   public void testGetOshiSysMonitorViaInjector()
   {

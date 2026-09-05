@@ -105,7 +105,6 @@ There are four JVM parameters that we set on all of our services:
   * The temp directory should not be volatile tmpfs.
   * This directory should also have good read and write speed.
   * Avoid NFS mount.
-  * The `org.apache.druid.java.util.metrics.SysMonitor` requires execute privileges on files in `java.io.tmpdir`. If you are using the system monitor, do not set `java.io.tmpdir` to `noexec`.
 * `-Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager` This allows log4j2 to handle logs for non-log4j2 components (like jetty) which use standard java logging.
 
 ### Extensions
