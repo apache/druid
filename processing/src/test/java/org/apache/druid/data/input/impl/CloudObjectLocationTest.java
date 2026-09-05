@@ -130,4 +130,65 @@ public class CloudObjectLocationTest
     Assertions.assertEquals("test_bucket", s3ValidBucket.getBucket());
     Assertions.assertEquals("path/to/path", s3ValidBucket.getPath());
   }
+
+  @Test
+  void testMRAP()
+  {
+    CloudObjectLocation location = new CloudObjectLocation("arn:aws:s3::123456789123:accesspoint:bucket.mrap", "path/to/path");
+    Assertions.assertEquals("arn:aws:s3::123456789123:accesspoint:bucket.mrap", location.getBucket());
+    Assertions.assertEquals("path/to/path", location.getPath());
+  }
+
+  @Test
+  void testMRAPWithURI()
+  {
+    CloudObjectLocation location = new CloudObjectLocation(URI.create("s3://arn:aws:s3::123456789123:accesspoint:bucket.mrap/path/to/path"));
+    Assertions.assertEquals("arn:aws:s3::123456789123:accesspoint:bucket.mrap", location.getBucket());
+    Assertions.assertEquals("path/to/path", location.getPath());
+  }
+
+  @Test
+  void testRegionalARN()
+  {
+    CloudObjectLocation location = new CloudObjectLocation("arn:aws:s3:us-east-1:123456789123:accesspoint:bucket", "path/to/path");
+    Assertions.assertEquals("arn:aws:s3:us-east-1:123456789123:accesspoint:bucket", location.getBucket());
+    Assertions.assertEquals("path/to/path", location.getPath());
+  }
+
+  @Test
+  void testRegionARNWithURI()
+  {
+    CloudObjectLocation location = new CloudObjectLocation(URI.create("s3://arn:aws:s3:us-east-1:123456789123:accesspoint:bucket/path/to/path"));
+    Assertions.assertEquals("arn:aws:s3:us-east-1:123456789123:accesspoint:bucket", location.getBucket());
+    Assertions.assertEquals("path/to/path", location.getPath());
+  }
+
+  @Test
+  void testMRAPWithPlusInKey()
+  {
+    CloudObjectLocation location = new CloudObjectLocation(URI.create("s3://arn:aws:s3::123456789123:accesspoint:bucket.mrap/path/with+plus"));
+    Assertions.assertEquals("arn:aws:s3::123456789123:accesspoint:bucket.mrap", location.getBucket());
+    Assertions.assertEquals("path/with+plus", location.getPath());
+  }
+
+  @Test
+  void testMRAPSlashFormDirectConstructionRejected()
+  {
+    // Slash-form ARNs are not accepted; callers must normalize to colon form via S3Utils.normalizeBucketName.
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new CloudObjectLocation("arn:aws:s3::123456789123:accesspoint/bucket.mrap", "path/to/path")
+    );
+  }
+
+  @Test
+  void testMRAPSlashFormUriRejected()
+  {
+    // java.net.URI splits the slash-form ARN so the authority becomes "arn:...:accesspoint",
+    // which is not a valid bucket — rejected with IllegalArgumentException.
+    Assertions.assertThrows(
+        IllegalArgumentException.class,
+        () -> new CloudObjectLocation(URI.create("s3://arn:aws:s3::123456789123:accesspoint/bucket.mrap/path/to/path"))
+    );
+  }
 }
