@@ -36,10 +36,13 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentAnalysis.ContainerAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.file.SegmentFileContainerMetadata;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -165,22 +168,33 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           }
         }
 
-        return Sequences.simple(
-            Collections.singletonList(
-                new SegmentAnalysis(
-                    segment.getId().toString(),
-                    retIntervals,
-                    columns,
-                    totalSize,
-                    numRows,
-                    aggregators,
-                    projectionsMap,
-                    timestampSpec,
-                    queryGranularity,
-                    rollup
-                )
-            )
-        );
+        final List<ContainerAnalysis> containers;
+        if (updatedQuery.hasContainerSizes()) {
+          final QueryableIndex index = segment.as(QueryableIndex.class);
+          final List<SegmentFileContainerMetadata> fileContainers = index == null ? null : index.getFileContainers();
+          containers = fileContainers == null
+                       ? null
+                       : fileContainers.stream()
+                                       .map(c -> new ContainerAnalysis(c.getBundle(), c.getSize()))
+                                       .collect(Collectors.toList());
+        } else {
+          containers = null;
+        }
+
+        final SegmentAnalysis analysis = new SegmentAnalysis.Builder(segment.getId().toString())
+            .intervals(retIntervals)
+            .columns(columns)
+            .size(totalSize)
+            .numRows(numRows)
+            .aggregators(aggregators)
+            .projections(projectionsMap)
+            .timestampSpec(timestampSpec)
+            .queryGranularity(queryGranularity)
+            .rollup(rollup)
+            .containers(containers)
+            .build();
+
+        return Sequences.simple(Collections.singletonList(analysis));
       }
     };
   }

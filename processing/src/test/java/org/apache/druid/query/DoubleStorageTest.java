@@ -148,108 +148,101 @@ public class DoubleStorageTest extends InitializedNullHandlingTest
 
   public static Stream<Object[]> constructorFeeder()
   {
-    SegmentAnalysis expectedSegmentAnalysisDouble = new SegmentAnalysis(
-        SEGMENT_ID.toString(),
-        ImmutableList.of(INTERVAL),
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                TIME_COLUMN,
-                new ColumnAnalysis(
-                    ColumnType.LONG,
-                    ValueType.LONG.name(),
-                    false,
-                    false,
-                    100,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                DIM_NAME,
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.name(),
-                    false,
-                    false,
-                    120,
-                    1,
-                    DIM_VALUE,
-                    DIM_VALUE,
-                    null
-                ),
-                DIM_FLOAT_NAME,
-                new ColumnAnalysis(
-                    ColumnType.DOUBLE,
-                    ValueType.DOUBLE.name(),
-                    false,
-                    false,
-                    80,
-                    null,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis expectedSegmentAnalysisDouble = new SegmentAnalysis.Builder(SEGMENT_ID)
+        .interval(INTERVAL)
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    TIME_COLUMN,
+                    new ColumnAnalysis(
+                        ColumnType.LONG,
+                        ValueType.LONG.name(),
+                        false,
+                        false,
+                        100,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    DIM_NAME,
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.name(),
+                        false,
+                        false,
+                        120,
+                        1,
+                        DIM_VALUE,
+                        DIM_VALUE,
+                        null
+                    ),
+                    DIM_FLOAT_NAME,
+                    new ColumnAnalysis(
+                        ColumnType.DOUBLE,
+                        ValueType.DOUBLE.name(),
+                        false,
+                        false,
+                        80,
+                        null,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ), 330,
-        MAX_ROWS,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(330)
+        .numRows(MAX_ROWS)
+        .build();
 
-    SegmentAnalysis expectedSegmentAnalysisFloat = new SegmentAnalysis(
-        SEGMENT_ID.toString(),
-        ImmutableList.of(INTERVAL),
-        new LinkedHashMap<>(
-            ImmutableMap.of(
-                TIME_COLUMN,
-                new ColumnAnalysis(
-                    ColumnType.LONG,
-                    ValueType.LONG.name(),
-                    false,
-                    false,
-                    100,
-                    null,
-                    null,
-                    null,
-                    null
-                ),
-                DIM_NAME,
-                new ColumnAnalysis(
-                    ColumnType.STRING,
-                    ValueType.STRING.name(),
-                    false,
-                    false,
-                    120,
-                    1,
-                    DIM_VALUE,
-                    DIM_VALUE,
-                    null
-                ),
-                DIM_FLOAT_NAME,
-                new ColumnAnalysis(
-                    ColumnType.FLOAT,
-                    ValueType.FLOAT.name(),
-                    false,
-                    false,
-                    80,
-                    null,
-                    null,
-                    null,
-                    null
+    SegmentAnalysis expectedSegmentAnalysisFloat = new SegmentAnalysis.Builder(SEGMENT_ID)
+        .interval(INTERVAL)
+        .columns(
+            new LinkedHashMap<>(
+                ImmutableMap.of(
+                    TIME_COLUMN,
+                    new ColumnAnalysis(
+                        ColumnType.LONG,
+                        ValueType.LONG.name(),
+                        false,
+                        false,
+                        100,
+                        null,
+                        null,
+                        null,
+                        null
+                    ),
+                    DIM_NAME,
+                    new ColumnAnalysis(
+                        ColumnType.STRING,
+                        ValueType.STRING.name(),
+                        false,
+                        false,
+                        120,
+                        1,
+                        DIM_VALUE,
+                        DIM_VALUE,
+                        null
+                    ),
+                    DIM_FLOAT_NAME,
+                    new ColumnAnalysis(
+                        ColumnType.FLOAT,
+                        ValueType.FLOAT.name(),
+                        false,
+                        false,
+                        80,
+                        null,
+                        null,
+                        null,
+                        null
+                    )
                 )
             )
-        ),
-        330,
-        MAX_ROWS,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
+        )
+        .size(330)
+        .numRows(MAX_ROWS)
+        .build();
 
     return Stream.of(
         new Object[]{"double", expectedSegmentAnalysisDouble},

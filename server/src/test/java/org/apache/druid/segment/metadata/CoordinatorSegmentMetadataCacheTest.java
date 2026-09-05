@@ -1108,18 +1108,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
 
     RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
-        new SegmentAnalysis(
-            "id",
-            ImmutableList.of(Intervals.utc(1L, 2L)),
-            columns,
-            1234,
-            100,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        new SegmentAnalysis.Builder("id")
+            .interval(Intervals.utc(1L, 2L))
+            .columns(columns)
+            .size(1234)
+            .numRows(100)
+            .build()
     );
 
     Assertions.assertEquals(
@@ -1136,57 +1130,53 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
   public void testSegmentMetadataFallbackType()
   {
     RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
-        new SegmentAnalysis(
-            "id",
-            ImmutableList.of(Intervals.utc(1L, 2L)),
-            new LinkedHashMap<>(
-                ImmutableMap.of(
-                    "a",
-                    new ColumnAnalysis(
-                        null,
-                        ColumnType.STRING.asTypeString(),
-                        false,
-                        true,
-                        1234,
-                        26,
+        new SegmentAnalysis.Builder("id")
+            .interval(Intervals.utc(1L, 2L))
+            .columns(
+                new LinkedHashMap<>(
+                    ImmutableMap.of(
                         "a",
-                        "z",
-                        null
-                    ),
-                    "count",
-                    new ColumnAnalysis(
-                        null,
-                        ColumnType.LONG.asTypeString(),
-                        false,
-                        true,
-                        1234,
-                        null,
-                        null,
-                        null,
-                        null
-                    ),
-                    "distinct",
-                    new ColumnAnalysis(
-                        null,
-                        "hyperUnique",
-                        false,
-                        true,
-                        1234,
-                        null,
-                        null,
-                        null,
-                        null
+                        new ColumnAnalysis(
+                            null,
+                            ColumnType.STRING.asTypeString(),
+                            false,
+                            true,
+                            1234,
+                            26,
+                            "a",
+                            "z",
+                            null
+                        ),
+                        "count",
+                        new ColumnAnalysis(
+                            null,
+                            ColumnType.LONG.asTypeString(),
+                            false,
+                            true,
+                            1234,
+                            null,
+                            null,
+                            null,
+                            null
+                        ),
+                        "distinct",
+                        new ColumnAnalysis(
+                            null,
+                            "hyperUnique",
+                            false,
+                            true,
+                            1234,
+                            null,
+                            null,
+                            null,
+                            null
+                        )
                     )
                 )
-            ),
-            1234,
-            100,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+            )
+            .size(1234)
+            .numRows(100)
+            .build()
     );
     Assertions.assertEquals(
         RowSignature.builder().add("a", ColumnType.STRING).add("count", ColumnType.LONG).add("distinct", ColumnType.ofComplex("hyperUnique")).build(),
@@ -1211,18 +1201,12 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     columns.put("error_col2", ColumnAnalysis.error("multi_value"));
 
     final RowSignature signature = AbstractSegmentMetadataCache.analysisToRowSignature(
-        new SegmentAnalysis(
-            "id",
-            ImmutableList.of(Intervals.utc(1L, 2L)),
-            columns,
-            1234,
-            100,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
+        new SegmentAnalysis.Builder("id")
+            .interval(Intervals.utc(1L, 2L))
+            .columns(columns)
+            .size(1234)
+            .numRows(100)
+            .build()
     );
 
     Assertions.assertEquals(

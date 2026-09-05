@@ -30,6 +30,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
+import org.apache.druid.query.metadata.metadata.SegmentAnalysis.ContainerAnalysis;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -73,14 +74,13 @@ public class SegmentAnalysisTest
         new ColumnAnalysis(ColumnType.DOUBLE, ColumnType.DOUBLE.asTypeString(), true, true, 0, null, null, null, null)
     );
 
-    final SegmentAnalysis analysis = new SegmentAnalysis(
-        "id",
-        Intervals.ONLY_ETERNITY,
-        columns,
-        1,
-        2,
-        ImmutableMap.of("cnt", new CountAggregatorFactory("cnt")),
-        ImmutableMap.of("channel_added_hourly", new AggregateProjectionMetadata(
+    final SegmentAnalysis analysis = new SegmentAnalysis.Builder("id")
+        .intervals(Intervals.ONLY_ETERNITY)
+        .columns(columns)
+        .size(1)
+        .numRows(2)
+        .aggregators(ImmutableMap.of("cnt", new CountAggregatorFactory("cnt")))
+        .projections(ImmutableMap.of("channel_added_hourly", new AggregateProjectionMetadata(
             AggregateProjectionSchema.schemaBuilder("channel_added_hourly")
                                      .timeColumnName(Granularities.GRANULARITY_VIRTUAL_COLUMN_NAME)
                                      .virtualColumns(
@@ -93,11 +93,15 @@ public class SegmentAnalysisTest
                                      .aggregators(new LongSumAggregatorFactory("sum_added", "added"))
                                      .build(),
             16
-        )),
-        TimestampSpec.DEFAULT,
-        Granularities.SECOND,
-        true
-    );
+        )))
+        .timestampSpec(TimestampSpec.DEFAULT)
+        .queryGranularity(Granularities.SECOND)
+        .rollup(true)
+        .containers(ImmutableList.of(
+            new ContainerAnalysis("__base", 223),
+            new ContainerAnalysis("channel_added_hourly", 145)
+        ))
+        .build();
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final SegmentAnalysis analysis2 = jsonMapper.readValue(
@@ -112,5 +116,8 @@ public class SegmentAnalysisTest
         ImmutableList.copyOf(columns.entrySet()),
         ImmutableList.copyOf(analysis2.getColumns().entrySet())
     );
+
+    // Verify containers survive serde.
+    Assertions.assertEquals(analysis.getContainers(), analysis2.getContainers());
   }
 }
