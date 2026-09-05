@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -115,10 +114,13 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     if (allSegments.isEmpty()) {
       return;
     }
-    final String reason = skipIntervals.contains(Intervals.ETERNITY)
-                           ? StringUtils.format("Interval[%s] locked by another task", Intervals.ETERNITY)
-                           : StringUtils.format("Interval[%s] skipped by compaction config", Intervals.ETERNITY);
-    skippedSegments.add(CompactionCandidate.from(allSegments, null, CompactionStatus.skipped(reason)));
+    final CompactionStatus skipStatus = computeSkipStatus(
+        Intervals.ETERNITY,
+        config.getSkipOffsetFromLatest(),
+        config.getSkipIntervals(),
+        skipIntervals
+    );
+    skippedSegments.add(CompactionCandidate.from(allSegments, null, skipStatus));
   }
 
   private void populateQueue(SegmentTimeline timeline, List<Interval> skipIntervals)
@@ -147,7 +149,10 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
             CompactionCandidate candidatesWithStatus = CompactionCandidate.from(
                 partialEternitySegments,
                 null,
-                CompactionStatus.skipped("Segments have partial-eternity intervals")
+                CompactionStatus.skipped(
+                    CompactionSkipReason.PARTIAL_ETERNITY_INTERVAL,
+                    "Segments have partial-eternity intervals"
+                )
             );
             skippedSegments.add(candidatesWithStatus);
             return;
@@ -403,7 +408,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         skippedSegments.add(CompactionCandidate.from(
             segments,
             segmentGranularity,
-            CompactionStatus.skipped(describeSkipReason(skipInterval, skipOffset, config.getSkipIntervals(), skipIntervals))
+            computeSkipStatus(skipInterval, skipOffset, config.getSkipIntervals(), skipIntervals)
         ));
       }
     }
@@ -455,7 +460,7 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         log.warn(
             "searchInterval[%s] for datasource[%s] unexpectedly overlaps skipInterval[%s]: %s, skipping it",
             searchInterval, dataSource, overlappingSkipInterval,
-            describeSkipReason(overlappingSkipInterval, skipOffset, config.getSkipIntervals(), skipIntervals)
+            computeSkipStatus(overlappingSkipInterval, skipOffset, config.getSkipIntervals(), skipIntervals).getReason()
         );
         continue;
       }
@@ -465,7 +470,15 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
     return searchIntervals;
   }
 
-  private static String describeSkipReason(
+  /**
+   * Determines why the given skip interval is not being considered for compaction
+   * in this run. A skip interval may be the condensed union of several skip
+   * intervals, in which case the first matching reason is reported. All the
+   * reasons returned here belong to a category that does not count against the
+   * datasource being fully compacted, so the order does not affect progress
+   * accounting.
+   */
+  private static CompactionStatus computeSkipStatus(
       Interval skipInterval,
       Period skipOffset,
       List<Interval> configuredSkipIntervals,
@@ -473,11 +486,23 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
   )
   {
     if (lockedIntervals.stream().anyMatch(skipInterval::overlaps)) {
-      return StringUtils.format("Interval[%s] locked by another task", skipInterval);
+      return CompactionStatus.skipped(
+          CompactionSkipReason.INTERVAL_LOCKED,
+          "Interval[%s] locked by another task",
+          skipInterval
+      );
     } else if (configuredSkipIntervals.stream().anyMatch(skipInterval::overlaps)) {
-      return StringUtils.format("Interval[%s] skipped by compaction config", skipInterval);
+      return CompactionStatus.skipped(
+          CompactionSkipReason.SKIP_OFFSET,
+          "Interval[%s] skipped by compaction config",
+          skipInterval
+      );
     } else {
-      return StringUtils.format("Skip offset from latest[%s]", skipOffset);
+      return CompactionStatus.skipped(
+          CompactionSkipReason.SKIP_OFFSET,
+          "Skip offset from latest[%s]",
+          skipOffset
+      );
     }
   }
 

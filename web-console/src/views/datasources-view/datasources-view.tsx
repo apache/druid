@@ -55,11 +55,14 @@ import type {
   Rule,
 } from '../../druid-models';
 import {
+  bytesNotMatchingCompactionConfig,
   END_OF_TIME_DATE,
   formatCompactionInfo,
   getConsoleViewIcon,
   getDatasourceColor,
+  intervalsNotMatchingCompactionConfig,
   RuleUtil,
+  segmentsNotMatchingCompactionConfig,
   START_OF_TIME_DATE,
   zeroCompactionStatus,
 } from '../../druid-models';
@@ -1200,7 +1203,7 @@ GROUP BY 1, 2`;
 
     const leftToBeCompactedValues = datasources.map(d =>
       d.compaction?.status
-        ? formatLeftToBeCompacted(d.compaction?.status.bytesAwaitingCompaction)
+        ? formatLeftToBeCompacted(bytesNotMatchingCompactionConfig(d.compaction.status))
         : '-',
     );
 
@@ -1570,7 +1573,8 @@ GROUP BY 1, 2`;
             accessor: ({ compaction }) => {
               const status = compaction?.status;
               return status?.bytesCompacted
-                ? status.bytesCompacted / (status.bytesAwaitingCompaction + status.bytesCompacted)
+                ? status.bytesCompacted /
+                    (bytesNotMatchingCompactionConfig(status) + status.bytesCompacted)
                 : 0;
             },
             filterable: false,
@@ -1594,14 +1598,17 @@ GROUP BY 1, 2`;
                 <>
                   <BracedText
                     text={formatPercent(
-                      progress(status.bytesCompacted, status.bytesAwaitingCompaction),
+                      progress(status.bytesCompacted, bytesNotMatchingCompactionConfig(status)),
                     )}
                     braces={PERCENT_BRACES}
                   />{' '}
                   &nbsp;{' '}
                   <BracedText
                     text={formatPercent(
-                      progress(status.segmentCountCompacted, status.segmentCountAwaitingCompaction),
+                      progress(
+                        status.segmentCountCompacted,
+                        segmentsNotMatchingCompactionConfig(status),
+                      ),
                     )}
                     braces={PERCENT_BRACES}
                   />{' '}
@@ -1610,7 +1617,7 @@ GROUP BY 1, 2`;
                     text={formatPercent(
                       progress(
                         status.intervalCountCompacted,
-                        status.intervalCountAwaitingCompaction,
+                        intervalsNotMatchingCompactionConfig(status),
                       ),
                     )}
                     braces={PERCENT_BRACES}
@@ -1627,7 +1634,7 @@ GROUP BY 1, 2`;
             width: 100,
             accessor: ({ compaction }) => {
               const status = compaction?.status;
-              return status?.bytesAwaitingCompaction || 0;
+              return status ? bytesNotMatchingCompactionConfig(status) : 0;
             },
             filterable: false,
             className: 'padded',
@@ -1642,7 +1649,7 @@ GROUP BY 1, 2`;
 
               return (
                 <BracedText
-                  text={formatLeftToBeCompacted(status.bytesAwaitingCompaction)}
+                  text={formatLeftToBeCompacted(bytesNotMatchingCompactionConfig(status))}
                   braces={leftToBeCompactedValues}
                 />
               );

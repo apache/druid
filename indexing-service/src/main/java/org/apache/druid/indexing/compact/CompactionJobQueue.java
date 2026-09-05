@@ -42,6 +42,7 @@ import org.apache.druid.segment.metadata.IndexingStateCache;
 import org.apache.druid.segment.metadata.IndexingStateStorage;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
+import org.apache.druid.server.compaction.CompactionSkipReason;
 import org.apache.druid.server.compaction.CompactionSlotManager;
 import org.apache.druid.server.compaction.CompactionSnapshotBuilder;
 import org.apache.druid.server.compaction.CompactionStatus;
@@ -292,7 +293,7 @@ public class CompactionJobQueue
     final CompactionConfigValidationResult validationResult = validateCompactionJob(job);
     if (!validationResult.isValid()) {
       log.error("Skipping invalid compaction job[%s] due to reason[%s].", job, validationResult.getReason());
-      snapshotBuilder.moveFromPendingToSkipped(candidate);
+      snapshotBuilder.moveFromPendingToSkipped(candidate, CompactionSkipReason.INVALID_JOB);
       return false;
     }
 
@@ -304,7 +305,7 @@ public class CompactionJobQueue
       case RUNNING:
         return false;
       case SKIPPED:
-        snapshotBuilder.moveFromPendingToSkipped(candidate);
+        snapshotBuilder.moveFromPendingToSkipped(candidate, compactionStatus.getSkipReason());
         return false;
       case PENDING:
         break;
@@ -324,7 +325,7 @@ public class CompactionJobQueue
     final String taskId = startTaskIfReady(job);
     if (taskId == null) {
       // Mark the job as skipped for now as the intervals might be locked by other tasks
-      snapshotBuilder.moveFromPendingToSkipped(candidate);
+      snapshotBuilder.moveFromPendingToSkipped(candidate, CompactionSkipReason.LOCK_ACQUISITION_FAILED);
       return false;
     } else {
       statusTracker.onTaskSubmitted(taskId, job.getCandidate());
