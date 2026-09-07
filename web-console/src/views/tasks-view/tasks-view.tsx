@@ -382,7 +382,7 @@ ORDER BY
       <ReactTable
         data={tasks}
         loading={tasksState.loading}
-        noDataText={tasksState.isEmpty() ? 'No tasks' : tasksState.getErrorMessage() || ''}
+        noDataText={tasksState.data?.length === 0 ? 'No tasks' : tasksState.getErrorMessage() || ''}
         filterable
         filtered={filters.toFilters()}
         onFilteredChange={filters => onFiltersChange(TableFilters.fromFilters(filters))}

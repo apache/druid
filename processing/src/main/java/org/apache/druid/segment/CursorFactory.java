@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -31,6 +32,27 @@ public interface CursorFactory extends ColumnInspector
    * scan, filter, transform, group and aggregate, and/or order the data.
    */
   CursorHolder makeCursorHolder(CursorBuildSpec spec);
+
+  /**
+   * Asynchronous variant of {@link #makeCursorHolder(CursorBuildSpec)} for cursor factories that may need to do I/O
+   * (e.g. download column data from deep storage) before they can serve a cursor. Callers running on threads that
+   * must not block use this rather than {@link #makeCursorHolder}.
+   * <p>
+   * There is intentionally no working default: this method must be explicitly implemented to participate in
+   * async-aware engines (MSQ). A factory whose source is always fully-resident and never needs to block while waiting
+   * on some other thread to perform work can implement {@link ResidentCursorFactory} instead of {@link CursorFactory}
+   * directly, which provides a default implementation of this method that wraps
+   * {@link #makeCursorHolder(CursorBuildSpec)}.
+   */
+  default AsyncCursorHolder makeCursorHolderAsync(CursorBuildSpec spec)
+  {
+    throw DruidException.defensive(
+        "makeCursorHolderAsync is not implemented by [%s]. Override it (or implement ResidentCursorFactory): return "
+        + "AsyncCursorHolder.completed(makeCursorHolder(spec)) if the source is always fully resident, or build/await "
+        + "the cursor holder asynchronously if it supports load on demand.",
+        getClass().getName()
+    );
+  }
 
   /**
    * Returns the {@link RowSignature} of the data available from this cursor factory. For mutable segments, even though

@@ -112,11 +112,11 @@ public class ResourceFilterTestHelper
     ).anyTimes();
     EasyMock.expect(request.getMethod()).andReturn(requestMethod).anyTimes();
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).anyTimes();
-    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     AuthenticationResult authenticationResult = new AuthenticationResult("druid", "druid", null, null);
     EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
             .andReturn(authenticationResult)
             .atLeastOnce();
+    EasyMock.expect(req.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).anyTimes();
     req.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, authCheckResult);
     EasyMock.expectLastCall().anyTimes();
     EasyMock.expect(authorizerMapper.getAuthorizer(
@@ -132,6 +132,7 @@ public class ResourceFilterTestHelper
 
         }
     ).atLeastOnce();
+    EasyMock.expect(authorizerMapper.getServiceEmitter()).andReturn(null).anyTimes();
   }
 
   public static Collection<Object[]> getRequestPathsWithAuthorizer(final AnnotatedElement classOrMethod)

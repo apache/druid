@@ -27,13 +27,9 @@ import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
-import org.hamcrest.Matchers;
-import org.hamcrest.number.IsCloseTo;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -91,7 +87,7 @@ public class StringSketchTest
   {
     private StringSketch target;
 
-    @Before
+    @BeforeEach
     public void setup()
     {
       target = new StringSketch();
@@ -101,40 +97,40 @@ public class StringSketchTest
     public void putIfNewMin()
     {
       StringTuple value = MAX_STRING;
-      Assert.assertEquals(0, getCount());
+      Assertions.assertEquals(0, getCount());
 
       target.putIfNewMin(value);
-      Assert.assertEquals(1, getCount());
+      Assertions.assertEquals(1, getCount());
 
       target.putIfNewMin(value);
-      Assert.assertEquals(1, getCount());
-      Assert.assertEquals(value, target.getDelegate().getMinItem());
-      Assert.assertEquals(value, target.getDelegate().getMaxItem());
+      Assertions.assertEquals(1, getCount());
+      Assertions.assertEquals(value, target.getDelegate().getMinItem());
+      Assertions.assertEquals(value, target.getDelegate().getMaxItem());
 
       target.putIfNewMin(MIN_STRING);
-      Assert.assertEquals(2, getCount());
-      Assert.assertEquals(MIN_STRING, target.getDelegate().getMinItem());
-      Assert.assertEquals(MAX_STRING, target.getDelegate().getMaxItem());
+      Assertions.assertEquals(2, getCount());
+      Assertions.assertEquals(MIN_STRING, target.getDelegate().getMinItem());
+      Assertions.assertEquals(MAX_STRING, target.getDelegate().getMaxItem());
     }
 
     @Test
     public void putIfNewMax()
     {
       StringTuple value = MIN_STRING;
-      Assert.assertEquals(0, getCount());
+      Assertions.assertEquals(0, getCount());
 
       target.putIfNewMax(value);
-      Assert.assertEquals(1, getCount());
+      Assertions.assertEquals(1, getCount());
 
       target.putIfNewMax(value);
-      Assert.assertEquals(1, getCount());
-      Assert.assertEquals(value, target.getDelegate().getMinItem());
-      Assert.assertEquals(value, target.getDelegate().getMaxItem());
+      Assertions.assertEquals(1, getCount());
+      Assertions.assertEquals(value, target.getDelegate().getMinItem());
+      Assertions.assertEquals(value, target.getDelegate().getMaxItem());
 
       target.putIfNewMax(MAX_STRING);
-      Assert.assertEquals(2, getCount());
-      Assert.assertEquals(MIN_STRING, target.getDelegate().getMinItem());
-      Assert.assertEquals(MAX_STRING, target.getDelegate().getMaxItem());
+      Assertions.assertEquals(2, getCount());
+      Assertions.assertEquals(MIN_STRING, target.getDelegate().getMinItem());
+      Assertions.assertEquals(MAX_STRING, target.getDelegate().getMaxItem());
     }
 
     private long getCount()
@@ -154,16 +150,14 @@ public class StringSketchTest
 
     public static class TargetSizeTest
     {
-      @Rule
-      public ExpectedException exception = ExpectedException.none();
-
       @Test
       public void requiresPositiveSize()
       {
-        exception.expect(IllegalArgumentException.class);
-        exception.expectMessage("targetSize must be positive but is 0");
-
-        SKETCH.getEvenPartitionsByTargetSize(0);
+        final IllegalArgumentException exception = Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> SKETCH.getEvenPartitionsByTargetSize(0)
+        );
+        Assertions.assertTrue(exception.getMessage().contains("targetSize must be positive but is 0"));
       }
 
       @Test
@@ -171,7 +165,7 @@ public class StringSketchTest
       {
         StringSketch sketch = new StringSketch();
         PartitionBoundaries partitionBoundaries = sketch.getEvenPartitionsByTargetSize(1);
-        Assert.assertEquals(0, partitionBoundaries.size());
+        Assertions.assertEquals(0, partitionBoundaries.size());
       }
 
       @Test
@@ -180,9 +174,9 @@ public class StringSketchTest
         StringSketch sketch = new StringSketch();
         sketch.put(MIN_STRING);
         PartitionBoundaries partitionBoundaries = sketch.getEvenPartitionsByTargetSize(1);
-        Assert.assertEquals(2, partitionBoundaries.size());
-        Assert.assertNull(partitionBoundaries.get(0));
-        Assert.assertNull(partitionBoundaries.get(1));
+        Assertions.assertEquals(2, partitionBoundaries.size());
+        Assertions.assertNull(partitionBoundaries.get(0));
+        Assertions.assertNull(partitionBoundaries.get(1));
       }
 
       @Test
@@ -208,25 +202,24 @@ public class StringSketchTest
         String partitionBoundariesString = PartitionTest.toString(partitionBoundaries);
         int expectedHighPartitionBoundaryCount = (int) Math.ceil((double) NUM_STRING / targetSize);
         int expectedLowPartitionBoundaryCount = expectedHighPartitionBoundaryCount - 1;
-        Assert.assertThat(
-            "targetSize=" + targetSize + " " + partitionBoundariesString,
-            partitionBoundaries.size(),
-            Matchers.lessThanOrEqualTo(expectedHighPartitionBoundaryCount + 1)
+        Assertions.assertTrue(
+            partitionBoundaries.size() <= expectedHighPartitionBoundaryCount + 1,
+            "targetSize=" + targetSize + " " + partitionBoundariesString
         );
-        Assert.assertThat(
-            "targetSize=" + targetSize + " " + partitionBoundariesString,
-            partitionBoundaries.size(),
-            Matchers.greaterThanOrEqualTo(expectedLowPartitionBoundaryCount + 1)
+        Assertions.assertTrue(
+            partitionBoundaries.size() >= expectedLowPartitionBoundaryCount + 1,
+            "targetSize=" + targetSize + " " + partitionBoundariesString
         );
 
         int previous = 0;
         for (int i = 1; i < partitionBoundaries.size() - 1; i++) {
           int current = Integer.parseInt(partitionBoundaries.get(i).get(0));
           int size = current - previous;
-          Assert.assertThat(
-              getErrMsgPrefix(targetSize, i) + partitionBoundariesString,
+          Assertions.assertEquals(
+              targetSize,
               (double) size,
-              IsCloseTo.closeTo(targetSize, Math.ceil(DELTA) * 2)
+              Math.ceil(DELTA) * 2,
+              getErrMsgPrefix(targetSize, i) + partitionBoundariesString
           );
           previous = current;
         }
@@ -249,16 +242,14 @@ public class StringSketchTest
 
     public static class MaxSizeTest
     {
-      @Rule
-      public ExpectedException exception = ExpectedException.none();
-
       @Test
       public void requiresPositiveSize()
       {
-        exception.expect(IllegalArgumentException.class);
-        exception.expectMessage("maxSize must be positive but is 0");
-
-        SKETCH.getEvenPartitionsByMaxSize(0);
+        final IllegalArgumentException exception = Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> SKETCH.getEvenPartitionsByMaxSize(0)
+        );
+        Assertions.assertTrue(exception.getMessage().contains("maxSize must be positive but is 0"));
       }
 
       @Test
@@ -266,7 +257,7 @@ public class StringSketchTest
       {
         StringSketch sketch = new StringSketch();
         PartitionBoundaries partitionBoundaries = sketch.getEvenPartitionsByMaxSize(1);
-        Assert.assertEquals(0, partitionBoundaries.size());
+        Assertions.assertEquals(0, partitionBoundaries.size());
       }
 
       @Test
@@ -275,9 +266,9 @@ public class StringSketchTest
         StringSketch sketch = new StringSketch();
         sketch.put(MIN_STRING);
         PartitionBoundaries partitionBoundaries = sketch.getEvenPartitionsByMaxSize(1);
-        Assert.assertEquals(2, partitionBoundaries.size());
-        Assert.assertNull(partitionBoundaries.get(0));
-        Assert.assertNull(partitionBoundaries.get(1));
+        Assertions.assertEquals(2, partitionBoundaries.size());
+        Assertions.assertNull(partitionBoundaries.get(0));
+        Assertions.assertNull(partitionBoundaries.get(1));
       }
 
       @Test
@@ -302,10 +293,10 @@ public class StringSketchTest
 
         String partitionBoundariesString = PartitionTest.toString(partitionBoundaries);
         long expectedPartitionCount = (long) Math.ceil((double) NUM_STRING / maxSize);
-        Assert.assertEquals(
-            "maxSize=" + maxSize + " " + partitionBoundariesString,
+        Assertions.assertEquals(
             expectedPartitionCount + 1,
-            partitionBoundaries.size()
+            partitionBoundaries.size(),
+            "maxSize=" + maxSize + " " + partitionBoundariesString
         );
 
         double minSize = (double) NUM_STRING / expectedPartitionCount - DELTA;
@@ -314,15 +305,13 @@ public class StringSketchTest
         for (int i = 1; i < partitionBoundaries.size() - 1; i++) {
           int current = Integer.parseInt(partitionBoundaries.get(i).get(0));
           int size = current - previous;
-          Assert.assertThat(
-              getErrMsgPrefix(maxSize, i) + partitionBoundariesString,
-              size,
-              Matchers.lessThanOrEqualTo(maxSize)
+          Assertions.assertTrue(
+              size <= maxSize,
+              getErrMsgPrefix(maxSize, i) + partitionBoundariesString
           );
-          Assert.assertThat(
-              getErrMsgPrefix(maxSize, i) + partitionBoundariesString,
-              (double) size,
-              Matchers.greaterThanOrEqualTo(minSize)
+          Assertions.assertTrue(
+              size >= minSize,
+              getErrMsgPrefix(maxSize, i) + partitionBoundariesString
           );
           previous = current;
         }
@@ -349,17 +338,21 @@ public class StringSketchTest
     {
       String partitionBoundariesString = toString(partitionBoundaries);
 
-      Assert.assertEquals(partitionBoundariesString, StringSketch.SKETCH_K + 1, partitionBoundaries.size());
+      Assertions.assertEquals(
+          StringSketch.SKETCH_K + 1,
+          partitionBoundaries.size(),
+          partitionBoundariesString
+      );
       assertFirstAndLastPartitionsCorrect(partitionBoundaries);
 
       int previous = 0;
       for (int i = 1; i < partitionBoundaries.size() - 1; i++) {
         int current = Integer.parseInt(partitionBoundaries.get(i).get(0));
-        Assert.assertEquals(
-            getErrMsgPrefix(1, i) + partitionBoundariesString,
+        Assertions.assertEquals(
             1,
             current - previous,
-            FACTOR
+            FACTOR,
+            getErrMsgPrefix(1, i) + partitionBoundariesString
         );
         previous = current;
       }
@@ -367,14 +360,14 @@ public class StringSketchTest
 
     private static void assertSinglePartition(PartitionBoundaries partitionBoundaries)
     {
-      Assert.assertEquals(2, partitionBoundaries.size());
+      Assertions.assertEquals(2, partitionBoundaries.size());
       assertFirstAndLastPartitionsCorrect(partitionBoundaries);
     }
 
     private static void assertFirstAndLastPartitionsCorrect(PartitionBoundaries partitionBoundaries)
     {
-      Assert.assertNull(partitionBoundaries.get(0));
-      Assert.assertNull(partitionBoundaries.get(partitionBoundaries.size() - 1));
+      Assertions.assertNull(partitionBoundaries.get(0));
+      Assertions.assertNull(partitionBoundaries.get(partitionBoundaries.size() - 1));
     }
 
     private static String getErrMsgPrefix(int size, int i)

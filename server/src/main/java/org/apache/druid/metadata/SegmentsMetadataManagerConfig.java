@@ -26,6 +26,8 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.joda.time.Period;
 
+import javax.annotation.Nullable;
+
 /**
  * Config that dictates polling and caching of segment metadata on leader
  * Coordinator or Overlord services.
@@ -45,14 +47,14 @@ public class SegmentsMetadataManagerConfig
 
   @JsonCreator
   public SegmentsMetadataManagerConfig(
-      @JsonProperty("pollDuration") Period pollDuration,
-      @JsonProperty("useIncrementalCache") SegmentMetadataCache.UsageMode useIncrementalCache,
-      @JsonProperty("killUnused") UnusedSegmentKillerConfig killUnused
+      @JsonProperty("pollDuration") @Nullable Period pollDuration,
+      @JsonProperty("useIncrementalCache") @Nullable SegmentMetadataCache.UsageMode useIncrementalCache,
+      @JsonProperty("killUnused") @Nullable UnusedSegmentKillerConfig killUnused
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
     this.useIncrementalCache = Configs.valueOrDefault(useIncrementalCache, SegmentMetadataCache.UsageMode.IF_SYNCED);
-    this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null, null));
+    this.killUnused = Configs.valueOrDefault(killUnused, new UnusedSegmentKillerConfig(null, null, null, null));
     if (this.killUnused.isEnabled() && this.useIncrementalCache == SegmentMetadataCache.UsageMode.NEVER) {
       throw DruidException
           .forPersona(DruidException.Persona.OPERATOR)

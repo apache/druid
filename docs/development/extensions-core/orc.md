@@ -24,7 +24,7 @@ title: "ORC Extension"
 
 ## ORC extension
 
-This Apache Druid extension enables Druid to ingest and understand the Apache ORC data format.
+This Apache&circledR; Druid extension enables Druid to ingest and understand the Apache ORC data format.
 
 The extension provides the [ORC input format](../../ingestion/data-formats.md#orc) 
 for [native batch ingestion](../../ingestion/native-batch.md).

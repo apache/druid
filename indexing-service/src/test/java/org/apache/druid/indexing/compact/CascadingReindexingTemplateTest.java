@@ -82,11 +82,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   @Test
   public void test_serde() throws Exception
   {
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        50,
-        1000000L,
-        InlineReindexingRuleProvider.builder()
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withTaskPriority(50)
+        .withInputSegmentSizeBytes(1000000L)
+        .withRuleProvider(InlineReindexingRuleProvider.builder()
             .partitioningRules(List.of(
                 new ReindexingPartitioningRule(
                     "hourRule",
@@ -105,15 +105,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                     null
                 )
             ))
-            .build(),
-        ImmutableMap.of("context_key", "context_value"),
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+            .build())
+        .withTaskContext(ImmutableMap.of("context_key", "context_value"))
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     final String json = OBJECT_MAPPER.writeValueAsString(template);
     final CascadingReindexingTemplate fromJson = OBJECT_MAPPER.readValue(json, CascadingReindexingTemplate.class);
@@ -129,11 +125,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   @Test
   public void test_serde_asDataSourceCompactionConfig() throws Exception
   {
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        30,
-        500000L,
-        InlineReindexingRuleProvider.builder()
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withTaskPriority(30)
+        .withInputSegmentSizeBytes(500000L)
+        .withRuleProvider(InlineReindexingRuleProvider.builder()
             .partitioningRules(List.of(
                 new ReindexingPartitioningRule(
                     "rule1",
@@ -144,15 +140,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                     null
                 )
             ))
-            .build(),
-        ImmutableMap.of("key", "value"),
-        null,
-        null,
-        Granularities.HOUR,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+            .build())
+        .withTaskContext(ImmutableMap.of("key", "value"))
+        .withDefaultSegmentGranularity(Granularities.HOUR)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     // Serialize and deserialize as DataSourceCompactionConfig interface
     final String json = OBJECT_MAPPER.writeValueAsString(template);
@@ -177,19 +169,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     EasyMock.expect(notReadyProvider.getType()).andReturn("mock-provider");
     EasyMock.replay(notReadyProvider);
 
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        null,
-        null,
-        notReadyProvider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withRuleProvider(notReadyProvider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     // Call createCompactionJobs - should return empty list without processing
     final List<CompactionJob> jobs = template.createCompactionJobs(null, null);
@@ -206,19 +191,14 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> new CascadingReindexingTemplate(
-            "testDataSource",
-            null,
-            null,
-            mockProvider,
-            null,
-            Period.days(7),  // skipOffsetFromLatest
-            Period.days(3),   // skipOffsetFromNow
-            Granularities.DAY,
-            new DynamicPartitionsSpec(5000000, null),
-            null,
-            null
-        )
+        () -> CascadingReindexingTemplate.builder()
+            .forDataSource("testDataSource")
+            .withRuleProvider(mockProvider)
+            .withSkipOffsetFromLatest(Period.days(7))
+            .withSkipOffsetFromNow(Period.days(3))
+            .withDefaultSegmentGranularity(Granularities.DAY)
+            .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+            .build()
     );
 
     Assertions.assertEquals("Cannot set both skipOffsetFromNow and skipOffsetFromLatest", exception.getMessage());
@@ -233,19 +213,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> new CascadingReindexingTemplate(
-            null,  // null dataSource
-            null,
-            null,
-            mockProvider,
-            null,
-            null,
-            null,
-            Granularities.DAY,
-            new DynamicPartitionsSpec(5000000, null),
-            null,
-            null
-        )
+        () -> CascadingReindexingTemplate.builder()
+            .withRuleProvider(mockProvider)
+            .withDefaultSegmentGranularity(Granularities.DAY)
+            .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+            .build()
     );
 
     Assertions.assertTrue(exception.getMessage().contains("'dataSource' cannot be null"));
@@ -257,19 +229,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> new CascadingReindexingTemplate(
-            "testDataSource",
-            null,
-            null,
-            null,  // null ruleProvider
-            null,
-            null,
-            null,
-            Granularities.DAY,
-            new DynamicPartitionsSpec(5000000, null),
-            null,
-            null
-        )
+        () -> CascadingReindexingTemplate.builder()
+            .forDataSource("testDataSource")
+            .withDefaultSegmentGranularity(Granularities.DAY)
+            .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+            .build()
     );
 
     Assertions.assertTrue(exception.getMessage().contains("'ruleProvider' cannot be null"));
@@ -283,19 +247,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> new CascadingReindexingTemplate(
-            "testDataSource",
-            null,
-            null,
-            mockProvider,
-            null,
-            null,
-            null,
-            null,  // null defaultSegmentGranularity
-            new DynamicPartitionsSpec(5000000, null),
-            null,
-            null
-        )
+        () -> CascadingReindexingTemplate.builder()
+            .forDataSource("testDataSource")
+            .withRuleProvider(mockProvider)
+            .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+            .build()
     );
 
     Assertions.assertTrue(exception.getMessage().contains("'defaultSegmentGranularity' cannot be null"));
@@ -314,19 +270,13 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     DruidException exception = Assertions.assertThrows(
         DruidException.class,
-        () -> new CascadingReindexingTemplate(
-            "testDataSource",
-            null,
-            null,
-            mockProvider,
-            null,
-            null,
-            null,
-            Granularities.DAY,
-            new DynamicPartitionsSpec(5000000, null),
-            null,
-            tuningWithPartitionsSpec
-        )
+        () -> CascadingReindexingTemplate.builder()
+            .forDataSource("testDataSource")
+            .withRuleProvider(mockProvider)
+            .withDefaultSegmentGranularity(Granularities.DAY)
+            .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+            .withTuningConfig(tuningWithPartitionsSpec)
+            .build()
     );
 
     Assertions.assertTrue(
@@ -384,7 +334,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromLatest_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromLatest_truncatesIntervalsExtendingPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -399,9 +349,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(15), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -411,7 +363,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -422,9 +374,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(25), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -451,7 +405,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_createCompactionJobs_withSkipOffsetFromNow_skipsIntervalsExtendingPastOffset()
+  public void test_createCompactionJobs_withSkipOffsetFromNow_truncatesIntervalThatExtendsPastSkipOffset()
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
@@ -466,9 +420,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -478,7 +434,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   {
     DateTime referenceTime = DateTimes.of("2024-01-15T00:00:00Z");
     SegmentTimeline timeline = createTestTimeline(referenceTime.minusDays(90), referenceTime.minusDays(10));
-    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(7), Period.days(30)));
+    ReindexingRuleProvider mockProvider = createMockProvider(List.of(Period.days(3), Period.days(7), Period.days(30)));
     CompactionJobParams mockParams = createMockParams(referenceTime, timeline);
     DruidInputSource mockSource = createMockSource();
 
@@ -489,9 +445,11 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     template.createCompactionJobs(mockSource, mockParams);
     List<Interval> processedIntervals = template.getProcessedIntervals();
 
-    Assertions.assertEquals(1, processedIntervals.size());
+    Assertions.assertEquals(2, processedIntervals.size());
     Assertions.assertEquals(DateTimes.MIN, processedIntervals.get(0).getStart());
     Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(0).getEnd());
+    Assertions.assertEquals(referenceTime.minusDays(30), processedIntervals.get(1).getStart());
+    Assertions.assertEquals(referenceTime.minusDays(20), processedIntervals.get(1).getEnd());
 
     EasyMock.verify(mockProvider, mockParams, mockSource);
   }
@@ -541,19 +499,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .partitioningRules(List.of(hourRule, dayRule, monthRule))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -631,19 +582,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -719,26 +663,19 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null),
+            new ReindexingDataSchemaRule("metrics-8d", null, Period.days(8), null, new AggregatorFactory[0], null, null, null, null),
             createReindexingDataSchemaRule("metrics-8d", Period.days(8)),
             createReindexingDataSchemaRule("metrics-14d", Period.days(14)),
             createReindexingDataSchemaRule("metrics-45d", Period.days(45))
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     // When no segment granularity rules exist, a synthetic rule is created with the smallest period
     ReindexingPartitioningRule syntheticRule = ReindexingPartitioningRule.syntheticRule(
@@ -816,25 +753,18 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(monthRule, dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-21d", null, Period.days(21), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-21d", null, Period.days(21), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.HOUR,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.HOUR)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     ReindexingPartitioningRule syntheticRule = ReindexingPartitioningRule.syntheticRule(
         Granularities.HOUR,
@@ -924,25 +854,18 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             .builder()
             .partitioningRules(List.of(yearRule, monthRule, dayRule))
             .dataSchemaRules(List.of(
-                new ReindexingDataSchemaRule("metrics-1d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null),
-                new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null),
-                new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null)
+                new ReindexingDataSchemaRule("metrics-1d", null, Period.days(1), null, new AggregatorFactory[0], null, null, null, null),
+                new ReindexingDataSchemaRule("metrics-14d", null, Period.days(14), null, new AggregatorFactory[0], null, null, null, null),
+                new ReindexingDataSchemaRule("metrics-45d", null, Period.days(45), null, new AggregatorFactory[0], null, null, null, null)
             ))
             .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.HOUR,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.HOUR)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     ReindexingPartitioningRule syntheticRule = ReindexingPartitioningRule.syntheticRule(
         Granularities.HOUR,
@@ -1001,19 +924,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
 
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder().build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     DruidException exception = Assertions.assertThrows(
         DruidException.class,
@@ -1064,23 +980,16 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(monthRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-1m", null, Period.months(1), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -1132,23 +1041,16 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-12h", null, Period.hours(12), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -1203,24 +1105,17 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     ReindexingRuleProvider provider = InlineReindexingRuleProvider.builder()
         .partitioningRules(List.of(dayRule))
         .dataSchemaRules(List.of(
-            new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null),
-            new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null)
+            new ReindexingDataSchemaRule("metrics-33d-6h", null, Period.hours(33 * 24 + 6), null, new AggregatorFactory[0], null, null, null, null),
+            new ReindexingDataSchemaRule("metrics-33d-18h", null, Period.hours(33 * 24 + 18), null, new AggregatorFactory[0], null, null, null, null)
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -1272,19 +1167,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .partitioningRules(List.of(monthRule))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -1339,19 +1227,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .partitioningRules(List.of(hourRule))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -1431,19 +1312,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         .partitioningRules(List.of(hourRule, dayRule, monthRule))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     List<IntervalPartitioningInfo> expected = List.of(
         new IntervalPartitioningInfo(
@@ -1499,23 +1373,16 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
                 new ReindexingPartitioningRule("day-rule", null, Period.days(90), Granularities.DAY, new DynamicPartitionsSpec(5000000, null), null)
             ))
             .dataSchemaRules(List.of(
-                new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null)
+                new ReindexingDataSchemaRule("metrics-7d", null, Period.days(7), null, new AggregatorFactory[0], null, null, null, null)
             ))
             .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.MONTH,  // MONTH is coarser than HOUR!
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.MONTH)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     IllegalArgumentException exception = Assertions.assertThrows(
         IllegalArgumentException.class,
@@ -1566,19 +1433,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
             ))
             .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        null,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .build();
 
     IllegalArgumentException exception = Assertions.assertThrows(
         IllegalArgumentException.class,
@@ -1613,19 +1473,13 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        defaultVCs,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .withDefaultPartitioningVirtualColumns(defaultVCs)
+        .build();
 
     ReindexingPartitioningRule syntheticRule = ReindexingPartitioningRule.syntheticRule(
         Granularities.DAY,
@@ -1673,19 +1527,13 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         ))
         .build();
 
-    CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDS",
-        null,
-        null,
-        provider,
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        defaultVCs,
-        null
-    );
+    CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDS")
+        .withRuleProvider(provider)
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .withDefaultPartitioningVirtualColumns(defaultVCs)
+        .build();
 
     // P1M threshold: 2025-01-29 - P1M = 2024-12-29T16:15 → aligned to MONTH → 2024-12-01T00:00
     ReindexingPartitioningRule syntheticRule = ReindexingPartitioningRule.syntheticRule(
@@ -1723,26 +1571,23 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         new ExpressionVirtualColumn("vc_bucket", "timestamp_floor(__time, 'P1D')", ColumnType.LONG, TestExprMacroTable.INSTANCE)
     ));
 
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        50,
-        1000000L,
-        InlineReindexingRuleProvider.builder()
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withTaskPriority(50)
+        .withInputSegmentSizeBytes(1000000L)
+        .withRuleProvider(InlineReindexingRuleProvider.builder()
             .partitioningRules(List.of(
                 new ReindexingPartitioningRule(
                     "hourRule", null, Period.days(7), Granularities.HOUR,
                     new DynamicPartitionsSpec(5000000, null), null
                 )
             ))
-            .build(),
-        ImmutableMap.of("context_key", "context_value"),
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(5000000, null),
-        defaultVCs,
-        null
-    );
+            .build())
+        .withTaskContext(ImmutableMap.of("context_key", "context_value"))
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(5000000, null))
+        .withDefaultPartitioningVirtualColumns(defaultVCs)
+        .build();
 
     // Need ExprMacroTable injectable for VirtualColumn deserialization
     ObjectMapper mapper = new DefaultObjectMapper();
@@ -1772,19 +1617,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   @Test
   public void test_validate_returnsValid_withDynamicPartitionsSpec()
   {
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        null,
-        null,
-        InlineReindexingRuleProvider.builder().build(),
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(null, null),
-        null,
-        null
-    );
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withRuleProvider(InlineReindexingRuleProvider.builder().build())
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
 
     CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
     Assertions.assertTrue(result.isValid());
@@ -1793,19 +1631,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   @Test
   public void test_validate_returnsInvalid_withHashedPartitionsSpec()
   {
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        null,
-        null,
-        InlineReindexingRuleProvider.builder().build(),
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new HashedPartitionsSpec(null, 3, null),
-        null,
-        null
-    );
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withRuleProvider(InlineReindexingRuleProvider.builder().build())
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new HashedPartitionsSpec(null, 3, null))
+        .build();
 
     CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
     Assertions.assertFalse(result.isValid());
@@ -1818,19 +1649,12 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   @Test
   public void test_validate_returnsInvalid_withMaxTotalRows()
   {
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        null,
-        null,
-        InlineReindexingRuleProvider.builder().build(),
-        null,
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(null, 1000L),
-        null,
-        null
-    );
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withRuleProvider(InlineReindexingRuleProvider.builder().build())
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, 1000L))
+        .build();
 
     CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
     Assertions.assertFalse(result.isValid());
@@ -1843,19 +1667,13 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
   @Test
   public void test_validate_returnsInvalid_withOneMaxNumTasks()
   {
-    final CascadingReindexingTemplate template = new CascadingReindexingTemplate(
-        "testDataSource",
-        null,
-        null,
-        InlineReindexingRuleProvider.builder().build(),
-        Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1),
-        null,
-        null,
-        Granularities.DAY,
-        new DynamicPartitionsSpec(null, null),
-        null,
-        null
-    );
+    final CascadingReindexingTemplate template = CascadingReindexingTemplate.builder()
+        .forDataSource("testDataSource")
+        .withRuleProvider(InlineReindexingRuleProvider.builder().build())
+        .withTaskContext(Collections.singletonMap(ClientMSQContext.CTX_MAX_NUM_TASKS, 1))
+        .withDefaultSegmentGranularity(Granularities.DAY)
+        .withDefaultPartitionsSpec(new DynamicPartitionsSpec(null, null))
+        .build();
 
     CompactionConfigValidationResult result = template.validate(CLUSTER_CONFIG);
     Assertions.assertFalse(result.isValid());
@@ -1881,7 +1699,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
     )
     {
       super(dataSource, taskPriority, inputSegmentSizeBytes, ruleProvider,
-            taskContext, skipOffsetFromLatest, skipOffsetFromNow, Granularities.DAY,
+            taskContext, skipOffsetFromLatest, skipOffsetFromNow, null, Granularities.DAY,
             new DynamicPartitionsSpec(5000000, null), null, null
       );
     }
@@ -2005,6 +1823,7 @@ public class CascadingReindexingTemplateTest extends InitializedNullHandlingTest
         period,
         null,
         new AggregatorFactory[0],
+        null,
         null,
         null,
         null

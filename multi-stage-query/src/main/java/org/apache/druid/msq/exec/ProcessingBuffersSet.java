@@ -21,7 +21,6 @@ package org.apache.druid.msq.exec;
 
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.kernel.StageDefinition;
 
 import java.nio.ByteBuffer;
 import java.util.Collection;
@@ -31,27 +30,44 @@ import java.util.concurrent.BlockingQueue;
 import java.util.stream.Collectors;
 
 /**
- * Holds a set of {@link ProcessingBuffers} for a {@link Worker}. Acquired from {@link ProcessingBuffersProvider}.
+ * Holds a set of {@link Slot}, each of which can produce {@link ProcessingBuffers} for one concurrent stage.
+ * Acquired from {@link ProcessingBuffersProvider}.
+ *
+ * Slots come in two flavors:
+ * <ul>
+ *   <li>{@link EagerSlot}: holds an already-built {@link ProcessingBuffers}; ignores the requested slice count.
+ *       Used by buffer providers that pre-allocate (Peon, Indexer).</li>
+ *   <li>Lazy slots (provider-defined): hold a buffer chunk and slice it per stage based on the actual concurrent
+ *       processor count, so a stage that runs fewer processors gets larger slices. Used by Dart.</li>
+ * </ul>
  */
 public class ProcessingBuffersSet
 {
   public static final ProcessingBuffersSet EMPTY = new ProcessingBuffersSet(Collections.emptyList());
 
-  private final BlockingQueue<ProcessingBuffers> pool;
+  private final BlockingQueue<Slot> pool;
 
-  public ProcessingBuffersSet(Collection<ProcessingBuffers> buffers)
+  public ProcessingBuffersSet(final Collection<? extends Slot> slots)
   {
-    this.pool = new ArrayBlockingQueue<>(buffers.isEmpty() ? 1 : buffers.size());
-    this.pool.addAll(buffers);
+    this.pool = new ArrayBlockingQueue<>(slots.isEmpty() ? 1 : slots.size());
+    this.pool.addAll(slots);
+  }
+
+  /**
+   * Wrap a collection of pre-built {@link ProcessingBuffers}.
+   */
+  public static ProcessingBuffersSet wrap(final Collection<ProcessingBuffers> buffers)
+  {
+    return new ProcessingBuffersSet(buffers.stream().map(EagerSlot::new).collect(Collectors.toList()));
   }
 
   /**
    * Equivalent to calling {@link ProcessingBuffers#fromCollection} on each collection in the overall collection,
-   * then creating an instance.
+   * then wrapping in eager slots.
    */
   public static <T extends Collection<ByteBuffer>> ProcessingBuffersSet fromCollection(final Collection<T> processingBuffers)
   {
-    return new ProcessingBuffersSet(
+    return wrap(
         processingBuffers.stream()
                          .map(ProcessingBuffers::fromCollection)
                          .collect(Collectors.toList())
@@ -59,30 +75,26 @@ public class ProcessingBuffersSet
   }
 
   /**
-   * Acquire buffers if a particular stages needs them; otherwise, returns a holder that throws an exception on
-   * {@link ResourceHolder#get()}.
+   * Acquire buffers with a specific requested slice count. The actual number of slices may be higher but will
+   * not be lower.
    */
-  public ResourceHolder<ProcessingBuffers> acquireForStage(final StageDefinition stageDef)
+  public ResourceHolder<ProcessingBuffers> acquire(final int requestedSlices)
   {
-    if (!stageDef.getProcessor().usesProcessingBuffers()) {
-      return new NilResourceHolder<>();
-    } else {
-      return acquire();
-    }
-  }
+    final Slot slot = pool.poll();
 
-  /**
-   * Acquire buffers unconditionally. In production, it is expected that callers will use
-   * {@link #acquireForStage(StageDefinition)}.
-   */
-  public ResourceHolder<ProcessingBuffers> acquire()
-  {
-    final ProcessingBuffers buffers = pool.poll();
-
-    if (buffers == null) {
+    if (slot == null) {
       // Never happens, because the pool acquired from ProcessingBuffersProvider must be big enough for all
       // concurrent processing buffer needs. (In other words: if this does happen, it's a bug.)
       throw DruidException.defensive("Processing buffers not available");
+    }
+
+    final ProcessingBuffers buffers;
+    try {
+      buffers = slot.acquire(requestedSlices);
+    }
+    catch (Throwable t) {
+      pool.add(slot);
+      throw t;
     }
 
     return new ResourceHolder<>()
@@ -96,26 +108,49 @@ public class ProcessingBuffersSet
       @Override
       public void close()
       {
-        pool.add(buffers);
+        pool.add(slot);
       }
     };
   }
 
   /**
-   * Resource holder that throws an exception on {@link #get()}.
+   * A producer of {@link ProcessingBuffers} from a single concurrent-stage slot in the pool. Implementations
+   * decide whether the slice count argument to {@link #acquire} is honored (lazy slots) or ignored (eager slots).
    */
-  static class NilResourceHolder<T> implements ResourceHolder<T>
+  public interface Slot
   {
-    @Override
-    public T get()
+    /**
+     * Produce a {@link ProcessingBuffers} suitable for a stage that will run up to {@code requestedSlices}
+     * concurrent processors. Implementations may choose to ignore the argument when the slot's buffers are
+     * already laid out (e.g., {@link EagerSlot}).
+     */
+    ProcessingBuffers acquire(int requestedSlices);
+  }
+
+  /**
+   * Slot that wraps an already-built {@link ProcessingBuffers}.
+   */
+  public static final class EagerSlot implements Slot
+  {
+    private final ProcessingBuffers buffers;
+
+    public EagerSlot(final ProcessingBuffers buffers)
     {
-      throw DruidException.defensive("Unexpected call to get()");
+      this.buffers = buffers;
     }
 
     @Override
-    public void close()
+    public ProcessingBuffers acquire(final int requestedSlices)
     {
-      // Do nothing.
+      if (requestedSlices > buffers.getBouncer().getMaxCount()) {
+        throw DruidException.defensive(
+            "requestedSlices[%d] too large, only have[%d] buffers",
+            requestedSlices,
+            buffers.getBouncer().getMaxCount()
+        );
+      }
+
+      return buffers;
     }
   }
 }

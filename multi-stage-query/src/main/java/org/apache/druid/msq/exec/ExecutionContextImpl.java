@@ -50,6 +50,7 @@ public class ExecutionContextImpl implements ExecutionContext
   private final FrameContext frameContext;
   private final CounterTracker counters;
   private final int maxOutstandingProcessors;
+  private final int segmentLoadAheadCount;
   private final String cancellationId;
   private final RunWorkOrderListener listener;
   private final Set<String> intermediateOutputChannelFactoryNames = Sets.newConcurrentHashSet();
@@ -65,6 +66,7 @@ public class ExecutionContextImpl implements ExecutionContext
       final FrameContext frameContext,
       final CounterTracker counters,
       final int maxOutstandingProcessors,
+      final int segmentLoadAheadCount,
       final String cancellationId,
       final RunWorkOrderListener listener
   )
@@ -79,6 +81,7 @@ public class ExecutionContextImpl implements ExecutionContext
     this.frameContext = frameContext;
     this.counters = counters;
     this.maxOutstandingProcessors = maxOutstandingProcessors;
+    this.segmentLoadAheadCount = segmentLoadAheadCount;
     this.cancellationId = cancellationId;
     this.listener = listener;
   }
@@ -145,6 +148,12 @@ public class ExecutionContextImpl implements ExecutionContext
   public int threadCount()
   {
     return maxOutstandingProcessors;
+  }
+
+  @Override
+  public int segmentLoadAheadCount()
+  {
+    return segmentLoadAheadCount;
   }
 
   @Override

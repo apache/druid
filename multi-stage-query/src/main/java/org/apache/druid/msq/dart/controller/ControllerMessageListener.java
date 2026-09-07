@@ -70,7 +70,7 @@ public class ControllerMessageListener implements MessageListener<ControllerMess
       // Close the worker client for this server.
       final ControllerContext controllerContext = controller.getControllerContext();
       if (controllerContext instanceof DartControllerContext) {
-        ((DartControllerContext) controllerContext).newWorkerClient().closeClient(workerId.getHostAndPort());
+        ((DartControllerContext) controllerContext).newWorkerClient().closeClient(workerIdString);
       }
 
       // Notify the controller that the worker has gone offline.

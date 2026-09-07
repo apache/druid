@@ -79,7 +79,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
     final int priority = query.context().getPriority();
-    final Ordering ordering = query.getResultOrdering();
+    final Ordering<T> ordering = query.getResultOrdering();
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
 
     final QueryContext context = query.context();
@@ -91,7 +91,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
           @Override
           public Iterator<T> make()
           {
-            // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
+            // Make it a List<> to materialize all the values (so that it will submit everything to the executor)
             List<ListenableFuture<Iterable<T>>> futures =
                 Lists.newArrayList(
                     Iterables.transform(

@@ -54,6 +54,7 @@ import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
 import org.apache.druid.storage.ExportStorageProvider;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class IngestHandler extends QueryHandler
@@ -215,7 +216,7 @@ public abstract class IngestHandler extends QueryHandler
       String tableName = Iterables.getOnlyElement(tableIdentifier.names);
       IdUtils.validateId("table", tableName);
       dataSource = new TableDestination(tableName);
-      resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
+      resourceActions.addAll(getIngestResourceActions(tableName));
     } else {
       // Qualified name.
       final String defaultSchemaName =
@@ -225,7 +226,7 @@ public abstract class IngestHandler extends QueryHandler
         String tableName = tableIdentifier.names.get(1);
         IdUtils.validateId("table", tableName);
         dataSource = new TableDestination(tableName);
-        resourceActions.add(new ResourceAction(new Resource(tableName, ResourceType.DATASOURCE), Action.WRITE));
+        resourceActions.addAll(getIngestResourceActions(tableName));
       } else {
         throw InvalidSqlInput.exception(
             "Table [%s] does not support operation [%s] because it is not a Druid datasource",
@@ -252,6 +253,17 @@ public abstract class IngestHandler extends QueryHandler
         rootQueryRel,
         handlerContext.plannerContext()
     );
+  }
+
+  private List<ResourceAction> getIngestResourceActions(final String dataSource)
+  {
+    final List<ResourceAction> resourceActions = new ArrayList<>();
+    final Resource resource = new Resource(dataSource, ResourceType.DATASOURCE);
+    resourceActions.add(new ResourceAction(resource, Action.WRITE));
+    if (handlerContext.plannerContext().getPlannerConfig().isAuthorizeTableVisibility()) {
+      resourceActions.add(new ResourceAction(resource, Action.READ));
+    }
+    return resourceActions;
   }
 
   /**

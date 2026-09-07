@@ -19,19 +19,11 @@
 
 package org.apache.druid.curator;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableSet;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
-import org.apache.curator.utils.ZKPaths;
-import org.apache.druid.client.DruidServer;
-import org.apache.druid.server.initialization.ZkPathsConfig;
-import org.apache.druid.timeline.DataSegment;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
 
@@ -55,83 +47,6 @@ public class CuratorTestBase
         .retryPolicy(new RetryOneTime(1))
         .compressionProvider(new PotentiallyGzippedCompressionProvider(true))
         .build();
-  }
-
-  protected void setupZNodeForServer(DruidServer server, ZkPathsConfig zkPathsConfig, ObjectMapper jsonMapper)
-  {
-    final String announcementsPath = zkPathsConfig.getAnnouncementsPath();
-    final String inventoryPath = zkPathsConfig.getLiveSegmentsPath();
-
-    String zkPath = ZKPaths.makePath(announcementsPath, server.getHost());
-    try {
-      curator.create()
-             .creatingParentsIfNeeded()
-             .forPath(zkPath, jsonMapper.writeValueAsBytes(server.getMetadata()));
-      curator.create()
-             .creatingParentsIfNeeded()
-             .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
-    }
-    catch (KeeperException.NodeExistsException e) {
-      /*
-       * For some reason, Travis build sometimes fails here because of
-       * org.apache.zookeeper.KeeperException$NodeExistsException: KeeperErrorCode = NodeExists, though it should never
-       * happen because zookeeper should be in a clean state for each run of tests.
-       * Address issue: https://github.com/apache/druid/issues/1512
-       */
-      try {
-        curator.setData()
-               .forPath(zkPath, jsonMapper.writeValueAsBytes(server.getMetadata()));
-        curator.setData()
-               .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
-      }
-      catch (Exception e1) {
-        throw new RuntimeException(e1);
-      }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  protected void announceSegmentForServer(
-      DruidServer druidServer,
-      DataSegment segment,
-      ZkPathsConfig zkPathsConfig,
-      ObjectMapper jsonMapper
-  )
-  {
-    final String segmentAnnouncementPath =
-        ZKPaths.makePath(zkPathsConfig.getLiveSegmentsPath(), druidServer.getHost(), segment.getId().toString());
-
-    try {
-      curator.create()
-             .compressed()
-             .withMode(CreateMode.EPHEMERAL)
-             .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
-    }
-    catch (KeeperException.NodeExistsException e) {
-      try {
-        curator.setData()
-               .forPath(segmentAnnouncementPath, jsonMapper.writeValueAsBytes(ImmutableSet.of(segment)));
-      }
-      catch (Exception e1) {
-        throw new RuntimeException(e1);
-      }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  protected void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment, ZkPathsConfig zkPathsConfig)
-      throws Exception
-  {
-    String path = ZKPaths.makePath(
-        zkPathsConfig.getLiveSegmentsPath(),
-        druidServer.getHost(),
-        segment.getId().toString()
-    );
-    curator.delete().guaranteed().forPath(path);
   }
 
   public void tearDownServerAndCurator()

@@ -43,10 +43,10 @@ import org.apache.druid.msq.querykit.common.OffsetLimitStageProcessor;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.util.ArrayDeque;
@@ -79,8 +79,8 @@ public class MSQTaskReportTest
           )
           .build();
 
-  @Rule
-  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   @Test
   public void testSerdeResultsReport() throws Exception
@@ -132,17 +132,17 @@ public class MSQTaskReportTest
         TaskReport.class
     );
 
-    Assert.assertEquals(TASK_ID, report2.getTaskId());
-    Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
-    Assert.assertNull(report2.getPayload().getStatus().getErrorReport());
-    Assert.assertEquals(report.getPayload().getStatus().getRunningTasks(), report2.getPayload().getStatus().getRunningTasks());
-    Assert.assertEquals(report.getPayload().getStatus().getPendingTasks(), report2.getPayload().getStatus().getPendingTasks());
-    Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
+    Assertions.assertEquals(TASK_ID, report2.getTaskId());
+    Assertions.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
+    Assertions.assertNull(report2.getPayload().getStatus().getErrorReport());
+    Assertions.assertEquals(report.getPayload().getStatus().getRunningTasks(), report2.getPayload().getStatus().getRunningTasks());
+    Assertions.assertEquals(report.getPayload().getStatus().getPendingTasks(), report2.getPayload().getStatus().getPendingTasks());
+    Assertions.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
 
     final List<Object[]> results2 = report2.getPayload().getResults().getResults();
-    Assert.assertEquals(results.size(), results2.size());
+    Assertions.assertEquals(results.size(), results2.size());
     for (int i = 0; i < results.size(); i++) {
-      Assert.assertArrayEquals(results.get(i), results2.get(i));
+      Assertions.assertArrayEquals(results.get(i), results2.get(i));
     }
   }
 
@@ -187,13 +187,13 @@ public class MSQTaskReportTest
         TaskReport.class
     );
 
-    Assert.assertEquals(TASK_ID, report2.getTaskId());
-    Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
-    Assert.assertEquals(
+    Assertions.assertEquals(TASK_ID, report2.getTaskId());
+    Assertions.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
+    Assertions.assertEquals(
         report.getPayload().getStatus().getErrorReport(),
         report2.getPayload().getStatus().getErrorReport()
     );
-    Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
+    Assertions.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
   }
 
   @Test
@@ -243,8 +243,8 @@ public class MSQTaskReportTest
 
     final MSQTaskReport report2 = (MSQTaskReport) reportMap.get(MSQTaskReport.REPORT_KEY);
 
-    Assert.assertEquals(TASK_ID, report2.getTaskId());
-    Assert.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
-    Assert.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
+    Assertions.assertEquals(TASK_ID, report2.getTaskId());
+    Assertions.assertEquals(report.getPayload().getStatus().getStatus(), report2.getPayload().getStatus().getStatus());
+    Assertions.assertEquals(report.getPayload().getStages(), report2.getPayload().getStages());
   }
 }

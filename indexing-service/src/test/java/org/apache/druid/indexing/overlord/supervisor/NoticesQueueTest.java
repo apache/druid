@@ -21,8 +21,8 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import org.apache.druid.indexing.seekablestream.supervisor.NoticesQueue;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -36,27 +36,27 @@ public class NoticesQueueTest
     final NoticesQueue<String> queue = new NoticesQueue<>();
 
     for (int i = 0; i < 3; i++) {
-      Assert.assertEquals(0, queue.size());
+      Assertions.assertEquals(0, queue.size());
       queue.add("xyz");
-      Assert.assertEquals(1, queue.size());
+      Assertions.assertEquals(1, queue.size());
 
       queue.add("xyz");
-      Assert.assertEquals(1, queue.size());
+      Assertions.assertEquals(1, queue.size());
 
       queue.add("foo");
-      Assert.assertEquals(2, queue.size());
+      Assertions.assertEquals(2, queue.size());
 
       queue.add("xyz");
-      Assert.assertEquals(2, queue.size());
+      Assertions.assertEquals(2, queue.size());
 
       queue.add("bar");
-      Assert.assertEquals(3, queue.size());
+      Assertions.assertEquals(3, queue.size());
 
-      Assert.assertEquals("xyz", queue.poll(10));
-      Assert.assertEquals("foo", queue.poll(10));
-      Assert.assertEquals("bar", queue.poll(10));
-      Assert.assertNull(queue.poll(10));
-      Assert.assertEquals(0, queue.size());
+      Assertions.assertEquals("xyz", queue.poll(10));
+      Assertions.assertEquals("foo", queue.poll(10));
+      Assertions.assertEquals("bar", queue.poll(10));
+      Assertions.assertNull(queue.poll(10));
+      Assertions.assertEquals(0, queue.size());
     }
   }
 
@@ -72,7 +72,7 @@ public class NoticesQueueTest
       // Imperfect test: ideally we "add" after "poll", but we can't tell if "poll" has started yet.
       // Don't want to add a sleep, to avoid adding additional time to the test case, so we live with the imperfection.
       queue.add("xyz");
-      Assert.assertEquals("xyz", item.get());
+      Assertions.assertEquals("xyz", item.get());
     }
     finally {
       exec.shutdownNow();

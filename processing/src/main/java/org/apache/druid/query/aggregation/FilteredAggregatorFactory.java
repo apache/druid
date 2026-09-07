@@ -234,7 +234,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         return this;
       }
 
-      Interval segmentInterval = optimizationContext.getSegmentDescriptor().getInterval();
+      Interval segmentInterval = optimizationContext.segmentDescriptor().getInterval();
       List<Interval> filterIntervals = intervalDimFilter.getIntervals();
       List<Interval> excludedFilterIntervals = new ArrayList<>();
       List<Interval> effectiveFilterIntervals = new ArrayList<>();

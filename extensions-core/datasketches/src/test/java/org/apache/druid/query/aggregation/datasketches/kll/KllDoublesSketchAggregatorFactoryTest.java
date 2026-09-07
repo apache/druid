@@ -33,8 +33,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -66,7 +66,7 @@ public class KllDoublesSketchAggregatorFactoryTest
         json,
         AggregatorFactory.class
     );
-    Assert.assertEquals(factory, fromJson);
+    Assertions.assertEquals(factory, fromJson);
   }
 
   @Test
@@ -79,8 +79,8 @@ public class KllDoublesSketchAggregatorFactoryTest
         null
     );
 
-    Assert.assertEquals(KllSketchAggregatorFactory.DEFAULT_K, factory.getK());
-    Assert.assertEquals(KllSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH, factory.getMaxStreamLength());
+    Assertions.assertEquals(KllSketchAggregatorFactory.DEFAULT_K, factory.getK());
+    Assertions.assertEquals(KllSketchAggregatorFactory.DEFAULT_MAX_STREAM_LENGTH, factory.getMaxStreamLength());
   }
 
   @Test
@@ -92,10 +92,10 @@ public class KllDoublesSketchAggregatorFactoryTest
         200,
         null
     );
-    Assert.assertEquals(1644, factory.guessAggregatorHeapFootprint(1));
-    Assert.assertEquals(1644, factory.guessAggregatorHeapFootprint(100));
-    Assert.assertEquals(3428, factory.guessAggregatorHeapFootprint(1000));
-    Assert.assertEquals(6388, factory.guessAggregatorHeapFootprint(1_000_000_000_000L));
+    Assertions.assertEquals(1644, factory.guessAggregatorHeapFootprint(1));
+    Assertions.assertEquals(1644, factory.guessAggregatorHeapFootprint(100));
+    Assertions.assertEquals(3428, factory.guessAggregatorHeapFootprint(1000));
+    Assertions.assertEquals(6388, factory.guessAggregatorHeapFootprint(1_000_000_000_000L));
   }
 
   @Test
@@ -107,7 +107,7 @@ public class KllDoublesSketchAggregatorFactoryTest
         200,
         null
     );
-    Assert.assertEquals(5708, factory.getMaxIntermediateSize());
+    Assertions.assertEquals(5708, factory.getMaxIntermediateSize());
 
     factory = new KllDoublesSketchAggregatorFactory(
         "myFactory",
@@ -115,7 +115,7 @@ public class KllDoublesSketchAggregatorFactoryTest
         200,
         1_000_000_000_000L
     );
-    Assert.assertEquals(6388, factory.getMaxIntermediateSize());
+    Assertions.assertEquals(6388, factory.getMaxIntermediateSize());
   }
 
   @Test
@@ -139,7 +139,7 @@ public class KllDoublesSketchAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)
@@ -163,12 +163,12 @@ public class KllDoublesSketchAggregatorFactoryTest
     AggregatorFactory sketch4 = new KllDoublesSketchAggregatorFactory("sketch", "y", 200, null);
     AggregatorFactory sketch5 = new KllDoublesSketchAggregatorFactory("sketch", "x", 300, null);
 
-    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch2));
-    Assert.assertNotNull(sketch3.substituteCombiningFactory(sketch2));
-    Assert.assertNotNull(sketch3.substituteCombiningFactory(sketch));
-    Assert.assertNotNull(sketch2.substituteCombiningFactory(sketch));
-    Assert.assertNull(sketch.substituteCombiningFactory(sketch3));
-    Assert.assertNull(sketch.substituteCombiningFactory(sketch4));
-    Assert.assertNull(sketch.substituteCombiningFactory(sketch5));
+    Assertions.assertNotNull(sketch.substituteCombiningFactory(sketch2));
+    Assertions.assertNotNull(sketch3.substituteCombiningFactory(sketch2));
+    Assertions.assertNotNull(sketch3.substituteCombiningFactory(sketch));
+    Assertions.assertNotNull(sketch2.substituteCombiningFactory(sketch));
+    Assertions.assertNull(sketch.substituteCombiningFactory(sketch3));
+    Assertions.assertNull(sketch.substituteCombiningFactory(sketch4));
+    Assertions.assertNull(sketch.substituteCombiningFactory(sketch5));
   }
 }

@@ -33,9 +33,12 @@ import org.apache.druid.java.util.common.RetryUtils.Task;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.URIs;
 import org.apache.druid.java.util.common.logger.Logger;
+import software.amazon.awssdk.core.checksums.RequestChecksumCalculation;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.apache.ProxyConfiguration;
+import software.amazon.awssdk.services.s3.LegacyMd5Plugin;
+import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.model.Delete;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
@@ -43,13 +46,12 @@ import software.amazon.awssdk.services.s3.model.Grant;
 import software.amazon.awssdk.services.s3.model.Grantee;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
-import software.amazon.awssdk.services.s3.model.Permission;
 import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
-import software.amazon.awssdk.services.s3.model.Type;
 
 import javax.annotation.Nullable;
+import javax.net.ssl.SSLException;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -79,6 +81,10 @@ public class S3Utils
     {
       if (e == null) {
         return false;
+      } else if (e instanceof SSLException) {
+        // Transient TLS read failure (e.g. AEADBadTagException "Tag mismatch!"). Retry here, ahead of
+        // the IOException branch, which would recurse into the non-IOException crypto cause and not retry.
+        return true;
       } else if (e instanceof IOException) {
         if (e.getCause() != null) {
           // Recurse with the underlying cause to see if it's retriable.
@@ -121,6 +127,28 @@ public class S3Utils
       }
     }
   };
+
+  /**
+   * Restores {@code Content-MD5} for required request checksums and disables optional request checksums on every given
+   * builder, for S3-compatible stores that reject the CRC32 checksums the SDK sends by default since 2.30.0.
+   * <p>
+   * Takes all the builders for one client set rather than one builder per call, so the sync and async clients cannot
+   * end up disagreeing about checksum behavior, and so the switch is logged once per client set.
+   */
+  public static void configureLegacyMd5(
+      final AWSClientConfig clientConfig,
+      final S3BaseClientBuilder<?, ?>... s3ClientBuilders
+  )
+  {
+    if (clientConfig.isEnableLegacyMd5()) {
+      log.info("Legacy MD5 compatibility mode is enabled for the S3 client.");
+      for (final S3BaseClientBuilder<?, ?> s3ClientBuilder : s3ClientBuilders) {
+        s3ClientBuilder
+            .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
+            .addPlugin(LegacyMd5Plugin.create());
+      }
+    }
+  }
 
   /**
    * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
@@ -238,20 +266,6 @@ public class S3Utils
         baseKey.isEmpty() ? null : baseKey,
         storageDir
     ) + "/";
-  }
-
-  static Grant grantFullControlToBucketOwner(ServerSideEncryptingAmazonS3 s3Client, String bucket)
-  {
-    final String ownerId = s3Client.getBucketAcl(bucket).owner().id();
-    return Grant
-        .builder()
-        .grantee(Grantee
-            .builder()
-            .type(Type.CANONICAL_USER)
-            .id(ownerId)
-            .build())
-        .permission(Permission.FULL_CONTROL)
-        .build();
   }
 
   /**
@@ -427,15 +441,15 @@ public class S3Utils
   )
   {
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
-    service.upload(bucket, key, file, disableAcl ? null : S3Utils.grantFullControlToBucketOwner(service, bucket));
+    service.upload(bucket, key, file, disableAcl ? null : service.getBucketOwnerGrant(bucket));
   }
 
   /**
    * Determines whether to use HTTP or HTTPS protocol based on configuration.
    */
-  public static boolean useHttps(AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
+  public static boolean useHttps(@Nullable AWSClientConfig clientConfig, AWSEndpointConfig endpointConfig)
   {
-    String protocol = clientConfig.getProtocol();
+    final String protocol = clientConfig == null ? null : clientConfig.getProtocol();
     final String endpointUrl = endpointConfig.getUrl();
 
     if (org.apache.commons.lang3.StringUtils.isNotEmpty(endpointUrl)) {

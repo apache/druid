@@ -28,8 +28,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DDSketchAggregatorFactoryTest
 {
@@ -51,7 +51,7 @@ public class DDSketchAggregatorFactoryTest
               )
               .build();
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         RowSignature.builder()
                     .addTimeColumn()
                     .add("count", ColumnType.LONG)
@@ -67,7 +67,7 @@ public class DDSketchAggregatorFactoryTest
   public void testWithName()
   {
     DDSketchAggregatorFactory factory = new DDSketchAggregatorFactory("ddsketch", "col", 0.01, 1000);
-    Assert.assertEquals(factory, factory.withName("ddsketch"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("ddsketch"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 }

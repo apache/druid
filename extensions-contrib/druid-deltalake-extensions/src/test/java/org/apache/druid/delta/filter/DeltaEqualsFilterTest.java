@@ -29,11 +29,10 @@ import io.delta.kernel.types.ShortType;
 import io.delta.kernel.types.StringType;
 import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
+import org.apache.druid.delta.DeltaAssertions;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
-import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DeltaEqualsFilterTest
 {
@@ -53,35 +52,31 @@ public class DeltaEqualsFilterTest
 
     Predicate predicate = eqFilter.getFilterPredicate(SCHEMA);
 
-    Assert.assertEquals("=", predicate.getName());
-    Assert.assertEquals(2, predicate.getChildren().size());
+    Assertions.assertEquals("=", predicate.getName());
+    Assertions.assertEquals(2, predicate.getChildren().size());
   }
 
   @Test
   public void testFilterWithNullColumn()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new DeltaEqualsFilter(null, "Employee1")
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "column is a required field for = filter."
-        )
+        "column is a required field for = filter."
     );
   }
 
   @Test
   public void testFilterWithNullValue()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> new DeltaEqualsFilter("str_col", null)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "value is a required field for = filter. None provided for column[str_col]."
-        )
+        "value is a required field for = filter. None provided for column[str_col]."
     );
   }
 
@@ -90,14 +85,12 @@ public class DeltaEqualsFilterTest
   {
     DeltaEqualsFilter eqFilter = new DeltaEqualsFilter("long_col", "twentyOne");
 
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    DeltaAssertions.assertInvalidInput(
+        Assertions.assertThrows(
             DruidException.class,
             () -> eqFilter.getFilterPredicate(SCHEMA)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            "column[long_col] has an invalid value[twentyOne]. The value must be a number, as the column's data type is [long]."
-        )
+        "column[long_col] has an invalid value[twentyOne]. The value must be a number, as the column's data type is [long]."
     );
   }
 }

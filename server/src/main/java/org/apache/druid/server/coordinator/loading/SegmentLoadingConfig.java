@@ -42,6 +42,7 @@ public class SegmentLoadingConfig
   private final boolean useRoundRobinSegmentAssignment;
 
   private final Map<String, Set<String>> historicalTierAliases;
+  private final Map<String, String> tierToAliasName;
 
   /**
    * Creates a new SegmentLoadingConfig with recomputed coordinator config values
@@ -67,7 +68,8 @@ public class SegmentLoadingConfig
           60,
           true,
           numBalancerThreads,
-          dynamicConfig.getHistoricalTierAliases()
+          dynamicConfig.getHistoricalTierAliases(),
+          dynamicConfig.getTierToAliasName()
       );
     } else {
       // Use the configured values
@@ -77,7 +79,8 @@ public class SegmentLoadingConfig
           dynamicConfig.getReplicantLifetime(),
           dynamicConfig.isUseRoundRobinSegmentAssignment(),
           dynamicConfig.getBalancerComputeThreads(),
-          dynamicConfig.getHistoricalTierAliases()
+          dynamicConfig.getHistoricalTierAliases(),
+          dynamicConfig.getTierToAliasName()
       );
     }
   }
@@ -88,7 +91,8 @@ public class SegmentLoadingConfig
       int maxLifetimeInLoadQueue,
       boolean useRoundRobinSegmentAssignment,
       int balancerComputeThreads,
-      Map<String, Set<String>> historicalTierAliases
+      Map<String, Set<String>> historicalTierAliases,
+      Map<String, String> tierToAliasName
   )
   {
     this.maxSegmentsInLoadQueue = maxSegmentsInLoadQueue;
@@ -97,6 +101,7 @@ public class SegmentLoadingConfig
     this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
     this.balancerComputeThreads = balancerComputeThreads;
     this.historicalTierAliases = historicalTierAliases;
+    this.tierToAliasName = tierToAliasName;
   }
 
   public int getMaxSegmentsInLoadQueue()
@@ -127,5 +132,14 @@ public class SegmentLoadingConfig
   public Map<String, Set<String>> getHistoricalTierAliases()
   {
     return historicalTierAliases;
+  }
+
+  /**
+   * Maps each physical tier to the alias tier it belongs to. Used to tag
+   * coordinator metrics with {@link org.apache.druid.server.coordinator.stats.Dimension#TIER_ALIAS}.
+   */
+  public Map<String, String> getTierToAliasName()
+  {
+    return tierToAliasName;
   }
 }

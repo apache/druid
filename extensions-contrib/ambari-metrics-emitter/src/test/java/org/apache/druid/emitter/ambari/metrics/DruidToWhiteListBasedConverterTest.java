@@ -19,8 +19,8 @@
 
 package org.apache.druid.emitter.ambari.metrics;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class DruidToWhiteListBasedConverterTest
 {
@@ -29,6 +29,6 @@ public class DruidToWhiteListBasedConverterTest
   public void testSanitize()
   {
     String test = "host name.yahoo.com:8080";
-    Assert.assertEquals("host_name_yahoo_com:8080", AmbariMetricsEmitter.sanitize(test));
+    Assertions.assertEquals("host_name_yahoo_com:8080", AmbariMetricsEmitter.sanitize(test));
   }
 }

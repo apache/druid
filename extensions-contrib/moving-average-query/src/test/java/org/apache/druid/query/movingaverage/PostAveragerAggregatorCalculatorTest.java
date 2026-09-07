@@ -31,9 +31,9 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -46,7 +46,7 @@ public class PostAveragerAggregatorCalculatorTest
   private Map<String, Object> event;
   private MapBasedRow row;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     MovingAverageQuery query = new MovingAverageQuery(
@@ -87,7 +87,7 @@ public class PostAveragerAggregatorCalculatorTest
 
     Row result = pac.apply(row);
 
-    Assert.assertEquals(10.0f / 12.0f, result.getMetric("avgCountRatio").floatValue(), 0.0);
+    Assertions.assertEquals(10.0f / 12.0f, result.getMetric("avgCountRatio").floatValue(), 0.0);
   }
 
   @Test
@@ -97,7 +97,7 @@ public class PostAveragerAggregatorCalculatorTest
 
     Row result = pac.apply(row);
 
-    Assert.assertNull(result.getMetric("avgCountRatio"));
-    Assert.assertNull(result.getRaw("avgCountRatio"));
+    Assertions.assertNull(result.getMetric("avgCountRatio"));
+    Assertions.assertNull(result.getRaw("avgCountRatio"));
   }
 }

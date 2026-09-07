@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -63,8 +64,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMapping;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.SegmentId;
-import org.hamcrest.CoreMatchers;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
@@ -967,9 +966,8 @@ public class MSQWindowTest extends MSQTestBase
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)
                                 .intervals(querySegmentSpec(Filtration.eternity()))
-                                .virtualColumns(expressionVirtualColumn("v0", "\"m2\"", ColumnType.FLOAT))
-                                .columns("m2", "v0")
-                                .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
+                                .columns("m2")
+                                .columnTypes(ColumnType.DOUBLE)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(DEFAULT_MSQ_CONTEXT)
                                 .build()
@@ -977,7 +975,7 @@ public class MSQWindowTest extends MSQTestBase
                         "j0.",
                         equalsCondition(
                             DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
-                            DruidExpression.ofColumn(ColumnType.FLOAT, "j0.v0")
+                            DruidExpression.ofColumn(ColumnType.DOUBLE, "j0.m2")
                         ),
                         JoinType.INNER
                     )
@@ -1054,9 +1052,8 @@ public class MSQWindowTest extends MSQTestBase
                             newScanQueryBuilder()
                                 .dataSource(CalciteTests.DATASOURCE1)
                                 .intervals(querySegmentSpec(Filtration.eternity()))
-                                .virtualColumns(expressionVirtualColumn("v0", "\"m2\"", ColumnType.FLOAT))
-                                .columns("m2", "v0")
-                                .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
+                                .columns("m2")
+                                .columnTypes(ColumnType.DOUBLE)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(DEFAULT_MSQ_CONTEXT)
                                 .build()
@@ -1064,7 +1061,7 @@ public class MSQWindowTest extends MSQTestBase
                         "j0.",
                         equalsCondition(
                             DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
-                            DruidExpression.ofColumn(ColumnType.FLOAT, "j0.v0")
+                            DruidExpression.ofColumn(ColumnType.DOUBLE, "j0.m2")
                         ),
                         JoinType.INNER
                     )
@@ -2235,11 +2232,11 @@ public class MSQWindowTest extends MSQTestBase
                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                 + "order by 1, 2, 3")
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
-        ))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."
+            )
+        )
         .verifyExecutionError();
   }
 
@@ -2254,11 +2251,11 @@ public class MSQWindowTest extends MSQTestBase
                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
                 + "order by 1, 2, 3")
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ISE.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
-        ))
+        .setExpectedExecutionErrorMatcher(ThrowableMatcher.of(ISE.class)
+            .expectMessageContains(
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."
+            )
+        )
         .verifyExecutionError();
   }
 }

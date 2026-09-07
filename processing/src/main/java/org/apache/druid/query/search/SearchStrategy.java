@@ -28,7 +28,6 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Metadata;
-import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -70,8 +69,7 @@ public abstract class SearchStrategy
         }
       } else {
         // fallback to RowSignature and Metadata if QueryableIndex not available
-        final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
-        final Metadata metadata = segmentInspector != null ? segmentInspector.getMetadata() : null;
+        final Metadata metadata = segment.as(Metadata.class);
         final Set<String> ignore = new HashSet<>();
         ignore.add(ColumnHolder.TIME_COLUMN_NAME);
         if (metadata != null && metadata.getAggregators() != null) {

@@ -248,6 +248,7 @@ public class CreateDataSegments
           Collections.emptyList(),
           Collections.emptyList(),
           Collections.emptyList(),
+          null,
           shardSpec,
           compactionState,
           IndexIO.CURRENT_VERSION_ID,

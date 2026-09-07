@@ -26,14 +26,14 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.indexing.MSQSpec;
-import org.apache.druid.msq.input.InputSpecSlicer;
-import org.apache.druid.msq.input.table.SegmentsInputSlice;
-import org.apache.druid.msq.input.table.TableInputSpec;
+import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.InputSpecSlicerProvider;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * Context used by multi-stage query controllers. Useful because it allows test fixtures to provide their own
@@ -82,9 +82,10 @@ public interface ControllerContext
   DruidNode selfNode();
 
   /**
-   * Provides an {@link InputSpecSlicer} that slices {@link TableInputSpec} into {@link SegmentsInputSlice}.
+   * Extension point for {@link InputSpec} beyond the builtin ones provided by
+   * {@link ControllerImpl#makeInputSpecSlicerFactory}.
    */
-  InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager);
+  List<InputSpecSlicerProvider> inputSpecSlicerProviders();
 
   /**
    * Provide access to segment actions in the Overlord. Only called for ingestion queries, i.e., where

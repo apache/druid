@@ -36,6 +36,7 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.storage.CatalogStorage;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -312,8 +313,8 @@ public class TableEditor
     try {
       defn.validateColumns(revised);
     }
-    catch (IAE e) {
-      throw CatalogException.badRequest(e.getMessage());
+    catch (IAE | DruidException e) {
+      throw CatalogException.validationError(e);
     }
     return existingSpec.withColumns(revised);
   }

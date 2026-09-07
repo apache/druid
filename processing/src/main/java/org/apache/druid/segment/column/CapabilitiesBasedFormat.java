@@ -102,6 +102,17 @@ public class CapabilitiesBasedFormat implements ColumnFormat
       return this;
     }
 
+    if (otherFormat instanceof StringDictionaryEncodedColumnFormat) {
+      if (!this.capabilities.is(ValueType.STRING)) {
+        throw new ISE(
+            "Cannot merge columns of type[%s] and [%s]",
+            this.capabilities.asTypeString(),
+            otherFormat.getLogicalType()
+        );
+      }
+      return otherFormat.merge(this);
+    }
+
     ColumnCapabilitiesImpl merged = ColumnCapabilitiesImpl.copyOf(this.toColumnCapabilities());
     ColumnCapabilitiesImpl otherSnapshot = ColumnCapabilitiesImpl.copyOf(otherFormat.toColumnCapabilities());
     final String mergedType = merged.getType() == null ? null : merged.asTypeString();

@@ -19,18 +19,19 @@
 
 package org.apache.druid.indexing.seekablestream.supervisor;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.hamcrest.MatcherAssert;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -40,6 +41,14 @@ import static org.mockito.Mockito.when;
 
 public class SeekableStreamSupervisorIOConfigTest
 {
+
+  private static void assertInvalidInputException(DruidException exception, String message)
+  {
+    Assertions.assertEquals(DruidException.Persona.USER, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertEquals("invalidInput", exception.getErrorCode());
+    Assertions.assertEquals(message, exception.getMessage());
+  }
 
   private final Map<Integer, Integer> serverPriorityToReplicas = Map.of(
       1, 2,
@@ -52,7 +61,7 @@ public class SeekableStreamSupervisorIOConfigTest
     LagAggregator lagAggregator = mock(LagAggregator.class);
     InputFormat inputFormat = mock(InputFormat.class);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         inputFormat,
         null,
@@ -69,46 +78,71 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
     };
 
-    Assert.assertEquals("stream", config.getStream());
-    Assert.assertEquals(inputFormat, config.getInputFormat());
-    Assert.assertEquals(Integer.valueOf(1), config.getReplicas());
-    Assert.assertEquals(Integer.valueOf(1), config.getTaskCount());
-    Assert.assertEquals(Duration.standardHours(1), config.getTaskDuration());
-    Assert.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
-    Assert.assertEquals(Duration.standardSeconds(30), config.getPeriod());
-    Assert.assertFalse(config.isUseEarliestSequenceNumber());
-    Assert.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
-    Assert.assertFalse(config.getEarlyMessageRejectionPeriod().isPresent());
-    Assert.assertFalse(config.getLateMessageRejectionPeriod().isPresent());
-    Assert.assertFalse(config.getLateMessageRejectionStartDateTime().isPresent());
-    Assert.assertNull(config.getIdleConfig());
-    Assert.assertNull(config.getStopTaskCount());
-    Assert.assertEquals(lagAggregator, config.getLagAggregator());
-    Assert.assertEquals(1, config.getMaxAllowedStops());
-    Assert.assertNull(config.getServerPriorityToReplicas());
+    Assertions.assertEquals("stream", config.getStream());
+    Assertions.assertEquals(inputFormat, config.getInputFormat());
+    Assertions.assertEquals(Integer.valueOf(1), config.getReplicas());
+    Assertions.assertEquals(1, config.getTaskCount());
+    Assertions.assertEquals(Duration.standardHours(1), config.getTaskDuration());
+    Assertions.assertEquals(Duration.standardSeconds(5), config.getStartDelay());
+    Assertions.assertEquals(Duration.standardSeconds(30), config.getPeriod());
+    Assertions.assertFalse(config.isUseEarliestSequenceNumber());
+    Assertions.assertEquals(Duration.standardMinutes(30), config.getCompletionTimeout());
+    Assertions.assertFalse(config.getEarlyMessageRejectionPeriod().isPresent());
+    Assertions.assertFalse(config.getLateMessageRejectionPeriod().isPresent());
+    Assertions.assertFalse(config.getLateMessageRejectionStartDateTime().isPresent());
+    Assertions.assertNull(config.getIdleConfig());
+    Assertions.assertNull(config.getStopTaskCount());
+    Assertions.assertEquals(lagAggregator, config.getLagAggregator());
+    Assertions.assertEquals(1, config.getMaxAllowedStops());
+    Assertions.assertNull(config.getServerPriorityToReplicas());
   }
 
   @Test
-  public void testAutoScalerEnabledPreservesTaskCountWhenNonNull()
+  public void testTaskCountResolutionInConstructor()
   {
-    LagAggregator lagAggregator = mock(LagAggregator.class);
+    // Constructor priority is "explicit taskCount > taskCountStart > taskCountMin" so that a
+    // previously autoscaled taskCount survives a Jackson round-trip through the metadata store.
 
-    // autoScalerEnabled = true
-    AutoScalerConfig autoScalerConfig = mock(AutoScalerConfig.class);
-    when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
-    when(autoScalerConfig.getTaskCountStart()).thenReturn(5);
-    when(autoScalerConfig.getTaskCountMin()).thenReturn(3);
+    // taskCount=10 + taskCountStart=5 -> taskCount wins, isExplicit=true.
+    assertTaskCount(10, autoScaler(5, 3), 10, true);
 
-    SeekableStreamSupervisorIOConfig configAuto = new SeekableStreamSupervisorIOConfig(
+    // taskCount=null + taskCountStart=5 -> taskCountStart, isExplicit=false.
+    assertTaskCount(null, autoScaler(5, 3), 5, false);
+
+    // taskCount=null + no taskCountStart -> taskCountMin, isExplicit=false.
+    assertTaskCount(null, autoScaler(null, 3), 3, false);
+
+    // taskCount=10, no autoscaler -> taskCount, isExplicit=true.
+    assertTaskCount(10, null, 10, true);
+  }
+
+  private static AutoScalerConfig autoScaler(@Nullable Integer taskCountStart, int taskCountMin)
+  {
+    final AutoScalerConfig config = mock(AutoScalerConfig.class);
+    when(config.getEnableTaskAutoScaler()).thenReturn(true);
+    when(config.getTaskCountStart()).thenReturn(taskCountStart);
+    when(config.getTaskCountMin()).thenReturn(taskCountMin);
+    return config;
+  }
+
+  private static void assertTaskCount(
+      @Nullable Integer taskCount,
+      @Nullable AutoScalerConfig autoScalerConfig,
+      int expectedTaskCount,
+      boolean expectedExplicit
+  )
+  {
+    final SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         2,
-        10, // (taskCount should be ignored)
+        taskCount,
         null,
         null,
         null,
@@ -117,7 +151,8 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         autoScalerConfig,
-        lagAggregator,
+        mock(LagAggregator.class),
+        null,
         null,
         null,
         null,
@@ -125,33 +160,8 @@ public class SeekableStreamSupervisorIOConfigTest
     )
     {
     };
-
-    Assert.assertEquals(Integer.valueOf(5), configAuto.getTaskCount()); // taskCountStart
-
-    // autoScalerEnabled = false
-    SeekableStreamSupervisorIOConfig configNoAuto = new SeekableStreamSupervisorIOConfig(
-        "stream",
-        null,
-        2,
-        10,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        lagAggregator,
-        null,
-        null,
-        null,
-        null
-    )
-    {
-    };
-
-    Assert.assertEquals(Integer.valueOf(10), configNoAuto.getTaskCount());
+    Assertions.assertEquals(expectedTaskCount, config.getTaskCount());
+    Assertions.assertEquals(expectedExplicit, config.isTaskCountExplicit());
   }
 
   @Test
@@ -159,9 +169,9 @@ public class SeekableStreamSupervisorIOConfigTest
   {
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
-    IAE ex = Assert.assertThrows(
+    IAE ex = Assertions.assertThrows(
         IAE.class,
-        () -> new SeekableStreamSupervisorIOConfig(
+        () -> new TestableSeekableStreamSupervisorIOConfig(
             "stream",
             null,
             null,
@@ -178,12 +188,13 @@ public class SeekableStreamSupervisorIOConfigTest
             DateTimes.nowUtc(),
             null,
             null,
+            null,
             null
         )
         {
         }
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         ex.getMessage()
           .contains(
               "SeekableStreamSupervisorIOConfig does not support both properties lateMessageRejectionStartDateTime and lateMessageRejectionPeriod"
@@ -194,9 +205,9 @@ public class SeekableStreamSupervisorIOConfigTest
   @Test
   public void testNullAggregatorThrows()
   {
-    DruidException ex = Assert.assertThrows(
+    DruidException ex = Assertions.assertThrows(
         DruidException.class,
-        () -> new SeekableStreamSupervisorIOConfig(
+        () -> new TestableSeekableStreamSupervisorIOConfig(
             "stream",
             null,
             null,
@@ -213,12 +224,13 @@ public class SeekableStreamSupervisorIOConfigTest
             null,
             null,
             null,
+            null,
             null
         )
         {
         }
     );
-    Assert.assertTrue(
+    Assertions.assertTrue(
         ex.getMessage().contains("'lagAggregator' must be specified in supervisor 'spec.ioConfig'")
     );
   }
@@ -229,7 +241,7 @@ public class SeekableStreamSupervisorIOConfigTest
     LagAggregator lagAggregator = mock(LagAggregator.class);
 
     // Autoscaler disabled, stopTaskCount unset
-    SeekableStreamSupervisorIOConfig config1 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config1 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -246,14 +258,15 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
     };
-    Assert.assertEquals(7, config1.getMaxAllowedStops());
+    Assertions.assertEquals(7, config1.getMaxAllowedStops());
 
     // Autoscaler disabled, stopTaskCount set
-    SeekableStreamSupervisorIOConfig config2 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config2 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -270,11 +283,12 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         3,
+        null,
         null
     )
     {
     };
-    Assert.assertEquals(3, config2.getMaxAllowedStops());
+    Assertions.assertEquals(3, config2.getMaxAllowedStops());
   }
 
   @Test
@@ -289,7 +303,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(0.5);
 
-    SeekableStreamSupervisorIOConfig config = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -306,23 +320,24 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         1,
+        null,
         null
     )
     {
     };
 
-    Assert.assertEquals(5, config.getMaxAllowedStops());
+    Assertions.assertEquals(5, config.getMaxAllowedStops());
 
     // Ensure never goes below 1
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(0.05);
-    Assert.assertEquals(1, config.getMaxAllowedStops());
+    Assertions.assertEquals(1, config.getMaxAllowedStops());
 
     // Autoscaler enabled, stopTaskCountRatio unset, stopTaskCount set
     when(autoScalerConfig.getEnableTaskAutoScaler()).thenReturn(true);
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
-    SeekableStreamSupervisorIOConfig config2 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config2 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -339,12 +354,13 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         1,
+        null,
         null
     )
     {
     };
 
-    Assert.assertEquals(1, config2.getMaxAllowedStops());
+    Assertions.assertEquals(1, config2.getMaxAllowedStops());
 
 
     // Autoscaler enabled, stopTaskCountRatio unset, stopTaskCount unset
@@ -352,7 +368,7 @@ public class SeekableStreamSupervisorIOConfigTest
     when(autoScalerConfig.getTaskCountStart()).thenReturn(10);
     when(autoScalerConfig.getStopTaskCountRatio()).thenReturn(null);
 
-    SeekableStreamSupervisorIOConfig config3 = new SeekableStreamSupervisorIOConfig(
+    SeekableStreamSupervisorIOConfig config3 = new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         null,
@@ -369,52 +385,51 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
+        null,
         null
     )
     {
     };
 
-    Assert.assertEquals(10, config3.getMaxAllowedStops());
+    Assertions.assertEquals(10, config3.getMaxAllowedStops());
   }
 
   @Test
   public void testReplicasIsSetWhenserverPriorityToReplicas()
   {
     final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(null, serverPriorityToReplicas);
-    Assert.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
-    Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
+    Assertions.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
+    Assertions.assertEquals(Integer.valueOf(5), config.getReplicas());
   }
 
   @Test
   public void testReplicasOnlyConfig()
   {
     final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(4, null);
-    Assert.assertEquals(Integer.valueOf(4), config.getReplicas());
-    Assert.assertNull(config.getServerPriorityToReplicas());
+    Assertions.assertEquals(Integer.valueOf(4), config.getReplicas());
+    Assertions.assertNull(config.getServerPriorityToReplicas());
   }
 
   @Test
   public void testMatchingReplicasAndServerPriority()
   {
     final SeekableStreamSupervisorIOConfig config = makeSeekableStreamSupervisorIOConfig(5, serverPriorityToReplicas);
-    Assert.assertEquals(Integer.valueOf(5), config.getReplicas());
-    Assert.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
+    Assertions.assertEquals(Integer.valueOf(5), config.getReplicas());
+    Assertions.assertEquals(serverPriorityToReplicas, config.getServerPriorityToReplicas());
   }
 
   @Test
   public void testMismatchBetweenReplicasAndServerPriorityReplicasThrowsException()
   {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    assertInvalidInputException(
+        Assertions.assertThrows(
             DruidException.class,
             () -> makeSeekableStreamSupervisorIOConfig(3, serverPriorityToReplicas)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            StringUtils.format(
-                "Configured replicas[3] does not match the sum of replicas[5] specified in serverPriorityToReplicas[%s]."
-                + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
-                serverPriorityToReplicas
-            )
+        StringUtils.format(
+            "Configured replicas[3] does not match the sum of replicas[5] specified in serverPriorityToReplicas[%s]."
+            + " To avoid ambiguity, consider removing [ioConfig.replicas] in favor of [ioConfig.serverPriorityToReplicas].",
+            serverPriorityToReplicas
         )
     );
   }
@@ -423,23 +438,21 @@ public class SeekableStreamSupervisorIOConfigTest
   public void testNegativeReplicasThrowsException()
   {
     final Map<Integer, Integer> invalidServerPriorityToReplicas = Map.of(0, 2, 1, -1);
-    MatcherAssert.assertThat(
-        Assert.assertThrows(
+    assertInvalidInputException(
+        Assertions.assertThrows(
             DruidException.class,
             () -> makeSeekableStreamSupervisorIOConfig(null, invalidServerPriorityToReplicas)
         ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(
-            StringUtils.format(
-                "Found invalid server replica[-1] for priority[1] in serverPriorityToReplicas[%s]. Replicas must be >= 0.",
-                invalidServerPriorityToReplicas
-            )
+        StringUtils.format(
+            "Found invalid server replica[-1] for priority[1] in serverPriorityToReplicas[%s]. Replicas must be >= 0.",
+            invalidServerPriorityToReplicas
         )
     );
   }
 
   private SeekableStreamSupervisorIOConfig makeSeekableStreamSupervisorIOConfig(@Nullable Integer replicas, @Nullable Map<Integer, Integer> serverPriorityToReplicas)
   {
-    return new SeekableStreamSupervisorIOConfig(
+    return new TestableSeekableStreamSupervisorIOConfig(
         "stream",
         null,
         replicas,
@@ -456,9 +469,229 @@ public class SeekableStreamSupervisorIOConfigTest
         null,
         null,
         null,
-        serverPriorityToReplicas
+        serverPriorityToReplicas,
+        null
     )
     {
     };
+  }
+
+  @Test
+  public void testBoundedModeWithValidConfig()
+  {
+    Map<String, Integer> startOffsets = Map.of("0", 100, "1", 200);
+    Map<String, Integer> endOffsets = Map.of("0", 500, "1", 600);
+    BoundedStreamConfig boundedConfig = new BoundedStreamConfig(startOffsets, endOffsets);
+
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        boundedConfig
+    )
+    {
+    };
+
+    Assertions.assertTrue(config.isBounded());
+    Assertions.assertNotNull(config.getBoundedStreamConfig());
+    Assertions.assertEquals(boundedConfig, config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testUnboundedModeByDefault()
+  {
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+
+    Assertions.assertFalse(config.isBounded());
+    Assertions.assertNull(config.getBoundedStreamConfig());
+  }
+
+  @Test
+  public void testBoundedModeWithNullConfig()
+  {
+    LagAggregator lagAggregator = mock(LagAggregator.class);
+
+    SeekableStreamSupervisorIOConfig config = new TestableSeekableStreamSupervisorIOConfig(
+        "stream",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        lagAggregator,
+        null,
+        null,
+        null,
+        null,
+        null
+    )
+    {
+    };
+
+    Assertions.assertFalse(config.isBounded());
+    Assertions.assertNull(config.getBoundedStreamConfig());
+  }
+
+  private static SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder ioConfigBuilder()
+  {
+    return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder()
+        .withStream("stream")
+        .withReplicas(1)
+        .withTaskCount(2)
+        .withTaskDuration(new Period("PT1H"))
+        .withLagAggregator(LagAggregator.DEFAULT);
+  }
+
+  @Test
+  public void testEqualsAndHashCode()
+  {
+    final SeekableStreamSupervisorIOConfig config = ioConfigBuilder().build();
+    Assertions.assertEquals(config, ioConfigBuilder().build());
+    Assertions.assertEquals(config.hashCode(), ioConfigBuilder().build().hashCode());
+    Assertions.assertNotEquals(config, null);
+    Assertions.assertNotEquals(config, "not an io config");
+    Assertions.assertNotEquals(config, ioConfigBuilder().withStream("other").build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withReplicas(9).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withTaskCount(9).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withStopTaskCount(7).build());
+    Assertions.assertNotEquals(config, ioConfigBuilder().withIdleConfig(new IdleConfig(true, 5L)).build());
+  }
+
+  @Test
+  public void testIdleConfigEqualsAndHashCode()
+  {
+    EqualsVerifier.forClass(IdleConfig.class).usingGetClass().verify();
+  }
+
+  /**
+   * Drift guard: the supervisor restart decision is equality-based, so any field omitted from
+   * {@code equals} would let a changed spec persist without restarting. EqualsVerifier reflects over the
+   * fields and fails automatically on a newly-added unused field — only abstract field types need prefab
+   * values. {@code taskCountExplicit}/{@code autoScalerEnabled} are derived hints (ignored); {@code taskCount}
+   * is mutable (NONFINAL_FIELDS suppressed).
+   */
+  @Test
+  public void testEqualsContractCoversAllFields()
+  {
+    EqualsVerifier.forClass(SeekableStreamSupervisorIOConfig.class)
+                  .usingGetClass()
+                  .withIgnoredFields("taskCountExplicit", "autoScalerEnabled")
+                  .suppress(Warning.NONFINAL_FIELDS)
+                  .withPrefabValues(InputFormat.class, mock(InputFormat.class), mock(InputFormat.class))
+                  .withPrefabValues(AutoScalerConfig.class, mock(AutoScalerConfig.class), mock(AutoScalerConfig.class))
+                  .withPrefabValues(LagAggregator.class, mock(LagAggregator.class), mock(LagAggregator.class))
+                  .verify();
+  }
+
+  @Test
+  public void testDefaultLagAggregatorEquals()
+  {
+    // The default aggregator is a stateless singleton; instance() always returns DEFAULT.
+    final LagAggregator aggregator = LagAggregator.DefaultLagAggregator.instance();
+    Assertions.assertSame(LagAggregator.DEFAULT, aggregator);
+    Assertions.assertEquals(aggregator, LagAggregator.DefaultLagAggregator.instance());
+    Assertions.assertNotEquals(aggregator, null);
+    Assertions.assertNotEquals(aggregator, "not a lag aggregator");
+  }
+
+  /**
+   * Concrete subclass for tests that exercise the abstract base directly. Implements the now-abstract
+   * {@link SeekableStreamSupervisorIOConfig#toBuilder()} via the generic builder.
+   */
+  private static class TestableSeekableStreamSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
+  {
+    TestableSeekableStreamSupervisorIOConfig(
+        String stream,
+        InputFormat inputFormat,
+        Integer replicas,
+        Integer taskCount,
+        Period taskDuration,
+        Period startDelay,
+        Period period,
+        Boolean useEarliestSequenceNumber,
+        Period completionTimeout,
+        Period lateMessageRejectionPeriod,
+        Period earlyMessageRejectionPeriod,
+        AutoScalerConfig autoScalerConfig,
+        LagAggregator lagAggregator,
+        DateTime lateMessageRejectionStartDateTime,
+        IdleConfig idleConfig,
+        Integer stopTaskCount,
+        Map<Integer, Integer> serverPriorityToReplicas,
+        BoundedStreamConfig boundedStreamConfig
+    )
+    {
+      super(
+          stream,
+          inputFormat,
+          replicas,
+          taskCount,
+          taskDuration,
+          startDelay,
+          period,
+          useEarliestSequenceNumber,
+          completionTimeout,
+          lateMessageRejectionPeriod,
+          earlyMessageRejectionPeriod,
+          autoScalerConfig,
+          lagAggregator,
+          lateMessageRejectionStartDateTime,
+          idleConfig,
+          stopTaskCount,
+          serverPriorityToReplicas,
+          boundedStreamConfig
+      );
+    }
+
+    @Override
+    public SupervisorIOConfigBuilder<?, ?> toBuilder()
+    {
+      return new SupervisorIOConfigBuilder.DefaultSupervisorIOConfigBuilder().copyFromBase(this);
+    }
   }
 }

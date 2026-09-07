@@ -63,6 +63,35 @@ public interface BaseTransformer extends Closeable
   InputRowListPlusRawValues transform(@Nullable InputRowListPlusRawValues row);
 
   /**
+   * Transforms a single input row applying transforms but skipping any filter, so that the filter can be applied
+   * later in the row-metering pipeline. Only meaningful for transformers that carry a separable filter (e.g.
+   * {@link Transformer}); the default simply delegates to {@link #transform(InputRow)}.
+   */
+  @Nullable
+  default InputRow transformWithoutFilter(@Nullable InputRow row)
+  {
+    return transform(row);
+  }
+
+  /**
+   * Whether this transformer carries a separable filter that can be applied outside the reader (so that filtered
+   * rows can be metered in the ingestion pipeline). Defaults to false; transformers that filter internally (e.g.
+   * {@link ScanTransformer}) leave this false.
+   */
+  default boolean hasFilter()
+  {
+    return false;
+  }
+
+  /**
+   * Applies the separable filter to a row that has already had transforms applied. Defaults to accepting every row.
+   */
+  default boolean rowMatchesFilter(@Nullable InputRow transformedRow)
+  {
+    return true;
+  }
+
+  /**
    * Releases any resources held by this transformer. The default implementation is a no-op.
    */
   @Override

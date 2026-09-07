@@ -34,8 +34,8 @@ import org.apache.druid.storage.google.GoogleInputDataConfig;
 import org.apache.druid.storage.google.GoogleStorage;
 import org.apache.druid.storage.google.GoogleStorageDruidModule;
 import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.util.Properties;
@@ -56,11 +56,11 @@ public class GoogleStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
     StorageConnectorProvider googleStorageConnectorProvider = getStorageConnectorProvider(properties);
 
-    Assert.assertTrue(googleStorageConnectorProvider instanceof GoogleStorageConnectorProvider);
-    Assert.assertTrue(googleStorageConnectorProvider.createStorageConnector(tempDir) instanceof GoogleStorageConnector);
-    Assert.assertEquals("bucket", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getBucket());
-    Assert.assertEquals("prefix", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getPrefix());
-    Assert.assertEquals(new File("/tmp"), ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getTempDir());
+    Assertions.assertTrue(googleStorageConnectorProvider instanceof GoogleStorageConnectorProvider);
+    Assertions.assertTrue(googleStorageConnectorProvider.createStorageConnector(tempDir) instanceof GoogleStorageConnector);
+    Assertions.assertEquals("bucket", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getBucket());
+    Assertions.assertEquals("prefix", ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getPrefix());
+    Assertions.assertEquals(new File("/tmp"), ((GoogleStorageConnectorProvider) googleStorageConnectorProvider).getTempDir());
 
   }
 
@@ -72,10 +72,10 @@ public class GoogleStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "bucket");
     properties.setProperty(CUSTOM_NAMESPACE + ".bucket", "bucket");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
-    Assert.assertThrows(
-        "Missing required creator property 'prefix'",
+    Assertions.assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'prefix'"
     );
   }
 
@@ -88,10 +88,10 @@ public class GoogleStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".type", "Google");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
     properties.setProperty(CUSTOM_NAMESPACE + ".tempDir", "/tmp");
-    Assert.assertThrows(
-        "Missing required creator property 'bucket'",
+    Assertions.assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'bucket'"
     );
   }
 
@@ -104,10 +104,10 @@ public class GoogleStorageConnectorProviderTest
     properties.setProperty(CUSTOM_NAMESPACE + ".bucket", "bucket");
     properties.setProperty(CUSTOM_NAMESPACE + ".prefix", "prefix");
 
-    Assert.assertThrows(
-        "Missing required creator property 'tempDir'",
+    Assertions.assertThrows(
         ProvisionException.class,
-        () -> getStorageConnectorProvider(properties)
+        () -> getStorageConnectorProvider(properties),
+        "Missing required creator property 'tempDir'"
     );
   }
 
@@ -117,14 +117,13 @@ public class GoogleStorageConnectorProviderTest
         new GoogleStorageDruidModule(),
         new StorageConnectorModule(),
         new GoogleStorageConnectorModule(),
-        binder -> {
+        binder ->
           JsonConfigProvider.bind(
               binder,
               CUSTOM_NAMESPACE,
               StorageConnectorProvider.class,
               Names.named(CUSTOM_NAMESPACE)
-          );
-        }
+          )
     ).withProperties(properties);
 
     Injector injector = startupInjectorBuilder.build();

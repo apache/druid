@@ -19,17 +19,15 @@
 
 package org.apache.druid.error;
 
-import org.apache.druid.matchers.DruidMatchers;
-import org.hamcrest.Description;
-import org.hamcrest.DiagnosingMatcher;
-import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
-import org.hamcrest.Matchers;
-import org.hamcrest.core.AllOf;
+import org.junit.jupiter.api.Assertions;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
-public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
+public class DruidExceptionMatcher
 {
   public static DruidExceptionMatcher invalidInput()
   {
@@ -95,78 +93,81 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
     );
   }
 
-  private final AllOf<DruidException> delegate;
-  private final ArrayList<Matcher<? super DruidException>> matcherList;
+  private final List<Consumer<DruidException>> assertions;
 
   public DruidExceptionMatcher(
-      DruidException.Persona targetPersona,
-      DruidException.Category category,
-      String errorCode
+      final DruidException.Persona targetPersona,
+      final DruidException.Category category,
+      final String errorCode
   )
   {
-    matcherList = new ArrayList<>();
-    matcherList.add(DruidMatchers.fn("targetPersona", DruidException::getTargetPersona, Matchers.is(targetPersona)));
-    matcherList.add(DruidMatchers.fn("category", DruidException::getCategory, Matchers.is(category)));
-    matcherList.add(DruidMatchers.fn("errorCode", DruidException::getErrorCode, Matchers.is(errorCode)));
-
-    delegate = new AllOf<>(matcherList);
+    assertions = new ArrayList<>();
+    assertions.add(exception -> Assertions.assertEquals(targetPersona, exception.getTargetPersona()));
+    assertions.add(exception -> Assertions.assertEquals(category, exception.getCategory()));
+    assertions.add(exception -> Assertions.assertEquals(errorCode, exception.getErrorCode()));
   }
 
-  public DruidExceptionMatcher expectContext(String key, String value)
+  public DruidExceptionMatcher expectContext(final String key, final String value)
   {
-    matcherList.add(0, DruidMatchers.fn("context", DruidException::getContext, Matchers.hasEntry(key, value)));
+    assertions.add(exception -> {
+      final Map<String, String> context = exception.getContext();
+      Assertions.assertTrue(context.containsKey(key));
+      Assertions.assertEquals(value, context.get(key));
+    });
     return this;
   }
 
-  public DruidExceptionMatcher expectMessageIs(String s)
+  public DruidExceptionMatcher expectMessageIs(final String s)
   {
-    return expectMessage(Matchers.equalTo(s));
-  }
-
-  public DruidExceptionMatcher expectMessageContains(String contains)
-  {
-    return expectMessage(Matchers.containsString(contains));
-  }
-
-  public DruidExceptionMatcher expectMessage(Matcher<String> messageMatcher)
-  {
-    matcherList.add(0, DruidMatchers.fn("message", DruidException::getMessage, messageMatcher));
+    assertions.add(exception -> Assertions.assertEquals(s, exception.getMessage()));
     return this;
   }
 
-  public DruidExceptionMatcher expectException(Matcher<Throwable> causeMatcher)
+  public DruidExceptionMatcher expectMessageContains(final String contains)
   {
-    matcherList.add(0, DruidMatchers.fn("cause", DruidException::getCause, causeMatcher));
+    assertions.add(exception -> {
+      Assertions.assertNotNull(exception.getMessage());
+      Assertions.assertTrue(exception.getMessage().contains(contains));
+    });
     return this;
   }
 
-  @Override
-  protected boolean matches(Object item, Description mismatchDescription)
+  public DruidExceptionMatcher expectMessage(final Predicate<String> messageMatcher)
   {
-    return delegate.matches(item, mismatchDescription);
+    assertions.add(exception -> Assertions.assertTrue(messageMatcher.test(exception.getMessage())));
+    return this;
   }
 
-  @Override
-  public void describeTo(Description description)
+  public DruidExceptionMatcher expectException(final Predicate<Throwable> causeMatcher)
   {
-    delegate.describeTo(description);
+    assertions.add(exception -> Assertions.assertTrue(causeMatcher.test(exception.getCause())));
+    return this;
   }
 
-  public <T> void assertThrowsAndMatches(ThrowingSupplier fn)
+  public static void assertThat(final Throwable actual, final DruidExceptionMatcher expected)
   {
-    boolean thrown = false;
+    final DruidException exception = Assertions.assertInstanceOf(DruidException.class, actual);
+    expected.assertions.forEach(assertion -> assertion.accept(exception));
+  }
+
+  public static void assertThat(
+      final String reason,
+      final Throwable actual,
+      final DruidExceptionMatcher expected
+  )
+  {
     try {
-      fn.get();
+      assertThat(actual, expected);
     }
-    catch (Throwable e) {
-      if (e instanceof DruidException) {
-        MatcherAssert.assertThat(e, this);
-        thrown = true;
-      } else {
-        throw new RuntimeException(e);
-      }
+    catch (AssertionError e) {
+      throw new AssertionError(reason + ": " + e.getMessage(), e);
     }
-    MatcherAssert.assertThat(thrown, Matchers.is(true));
+  }
+
+  public void assertThrowsAndMatches(final ThrowingSupplier fn)
+  {
+    final DruidException exception = Assertions.assertThrows(DruidException.class, fn::get);
+    assertThat(exception, this);
   }
 
   public interface ThrowingSupplier

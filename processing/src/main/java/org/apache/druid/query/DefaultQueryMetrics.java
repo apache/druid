@@ -46,6 +46,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public static final String QUERY_BYTES = "query/bytes";
   public static final String QUERY_CPU_TIME = "query/cpu/time";
   public static final String QUERY_WAIT_TIME = "query/wait/time";
+  public static final String QUERY_SEGMENTS_COUNT = "query/segments/count";
   public static final String QUERY_SEGMENT_TIME = "query/segment/time";
   public static final String QUERY_SEGMENT_AND_CACHE_TIME = "query/segmentAndCache/time";
   public static final String QUERY_RESULT_CACHE_HIT = "query/resultCache/hit";

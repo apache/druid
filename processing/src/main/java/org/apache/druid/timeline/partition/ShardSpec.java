@@ -43,6 +43,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = ShardSpec.Type.LINEAR, value = LinearShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.NUMBERED, value = NumberedShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.HASHED, value = HashBasedNumberedShardSpec.class),
+    @JsonSubTypes.Type(name = ShardSpec.Type.DIM_VALUE_SET, value = DimensionValueSetShardSpec.class),
     @JsonSubTypes.Type(name = ShardSpec.Type.NUMBERED_OVERWRITE, value = NumberedOverwriteShardSpec.class),
     // BuildingShardSpecs are the shardSpec with missing numCorePartitions, and thus must not be published.
     // See BuildingShardSpec for more details.
@@ -202,6 +203,7 @@ public interface ShardSpec
     String LINEAR = "linear";
     String NUMBERED = "numbered";
     String HASHED = "hashed";
+    String DIM_VALUE_SET = "dim_value_set";
 
     String NUMBERED_OVERWRITE = "numbered_overwrite";
 

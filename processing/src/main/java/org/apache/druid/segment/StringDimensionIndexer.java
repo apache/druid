@@ -38,9 +38,12 @@ import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumnFormat;
 import org.apache.druid.segment.data.ArrayBasedIndexedInts;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -60,6 +63,8 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   private final boolean hasSpatialIndexes;
   @Nullable
   private final Integer maxStringLength;
+  @Nullable
+  private final StringColumnFormatSpec columnFormatSpec;
   private volatile boolean hasMultipleValues = false;
 
   public StringDimensionIndexer(
@@ -78,11 +83,38 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       @Nullable Integer maxStringLength
   )
   {
+    this(multiValueHandling, hasBitmapIndexes, hasSpatialIndexes, maxStringLength, null);
+  }
+
+  public StringDimensionIndexer(
+      @Nullable MultiValueHandling multiValueHandling,
+      boolean hasBitmapIndexes,
+      boolean hasSpatialIndexes,
+      @Nullable Integer maxStringLength,
+      @Nullable StringColumnFormatSpec columnFormatSpec
+  )
+  {
     super(new StringDimensionDictionary());
     this.multiValueHandling = multiValueHandling == null ? MultiValueHandling.ofDefault() : multiValueHandling;
     this.hasBitmapIndexes = hasBitmapIndexes;
     this.hasSpatialIndexes = hasSpatialIndexes;
     this.maxStringLength = maxStringLength;
+    this.columnFormatSpec = columnFormatSpec;
+  }
+
+  @Override
+  public ColumnFormat getFormat()
+  {
+    if (columnFormatSpec != null) {
+      return new StringDictionaryEncodedColumnFormat(
+          hasMultipleValues,
+          dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID,
+          hasBitmapIndexes,
+          hasSpatialIndexes,
+          columnFormatSpec
+      );
+    }
+    return CapabilitiesBasedFormat.forColumnIndexer(getColumnCapabilities());
   }
 
   /**

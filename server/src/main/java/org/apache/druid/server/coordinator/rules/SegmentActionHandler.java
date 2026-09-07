@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator.rules;
 
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.Map;
@@ -35,6 +36,26 @@ public interface SegmentActionHandler
    * target replication level on all historical tiers.
    */
   void replicateSegment(DataSegment segment, Map<String, Integer> tierToReplicaCount);
+
+  /**
+   * Like {@link #replicateSegment(DataSegment, Map)} but for a partial-load rule. The given {@code profile} carries
+   * the partial load spec and rule fingerprint that the historicals are being asked to load and that the
+   * coordinator uses to reconcile already-loaded replicas against the rule's request.
+   * <p>
+   * Default implementation throws {@link UnsupportedOperationException}: callers that don't intend to support partial
+   * load rules (e.g., minimal mock handlers used in unit tests) can leave it unimplemented. The production handler
+   * {@code StrategicSegmentAssigner} overrides this to do fingerprint-aware replica counting.
+   */
+  default void replicateSegmentPartially(
+      DataSegment segment,
+      PartialLoadProfile profile,
+      Map<String, Integer> tierToReplicaCount
+  )
+  {
+    throw new UnsupportedOperationException(
+        "replicateSegmentPartially is not supported by this SegmentActionHandler implementation"
+    );
+  }
 
   /**
    * Marks the given segment as unused. Unused segments are eventually unloaded

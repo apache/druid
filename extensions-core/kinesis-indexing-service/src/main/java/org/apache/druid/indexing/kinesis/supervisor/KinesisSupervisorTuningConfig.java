@@ -29,6 +29,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
     implements SeekableStreamSupervisorTuningConfig
@@ -212,6 +213,40 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
   public boolean isUseListShards()
   {
     return useListShards;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    KinesisSupervisorTuningConfig that = (KinesisSupervisorTuningConfig) o;
+    return useListShards == that.useListShards
+           && Objects.equals(workerThreads, that.workerThreads)
+           && Objects.equals(chatRetries, that.chatRetries)
+           && Objects.equals(httpTimeout, that.httpTimeout)
+           && Objects.equals(shutdownTimeout, that.shutdownTimeout)
+           && Objects.equals(repartitionTransitionDuration, that.repartitionTransitionDuration)
+           && Objects.equals(offsetFetchPeriod, that.offsetFetchPeriod);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        super.hashCode(),
+        workerThreads,
+        chatRetries,
+        httpTimeout,
+        shutdownTimeout,
+        repartitionTransitionDuration,
+        offsetFetchPeriod,
+        useListShards
+    );
   }
 
   @Override

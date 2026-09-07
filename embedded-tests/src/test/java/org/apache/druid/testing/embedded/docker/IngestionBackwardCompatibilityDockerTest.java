@@ -36,6 +36,7 @@ import org.apache.druid.testing.embedded.indexing.IngestionSmokeTest;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 
 import java.util.Map;
 
@@ -64,6 +65,7 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
     return cluster
         .useContainerFriendlyHostname()
         .useDefaultTimeoutForLatchableEmitter(60)
+        .addServer(eventCollector)
         .addResource(containerOverlord)
         .addResource(containerCoordinator)
         .addServer(overlord)
@@ -71,7 +73,6 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
         .addServer(broker)
         .addServer(new EmbeddedHistorical())
         .addServer(new EmbeddedRouter())
-        .addServer(eventCollector)
         .addCommonProperty(
             "druid.extensions.loadList",
             "[\"druid-s3-extensions\", \"druid-kafka-indexing-service\","
@@ -118,6 +119,13 @@ public class IngestionBackwardCompatibilityDockerTest extends IngestionSmokeTest
   {
     // Older Overlord versions did not include "restarted" in the API response.
     Assertions.assertEquals(Map.of("id", supervisorId), startSupervisorResult);
+  }
+
+  @Override
+  @Disabled("modified/restarted response semantics and skipRestartIfUnmodified are not supported by the old Overlord")
+  public void test_kafkaSupervisor_modifiedAndRestartedCombinations()
+  {
+    // No-op: the older Overlord returns only {id} and always restarts on submission.
   }
 
   @Override

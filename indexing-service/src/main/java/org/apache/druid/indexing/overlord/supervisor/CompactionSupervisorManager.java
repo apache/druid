@@ -73,8 +73,8 @@ public class CompactionSupervisorManager
   )
   {
     return performIfLeader(manager -> {
-      // Check if the spec needs to be updated
-      if (manager.shouldUpdateSupervisor(spec) && manager.createOrUpdateAndStartSupervisor(spec)) {
+      final SupervisorSpecUpdateResult result = manager.createOrUpdateAndStartSupervisor(spec, true);
+      if (result.isModified()) {
         final String auditPayload
             = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
         auditManager.doAudit(
@@ -87,7 +87,6 @@ public class CompactionSupervisorManager
                       .build()
         );
       }
-
       return true;
     });
   }

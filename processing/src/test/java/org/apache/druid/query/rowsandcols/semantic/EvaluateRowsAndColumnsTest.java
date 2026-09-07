@@ -31,15 +31,24 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.function.Function;
+import java.util.stream.Stream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeNotNull;
-
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class EvaluateRowsAndColumnsTest extends SemanticTestBase
 {
+  public static Stream<Object[]> constructorFeeder()
+  {
+    return SemanticTestBase.parameterFeed();
+  }
+
   public EvaluateRowsAndColumnsTest(String name, Function<MapOfColumnsRowsAndColumns, RowsAndColumns> fn)
   {
     super(name, fn);
@@ -76,7 +85,7 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
         .expectColumn("array", expectedArr, ColumnType.STRING_ARRAY)
         .validate(base);
 
-    assumeNotNull("skipping: CursorFactory not supported", base.as(CursorFactory.class));
+    Assumptions.assumeTrue(base.as(CursorFactory.class) != null, "skipping: CursorFactory not supported");
 
     LazilyDecoratedRowsAndColumns ras = new LazilyDecoratedRowsAndColumns(
         base,
@@ -95,7 +104,7 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
     // do the materialziation
     ras.numRows();
 
-    assertEquals(Lists.newArrayList("__time", "dim", "val", "array", "arrayIndex", "expr"), ras.getColumnNames());
+    Assertions.assertEquals(Lists.newArrayList("__time", "dim", "val", "array", "arrayIndex", "expr"), ras.getColumnNames());
 
     new RowsAndColumnsHelper()
         .expectColumn("expr", new long[] {123 * 2, 456L * 2, 789 * 2, 123 * 2})

@@ -1,0 +1,635 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.query.groupby.epinephelinae;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableMap;
+import org.apache.druid.data.input.MapBasedRow;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.testing.TemporaryFolderExtension;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class SpillingGrouperTest extends InitializedNullHandlingTest
+{
+  private static final AggregatorFactory[] AGGREGATOR_FACTORIES = new AggregatorFactory[]{
+      new LongSumAggregatorFactory("valueSum", "value"),
+      new CountAggregatorFactory("count")
+  };
+  private static final int KEY_SIZE = new IntKeySerde().keySize();
+  private static final float MAX_LOAD_FACTOR = 0.75f;
+  private static final int INITIAL_BUCKETS = 4;
+
+  @RegisterExtension
+  public TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
+
+  @Test
+  public void testNoSpilling() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    //  Only 3 keys with a 10,000-byte buffer. Everything fits in memory
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(10000, storageDir, 1024 * 1024, 100)) {
+      for (int i = 0; i < 3; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      assertResultsCorrect(grouper, 3, 1);
+      Assertions.assertEquals(0, storageDir.listFiles().length);
+    }
+  }
+
+  @Test
+  public void testSpillAndIterateSorted() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    final int numKeys = 100;
+    // 100 unique keys force many spills since buffer is only 50 bytes. With iterator(true), results should be sorted ascending by key.
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, storageDir, 1024 * 1024, 100)) {
+      for (int i = 0; i < numKeys; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      try (CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true)) {
+        Assertions.assertTrue(storageDir.listFiles().length > 0, "spilling should have occurred");
+        int prevKey = -1;
+        int count = 0;
+        while (iterator.hasNext()) {
+          Grouper.Entry<IntKey> entry = iterator.next();
+          Assertions.assertTrue(
+              entry.getKey().intValue() > prevKey,
+              "keys should be sorted ascending"
+          );
+          prevKey = entry.getKey().intValue();
+          Assertions.assertEquals(1L, entry.getValues()[0]);
+          Assertions.assertEquals(1L, entry.getValues()[1]);
+          count++;
+        }
+        Assertions.assertEquals(numKeys, count);
+      }
+    }
+  }
+
+  @Test
+  public void testSpillAndIterateUnsorted() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    final int numKeys = 100;
+    // 100 unique keys force many spills since buffer is only 50 bytes. With iterator(false), results may be in any order, but all keys should be present with correct values.
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, storageDir, 1024 * 1024, 100)) {
+      for (int i = 0; i < numKeys; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      assertResultsCorrect(grouper, numKeys, 1);
+      Assertions.assertTrue(storageDir.listFiles().length > 0, "spilling should have occurred");
+    }
+  }
+
+  @Test
+  public void testAggregatesDuplicateKeys() throws IOException
+  {
+    // SpillingGrouper doesn't combine across spills — duplicate keys from different spill files
+    // appear as separate entries in the sorted iterator. Verify that the total aggregate values
+    // per key sum to the expected amount across all entries.
+    final File storageDir = temporaryFolder.newFolder();
+    final int numKeys = 20;
+    final int duplicates = 5;
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, storageDir, 1024 * 1024, 100)) {
+      for (int round = 0; round < duplicates; round++) {
+        for (int i = 0; i < numKeys; i++) {
+          Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+        }
+      }
+
+      int totalEntries = 0;
+      final Map<Integer, Long> totalCounts = new HashMap<>();
+      try (CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true)) {
+        Assertions.assertTrue(storageDir.listFiles().length > 0, "spilling should have occurred");
+        while (iterator.hasNext()) {
+          Grouper.Entry<IntKey> entry = iterator.next();
+          totalCounts.merge(entry.getKey().intValue(), (Long) entry.getValues()[1], Long::sum);
+          totalEntries++;
+        }
+      }
+      Assertions.assertTrue(
+          totalEntries > numKeys,
+          "duplicate keys should exist across spills, so total entries (" + totalEntries
+          + ") should exceed unique key count (" + numKeys + ")"
+      );
+      Assertions.assertEquals(numKeys, totalCounts.size());
+      for (Map.Entry<Integer, Long> e : totalCounts.entrySet()) {
+        Assertions.assertEquals(
+            (long) duplicates,
+            (long) e.getValue(),
+            "total count for key " + e.getKey()
+        );
+      }
+    }
+  }
+
+  @Test
+  public void testSmallSpillsAreBatched() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    final int bufferSize = 50;
+    final int numKeys = 100;
+
+    int maxUsableEntries = computeMaxUsableEntries(bufferSize);
+    Assertions.assertEquals(
+        1,
+        maxUsableEntries,
+        "buffer should hold at most 1 entry, guaranteeing a spill on every key"
+    );
+
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(bufferSize, storageDir, 1024 * 1024, 100)) {
+      for (int i = 0; i < numKeys; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      assertResultsCorrect(grouper, numKeys, 1);
+
+      File[] files = storageDir.listFiles();
+      Assertions.assertNotNull(files);
+      Assertions.assertEquals(
+          2,
+          files.length,
+          "all spills are tiny and should batch into a single data + dictionary file pair"
+      );
+    }
+  }
+
+  @Test
+  public void testDiskQuotaReclaimedWhenSmallSpillsDeleted() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    final LimitedTemporaryStorage temporaryStorage =
+        new LimitedTemporaryStorage(storageDir, 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats());
+    final int bufferSize = 50;
+    final int numKeys = 100;
+
+    int maxUsableEntries = computeMaxUsableEntries(bufferSize);
+    Assertions.assertEquals(
+        1,
+        maxUsableEntries,
+        "buffer should hold at most 1 entry, guaranteeing a spill on every key"
+    );
+
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(bufferSize, temporaryStorage)) {
+      for (int i = 0; i < numKeys; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      // Before iterator(): small spills were created and deleted during batching, so the
+      // temporary storage should have reclaimed their bytes. Only the final merged file(s)
+      // from flushPendingRunsToDisk() should remain on disk.
+      long sizeBeforeIterator = temporaryStorage.currentSize();
+      int fileCountBeforeIterator = temporaryStorage.currentFileCount();
+
+      // With a 50-byte buffer and 100 keys, many individual spills occur. Batching deletes
+      // each small temp file immediately, so the file count should be much less than numKeys.
+      Assertions.assertTrue(
+          fileCountBeforeIterator < numKeys,
+          "file count (" + fileCountBeforeIterator + ") should be much less than numKeys (" + numKeys
+          + ") because small spill files are deleted after being read into memory"
+      );
+
+      // The tracked bytes should reflect only the files still on disk, not the deleted ones.
+      long actualDiskBytes = 0;
+      File[] diskFiles = storageDir.listFiles();
+      Assertions.assertNotNull(diskFiles);
+      for (File f : diskFiles) {
+        actualDiskBytes += f.length();
+      }
+      Assertions.assertEquals(
+          actualDiskBytes,
+          sizeBeforeIterator,
+          "tracked bytes should match actual bytes on disk"
+      );
+
+      // Calling iterator() flushes remaining pending runs; verify results are still correct.
+      assertResultsCorrect(grouper, numKeys, 1);
+
+      // After iterator, check that the final state is also consistent.
+      long sizeAfterIterator = temporaryStorage.currentSize();
+      long actualDiskBytesAfter = 0;
+      File[] diskFilesAfter = storageDir.listFiles();
+      Assertions.assertNotNull(diskFilesAfter);
+      for (File f : diskFilesAfter) {
+        actualDiskBytesAfter += f.length();
+      }
+      Assertions.assertEquals(
+          actualDiskBytesAfter,
+          sizeAfterIterator,
+          "tracked bytes should match actual bytes on disk after iterator"
+      );
+    }
+  }
+
+  @Test
+  public void testResetClearsPendingState() throws IOException
+  {
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 1024 * 1024, 100)) {
+      for (int i = 0; i < 50; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      grouper.reset();
+
+      for (int i = 1000; i < 1010; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      try (CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true)) {
+        int count = 0;
+        while (iterator.hasNext()) {
+          Grouper.Entry<IntKey> entry = iterator.next();
+          Assertions.assertTrue(
+              entry.getKey().intValue() >= 1000,
+              "keys should be >= 1000 after reset"
+          );
+          count++;
+        }
+        Assertions.assertEquals(10, count);
+      }
+    }
+  }
+
+  @Test
+  public void testSmallSpillsStayInMemoryUntilFlush() throws IOException
+  {
+    final File storageDir = temporaryFolder.newFolder();
+    final LimitedTemporaryStorage temporaryStorage =
+        new LimitedTemporaryStorage(storageDir, 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats());
+
+    // Use a large minSpillFileSize so individual spills (which are tiny with a 50-byte buffer)
+    // stay in memory via SpillOutputStream and never create temp files.
+    final long largeMinSpillFileSize = 1024 * 1024L;
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryStorage, largeMinSpillFileSize)) {
+      // Aggregate enough keys to trigger multiple spills, but not enough to exceed
+      // minSpillFileSize in total pending bytes.
+      for (int i = 0; i < 20; i++) {
+        Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+      }
+
+      // No files should have been created — all spills are below the threshold and
+      // pending bytes haven't reached minSpillFileSize yet.
+      Assertions.assertEquals(
+          0,
+          temporaryStorage.currentFileCount(),
+          "small spills should stay in memory without creating any temp files"
+      );
+      Assertions.assertEquals(0, storageDir.listFiles().length);
+
+      // Results should still be correct when iterated.
+      assertResultsCorrect(grouper, 20, 1);
+    }
+  }
+
+  @Test
+  public void testDiskFull() throws IOException
+  {
+    // Use a small minSpillFileSize so pending runs flush to disk frequently, where the
+    // 500-byte maxStorageBytes limit will be hit.
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(50, temporaryFolder.newFolder(), 500, 100, 100)) {
+      AggregateResult lastResult = AggregateResult.ok();
+      for (int i = 0; i < 10000 && lastResult.isOk(); i++) {
+        lastResult = grouper.aggregate(new IntKey(i));
+      }
+
+      Assertions.assertFalse(lastResult.isOk(), "should have hit disk full");
+      Assertions.assertTrue(
+          lastResult.getReason().contains("Not enough disk space"),
+          "reason should mention disk space"
+      );
+    }
+  }
+
+  @Test
+  public void testMaxSpillFileCount() throws IOException
+  {
+    // With batching, small spill files are created and immediately deleted, so the file count
+    // stays low. The limit is hit when flushPendingRunsToDisk() creates the merged data file
+    // (succeeds as file #1) then tries to create the dictionary file (fails because
+    // maxFileCount=1 is already reached). Need enough keys to accumulate >= 1MB of pending bytes.
+    //
+    // Without batching, the file limit would be hit on the 2nd spill — only a handful of keys
+    // would succeed. With batching, thousands of keys are processed before the flush triggers
+    // the limit. We assert keysAggregated > maxUsableEntries * 2 to prove batching was active.
+    final int bufferSize = 50;
+    final int maxUsableEntries = computeMaxUsableEntries(bufferSize);
+    try (SpillingGrouper<IntKey> grouper = makeGrouper(bufferSize, temporaryFolder.newFolder(), 10 * 1024 * 1024, 1)) {
+      AggregateResult lastResult = AggregateResult.ok();
+      int keysAggregated = 0;
+      for (int i = 0; i < 200_000 && lastResult.isOk(); i++) {
+        lastResult = grouper.aggregate(new IntKey(i));
+        if (lastResult.isOk()) {
+          keysAggregated++;
+        }
+      }
+
+      Assertions.assertFalse(lastResult.isOk(), "should have hit max file count");
+      Assertions.assertTrue(
+          lastResult.getReason().contains("Maximum number of spill files"),
+          "reason should mention spill file count"
+      );
+      Assertions.assertTrue(
+          keysAggregated > maxUsableEntries * 2,
+          "batching should allow many keys (" + keysAggregated + ") before hitting file limit;"
+          + " without batching only ~" + (maxUsableEntries * 2) + " would succeed"
+      );
+    }
+  }
+
+  @Test
+  public void testSpillProximityReflectsSliceFillOnClose() throws IOException
+  {
+    // Fill a grouper part-way (no spill) and confirm close() records a proximity strictly in (0, 1). The proximity is
+    // the underlying hash table's peak size/terminalRegrowthThreshold, so a lightly-filled slice is well below 1.0.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final int bufferSize = 100_000;
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        true
+    );
+
+    // A handful of distinct keys: some buckets used, well short of the spill threshold.
+    for (int i = 0; i < 10; i++) {
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+    }
+    grouper.close();
+
+    final double proximity = stats.getSpillProximity();
+    Assertions.assertTrue(proximity > 0.0, "proximity should be positive after aggregating: " + proximity);
+    Assertions.assertTrue(proximity < 1.0, "a lightly-filled slice should be well below the spill point: " + proximity);
+  }
+
+  @Test
+  public void testSpillProximityNotRecordedWhenGrouperNeverInitialized() throws IOException
+  {
+    // A grouper that never initialized (never touched the merge buffer) must not contribute to spill proximity, per the
+    // isInitialized() gate in close(). Otherwise idle slices would report a spurious 0-of-threshold data point.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        100_000,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        false // do not init
+    );
+    grouper.close();
+
+    // No spillProximity() call was made, so proximity stays at its initial 0.0.
+    Assertions.assertEquals(0.0, stats.getSpillProximity(), 1e-9);
+  }
+
+  @Test
+  public void testSpillProximityStaysOneAfterSpillThenLightRefill() throws IOException
+  {
+    // Force a real spill, then aggregate a few more keys that don't refill the table, then close. The underlying hash
+    // table gets reset() by spill() (size returns to 0, regrowthThreshold shrinks to its initial small value), so the
+    // ratio in isolation at close time would be tiny. What must save us is peak preservation: the 1.0 pinned inside
+    // findBucketWithAutoGrowth (or at the terminal threshold) before the reset survives it. Assert the reported
+    // proximity is exactly 1.0 despite the low post-spill fill.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final int bufferSize = 50;
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        true
+    );
+
+    // Enough keys to trigger multiple spills.
+    for (int i = 0; i < 50; i++) {
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+    }
+    // Just a couple more keys — table has been reset() by the last spill so it's lightly filled at close.
+    Assertions.assertTrue(grouper.aggregate(new IntKey(9001)).isOk());
+    Assertions.assertTrue(grouper.aggregate(new IntKey(9002)).isOk());
+    grouper.close();
+
+    Assertions.assertEquals(
+        1.0,
+        stats.getSpillProximity(),
+        0.0,
+        "spilled slice with post-spill light refill must still report 1.0 (peak preserved across reset)"
+    );
+  }
+
+  @Test
+  public void testSpillProximityExactlyOneWhenSliceSpills() throws IOException
+  {
+    // A tiny 50-byte buffer with 100 unique keys forces the underlying BufferHashGrouper to reject a bucket allocation
+    // (findBucketWithAutoGrowth returns -1), which is the real spill trigger. SpillingGrouper.aggregate then invokes
+    // spill(); the peak size/terminalRegrowthThreshold at that instant is pinned to exactly 1.0 and preserved across
+    // the subsequent grouper.reset(). This is the "1.0 <=> actually spilled" invariant.
+    final GroupByStatsProvider.PerQueryStats stats = new GroupByStatsProvider.PerQueryStats();
+    final int bufferSize = 50;
+    final SpillingGrouper<IntKey> grouper = makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, 100, new GroupByStatsProvider.PerQueryStats()),
+        1024 * 1024L,
+        stats,
+        true
+    );
+
+    for (int i = 0; i < 100; i++) {
+      Assertions.assertTrue(grouper.aggregate(new IntKey(i)).isOk());
+    }
+    grouper.close();
+
+    Assertions.assertEquals(
+        1.0,
+        stats.getSpillProximity(),
+        0.0,
+        "a slice that reached its spill trigger must report proximity == 1.0 exactly"
+    );
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      File storageDir,
+      long maxStorageBytes,
+      int maxFileCount
+  )
+  {
+    return makeGrouper(bufferSize, storageDir, maxStorageBytes, maxFileCount, 1024 * 1024L);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      File storageDir,
+      long maxStorageBytes,
+      int maxFileCount,
+      long minSpillFileSize
+  )
+  {
+    return makeGrouper(
+        bufferSize,
+        new LimitedTemporaryStorage(storageDir, maxStorageBytes, maxFileCount, new GroupByStatsProvider.PerQueryStats()),
+        minSpillFileSize
+    );
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      LimitedTemporaryStorage temporaryStorage
+  )
+  {
+    return makeGrouper(bufferSize, temporaryStorage, 1024 * 1024L);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      LimitedTemporaryStorage temporaryStorage,
+      long minSpillFileSize
+  )
+  {
+    return makeGrouper(bufferSize, temporaryStorage, minSpillFileSize, new GroupByStatsProvider.PerQueryStats(), true);
+  }
+
+  private SpillingGrouper<IntKey> makeGrouper(
+      int bufferSize,
+      LimitedTemporaryStorage temporaryStorage,
+      long minSpillFileSize,
+      GroupByStatsProvider.PerQueryStats perQueryStats,
+      boolean init
+  )
+  {
+    final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
+    columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.of("value", 1L)));
+
+    final SpillingGrouper<IntKey> grouper = new SpillingGrouper<>(
+        Suppliers.ofInstance(ByteBuffer.allocate(bufferSize)),
+        new IntKeySerdeFactory(),
+        columnSelectorFactory,
+        AGGREGATOR_FACTORIES,
+        Integer.MAX_VALUE,
+        MAX_LOAD_FACTOR,
+        INITIAL_BUCKETS,
+        temporaryStorage,
+        new ObjectMapper(),
+        true,
+        null,
+        false,
+        bufferSize,
+        minSpillFileSize,
+        perQueryStats
+    );
+    if (init) {
+      grouper.init();
+    }
+    return grouper;
+  }
+
+  private void assertResultsCorrect(
+      SpillingGrouper<IntKey> grouper,
+      int expectedKeys,
+      long expectedCountPerKey
+  ) throws IOException
+  {
+    final Map<Integer, Object[]> results = new HashMap<>();
+    try (CloseableIterator<Grouper.Entry<IntKey>> iterator = grouper.iterator(true)) {
+      while (iterator.hasNext()) {
+        Grouper.Entry<IntKey> entry = iterator.next();
+        int key = entry.getKey().intValue();
+        Object[] valuesCopy = new Object[entry.getValues().length];
+        System.arraycopy(entry.getValues(), 0, valuesCopy, 0, valuesCopy.length);
+        Assertions.assertNull(results.put(key, valuesCopy), "duplicate key in results: " + key);
+      }
+    }
+    Assertions.assertEquals(expectedKeys, results.size());
+    for (Map.Entry<Integer, Object[]> e : results.entrySet()) {
+      Assertions.assertEquals(
+          expectedCountPerKey,
+          e.getValue()[0],
+          "valueSum for key " + e.getKey()
+      );
+      Assertions.assertEquals(
+          expectedCountPerKey,
+          e.getValue()[1],
+          "count for key " + e.getKey()
+      );
+    }
+  }
+
+  private static int computeMaxUsableEntries(int bufferSize)
+  {
+    int aggSize = 0;
+    for (AggregatorFactory factory : AGGREGATOR_FACTORIES) {
+      aggSize += factory.getMaxIntermediateSizeWithNulls();
+    }
+    int bucketSizeWithHash = Integer.BYTES + KEY_SIZE + aggSize;
+    int maxBuckets = Math.min(bufferSize / bucketSizeWithHash, INITIAL_BUCKETS);
+    return (int) (maxBuckets * MAX_LOAD_FACTOR);
+  }
+
+  static class IntKeySerdeFactory implements Grouper.KeySerdeFactory<IntKey>
+  {
+    @Override
+    public long getMaxDictionarySize()
+    {
+      return 0;
+    }
+
+    @Override
+    public Grouper.KeySerde<IntKey> factorize()
+    {
+      return new IntKeySerde();
+    }
+
+    @Override
+    public Grouper.KeySerde<IntKey> factorizeWithDictionary(List<String> dictionary)
+    {
+      return factorize();
+    }
+
+    @Override
+    public IntKey copyKey(IntKey key)
+    {
+      return new IntKey(key.intValue());
+    }
+
+    @Override
+    public Comparator<Grouper.Entry<IntKey>> objectComparator(boolean forceDefaultOrder)
+    {
+      return Comparator.comparingInt(o -> o.getKey().intValue());
+    }
+  }
+}

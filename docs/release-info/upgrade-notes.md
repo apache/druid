@@ -26,7 +26,165 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
-## Announcements
+## 37.0.0
+
+### Upgrade notes
+
+#### Hadoop-based ingestion
+
+Support for Hadoop-based ingestion has been removed. The feature was deprecated in Druid 32.
+
+Use one of Druid's other supported ingestion methods, such as SQL-based ingestion or MiddleManager-less ingestion using Kubernetes&circledR;.
+
+[#19109](https://github.com/apache/druid/pull/19109)
+
+#### Segment metadata cache on by default
+
+Starting in Druid 37, the segment metadata cache is on by default. This feature allows the Broker to cache segment metadata polled from the Coordinator, rather than having to fetch metadata for every query against the `sys.segments` table. This improves performance but increases memory usage on Brokers.
+
+The `druid.sql.planner.metadataSegmentCacheEnable` config controls this feature.
+
+[#19075](https://github.com/apache/druid/pull/19075)
+
+#### Streaming ingestion `parser`
+
+Support for the deprecated `parser` has been removed for streaming ingest tasks such as Kafka and Kinesis. Operators must now specify `inputSource`/`inputFormat` on the `ioConfig` of the supervisor spec, and the `dataSchema` must not specify a parser. Do this before upgrading to Druid 37 or newer.
+
+[#19173](https://github.com/apache/druid/pull/19173) [#19166](https://github.com/apache/druid/pull/19166)
+
+#### Rolling upgrades from Druid versions prior to version 0.23
+
+You can't perform a rolling upgrade from versions earlier than Druid 0.23.
+
+[#18961](https://github.com/apache/druid/pull/18961)
+
+#### Metadata storage for auto-compaction with compaction supervisors
+
+Automatic compaction using compaction supervisors now requires incremental segment metadata caching to be enabled on the Overlord and Coordinator in the runtime properties. Specifically, the `druid.manager.segments.useIncrementalCache` config must be set to `always` or `ifSynced`. For more information about the config, see [Segment metadata cache](../configuration/index.md#segment-metadata-cache).
+
+Additionally, metadata store changes are required for this upgrade.
+
+If you already have `druid.metadata.storage.connector.createTables` set to `true`, no action is needed.
+
+If you have this feature turned off, you will need to alter the segments table and create the `compactionStates` table. The Postgres DDL is provided below as a guide:
+
+```
+-- create the indexing states lookup table and associated indices
+CREATE TABLE druid_indexingStates (
+    created_date VARCHAR(255) NOT NULL,
+    datasource VARCHAR(255) NOT NULL,
+    fingerprint VARCHAR(255) NOT NULL,
+    payload BYTEA NOT NULL,
+    used BOOLEAN NOT NULL,
+    pending BOOLEAN NOT NULL,
+    used_status_last_updated VARCHAR(255) NOT NULL,
+    PRIMARY KEY (fingerprint),
+  );
+
+  CREATE INDEX idx_druid_compactionStates_used ON druid_compactionStates(used, used_status_last_updated);
+```
+
+```
+-- modify druid_segments table to have a column for storing compaction state fingerprints
+ALTER TABLE druid_segments ADD COLUMN indexing_state_fingerprint VARCHAR(255);
+```
+
+You may have to adapt the syntax to fit your table naming prefix and metadata store backend.
+
+[#18844](https://github.com/apache/druid/pull/18844)
+
+#### Segment locking
+
+Segment locking and `NumberedOverwriteShardSpec` are deprecated and will be removed in a future release. Use time chunk locking instead. You can make sure only time chunk locking is used by setting `druid.indexer.tasklock.forceTimeChunkLock` to `true`.
+
+[#19050](https://github.com/apache/druid/pull/19050)
+
+### Incompatible changes
+
+#### Removed `ParseSpec` and deprecated parsers
+
+The Parser for native batch tasks and streaming ingestion indexing services has been removed. Where possible, use the input format instead. Note that `JavascriptParseSpec` and `JSONLowercaseParseSpec` have no InputFormat equivalents. 
+
+Druid supports custom text data formats and can use the Regex input format to parse them. However, be aware doing this to
+parse data is less efficient than writing a native Java `InputFormat` extension, or using an external stream processor. We welcome contributions of new input formats.
+
+[#19239](https://github.com/apache/druid/pull/19239)
+
+#### Removed `defaultProcessingRate` config
+
+This config allowed scaling actions to begin prior to the first metrics becoming available. 
+
+[#19028](https://github.com/apache/druid/pull/19028)
+
+#### Front-coding format
+
+Druid now defaults to v1 of the front-coded format instead of version 0 if enabled. Version 1 was introduced in Druid 26. Downgrading to or upgrading from a version of Druid prior to 26 may require reindexing if you have front-coding enabled with version 0.
+
+[#18984](https://github.com/apache/druid/pull/18984)
+
+## 36.0.0
+
+### Upgrade notes
+
+#### Deprecated metrics
+
+Monitors on peons that previously emitted the `id` dimension from `JettyMonitor`, `OshiSysMonitor`, `JvmMonitor`, `JvmCpuMonitor`, `JvmThreadsMonitor` and `SysMonitor` to represent the task ID are deprecated and will be removed in a future release. Use the `taskId` dimension instead.
+
+[#18709](https://github.com/apache/druid/pull/18709)
+
+#### Some `statsd` metrics removed
+
+The following obsolete metrics have been removed:
+
+* `segment/cost/raw`
+* `segment/cost/normalized`
+* `segment/cost/normalization`
+
+[#18846](https://github.com/apache/druid/pull/18846)
+
+## 35.0.0
+
+### Upgrade notes
+
+#### Fallback vectorization on by default
+
+The `druid.expressions.allowVectorizeFallback` now defaults to `true`. Additionally, `SAFE_DIVIDE` can now vectorize as a fallback.
+
+[#18549](https://github.com/apache/druid/pull/18549)
+
+#### Java 11 support removed
+
+Upgrade to Java 17 or 21. Note that some versions of Java 21 encountered issues during test, specifically Java 21.05-21.07. If possible, avoid these versions.
+
+[#18424](https://github.com/apache/druid/pull/18424)
+
+#### Jetty 12 
+
+A new server configuration option has been added: `druid.server.http.uriCompliance`. Jetty 12 by default has strict enforcement of `RFC3986` URI format. This is a change from Jetty 9. To retain compatibility with legacy Druid, this config defaults to `LEGACY`, which uses the more permissive URI format enforcement that Jetty 9 used. If the cluster you operate does not require legacy compatibility, we recommend you use the upstream Jetty default of `RFC3986` in your Druid deployment. See the jetty documentation for more info.
+
+[#18424](https://github.com/apache/druid/pull/18424)
+
+#### Kerberos authentication
+
+The `druid.auth.authenticator.kerberos.cookieSignatureSecret` config is now mandatory. 
+
+[#18368](https://github.com/apache/druid/pull/18368)
+
+#### Multi-stage query task engine
+
+The MSQ task engine is now a core capability of Druid rather than an extension. It has been in the default extension load list for several releases. 
+
+Remove `druid-multi-stage-query` from `druid.extensions.loadList` in `common.runtimes.properties` before you upgrade.
+
+Druid 35.0.0 will ignore the extension if it's in the load list. Future versions of Druid will fail to start since it cannot locate the extension.
+
+[#18394](https://github.com/apache/druid/pull/18394)
+
+#### pac4j extension
+
+Due to the upgrade from `pac4j` 4 to 5, session serialization has changed from `pac4j`’s `JavaSerializer` to standard Java serialization. As a result, clients of clusters using the `pac4j` extension may be logged out during rolling upgrades and need to re‑authenticate.
+
+[#18259](https://github.com/apache/druid/pull/18259)
 
 ## 34.0.0
 
@@ -111,7 +269,7 @@ This feature is introduced in Druid 33.0.
 
 ### Incompatible changes
 
-### ANSI-SQL compatibility and query results
+#### ANSI-SQL compatibility and query results
 
 Support for the configs that let you maintain older behavior that wasn't ANSI-SQL compliant have been removed:
 
@@ -129,7 +287,7 @@ For more information about how to update your queries, see the [migration guide]
 
 [#17568](https://github.com/apache/druid/pull/17568) [#17609](https://github.com/apache/druid/pull/17609)
 
-### Java support
+#### Java support
 
 Java support in Druid has been updated:
 
@@ -140,13 +298,13 @@ We recommend that you upgrade to Java 17.
 
 [#17466](https://github.com/apache/druid/pull/17466)
 
-### Javascript support
+#### Javascript support
 
 - Javascript tiered broker selector strategy and Javascript filters currently do not work on Java 17.
 
 ### Deprecations
 
-### Hadoop-based ingestion
+#### Hadoop-based ingestion
 
 Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. 
 

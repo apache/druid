@@ -24,11 +24,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.emitter.service.UnitEvent;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,8 +42,8 @@ import java.util.List;
 
 public class LoggingEmitterTest
 {
-  @TempDir
-  public File tempFolder;
+  @RegisterExtension
+  public final TemporaryFolderExtension temporaryFolder = TemporaryFolderExtension.testCaseScoped();
 
   private List<Object> serializedObjects;
   private ObjectMapper trackingMapper;
@@ -203,7 +204,7 @@ public class LoggingEmitterTest
 
   private File createAllowlistFile(String jsonContent) throws IOException
   {
-    final File file = new File(tempFolder, "allowedMetrics.json");
+    final File file = temporaryFolder.newFile("allowedMetrics.json");
     try (Writer writer = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8)) {
       writer.write(jsonContent);
     }

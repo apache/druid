@@ -76,6 +76,7 @@ data: {
     nonReservedKeywordsToAdd: [
       "OVERWRITE"
       "EXTERN"
+      "VARIANT"
     ]
 
     # List of methods for parsing custom SQL statements.

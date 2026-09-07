@@ -62,6 +62,7 @@ CORS
 CNF
 CPUs
 CSVs
+CTEs
 CentralizedDatasourceSchema
 Ceph
 circledR
@@ -73,6 +74,7 @@ CUME_DIST
 DDL
 DENSE_RANK
 DML
+DN
 DNS
 DRUIDVERSION
 DataSketches
@@ -105,6 +107,7 @@ ECS
 EMR
 EMRFS
 ETL
+emits
 Elasticsearch
 Enums
 FIRST_VALUE
@@ -146,6 +149,7 @@ ISO8601
 IndexSpec
 IndexTask
 InfluxDB
+InnoDB
 InputFormat
 InputSource
 InputSources
@@ -160,6 +164,7 @@ JDK7
 JDK8
 JKS
 jks
+JNDI
 JMX
 JRE
 JS
@@ -196,6 +201,7 @@ Lucene
 MapBD
 MapDB
 MariaDB
+Marquez
 MiddleManager
 MiddleManagers
 Montréal
@@ -209,8 +215,11 @@ OCF
 OIDC
 OLAP
 OOMs
+OPA
 OpenJDK
 OpenLDAP
+openlineage
+OpenLineage
 OpenTSDB
 OutputStream
 ParAccel
@@ -233,6 +242,7 @@ S3
 SAS
 SDK
 SIGAR
+SIMD
 SNI
 SPNEGO
 Splunk
@@ -291,6 +301,7 @@ averagers
 backend
 backfills
 backfilled
+backfilling
 backpressure
 base64
 baseTime
@@ -303,6 +314,7 @@ boolean
 breakpoint
 broadcasted
 bucketSize
+checkpointed
 checksums
 classpath
 clickstream
@@ -331,6 +343,7 @@ deepstore
 denormalization
 denormalize
 denormalized
+deduplicated
 deprioritization
 deprioritizes
 dequeued
@@ -414,6 +427,7 @@ kubexit
 k8s
 laning
 lifecycle
+lineage
 localhost
 log4j
 log4j2
@@ -508,6 +522,7 @@ prepends
 prepopulated
 preprocessing
 priori
+reprocessing
 procs
 processFromRaw
 programmatically
@@ -523,9 +538,11 @@ quantile
 quantiles
 queryable
 quickstart
+RE2
 realtime
 rebalance
 redis
+ReDoS
 regexes
 reimported
 reindex
@@ -715,6 +732,7 @@ druid.sql.planner.useApproximateTopN
 druid.sql.planner.useLexicographicTopN
 druid.sql.planner.useGroupingSetForExactDistinct
 druid.sql.planner.useNativeQueryExplain
+error_message
 error_msg
 exprs
 group_id
@@ -895,8 +913,6 @@ c3.2xlarge
 defaultManualBrokerService
 maxPriority
 minPriority
-minScaleUpDelay
-minScaleDownDelay
 NUMBER_FEATURES
 NUMBER_OF_CONTRIBUTORS
 PreparedStatement
@@ -1683,6 +1699,7 @@ un
 G1GC
 GroupBys
 QoS-type
+QoS
 DumpSegment
 SegmentMetadata
 __time
@@ -2393,6 +2410,7 @@ druid-orc-extensions
 druid-parquet-extensions
 druid-protobuf-extensions
 druid-ranger-security
+druid-opa-authorizer
 druid-s3-extensions
 druid-ec2-extensions
 druid-aws-rds-extensions
@@ -2647,3 +2665,13 @@ nginx
 - ../docs/development/extensions-core/s3.md
 NIO
 passthrough
+checksum
+
+- ../docs/development/extensions-contrib/druid-opa-authorizer.md
+Rego
+alice
+christy
+dylan
+eve
+opaUri
+rego

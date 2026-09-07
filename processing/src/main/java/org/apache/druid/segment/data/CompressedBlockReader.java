@@ -68,12 +68,18 @@ public final class CompressedBlockReader implements Closeable
     if (versionFromBuffer == VERSION) {
       final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
       final int blockSize = buffer.getInt();
-      assert CompressedPools.BUFFER_SIZE == blockSize;
       Preconditions.checkState(
           blockSize <= CompressedPools.BUFFER_SIZE,
           "Maximum block size must be less than " + CompressedPools.BUFFER_SIZE
       );
+      Preconditions.checkArgument(blockSize > 0, "Block size[%s] must be positive", blockSize);
       final int numBlocks = buffer.getInt();
+      Preconditions.checkArgument(numBlocks > 0, "Number of blocks[%s] must be positive", numBlocks);
+      Preconditions.checkArgument(
+          (long) numBlocks * Integer.BYTES <= buffer.remaining(),
+          "Number of blocks[%s] exceeds the available buffer",
+          numBlocks
+      );
       final int offsetsSize = numBlocks * Integer.BYTES;
       // buffer is at start of ending offsets
       final ByteBuffer offsets = buffer.asReadOnlyBuffer().order(compressionOrder);

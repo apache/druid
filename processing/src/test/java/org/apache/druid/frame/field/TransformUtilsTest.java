@@ -23,14 +23,17 @@ import com.google.common.collect.ImmutableList;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.java.util.common.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.Parameter;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class TransformUtilsTest
 {
   private final WritableMemory lhsMemory = WritableMemory.allocate(10);
@@ -38,20 +41,15 @@ public class TransformUtilsTest
 
   private static final long MEMORY_LOCATION = 0;
 
-  private final FrameType frameType;
+  @Parameter(0)
+  public FrameType frameType;
 
-  public TransformUtilsTest(final FrameType frameType)
-  {
-    this.frameType = frameType;
-  }
-
-  @Parameterized.Parameters(name = "frameType = {0}")
-  public static Iterable<Object[]> constructorFeeder()
+  public static Stream<Object[]> constructorFeeder()
   {
     return List.of(
         new Object[]{FrameType.ROW_BASED_V1},
         new Object[]{FrameType.ROW_BASED_V2}
-    );
+    ).stream();
   }
 
   /**
@@ -123,11 +121,11 @@ public class TransformUtilsTest
         );
 
     for (double value : values) {
-      Assert.assertEquals(
-          String.valueOf(value),
+      Assertions.assertEquals(
           value,
           TransformUtils.detransformToDouble(TransformUtils.transformFromDouble(value, frameType), frameType),
-          0.0
+          0.0,
+          String.valueOf(value)
       );
 
     }
@@ -140,7 +138,7 @@ public class TransformUtilsTest
         rhsMemory.putLong(MEMORY_LOCATION, TransformUtils.transformFromDouble(rhs, frameType));
         int byteCmp = byteComparison(Double.BYTES);
         final int expectedCmp = expectedComparison(frameType, lhs, rhs);
-        Assert.assertEquals(StringUtils.format("compare(%s, %s)", lhs, rhs), signum(expectedCmp), signum(byteCmp));
+        Assertions.assertEquals(signum(expectedCmp), signum(byteCmp), StringUtils.format("compare(%s, %s)", lhs, rhs));
       }
     }
   }
@@ -158,7 +156,7 @@ public class TransformUtilsTest
         );
 
     for (long value : values) {
-      Assert.assertEquals(
+      Assertions.assertEquals(
           value,
           TransformUtils.detransformToLong(TransformUtils.transformFromLong(value))
       );
@@ -174,11 +172,11 @@ public class TransformUtilsTest
         int byteCmp = byteComparison(Long.BYTES);
 
         if (byteCmp < 0) {
-          Assert.assertTrue(lhs < rhs);
+          Assertions.assertTrue(lhs < rhs);
         } else if (byteCmp == 0) {
-          Assert.assertEquals(lhs, rhs);
+          Assertions.assertEquals(lhs, rhs);
         } else {
-          Assert.assertTrue(lhs > rhs);
+          Assertions.assertTrue(lhs > rhs);
         }
       }
     }
@@ -219,11 +217,11 @@ public class TransformUtilsTest
         );
 
     for (float value : values) {
-      Assert.assertEquals(
-          String.valueOf(value),
+      Assertions.assertEquals(
           value,
           TransformUtils.detransformToFloat(TransformUtils.transformFromFloat(value, frameType), frameType),
-          0.0
+          0.0f,
+          String.valueOf(value)
       );
     }
 
@@ -235,7 +233,7 @@ public class TransformUtilsTest
         rhsMemory.putLong(MEMORY_LOCATION, TransformUtils.transformFromFloat(rhs, frameType));
         final int byteCmp = byteComparison(Long.BYTES);
         final int expectedCmp = expectedComparison(frameType, lhs, rhs);
-        Assert.assertEquals(StringUtils.format("compare(%s, %s)", lhs, rhs), signum(expectedCmp), signum(byteCmp));
+        Assertions.assertEquals(signum(expectedCmp), signum(byteCmp), StringUtils.format("compare(%s, %s)", lhs, rhs));
       }
     }
   }

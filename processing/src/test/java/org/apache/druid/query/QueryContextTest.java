@@ -38,7 +38,7 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 
@@ -47,12 +47,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class QueryContextTest
 {
@@ -430,6 +430,7 @@ public class QueryContextTest
   }
 
   @Test
+  @SuppressWarnings("deprecation")
   public void testIsRealtimeSegmentsOnly()
   {
     assertFalse(QueryContext.empty().isRealtimeSegmentsOnly());
@@ -437,6 +438,77 @@ public class QueryContextTest
         QueryContext
             .of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
             .isRealtimeSegmentsOnly()
+    );
+  }
+
+  @Test
+  public void testGetRealtimeSegmentsMode()
+  {
+    assertEquals(
+        QueryContexts.RealtimeSegmentsMode.INCLUDE,
+        QueryContext.empty().getRealtimeSegmentsMode()
+    );
+    assertEquals(
+        QueryContexts.RealtimeSegmentsMode.EXCLUSIVE,
+        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclusive"))
+                   .getRealtimeSegmentsMode()
+    );
+    assertEquals(
+        QueryContexts.RealtimeSegmentsMode.EXCLUDE,
+        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "exclude"))
+                   .getRealtimeSegmentsMode()
+    );
+    assertEquals(
+        QueryContexts.RealtimeSegmentsMode.INCLUDE,
+        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "include"))
+                   .getRealtimeSegmentsMode()
+    );
+  }
+
+  @Test
+  public void testGetRealtimeSegmentsModeBackwardCompat()
+  {
+    // realtimeSegmentsOnly=true maps to EXCLUSIVE
+    assertEquals(
+        QueryContexts.RealtimeSegmentsMode.EXCLUSIVE,
+        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, true))
+                   .getRealtimeSegmentsMode()
+    );
+    // realtimeSegmentsOnly=false maps to INCLUDE (default)
+    assertEquals(
+        QueryContexts.RealtimeSegmentsMode.INCLUDE,
+        QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_ONLY, false))
+                   .getRealtimeSegmentsMode()
+    );
+  }
+
+  @Test
+  public void testGetRealtimeSegmentsModeConflictThrows()
+  {
+    BadQueryContextException e = assertThrows(
+        BadQueryContextException.class,
+        () -> QueryContext.of(ImmutableMap.of(
+            QueryContexts.REALTIME_SEGMENTS_ONLY, true,
+            QueryContexts.REALTIME_SEGMENTS_MODE, "exclude"
+        )).getRealtimeSegmentsMode()
+    );
+    assertEquals(
+        "Cannot set both [realtimeSegmentsMode] and deprecated [realtimeSegmentsOnly]; use [realtimeSegmentsMode] only.",
+        e.getMessage()
+    );
+  }
+
+  @Test
+  public void testGetRealtimeSegmentsModeInvalidValue()
+  {
+    BadQueryContextException e = assertThrows(
+        BadQueryContextException.class,
+        () -> QueryContext.of(ImmutableMap.of(QueryContexts.REALTIME_SEGMENTS_MODE, "badvalue"))
+                         .getRealtimeSegmentsMode()
+    );
+    assertEquals(
+        "Expected key [realtimeSegmentsMode] to be referring to one of the values [INCLUDE,EXCLUSIVE,EXCLUDE] of enum [RealtimeSegmentsMode], but got [badvalue]",
+        e.getMessage()
     );
   }
 

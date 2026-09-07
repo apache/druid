@@ -32,11 +32,30 @@ public class TransformingInputEntityReader implements InputEntityReader
 {
   private final InputEntityReader delegate;
   private final BaseTransformer transformer;
+  private final boolean applyFilter;
 
-  public TransformingInputEntityReader(InputEntityReader delegate, BaseTransformer transformer)
+  public TransformingInputEntityReader(final InputEntityReader delegate, final BaseTransformer transformer)
+  {
+    this(delegate, transformer, true);
+  }
+
+  public static TransformingInputEntityReader withoutFilter(
+      final InputEntityReader delegate,
+      final BaseTransformer transformer
+  )
+  {
+    return new TransformingInputEntityReader(delegate, transformer, false);
+  }
+
+  private TransformingInputEntityReader(
+      final InputEntityReader delegate,
+      final BaseTransformer transformer,
+      final boolean applyFilter
+  )
   {
     this.delegate = delegate;
     this.transformer = transformer;
+    this.applyFilter = applyFilter;
   }
 
   @Override
@@ -48,7 +67,11 @@ public class TransformingInputEntityReader implements InputEntityReader
         return CloseableIterators.withEmptyBaggage(rows.iterator());
       });
     }
-    return delegate.read().map(transformer::transform);
+    if (applyFilter) {
+      return delegate.read().map(transformer::transform);
+    } else {
+      return delegate.read().map(transformer::transformWithoutFilter);
+    }
   }
 
 

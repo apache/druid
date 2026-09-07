@@ -20,8 +20,8 @@
 package org.apache.druid.server;
 
 import org.apache.druid.query.context.ResponseContext;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -41,7 +41,7 @@ public class QueryDetailsTest
       QueryResource.transferEntityTag(responseContext, responseBuilder);
       Response response = responseBuilder.build();
       MultivaluedMap<String, Object> metadata = response.getMetadata();
-      Assert.assertNull(metadata.get(QueryResource.HEADER_ETAG));
+      Assertions.assertNull(metadata.get(QueryResource.HEADER_ETAG));
     }
 
     // Provided ETAG is passed along.
@@ -53,7 +53,7 @@ public class QueryDetailsTest
       QueryResource.transferEntityTag(responseContext, responseBuilder);
       Response response = responseBuilder.build();
       MultivaluedMap<String, Object> metadata = response.getMetadata();
-      Assert.assertEquals(etagValue, metadata.getFirst(QueryResource.HEADER_ETAG));
+      Assertions.assertEquals(etagValue, metadata.getFirst(QueryResource.HEADER_ETAG));
     }
   }
 }

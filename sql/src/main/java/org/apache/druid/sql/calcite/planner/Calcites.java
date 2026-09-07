@@ -243,7 +243,8 @@ public class Calcites
     return SqlTypeName.TIMESTAMP == sqlTypeName ||
            SqlTypeName.DATE == sqlTypeName ||
            SqlTypeName.BOOLEAN == sqlTypeName ||
-           SqlTypeName.INT_TYPES.contains(sqlTypeName);
+           SqlTypeName.INT_TYPES.contains(sqlTypeName) ||
+           SqlTypeName.UNSIGNED_TYPES.contains(sqlTypeName);
   }
 
   /**

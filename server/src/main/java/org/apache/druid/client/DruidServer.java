@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.loading.PartialLoadProfile;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 
@@ -214,6 +215,21 @@ public class DruidServer implements Comparable<DruidServer>
 
   public DruidServer addDataSegment(DataSegment segment)
   {
+    return addDataSegment(segment, null);
+  }
+
+  /**
+   * Adds a segment along with optional partial-load metadata. When {@code profile} is non-null and carries a
+   * {@code loadedBytes} value, the server's {@link #currSize} accounting uses that figure instead of
+   * {@link DataSegment#getSize()} so balancing decisions reflect the actual on-disk footprint of partial replicas.
+   * The profile is stored alongside the segment in the {@link DruidDataSource} for the coordinator's
+   * replica-reconciliation logic to consult.
+   */
+  public DruidServer addDataSegment(DataSegment segment, @Nullable PartialLoadProfile profile)
+  {
+    final long sizeToAdd = (profile != null && profile.loadedBytes() != null)
+                           ? profile.loadedBytes()
+                           : segment.getSize();
     // ConcurrentHashMap.compute() ensures that all actions for specific dataSource are linearizable.
     dataSources.compute(
         segment.getDataSource(),
@@ -221,8 +237,8 @@ public class DruidServer implements Comparable<DruidServer>
           if (dataSource == null) {
             dataSource = new DruidDataSource(dataSourceName, ImmutableMap.of("client", "side"));
           }
-          if (dataSource.addSegmentIfAbsent(segment)) {
-            currSize.addAndGet(segment.getSize());
+          if (dataSource.addSegmentIfAbsent(segment, profile)) {
+            currSize.addAndGet(sizeToAdd);
             totalSegments.incrementAndGet();
           } else {
             log.warn(
@@ -237,10 +253,52 @@ public class DruidServer implements Comparable<DruidServer>
     return this;
   }
 
-  public DruidServer addDataSegments(DruidServer server)
+  /**
+   * Returns the partial-load profile for the given segment, or {@code null} if the segment was loaded as a regular
+   * full-load (no partial-load metadata announced).
+   */
+  @Nullable
+  public PartialLoadProfile getPartialLoadProfile(SegmentId segmentId)
   {
-    server.iterateAllSegments().forEach(this::addDataSegment);
-    return this;
+    final DruidDataSource dataSource = dataSources.get(segmentId.getDataSource());
+    return dataSource == null ? null : dataSource.getPartialLoadProfile(segmentId);
+  }
+
+  /**
+   * Updates the {@link PartialLoadProfile} attached to an already-present segment, used by the inventory layer when a
+   * historical re-announces a segment whose load spec has changed (e.g. an additive partial-load reload swapping the
+   * wrapper / fingerprint). The segment stays in the inventory at the same {@link SegmentId}; only the per-server
+   * profile and the {@link #currSize} accounting (which uses {@link DataSegmentAndLoadProfile#effectiveSizeOf}) are
+   * adjusted. {@link #totalSegments} is unchanged. No-op if the segment isn't currently present on this server.
+   *
+   * @return {@code true} if the entry was updated; {@code false} if the segment wasn't present on this server.
+   */
+  public boolean updateDataSegmentProfile(DataSegment segment, @Nullable PartialLoadProfile profile)
+  {
+    final boolean[] updated = {false};
+    dataSources.compute(
+        segment.getDataSource(),
+        (dataSourceName, dataSource) -> {
+          if (dataSource == null) {
+            return null;
+          }
+          final DataSegment existing = dataSource.getSegment(segment.getId());
+          if (existing == null) {
+            return dataSource;
+          }
+          final long oldEffectiveSize = DataSegmentAndLoadProfile.effectiveSizeOf(existing);
+          final long newEffectiveSize = (profile != null && profile.loadedBytes() != null)
+                                        ? profile.loadedBytes()
+                                        : segment.getSize();
+          // addSegment unconditionally overwrites (vs addSegmentIfAbsent in addDataSegment); we already know the
+          // entry exists, so this swaps the value for the same key.
+          dataSource.addSegment(segment, profile);
+          currSize.addAndGet(newEffectiveSize - oldEffectiveSize);
+          updated[0] = true;
+          return dataSource;
+        }
+    );
+    return updated[0];
   }
 
   @Nullable
@@ -261,10 +319,12 @@ public class DruidServer implements Comparable<DruidServer>
             // Returning null from the lambda here makes the ConcurrentHashMap to not record any entry.
             return null;
           }
-          DataSegment segment = dataSource.removeSegment(segmentId);
-          if (segment != null) {
-            segmentRemoved[0] = segment;
-            currSize.addAndGet(-segment.getSize());
+          DataSegment removed = dataSource.removeSegment(segmentId);
+          if (removed != null) {
+            segmentRemoved[0] = removed;
+            // Use effectiveSizeOf (loadedBytes when the value is a DataSegmentAndLoadProfile, else segment size)
+            // so the books balance against what we added.
+            currSize.addAndGet(-DataSegmentAndLoadProfile.effectiveSizeOf(removed));
             totalSegments.decrementAndGet();
           } else {
             log.warn("Asked to remove data segment that doesn't exist!? server[%s], segment[%s]", getName(), segmentId);

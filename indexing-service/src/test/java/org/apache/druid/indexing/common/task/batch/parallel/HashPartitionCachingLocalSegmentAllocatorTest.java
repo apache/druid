@@ -44,9 +44,9 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -74,7 +74,7 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
   private SegmentAllocator target;
   private SequenceNameFunction sequenceNameFunction;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException
   {
     TaskToolbox toolbox = createToolbox();
@@ -99,14 +99,14 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
     String sequenceName = sequenceNameFunction.getSequenceName(INTERVAL, row);
     SegmentIdWithShardSpec segmentIdWithShardSpec = target.allocate(row, sequenceName, null, false);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         SegmentId.of(DATASOURCE, INTERVAL, VERSION, PARTITION_NUM),
         segmentIdWithShardSpec.asSegmentId()
     );
     HashBucketShardSpec shardSpec = (HashBucketShardSpec) segmentIdWithShardSpec.getShardSpec();
-    Assert.assertEquals(PARTITION_DIMENSIONS, shardSpec.getPartitionDimensions());
-    Assert.assertEquals(NUM_PARTITONS, shardSpec.getNumBuckets());
-    Assert.assertEquals(PARTITION_NUM, shardSpec.getBucketId());
+    Assertions.assertEquals(PARTITION_DIMENSIONS, shardSpec.getPartitionDimensions());
+    Assertions.assertEquals(NUM_PARTITONS, shardSpec.getNumBuckets());
+    Assertions.assertEquals(PARTITION_NUM, shardSpec.getBucketId());
   }
 
   @Test
@@ -116,7 +116,7 @@ public class HashPartitionCachingLocalSegmentAllocatorTest
     InputRow row = createInputRow();
     String sequenceName = sequenceNameFunction.getSequenceName(INTERVAL, row);
     String expectedSequenceName = StringUtils.format("%s_%s_%d", TASKID, INTERVAL, PARTITION_NUM);
-    Assert.assertEquals(expectedSequenceName, sequenceName);
+    Assertions.assertEquals(expectedSequenceName, sequenceName);
   }
 
   private static TaskToolbox createToolbox()

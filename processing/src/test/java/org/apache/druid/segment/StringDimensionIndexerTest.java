@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.StringDictionaryEncodedColumnFormat;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -196,6 +197,28 @@ public class StringDimensionIndexerTest extends InitializedNullHandlingTest
         Arrays.asList("abcdefghij", "klmnopqrst"),
         indexer.convertUnsortedEncodedKeyComponentToActualList(keyComponent.getComponent())
     );
+  }
+
+  @Test
+  public void testGetFormatHasNullsAfterProcessingNull()
+  {
+    final StringColumnFormatSpec spec = new StringColumnFormatSpec(null, null, 100);
+    final StringDimensionIndexer indexer = new StringDimensionIndexer(
+        DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+        true,
+        false,
+        100,
+        spec
+    );
+
+    StringDictionaryEncodedColumnFormat format =
+        (StringDictionaryEncodedColumnFormat) indexer.getFormat();
+    Assertions.assertFalse(format.toColumnCapabilities().hasNulls().isTrue());
+
+    indexer.processRowValsToUnsortedEncodedKeyComponent(null, false);
+
+    format = (StringDictionaryEncodedColumnFormat) indexer.getFormat();
+    Assertions.assertTrue(format.toColumnCapabilities().hasNulls().isTrue());
   }
 
   private long verifyEncodedValues(

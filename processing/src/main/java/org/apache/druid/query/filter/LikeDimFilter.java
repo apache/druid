@@ -24,10 +24,13 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.LikeFilter;
@@ -154,6 +157,20 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
+    if (!this.dimension.equals(dimension) || extractionFn != null) {
+      return null;
+    }
+    final LikeDimFilter.LikeMatcher.SuffixMatch suffixMatch = likeMatcher.getSuffixMatch();
+    final String prefix = likeMatcher.getPrefix();
+    if (suffixMatch == LikeMatcher.SuffixMatch.MATCH_EMPTY) {
+      // The full pattern was a literal (no wildcards); LIKE acts as equality on `prefix`.
+      return ImmutableRangeSet.of(Range.singleton(prefix));
+    }
+    if (suffixMatch == LikeMatcher.SuffixMatch.MATCH_ANY) {
+      // LIKE 'prefix%' matches every string starting with `prefix`; bare LIKE '%' matches everything
+      return ImmutableRangeSet.of(prefix.isEmpty() ? Range.all() : prefixRange(prefix));
+    }
+    // mid-string wildcards aren't expressible as a single Range.
     return null;
   }
 
@@ -195,6 +212,42 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       builder.append(" ESCAPE '").append(escapeChar).append("'");
     }
     return builder.appendFilterTuning(filterTuning).build();
+  }
+
+  /**
+   * Range covering every string that starts with {@code prefix}
+   */
+  public static Range<String> prefixRange(String prefix)
+  {
+    if (prefix.isEmpty()) {
+      throw DruidException.defensive("prefix is empty; use Range.all() explicitly for the match-everything case");
+    }
+    final String successor = lexicographicSuccessor(prefix);
+    return successor == null ? Range.atLeast(prefix) : Range.closedOpen(prefix, successor);
+  }
+
+  /**
+   * Smallest string strictly greater than {@code s} in lexicographic (UTF-16) order: increment the last
+   * non-{@link Character#MAX_VALUE} char and truncate everything after it. Returns {@code null} when {@code s}
+   * is a non-empty run of {@code MAX_VALUE} chars and the carry would overflow.
+   */
+  @Nullable
+  @VisibleForTesting
+  static String lexicographicSuccessor(String s)
+  {
+    if (s.isEmpty()) {
+      return "\u0000";
+    }
+    final char[] chars = s.toCharArray();
+    int i = chars.length - 1;
+    while (i >= 0 && chars[i] == Character.MAX_VALUE) {
+      i--;
+    }
+    if (i < 0) {
+      return null;
+    }
+    chars[i]++;
+    return new String(chars, 0, i + 1);
   }
 
   public static class LikeMatcher

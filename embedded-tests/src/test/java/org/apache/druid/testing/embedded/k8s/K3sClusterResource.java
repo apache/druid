@@ -211,6 +211,15 @@ public class K3sClusterResource extends TestcontainerResource<K3sContainer>
     client.pods().inNamespace(namespace).resources().forEach(this::waitUntilPodIsReady);
   }
 
+  /**
+   * Exposes the fabric8 {@link KubernetesClient} for tests that need to interact
+   * with the cluster directly (e.g. discover task-launched peon pods).
+   */
+  public KubernetesClient getKubernetesClient()
+  {
+    return client;
+  }
+
   @Override
   public void stop()
   {

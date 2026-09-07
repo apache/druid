@@ -22,7 +22,7 @@ title: "Manual compaction"
   ~ under the License.
   -->
 
-In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance.
+In Apache&circledR; Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance.
 
 You can perform manual compaction where you submit a one-time compaction task for a specific interval. Generally, you don't need to do this if you use [automatic compaction](./automatic-compaction.md), which is recommended for most workloads.
 

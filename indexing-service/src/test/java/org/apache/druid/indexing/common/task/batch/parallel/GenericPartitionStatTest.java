@@ -24,9 +24,9 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.timeline.partition.HashBucketShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 
@@ -36,7 +36,7 @@ public class GenericPartitionStatTest
 
   private GenericPartitionStat target;
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     target = new GenericPartitionStat(
@@ -65,7 +65,7 @@ public class GenericPartitionStatTest
   @Test
   public void hasPartitionIdThatMatchesSecondaryPartition()
   {
-    Assert.assertEquals(target.getSecondaryPartition().getBucketId(), target.getBucketId());
+    Assertions.assertEquals(target.getSecondaryPartition().getBucketId(), target.getBucketId());
   }
 
   @Test

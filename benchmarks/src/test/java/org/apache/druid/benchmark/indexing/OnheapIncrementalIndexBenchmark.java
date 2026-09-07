@@ -53,7 +53,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -278,7 +278,7 @@ public class OnheapIncrementalIndexBenchmark
                 List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
                 for (Result<TimeseriesResultValue> result : results) {
                   if (someoneRan.get()) {
-                    Assert.assertTrue(result.getValue().getDoubleMetric("doubleSumResult0") > 0);
+                    Assertions.assertTrue(result.getValue().getDoubleMetric("doubleSumResult0") > 0);
                   }
                 }
                 if (currentlyRunning.get() > 0) {
@@ -306,17 +306,17 @@ public class OnheapIncrementalIndexBenchmark
     List<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     final int expectedVal = elementsPerAddTask * taskCount;
     for (Result<TimeseriesResultValue> result : results) {
-      Assert.assertEquals(elementsPerAddTask, result.getValue().getLongMetric("rows").intValue());
+      Assertions.assertEquals(elementsPerAddTask, result.getValue().getLongMetric("rows").intValue());
       for (int i = 0; i < DIMENSION_COUNT; ++i) {
-        Assert.assertEquals(
-            StringUtils.format("Failed long sum on dimension %d", i),
+        Assertions.assertEquals(
             expectedVal,
-            result.getValue().getLongMetric(StringUtils.format("sumResult%s", i)).intValue()
+            result.getValue().getLongMetric(StringUtils.format("sumResult%s", i)).intValue(),
+            StringUtils.format("Failed long sum on dimension %d", i)
         );
-        Assert.assertEquals(
-            StringUtils.format("Failed double sum on dimension %d", i),
+        Assertions.assertEquals(
             expectedVal,
-            result.getValue().getDoubleMetric(StringUtils.format("doubleSumResult%s", i)).intValue()
+            result.getValue().getDoubleMetric(StringUtils.format("doubleSumResult%s", i)).intValue(),
+            StringUtils.format("Failed double sum on dimension %d", i)
         );
       }
     }

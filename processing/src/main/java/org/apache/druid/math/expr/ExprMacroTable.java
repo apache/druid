@@ -51,7 +51,8 @@ public class ExprMacroTable
           COMPLEX_DECODE_BASE_64_EXPR_MACRO,
           BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS
       ),
-      new BuiltInExprMacros.StringDecodeBase64UTFExprMacro()
+      new BuiltInExprMacros.StringDecodeBase64UTFExprMacro(),
+      new BuiltInExprMacros.NowExprMacro()
   );
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
 

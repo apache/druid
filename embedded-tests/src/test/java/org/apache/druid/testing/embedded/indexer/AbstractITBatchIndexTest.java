@@ -49,7 +49,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -349,7 +349,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
           mapper -> new RequestBuilder(HttpMethod.GET, url),
           new TypeReference<>(){}
       );
-      Assert.assertFalse("dimensions : " + dimensions, dimensions.contains("robot"));
+      Assertions.assertFalse(dimensions.contains("robot"), "dimensions : " + dimensions);
     }
     catch (Exception e) {
       LOG.error(e, "Error while testing");
@@ -413,12 +413,12 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
     if (assertRunsSubTasks) {
       final boolean perfectRollup = !taskSpec.contains("dynamic");
       final long newSubTasks = countCompleteSubTasks(dataSourceName, perfectRollup) - startSubTaskCount;
-      Assert.assertTrue(
+      Assertions.assertTrue(
+          newSubTasks > 0,
           StringUtils.format(
               "The supervisor task [%s] didn't create any sub tasks. Was it executed in the parallel mode?",
               taskID
-          ),
-          newSubTasks > 0
+          )
       );
     }
 
@@ -428,11 +428,11 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
       IngestionStatsAndErrors reportData = report.getPayload();
 
       // Confirm that the task waited longer than 0ms for the task to complete.
-      Assert.assertTrue(reportData.getSegmentAvailabilityWaitTimeMs() > 0);
+      Assertions.assertTrue(reportData.getSegmentAvailabilityWaitTimeMs() > 0);
 
       // Make sure that the result of waiting for segments to load matches the expected result
       if (segmentAvailabilityConfirmationPair.rhs != null) {
-        Assert.assertEquals(
+        Assertions.assertEquals(
             reportData.isSegmentAvailabilityConfirmed(),
             segmentAvailabilityConfirmationPair.rhs
         );
@@ -443,7 +443,7 @@ public abstract class AbstractITBatchIndexTest extends AbstractIndexerTest
                                      .onLeaderOverlord(o -> o.taskReportAsMap(taskID))
                                      .get(TaskContextReport.REPORT_KEY);
 
-      Assert.assertFalse(taskContextReport.getPayload().isEmpty());
+      Assertions.assertFalse(taskContextReport.getPayload().isEmpty());
     }
 
     // IT*ParallelIndexTest do a second round of ingestion to replace segments in an existing

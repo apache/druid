@@ -23,7 +23,7 @@ mvn -B com.github.eirslett:frontend-maven-plugin:install-node-and-npm@install-no
 PATH+=:web-console/target/node/
 
 # docs
-(cd website && npm install)
+(cd website && npm ci)
 cd website
 npm run build
 npm run link-lint

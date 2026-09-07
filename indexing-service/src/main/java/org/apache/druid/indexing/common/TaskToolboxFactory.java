@@ -45,6 +45,7 @@ import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.policy.PolicyEnforcer;
@@ -66,7 +67,6 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.DataSegmentServerAnnouncer;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.utils.RuntimeInfo;
@@ -90,7 +90,6 @@ public class TaskToolboxFactory
   private final DataSegmentMover dataSegmentMover;
   private final DataSegmentArchiver dataSegmentArchiver;
   private final DataSegmentAnnouncer segmentAnnouncer;
-  private final DataSegmentServerAnnouncer serverAnnouncer;
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider;
   private final Provider<DruidProcessingConfig> processingConfigProvider;
@@ -139,7 +138,6 @@ public class TaskToolboxFactory
       DataSegmentMover dataSegmentMover,
       DataSegmentArchiver dataSegmentArchiver,
       DataSegmentAnnouncer segmentAnnouncer,
-      DataSegmentServerAnnouncer serverAnnouncer,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
       Provider<QueryRunnerFactoryConglomerate> queryRunnerFactoryConglomerateProvider,
       Provider<DruidProcessingConfig> processingConfigProvider,
@@ -185,7 +183,6 @@ public class TaskToolboxFactory
     this.dataSegmentMover = dataSegmentMover;
     this.dataSegmentArchiver = dataSegmentArchiver;
     this.segmentAnnouncer = segmentAnnouncer;
-    this.serverAnnouncer = serverAnnouncer;
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryRunnerFactoryConglomerateProvider = queryRunnerFactoryConglomerateProvider;
     this.processingConfigProvider = processingConfigProvider;
@@ -245,14 +242,22 @@ public class TaskToolboxFactory
         .dataSegmentMover(dataSegmentMover)
         .dataSegmentArchiver(dataSegmentArchiver)
         .segmentAnnouncer(segmentAnnouncer)
-        .serverAnnouncer(serverAnnouncer)
         .handoffNotifierFactory(handoffNotifierFactory)
         .queryRunnerFactoryConglomerateProvider(queryRunnerFactoryConglomerateProvider)
         .processingConfigProvider(processingConfigProvider)
         .queryProcessingPool(queryProcessingPool)
         .joinableFactory(joinableFactory)
         .monitorSchedulerProvider(monitorSchedulerProvider)
-        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(taskWorkDir, true))
+        .segmentCacheManager(segmentCacheManagerFactory.manufacturate(
+            taskWorkDir,
+            null,
+            true,
+            // getBoolean (not the raw getContextValue) so a string "true"/"false" is parsed
+            QueryContext.of(task.getContext()).getBoolean(
+                Tasks.VIRTUAL_STORAGE_PARTIAL_DOWNLOADS_KEY,
+                config.isVirtualStoragePartialDownloadsEnabled()
+            )
+        ))
         .jsonMapper(jsonMapper)
         .taskWorkDir(taskWorkDir)
         .indexIO(indexIO)

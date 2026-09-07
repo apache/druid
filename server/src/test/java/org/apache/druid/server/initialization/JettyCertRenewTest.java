@@ -27,6 +27,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
@@ -45,13 +46,13 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.initialization.jetty.ServletFilterHolder;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.testing.TemporaryFolderExtension;
 import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Duration;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
@@ -83,8 +84,8 @@ import java.util.zip.GZIPOutputStream;
 
 public class JettyCertRenewTest extends BaseJettyTest
 {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+  @RegisterExtension
+  public final TemporaryFolderExtension folder = TemporaryFolderExtension.testCaseScoped();
 
   private Injector injector;
 
@@ -135,7 +136,11 @@ public class JettyCertRenewTest extends BaseJettyTest
       throw new RuntimeException(e);
     }
 
-    final int ephemeralPort = ThreadLocalRandom.current().nextInt(49152, 65535);
+    // Pick ports that are actually bindable rather than guessing a random one: with reused forks and
+    // many concurrent test shards a blind random port frequently collides (BindException). Verify the
+    // plaintext and TLS ports independently since both are enabled below.
+    final int ephemeralPort = SocketUtil.findOpenPortFrom(ThreadLocalRandom.current().nextInt(49152, 60000));
+    final int tlsEphemeralPort = SocketUtil.findOpenPortFrom(ephemeralPort + 1);
 
     latchedRequestState = new LatchedRequestStateHolder();
     injector = Initialization.makeInjectorWithModules(
@@ -149,7 +154,7 @@ public class JettyCertRenewTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder,
                     Key.get(DruidNode.class, Self.class),
-                    new DruidNode("test", "localhost", false, ephemeralPort, ephemeralPort + 1, true, true)
+                    new DruidNode("test", "localhost", false, ephemeralPort, tlsEphemeralPort, true, true)
                 );
                 binder.bind(TLSServerConfig.class).toInstance(tlsConfig);
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
@@ -220,10 +225,10 @@ public class JettyCertRenewTest extends BaseJettyTest
     Certificate[] certificatesBefore = getCertificates();
     for (Certificate certificate : certificatesBefore) {
       X509Certificate real = (X509Certificate) certificate;
-      Assert.assertEquals(dateFormat.parse("Fri Mar 29 11:00:40 UTC 2030").toInstant(), real.getNotAfter().toInstant());
+      Assertions.assertEquals(dateFormat.parse("Fri Mar 29 11:00:40 UTC 2030").toInstant(), real.getNotAfter().toInstant());
     }
 
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
+    Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
 
     // Replace the server and trustore keystores, wait for 3s and perform all the tests.
     File keyStore = new File(JettyCertRenewTest.class.getClassLoader().getResource("server-new.jks").getFile());
@@ -236,10 +241,10 @@ public class JettyCertRenewTest extends BaseJettyTest
     Certificate[] certificatesAfter = getCertificates();
     for (Certificate certificate : certificatesAfter) {
       X509Certificate real = (X509Certificate) certificate;
-      Assert.assertEquals(dateFormat.parse("Thu Aug 19 13:38:51 UTC 2032").toInstant(), real.getNotAfter().toInstant());
+      Assertions.assertEquals(dateFormat.parse("Thu Aug 19 13:38:51 UTC 2032").toInstant(), real.getNotAfter().toInstant());
     }
 
-    Assert.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
+    Assertions.assertEquals(DEFAULT_RESPONSE_CONTENT, getResponseWithProperTrustStore());
   }
 
   private static class AcceptAllForTestX509TrustManager implements X509TrustManager

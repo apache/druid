@@ -130,7 +130,7 @@ public class StringDimensionSchema extends DimensionSchema
       }
       maxStringLength = columnFormatSpec.getMaxStringLength();
     }
-    return new StringDimensionHandler(getName(), mvh, bitmap, false, maxStringLength);
+    return new StringDimensionHandler(getName(), mvh, bitmap, false, maxStringLength, columnFormatSpec);
   }
 
   @Override

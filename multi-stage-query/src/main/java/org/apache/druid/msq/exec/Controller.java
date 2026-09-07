@@ -60,7 +60,7 @@ public interface Controller
    * Terminate the controller upon a cancellation request. Causes a concurrently-running {@link #run} method in
    * a separate thread to cancel all outstanding work and exit.
    */
-  void stop(CancellationReason reason);
+  void stop(CancellationReason reason, @Nullable Throwable cause);
 
   // Worker-to-controller messages
 

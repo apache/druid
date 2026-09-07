@@ -21,6 +21,7 @@ package org.apache.druid.segment.file;
 
 import org.apache.druid.segment.column.ColumnDescriptor;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -41,9 +42,34 @@ import java.nio.ByteBuffer;
 public interface SegmentFileBuilder extends Closeable
 {
   /**
+   * Default bundle name for containers written without an explicit {@link #startFileBundle} call. Thinking of file
+   * bundles as directories, this is the root directory that sits above any named subdirectories the writer declares.
+   * Containers always carry a non-null bundle name; if the writer never calls {@code startFileBundle}, they are
+   * tagged with this default. Cache-layer readers treat all containers sharing this name as one mount/evict unit.
+   */
+  String ROOT_BUNDLE_NAME = "__root__";
+
+  /**
    * Add a column to the metadata of this segment file
    */
   void addColumn(String name, ColumnDescriptor columnDescriptor);
+
+  /**
+   * Declare that subsequent writes belong to a named bundle of files that should be stored together. This is a hint
+   * about physical layout, it does not constrain the names of files subsequently added, and implementations are free
+   * to ignore it entirely (the default is a no-op for formats that don't organize data into coarse-grained
+   * groupings). Projections are the primary caller today, but the mechanism is generic, it's equally applicable to
+   * grouping internal metadata, data shared across columns, etc.
+   * <p>
+   * Callers should invoke this before writing each bundle's files; passing {@code null} resets the current bundle to
+   * the {@link #ROOT_BUNDLE_NAME} default. Callers should not invoke this while a writer returned by
+   * {@link #addWithChannel} is still open (implementations may reject such calls).
+   *
+   * @see SegmentFileBuilderV10#startFileBundle(String) for the V10 semantics
+   */
+  default void startFileBundle(@Nullable String bundleName)
+  {
+  }
 
   /**
    * Add a {@link File} to the segment file as the specified name

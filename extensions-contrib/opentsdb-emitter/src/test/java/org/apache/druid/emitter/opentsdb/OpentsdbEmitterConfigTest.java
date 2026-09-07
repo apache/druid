@@ -22,15 +22,15 @@ package org.apache.druid.emitter.opentsdb;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class OpentsdbEmitterConfigTest
 {
   private ObjectMapper mapper = new DefaultObjectMapper();
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, new DefaultObjectMapper()));
@@ -43,7 +43,7 @@ public class OpentsdbEmitterConfigTest
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
     OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
                                                                 .readValue(opentsdbEmitterConfigString);
-    Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+    Assertions.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
   }
 
   @Test
@@ -53,7 +53,7 @@ public class OpentsdbEmitterConfigTest
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
     OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
                                                                 .readValue(opentsdbEmitterConfigString);
-    Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+    Assertions.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
   }
 
   @Test
@@ -63,7 +63,7 @@ public class OpentsdbEmitterConfigTest
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
     OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
         .readValue(opentsdbEmitterConfigString);
-    Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+    Assertions.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
   }
 
   @Test
@@ -73,12 +73,12 @@ public class OpentsdbEmitterConfigTest
     String opentsdbEmitterConfigString = mapper.writeValueAsString(opentsdbEmitterConfig);
     OpentsdbEmitterConfig expectedOpentsdbEmitterConfig = mapper.readerFor(OpentsdbEmitterConfig.class)
         .readValue(opentsdbEmitterConfigString);
-    Assert.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
+    Assertions.assertEquals(expectedOpentsdbEmitterConfig, opentsdbEmitterConfig);
   }
 
   @Test
   public void testJacksonModules()
   {
-    Assert.assertTrue(new OpentsdbEmitterModule().getJacksonModules().isEmpty());
+    Assertions.assertTrue(new OpentsdbEmitterModule().getJacksonModules().isEmpty());
   }
 }

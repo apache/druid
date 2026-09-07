@@ -119,8 +119,13 @@ public class ResourceInputSource extends AbstractInputSource
     @Override
     public InputStream open() throws IOException
     {
-      final InputStream resourceStream = classLoader.getResourceAsStream(resourceFile);
-      return CompressionUtils.decompress(resourceStream, resourceFile);
+      return CompressionUtils.decompress(openRaw(), resourceFile);
+    }
+
+    @Override
+    public InputStream openRaw()
+    {
+      return classLoader.getResourceAsStream(resourceFile);
     }
   }
 }

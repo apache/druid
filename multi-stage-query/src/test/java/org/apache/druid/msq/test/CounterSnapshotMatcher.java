@@ -22,7 +22,7 @@ package org.apache.druid.msq.test;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 
 /**
  * Utility class to build instances of {@link QueryCounterSnapshot} used in tests.
@@ -111,34 +111,34 @@ public class CounterSnapshotMatcher
   public void matchQuerySnapshot(String errorMessageFormat, QueryCounterSnapshot queryCounterSnapshot)
   {
     if (rows != null) {
-      Assert.assertArrayEquals(errorMessageFormat, rows, ((ChannelCounters.Snapshot) queryCounterSnapshot).getRows());
+      Assertions.assertArrayEquals(rows, ((ChannelCounters.Snapshot) queryCounterSnapshot).getRows(), errorMessageFormat);
     }
     if (bytes != null) {
-      Assert.assertArrayEquals(errorMessageFormat, bytes, ((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes());
+      Assertions.assertArrayEquals(bytes, ((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes(), errorMessageFormat);
     }
     if (frames != null) {
-      Assert.assertArrayEquals(errorMessageFormat, frames, ((ChannelCounters.Snapshot) queryCounterSnapshot).getFrames());
+      Assertions.assertArrayEquals(frames, ((ChannelCounters.Snapshot) queryCounterSnapshot).getFrames(), errorMessageFormat);
     }
     if (files != null) {
-      Assert.assertArrayEquals(errorMessageFormat, files, ((ChannelCounters.Snapshot) queryCounterSnapshot).getFiles());
+      Assertions.assertArrayEquals(files, ((ChannelCounters.Snapshot) queryCounterSnapshot).getFiles(), errorMessageFormat);
     }
     if (totalFiles != null) {
-      Assert.assertArrayEquals(errorMessageFormat, totalFiles, ((ChannelCounters.Snapshot) queryCounterSnapshot).getTotalFiles());
+      Assertions.assertArrayEquals(totalFiles, ((ChannelCounters.Snapshot) queryCounterSnapshot).getTotalFiles(), errorMessageFormat);
     }
     if (loadBytes != null) {
-      Assert.assertArrayEquals(errorMessageFormat, loadBytes, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadBytes());
+      Assertions.assertArrayEquals(loadBytes, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadBytes(), errorMessageFormat);
     }
     if (loadTime != null) {
-      Assert.assertArrayEquals(errorMessageFormat, loadTime, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadTime());
+      Assertions.assertArrayEquals(loadTime, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadTime(), errorMessageFormat);
     }
     if (loadWait != null) {
-      Assert.assertArrayEquals(errorMessageFormat, loadWait, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadWait());
+      Assertions.assertArrayEquals(loadWait, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadWait(), errorMessageFormat);
     }
     if (loadFiles != null) {
-      Assert.assertArrayEquals(errorMessageFormat, loadFiles, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadFiles());
+      Assertions.assertArrayEquals(loadFiles, ((ChannelCounters.Snapshot) queryCounterSnapshot).getLoadFiles(), errorMessageFormat);
     }
     if (segmentRowsProcessed != null) {
-      Assert.assertEquals(errorMessageFormat, segmentRowsProcessed.longValue(), ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsProcessed());
+      Assertions.assertEquals(segmentRowsProcessed.longValue(), ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsProcessed(), errorMessageFormat);
     }
   }
 }

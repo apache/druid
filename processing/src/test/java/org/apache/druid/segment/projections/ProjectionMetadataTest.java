@@ -73,6 +73,32 @@ class ProjectionMetadataTest
   }
 
   @Test
+  void testSerdeWithMinMaxTime() throws JsonProcessingException
+  {
+    final ProjectionMetadata spec = new ProjectionMetadata(
+        12345,
+        new AggregateProjectionSchema(
+            "some_projection",
+            "time",
+            null,
+            VirtualColumns.EMPTY,
+            Arrays.asList("a", "time"),
+            new AggregatorFactory[]{new CountAggregatorFactory("count")},
+            Arrays.asList(OrderBy.ascending("a"), OrderBy.ascending("time"))
+        ),
+        1_700_000_000_000L,
+        1_700_000_999_999L
+    );
+    final ProjectionMetadata roundTripped = JSON_MAPPER.readValue(
+        JSON_MAPPER.writeValueAsString(spec),
+        ProjectionMetadata.class
+    );
+    Assertions.assertEquals(spec, roundTripped);
+    Assertions.assertEquals(Long.valueOf(1_700_000_000_000L), roundTripped.getMinTime());
+    Assertions.assertEquals(Long.valueOf(1_700_000_999_999L), roundTripped.getMaxTime());
+  }
+
+  @Test
   void testEqualsAndHashcode()
   {
     EqualsVerifier.forClass(ProjectionMetadata.class).usingGetClass().verify();

@@ -135,6 +135,13 @@ public abstract class SimpleDoubleAggregatorFactory extends NullableNumericAggre
   }
 
   @Override
+  @Nullable
+  protected String getInputColumn()
+  {
+    return expression == null ? fieldName : null;
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     // handle "NaN" / "Infinity" values serialized as strings in JSON

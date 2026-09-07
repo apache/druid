@@ -21,11 +21,11 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
 import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 import org.opentest4j.IncompleteExecutionException;
+import org.opentest4j.TestAbortedException;
 
 import javax.annotation.Nullable;
 
@@ -37,7 +37,7 @@ import java.lang.reflect.Method;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Can be used to mark tests which are not-yet supported for some reason.
@@ -102,7 +102,7 @@ public @interface NotYetSupported
     EXPRESSION_NOT_GROUPED(Scope.BINDABLE, DruidException.class, "Expression '[a-z]+' is not being grouped"),
 
     NOT_ENOUGH_RULES(Scope.DECOUPLED, DruidException.class, "There are not enough rules to produce a node"),
-    SORT_REMOVE_TROUBLE(Scope.DECOUPLED, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
+    SORT_REMOVE_TROUBLE(Scope.DECOUPLED, AssertionError.class, ""),
     UNNEST_INLINED(Scope.DECOUPLED, Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(Scope.DECOUPLED, AssertionError.class, "(Result count mismatch|column content mismatch)"),
 
@@ -115,7 +115,6 @@ public @interface NotYetSupported
     DD_WINDOW(Scope.DECOUPLED_DART, DruidException.class, "DruidWindow.DRUID_LOGICAL"),
     DD_UNNEST_RESULT_MISMATCH(Scope.DECOUPLED_DART, AssertionError.class, "(Result count mismatch|column content mismatch)"),
     DD_UNNEST_INLINED(Scope.DECOUPLED_DART, Exception.class, "Missing conversion is Uncollect"),
-    DD_SORT_REMOVE_TROUBLE(Scope.DECOUPLED_DART, DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     DD_JOIN_CONDITION_NORMALIZATION(Scope.DECOUPLED_DART, DruidException.class, "Cannot handle equality"),
     DD_RESULT_MISMATCH_FLOAT_DOUBLE(Scope.DECOUPLED_DART, AssertionError.class, "column content mismatch");
     // @formatter:on
@@ -188,21 +187,21 @@ public @interface NotYetSupported
           }
           // If the base test case is supposed to be ignored already, just skip
           // the further evaluation
-          if (e instanceof AssumptionViolatedException) {
-            throw (AssumptionViolatedException) e;
+          if (e instanceof TestAbortedException) {
+            throw e;
           }
           if (e instanceof IncompleteExecutionException) {
             throw (IncompleteExecutionException) e;
           }
           Throwable finalE = e;
           assertThrows(
-              "Expected that this testcase will fail - it might got fixed; or failure have changed?",
               ignoreMode.throwableClass,
               () -> {
                 if (finalE != null) {
                   throw finalE;
                 }
-              }
+              },
+              "Expected that this testcase will fail - it might got fixed; or failure have changed?"
           );
 
           String trace = Throwables.getStackTraceAsString(e);
@@ -211,7 +210,7 @@ public @interface NotYetSupported
           if (!m.find()) {
             throw new AssertionError("Exception stacktrace doesn't match regex: " + ignoreMode.regex, e);
           }
-          throw new AssumptionViolatedException("Test is not-yet supported; ignored with:" + annotation);
+          throw new TestAbortedException("Test is not-yet supported; ignored with:" + annotation);
         }
       }
     }

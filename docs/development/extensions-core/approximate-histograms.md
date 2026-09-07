@@ -27,7 +27,7 @@ title: "Approximate Histogram aggregators"
  The Approximate Histogram aggregator is deprecated. Use [DataSketches Quantiles](../extensions-core/datasketches-quantiles.md) instead as it provides a superior distribution-independent algorithm with formal error guarantees.
 :::
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-histogram` in the extensions load list.
+To use this Apache&circledR; Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-histogram` in the extensions load list.
 
 The `druid-histogram` extension provides an approximate histogram aggregator and a fixed buckets histogram aggregator.
 
@@ -120,8 +120,8 @@ For general histogram and quantile use cases, the [DataSketches Quantiles Sketch
 |`fieldName`|Column name of the input to the aggregator.|No default, must be specified|
 |`lowerLimit`|Lower limit of the histogram. |No default, must be specified|
 |`upperLimit`|Upper limit of the histogram. |No default, must be specified|
-|`numBuckets`|Number of buckets for the histogram. The range [lowerLimit, upperLimit] will be divided into `numBuckets` intervals of equal size.|10|
-|`outlierHandlingMode`|Specifies how values outside of [lowerLimit, upperLimit] will be handled. Supported modes are "ignore", "overflow", and "clip". See [outlier handling modes](#outlier-handling-modes) for more details.|No default, must be specified|
+|`numBuckets`|Number of buckets for the histogram. The range [lowerLimit, upperLimit) will be divided into `numBuckets` intervals of equal size.|10|
+|`outlierHandlingMode`|Specifies how values outside of [lowerLimit, upperLimit) will be handled. Supported modes are "ignore", "overflow", and "clip". See [outlier handling modes](#outlier-handling-modes) for more details.|No default, must be specified|
 |`finalizeAsBase64Binary`|If true, the finalized aggregator value will be a Base64-encoded byte array containing the [serialized form](#serialization-formats) of the histogram. If false, the finalized aggregator value will be a JSON representation of the histogram.|false|
 
 An example aggregator spec is shown below:

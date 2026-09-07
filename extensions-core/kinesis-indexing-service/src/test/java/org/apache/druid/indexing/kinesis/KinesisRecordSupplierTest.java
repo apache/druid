@@ -31,10 +31,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.regions.Region;
@@ -63,6 +63,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.END_OF_SHARD_MARKER;
 import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.UNREAD_TRIM_HORIZON;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
@@ -162,13 +163,13 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   private KinesisClient kinesis;
   private KinesisRecordSupplier recordSupplier;
 
-  @Before
+  @BeforeEach
   public void setupTest()
   {
     kinesis = EasyMock.createMock(KinesisClient.class);
   }
 
-  @After
+  @AfterEach
   public void tearDownTest()
   {
     if (null != recordSupplier) {
@@ -224,26 +225,26 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         false
     );
 
-    Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
+    Assertions.assertTrue(recordSupplier.getAssignment().isEmpty());
 
     recordSupplier.assign(partitions);
 
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(ImmutableSet.of(SHARD_ID0, SHARD_ID1), recordSupplier.getPartitionIds(STREAM));
+    Assertions.assertEquals(partitions, recordSupplier.getAssignment());
+    Assertions.assertEquals(ImmutableSet.of(SHARD_ID0, SHARD_ID1), recordSupplier.getPartitionIds(STREAM));
 
     // calling poll would start background fetch if seek was called, but will instead be skipped and the results
     // empty
-    Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
+    Assertions.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
 
     EasyMock.verify(kinesis);
 
     // Check first request
-    Assert.assertEquals(STREAM, capturedRequest0.getValue().streamName());
-    Assert.assertNull(capturedRequest0.getValue().exclusiveStartShardId());
+    Assertions.assertEquals(STREAM, capturedRequest0.getValue().streamName());
+    Assertions.assertNull(capturedRequest0.getValue().exclusiveStartShardId());
 
     // Check second request has exclusive start shard id
-    Assert.assertEquals(STREAM, capturedRequest1.getValue().streamName());
-    Assert.assertEquals(SHARD_ID1, capturedRequest1.getValue().exclusiveStartShardId());
+    Assertions.assertEquals(STREAM, capturedRequest1.getValue().streamName());
+    Assertions.assertEquals(SHARD_ID1, capturedRequest1.getValue().exclusiveStartShardId());
   }
 
   @Test
@@ -289,24 +290,24 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         true
     );
 
-    Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
+    Assertions.assertTrue(recordSupplier.getAssignment().isEmpty());
 
     recordSupplier.assign(partitions);
 
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertEquals(ImmutableSet.of(SHARD_ID1, SHARD_ID0), recordSupplier.getPartitionIds(STREAM));
+    Assertions.assertEquals(partitions, recordSupplier.getAssignment());
+    Assertions.assertEquals(ImmutableSet.of(SHARD_ID1, SHARD_ID0), recordSupplier.getPartitionIds(STREAM));
 
     // calling poll would start background fetch if seek was called, but will instead be skipped and the results
     // empty
-    Assert.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
+    Assertions.assertEquals(Collections.emptyList(), recordSupplier.poll(100));
 
     EasyMock.verify(kinesis);
 
-    Assert.assertEquals(STREAM, capturedRequest0.getValue().streamName());
-    Assert.assertNull(capturedRequest0.getValue().nextToken());
+    Assertions.assertEquals(STREAM, capturedRequest0.getValue().streamName());
+    Assertions.assertNull(capturedRequest0.getValue().nextToken());
 
-    Assert.assertNull(capturedRequest1.getValue().streamName());
-    Assert.assertEquals(nextToken, capturedRequest1.getValue().nextToken());
+    Assertions.assertNull(capturedRequest1.getValue().streamName());
+    Assertions.assertEquals(nextToken, capturedRequest1.getValue().nextToken());
   }
 
   // filter out EOS markers
@@ -396,8 +397,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.verify(kinesis);
 
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertTrue(polledRecords.containsAll(ALL_RECORDS));
+    Assertions.assertEquals(partitions, recordSupplier.getAssignment());
+    Assertions.assertTrue(polledRecords.containsAll(ALL_RECORDS));
   }
 
   @Test
@@ -477,7 +478,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         POLL_TIMEOUT_MILLIS));
 
     EasyMock.verify(kinesis);
-    Assert.assertEquals(9, polledRecords.size());
+    Assertions.assertEquals(9, polledRecords.size());
   }
 
   @Test
@@ -529,34 +530,36 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     for (int i = 0; i < 10 && recordSupplier.bufferSize() < 2; i++) {
       Thread.sleep(100);
     }
-    Assert.assertEquals(Collections.emptyList(), cleanRecords(recordSupplier.poll(POLL_TIMEOUT_MILLIS)));
+    Assertions.assertEquals(Collections.emptyList(), cleanRecords(recordSupplier.poll(POLL_TIMEOUT_MILLIS)));
 
     EasyMock.verify(kinesis);
   }
 
-  @Test(expected = ISE.class)
-  public void testSeekUnassigned() throws InterruptedException
+  @Test
+  public void testSeekUnassigned()
   {
-    StreamPartition<String> shard0 = StreamPartition.of(STREAM, SHARD_ID0);
-    StreamPartition<String> shard1 = StreamPartition.of(STREAM, SHARD_ID1);
-    Set<StreamPartition<String>> partitions = ImmutableSet.of(
-        shard1
-    );
+    assertThrows(ISE.class, () -> {
+      StreamPartition<String> shard0 = StreamPartition.of(STREAM, SHARD_ID0);
+      StreamPartition<String> shard1 = StreamPartition.of(STREAM, SHARD_ID1);
+      Set<StreamPartition<String>> partitions = ImmutableSet.of(
+          shard1
+      );
 
-    recordSupplier = new KinesisRecordSupplier(
-        kinesis,
-        0,
-        2,
-        100,
-        5000,
-        5000,
-        1_000_000,
-        true,
-        false
-    );
+      recordSupplier = new KinesisRecordSupplier(
+          kinesis,
+          0,
+          2,
+          100,
+          5000,
+          5000,
+          1_000_000,
+          true,
+          false
+      );
 
-    recordSupplier.assign(partitions);
-    recordSupplier.seekToEarliest(Collections.singleton(shard0));
+      recordSupplier.assign(partitions);
+      recordSupplier.seekToEarliest(Collections.singleton(shard0));
+    });
   }
 
   @Test
@@ -634,8 +637,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.verify(kinesis);
 
-    Assert.assertEquals(partitions, recordSupplier.getAssignment());
-    Assert.assertTrue(polledRecords.containsAll(ALL_RECORDS));
+    Assertions.assertEquals(partitions, recordSupplier.getAssignment());
+    Assertions.assertTrue(polledRecords.containsAll(ALL_RECORDS));
   }
 
   @Test
@@ -672,7 +675,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         false
     );
 
-    Assert.assertEquals(KinesisSequenceNumber.UNREAD_LATEST,
+    Assertions.assertEquals(KinesisSequenceNumber.UNREAD_LATEST,
                         recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
     EasyMock.verify(kinesis);
   }
@@ -711,7 +714,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         false
     );
 
-    Assert.assertEquals(KinesisSequenceNumber.UNREAD_TRIM_HORIZON,
+    Assertions.assertEquals(KinesisSequenceNumber.UNREAD_TRIM_HORIZON,
                         recordSupplier.getEarliestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
     EasyMock.verify(kinesis);
   }
@@ -754,7 +757,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         false
     );
 
-    Assert.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
+    Assertions.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
   }
 
   @Test
@@ -830,11 +833,11 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
 
     EasyMock.replay(mockKinesis);
 
-    Assert.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of(UNREAD_TRIM_HORIZON)));
-    Assert.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of(END_OF_SHARD_MARKER)));
-    Assert.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("-1")));
-    Assert.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("0")));
-    Assert.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("10")));
+    Assertions.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of(UNREAD_TRIM_HORIZON)));
+    Assertions.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of(END_OF_SHARD_MARKER)));
+    Assertions.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("-1")));
+    Assertions.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("0")));
+    Assertions.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("10")));
 
     target.close();
   }
@@ -842,7 +845,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testParseRegionFromEndpoint_standardEndpoint()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Region.US_EAST_1,
         KinesisRecordSupplier.parseRegionFromEndpoint("https://kinesis.us-east-1.amazonaws.com")
     );
@@ -851,7 +854,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testParseRegionFromEndpoint_withoutScheme()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Region.EU_WEST_1,
         KinesisRecordSupplier.parseRegionFromEndpoint("kinesis.eu-west-1.amazonaws.com")
     );
@@ -860,7 +863,7 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testParseRegionFromEndpoint_cnRegion()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         Region.of("cn-north-1"),
         KinesisRecordSupplier.parseRegionFromEndpoint("https://kinesis.cn-north-1.amazonaws.com")
     );
@@ -869,19 +872,19 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
   @Test
   public void testParseRegionFromEndpoint_null()
   {
-    Assert.assertNull(KinesisRecordSupplier.parseRegionFromEndpoint(null));
+    Assertions.assertNull(KinesisRecordSupplier.parseRegionFromEndpoint(null));
   }
 
   @Test
   public void testParseRegionFromEndpoint_nonAwsEndpoint()
   {
-    Assert.assertNull(KinesisRecordSupplier.parseRegionFromEndpoint("https://localhost:4566"));
+    Assertions.assertNull(KinesisRecordSupplier.parseRegionFromEndpoint("https://localhost:4566"));
   }
 
   @Test
   public void testParseRegionFromEndpoint_noKinesisPrefix()
   {
-    Assert.assertNull(
+    Assertions.assertNull(
         KinesisRecordSupplier.parseRegionFromEndpoint("https://custom.us-east-1.amazonaws.com")
     );
   }

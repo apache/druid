@@ -40,9 +40,11 @@ import org.apache.druid.math.expr.SettableObjectBinding;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.virtual.ExpressionPlan;
 import org.apache.druid.segment.virtual.ExpressionPlanner;
 import org.apache.druid.segment.virtual.ExpressionSelectors;
@@ -345,6 +347,86 @@ public class ExpressionLambdaAggregatorFactory extends AggregatorFactory
     return combineExpression.get().eval(
         combineBindings.get().withBinding(accumulatorId, lhs).withBinding(name, rhs)
     ).value();
+  }
+
+  @Override
+  public AggregateCombiner makeAggregateCombiner()
+  {
+    final ColumnType intermediateType = getIntermediateType();
+    // The combiner delegates to combine(), which feeds inputs into combineExpression typed against initialCombineValue.
+    // If the fold-side intermediate type (what's stored in the segment column) differs from the combine-side type,
+    // the primitive selector would silently feed wrong-typed values into the expression. Fall through to UOE.
+    if (!intermediateType.equals(ExpressionType.toColumnType(initialCombineValue.get().type()))) {
+      return super.makeAggregateCombiner();
+    }
+    if (intermediateType.is(ValueType.LONG)) {
+      return new LongAggregateCombiner()
+      {
+        private long state;
+        private boolean isNull;
+
+        @Override
+        public void reset(ColumnValueSelector selector)
+        {
+          state = selector.getLong();
+          isNull = selector.isNull();
+        }
+
+        @Override
+        public void fold(ColumnValueSelector selector)
+        {
+          final Object combined = combine(isNull ? null : state, selector.getObject());
+          isNull = combined == null;
+          state = combined == null ? 0L : ((Number) combined).longValue();
+        }
+
+        @Override
+        public long getLong()
+        {
+          return state;
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return isNull;
+        }
+      };
+    } else if (intermediateType.is(ValueType.DOUBLE)) {
+      return new DoubleAggregateCombiner()
+      {
+        private double state;
+        private boolean isNull;
+
+        @Override
+        public void reset(ColumnValueSelector selector)
+        {
+          state = selector.getDouble();
+          isNull = selector.isNull();
+        }
+
+        @Override
+        public void fold(ColumnValueSelector selector)
+        {
+          final Object combined = combine(isNull ? null : state, selector.getObject());
+          isNull = combined == null;
+          state = combined == null ? 0.0 : ((Number) combined).doubleValue();
+        }
+
+        @Override
+        public double getDouble()
+        {
+          return state;
+        }
+
+        @Override
+        public boolean isNull()
+        {
+          return isNull;
+        }
+      };
+    }
+    return super.makeAggregateCombiner();
   }
 
   @Override

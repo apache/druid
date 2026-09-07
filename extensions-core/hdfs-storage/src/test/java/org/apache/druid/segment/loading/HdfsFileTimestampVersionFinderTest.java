@@ -21,19 +21,18 @@ package org.apache.druid.segment.loading;
 
 import com.google.common.io.ByteStreams;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.hdfs.HdfsFileTimestampVersionFinder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -54,20 +53,16 @@ public class HdfsFileTimestampVersionFinderTest
   private static byte[] pathByteContents = StringUtils.toUtf8(pathContents);
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupStatic() throws IOException
   {
-    hdfsTmpDir = File.createTempFile("hdfsHandlerTest", "dir");
-    if (!hdfsTmpDir.delete()) {
-      throw new IOE("Unable to delete hdfsTmpDir [%s]", hdfsTmpDir.getAbsolutePath());
-    }
+    hdfsTmpDir = FileUtils.createTempDir("hdfsHandlerTest");
     conf = new Configuration(true);
     fileSystem = new LocalFileSystem();
     fileSystem.initialize(hdfsTmpDir.toURI(), conf);
     fileSystem.setWorkingDirectory(new Path(hdfsTmpDir.toURI()));
 
-    final File tmpFile = File.createTempFile("hdfsHandlerTest", ".data");
-    tmpFile.delete();
+    final File tmpFile = new File(hdfsTmpDir, "input.data");
     try {
       Files.copy(new ByteArrayInputStream(pathByteContents), tmpFile.toPath());
       try (OutputStream stream = fileSystem.create(filePath)) {
@@ -79,7 +74,7 @@ public class HdfsFileTimestampVersionFinderTest
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownStatic() throws IOException
   {
     FileUtils.deleteDirectory(hdfsTmpDir);
@@ -89,13 +84,13 @@ public class HdfsFileTimestampVersionFinderTest
 
   private HdfsFileTimestampVersionFinder finder;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     finder = new HdfsFileTimestampVersionFinder(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException
   {
     fileSystem.delete(perTestPath, true);
@@ -106,7 +101,7 @@ public class HdfsFileTimestampVersionFinderTest
   public void testSimpleLatestVersion() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
+    Assertions.assertFalse(fileSystem.exists(oldPath));
     try (final OutputStream outputStream = fileSystem.create(oldPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
@@ -115,13 +110,13 @@ public class HdfsFileTimestampVersionFinderTest
     Thread.sleep(10);
 
     final Path newPath = new Path(perTestPath, "666test.txt");
-    Assert.assertFalse(fileSystem.exists(newPath));
+    Assertions.assertFalse(fileSystem.exists(newPath));
     try (final OutputStream outputStream = fileSystem.create(newPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         fileSystem.makeQualified(newPath).toUri(),
         finder.getLatestVersion(fileSystem.makeQualified(oldPath).toUri(), Pattern.compile(".*")));
   }
@@ -130,7 +125,7 @@ public class HdfsFileTimestampVersionFinderTest
   public void testAlreadyLatestVersion() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
+    Assertions.assertFalse(fileSystem.exists(oldPath));
     try (final OutputStream outputStream = fileSystem.create(oldPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
@@ -139,13 +134,13 @@ public class HdfsFileTimestampVersionFinderTest
     Thread.sleep(10);
 
     final Path newPath = new Path(perTestPath, "666test.txt");
-    Assert.assertFalse(fileSystem.exists(newPath));
+    Assertions.assertFalse(fileSystem.exists(newPath));
     try (final OutputStream outputStream = fileSystem.create(newPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         fileSystem.makeQualified(newPath).toUri(),
         finder.getLatestVersion(fileSystem.makeQualified(newPath).toUri(), Pattern.compile(".*")));
   }
@@ -154,15 +149,15 @@ public class HdfsFileTimestampVersionFinderTest
   public void testNoLatestVersion() throws IOException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
-    Assert.assertNull(finder.getLatestVersion(fileSystem.makeQualified(oldPath).toUri(), Pattern.compile(".*")));
+    Assertions.assertFalse(fileSystem.exists(oldPath));
+    Assertions.assertNull(finder.getLatestVersion(fileSystem.makeQualified(oldPath).toUri(), Pattern.compile(".*")));
   }
 
   @Test
   public void testSimpleLatestVersionInDir() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
+    Assertions.assertFalse(fileSystem.exists(oldPath));
     try (final OutputStream outputStream = fileSystem.create(oldPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
@@ -171,13 +166,13 @@ public class HdfsFileTimestampVersionFinderTest
     Thread.sleep(10);
 
     final Path newPath = new Path(perTestPath, "666test.txt");
-    Assert.assertFalse(fileSystem.exists(newPath));
+    Assertions.assertFalse(fileSystem.exists(newPath));
     try (final OutputStream outputStream = fileSystem.create(newPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         fileSystem.makeQualified(newPath).toUri(),
         finder.getLatestVersion(fileSystem.makeQualified(perTestPath).toUri(), Pattern.compile(".*test\\.txt")));
   }
@@ -186,7 +181,7 @@ public class HdfsFileTimestampVersionFinderTest
   public void testSkipMismatch() throws IOException, InterruptedException
   {
     final Path oldPath = new Path(perTestPath, "555test.txt");
-    Assert.assertFalse(fileSystem.exists(oldPath));
+    Assertions.assertFalse(fileSystem.exists(oldPath));
     try (final OutputStream outputStream = fileSystem.create(oldPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
@@ -195,13 +190,13 @@ public class HdfsFileTimestampVersionFinderTest
     Thread.sleep(10);
 
     final Path newPath = new Path(perTestPath, "666test.txt2");
-    Assert.assertFalse(fileSystem.exists(newPath));
+    Assertions.assertFalse(fileSystem.exists(newPath));
     try (final OutputStream outputStream = fileSystem.create(newPath);
          final InputStream inputStream = new ByteArrayInputStream(pathByteContents)) {
       ByteStreams.copy(inputStream, outputStream);
     }
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         fileSystem.makeQualified(oldPath).toUri(),
         finder.getLatestVersion(fileSystem.makeQualified(perTestPath).toUri(), Pattern.compile(".*test\\.txt")));
   }

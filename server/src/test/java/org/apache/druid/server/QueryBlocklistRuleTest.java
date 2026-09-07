@@ -19,12 +19,15 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.segment.TestHelper;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+
 import java.util.Map;
 import java.util.Set;
 
@@ -34,9 +37,9 @@ public class QueryBlocklistRuleTest
   public void testMatchAllCriteria_rejectsNullCriteria()
   {
     // Rule with all null criteria would block ALL queries - this should be rejected
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule("match-all", null, null, null)
+        () -> new DefaultQueryBlocklistRule("match-all", null, null, null)
     );
   }
 
@@ -44,9 +47,9 @@ public class QueryBlocklistRuleTest
   public void testMatchAllCriteria_rejectsEmptyCollections()
   {
     // Rule with all empty collections should also be rejected (same as null)
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule("match-all", ImmutableSet.of(), ImmutableSet.of(), ImmutableMap.of())
+        () -> new DefaultQueryBlocklistRule("match-all", ImmutableSet.of(), ImmutableSet.of(), ImmutableMap.of())
     );
   }
 
@@ -54,28 +57,28 @@ public class QueryBlocklistRuleTest
   public void testMatchByDataSource()
   {
     Set<String> dataSources = ImmutableSet.of("sensitive_data", "pii_table");
-    QueryBlocklistRule rule = new QueryBlocklistRule("block-sensitive", dataSources, null, null);
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule("block-sensitive", dataSources, null, null);
 
     // Should match when datasource is in the list
     TimeseriesQuery matchingQuery = Druids.newTimeseriesQueryBuilder()
                                    .dataSource("sensitive_data")
                                    .intervals("2020-01-01/2020-01-02")
                                    .build();
-    Assert.assertTrue(rule.matches(matchingQuery));
+    Assertions.assertTrue(rule.matches(matchingQuery));
 
     // Should not match when datasource is not in the list
     TimeseriesQuery nonMatchingQuery = Druids.newTimeseriesQueryBuilder()
                                       .dataSource("safe_data")
                                       .intervals("2020-01-01/2020-01-02")
                                       .build();
-    Assert.assertFalse(rule.matches(nonMatchingQuery));
+    Assertions.assertFalse(rule.matches(nonMatchingQuery));
   }
 
   @Test
   public void testMatchByContext()
   {
     Map<String, String> contextMatches = ImmutableMap.of("priority", "0", "application", "rogue-app");
-    QueryBlocklistRule rule = new QueryBlocklistRule("block-rogue-app", null, null, contextMatches);
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule("block-rogue-app", null, null, contextMatches);
 
     // Should match when all context values match
     TimeseriesQuery matchingQuery = Druids.newTimeseriesQueryBuilder()
@@ -83,7 +86,7 @@ public class QueryBlocklistRuleTest
                                    .intervals("2020-01-01/2020-01-02")
                                    .context(ImmutableMap.of("priority", "0", "application", "rogue-app"))
                                    .build();
-    Assert.assertTrue(rule.matches(matchingQuery));
+    Assertions.assertTrue(rule.matches(matchingQuery));
 
     // Should not match when context values don't match
     TimeseriesQuery nonMatchingQuery = Druids.newTimeseriesQueryBuilder()
@@ -91,28 +94,28 @@ public class QueryBlocklistRuleTest
                                       .intervals("2020-01-01/2020-01-02")
                                       .context(ImmutableMap.of("priority", "1", "application", "rogue-app"))
                                       .build();
-    Assert.assertFalse(rule.matches(nonMatchingQuery));
+    Assertions.assertFalse(rule.matches(nonMatchingQuery));
 
     // Should not match when context is missing
     TimeseriesQuery noContextQuery = Druids.newTimeseriesQueryBuilder()
                                     .dataSource("test")
                                     .intervals("2020-01-01/2020-01-02")
                                     .build();
-    Assert.assertFalse(rule.matches(noContextQuery));
+    Assertions.assertFalse(rule.matches(noContextQuery));
   }
 
   @Test
   public void testMatchByQueryType()
   {
     Set<String> queryTypes = ImmutableSet.of("timeseries", "groupBy");
-    QueryBlocklistRule rule = new QueryBlocklistRule("block-timeseries-groupby", null, queryTypes, null);
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule("block-timeseries-groupby", null, queryTypes, null);
 
     // Should match when query type is in the list (timeseries)
     TimeseriesQuery matchingQuery = Druids.newTimeseriesQueryBuilder()
                                    .dataSource("test")
                                    .intervals("2020-01-01/2020-01-02")
                                    .build();
-    Assert.assertTrue(rule.matches(matchingQuery));
+    Assertions.assertTrue(rule.matches(matchingQuery));
   }
 
   @Test
@@ -121,7 +124,7 @@ public class QueryBlocklistRuleTest
     // Rule with multiple criteria - all must match (AND logic)
     Set<String> dataSources = ImmutableSet.of("large_table");
     Map<String, String> contextMatches = ImmutableMap.of("priority", "0");
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "block-low-priority-large-table",
         dataSources,
         null,
@@ -134,7 +137,7 @@ public class QueryBlocklistRuleTest
                                    .intervals("2020-01-01/2020-01-02")
                                    .context(ImmutableMap.of("priority", "0"))
                                    .build();
-    Assert.assertTrue(rule.matches(matchingQuery));
+    Assertions.assertTrue(rule.matches(matchingQuery));
 
     // Should not match when only datasource matches
     TimeseriesQuery onlyDataSourceMatches = Druids.newTimeseriesQueryBuilder()
@@ -142,7 +145,7 @@ public class QueryBlocklistRuleTest
                                            .intervals("2020-01-01/2020-01-02")
                                            .context(ImmutableMap.of("priority", "1"))
                                            .build();
-    Assert.assertFalse(rule.matches(onlyDataSourceMatches));
+    Assertions.assertFalse(rule.matches(onlyDataSourceMatches));
 
     // Should not match when only context matches
     TimeseriesQuery onlyContextMatches = Druids.newTimeseriesQueryBuilder()
@@ -150,13 +153,13 @@ public class QueryBlocklistRuleTest
                                         .intervals("2020-01-01/2020-01-02")
                                         .context(ImmutableMap.of("priority", "0"))
                                         .build();
-    Assert.assertFalse(rule.matches(onlyContextMatches));
+    Assertions.assertFalse(rule.matches(onlyContextMatches));
   }
 
   @Test
   public void testWildcardBehavior_nullQueryTypes()
   {
-    QueryBlocklistRule rule = new QueryBlocklistRule(
+    QueryBlocklistRule rule = new DefaultQueryBlocklistRule(
         "block-datasource-all-types",
         ImmutableSet.of("blocked_ds"),
         null,  // null means match all query types
@@ -168,16 +171,16 @@ public class QueryBlocklistRuleTest
                            .intervals("2020-01-01/2020-01-02")
                            .build();
 
-    Assert.assertTrue(rule.matches(query));
+    Assertions.assertTrue(rule.matches(query));
   }
 
   @Test
   public void testRuleNameValidation_null()
   {
     // Rule name cannot be null
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule(null, ImmutableSet.of("ds"), null, null)
+        () -> new DefaultQueryBlocklistRule(null, ImmutableSet.of("ds"), null, null)
     );
   }
 
@@ -185,9 +188,41 @@ public class QueryBlocklistRuleTest
   public void testRuleNameValidation_empty()
   {
     // Rule name cannot be empty
-    Assert.assertThrows(
+    Assertions.assertThrows(
         IllegalArgumentException.class,
-        () -> new QueryBlocklistRule("", ImmutableSet.of("ds"), null, null)
+        () -> new DefaultQueryBlocklistRule("", ImmutableSet.of("ds"), null, null)
     );
+  }
+
+  @Test
+  public void testDeserialize_missingType_usesDefault() throws Exception
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    String json = "{\"ruleName\":\"block-ds\",\"dataSources\":[\"foo\"]}";
+    QueryBlocklistRule rule = mapper.readValue(json, QueryBlocklistRule.class);
+    Assertions.assertTrue(rule instanceof DefaultQueryBlocklistRule);
+    Assertions.assertEquals("block-ds", rule.getRuleName());
+  }
+
+  @Test
+  public void testDeserialize_explicitDefaultType() throws Exception
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    String json = "{\"type\":\"default\",\"ruleName\":\"block-ds\",\"dataSources\":[\"foo\"]}";
+    QueryBlocklistRule rule = mapper.readValue(json, QueryBlocklistRule.class);
+    Assertions.assertTrue(rule instanceof DefaultQueryBlocklistRule);
+    Assertions.assertEquals("block-ds", rule.getRuleName());
+  }
+
+  @Test
+  public void testDeserialize_unrecognizedType_fails()
+  {
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    String json = "{\"type\":\"customExtension\",\"ruleName\":\"block-ds\",\"dataSources\":[\"foo\"]}";
+    Exception e = Assertions.assertThrows(
+        Exception.class,
+        () -> mapper.readValue(json, QueryBlocklistRule.class)
+    );
+    Assertions.assertTrue(e.getMessage().contains("Could not resolve type id 'customExtension'"));
   }
 }

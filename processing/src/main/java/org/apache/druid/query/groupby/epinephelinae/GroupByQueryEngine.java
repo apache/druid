@@ -751,16 +751,16 @@ public class GroupByQueryEngine
     @Override
     protected void aggregateSingleValueDims(Grouper<IntKey> grouper)
     {
-      aggregateSingleValueDims((IntGrouper) grouper);
+      aggregateSingleValueDimsWithIntGrouper((IntGrouper) grouper);
     }
 
     @Override
     protected void aggregateMultiValueDims(Grouper<IntKey> grouper)
     {
-      aggregateMultiValueDims((IntGrouper) grouper);
+      aggregateMultiValueDimsWithIntGrouper((IntGrouper) grouper);
     }
 
-    private void aggregateSingleValueDims(IntGrouper grouper)
+    private void aggregateSingleValueDimsWithIntGrouper(IntGrouper grouper)
     {
       // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
       // It accesses dimension selectors directly and only works on truly dictionary-coded columns.
@@ -783,7 +783,7 @@ public class GroupByQueryEngine
       }
     }
 
-    private void aggregateMultiValueDims(IntGrouper grouper)
+    private void aggregateMultiValueDimsWithIntGrouper(IntGrouper grouper)
     {
       // No need to track strategy internal state footprint, because array-based grouping does not use strategies.
       // It accesses dimension selectors directly and only works on truly dictionary-coded columns.

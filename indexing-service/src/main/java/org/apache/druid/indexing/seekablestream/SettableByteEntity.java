@@ -62,7 +62,7 @@ public class SettableByteEntity<T extends ByteEntity> implements InputEntity
   }
 
   @Override
-  public InputStream open()
+  public InputStream openRaw()
   {
     // Duplicate the entity buffer, because the stream will update its position.
     final SettableByteBufferInputStream stream = new SettableByteBufferInputStream();

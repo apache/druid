@@ -21,17 +21,18 @@ package org.apache.druid.compressedbigdecimal;
 
 import org.apache.druid.compressedbigdecimal.aggregator.CompressedBigDecimalAggregatorFactoryBase;
 import org.apache.druid.java.util.common.IAE;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Unit tests for CompressedBigDecimal.
@@ -171,35 +172,37 @@ public class ArrayCompressedBigDecimalTest
     d3.accumulateSum(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d3.getScale()));
     d4.accumulateSum(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d4.getScale()));
 
-    Assert.assertEquals(-1, d2.compareTo(d1, true));
-    Assert.assertEquals(1, d1.compareTo(d2, true));
-    Assert.assertEquals(0, d3.compareTo(d4, true));
-    Assert.assertEquals(0, d4.compareTo(d3, true));
-    Assert.assertEquals(-1, d1.compareTo
+    Assertions.assertEquals(-1, d2.compareTo(d1, true));
+    Assertions.assertEquals(1, d1.compareTo(d2, true));
+    Assertions.assertEquals(0, d3.compareTo(d4, true));
+    Assertions.assertEquals(0, d4.compareTo(d3, true));
+    Assertions.assertEquals(-1, d1.compareTo
                                   (d3, true));
-    Assert.assertEquals(1, d3.compareTo(d1, true));
-    Assert.assertEquals(-1, d2.compareTo(d3, true));
-    Assert.assertEquals(1, d3.compareTo(d2, true));
-    Assert.assertEquals(1, d5.compareTo(d2, true));
-    Assert.assertEquals(-1, d2.compareTo(d5, true));
-    Assert.assertEquals(-1, d5.compareTo(d3, true));
-    Assert.assertEquals(1, d3.compareTo(d5, true));
+    Assertions.assertEquals(1, d3.compareTo(d1, true));
+    Assertions.assertEquals(-1, d2.compareTo(d3, true));
+    Assertions.assertEquals(1, d3.compareTo(d2, true));
+    Assertions.assertEquals(1, d5.compareTo(d2, true));
+    Assertions.assertEquals(-1, d2.compareTo(d5, true));
+    Assertions.assertEquals(-1, d5.compareTo(d3, true));
+    Assertions.assertEquals(1, d3.compareTo(d5, true));
   }
 
-  @Test(expected = IAE.class)
+  @Test
   public void testCompareToFailOptimized()
   {
-    ArrayCompressedBigDecimal d1 = ArrayCompressedBigDecimal.allocateZero(
-        CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SIZE,
-        CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SCALE
-    );
-    ArrayCompressedBigDecimal d2 = ArrayCompressedBigDecimal.allocateZero(
-        CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SIZE,
-        CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SCALE + 1
-        );
+    assertThrows(IAE.class, () -> {
+      ArrayCompressedBigDecimal d1 = ArrayCompressedBigDecimal.allocateZero(
+          CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SIZE,
+          CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SCALE
+      );
+      ArrayCompressedBigDecimal d2 = ArrayCompressedBigDecimal.allocateZero(
+          CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SIZE,
+          CompressedBigDecimalAggregatorFactoryBase.DEFAULT_SCALE + 1
+      );
 
-    // size doesn't match, so an IAE will be thrown
-    d1.compareTo(d2, true);
+      // size doesn't match, so an IAE will be thrown
+      d1.compareTo(d2, true);
+    });
   }
 
   @Test
@@ -232,18 +235,18 @@ public class ArrayCompressedBigDecimalTest
     d3.accumulateSum(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d3.getScale()));
     d4.accumulateSum(Utils.scale(new ArrayCompressedBigDecimal(new BigDecimal(8L * Integer.MAX_VALUE)), d4.getScale()));
 
-    Assert.assertEquals(-1, d2.compareTo(d1, true));
-    Assert.assertEquals(1, d1.compareTo(d2, true));
-    Assert.assertEquals(0, d3.compareTo(d4, true));
-    Assert.assertEquals(0, d4.compareTo(d3, true));
-    Assert.assertEquals(-1, d1.compareTo(d3, true));
-    Assert.assertEquals(1, d3.compareTo(d1, true));
-    Assert.assertEquals(-1, d2.compareTo(d3, true));
-    Assert.assertEquals(1, d3.compareTo(d2, true));
-    Assert.assertEquals(1, d5.compareTo(d2, true));
-    Assert.assertEquals(-1, d2.compareTo(d5, true));
-    Assert.assertEquals(-1, d5.compareTo(d3, true));
-    Assert.assertEquals(1, d3.compareTo(d5, true));
+    Assertions.assertEquals(-1, d2.compareTo(d1, true));
+    Assertions.assertEquals(1, d1.compareTo(d2, true));
+    Assertions.assertEquals(0, d3.compareTo(d4, true));
+    Assertions.assertEquals(0, d4.compareTo(d3, true));
+    Assertions.assertEquals(-1, d1.compareTo(d3, true));
+    Assertions.assertEquals(1, d3.compareTo(d1, true));
+    Assertions.assertEquals(-1, d2.compareTo(d3, true));
+    Assertions.assertEquals(1, d3.compareTo(d2, true));
+    Assertions.assertEquals(1, d5.compareTo(d2, true));
+    Assertions.assertEquals(-1, d2.compareTo(d5, true));
+    Assertions.assertEquals(-1, d5.compareTo(d3, true));
+    Assertions.assertEquals(1, d3.compareTo(d5, true));
   }
 
   @Test
@@ -255,10 +258,10 @@ public class ArrayCompressedBigDecimalTest
     CompressedBigDecimal negativeOne = ArrayCompressedBigDecimal.wrap(new int[]{-1, -1}, 0);
 
     // compareTo skips subtraction in overflow cases
-    Assert.assertEquals(1, maxPositive.compareTo(minNegative));
-    Assert.assertEquals(-1, minNegative.compareTo(maxPositive));
-    Assert.assertEquals(1, maxPositive.compareTo(negativeOne));
-    Assert.assertEquals(-1, minNegative.compareTo(one));
+    Assertions.assertEquals(1, maxPositive.compareTo(minNegative));
+    Assertions.assertEquals(-1, minNegative.compareTo(maxPositive));
+    Assertions.assertEquals(1, maxPositive.compareTo(negativeOne));
+    Assertions.assertEquals(-1, minNegative.compareTo(one));
   }
 
   /**
@@ -438,25 +441,29 @@ public class ArrayCompressedBigDecimalTest
   /**
    * Test method for {@link ArrayCompressedBigDecimal#accumulateSum(CompressedBigDecimal)}.
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testUnevenAccumulateOverflowWithTruncate()
   {
-    ArrayCompressedBigDecimal bd = ArrayCompressedBigDecimal.wrap(new int[]{Integer.MAX_VALUE}, 0);
+    assertThrows(IllegalArgumentException.class, () -> {
+      ArrayCompressedBigDecimal bd = ArrayCompressedBigDecimal.wrap(new int[]{Integer.MAX_VALUE}, 0);
 
-    ArrayCompressedBigDecimal add = ArrayCompressedBigDecimal.wrap(new int[]{1, 1}, 0);
+      ArrayCompressedBigDecimal add = ArrayCompressedBigDecimal.wrap(new int[]{1, 1}, 0);
 
-    bd.accumulateSum(add);
+      bd.accumulateSum(add);
+    });
   }
 
   /**
    * Test method for {@link ArrayCompressedBigDecimal#accumulateSum(CompressedBigDecimal)}.
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testAccumulateSumScaleMismatch()
   {
-    ArrayCompressedBigDecimal bd = ArrayCompressedBigDecimal.allocateZero(2, 1);
-    ArrayCompressedBigDecimal add = new ArrayCompressedBigDecimal(1, 0);
-    bd.accumulateSum(add);
+    assertThrows(IllegalArgumentException.class, () -> {
+      ArrayCompressedBigDecimal bd = ArrayCompressedBigDecimal.allocateZero(2, 1);
+      ArrayCompressedBigDecimal add = new ArrayCompressedBigDecimal(1, 0);
+      bd.accumulateSum(add);
+    });
   }
 
   /**
@@ -524,22 +531,26 @@ public class ArrayCompressedBigDecimalTest
   /**
    * Test method for {@link Utils#accumulateSum(ByteBuffer, int, int, int, CompressedBigDecimal)}
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testUtilsAccumulateSumByteBuf()
   {
-    ByteBuffer buf = ByteBuffer.allocate(4);
-    Utils.accumulateSum(buf, 0, 1, 2, new ArrayCompressedBigDecimal(new BigDecimal(Long.MAX_VALUE)));
+    assertThrows(IllegalArgumentException.class, () -> {
+      ByteBuffer buf = ByteBuffer.allocate(4);
+      Utils.accumulateSum(buf, 0, 1, 2, new ArrayCompressedBigDecimal(new BigDecimal(Long.MAX_VALUE)));
+    });
   }
 
   /**
    * Test method for {@link Utils#accumulateSum(CompressedBigDecimal, long, int)}
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testUtilsAccumulateSumCbdWithExeception()
   {
-    BigDecimal bd = new BigDecimal(new BigInteger("1"));
-    ArrayCompressedBigDecimal d = new ArrayCompressedBigDecimal(bd);
-    Utils.accumulateSum(d, 0L, 1);
+    assertThrows(IllegalArgumentException.class, () -> {
+      BigDecimal bd = new BigDecimal(new BigInteger("1"));
+      ArrayCompressedBigDecimal d = new ArrayCompressedBigDecimal(bd);
+      Utils.accumulateSum(d, 0L, 1);
+    });
   }
 
   /**
@@ -565,7 +576,7 @@ public class ArrayCompressedBigDecimalTest
   {
     CompressedBigDecimal bd = new ArrayCompressedBigDecimal(new BigDecimal("1.1234567890"));
     CompressedBigDecimal scaled = Utils.scale(bd, 9);
-    Assert.assertEquals("1.123456789", scaled.toString());
+    Assertions.assertEquals("1.123456789", scaled.toString());
   }
 
   /**
@@ -595,7 +606,7 @@ public class ArrayCompressedBigDecimalTest
     ArrayCompressedBigDecimal bd = ArrayCompressedBigDecimal.allocateZero(2, 0);
 
     bd.setMinValue();
-    Assert.assertEquals("-9223372036854775808", bd.toString());
+    Assertions.assertEquals("-9223372036854775808", bd.toString());
   }
 
   @Test
@@ -604,7 +615,7 @@ public class ArrayCompressedBigDecimalTest
     ArrayCompressedBigDecimal bd = ArrayCompressedBigDecimal.allocateZero(2, 0);
 
     bd.setMaxValue();
-    Assert.assertEquals("9223372036854775807", bd.toString());
+    Assertions.assertEquals("9223372036854775807", bd.toString());
   }
 
   @Test
@@ -618,13 +629,13 @@ public class ArrayCompressedBigDecimalTest
     ArrayCompressedBigDecimal bd4 = new ArrayCompressedBigDecimal(new BigDecimal(Integer.MAX_VALUE));
 
     bdBase.accumulateMax(bd1);
-    Assert.assertEquals(Long.toString(Long.MIN_VALUE), bdBase.toString());
+    Assertions.assertEquals(Long.toString(Long.MIN_VALUE), bdBase.toString());
     bdBase.accumulateMax(bd2);
-    Assert.assertEquals("-1", bdBase.toString());
+    Assertions.assertEquals("-1", bdBase.toString());
     bdBase.accumulateMax(bd3);
-    Assert.assertEquals(Long.toString(Long.MAX_VALUE), bdBase.toString());
+    Assertions.assertEquals(Long.toString(Long.MAX_VALUE), bdBase.toString());
     bdBase.accumulateMax(bd4);
-    Assert.assertEquals(Long.toString(Long.MAX_VALUE), bdBase.toString());
+    Assertions.assertEquals(Long.toString(Long.MAX_VALUE), bdBase.toString());
   }
 
   @Test
@@ -642,20 +653,20 @@ public class ArrayCompressedBigDecimalTest
     ArrayCompressedBigDecimal bd7 = ArrayCompressedBigDecimal.wrap(new int[]{0, 0, 0, 0, 0, 1}, 0);
 
     bdBase.accumulateMin(bd1);
-    Assert.assertEquals("-1", bdBase.toString());
+    Assertions.assertEquals("-1", bdBase.toString());
     bdBase.accumulateMin(bd2);
-    Assert.assertEquals("-1", bdBase.toString());
+    Assertions.assertEquals("-1", bdBase.toString());
     bdBase.accumulateMin(bd3);
-    Assert.assertEquals("-1", bdBase.toString());
+    Assertions.assertEquals("-1", bdBase.toString());
     bdBase.accumulateMin(bd4);
-    Assert.assertEquals(Integer.toString(Integer.MIN_VALUE), bdBase.toString());
+    Assertions.assertEquals(Integer.toString(Integer.MIN_VALUE), bdBase.toString());
     bdBase.accumulateMin(bd5);
-    Assert.assertEquals(Long.toString(Long.MIN_VALUE), bdBase.toString());
+    Assertions.assertEquals(Long.toString(Long.MIN_VALUE), bdBase.toString());
     // smallest possible 6-int[] number
     bdBase.accumulateMin(bd6);
-    Assert.assertEquals("-3138550867693340381917894711603833208051177722232017256448", bdBase.toString());
+    Assertions.assertEquals("-3138550867693340381917894711603833208051177722232017256448", bdBase.toString());
     // this tests that we don't do the subtraction and overflow
     bdBase.accumulateMin(bd7);
-    Assert.assertEquals("-3138550867693340381917894711603833208051177722232017256448", bdBase.toString());
+    Assertions.assertEquals("-3138550867693340381917894711603833208051177722232017256448", bdBase.toString());
   }
 }

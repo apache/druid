@@ -79,26 +79,49 @@ public class Transformer implements BaseTransformer
   @Nullable
   public InputRow transform(@Nullable final InputRow row)
   {
+    final InputRow transformedRow = transformWithoutFilter(row);
+    if (!rowMatchesFilter(transformedRow)) {
+      return null;
+    }
+    return transformedRow;
+  }
+
+  @Override
+  @Nullable
+  public InputRow transformWithoutFilter(@Nullable final InputRow row)
+  {
     if (row == null) {
       return null;
     }
 
-    final InputRow transformedRow;
-
     if (transforms.isEmpty()) {
-      transformedRow = row;
+      return row;
     } else {
-      transformedRow = new TransformedInputRow(row, transforms);
+      return new TransformedInputRow(row, transforms);
+    }
+  }
+
+  /**
+   * Returns true if this transformer has a {@link TransformSpec} filter to apply via {@link #rowMatchesFilter}.
+   */
+  @Override
+  public boolean hasFilter()
+  {
+    return valueMatcher != null;
+  }
+
+  /**
+   * Applies the {@link TransformSpec} filter to a row that has already had transforms applied.
+   */
+  @Override
+  public boolean rowMatchesFilter(@Nullable final InputRow transformedRow)
+  {
+    if (transformedRow == null || valueMatcher == null) {
+      return true;
     }
 
-    if (valueMatcher != null) {
-      rowSupplierForValueMatcher.set(transformedRow);
-      if (!valueMatcher.matches(false)) {
-        return null;
-      }
-    }
-
-    return transformedRow;
+    rowSupplierForValueMatcher.set(transformedRow);
+    return valueMatcher.matches(false);
   }
 
   @Override

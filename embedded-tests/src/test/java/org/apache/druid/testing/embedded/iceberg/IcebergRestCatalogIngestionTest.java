@@ -109,7 +109,7 @@ public class IcebergRestCatalogIngestionTest extends EmbeddedClusterTestBase
     final DataWriter<GenericRecord> writer;
     try (DataWriter<GenericRecord> w = Parquet.writeData(file)
                                               .schema(ICEBERG_SCHEMA)
-                                              .createWriterFunc(GenericParquetWriter::buildWriter)
+                                              .createWriterFunc(GenericParquetWriter::create)
                                               .overwrite()
                                               .withSpec(table.spec())
                                               .build()) {

@@ -24,12 +24,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.utils.RuntimeInfo;
 
-import javax.validation.constraints.NotNull;
 import java.util.Set;
 
 /**

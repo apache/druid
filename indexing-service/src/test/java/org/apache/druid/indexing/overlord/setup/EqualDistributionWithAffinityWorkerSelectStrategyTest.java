@@ -24,13 +24,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
-import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.config.HttpRemoteTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -49,7 +49,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
 
     NoopTask noopTask = NoopTask.forDatasource("foo");
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-            new RemoteTaskRunnerConfig(),
+            new HttpRemoteTaskRunnerConfig(),
             ImmutableMap.of(
                     "localhost0",
                     new ImmutableWorkerInfo(
@@ -82,7 +82,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ),
             noopTask
     );
-    Assert.assertEquals("localhost1", worker.getWorker().getHost());
+    Assertions.assertEquals("localhost1", worker.getWorker().getHost());
   }
 
   @Test
@@ -94,7 +94,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-            new RemoteTaskRunnerConfig(),
+            new HttpRemoteTaskRunnerConfig(),
             ImmutableMap.of(
                     "lhost",
                     new ImmutableWorkerInfo(
@@ -113,7 +113,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ),
             NoopTask.create()
     );
-    Assert.assertEquals("lhost", worker.getWorker().getHost());
+    Assertions.assertEquals("lhost", worker.getWorker().getHost());
   }
 
   @Test
@@ -125,7 +125,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
     );
 
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-            new RemoteTaskRunnerConfig(),
+            new HttpRemoteTaskRunnerConfig(),
             ImmutableMap.of(
                     "localhost",
                     new ImmutableWorkerInfo(
@@ -137,7 +137,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             ),
             NoopTask.create()
     );
-    Assert.assertNull(worker);
+    Assertions.assertNull(worker);
   }
 
   @Test
@@ -152,7 +152,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
         objectMapper.writeValueAsBytes(strategy),
         WorkerSelectStrategy.class
     );
-    Assert.assertEquals(strategy, strategy2);
+    Assertions.assertEquals(strategy, strategy2);
   }
 
   @Test
@@ -170,7 +170,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
 
     NoopTask noopTask = NoopTask.forDatasource("foo");
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "localhost0",
             new ImmutableWorkerInfo(
@@ -191,10 +191,10 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
         ),
         noopTask
     );
-    Assert.assertNotNull(worker);
+    Assertions.assertNotNull(worker);
 
     ImmutableWorkerInfo worker1 = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "localhost0",
             new ImmutableWorkerInfo(
@@ -218,7 +218,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
         noopTask
     );
 
-    Assert.assertNull(worker1);
+    Assertions.assertNull(worker1);
 
   }
 
@@ -237,7 +237,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
 
     NoopTask noopTask = NoopTask.forDatasource("foo");
     ImmutableWorkerInfo worker = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "localhost0",
             new ImmutableWorkerInfo(
@@ -258,10 +258,10 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
         ),
         noopTask
     );
-    Assert.assertNotNull(worker);
+    Assertions.assertNotNull(worker);
 
     ImmutableWorkerInfo worker1 = strategy.findWorkerForTask(
-        new RemoteTaskRunnerConfig(),
+        new HttpRemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "localhost0",
             new ImmutableWorkerInfo(
@@ -285,7 +285,7 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
         noopTask
     );
 
-    Assert.assertNull(worker1);
+    Assertions.assertNull(worker1);
 
   }
 }

@@ -21,12 +21,46 @@ package org.apache.druid.indexing.overlord.config;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import org.joda.time.Period;
 
 /**
  */
-public class HttpRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
+public class HttpRemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 {
+  // This default value is kept to take MM restart into consideration just in case it was
+  // restarted right after task assignment.
+  @JsonProperty
+  @NotNull
+  private Period taskAssignmentTimeout = new Period("PT5M");
+
+  @JsonProperty
+  @NotNull
+  private Period taskCleanupTimeout = new Period("PT15M");
+
+  @JsonProperty
+  @Min(1)
+  private int pendingTasksRunnerNumThreads = 1;
+
+  @JsonProperty
+  @Min(1)
+  private int maxRetriesBeforeBlacklist = 5;
+
+  @JsonProperty
+  @NotNull
+  private Period workerBlackListBackoffTime = new Period("PT15M");
+
+  @JsonProperty
+  @NotNull
+  private Period workerBlackListCleanupPeriod = new Period("PT5M");
+
+  @JsonProperty
+  @Max(100)
+  @Min(0)
+  private int maxPercentageBlacklistWorkers = 20;
+
   @JsonProperty
   private int workerSyncNumThreads = 5;
 
@@ -47,6 +81,46 @@ public class HttpRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
 
   @JsonProperty
   private Period serverUnstabilityTimeout = new Period("PT1M");
+
+  public Period getTaskAssignmentTimeout()
+  {
+    return taskAssignmentTimeout;
+  }
+
+  public Period getTaskCleanupTimeout()
+  {
+    return taskCleanupTimeout;
+  }
+
+  public int getPendingTasksRunnerNumThreads()
+  {
+    return pendingTasksRunnerNumThreads;
+  }
+
+  public int getMaxRetriesBeforeBlacklist()
+  {
+    return maxRetriesBeforeBlacklist;
+  }
+
+  public Period getWorkerBlackListBackoffTime()
+  {
+    return workerBlackListBackoffTime;
+  }
+
+  public Period getWorkerBlackListCleanupPeriod()
+  {
+    return workerBlackListCleanupPeriod;
+  }
+
+  public int getMaxPercentageBlacklistWorkers()
+  {
+    return maxPercentageBlacklistWorkers;
+  }
+
+  public void setMaxPercentageBlacklistWorkers(int maxPercentageBlacklistWorkers)
+  {
+    this.maxPercentageBlacklistWorkers = maxPercentageBlacklistWorkers;
+  }
 
   public int getWorkerSyncNumThreads()
   {

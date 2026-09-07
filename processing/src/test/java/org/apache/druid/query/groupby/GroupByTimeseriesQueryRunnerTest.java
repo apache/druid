@@ -54,12 +54,12 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.joda.time.DateTime;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -71,18 +71,19 @@ import java.util.Map;
 /**
  * This class is for testing both timeseries and groupBy queries with the same set of queries.
  */
-@RunWith(Parameterized.class)
+@ParameterizedClass
+@MethodSource("constructorFeeder")
 public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 {
   private static TestGroupByBuffers BUFFER_POOLS = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass()
   {
     BUFFER_POOLS = TestGroupByBuffers.createDefault();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass()
   {
     BUFFER_POOLS.close();
@@ -90,7 +91,6 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   }
 
   @SuppressWarnings("unchecked")
-  @Parameterized.Parameters(name = "{0}, vectorize = {1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     setUpClass();
@@ -183,9 +183,15 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
       };
 
       for (boolean vectorize : ImmutableList.of(false, true)) {
-        // Add vectorization tests for any indexes that support it.
-        if (!vectorize || QueryRunnerTestHelper.isTestRunnerVectorizable(runner)) {
-          constructors.add(new Object[]{modifiedRunner, vectorize});
+        for (boolean useVectorApi : ImmutableList.of(false, true)) {
+          if (!vectorize && useVectorApi) {
+            // SIMD path is reachable only when vectorization is on; skip the redundant combo.
+            continue;
+          }
+          // Add vectorization tests for any indexes that support it.
+          if (!vectorize || QueryRunnerTestHelper.isTestRunnerVectorizable(runner)) {
+            constructors.add(new Object[]{modifiedRunner, vectorize, useVectorApi});
+          }
         }
       }
     }
@@ -193,9 +199,9 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     return constructors;
   }
 
-  public GroupByTimeseriesQueryRunnerTest(QueryRunner runner, boolean vectorize)
+  public GroupByTimeseriesQueryRunnerTest(QueryRunner runner, boolean vectorize, boolean useVectorApi)
   {
-    super(runner, false, vectorize, QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS);
+    super(runner, false, vectorize, QueryRunnerTestHelper.COMMON_DOUBLE_AGGREGATORS, useVectorApi);
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
@@ -220,16 +226,16 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     Result<TimeseriesResultValue> result = results.iterator().next();
 
-    Assert.assertEquals(expectedEarliest, result.getTimestamp());
-    Assert.assertFalse(
-        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
-        result.getTimestamp().isAfter(expectedLast)
+    Assertions.assertEquals(expectedEarliest, result.getTimestamp());
+    Assertions.assertFalse(
+        result.getTimestamp().isAfter(expectedLast),
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast)
     );
 
     final TimeseriesResultValue value = result.getValue();
 
-    Assert.assertEquals(result.toString(), 1870.061029, value.getDoubleMetric("maxIndex"), 1870.061029 * 1e-6);
-    Assert.assertEquals(result.toString(), 59.021022, value.getDoubleMetric("minIndex"), 59.021022 * 1e-6);
+    Assertions.assertEquals(1870.061029, value.getDoubleMetric("maxIndex"), 1870.061029 * 1e-6, result.toString());
+    Assertions.assertEquals(59.021022, value.getDoubleMetric("minIndex"), 59.021022 * 1e-6, result.toString());
   }
 
   // GroupBy handles timestamps differently when granularity is ALL
@@ -259,25 +265,25 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query)).toList();
     Result<TimeseriesResultValue> result = results.iterator().next();
 
-    Assert.assertEquals(expectedEarliest, result.getTimestamp());
-    Assert.assertFalse(
-        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast),
-        result.getTimestamp().isAfter(expectedLast)
+    Assertions.assertEquals(expectedEarliest, result.getTimestamp());
+    Assertions.assertFalse(
+        result.getTimestamp().isAfter(expectedLast),
+        StringUtils.format("Timestamp[%s] > expectedLast[%s]", result.getTimestamp(), expectedLast)
     );
-    Assert.assertEquals(59L, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC));
-    Assert.assertEquals(1870, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC));
-    Assert.assertEquals(
+    Assertions.assertEquals(59L, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MIN_INDEX_METRIC));
+    Assertions.assertEquals(1870, (long) result.getValue().getLongMetric(QueryRunnerTestHelper.LONG_MAX_INDEX_METRIC));
+    Assertions.assertEquals(
         59.021022D,
         result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MIN_INDEX_METRIC),
         0
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         1870.061029D,
         result.getValue().getDoubleMetric(QueryRunnerTestHelper.DOUBLE_MAX_INDEX_METRIC),
         0
     );
-    Assert.assertEquals(59.021023F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC), 0);
-    Assert.assertEquals(1870.061F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC), 0);
+    Assertions.assertEquals(59.021023F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MIN_INDEX_METRIC), 0);
+    Assertions.assertEquals(1870.061F, result.getValue().getFloatMetric(QueryRunnerTestHelper.FLOAT_MAX_INDEX_METRIC), 0);
   }
 
   @Override
@@ -353,11 +359,6 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
   @Override
   public void testTimeseriesWithExpressionAggregatorTooBig()
   {
-    cannotVectorize();
-    if (!vectorize) {
-      // size bytes when it overshoots varies slightly between algorithms
-      expectedException.expectMessage("Unable to serialize [ARRAY<STRING>]");
-    }
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(Granularities.DAY)
@@ -386,7 +387,23 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
                                   .context(makeContext())
                                   .build();
 
-    runner.run(QueryPlus.wrap(query)).toList();
+    if (vectorize) {
+      final RuntimeException exception = Assertions.assertThrows(
+          RuntimeException.class,
+          () -> runner.run(QueryPlus.wrap(query)).toList()
+      );
+      Assertions.assertTrue(exception.getMessage().contains("Cannot vectorize!"));
+      return;
+    }
+    // Size bytes when it overshoots varies slightly between algorithms.
+    final Throwable exception = Assertions.assertThrows(
+        Throwable.class,
+        () -> runner.run(QueryPlus.wrap(query)).toList()
+    );
+    Assertions.assertTrue(
+        exception.getMessage() != null
+        && exception.getMessage().contains("Unable to serialize [ARRAY<STRING>]")
+    );
   }
 
   @Override
@@ -408,6 +425,6 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query))
                                                             .toList();
     // group by query results are empty instead of day bucket results with zeros and nulls
-    Assert.assertEquals(Collections.emptyList(), results);
+    Assertions.assertEquals(Collections.emptyList(), results);
   }
 }

@@ -23,8 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.segment.column.StringBitmapIndexType;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class StringColumnFormatSpecTest
 {
@@ -41,7 +41,7 @@ public class StringColumnFormatSpecTest
         TestHelper.JSON_MAPPER.writeValueAsString(spec),
         StringColumnFormatSpec.class
     );
-    Assert.assertEquals(spec, roundTripped);
+    Assertions.assertEquals(spec, roundTripped);
   }
 
   @Test
@@ -50,10 +50,10 @@ public class StringColumnFormatSpecTest
     StringColumnFormatSpec spec = StringColumnFormatSpec.builder().build();
 
     String json = TestHelper.JSON_MAPPER.writeValueAsString(spec);
-    Assert.assertEquals("{}", json);
+    Assertions.assertEquals("{}", json);
 
     StringColumnFormatSpec roundTripped = TestHelper.JSON_MAPPER.readValue(json, StringColumnFormatSpec.class);
-    Assert.assertEquals(spec, roundTripped);
+    Assertions.assertEquals(spec, roundTripped);
   }
 
   @Test
@@ -64,9 +64,9 @@ public class StringColumnFormatSpecTest
         IndexSpec.builder().build()
     );
 
-    Assert.assertEquals(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, effective.getIndexType());
-    Assert.assertEquals(MultiValueHandling.SORTED_ARRAY, effective.getMultiValueHandling());
-    Assert.assertNull(effective.getMaxStringLength());
+    Assertions.assertEquals(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, effective.getIndexType());
+    Assertions.assertEquals(MultiValueHandling.SORTED_ARRAY, effective.getMultiValueHandling());
+    Assertions.assertNull(effective.getMaxStringLength());
   }
 
   @Test
@@ -82,9 +82,9 @@ public class StringColumnFormatSpecTest
 
     StringColumnFormatSpec effective = StringColumnFormatSpec.getEffectiveFormatSpec(null, indexSpec);
 
-    Assert.assertEquals(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, effective.getIndexType());
-    Assert.assertEquals(MultiValueHandling.SORTED_ARRAY, effective.getMultiValueHandling());
-    Assert.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
+    Assertions.assertEquals(StringBitmapIndexType.DictionaryEncodedValueIndex.INSTANCE, effective.getIndexType());
+    Assertions.assertEquals(MultiValueHandling.SORTED_ARRAY, effective.getMultiValueHandling());
+    Assertions.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
   }
 
   @Test
@@ -104,7 +104,7 @@ public class StringColumnFormatSpecTest
 
     StringColumnFormatSpec effective = StringColumnFormatSpec.getEffectiveFormatSpec(columnSpec, indexSpec);
 
-    Assert.assertEquals(Integer.valueOf(20), effective.getMaxStringLength());
+    Assertions.assertEquals(Integer.valueOf(20), effective.getMaxStringLength());
   }
 
   @Test
@@ -125,19 +125,19 @@ public class StringColumnFormatSpecTest
 
     StringColumnFormatSpec effective = StringColumnFormatSpec.getEffectiveFormatSpec(columnSpec, indexSpec);
 
-    Assert.assertEquals(StringBitmapIndexType.NoIndex.INSTANCE, effective.getIndexType());
-    Assert.assertEquals(MultiValueHandling.ARRAY, effective.getMultiValueHandling());
-    Assert.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
+    Assertions.assertEquals(StringBitmapIndexType.NoIndex.INSTANCE, effective.getIndexType());
+    Assertions.assertEquals(MultiValueHandling.ARRAY, effective.getMultiValueHandling());
+    Assertions.assertEquals(Integer.valueOf(50), effective.getMaxStringLength());
   }
 
   @Test
   public void testInvalidMaxStringLength()
   {
-    final Exception exception = Assert.assertThrows(
+    final Exception exception = Assertions.assertThrows(
         Exception.class,
         () -> StringColumnFormatSpec.builder().setMaxStringLength(-1).build()
     );
-    Assert.assertTrue(exception.getMessage().contains("maxStringLength must be >= 0"));
+    Assertions.assertTrue(exception.getMessage().contains("maxStringLength must be >= 0"));
   }
 
   @Test

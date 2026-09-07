@@ -21,8 +21,8 @@ package org.apache.druid.security.kerberos;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.server.DruidNode;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class KerberosAuthenticatorTest
 {
@@ -44,7 +44,7 @@ public class KerberosAuthenticatorTest
   {
     DruidNode node = createTestNode();
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> new KerberosAuthenticator(
             TEST_SERVER_PRINCIPAL,
@@ -57,15 +57,15 @@ public class KerberosAuthenticatorTest
         )
     );
 
-    Assert.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
-    Assert.assertTrue(
-        "Exception message should mention cookieSignatureSecret",
-        exception.getMessage().contains("cookieSignatureSecret")
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertTrue(
+        exception.getMessage().contains("cookieSignatureSecret"),
+        "Exception message should mention cookieSignatureSecret"
     );
-    Assert.assertTrue(
-        "Exception message should mention 'is not set'",
-        exception.getMessage().contains("is not set")
+    Assertions.assertTrue(
+        exception.getMessage().contains("is not set"),
+        "Exception message should mention 'is not set'"
     );
   }
 
@@ -74,7 +74,7 @@ public class KerberosAuthenticatorTest
   {
     DruidNode node = createTestNode();
 
-    DruidException exception = Assert.assertThrows(
+    DruidException exception = Assertions.assertThrows(
         DruidException.class,
         () -> new KerberosAuthenticator(
             TEST_SERVER_PRINCIPAL,
@@ -87,15 +87,15 @@ public class KerberosAuthenticatorTest
         )
     );
 
-    Assert.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
-    Assert.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
-    Assert.assertTrue(
-        "Exception message should mention cookieSignatureSecret",
-        exception.getMessage().contains("cookieSignatureSecret")
+    Assertions.assertEquals(DruidException.Persona.OPERATOR, exception.getTargetPersona());
+    Assertions.assertEquals(DruidException.Category.INVALID_INPUT, exception.getCategory());
+    Assertions.assertTrue(
+        exception.getMessage().contains("cookieSignatureSecret"),
+        "Exception message should mention cookieSignatureSecret"
     );
-    Assert.assertTrue(
-        "Exception message should mention 'is not set'",
-        exception.getMessage().contains("is not set")
+    Assertions.assertTrue(
+        exception.getMessage().contains("is not set"),
+        "Exception message should mention 'is not set'"
     );
   }
 }

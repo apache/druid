@@ -20,8 +20,8 @@
 package org.apache.druid.security.pac4j;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class OIDCConfigTest
 {
@@ -41,12 +41,12 @@ public class OIDCConfigTest
         jsonMapper.writeValueAsString(jsonMapper.readValue(jsonStr, OIDCConfig.class)),
         OIDCConfig.class
     );
-    Assert.assertEquals("testid", conf.getClientID());
-    Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
-    Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
-    Assert.assertEquals("name", conf.getOidcClaim());
-    Assert.assertEquals("testscope", conf.getScope());
-    Assert.assertNull(conf.getClientAuthenticationMethod());
+    Assertions.assertEquals("testid", conf.getClientID());
+    Assertions.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assertions.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assertions.assertEquals("name", conf.getOidcClaim());
+    Assertions.assertEquals("testscope", conf.getScope());
+    Assertions.assertNull(conf.getClientAuthenticationMethod());
   }
 
   @Test
@@ -67,11 +67,11 @@ public class OIDCConfigTest
         OIDCConfig.class
     );
 
-    Assert.assertEquals("testid", conf.getClientID());
-    Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
-    Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
-    Assert.assertEquals("email", conf.getOidcClaim());
-    Assert.assertEquals("testscope", conf.getScope());
+    Assertions.assertEquals("testid", conf.getClientID());
+    Assertions.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assertions.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assertions.assertEquals("email", conf.getOidcClaim());
+    Assertions.assertEquals("testscope", conf.getScope());
   }
 
   @Test
@@ -93,11 +93,11 @@ public class OIDCConfigTest
         OIDCConfig.class
     );
 
-    Assert.assertEquals("testid", conf.getClientID());
-    Assert.assertEquals("testsecret", conf.getClientSecret().getPassword());
-    Assert.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
-    Assert.assertEquals("email", conf.getOidcClaim());
-    Assert.assertEquals("testscope", conf.getScope());
-    Assert.assertEquals("client_secret_post", conf.getClientAuthenticationMethod());
+    Assertions.assertEquals("testid", conf.getClientID());
+    Assertions.assertEquals("testsecret", conf.getClientSecret().getPassword());
+    Assertions.assertEquals("testdiscoveryuri", conf.getDiscoveryURI());
+    Assertions.assertEquals("email", conf.getOidcClaim());
+    Assertions.assertEquals("testscope", conf.getScope());
+    Assertions.assertEquals("client_secret_post", conf.getClientAuthenticationMethod());
   }
 }

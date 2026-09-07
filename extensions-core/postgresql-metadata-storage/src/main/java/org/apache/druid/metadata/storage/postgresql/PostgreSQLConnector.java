@@ -38,6 +38,7 @@ import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.StringMapper;
 
+import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.List;
@@ -175,6 +176,16 @@ public class PostgreSQLConnector extends SQLMetadataConnector
                   .map(StringMapper.FIRST)
                   .list()
                   .isEmpty();
+  }
+
+  /**
+   * Scopes metadata lookups to the same schema as {@link #tableExists}, which may differ from the
+   * schema of the connection when the {@code search_path} resolves unqualified names elsewhere.
+   */
+  @Override
+  public String getMetadataTableSchema(final Connection connection)
+  {
+    return dbTableSchema;
   }
 
   @Override

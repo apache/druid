@@ -22,17 +22,18 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.OptBoolean;
 import com.google.common.base.Preconditions;
 import com.google.common.net.HostAndPort;
 import com.google.inject.name.Named;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.NotNull;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.common.utils.SocketUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Max;
-import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -130,12 +131,12 @@ public class DruidNode
    */
   @JsonCreator
   public DruidNode(
-      @JacksonInject @Named("serviceName") @JsonProperty("service") String serviceName,
+      @JacksonInject(useInput = OptBoolean.TRUE) @Named("serviceName") @JsonProperty("service") String serviceName,
       @JsonProperty("host") String host,
       @JsonProperty("bindOnHost") boolean bindOnHost,
       @JsonProperty("plaintextPort") Integer plaintextPort,
-      @JacksonInject @Named("servicePort") @JsonProperty("port") Integer port,
-      @JacksonInject @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
+      @JacksonInject(useInput = OptBoolean.TRUE) @Named("servicePort") @JsonProperty("port") Integer port,
+      @JacksonInject(useInput = OptBoolean.TRUE) @Named("tlsServicePort") @JsonProperty("tlsPort") Integer tlsPort,
       @JsonProperty("enablePlaintextPort") Boolean enablePlaintextPort,
       @JsonProperty("enableTlsPort") boolean enableTlsPort,
       @JsonProperty("labels") @Nullable Map<String, String> labels

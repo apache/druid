@@ -64,7 +64,8 @@ public class SupervisorStateManager
     RUNNING(true, false),
     IDLE(true, false),
     SUSPENDED(true, false),
-    STOPPING(true, false);
+    STOPPING(true, false),
+    COMPLETED(true, false);
 
     private final boolean healthy;
     private final boolean firstRunOnly;
@@ -199,11 +200,11 @@ public class SupervisorStateManager
     consecutiveSuccessfulRuns = currentRunSuccessful ? consecutiveSuccessfulRuns + 1 : 0;
     consecutiveFailedRuns = currentRunSuccessful ? 0 : consecutiveFailedRuns + 1;
 
-    // If the supervisor is not IDLE, try to set the state to RUNNING or SUSPENDED.
+    // If the supervisor is not IDLE or COMPLETED, try to set the state to RUNNING or SUSPENDED.
     // This will be rejected if we haven't had atLeastOneSuccessfulRun
     // (in favor of the more specific states for the initial run) and will instead trigger setting the state to an
     // unhealthy one if we are now over the error thresholds.
-    if (!isIdle()) {
+    if (!isIdle() && !isCompleted()) {
       maybeSetState(healthySteadyState);
     }
     // reset for next run
@@ -238,6 +239,11 @@ public class SupervisorStateManager
   public boolean isIdle()
   {
     return SupervisorStateManager.BasicState.IDLE.equals(supervisorState);
+  }
+
+  public boolean isCompleted()
+  {
+    return SupervisorStateManager.BasicState.COMPLETED.equals(supervisorState);
   }
 
   protected Deque<ExceptionEvent> getRecentEventsQueue()

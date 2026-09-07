@@ -31,6 +31,7 @@ import org.apache.calcite.sql.type.AbstractSqlType;
 import org.apache.calcite.sql.type.SqlOperandCountRanges;
 import org.apache.calcite.sql.type.SqlSingleOperandTypeChecker;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -58,6 +59,12 @@ public class RowSignatures
     // No instantiation.
   }
 
+  /**
+   * Creates a {@link RowSignature} from a Calcite row type with a list of field names. The provided list
+   * of field names is used instead of the field names from the Calcite row type. Care is required when
+   * selecting the field names, because field names in Druid are the primary way of identifying a field,
+   * whereas field names in Calcite are just labels (and may not be unique).
+   */
   public static RowSignature fromRelDataType(final List<String> rowOrder, final RelDataType rowType)
   {
     if (rowOrder.size() != rowType.getFieldCount()) {
@@ -73,6 +80,15 @@ public class RowSignatures
     }
 
     return rowSignatureBuilder.build();
+  }
+
+  /**
+   * Creates a {@link RowSignature} from a Calcite row type, adjusting field names if needed
+   * such that they are unique.
+   */
+  public static RowSignature fromRelDataTypeWithUniqueFields(final RelDataType rowType)
+  {
+    return fromRelDataType(SqlValidatorUtil.uniquify(rowType.getFieldNames()), rowType);
   }
 
   /**

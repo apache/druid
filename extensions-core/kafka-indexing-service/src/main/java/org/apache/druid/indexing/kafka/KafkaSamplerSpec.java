@@ -69,8 +69,12 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
       props.put("request.timeout.ms", Integer.toString(samplerConfig.getTimeoutMs()));
       KafkaSupervisorIOConfig kafkaSupervisorIOConfig = (KafkaSupervisorIOConfig) ioConfig;
 
-      return new KafkaRecordSupplier(props, objectMapper, kafkaSupervisorIOConfig.getConfigOverrides(),
-                                     kafkaSupervisorIOConfig.isMultiTopic()
+      return new KafkaRecordSupplier(
+          props,
+          objectMapper,
+          kafkaSupervisorIOConfig.getConfigOverrides(),
+          kafkaSupervisorIOConfig.isMultiTopic(),
+          null
       );
     }
     finally {

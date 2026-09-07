@@ -34,7 +34,6 @@ import org.apache.druid.testing.embedded.EmbeddedCoordinator;
 import org.apache.druid.testing.embedded.EmbeddedDruidCluster;
 import org.apache.druid.testing.embedded.EmbeddedOverlord;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -96,17 +95,15 @@ public class KillSupervisorsCustomDutyTest extends EmbeddedClusterTestBase
     );
 
     // Verify that the history now returns 404 Not Found
-    MatcherAssert.assertThat(
-        Assertions.assertThrows(
-            RuntimeException.class,
-            () -> getSupervisorHistory(supervisor.getId())
-        ),
-        ExceptionMatcher.of(RuntimeException.class).expectRootCause(
-            ExceptionMatcher.of(HttpResponseException.class)
-                            .expectMessageContains("404 Not Found")
-                            .expectMessageContains(StringUtils.format("No history for [%s]", supervisor.getId()))
-        )
+    final Throwable exception = Assertions.assertThrows(
+        RuntimeException.class,
+        () -> getSupervisorHistory(supervisor.getId())
     );
+    ExceptionMatcher.of(RuntimeException.class).expectRootCause(
+        ExceptionMatcher.of(HttpResponseException.class)
+                        .expectMessageContains("404 Not Found")
+                        .expectMessageContains(StringUtils.format("No history for [%s]", supervisor.getId()))
+    ).assertThat(exception);
   }
 
   private List<VersionedSupervisorSpec> getSupervisorHistory(String supervisorId)

@@ -27,7 +27,7 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.ImmutableDruidServerTests;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.metadata.MetadataRuleManager;
+import org.apache.druid.metadata.MetadataRuleManagerConfig;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinator;
@@ -37,6 +37,8 @@ import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.ForeverBroadcastDistributionRule;
 import org.apache.druid.server.coordinator.rules.ForeverLoadRule;
+import org.apache.druid.server.coordinator.rules.RetentionRulesSnapshot;
+import org.apache.druid.server.coordinator.rules.Rule;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -44,14 +46,15 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class UnloadUnusedSegmentsTest
@@ -72,10 +75,9 @@ public class UnloadUnusedSegmentsTest
   private List<ImmutableDruidDataSource> dataSources;
   private List<ImmutableDruidDataSource> dataSourcesForRealtime;
   private final String broadcastDatasource = "broadcastDatasource";
-  private MetadataRuleManager databaseRuleManager;
   private SegmentLoadQueueManager loadQueueManager;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     coordinator = EasyMock.createMock(DruidCoordinator.class);
@@ -83,7 +85,6 @@ public class UnloadUnusedSegmentsTest
     historicalServerTier2 = EasyMock.createMock(ImmutableDruidServer.class);
     brokerServer = EasyMock.createMock(ImmutableDruidServer.class);
     indexerServer = EasyMock.createMock(ImmutableDruidServer.class);
-    databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
     loadQueueManager = new SegmentLoadQueueManager(null, null);
 
     DateTime start1 = DateTimes.of("2012-01-01");
@@ -177,7 +178,7 @@ public class UnloadUnusedSegmentsTest
     dataSourcesForRealtime = ImmutableList.of(dataSource2ForRealtime, broadcastDatasource);
   }
 
-  @After
+  @AfterEach
   public void tearDown()
   {
     EasyMock.verify(coordinator);
@@ -185,11 +186,9 @@ public class UnloadUnusedSegmentsTest
     EasyMock.verify(historicalServerTier2);
     EasyMock.verify(brokerServer);
     EasyMock.verify(indexerServer);
-    EasyMock.verify(databaseRuleManager);
   }
 
-  @Test
-  public void test_unloadUnusedSegmentsFromAllServers()
+  private void mockAllServers()
   {
     mockDruidServer(
         historicalServer,
@@ -234,8 +233,29 @@ public class UnloadUnusedSegmentsTest
 
     // Mock stuff that the coordinator needs
     mockCoordinator(coordinator);
+  }
 
-    mockRuleManager(databaseRuleManager);
+  private DruidCluster buildCluster()
+  {
+    return DruidCluster
+        .builder()
+        .addTier(
+            DruidServer.DEFAULT_TIER,
+            new ServerHolder(historicalServer, historicalPeon, false)
+        )
+        .addTier(
+            "tier2",
+            new ServerHolder(historicalServerTier2, historicalTier2Peon, false)
+        )
+        .addBrokers(new ServerHolder(brokerServer, brokerPeon, false))
+        .addRealtimes(new ServerHolder(indexerServer, indexerPeon, false))
+        .build();
+  }
+
+  @Test
+  public void test_unloadUnusedSegmentsFromAllServers()
+  {
+    mockAllServers();
 
     // We keep datasource2 segments only, drop datasource1 and broadcastDatasource from all servers
     // realtimeSegment is intentionally missing from the set, to match how a realtime tasks's unpublished segments
@@ -244,34 +264,54 @@ public class UnloadUnusedSegmentsTest
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
         .builder()
-        .withDruidCluster(
-            DruidCluster
-                .builder()
-                .addTier(
-                    DruidServer.DEFAULT_TIER,
-                    new ServerHolder(historicalServer, historicalPeon, false)
-                )
-                .addTier(
-                    "tier2",
-                    new ServerHolder(historicalServerTier2, historicalTier2Peon, false)
-                )
-                .addBrokers(new ServerHolder(brokerServer, brokerPeon, false))
-                .addRealtimes(new ServerHolder(indexerServer, indexerPeon, false))
-                .build()
-        )
+        .withDruidCluster(buildCluster())
         .withUsedSegments(usedSegments)
+        .withRetentionRulesSnapshot(rulesSnapshot())
         .withBroadcastDatasources(Collections.singleton(broadcastDatasource))
         .build();
 
-    params = new UnloadUnusedSegments(loadQueueManager, databaseRuleManager::getRulesWithDefault).run(params);
+    params = new UnloadUnusedSegments(loadQueueManager).run(params);
     CoordinatorRunStats stats = params.getCoordinatorStats();
 
     // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, segment1.getDataSource()));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", segment1.getDataSource()));
+    Assertions.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, segment1.getDataSource()));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", segment1.getDataSource()));
 
-    Assert.assertEquals(3L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, broadcastDatasource));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", broadcastDatasource));
+    Assertions.assertEquals(3L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, broadcastDatasource));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", broadcastDatasource));
+  }
+
+  @Test
+  public void test_broadcastSegmentsAreDropped_ifSnapshotHasNoBroadcastRule()
+  {
+    mockAllServers();
+
+    final Set<DataSegment> usedSegments = ImmutableSet.of(segment2);
+
+    // The snapshot loads broadcastDatasource like any other datasource rather than
+    // broadcasting it, so the realtime server must be skipped for it
+    final RetentionRulesSnapshot rulesWithoutBroadcast = new RetentionRulesSnapshot(
+        Map.of(
+            MetadataRuleManagerConfig.DEFAULT_RULE_NAME,
+            List.of(new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1, "tier2", 1), null))
+        ),
+        MetadataRuleManagerConfig.DEFAULT_RULE_NAME
+    );
+
+    DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
+        .builder()
+        .withDruidCluster(buildCluster())
+        .withUsedSegments(usedSegments)
+        .withRetentionRulesSnapshot(rulesWithoutBroadcast)
+        .build();
+
+    params = new UnloadUnusedSegments(loadQueueManager).run(params);
+    final CoordinatorRunStats stats = params.getCoordinatorStats();
+
+    // Two broadcast segments are dropped from the historical, and none from the realtime
+    // server, one fewer than when the snapshot marks the datasource as broadcast
+    Assertions.assertEquals(2L, stats.getSegmentStat(Stats.Segments.UNNEEDED, DruidServer.DEFAULT_TIER, broadcastDatasource));
+    Assertions.assertEquals(1L, stats.getSegmentStat(Stats.Segments.UNNEEDED, "tier2", broadcastDatasource));
   }
 
   private static void mockDruidServer(
@@ -307,35 +347,19 @@ public class UnloadUnusedSegmentsTest
     EasyMock.replay(coordinator);
   }
 
-  private static void mockRuleManager(MetadataRuleManager metadataRuleManager)
+  private static RetentionRulesSnapshot rulesSnapshot()
   {
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault("datasource1")).andReturn(
-        Collections.singletonList(
-            new ForeverLoadRule(
-                ImmutableMap.of(
-                    DruidServer.DEFAULT_TIER, 1,
-                    "tier2", 1
-                ),
-                null
-            )
-        )).anyTimes();
-
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault("datasource2")).andReturn(
-        Collections.singletonList(
-            new ForeverLoadRule(
-                ImmutableMap.of(
-                    DruidServer.DEFAULT_TIER, 1,
-                    "tier2", 1
-                ),
-                null
-            )
-        )).anyTimes();
-
-    EasyMock.expect(metadataRuleManager.getRulesWithDefault("broadcastDatasource")).andReturn(
-        Collections.singletonList(
-            new ForeverBroadcastDistributionRule()
-        )).anyTimes();
-
-    EasyMock.replay(metadataRuleManager);
+    final List<Rule> loadOnBothTiers = Collections.singletonList(
+        new ForeverLoadRule(ImmutableMap.of(DruidServer.DEFAULT_TIER, 1, "tier2", 1), null)
+    );
+    return new RetentionRulesSnapshot(
+        Map.of(
+            "datasource1", loadOnBothTiers,
+            "datasource2", loadOnBothTiers,
+            "broadcastDatasource", Collections.singletonList(new ForeverBroadcastDistributionRule())
+        ),
+        // Has no entry above, so every datasource is governed solely by its own rules
+        "unusedDefaultDatasource"
+    );
   }
 }

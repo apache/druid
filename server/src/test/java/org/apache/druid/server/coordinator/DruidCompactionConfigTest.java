@@ -25,8 +25,8 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.compaction.NewestSegmentFirstPolicy;
 import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -42,14 +42,14 @@ public class DruidCompactionConfigTest
     final String json = MAPPER.writeValueAsString(defaultConfig);
 
     DruidCompactionConfig deserialized = MAPPER.readValue(json, DruidCompactionConfig.class);
-    Assert.assertEquals(defaultConfig, deserialized);
+    Assertions.assertEquals(defaultConfig, deserialized);
   }
 
   @Test
   public void testSerdeWithLegacyConfig() throws Exception
   {
     final String json = "{\"compactionConfigs\":[],\"useSupervisors\":false,\"engine\":\"native\"}";
-    Assert.assertEquals(DruidCompactionConfig.legacy(), MAPPER.readValue(json, DruidCompactionConfig.class));
+    Assertions.assertEquals(DruidCompactionConfig.legacy(), MAPPER.readValue(json, DruidCompactionConfig.class));
   }
 
   @Test
@@ -78,7 +78,7 @@ public class DruidCompactionConfigTest
 
     final String json = MAPPER.writeValueAsString(config);
     DruidCompactionConfig deserialized = MAPPER.readValue(json, DruidCompactionConfig.class);
-    Assert.assertEquals(config, deserialized);
+    Assertions.assertEquals(config, deserialized);
   }
 
   @Test
@@ -96,15 +96,15 @@ public class DruidCompactionConfigTest
     );
     final DruidCompactionConfig copy = config.withClusterConfig(clusterConfig);
 
-    Assert.assertEquals(clusterConfig, copy.clusterConfig());
-    Assert.assertNotEquals(clusterConfig, config.clusterConfig());
+    Assertions.assertEquals(clusterConfig, copy.clusterConfig());
+    Assertions.assertNotEquals(clusterConfig, config.clusterConfig());
   }
 
   @Test
   public void testCopyWithDatasourceConfigs()
   {
     final DruidCompactionConfig config = DruidCompactionConfig.empty();
-    Assert.assertTrue(config.getCompactionConfigs().isEmpty());
+    Assertions.assertTrue(config.getCompactionConfigs().isEmpty());
 
     final DataSourceCompactionConfig dataSourceConfig = InlineSchemaDataSourceCompactionConfig
         .builder()
@@ -114,20 +114,20 @@ public class DruidCompactionConfigTest
     final DruidCompactionConfig copy
         = config.withDatasourceConfigs(Collections.singletonList(dataSourceConfig));
 
-    Assert.assertEquals(1, copy.getCompactionConfigs().size());
-    Assert.assertEquals(dataSourceConfig, copy.findConfigForDatasource(TestDataSource.WIKI).orNull());
+    Assertions.assertEquals(1, copy.getCompactionConfigs().size());
+    Assertions.assertEquals(dataSourceConfig, copy.findConfigForDatasource(TestDataSource.WIKI).orNull());
   }
 
   @Test
   public void testDefaultConfigValues()
   {
     final DruidCompactionConfig config = DruidCompactionConfig.empty();
-    Assert.assertTrue(config.getCompactionConfigs().isEmpty());
-    Assert.assertTrue(config.getCompactionPolicy() instanceof NewestSegmentFirstPolicy);
-    Assert.assertEquals(CompactionEngine.NATIVE, config.getEngine());
-    Assert.assertTrue(config.isUseSupervisors());
-    Assert.assertEquals(0.1, config.getCompactionTaskSlotRatio(), 1e-9);
-    Assert.assertEquals(Integer.MAX_VALUE, config.getMaxCompactionTaskSlots());
-    Assert.assertTrue(config.isStoreCompactionStatePerSegment());
+    Assertions.assertTrue(config.getCompactionConfigs().isEmpty());
+    Assertions.assertTrue(config.getCompactionPolicy() instanceof NewestSegmentFirstPolicy);
+    Assertions.assertEquals(CompactionEngine.NATIVE, config.getEngine());
+    Assertions.assertTrue(config.isUseSupervisors());
+    Assertions.assertEquals(0.1, config.getCompactionTaskSlotRatio(), 1e-9);
+    Assertions.assertEquals(Integer.MAX_VALUE, config.getMaxCompactionTaskSlots());
+    Assertions.assertTrue(config.isStoreCompactionStatePerSegment());
   }
 }

@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -126,6 +127,17 @@ public class IndexMergerV9 extends IndexMergerBase
       final @Nullable SegmentWriteOutMediumFactory segmentWriteOutMediumFactory
   ) throws IOException
   {
+    for (IndexableAdapter adapter : adapters) {
+      // Clustered adapters keep their rows in per-group sub-indexes; the V9 merge path would silently write an
+      // empty segment from the (unused) base facts. Clustered base tables require the V10 format. Metadata can be
+      // null (e.g. some test adapters), which is trivially not clustered.
+      final Metadata adapterMetadata = adapter.getMetadata();
+      DruidException.conditionalDefensive(
+          adapterMetadata == null || adapterMetadata.getClusteredBaseTable() == null,
+          "Clustered base table segments cannot be written in the V9 segment format, use V10"
+      );
+    }
+
     progress.start();
     progress.progress();
 

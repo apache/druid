@@ -45,13 +45,11 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFactory;
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,15 +60,14 @@ import java.util.List;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
 {
-  private final AggregationTestHelper helper;
+  private AggregationTestHelper helper;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  private File tempFolder;
 
-  public OldApiSketchAggregationTest(final GroupByQueryConfig config)
+  public void initOldApiSketchAggregationTest(final GroupByQueryConfig config)
   {
     OldApiSketchModule sm = new OldApiSketchModule();
     sm.configure(null);
@@ -82,7 +79,6 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
   }
 
-  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -92,15 +88,20 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     return constructors;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
-    helper.close();
+    if (helper != null) {
+      helper.close();
+      helper = null;
+    }
   }
 
-  @Test
-  public void testSimpleDataIngestAndQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSimpleDataIngestAndQuery(final GroupByQueryConfig config) throws Exception
   {
+    initOldApiSketchAggregationTest(config);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
         .setDataSource("test_datasource")
         .setGranularity(Granularities.ALL)
@@ -172,8 +173,8 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
 
     List results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(
         ResultRow.fromLegacyRow(
             new MapBasedRow(
                 DateTimes.of("2014-10-19T00:00:00.000Z"),
@@ -193,9 +194,11 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testSketchDataIngestAndQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSketchDataIngestAndQuery(final GroupByQueryConfig config) throws Exception
   {
+    initOldApiSketchAggregationTest(config);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
         .setDataSource("test_datasource")
         .setGranularity(Granularities.ALL)
@@ -267,8 +270,8 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
 
     List results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(
         ResultRow.fromLegacyRow(
             new MapBasedRow(
                 DateTimes.of("2014-10-19T00:00:00.000Z"),
@@ -288,23 +291,27 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testSketchMergeAggregatorFactorySerde() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSketchMergeAggregatorFactorySerde(final GroupByQueryConfig config) throws Exception
   {
+    initOldApiSketchAggregationTest(config);
     assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, null));
     assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, false));
     assertAggregatorFactorySerde(new OldSketchMergeAggregatorFactory("name", "fieldName", 16, true));
   }
 
-  @Test
-  public void testSketchBuildAggregatorFactorySerde() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSketchBuildAggregatorFactorySerde(final GroupByQueryConfig config) throws Exception
   {
+    initOldApiSketchAggregationTest(config);
     assertAggregatorFactorySerde(new OldSketchBuildAggregatorFactory("name", "fieldName", 16));
   }
 
   private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         agg,
         helper.getObjectMapper().readValue(
             helper.getObjectMapper().writeValueAsString(agg),
@@ -313,9 +320,11 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testSketchEstimatePostAggregatorSerde() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSketchEstimatePostAggregatorSerde(final GroupByQueryConfig config) throws Exception
   {
+    initOldApiSketchAggregationTest(config);
     assertPostAggregatorSerde(
         new OldSketchEstimatePostAggregator(
             "name",
@@ -324,9 +333,11 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testSketchSetPostAggregatorSerde() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testSketchSetPostAggregatorSerde(final GroupByQueryConfig config) throws Exception
   {
+    initOldApiSketchAggregationTest(config);
     assertPostAggregatorSerde(
         new OldSketchSetPostAggregator(
             "name",
@@ -340,9 +351,11 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
     );
   }
 
-  @Test
-  public void testRelocation()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testRelocation(final GroupByQueryConfig config)
   {
+    initOldApiSketchAggregationTest(config);
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
@@ -354,29 +367,33 @@ public class OldApiSketchAggregationTest extends InitializedNullHandlingTest
         columnSelectorFactory,
         SketchHolder.class
     );
-    Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
+    Assertions.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
-  @Test
-  public void testWithNameMerge()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testWithNameMerge(final GroupByQueryConfig config)
   {
+    initOldApiSketchAggregationTest(config);
     OldSketchMergeAggregatorFactory factory = new OldSketchMergeAggregatorFactory("name", "fieldName", 16, null);
-    Assert.assertEquals(factory, factory.withName("name"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("name"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 
 
-  @Test
-  public void testWithNameBuild()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testWithNameBuild(final GroupByQueryConfig config)
   {
+    initOldApiSketchAggregationTest(config);
     OldSketchBuildAggregatorFactory factory = new OldSketchBuildAggregatorFactory("name", "fieldName", 16);
-    Assert.assertEquals(factory, factory.withName("name"));
-    Assert.assertEquals("newTest", factory.withName("newTest").getName());
+    Assertions.assertEquals(factory, factory.withName("name"));
+    Assertions.assertEquals("newTest", factory.withName("newTest").getName());
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         agg,
         helper.getObjectMapper().readValue(
             helper.getObjectMapper().writeValueAsString(agg),

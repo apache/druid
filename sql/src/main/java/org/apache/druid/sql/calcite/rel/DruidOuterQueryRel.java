@@ -129,10 +129,7 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
   {
     return partialQuery.build(
         partialQuery.getWindow() == null ? DUMMY_DATA_SOURCE : DUMMY_QUERY_DATA_SOURCE,
-        RowSignatures.fromRelDataType(
-            sourceRel.getRowType().getFieldNames(),
-            sourceRel.getRowType()
-        ),
+        RowSignatures.fromRelDataTypeWithUniqueFields(sourceRel.getRowType()),
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false,

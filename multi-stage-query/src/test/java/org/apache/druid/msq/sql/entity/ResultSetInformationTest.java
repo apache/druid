@@ -24,8 +24,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.sql.http.ResultFormat;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class ResultSetInformationTest
 {
@@ -59,13 +59,13 @@ public class ResultSetInformationTest
   @Test
   public void sanityTest() throws JsonProcessingException
   {
-    Assert.assertEquals(JSON_STRING, MAPPER.writeValueAsString(RESULTS));
-    Assert.assertEquals(RESULTS, MAPPER.readValue(MAPPER.writeValueAsString(RESULTS), ResultSetInformation.class));
-    Assert.assertEquals(
+    Assertions.assertEquals(JSON_STRING, MAPPER.writeValueAsString(RESULTS));
+    Assertions.assertEquals(RESULTS, MAPPER.readValue(MAPPER.writeValueAsString(RESULTS), ResultSetInformation.class));
+    Assertions.assertEquals(
         RESULTS.hashCode(),
         MAPPER.readValue(MAPPER.writeValueAsString(RESULTS), ResultSetInformation.class).hashCode()
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "ResultSetInformation{numTotalRows=1, totalSizeInBytes=1, resultFormat=object, records=null, dataSource='ds', pages=[PageInformation{id=0, numRows=null, sizeInBytes=1, worker=null, partition=null}]}",
         RESULTS.toString()
     );
@@ -75,7 +75,7 @@ public class ResultSetInformationTest
   public void resultsSanityTest() throws JsonProcessingException
   {
     // Since we have a List<Object[]> as a field, we cannot call equals method after deserialization.
-    Assert.assertEquals(JSON_STRING_1, MAPPER.writeValueAsString(RESULTS_1));
+    Assertions.assertEquals(JSON_STRING_1, MAPPER.writeValueAsString(RESULTS_1));
   }
 
 }

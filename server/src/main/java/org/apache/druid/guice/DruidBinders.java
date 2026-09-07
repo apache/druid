@@ -32,7 +32,6 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.server.DruidNode;
 
 import java.lang.annotation.Annotation;
 import java.util.Set;
@@ -132,11 +131,6 @@ public class DruidBinders
     {
       return bindQueryRunnerFactory(queryTypeClazz, queryRunnerFactory);
     }
-  }
-
-  public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
-  {
-    return Multibinder.newSetBinder(binder, new TypeLiteral<>() {});
   }
 
   public static Multibinder<Class<? extends Monitor>> metricMonitorBinder(Binder binder)

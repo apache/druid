@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.thrift.TException;
 import org.apache.thrift.TSerializer;
 import org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.thrift.transport.TTransportException;
 
 import java.util.List;
 
@@ -34,7 +35,17 @@ import java.util.List;
  */
 public class ThriftEventSerializer implements EventSerializer
 {
-  private static final TSerializer SERIALIZER = new TSerializer(new TCompactProtocol.Factory());
+  private static final TSerializer SERIALIZER = createSerializer();
+
+  private static TSerializer createSerializer()
+  {
+    try {
+      return new TSerializer(new TCompactProtocol.Factory());
+    }
+    catch (final TTransportException e) {
+      throw new IllegalStateException(e);
+    }
+  }
 
   @Override
   public byte[] serialize(List<Pair<String, Object>> event)

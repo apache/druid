@@ -44,8 +44,8 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -250,7 +250,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFilter1, serialized);
+    Assertions.assertEquals(serializedFilter1, serialized);
   }
 
   @Test
@@ -267,7 +267,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedLongFilter, serialized);
+    Assertions.assertEquals(serializedLongFilter, serialized);
   }
 
   @Test
@@ -284,7 +284,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFloatFilter, serialized);
+    Assertions.assertEquals(serializedFloatFilter, serialized);
   }
 
   @Test
@@ -301,7 +301,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get())
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedDoubleFilter, serialized);
+    Assertions.assertEquals(serializedDoubleFilter, serialized);
   }
 
   @Test
@@ -324,7 +324,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFilter2, serialized);
+    Assertions.assertEquals(serializedFilter2, serialized);
   }
 
   @Test
@@ -346,7 +346,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedLongFilter, serialized);
+    Assertions.assertEquals(serializedLongFilter, serialized);
   }
 
   @Test
@@ -368,7 +368,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedFloatFilter, serialized);
+    Assertions.assertEquals(serializedFloatFilter, serialized);
   }
 
   @Test
@@ -390,7 +390,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos))
     );
     String serialized = filterToString(bloomKFilter);
-    Assert.assertEquals(serializedDoubleFilter, serialized);
+    Assertions.assertEquals(serializedDoubleFilter, serialized);
   }
 
   @Test
@@ -419,7 +419,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     );
 
     String serialized = filterToString(combined);
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assertions.assertEquals(serializedCombinedFilter, serialized);
   }
 
   @Test
@@ -445,7 +445,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.getCombiningFactory().finalizeComputation(mergeAggregator.get())
     );
     String serialized = filterToString(merged);
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assertions.assertEquals(serializedCombinedFilter, serialized);
   }
 
   @Test
@@ -471,7 +471,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         (ByteBuffer) valueAggregatorFactory.getCombiningFactory().finalizeComputation(mergeAggregator.get())
     );
     String serialized = filterToString(merged);
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assertions.assertEquals(serializedCombinedFilter, serialized);
   }
 
   @Test
@@ -503,7 +503,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     );
     String serialized = filterToString(merged);
 
-    Assert.assertEquals(serializedCombinedFilter, serialized);
+    Assertions.assertEquals(serializedCombinedFilter, serialized);
   }
 
   @Test
@@ -516,7 +516,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
     );
     ObjectMapper objectMapper = new DefaultObjectMapper();
     new BloomFilterExtensionModule().getJacksonModules().forEach(objectMapper::registerModule);
-    Assert.assertEquals(
+    Assertions.assertEquals(
         factory,
         objectMapper.readValue(objectMapper.writeValueAsString(factory), AggregatorFactory.class)
     );
@@ -527,7 +527,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
                             + "\"field\":\"b\","
                             + "\"maxNumEntries\":15"
                             + "}";
-    Assert.assertEquals(
+    Assertions.assertEquals(
         factory,
         objectMapper.readValue(fieldNamesOnly, AggregatorFactory.class)
     );
@@ -538,7 +538,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         MAX_NUM_VALUES
     );
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         factory2,
         objectMapper.readValue(objectMapper.writeValueAsString(factory2), AggregatorFactory.class)
     );
@@ -548,7 +548,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
         new RegexFilteredDimensionSpec(new DefaultDimensionSpec("a", "a"), ".*"),
         MAX_NUM_VALUES
     );
-    Assert.assertEquals(
+    Assertions.assertEquals(
         factory3,
         objectMapper.readValue(objectMapper.writeValueAsString(factory3), AggregatorFactory.class)
     );

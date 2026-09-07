@@ -21,8 +21,8 @@ package org.apache.druid.storage.s3.output;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
@@ -44,15 +44,15 @@ public class S3ExportStorageProviderTest
     S3ExportStorageProvider.validateS3Prefix(ImmutableList.of("s3://bucket-name"), "bucket-name", "validPath");
     S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath1/../validPath2/");
 
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "incorrect-bucket", "validPath1/")
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "invalidPath1")
     );
-    Assert.assertThrows(
+    Assertions.assertThrows(
         DruidException.class,
         () -> S3ExportStorageProvider.validateS3Prefix(validPrefixes, "bucket-name", "validPath123")
     );
@@ -61,9 +61,9 @@ public class S3ExportStorageProviderTest
   @Test
   public void testExportManifestFilePath()
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "s3://export-bucket/export/table/file1",
-        new S3ExportStorageProvider("export-bucket", "export/table").getFilePathForManifest("file1")
+        new S3ExportStorageProvider("export-bucket", "export/table", null, null).getFilePathForManifest("file1")
     );
   }
 }

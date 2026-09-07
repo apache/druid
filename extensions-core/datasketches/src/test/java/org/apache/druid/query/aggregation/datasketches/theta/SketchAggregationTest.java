@@ -59,13 +59,11 @@ import org.apache.druid.query.groupby.epinephelinae.GroupByTestColumnSelectorFac
 import org.apache.druid.query.groupby.epinephelinae.GrouperTestUtil;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -79,16 +77,15 @@ import java.util.stream.Collectors;
 /**
  *
  */
-@RunWith(Parameterized.class)
 public class SketchAggregationTest
 {
-  private final AggregationTestHelper helper;
-  private final QueryContexts.Vectorize vectorize;
+  private AggregationTestHelper helper;
+  private QueryContexts.Vectorize vectorize;
 
-  @Rule
-  public final TemporaryFolder tempFolder = new TemporaryFolder();
+  @TempDir
+  private File tempFolder;
 
-  public SketchAggregationTest(final GroupByQueryConfig config, final String vectorize)
+  public void initSketchAggregationTest(final GroupByQueryConfig config, final String vectorize)
   {
     SketchModule.registerSerde();
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
@@ -99,7 +96,6 @@ public class SketchAggregationTest
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
   }
 
-  @Parameterized.Parameters(name = "config = {0}, vectorize = {1}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -111,15 +107,17 @@ public class SketchAggregationTest
     return constructors;
   }
 
-  @After
+  @AfterEach
   public void teardown() throws IOException
   {
     helper.close();
   }
 
-  @Test
-  public void testSketchDataIngestAndGpByQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSketchDataIngestAndGpByQuery(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
         .setDataSource("test_datasource")
         .setGranularity(Granularities.ALL)
@@ -219,8 +217,8 @@ public class SketchAggregationTest
                                    + "   Seed Hash               : 93cc | 37836\n"
                                    + "### END SKETCH SUMMARY\n";
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(
         ResultRow.fromLegacyRow(
             new MapBasedRow(
                 DateTimes.of("2014-10-19T00:00:00.000Z"),
@@ -249,9 +247,11 @@ public class SketchAggregationTest
     );
   }
 
-  @Test
-  public void testEmptySketchAggregateCombine() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testEmptySketchAggregateCombine(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
         .setDataSource("test_datasource")
         .setGranularity(Granularities.ALL)
@@ -280,8 +280,8 @@ public class SketchAggregationTest
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(
         ResultRow.fromLegacyRow(
             new MapBasedRow(
                 DateTimes.of("2019-07-14T00:00:00.000Z"),
@@ -297,9 +297,11 @@ public class SketchAggregationTest
     );
   }
 
-  @Test
-  public void testThetaCardinalityOnSimpleColumn() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testThetaCardinalityOnSimpleColumn(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
         .setDataSource("test_datasource")
         .setGranularity(Granularities.ALL)
@@ -383,8 +385,8 @@ public class SketchAggregationTest
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(5, results.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(5, results.size());
+    Assertions.assertEquals(
         ImmutableList.of(
             new MapBasedRow(
                 DateTimes.of("2014-10-19T00:00:00.000Z"),
@@ -456,41 +458,45 @@ public class SketchAggregationTest
     );
   }
 
-  @Test
-  public void testSketchMergeAggregatorFactorySerde() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSketchMergeAggregatorFactorySerde(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initSketchAggregationTest(config, vectorize);
     assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null));
     assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, false, true, null));
     assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, null));
     assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, 2));
   }
 
-  @Test
-  public void testSketchMergeFinalization()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSketchMergeFinalization(final GroupByQueryConfig config, final String vectorize)
   {
+    initSketchAggregationTest(config, vectorize);
     SketchHolder sketch = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(128).build());
 
     SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null);
-    Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
+    Assertions.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
     agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, null);
-    Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
+    Assertions.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
     agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null, null);
-    Assert.assertEquals(sketch, agg.finalizeComputation(sketch));
+    Assertions.assertEquals(sketch, agg.finalizeComputation(sketch));
 
     agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, 2);
     SketchEstimateWithErrorBounds est = (SketchEstimateWithErrorBounds) agg.finalizeComputation(sketch);
-    Assert.assertEquals(0.0, est.getEstimate(), 0.0001);
-    Assert.assertEquals(0.0, est.getHighBound(), 0.0001);
-    Assert.assertEquals(0.0, est.getLowBound(), 0.0001);
-    Assert.assertEquals(2, est.getNumStdDev());
+    Assertions.assertEquals(0.0, est.getEstimate(), 0.0001);
+    Assertions.assertEquals(0.0, est.getHighBound(), 0.0001);
+    Assertions.assertEquals(0.0, est.getLowBound(), 0.0001);
+    Assertions.assertEquals(2, est.getNumStdDev());
 
   }
 
   private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         agg,
         helper.getObjectMapper().readValue(
             helper.getObjectMapper().writeValueAsString(agg),
@@ -499,9 +505,11 @@ public class SketchAggregationTest
     );
   }
 
-  @Test
-  public void testSketchEstimatePostAggregatorSerde() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSketchEstimatePostAggregatorSerde(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initSketchAggregationTest(config, vectorize);
     assertPostAggregatorSerde(
         new SketchEstimatePostAggregator(
             "name",
@@ -527,9 +535,11 @@ public class SketchAggregationTest
     );
   }
 
-  @Test
-  public void testSketchSetPostAggregatorSerde() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSketchSetPostAggregatorSerde(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initSketchAggregationTest(config, vectorize);
     assertPostAggregatorSerde(
         new SketchSetPostAggregator(
             "name",
@@ -555,9 +565,11 @@ public class SketchAggregationTest
     );
   }
 
-  @Test
-  public void testCacheKey()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testCacheKey(final GroupByQueryConfig config, final String vectorize)
   {
+    initSketchAggregationTest(config, vectorize);
     final SketchMergeAggregatorFactory factory1 = new SketchMergeAggregatorFactory(
         "name",
         "fieldName",
@@ -583,13 +595,15 @@ public class SketchAggregationTest
         null
     );
 
-    Assert.assertTrue(Arrays.equals(factory1.getCacheKey(), factory2.getCacheKey()));
-    Assert.assertFalse(Arrays.equals(factory1.getCacheKey(), factory3.getCacheKey()));
+    Assertions.assertTrue(Arrays.equals(factory1.getCacheKey(), factory2.getCacheKey()));
+    Assertions.assertFalse(Arrays.equals(factory1.getCacheKey(), factory3.getCacheKey()));
   }
 
-  @Test
-  public void testRetentionDataIngestAndGpByQuery() throws Exception
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testRetentionDataIngestAndGpByQuery(final GroupByQueryConfig config, final String vectorize) throws Exception
   {
+    initSketchAggregationTest(config, vectorize);
     final GroupByQuery groupByQuery = GroupByQuery.builder()
         .setDataSource("test_datasource")
         .setGranularity(Granularities.ALL)
@@ -675,8 +689,8 @@ public class SketchAggregationTest
     );
 
     List<ResultRow> results = seq.toList();
-    Assert.assertEquals(1, results.size());
-    Assert.assertEquals(
+    Assertions.assertEquals(1, results.size());
+    Assertions.assertEquals(
         ImmutableList.of(
             new MapBasedRow(
                 DateTimes.of("2014-10-19T00:00:00.000Z"),
@@ -697,20 +711,22 @@ public class SketchAggregationTest
     );
   }
 
-  @Test
-  public void testSketchAggregatorFactoryComparator()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testSketchAggregatorFactoryComparator(final GroupByQueryConfig config, final String vectorize)
   {
+    initSketchAggregationTest(config, vectorize);
     Comparator<Object> comparator = SketchHolder.COMPARATOR;
     //noinspection EqualsWithItself
-    Assert.assertEquals(0, comparator.compare(null, null));
+    Assertions.assertEquals(0, comparator.compare(null, null));
 
     Union union1 = (Union) SetOperation.builder().setNominalEntries(1 << 4).build(Family.UNION);
     union1.update("a");
     union1.update("b");
     Sketch sketch1 = union1.getResult();
 
-    Assert.assertEquals(-1, comparator.compare(null, SketchHolder.of(sketch1)));
-    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch1), null));
+    Assertions.assertEquals(-1, comparator.compare(null, SketchHolder.of(sketch1)));
+    Assertions.assertEquals(1, comparator.compare(SketchHolder.of(sketch1), null));
 
     Union union2 = (Union) SetOperation.builder().setNominalEntries(1 << 4).build(Family.UNION);
     union2.update("a");
@@ -718,17 +734,19 @@ public class SketchAggregationTest
     union2.update("c");
     Sketch sketch2 = union2.getResult();
 
-    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(sketch2)));
-    Assert.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(union2)));
-    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(sketch1)));
-    Assert.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(union1)));
-    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(union1)));
-    Assert.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(sketch1)));
+    Assertions.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(sketch2)));
+    Assertions.assertEquals(-1, comparator.compare(SketchHolder.of(sketch1), SketchHolder.of(union2)));
+    Assertions.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(sketch1)));
+    Assertions.assertEquals(1, comparator.compare(SketchHolder.of(sketch2), SketchHolder.of(union1)));
+    Assertions.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(union1)));
+    Assertions.assertEquals(1, comparator.compare(SketchHolder.of(union2), SketchHolder.of(sketch1)));
   }
 
-  @Test
-  public void testRelocation()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testRelocation(final GroupByQueryConfig config, final String vectorize)
   {
+    initSketchAggregationTest(config, vectorize);
     final GroupByTestColumnSelectorFactory columnSelectorFactory = GrouperTestUtil.newColumnSelectorFactory();
     SketchHolder sketchHolder = SketchHolder.of(Sketches.updateSketchBuilder().setNominalEntries(16).build());
     UpdateSketch updateSketch = (UpdateSketch) sketchHolder.getSketch();
@@ -740,12 +758,14 @@ public class SketchAggregationTest
         columnSelectorFactory,
         SketchHolder.class
     );
-    Assert.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
+    Assertions.assertEquals(holders[0].getEstimate(), holders[1].getEstimate(), 0);
   }
 
-  @Test
-  public void testUpdateUnionWithNullInList()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testUpdateUnionWithNullInList(final GroupByQueryConfig config, final String vectorize)
   {
+    initSketchAggregationTest(config, vectorize);
     List<String> value = new ArrayList<>();
     value.add("foo");
     value.add(null);
@@ -755,32 +775,36 @@ public class SketchAggregationTest
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
     final Aggregator agg = new SketchAggregator(selector, 4096);
     agg.aggregate();
-    Assert.assertFalse(agg.isNull());
-    Assert.assertNotNull(agg.get());
-    Assert.assertTrue(agg.get() instanceof SketchHolder);
-    Assert.assertEquals(2, ((SketchHolder) agg.get()).getEstimate(), 0);
-    Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
-    Assert.assertEquals(2, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
+    Assertions.assertFalse(agg.isNull());
+    Assertions.assertNotNull(agg.get());
+    Assertions.assertTrue(agg.get() instanceof SketchHolder);
+    Assertions.assertEquals(2, ((SketchHolder) agg.get()).getEstimate(), 0);
+    Assertions.assertNotNull(((SketchHolder) agg.get()).getSketch());
+    Assertions.assertEquals(2, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
   }
 
-  @Test
-  public void testUpdateUnionWithDouble()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testUpdateUnionWithDouble(final GroupByQueryConfig config, final String vectorize)
   {
+    initSketchAggregationTest(config, vectorize);
     Double[] columnValues = new Double[]{2.0};
     final TestObjectColumnSelector selector = new TestObjectColumnSelector(columnValues);
     final Aggregator agg = new SketchAggregator(selector, 4096);
     agg.aggregate();
-    Assert.assertFalse(agg.isNull());
-    Assert.assertNotNull(agg.get());
-    Assert.assertTrue(agg.get() instanceof SketchHolder);
-    Assert.assertEquals(1, ((SketchHolder) agg.get()).getEstimate(), 0);
-    Assert.assertNotNull(((SketchHolder) agg.get()).getSketch());
-    Assert.assertEquals(1, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
+    Assertions.assertFalse(agg.isNull());
+    Assertions.assertNotNull(agg.get());
+    Assertions.assertTrue(agg.get() instanceof SketchHolder);
+    Assertions.assertEquals(1, ((SketchHolder) agg.get()).getEstimate(), 0);
+    Assertions.assertNotNull(((SketchHolder) agg.get()).getSketch());
+    Assertions.assertEquals(1, ((SketchHolder) agg.get()).getSketch().getEstimate(), 0);
   }
 
-  @Test
-  public void testAggregateWithSize()
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "config = {0}, vectorize = {1}")
+  public void testAggregateWithSize(final GroupByQueryConfig config, final String vectorize)
   {
+    initSketchAggregationTest(config, vectorize);
     final String[] columnValues = new String[20];
     for (int i = 0; i < columnValues.length; ++i) {
       columnValues[i] = "" + i;
@@ -790,37 +814,37 @@ public class SketchAggregationTest
     final SketchAggregator agg = new SketchAggregator(selector, 128);
 
     // Verify initial size of sketch
-    Assert.assertEquals(48L, agg.getInitialSizeBytes());
-    Assert.assertEquals(328L, agg.aggregateWithSize());
+    Assertions.assertEquals(48L, agg.getInitialSizeBytes());
+    Assertions.assertEquals(328L, agg.aggregateWithSize());
 
     // Verify that subsequent size deltas are zero
     for (int i = 1; i < 16; ++i) {
       selector.increment();
       long sizeDelta = agg.aggregateWithSize();
-      Assert.assertEquals(0, sizeDelta);
+      Assertions.assertEquals(0, sizeDelta);
     }
 
     // Verify that size delta is positive when sketch resizes
     selector.increment();
     long deltaAtResize = agg.aggregateWithSize();
-    Assert.assertEquals(1792, deltaAtResize);
+    Assertions.assertEquals(1792, deltaAtResize);
 
     for (int i = 17; i < columnValues.length; ++i) {
       selector.increment();
       long sizeDelta = agg.aggregateWithSize();
-      Assert.assertEquals(0, sizeDelta);
+      Assertions.assertEquals(0, sizeDelta);
     }
 
     // Verify unique count estimate
     SketchHolder sketchHolder = (SketchHolder) agg.get();
-    Assert.assertEquals(columnValues.length, sketchHolder.getEstimate(), 0);
-    Assert.assertNotNull(sketchHolder.getSketch());
-    Assert.assertEquals(columnValues.length, sketchHolder.getSketch().getEstimate(), 0);
+    Assertions.assertEquals(columnValues.length, sketchHolder.getEstimate(), 0);
+    Assertions.assertNotNull(sketchHolder.getSketch());
+    Assertions.assertEquals(columnValues.length, sketchHolder.getSketch().getEstimate(), 0);
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
   {
-    Assert.assertEquals(
+    Assertions.assertEquals(
         agg,
         helper.getObjectMapper().readValue(
             helper.getObjectMapper().writeValueAsString(agg),

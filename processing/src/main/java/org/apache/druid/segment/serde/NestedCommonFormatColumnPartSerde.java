@@ -168,6 +168,12 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
     return new NestedColumnDeserializer();
   }
 
+  @Override
+  public ColumnType getColumnType()
+  {
+    return logicalType;
+  }
+
   @JsonProperty("logicalType")
   public ColumnType getLogicalType()
   {

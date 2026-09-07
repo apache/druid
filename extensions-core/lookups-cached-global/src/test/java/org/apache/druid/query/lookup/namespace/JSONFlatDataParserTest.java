@@ -28,18 +28,19 @@ import com.google.common.io.CharSink;
 import com.google.common.io.Files;
 import org.apache.druid.data.input.MapPopulator;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JSONFlatDataParserTest
 {
@@ -56,16 +57,14 @@ public class JSONFlatDataParserTest
       ImmutableMap.of("key", "foo1", "val", "bar", "otherVal", 3, "canBeEmpty", ""),
       ImmutableMap.of("key", "foo2", "val", "baz", "canBeEmpty", "notEmpty")
   );
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
+  @TempDir
+  public File temporaryFolder;
   private File tmpFile;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception
   {
-    tmpFile = temporaryFolder.newFile("lookup.json");
+    tmpFile = File.createTempFile("lookup.json", null, temporaryFolder);
     final CharSink sink = Files.asByteSink(tmpFile).asCharSink(StandardCharsets.UTF_8);
     sink.writeLines(
         Iterables.transform(
@@ -97,8 +96,8 @@ public class JSONFlatDataParserTest
     );
     final Map<String, String> map = new HashMap<>();
     new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
-    Assert.assertEquals(VAL1, map.get(KEY1));
-    Assert.assertEquals(VAL2, map.get(KEY2));
+    Assertions.assertEquals(VAL1, map.get(KEY1));
+    Assertions.assertEquals(VAL2, map.get(KEY2));
   }
 
   @Test
@@ -115,8 +114,8 @@ public class JSONFlatDataParserTest
         map,
         100_000L,
         "namespace");
-    Assert.assertEquals(VAL1, map.get(KEY1));
-    Assert.assertEquals(VAL2, map.get(KEY2));
+    Assertions.assertEquals(VAL1, map.get(KEY1));
+    Assertions.assertEquals(VAL2, map.get(KEY2));
   }
 
   @Test
@@ -133,8 +132,8 @@ public class JSONFlatDataParserTest
         map,
         1L,
         "namespace");
-    Assert.assertEquals(VAL1, map.get(KEY1));
-    Assert.assertEquals(VAL2, map.get(KEY2));
+    Assertions.assertEquals(VAL1, map.get(KEY1));
+    Assertions.assertEquals(VAL2, map.get(KEY2));
   }
 
   @Test
@@ -147,8 +146,8 @@ public class JSONFlatDataParserTest
     );
     final Map<String, String> map = new HashMap<>();
     new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
-    Assert.assertEquals(OTHERVAL1, map.get(KEY1));
-    Assert.assertEquals(OTHERVAL2, map.get(KEY2));
+    Assertions.assertEquals(OTHERVAL1, map.get(KEY1));
+    Assertions.assertEquals(OTHERVAL2, map.get(KEY2));
   }
 
   @Test
@@ -161,23 +160,23 @@ public class JSONFlatDataParserTest
     );
     final Map<String, String> map = new HashMap<>();
     new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
-    Assert.assertEquals(CANBEEMPTY1, map.get(KEY1));
-    Assert.assertEquals(CANBEEMPTY2, map.get(KEY2));
+    Assertions.assertEquals(CANBEEMPTY1, map.get(KEY1));
+    Assertions.assertEquals(CANBEEMPTY2, map.get(KEY2));
   }
 
   @Test
-  public void testFailParseOnKeyMissing() throws Exception
+  public void testFailParseOnKeyMissing()
   {
-    final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
-        MAPPER,
-        "keyWHOOPS",
-        "val"
-    );
-    final Map<String, String> map = new HashMap<>();
+    Throwable exception = assertThrows(NullPointerException.class, () -> {
+      final UriExtractionNamespace.JSONFlatDataParser parser = new UriExtractionNamespace.JSONFlatDataParser(
+          MAPPER,
+          "keyWHOOPS",
+          "val"
+      );
+      final Map<String, String> map = new HashMap<>();
 
-    expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("Key column [keyWHOOPS] missing data in line");
-
-    new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
+      new MapPopulator<>(parser.getParser()).populate(Files.asByteSource(tmpFile), map);
+    });
+    assertTrue(exception.getMessage().contains("Key column [keyWHOOPS] missing data in line"));
   }
 }

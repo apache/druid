@@ -27,7 +27,6 @@ import org.roaringbitmap.IntIterator;
 
 import java.util.BitSet;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
 /**
@@ -61,54 +60,11 @@ public class IntSetTestUtility
 
   public static Boolean equalSets(Set<Integer> s1, ImmutableBitmap s2)
   {
-    Set<Integer> s3 = new HashSet<>();
-    for (Integer i : new IntIt(s2.iterator())) {
-      s3.add(i);
+    final Set<Integer> s3 = new HashSet<>();
+    final IntIterator iterator = s2.iterator();
+    while (iterator.hasNext()) {
+      s3.add(iterator.next());
     }
     return Sets.difference(s1, s3).isEmpty();
-  }
-
-  private static class IntIt implements Iterable<Integer>
-  {
-    private final Iterator<Integer> intIter;
-
-    public IntIt(IntIterator intIt)
-    {
-      this.intIter = new IntIter(intIt);
-    }
-
-    @Override
-    public Iterator<Integer> iterator()
-    {
-      return intIter;
-    }
-
-    private static class IntIter implements Iterator<Integer>
-    {
-      private final IntIterator intIt;
-
-      public IntIter(IntIterator intIt)
-      {
-        this.intIt = intIt;
-      }
-
-      @Override
-      public boolean hasNext()
-      {
-        return intIt.hasNext();
-      }
-
-      @Override
-      public Integer next()
-      {
-        return intIt.next();
-      }
-
-      @Override
-      public void remove()
-      {
-        throw new UnsupportedOperationException("Cannot remove ints from int iterator");
-      }
-    }
   }
 }

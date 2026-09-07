@@ -23,11 +23,13 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.server.initialization.JdbcAccessSecurityConfig;
 import org.joda.time.Period;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import java.util.Set;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JdbcExtractionNamespaceUrlCheckTest
 {
@@ -36,10 +38,9 @@ public class JdbcExtractionNamespaceUrlCheckTest
   private static final String VAL_NAME = "valName";
   private static final String TS_COLUMN = "tsColumn";
 
-  public static class MySqlTest
+  @Nested
+  public class MySqlTest
   {
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testCreateInstanceWhenUrlHasOnlyAllowedProperties()
@@ -82,41 +83,42 @@ public class JdbcExtractionNamespaceUrlCheckTest
     @Test
     public void testThrowWhenUrlHasNonAllowedPropertiesWhenEnforcingAllowedProperties()
     {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("The property [invalid_key1] is not in the allowed list [valid_key1, valid_key2]");
-      new JdbcExtractionNamespace(
-          new MetadataStorageConnectorConfig()
-          {
-            @Override
-            public String getConnectURI()
+      Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+        new JdbcExtractionNamespace(
+            new MetadataStorageConnectorConfig()
             {
-              return "jdbc:mysql://localhost:3306/db?invalid_key1=val1&valid_key2=val2";
-            }
-          },
-          TABLE_NAME,
-          KEY_NAME,
-          VAL_NAME,
-          TS_COLUMN,
-          "some filter",
-          new Period(10),
-          null,
-          0,
-          null,
-          new JdbcAccessSecurityConfig()
-          {
-            @Override
-            public Set<String> getAllowedProperties()
+              @Override
+              public String getConnectURI()
+              {
+                return "jdbc:mysql://localhost:3306/db?invalid_key1=val1&valid_key2=val2";
+              }
+            },
+            TABLE_NAME,
+            KEY_NAME,
+            VAL_NAME,
+            TS_COLUMN,
+            "some filter",
+            new Period(10),
+            null,
+            0,
+            null,
+            new JdbcAccessSecurityConfig()
             {
-              return ImmutableSet.of("valid_key1", "valid_key2");
-            }
+              @Override
+              public Set<String> getAllowedProperties()
+              {
+                return ImmutableSet.of("valid_key1", "valid_key2");
+              }
 
-            @Override
-            public boolean isEnforceAllowedProperties()
-            {
-              return true;
+              @Override
+              public boolean isEnforceAllowedProperties()
+              {
+                return true;
+              }
             }
-          }
-      );
+        );
+      });
+      assertTrue(exception.getMessage().contains("The property [invalid_key1] is not in the allowed list [valid_key1, valid_key2]"));
     }
 
     @Test
@@ -158,10 +160,9 @@ public class JdbcExtractionNamespaceUrlCheckTest
     }
   }
 
-  public static class PostgreSqlTest
+  @Nested
+  public class PostgreSqlTest
   {
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testCreateInstanceWhenUrlHasOnlyAllowedProperties()
@@ -204,41 +205,42 @@ public class JdbcExtractionNamespaceUrlCheckTest
     @Test
     public void testThrowWhenUrlHasNonAllowedPropertiesWhenEnforcingAllowedProperties()
     {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("The property [invalid_key1] is not in the allowed list [valid_key1, valid_key2]");
-      new JdbcExtractionNamespace(
-          new MetadataStorageConnectorConfig()
-          {
-            @Override
-            public String getConnectURI()
+      Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+        new JdbcExtractionNamespace(
+            new MetadataStorageConnectorConfig()
             {
-              return "jdbc:postgresql://localhost:5432/db?invalid_key1=val1&valid_key2=val2";
-            }
-          },
-          TABLE_NAME,
-          KEY_NAME,
-          VAL_NAME,
-          TS_COLUMN,
-          "some filter",
-          new Period(10),
-          10L,
-          0,
-          null,
-          new JdbcAccessSecurityConfig()
-          {
-            @Override
-            public Set<String> getAllowedProperties()
+              @Override
+              public String getConnectURI()
+              {
+                return "jdbc:postgresql://localhost:5432/db?invalid_key1=val1&valid_key2=val2";
+              }
+            },
+            TABLE_NAME,
+            KEY_NAME,
+            VAL_NAME,
+            TS_COLUMN,
+            "some filter",
+            new Period(10),
+            10L,
+            0,
+            null,
+            new JdbcAccessSecurityConfig()
             {
-              return ImmutableSet.of("valid_key1", "valid_key2");
-            }
+              @Override
+              public Set<String> getAllowedProperties()
+              {
+                return ImmutableSet.of("valid_key1", "valid_key2");
+              }
 
-            @Override
-            public boolean isEnforceAllowedProperties()
-            {
-              return true;
+              @Override
+              public boolean isEnforceAllowedProperties()
+              {
+                return true;
+              }
             }
-          }
-      );
+        );
+      });
+      assertTrue(exception.getMessage().contains("The property [invalid_key1] is not in the allowed list [valid_key1, valid_key2]"));
     }
 
     @Test
@@ -282,93 +284,94 @@ public class JdbcExtractionNamespaceUrlCheckTest
     @Test
     public void testWhenInvalidUrlFormat()
     {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Invalid URL format for PostgreSQL: [jdbc:postgresql://invalid-url::3006]");
-      new JdbcExtractionNamespace(
-          new MetadataStorageConnectorConfig()
-          {
-            @Override
-            public String getConnectURI()
+      Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+        new JdbcExtractionNamespace(
+            new MetadataStorageConnectorConfig()
             {
-              return "jdbc:postgresql://invalid-url::3006";
-            }
-          },
-          TABLE_NAME,
-          KEY_NAME,
-          VAL_NAME,
-          TS_COLUMN,
-          "some filter",
-          new Period(10),
-          null,
-          0,
-          null,
-          new JdbcAccessSecurityConfig()
-          {
-            @Override
-            public Set<String> getAllowedProperties()
+              @Override
+              public String getConnectURI()
+              {
+                return "jdbc:postgresql://invalid-url::3006";
+              }
+            },
+            TABLE_NAME,
+            KEY_NAME,
+            VAL_NAME,
+            TS_COLUMN,
+            "some filter",
+            new Period(10),
+            null,
+            0,
+            null,
+            new JdbcAccessSecurityConfig()
             {
-              return ImmutableSet.of("valid_key1", "valid_key2");
-            }
+              @Override
+              public Set<String> getAllowedProperties()
+              {
+                return ImmutableSet.of("valid_key1", "valid_key2");
+              }
 
-            @Override
-            public boolean isEnforceAllowedProperties()
-            {
-              return true;
+              @Override
+              public boolean isEnforceAllowedProperties()
+              {
+                return true;
+              }
             }
-          }
-      );
+        );
+      });
+      assertTrue(exception.getMessage().contains("Invalid URL format for PostgreSQL: [jdbc:postgresql://invalid-url::3006]"));
     }
   }
 
-  public static class UnknownSchemeTest
+  @Nested
+  public class UnknownSchemeTest
   {
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @Test
     public void testThrowWhenUnknownFormatIsNotAllowed()
     {
-      expectedException.expect(IllegalArgumentException.class);
-      expectedException.expectMessage("Unknown JDBC connection scheme: mydb");
-      new JdbcExtractionNamespace(
-          new MetadataStorageConnectorConfig()
-          {
-            @Override
-            public String getConnectURI()
+      Throwable exception = assertThrows(IllegalArgumentException.class, () -> {
+        new JdbcExtractionNamespace(
+            new MetadataStorageConnectorConfig()
             {
-              return "jdbc:mydb://localhost:5432/db?valid_key1=val1&valid_key2=val2";
-            }
-          },
-          TABLE_NAME,
-          KEY_NAME,
-          VAL_NAME,
-          TS_COLUMN,
-          "some filter",
-          new Period(10),
-          null,
-          0,
-          null,
-          new JdbcAccessSecurityConfig()
-          {
-            @Override
-            public Set<String> getAllowedProperties()
+              @Override
+              public String getConnectURI()
+              {
+                return "jdbc:mydb://localhost:5432/db?valid_key1=val1&valid_key2=val2";
+              }
+            },
+            TABLE_NAME,
+            KEY_NAME,
+            VAL_NAME,
+            TS_COLUMN,
+            "some filter",
+            new Period(10),
+            null,
+            0,
+            null,
+            new JdbcAccessSecurityConfig()
             {
-              return ImmutableSet.of("valid_key1", "valid_key2");
-            }
+              @Override
+              public Set<String> getAllowedProperties()
+              {
+                return ImmutableSet.of("valid_key1", "valid_key2");
+              }
 
-            @Override
-            public boolean isAllowUnknownJdbcUrlFormat()
-            {
-              return false;
-            }
+              @Override
+              public boolean isAllowUnknownJdbcUrlFormat()
+              {
+                return false;
+              }
 
-            @Override
-            public boolean isEnforceAllowedProperties()
-            {
-              return true;
+              @Override
+              public boolean isEnforceAllowedProperties()
+              {
+                return true;
+              }
             }
-          }
-      );
+        );
+      });
+      assertTrue(exception.getMessage().contains("Unknown JDBC connection scheme: mydb"));
     }
 
     @Test

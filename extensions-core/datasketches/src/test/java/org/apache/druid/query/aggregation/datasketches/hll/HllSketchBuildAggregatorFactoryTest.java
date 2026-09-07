@@ -25,8 +25,8 @@ import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.TestHelper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -55,7 +55,7 @@ public class HllSketchBuildAggregatorFactoryTest
 
     final String serializedString = jsonMapper.writeValueAsString(factory);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"HLLSketchBuild\",\"name\":\"foo\",\"fieldName\":\"bar\",\"lgK\":18,\"tgtHllType\":\"HLL_8\","
         + "\"stringEncoding\":\"utf8\",\"shouldFinalize\":false,\"round\":true}",
         serializedString
@@ -66,7 +66,7 @@ public class HllSketchBuildAggregatorFactoryTest
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, factory2);
+    Assertions.assertEquals(factory, factory2);
   }
 
   @Test
@@ -84,7 +84,7 @@ public class HllSketchBuildAggregatorFactoryTest
 
     final String serializedString = jsonMapper.writeValueAsString(factory);
 
-    Assert.assertEquals(
+    Assertions.assertEquals(
         "{\"type\":\"HLLSketchBuild\","
         + "\"name\":\"foo\","
         + "\"fieldName\":\"bar\","
@@ -99,7 +99,7 @@ public class HllSketchBuildAggregatorFactoryTest
         AggregatorFactory.class
     );
 
-    Assert.assertEquals(factory, factory2);
+    Assertions.assertEquals(factory, factory2);
   }
 
   @Test

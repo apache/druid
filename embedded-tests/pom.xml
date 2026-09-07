@@ -29,14 +29,12 @@
 
   <properties>
     <surefire.rerunFailingTestsCount>0</surefire.rerunFailingTestsCount>
-    <!-- Must match iceberg.core.version in extensions-contrib/druid-iceberg-extensions/pom.xml -->
-    <iceberg.version>1.7.2</iceberg.version>
   </properties>
 
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>38.0.0-SNAPSHOT</version>
+    <version>39.0.0-SNAPSHOT</version>
   </parent>
 
   <dependencies>
@@ -138,13 +136,13 @@
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-storage</artifactId>
-      <version>2.29.1</version>
+      <version>2.72.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-core</artifactId>
-      <version>2.27.0</version>
+      <version>2.73.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -160,7 +158,7 @@
     <dependency>
       <groupId>com.microsoft.azure</groupId>
       <artifactId>azure-storage</artifactId>
-      <version>8.6.0</version>
+      <version>8.6.6</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -272,6 +270,12 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-opa-authorizer</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.apache.druid.extensions</groupId>
       <artifactId>druid-basic-security</artifactId>
       <version>${project.parent.version}</version>
@@ -310,6 +314,19 @@
         <exclusion>
           <groupId>jakarta.ws.rs</groupId>
           <artifactId>jakarta.ws.rs-api</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.druid.extensions.contrib</groupId>
+      <artifactId>druid-deltalake-extensions</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <!-- hadoop-common is re-exported via hadoop-client-api; declaring it pulls in banned transitive deps. -->
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -418,13 +435,13 @@
     <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-api</artifactId>
-      <version>${iceberg.version}</version>
+      <version>${iceberg.core.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-core</artifactId>
-      <version>${iceberg.version}</version>
+      <version>${iceberg.core.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -436,7 +453,7 @@
     <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-parquet</artifactId>
-      <version>${iceberg.version}</version>
+      <version>${iceberg.core.version}</version>
       <scope>test</scope>
       <exclusions>
         <!-- Let parquet version be driven by druid-parquet-extensions (${parquet.version}) -->
@@ -463,11 +480,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
       <scope>test</scope>
@@ -475,11 +487,6 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -601,7 +608,7 @@
     <dependency>
       <groupId>io.aiven</groupId>
       <artifactId>testcontainers-fake-gcs-server</artifactId>
-      <version>0.1.0</version>
+      <version>0.3.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -685,7 +692,7 @@
     <dependency>
       <groupId>com.github.os72</groupId>
       <artifactId>protobuf-dynamic</artifactId>
-      <version>0.9.3</version>
+      <version>1.0.1</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -754,19 +761,19 @@
     <dependency>
       <groupId>org.apache.httpcomponents.client5</groupId>
       <artifactId>httpclient5</artifactId>
-      <version>5.5.1</version>
+      <version>5.6.4</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.thrift</groupId>
       <artifactId>libthrift</artifactId>
-      <version>0.13.0</version>
+      <version>0.24.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>com.aliyun.oss</groupId>
       <artifactId>aliyun-sdk-oss</artifactId>
-      <version>3.11.3</version>
+      <version>3.18.5</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -827,7 +834,7 @@
     <dependency>
       <groupId>com.google.auth</groupId>
       <artifactId>google-auth-library-credentials</artifactId>
-      <version>1.20.0</version>
+      <version>1.51.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -855,7 +862,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.6.2</version>
+        <version>3.6.3</version>
         <executions>
           <execution>
             <id>default-cli</id>

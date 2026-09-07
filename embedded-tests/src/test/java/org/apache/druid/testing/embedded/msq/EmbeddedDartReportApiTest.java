@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.ThrowableMatcher;
 import org.apache.druid.guice.SleepModule;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.report.TaskReport;
@@ -62,11 +63,8 @@ import org.apache.druid.testing.embedded.auth.EmbeddedBasicAuthResource;
 import org.apache.druid.testing.embedded.auth.HttpUtil;
 import org.apache.druid.testing.embedded.indexing.MoreResources;
 import org.apache.druid.testing.embedded.junit5.EmbeddedClusterTestBase;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
-import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -488,11 +486,9 @@ public class EmbeddedDartReportApiTest extends EmbeddedClusterTestBase
     Assertions.assertTrue(regularUserVisibleSqlQueryIds.contains(regularUserQueryId));
 
     // Regular user can get only their own query report
-    final RuntimeException e = Assertions.assertThrows(
-        RuntimeException.class,
-        () -> getReportWithClient(adminQueryId, regularUserClient)
-    );
-    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("404 Not Found")));
+    ThrowableMatcher.of(RuntimeException.class)
+                    .expectMessageContains("404 Not Found")
+                    .assertThrowsAndMatches(() -> getReportWithClient(adminQueryId, regularUserClient));
     Assertions.assertNotNull(getReportWithClient(regularUserQueryId, regularUserClient));
   }
 

@@ -30,9 +30,9 @@ import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -70,7 +70,7 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
   private Expr.VectorInputBinding binding;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     binding = new Expr.VectorInputBinding()
@@ -181,17 +181,17 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
     final ExprEvalVector<Object[]> eval = processor.evalVector(binding);
 
-    Assert.assertEquals(ExpressionType.DOUBLE, eval.getType());
-    Assert.assertArrayEquals(
+    Assertions.assertEquals(ExpressionType.DOUBLE, eval.getType());
+    Assertions.assertArrayEquals(
         new Object[]{101.0, null, 1.3},
         eval.getObjectVector()
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new double[]{101.0, 0L, 1.3},
         eval.getDoubleVector(),
         0
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new boolean[]{false, true, false},
         eval.getNullVector()
     );
@@ -210,8 +210,8 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
     final ExprEvalVector<Object[]> eval = processor.evalVector(binding);
 
-    Assert.assertEquals(ExpressionType.STRING, eval.getType());
-    Assert.assertArrayEquals(
+    Assertions.assertEquals(ExpressionType.STRING, eval.getType());
+    Assertions.assertArrayEquals(
         new Object[]{"FOO", null, "BAZ"},
         eval.getObjectVector()
     );
@@ -231,8 +231,8 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
     final ExprEvalVector<Object[]> eval = processor.evalVector(binding);
 
-    Assert.assertEquals(ExpressionType.STRING, eval.getType());
-    Assert.assertArrayEquals(
+    Assertions.assertEquals(ExpressionType.STRING, eval.getType());
+    Assertions.assertArrayEquals(
         new Object[]{"foo3.1", null, "baz3.3"},
         eval.getObjectVector()
     );
@@ -251,16 +251,16 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
     final ExprEvalVector<Object[]> eval = processor.evalVector(binding);
 
-    Assert.assertEquals(ExpressionType.LONG, eval.getType());
-    Assert.assertArrayEquals(
+    Assertions.assertEquals(ExpressionType.LONG, eval.getType());
+    Assertions.assertArrayEquals(
         new Object[]{3L, null, 3L},
         eval.getObjectVector()
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new long[]{3L, 0L, 3L},
         eval.getLongVector()
     );
-    Assert.assertArrayEquals(
+    Assertions.assertArrayEquals(
         new boolean[]{false, true, false},
         eval.getNullVector()
     );
@@ -280,13 +280,13 @@ public class FallbackVectorProcessorTest extends InitializedNullHandlingTest
 
     final ExprEvalVector<Object[]> eval = processor.evalVector(binding);
 
-    Assert.assertEquals(ExpressionType.LONG_ARRAY, eval.getType());
-    Assert.assertArrayEquals(
+    Assertions.assertEquals(ExpressionType.LONG_ARRAY, eval.getType());
+    Assertions.assertArrayEquals(
         new Object[]{201L, null, 203L, 101L},
         (Object[]) eval.getObjectVector()[0]
     );
-    Assert.assertNull(eval.getObjectVector()[1]);
-    Assert.assertArrayEquals(
+    Assertions.assertNull(eval.getObjectVector()[1]);
+    Assertions.assertArrayEquals(
         new Object[]{301L, null, 303L, 103L},
         (Object[]) eval.getObjectVector()[2]
     );
