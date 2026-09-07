@@ -396,13 +396,13 @@ public class TransformerTest extends InitializedNullHandlingTest
     final Map<String, Object> rawValues = ImmutableMap.of("user", "alice", "tags", ImmutableList.of("a", "b"));
 
     final InputRowListPlusRawValues transformed = transformer.transform(InputRowListPlusRawValues.of(inputRow, rawValues));
-    Assert.assertNotNull(transformed);
-    Assert.assertEquals(2, transformed.getInputRows().size());
-    Assert.assertEquals(2, transformed.getRawValuesList().size());
-    Assert.assertEquals(rawValues, transformed.getRawValuesList().get(0));
-    Assert.assertEquals(rawValues, transformed.getRawValuesList().get(1));
-    Assert.assertEquals("a", transformed.getInputRows().get(0).getRaw("tag"));
-    Assert.assertEquals("b", transformed.getInputRows().get(1).getRaw("tag"));
+    Assertions.assertNotNull(transformed);
+    Assertions.assertEquals(2, transformed.getInputRows().size());
+    Assertions.assertEquals(2, transformed.getRawValuesList().size());
+    Assertions.assertEquals(rawValues, transformed.getRawValuesList().get(0));
+    Assertions.assertEquals(rawValues, transformed.getRawValuesList().get(1));
+    Assertions.assertEquals("a", transformed.getInputRows().get(0).getRaw("tag"));
+    Assertions.assertEquals("b", transformed.getInputRows().get(1).getRaw("tag"));
   }
 
   @Test
@@ -578,7 +578,7 @@ public class TransformerTest extends InitializedNullHandlingTest
         ImmutableMap.of("dim", "value")
     );
 
-    Transformer transformer = transformSpec.toTransformer();
+    BaseTransformer transformer = transformSpec.toTransformer();
     InputRow transformed = transformer.transform(row);
 
     Assertions.assertNotNull(transformed);

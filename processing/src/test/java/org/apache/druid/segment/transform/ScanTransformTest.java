@@ -35,8 +35,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -98,14 +98,14 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b", "c"));
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(3, result.size());
+    Assertions.assertEquals(3, result.size());
 
-    Assert.assertEquals("a", result.get(0).getRaw("tag"));
-    Assert.assertEquals("alice", result.get(0).getRaw("user"));
-    Assert.assertEquals(TIMESTAMP, result.get(0).getTimestampFromEpoch());
+    Assertions.assertEquals("a", result.get(0).getRaw("tag"));
+    Assertions.assertEquals("alice", result.get(0).getRaw("user"));
+    Assertions.assertEquals(TIMESTAMP, result.get(0).getTimestampFromEpoch());
 
-    Assert.assertEquals("b", result.get(1).getRaw("tag"));
-    Assert.assertEquals("c", result.get(2).getRaw("tag"));
+    Assertions.assertEquals("b", result.get(1).getRaw("tag"));
+    Assertions.assertEquals("c", result.get(2).getRaw("tag"));
   }
 
   @Test
@@ -116,7 +116,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
 
     final List<InputRow> result = transformer.transformToList(input);
     // Empty array produces 0 rows, matching native CROSS JOIN UNNEST semantics
-    Assert.assertEquals(0, result.size());
+    Assertions.assertEquals(0, result.size());
   }
 
   @Test
@@ -127,7 +127,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
 
     final List<InputRow> result = transformer.transformToList(input);
     // Missing column produces 0 rows, matching native CROSS JOIN UNNEST semantics
-    Assert.assertEquals(0, result.size());
+    Assertions.assertEquals(0, result.size());
   }
 
   @Test
@@ -137,8 +137,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "tags", List.of("only"));
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("only", result.get(0).getRaw("tag"));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("only", result.get(0).getRaw("tag"));
   }
 
   @Test
@@ -148,8 +148,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "tags", "scalar");
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("scalar", result.get(0).getRaw("tag"));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("scalar", result.get(0).getRaw("tag"));
   }
 
   @Test
@@ -165,16 +165,16 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     ));
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(3, result.size());
+    Assertions.assertEquals(3, result.size());
 
     final Object item0 = result.get(0).getRaw("item");
-    Assert.assertNotNull(item0);
-    Assert.assertTrue("Expected a Map, got " + item0.getClass(), item0 instanceof Map);
-    Assert.assertEquals("shirt", ((Map<?, ?>) item0).get("product"));
+    Assertions.assertNotNull(item0);
+    Assertions.assertTrue(item0 instanceof Map, "Expected a Map, got " + item0.getClass());
+    Assertions.assertEquals("shirt", ((Map<?, ?>) item0).get("product"));
 
     final Object item2 = result.get(2).getRaw("item");
-    Assert.assertTrue(item2 instanceof Map);
-    Assert.assertEquals("hat", ((Map<?, ?>) item2).get("product"));
+    Assertions.assertTrue(item2 instanceof Map);
+    Assertions.assertEquals("hat", ((Map<?, ?>) item2).get("product"));
   }
 
   @Test
@@ -189,18 +189,18 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     );
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(2, result.size());
+    Assertions.assertEquals(2, result.size());
 
     final Object elem0 = result.get(0).getRaw("element");
-    Assert.assertNotNull(elem0);
-    Assert.assertArrayEquals(new Object[]{1L, 2L}, (Object[]) elem0);
+    Assertions.assertNotNull(elem0);
+    Assertions.assertArrayEquals(new Object[]{1L, 2L}, (Object[]) elem0);
 
     final Object elem1 = result.get(1).getRaw("element");
-    Assert.assertNotNull(elem1);
-    Assert.assertArrayEquals(new Object[]{3L}, (Object[]) elem1);
+    Assertions.assertNotNull(elem1);
+    Assertions.assertArrayEquals(new Object[]{3L}, (Object[]) elem1);
 
-    Assert.assertEquals("alice", result.get(0).getRaw("user"));
-    Assert.assertEquals("alice", result.get(1).getRaw("user"));
+    Assertions.assertEquals("alice", result.get(0).getRaw("user"));
+    Assertions.assertEquals("alice", result.get(1).getRaw("user"));
   }
 
   @Test
@@ -211,7 +211,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
 
     final List<InputRow> result = transformer.transformToList(input);
     for (final InputRow row : result) {
-      Assert.assertEquals(TIMESTAMP, row.getTimestampFromEpoch());
+      Assertions.assertEquals(TIMESTAMP, row.getTimestampFromEpoch());
     }
   }
 
@@ -224,8 +224,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b", "c"));
 
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(1, result.size());
-    Assert.assertEquals("b", result.get(0).getRaw("tag"));
+    Assertions.assertEquals(1, result.size());
+    Assertions.assertEquals("b", result.get(0).getRaw("tag"));
   }
 
   // --- Transformer integration tests ---
@@ -238,15 +238,15 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     );
 
     final BaseTransformer transformer = spec.toTransformer();
-    Assert.assertTrue(transformer.hasMultiRowTransform());
-    Assert.assertTrue(transformer instanceof ScanTransformer);
+    Assertions.assertTrue(transformer.hasMultiRowTransform());
+    Assertions.assertTrue(transformer instanceof ScanTransformer);
 
     final InputRow input = makeRow("user", "alice", "tags", List.of("x", "y"));
     final List<InputRow> result = transformer.transformToList(input);
 
-    Assert.assertEquals(2, result.size());
-    Assert.assertEquals("x", result.get(0).getRaw("tag"));
-    Assert.assertEquals("y", result.get(1).getRaw("tag"));
+    Assertions.assertEquals(2, result.size());
+    Assertions.assertEquals("x", result.get(0).getRaw("tag"));
+    Assertions.assertEquals("y", result.get(1).getRaw("tag"));
   }
 
   @Test
@@ -268,7 +268,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_LIST)
               .build()
     ).toTransformer();
-    Assert.assertTrue(transformer.hasMultiRowTransform());
+    Assertions.assertTrue(transformer.hasMultiRowTransform());
 
     final InputRow input = makeRow(
         "user", "alice",
@@ -278,7 +278,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final List<InputRow> result = transformer.transformToList(input);
 
     // 2 tags x 3 colors = 6 rows (cross join)
-    Assert.assertEquals(6, result.size());
+    Assertions.assertEquals(6, result.size());
   }
 
   @Test
@@ -307,7 +307,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
 
     // Nested unnest is a cross join: tags x services. With services missing, the cross join
     // produces 0 rows — matching native CROSS JOIN UNNEST semantics.
-    Assert.assertEquals(0, result.size());
+    Assertions.assertEquals(0, result.size());
   }
 
   @Test
@@ -338,17 +338,17 @@ public class ScanTransformTest extends InitializedNullHandlingTest
 
     // First unnest: [[1,2],[3]] -> [1,2], [3] (2 rows)
     // Second unnest: [1,2] -> 1, 2 and [3] -> 3 (3 rows total)
-    Assert.assertEquals(3, result.size());
+    Assertions.assertEquals(3, result.size());
 
     final List<Object> values = new ArrayList<>();
     for (final InputRow row : result) {
       values.add(row.getRaw("val"));
-      Assert.assertEquals("alice", row.getRaw("user"));
+      Assertions.assertEquals("alice", row.getRaw("user"));
     }
-    Assert.assertEquals(3, values.size());
-    Assert.assertEquals(1, ((Number) values.get(0)).intValue());
-    Assert.assertEquals(2, ((Number) values.get(1)).intValue());
-    Assert.assertEquals(3, ((Number) values.get(2)).intValue());
+    Assertions.assertEquals(3, values.size());
+    Assertions.assertEquals(1, ((Number) values.get(0)).intValue());
+    Assertions.assertEquals(2, ((Number) values.get(1)).intValue());
+    Assertions.assertEquals(3, ((Number) values.get(2)).intValue());
   }
 
   @Test
@@ -370,7 +370,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final InputRow input = makeRow("user", "alice", "tags", List.of("a", "b"));
     final List<InputRow> result = transformer.transformToList(input);
     // Filter rejects the row (user != "not_alice"), so 0 rows — matching native scan query semantics
-    Assert.assertEquals(0, result.size());
+    Assertions.assertEquals(0, result.size());
   }
 
   @Test
@@ -378,12 +378,12 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   {
     final TransformSpec spec = new TransformSpec(null, null);
     final BaseTransformer transformer = spec.toTransformer();
-    Assert.assertFalse(transformer.hasMultiRowTransform());
-    Assert.assertTrue(transformer instanceof Transformer);
+    Assertions.assertFalse(transformer.hasMultiRowTransform());
+    Assertions.assertTrue(transformer instanceof Transformer);
 
     final InputRow input = makeRow("user", "alice");
     final List<InputRow> result = transformer.transformToList(input);
-    Assert.assertEquals(1, result.size());
+    Assertions.assertEquals(1, result.size());
   }
 
   @Test
@@ -391,7 +391,7 @@ public class ScanTransformTest extends InitializedNullHandlingTest
   {
     final TransformSpec spec = new TransformSpec(null, null);
     final BaseTransformer transformer = spec.toTransformer();
-    Assert.assertTrue(transformer.transformToList(null).isEmpty());
+    Assertions.assertTrue(transformer.transformToList(null).isEmpty());
   }
 
   // --- Serde tests ---
@@ -406,8 +406,8 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final String json = jsonMapper.writeValueAsString(spec);
     final BaseTransformSpec deserialized = jsonMapper.readValue(json, BaseTransformSpec.class);
-    Assert.assertTrue(deserialized instanceof ScanTransformSpec);
-    Assert.assertEquals(spec, deserialized);
+    Assertions.assertTrue(deserialized instanceof ScanTransformSpec);
+    Assertions.assertEquals(spec, deserialized);
   }
 
   @Test
@@ -425,12 +425,12 @@ public class ScanTransformTest extends InitializedNullHandlingTest
     final BaseTransformer transformer = makeTransformer(makeUnnestQuery("tags", "tag"));
     final List<InputRow> result = transformer.transformToList(input);
 
-    Assert.assertEquals(2, result.size());
+    Assertions.assertEquals(2, result.size());
     for (final InputRow row : result) {
-      Assert.assertEquals(1024L, row.getRaw("bytes_sent"));
-      Assert.assertEquals("alice", row.getRaw("user"));
+      Assertions.assertEquals(1024L, row.getRaw("bytes_sent"));
+      Assertions.assertEquals("alice", row.getRaw("user"));
     }
-    Assert.assertEquals("a", result.get(0).getRaw("tag"));
-    Assert.assertEquals("b", result.get(1).getRaw("tag"));
+    Assertions.assertEquals("a", result.get(0).getRaw("tag"));
+    Assertions.assertEquals("b", result.get(1).getRaw("tag"));
   }
 }

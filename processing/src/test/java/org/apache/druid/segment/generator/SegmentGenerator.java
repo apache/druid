@@ -397,7 +397,7 @@ public class SegmentGenerator implements Closeable
     final List<InputRow> rows = new ArrayList<>();
     final List<QueryableIndex> indexes = new ArrayList<>();
 
-    final Transformer transformer = transformSpec.toTransformer();
+    final BaseTransformer transformer = transformSpec.toTransformer();
     final InputRowSchema rowSchema = new InputRowSchema(
         TimestampSpec.DEFAULT,
         dimensionsSpec,
