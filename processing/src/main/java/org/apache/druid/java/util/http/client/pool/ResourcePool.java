@@ -74,10 +74,7 @@ public class ResourcePool<K, V> implements Closeable
   }
 
   /**
-   * Takes a resource, blocking until one is free.
-   *
-   * Returns null if this pool is closed, or if the calling thread is interrupted while waiting; the interrupt is left
-   * set on the thread.
+   * Returns a {@link ResourceContainer} for the given key or null if this pool is already closed.
    */
   @Nullable
   public ResourceContainer<V> take(final K key)
@@ -452,21 +449,8 @@ public class ResourcePool<K, V> implements Closeable
     }
   }
 
-  /**
-   * Pools the resources of one key behind a permit per lendable resource, holding no lock while creating, validating
-   * or closing them.
-   *
-   * A taker discards every stale or broken resource it walks past rather than one per take, so the pool shrinks to
-   * what the traffic needs instead of reconnecting one for one.
-   */
   private static class AdaptiveResourceHolderPerKey<K, V> extends PooledResources<V>
   {
-    /**
-     * Released on close to wake every parked taker at once. Half of the range so that the permits still outstanding
-     * cannot overflow the count when they come back.
-     */
-    private static final int CLOSE_PERMITS = Integer.MAX_VALUE / 2;
-
     private final int maxSize;
     private final K key;
     private final ResourceFactory<K, V> factory;
@@ -554,7 +538,7 @@ public class ResourcePool<K, V> implements Closeable
     public void close()
     {
       if (closed.compareAndSet(false, true)) {
-        permits.release(CLOSE_PERMITS);
+        permits.release(maxSize);
         closeIdleResources();
       }
     }
@@ -577,10 +561,6 @@ public class ResourcePool<K, V> implements Closeable
       return true;
     }
 
-    /**
-     * Removes and returns the first usable idle resource, closing every expired or broken one it walks past. Null if
-     * none is left.
-     */
     @Nullable
     private V takeIdleResource()
     {
@@ -636,9 +616,6 @@ public class ResourcePool<K, V> implements Closeable
       }
     }
 
-    /**
-     * Closes a resource that is already out of the pool, where a failure has nothing left to abort.
-     */
     private void closeQuietly(V resource)
     {
       try {
