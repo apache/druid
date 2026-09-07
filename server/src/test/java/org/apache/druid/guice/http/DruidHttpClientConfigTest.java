@@ -19,14 +19,14 @@
 
 package org.apache.druid.guice.http;
 
+import jakarta.validation.Validation;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.http.client.pool.ResourcePool;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-import javax.validation.Validation;
 import java.util.Properties;
 
 /**
@@ -40,7 +40,7 @@ public class DruidHttpClientConfigTest
   @Test
   public void testPoolImplementationDefaultsToAdaptive()
   {
-    Assert.assertEquals(ResourcePool.Implementation.ADAPTIVE, configure(new Properties()).getPoolImplementation());
+    Assertions.assertEquals(ResourcePool.Implementation.ADAPTIVE, configure(new Properties()).getPoolImplementation());
   }
 
   @Test
@@ -49,7 +49,7 @@ public class DruidHttpClientConfigTest
     final Properties properties = new Properties();
     properties.setProperty(PROPERTY_BASE + ".poolImplementation", "retaining");
 
-    Assert.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
+    Assertions.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
   }
 
   /**
@@ -61,7 +61,7 @@ public class DruidHttpClientConfigTest
     final Properties properties = new Properties();
     properties.setProperty(PROPERTY_BASE + ".poolImplementation", "RETAINING");
 
-    Assert.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
+    Assertions.assertEquals(ResourcePool.Implementation.RETAINING, configure(properties).getPoolImplementation());
   }
 
   /**
@@ -73,7 +73,7 @@ public class DruidHttpClientConfigTest
     final Properties properties = new Properties();
     properties.setProperty(PROPERTY_BASE + ".poolImplementation", "invalid");
 
-    Assert.assertThrows(RuntimeException.class, () -> configure(properties));
+    Assertions.assertThrows(RuntimeException.class, () -> configure(properties));
   }
 
   private static DruidHttpClientConfig configure(Properties properties)
